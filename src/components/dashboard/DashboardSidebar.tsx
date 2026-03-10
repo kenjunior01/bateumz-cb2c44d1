@@ -10,7 +10,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -42,7 +43,9 @@ export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
+  const { profile, signOut } = useAuth();
 
   const isActive = (path: string) =>
     path === "/dashboard"
@@ -120,20 +123,23 @@ export function DashboardSidebar() {
       <SidebarFooter className="border-t border-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-bold">
-            E
+            {(profile?.display_name || "E").charAt(0).toUpperCase()}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
-                Empresa Demo
+                {profile?.display_name || "Empresa"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                Plano Business
+                {profile?.company_name || "Plano Business"}
               </p>
             </div>
           )}
           {!collapsed && (
-            <button className="text-muted-foreground hover:text-foreground">
+            <button
+              onClick={async () => { await signOut(); navigate("/"); }}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           )}

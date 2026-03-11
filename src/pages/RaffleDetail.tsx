@@ -206,7 +206,7 @@ const RaffleDetail = () => {
             <Card className="glass sticky top-28">
               <CardContent className="p-6">
                 <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {raffle.ticket_price.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}/bilhete</p>
+                <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
 
                 <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
                   {Array.from({ length: raffle.total_tickets }, (_, i) => i + 1).map((num) => {

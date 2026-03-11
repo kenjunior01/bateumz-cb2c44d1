@@ -139,7 +139,7 @@ const RaffleDetail = () => {
               </div>
               <div className="absolute bottom-4 left-4">
                 <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
-                  {raffle.prize_value.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                  {formatMZN(raffle.prize_value)}
                 </Badge>
               </div>
             </motion.div>

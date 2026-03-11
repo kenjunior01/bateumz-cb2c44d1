@@ -31,13 +31,13 @@ const Navbar = () => {
 
         <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase().replace(/ /g, "-")}`}
+            <Link
+              key={l.label}
+              to={l.href}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              {l}
-            </a>
+              {l.label}
+            </Link>
           ))}
         </div>
 

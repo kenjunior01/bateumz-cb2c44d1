@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Ticket, Clock, Users, ArrowRight } from "lucide-react";
+import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -111,7 +112,7 @@ const Marketplace = () => {
                           </div>
                         )}
                         <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                          {raffle.prize_value.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                          {formatMZN(raffle.prize_value)}
                         </Badge>
                         {raffle.end_date && (
                           <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
@@ -126,7 +127,7 @@ const Marketplace = () => {
                         <Progress value={pct} className="h-2 mb-2" />
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
-                          <span className="font-semibold text-foreground">{raffle.ticket_price.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}/bilhete</span>
+                          <span className="font-semibold text-foreground">{formatMZN(raffle.ticket_price)}/bilhete</span>
                         </div>
                         <div className="mt-4 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                           Participar <ArrowRight className="h-4 w-4" />

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart } from "lucide-react";
+import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -138,7 +139,7 @@ const RaffleDetail = () => {
               </div>
               <div className="absolute bottom-4 left-4">
                 <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
-                  {raffle.prize_value.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                  {formatMZN(raffle.prize_value)}
                 </Badge>
               </div>
             </motion.div>
@@ -205,7 +206,7 @@ const RaffleDetail = () => {
             <Card className="glass sticky top-28">
               <CardContent className="p-6">
                 <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {raffle.ticket_price.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}/bilhete</p>
+                <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
 
                 <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
                   {Array.from({ length: raffle.total_tickets }, (_, i) => i + 1).map((num) => {
@@ -246,7 +247,7 @@ const RaffleDetail = () => {
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">{selectedNumbers.length} bilhete(s)</span>
                           <span className="font-display text-2xl font-bold text-foreground">
-                            {totalPrice.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                            {formatMZN(totalPrice)}
                           </span>
                         </div>
                       </div>
@@ -307,12 +308,12 @@ const RaffleDetail = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Preço unitário</span>
-                      <span className="text-foreground">{raffle.ticket_price.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}</span>
+                      <span className="text-foreground">{formatMZN(raffle.ticket_price)}</span>
                     </div>
                     <div className="border-t border-border pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total</span>
                       <span className="font-display text-2xl font-bold text-primary">
-                        {totalPrice.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                        {formatMZN(totalPrice)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-accent">

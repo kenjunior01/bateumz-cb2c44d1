@@ -85,14 +85,14 @@ const Navbar = () => {
           >
             <div className="flex flex-col gap-2 px-6 py-4">
               {links.map((l) => (
-                <a
-                  key={l}
-                  href={`#${l.toLowerCase().replace(/ /g, "-")}`}
+                <Link
+                  key={l.label}
+                  to={l.href}
                   className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
                   onClick={() => setOpen(false)}
                 >
-                  {l}
-                </a>
+                  {l.label}
+                </Link>
               ))}
               <button className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
                 <Zap className="h-4 w-4" />

@@ -112,7 +112,7 @@ const Marketplace = () => {
                           </div>
                         )}
                         <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                          {raffle.prize_value.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                          {formatMZN(raffle.prize_value)}
                         </Badge>
                         {raffle.end_date && (
                           <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">

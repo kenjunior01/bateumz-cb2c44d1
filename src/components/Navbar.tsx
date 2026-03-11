@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const links = ["Sorteios", "Como Funciona", "Vencedores", "Transparência"];
+  const links = [
+    { label: "Sorteios", href: "/marketplace" },
+    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Vencedores", href: "#vencedores" },
+  ];
 
   return (
     <motion.nav

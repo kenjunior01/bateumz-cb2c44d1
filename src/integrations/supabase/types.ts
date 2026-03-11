@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      luck_points: {
+        Row: {
+          action: string
+          created_at: string
+          description: string | null
+          id: string
+          points: number
+          raffle_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          raffle_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          raffle_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "luck_points_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           created_at: string
@@ -136,6 +174,74 @@ export type Database = {
           title?: string
           total_tickets?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      redeemed_rewards: {
+        Row: {
+          id: string
+          points_spent: number
+          redeemed_at: string
+          reward_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          points_spent: number
+          redeemed_at?: string
+          reward_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          points_spent?: number
+          redeemed_at?: string
+          reward_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redeemed_rewards_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          points_cost: number
+          reward_type: string
+          title: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          points_cost: number
+          reward_type?: string
+          title: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          points_cost?: number
+          reward_type?: string
+          title?: string
+          value?: number
         }
         Relationships: []
       }

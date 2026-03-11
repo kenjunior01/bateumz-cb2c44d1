@@ -194,7 +194,7 @@ const RaffleDetail = () => {
                     <Clock className="h-5 w-5 text-primary" />
                     <p className="font-semibold text-foreground">Tempo Restante</p>
                   </div>
-                  <CountdownTimer targetDate={raffle.end_date} />
+                  <CountdownTimer targetDate={new Date(raffle.end_date)} />
                 </CardContent>
               </Card>
             )}

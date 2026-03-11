@@ -9,6 +9,9 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
+import Marketplace from "./pages/Marketplace.tsx";
+import RaffleDetail from "./pages/RaffleDetail.tsx";
+import UserDashboard from "./pages/UserDashboard.tsx";
 import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
@@ -29,6 +32,16 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/raffle/:id" element={<RaffleDetail />} />
+            <Route
+              path="/my-points"
+              element={
+                <ProtectedRoute>
+                  <UserDashboard />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

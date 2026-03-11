@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Trophy, Zap, LogIn } from "lucide-react";
+import { Menu, X, Trophy, Zap, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const links = ["Sorteios", "Como Funciona", "Vencedores", "Transparência"];
+  const links = [
+    { label: "Sorteios", href: "/marketplace" },
+    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Vencedores", href: "#vencedores" },
+  ];
 
   return (
     <motion.nav
@@ -27,19 +31,22 @@ const Navbar = () => {
 
         <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase().replace(/ /g, "-")}`}
+            <Link
+              key={l.label}
+              to={l.href}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              {l}
-            </a>
+              {l.label}
+            </Link>
           ))}
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
           {user ? (
             <>
+              <Link to="/my-points" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
+                <Star className="h-4 w-4 text-accent" /> Pontos
+              </Link>
               <Link to="/dashboard" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 Dashboard
               </Link>
@@ -78,14 +85,14 @@ const Navbar = () => {
           >
             <div className="flex flex-col gap-2 px-6 py-4">
               {links.map((l) => (
-                <a
-                  key={l}
-                  href={`#${l.toLowerCase().replace(/ /g, "-")}`}
+                <Link
+                  key={l.label}
+                  to={l.href}
                   className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
                   onClick={() => setOpen(false)}
                 >
-                  {l}
-                </a>
+                  {l.label}
+                </Link>
               ))}
               <button className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
                 <Zap className="h-4 w-4" />

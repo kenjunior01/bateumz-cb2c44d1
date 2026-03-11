@@ -308,7 +308,7 @@ const RaffleDetail = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Preço unitário</span>
-                      <span className="text-foreground">{raffle.ticket_price.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}</span>
+                      <span className="text-foreground">{formatMZN(raffle.ticket_price)}</span>
                     </div>
                     <div className="border-t border-border pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total</span>

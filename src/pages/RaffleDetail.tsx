@@ -313,7 +313,7 @@ const RaffleDetail = () => {
                     <div className="border-t border-border pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total</span>
                       <span className="font-display text-2xl font-bold text-primary">
-                        {totalPrice.toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}
+                        {formatMZN(totalPrice)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-accent">

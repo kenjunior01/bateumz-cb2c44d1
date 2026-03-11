@@ -149,7 +149,7 @@ export default function CreateRaffle() {
             <div className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/10 p-3">
               <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground leading-relaxed">
-                <p>Receita estimada: <span className="font-semibold text-foreground">{estimatedRevenue.toLocaleString("pt-MZ")} MZN</span></p>
+                <p>Receita estimada: <span className="font-semibold text-foreground">{formatMZN(estimatedRevenue)}</span></p>
                 <p className="mt-1">A plataforma cobra uma comissão de 5% sobre o valor total arrecadado.</p>
               </div>
             </div>

@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/raffle/:id" element={<RaffleDetail />} />
+            <Route path="/raffle/:id/live" element={<LiveDraw />} />
             <Route
               path="/my-points"
               element={

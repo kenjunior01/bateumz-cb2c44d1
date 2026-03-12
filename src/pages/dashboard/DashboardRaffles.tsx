@@ -179,10 +179,16 @@ export default function DashboardRaffles() {
                         </div>
                         <div className="flex items-center gap-2">
                           {raffle.status === "active" && raffle.sold_tickets > 0 && (
-                            <Button size="sm" variant="outline" className="gap-1 border-accent/50 text-accent hover:bg-accent/10"
-                              onClick={() => handleDraw(raffle)} disabled={!!drawingRaffle}>
-                              <Trophy className="h-3.5 w-3.5" /> Sortear
-                            </Button>
+                            <>
+                              <Button size="sm" variant="outline" className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
+                                onClick={() => navigate(`/raffle/${raffle.id}/live`)}>
+                                <Eye className="h-3.5 w-3.5" /> Ao Vivo
+                              </Button>
+                              <Button size="sm" variant="outline" className="gap-1 border-accent/50 text-accent hover:bg-accent/10"
+                                onClick={() => handleDraw(raffle)} disabled={!!drawingRaffle}>
+                                <Trophy className="h-3.5 w-3.5" /> Sortear
+                              </Button>
+                            </>
                           )}
                           <div className="relative">
                             <button onClick={() => setOpenMenu(openMenu === raffle.id ? null : raffle.id)}

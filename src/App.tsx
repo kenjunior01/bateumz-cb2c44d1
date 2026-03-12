@@ -18,6 +18,7 @@ import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
+import LiveDraw from "./pages/LiveDraw.tsx";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/raffle/:id" element={<RaffleDetail />} />
+            <Route path="/raffle/:id/live" element={<LiveDraw />} />
             <Route
               path="/my-points"
               element={

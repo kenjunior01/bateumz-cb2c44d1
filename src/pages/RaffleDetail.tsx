@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart } from "lucide-react";
+import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
+import BlockchainVerification from "@/components/BlockchainVerification";
+import BolaoModal from "@/components/BolaoModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,19 +29,30 @@ interface Raffle {
   end_date: string | null;
   image_url: string | null;
   status: string;
+  business_user_id: string;
 }
+
+type PaymentMethod = "mpesa" | "emola" | "card";
+
+const paymentMethods: { id: PaymentMethod; label: string; icon: typeof Smartphone; desc: string }[] = [
+  { id: "mpesa", label: "M-Pesa", icon: Smartphone, desc: "Pagamento via M-Pesa" },
+  { id: "emola", label: "e-Mola", icon: Wallet, desc: "Pagamento via e-Mola" },
+  { id: "card", label: "Cartão", icon: CreditCard, desc: "Visa / Mastercard" },
+];
 
 const RaffleDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [raffle, setRaffle] = useState<Raffle | null>(null);
+  const [businessName, setBusinessName] = useState<string | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState(0); // 0=closed, 1=payment, 2=confirm, 3=success
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mpesa");
   const [purchasing, setPurchasing] = useState(false);
-  const [purchased, setPurchased] = useState(false);
+  const [bolaoOpen, setBolaoOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -48,7 +61,16 @@ const RaffleDetail = () => {
         supabase.from("raffles").select("*").eq("id", id).single(),
         supabase.from("participants").select("ticket_number").eq("raffle_id", id),
       ]);
-      if (raffleRes.data) setRaffle(raffleRes.data);
+      if (raffleRes.data) {
+        setRaffle(raffleRes.data);
+        // Fetch business name
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, company_name")
+          .eq("user_id", raffleRes.data.business_user_id)
+          .single();
+        if (profile) setBusinessName(profile.company_name || profile.display_name);
+      }
       if (participantsRes.data) setSoldNumbers(participantsRes.data.map((p) => p.ticket_number));
       setLoading(false);
     };
@@ -84,7 +106,6 @@ const RaffleDetail = () => {
       setPurchasing(false);
       return;
     }
-    // Award luck points
     await supabase.from("luck_points").insert({
       user_id: user.id,
       points: selectedNumbers.length * 10,
@@ -93,14 +114,13 @@ const RaffleDetail = () => {
       raffle_id: raffle.id,
     });
     setPurchasing(false);
-    setPurchased(true);
+    setCheckoutStep(3);
     toast.success("Bilhetes comprados com sucesso!");
     setTimeout(() => {
-      setCheckoutOpen(false);
-      setPurchased(false);
+      setCheckoutStep(0);
       setSelectedNumbers([]);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
-    }, 2500);
+    }, 3000);
   };
 
   if (loading || !raffle) {
@@ -117,13 +137,12 @@ const RaffleDetail = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
-        {/* Back */}
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
 
         <div className="grid gap-8 lg:grid-cols-5">
-          {/* Left - Image & Info */}
+          {/* Left */}
           <div className="lg:col-span-3 space-y-6">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="relative overflow-hidden rounded-2xl aspect-video bg-secondary">
               {raffle.image_url ? (
@@ -137,10 +156,15 @@ const RaffleDetail = () => {
                 <button className="glass rounded-full p-2 hover:bg-card/80 transition"><Share2 className="h-4 w-4 text-foreground" /></button>
                 <button className="glass rounded-full p-2 hover:bg-card/80 transition"><Heart className="h-4 w-4 text-foreground" /></button>
               </div>
-              <div className="absolute bottom-4 left-4">
+              <div className="absolute bottom-4 left-4 flex gap-2 items-center">
                 <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
                   {formatMZN(raffle.prize_value)}
                 </Badge>
+                {businessName && (
+                  <Badge variant="outline" className="glass text-foreground border-accent/30 bg-accent/10">
+                    🏢 {businessName}
+                  </Badge>
+                )}
               </div>
             </motion.div>
 
@@ -150,130 +174,112 @@ const RaffleDetail = () => {
               {raffle.description && <p className="text-muted-foreground leading-relaxed">{raffle.description}</p>}
             </motion.div>
 
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <BlockchainVerification raffleId={raffle.id} raffleTitle={raffle.title} />
+              <Button variant="outline" size="sm" className="gap-2 border-accent/30 text-accent hover:bg-accent/10" onClick={() => setBolaoOpen(true)}>
+                <Users className="h-4 w-4" /> Bolão
+              </Button>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
-              <Card className="glass">
-                <CardContent className="p-4 text-center">
-                  <Users className="h-5 w-5 text-primary mx-auto mb-1" />
-                  <p className="font-display text-xl font-bold text-foreground">{raffle.sold_tickets}</p>
-                  <p className="text-xs text-muted-foreground">Participantes</p>
-                </CardContent>
-              </Card>
-              <Card className="glass">
-                <CardContent className="p-4 text-center">
-                  <Ticket className="h-5 w-5 text-accent mx-auto mb-1" />
-                  <p className="font-display text-xl font-bold text-foreground">{raffle.total_tickets - raffle.sold_tickets}</p>
-                  <p className="text-xs text-muted-foreground">Disponíveis</p>
-                </CardContent>
-              </Card>
-              <Card className="glass">
-                <CardContent className="p-4 text-center">
-                  <Star className="h-5 w-5 text-primary mx-auto mb-1" />
-                  <p className="font-display text-xl font-bold text-foreground">10</p>
-                  <p className="text-xs text-muted-foreground">Pts/bilhete</p>
-                </CardContent>
-              </Card>
+              <Card className="glass"><CardContent className="p-4 text-center">
+                <Users className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p className="font-display text-xl font-bold text-foreground">{raffle.sold_tickets}</p>
+                <p className="text-xs text-muted-foreground">Participantes</p>
+              </CardContent></Card>
+              <Card className="glass"><CardContent className="p-4 text-center">
+                <Ticket className="h-5 w-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-xl font-bold text-foreground">{raffle.total_tickets - raffle.sold_tickets}</p>
+                <p className="text-xs text-muted-foreground">Disponíveis</p>
+              </CardContent></Card>
+              <Card className="glass"><CardContent className="p-4 text-center">
+                <Star className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p className="font-display text-xl font-bold text-foreground">10</p>
+                <p className="text-xs text-muted-foreground">Pts/bilhete</p>
+              </CardContent></Card>
             </div>
 
             {/* Progress */}
-            <Card className="glass">
-              <CardContent className="p-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-semibold text-foreground">{soldPercent.toFixed(0)}%</span>
-                </div>
-                <Progress value={soldPercent} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} de {raffle.total_tickets} bilhetes vendidos</p>
-              </CardContent>
-            </Card>
+            <Card className="glass"><CardContent className="p-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Progresso</span>
+                <span className="font-semibold text-foreground">{soldPercent.toFixed(0)}%</span>
+              </div>
+              <Progress value={soldPercent} className="h-3" />
+              <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} de {raffle.total_tickets} bilhetes vendidos</p>
+            </CardContent></Card>
 
-            {/* Countdown */}
             {raffle.end_date && (
-              <Card className="glass border-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <p className="font-semibold text-foreground">Tempo Restante</p>
-                  </div>
-                  <CountdownTimer targetDate={new Date(raffle.end_date)} />
-                </CardContent>
-              </Card>
+              <Card className="glass border-primary/20"><CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-5 w-5 text-primary" />
+                  <p className="font-semibold text-foreground">Tempo Restante</p>
+                </div>
+                <CountdownTimer targetDate={new Date(raffle.end_date)} />
+              </CardContent></Card>
             )}
           </div>
 
           {/* Right - Number Selection */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="glass sticky top-28">
-              <CardContent className="p-6">
-                <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
+            <Card className="glass sticky top-28"><CardContent className="p-6">
+              <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
+              <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
 
-                <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
-                  {Array.from({ length: raffle.total_tickets }, (_, i) => i + 1).map((num) => {
-                    const isSold = soldNumbers.includes(num);
-                    const isSelected = selectedNumbers.includes(num);
-                    return (
-                      <motion.button
-                        key={num}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => toggleNumber(num)}
-                        disabled={isSold}
-                        className={`aspect-square rounded-lg text-xs font-bold transition-all ${
-                          isSold
-                            ? "bg-secondary/50 text-muted-foreground/30 cursor-not-allowed"
-                            : isSelected
-                            ? "bg-primary text-primary-foreground glow-primary"
-                            : "bg-secondary text-foreground hover:bg-secondary/80 hover:border-primary/50 border border-transparent"
-                        }`}
-                      >
-                        {num}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+              <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
+                {Array.from({ length: raffle.total_tickets }, (_, i) => i + 1).map((num) => {
+                  const isSold = soldNumbers.includes(num);
+                  const isSelected = selectedNumbers.includes(num);
+                  return (
+                    <motion.button key={num} whileTap={{ scale: 0.9 }} onClick={() => toggleNumber(num)} disabled={isSold}
+                      className={`aspect-square rounded-lg text-xs font-bold transition-all ${
+                        isSold ? "bg-secondary/50 text-muted-foreground/30 cursor-not-allowed"
+                        : isSelected ? "bg-primary text-primary-foreground glow-primary"
+                        : "bg-secondary text-foreground hover:bg-secondary/80 hover:border-primary/50 border border-transparent"
+                      }`}
+                    >{num}</motion.button>
+                  );
+                })}
+              </div>
 
-                {/* Selected summary */}
-                <AnimatePresence>
-                  {selectedNumbers.length > 0 && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                      <div className="border-t border-border pt-4 mb-4">
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {selectedNumbers.sort((a, b) => a - b).map((n) => (
-                            <Badge key={n} className="bg-primary/20 text-primary border-primary/30 cursor-pointer" onClick={() => toggleNumber(n)}>
-                              {n} ✕
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">{selectedNumbers.length} bilhete(s)</span>
-                          <span className="font-display text-2xl font-bold text-foreground">
-                            {formatMZN(totalPrice)}
-                          </span>
-                        </div>
+              <AnimatePresence>
+                {selectedNumbers.length > 0 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                    <div className="border-t border-border pt-4 mb-4">
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {selectedNumbers.sort((a, b) => a - b).map((n) => (
+                          <Badge key={n} className="bg-primary/20 text-primary border-primary/30 cursor-pointer" onClick={() => toggleNumber(n)}>
+                            {n} ✕
+                          </Badge>
+                        ))}
                       </div>
-                      <Button onClick={() => setCheckoutOpen(true)} className="w-full gap-2 h-12 text-base glow-primary">
-                        <ShoppingCart className="h-5 w-5" />
-                        Comprar Bilhetes
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">{selectedNumbers.length} bilhete(s)</span>
+                        <span className="font-display text-2xl font-bold text-foreground">{formatMZN(totalPrice)}</span>
+                      </div>
+                    </div>
+                    <Button onClick={() => setCheckoutStep(1)} className="w-full gap-2 h-12 text-base glow-primary">
+                      <ShoppingCart className="h-5 w-5" /> Comprar Bilhetes
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                {/* Legend */}
-                <div className="flex gap-4 mt-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary inline-block" /> Disponível</span>
-                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-primary inline-block" /> Selecionado</span>
-                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary/50 inline-block" /> Vendido</span>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="flex gap-4 mt-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary inline-block" /> Disponível</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-primary inline-block" /> Selecionado</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary/50 inline-block" /> Vendido</span>
+              </div>
+            </CardContent></Card>
           </div>
         </div>
       </div>
 
-      {/* Checkout Overlay */}
+      {/* 3-Step Checkout */}
       <AnimatePresence>
-        {checkoutOpen && (
+        {checkoutStep > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -281,22 +287,62 @@ const RaffleDetail = () => {
               exit={{ scale: 0.9, opacity: 0 }}
               className="glass-strong rounded-2xl p-8 max-w-md w-full"
             >
-              {purchased ? (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center py-8">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
-                    transition={{ duration: 0.6 }}
-                    className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 mb-4"
-                  >
-                    <Check className="h-10 w-10 text-primary" />
-                  </motion.div>
-                  <h3 className="font-display text-2xl font-bold text-foreground mb-2">Compra Confirmada!</h3>
-                  <p className="text-muted-foreground">+{selectedNumbers.length * 10} Luck Points ganhos 🎉</p>
+              {/* Step indicators */}
+              {checkoutStep < 3 && (
+                <div className="flex items-center gap-2 mb-6">
+                  {[1, 2].map((s) => (
+                    <div key={s} className="flex items-center gap-2 flex-1">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                        checkoutStep >= s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                      }`}>{s}</div>
+                      <span className="text-xs text-muted-foreground hidden sm:block">
+                        {s === 1 ? "Pagamento" : "Confirmar"}
+                      </span>
+                      {s < 2 && <div className={`flex-1 h-0.5 ${checkoutStep > s ? "bg-primary" : "bg-secondary"}`} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {checkoutStep === 1 && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-1">Método de Pagamento</h3>
+                  <p className="text-sm text-muted-foreground mb-5">Escolha como deseja pagar</p>
+                  <div className="space-y-2 mb-6">
+                    {paymentMethods.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setPaymentMethod(m.id)}
+                        className={`w-full flex items-center gap-4 rounded-xl p-4 transition-all border ${
+                          paymentMethod === m.id
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-secondary/50 hover:border-primary/30"
+                        }`}
+                      >
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          paymentMethod === m.id ? "bg-primary/20" : "bg-secondary"
+                        }`}>
+                          <m.icon className={`h-5 w-5 ${paymentMethod === m.id ? "text-primary" : "text-muted-foreground"}`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-foreground">{m.label}</p>
+                          <p className="text-xs text-muted-foreground">{m.desc}</p>
+                        </div>
+                        {paymentMethod === m.id && <Check className="h-5 w-5 text-primary ml-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" className="flex-1" onClick={() => setCheckoutStep(0)}>Cancelar</Button>
+                    <Button className="flex-1 glow-primary" onClick={() => setCheckoutStep(2)}>Continuar</Button>
+                  </div>
                 </motion.div>
-              ) : (
-                <>
-                  <h3 className="font-display text-2xl font-bold text-foreground mb-1">Confirmar Compra</h3>
-                  <p className="text-sm text-muted-foreground mb-6">{raffle.title}</p>
+              )}
+
+              {checkoutStep === 2 && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-1">Confirmar Compra</h3>
+                  <p className="text-sm text-muted-foreground mb-5">{raffle.title}</p>
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Bilhetes</span>
@@ -307,14 +353,16 @@ const RaffleDetail = () => {
                       <span className="text-foreground">{selectedNumbers.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Pagamento</span>
+                      <span className="text-foreground">{paymentMethods.find(m => m.id === paymentMethod)?.label}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Preço unitário</span>
                       <span className="text-foreground">{formatMZN(raffle.ticket_price)}</span>
                     </div>
                     <div className="border-t border-border pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total</span>
-                      <span className="font-display text-2xl font-bold text-primary">
-                        {formatMZN(totalPrice)}
-                      </span>
+                      <span className="font-display text-2xl font-bold text-primary">{formatMZN(totalPrice)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-accent">
                       <Star className="h-3.5 w-3.5" />
@@ -322,19 +370,35 @@ const RaffleDetail = () => {
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setCheckoutStep(1)}>Voltar</Button>
                     <Button className="flex-1 gap-2 glow-primary" onClick={handlePurchase} disabled={purchasing}>
                       {purchasing ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <ShoppingCart className="h-4 w-4" />}
-                      Confirmar
+                      Pagar {formatMZN(totalPrice)}
                     </Button>
                   </div>
-                </>
+                </motion.div>
+              )}
+
+              {checkoutStep === 3 && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center py-8">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.6 }}
+                    className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 mb-4"
+                  >
+                    <Check className="h-10 w-10 text-primary" />
+                  </motion.div>
+                  <h3 className="font-display text-2xl font-bold text-foreground mb-2">Compra Confirmada!</h3>
+                  <p className="text-muted-foreground mb-1">Pagamento via {paymentMethods.find(m => m.id === paymentMethod)?.label}</p>
+                  <p className="text-accent text-sm">+{selectedNumbers.length * 10} Luck Points ganhos 🎉</p>
+                </motion.div>
               )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      <BolaoModal raffleId={raffle.id} raffleTitle={raffle.title} open={bolaoOpen} onClose={() => setBolaoOpen(false)} />
       <Footer />
     </div>
   );

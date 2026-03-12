@@ -36,11 +36,18 @@ export default function BolaoModal({ raffleId, raffleTitle, open, onClose }: Pro
       setLoading(false);
       return;
     }
-    // Join as member
-    await supabase.from("bolao_members").insert({
-      bolao_id: data.invite_code, // will fix below
-      user_id: user.id,
-    }).catch(() => {});
+    // Join as member - need bolao id first
+    const { data: bolaoData } = await supabase
+      .from("boloes")
+      .select("id")
+      .eq("invite_code", data.invite_code)
+      .single();
+    if (bolaoData) {
+      await supabase.from("bolao_members").insert({
+        bolao_id: bolaoData.id,
+        user_id: user.id,
+      });
+    }
     
     setCreatedCode(data.invite_code);
     toast.success("Bolão criado com sucesso!");

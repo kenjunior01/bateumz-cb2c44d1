@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      bolao_members: {
+        Row: {
+          bolao_id: string
+          id: string
+          joined_at: string
+          tickets_contributed: number
+          user_id: string
+        }
+        Insert: {
+          bolao_id: string
+          id?: string
+          joined_at?: string
+          tickets_contributed?: number
+          user_id: string
+        }
+        Update: {
+          bolao_id?: string
+          id?: string
+          joined_at?: string
+          tickets_contributed?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bolao_members_bolao_id_fkey"
+            columns: ["bolao_id"]
+            isOneToOne: false
+            referencedRelation: "boloes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boloes: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          invite_code: string
+          max_members: number
+          name: string
+          raffle_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          invite_code?: string
+          max_members?: number
+          name?: string
+          raffle_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          invite_code?: string
+          max_members?: number
+          name?: string
+          raffle_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boloes_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       luck_points: {
         Row: {
           action: string

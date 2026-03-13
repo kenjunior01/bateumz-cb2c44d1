@@ -19,6 +19,11 @@ import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
 import LiveDraw from "./pages/LiveDraw.tsx";
+import AdminLayout from "./layouts/AdminLayout.tsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
+import AdminUsers from "./pages/admin/AdminUsers.tsx";
+import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
+import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
 
 const queryClient = new QueryClient();
 
@@ -34,8 +39,8 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/raffle/:id" element={<RaffleDetail />} />
-            <Route path="/raffle/:id/live" element={<LiveDraw />} />
+            <Route path="/raffle/:slug" element={<RaffleDetail />} />
+            <Route path="/raffle/:slug/live" element={<LiveDraw />} />
             <Route
               path="/my-points"
               element={
@@ -57,6 +62,19 @@ const App = () => (
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
+            </Route>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="raffles" element={<AdminRaffles />} />
+              <Route path="revenue" element={<AdminRevenue />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

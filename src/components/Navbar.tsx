@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, role, signOut } = useAuth();
   const links = [
     { label: "Sorteios", href: "/marketplace" },
     { label: "Como Funciona", href: "#como-funciona" },

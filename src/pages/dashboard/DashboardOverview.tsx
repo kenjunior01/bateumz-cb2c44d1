@@ -25,16 +25,29 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => {
-      const [rafflesRes, participantsRes] = await Promise.all([
-        supabase.from("raffles").select("*").eq("business_user_id", user.id).order("created_at", { ascending: false }).limit(4),
-        supabase.from("participants").select("id, raffle_id, raffles!inner(business_user_id)").eq("raffles.business_user_id", user.id),
-      ]);
-      if (rafflesRes.data) setRaffles(rafflesRes.data);
-      setParticipantCount(participantsRes.data?.length ?? 0);
+    const fetchData = async () => {
+      // Fetch raffles for this business user
+      const { data: rafflesData } = await supabase
+        .from("raffles")
+        .select("*")
+        .eq("business_user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const myRaffles = rafflesData || [];
+      setRaffles(myRaffles);
+
+      // Count participants across all user's raffles
+      if (myRaffles.length > 0) {
+        const raffleIds = myRaffles.map((r) => r.id);
+        const { count } = await supabase
+          .from("participants")
+          .select("id", { count: "exact", head: true })
+          .in("raffle_id", raffleIds);
+        setParticipantCount(count || 0);
+      }
       setLoading(false);
     };
-    fetch();
+    fetchData();
   }, [user]);
 
   const totalRevenue = raffles.reduce((s, r) => s + r.sold_tickets * Number(r.ticket_price), 0);
@@ -101,7 +114,7 @@ export default function DashboardOverview() {
                 <p className="text-center text-sm text-muted-foreground py-8">Nenhum sorteio criado ainda.</p>
               ) : (
                 <div className="space-y-3">
-                  {raffles.map((raffle) => {
+                  {raffles.slice(0, 4).map((raffle) => {
                     const config = statusConfig[raffle.status] || statusConfig.draft;
                     const pct = raffle.total_tickets > 0 ? Math.round((raffle.sold_tickets / raffle.total_tickets) * 100) : 0;
                     return (

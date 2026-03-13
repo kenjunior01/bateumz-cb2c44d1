@@ -199,7 +199,7 @@ export default function DashboardRaffles() {
                               {openMenu === raffle.id && (
                                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                                   className="absolute right-0 top-full z-10 mt-1 w-44 rounded-xl glass border border-glass-border p-1">
-                                  <button onClick={() => navigate(`/raffle/${raffle.id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
+                                  <button onClick={() => navigate(`/raffle/${raffle.slug || raffle.id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                     <Eye className="h-3.5 w-3.5" /> Ver detalhes
                                   </button>
                                   {(raffle.status === "draft" || raffle.status === "active") && (

@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 interface Raffle {
   id: string;
   title: string;
+  slug: string | null;
   prize_title: string;
   prize_value: number;
   ticket_price: number;
@@ -38,7 +39,7 @@ const Marketplace = () => {
         .select("*")
         .eq("status", "active")
         .order("created_at", { ascending: false });
-      if (data) setRaffles(data);
+      if (data) setRaffles(data as Raffle[]);
       setLoading(false);
     };
     fetchRaffles();
@@ -62,6 +63,8 @@ const Marketplace = () => {
     return `${hours}h restantes`;
   };
 
+  const getRaffleUrl = (raffle: Raffle) => `/raffle/${raffle.slug || raffle.id}`;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -71,7 +74,6 @@ const Marketplace = () => {
           <p className="text-muted-foreground text-lg">Descubra sorteios incríveis e concorra a prémios de luxo.</p>
         </motion.div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -101,7 +103,7 @@ const Marketplace = () => {
               const pct = (raffle.sold_tickets / raffle.total_tickets) * 100;
               return (
                 <motion.div key={raffle.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                  <Link to={`/raffle/${raffle.id}`}>
+                  <Link to={getRaffleUrl(raffle)}>
                     <Card className="glass group hover:border-primary/30 transition-all overflow-hidden">
                       <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
                         {raffle.image_url ? (

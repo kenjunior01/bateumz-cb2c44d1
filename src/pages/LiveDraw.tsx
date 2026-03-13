@@ -18,7 +18,7 @@ interface Participant {
 }
 
 const LiveDraw = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [raffle, setRaffle] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -29,29 +29,32 @@ const LiveDraw = () => {
   const [globeNumbers, setGlobeNumbers] = useState<number[]>([]);
 
   useEffect(() => {
-    if (!id) return;
-    const fetch = async () => {
-      const [r, p] = await Promise.all([
-        supabase.from("raffles").select("*").eq("id", id).single(),
-        supabase.from("participants").select("*").eq("raffle_id", id).eq("status", "active"),
-      ]);
-      if (r.data) setRaffle(r.data);
-      if (p.data) {
-        setParticipants(p.data);
-        setGlobeNumbers(p.data.map((x) => x.ticket_number));
+    if (!routeSlug) return;
+    const fetchData = async () => {
+      // Try slug first, then UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(routeSlug);
+      const raffleQuery = isUUID
+        ? supabase.from("raffles").select("*").eq("id", routeSlug).single()
+        : supabase.from("raffles").select("*").eq("slug", routeSlug).single();
+
+      const r = await raffleQuery;
+      if (r.data) {
+        setRaffle(r.data);
+        const raffleId = r.data.id;
+        const [p, w] = await Promise.all([
+          supabase.from("participants").select("*").eq("raffle_id", raffleId).eq("status", "active"),
+          supabase.from("participants").select("*").eq("raffle_id", raffleId).eq("status", "winner").maybeSingle(),
+        ]);
+        if (p.data) {
+          setParticipants(p.data);
+          setGlobeNumbers(p.data.map((x) => x.ticket_number));
+        }
+        if (w.data) setWinner(w.data);
       }
-      // Check if already has winner
-      const { data: winnerData } = await supabase
-        .from("participants")
-        .select("*")
-        .eq("raffle_id", id)
-        .eq("status", "winner")
-        .maybeSingle();
-      if (winnerData) setWinner(winnerData);
       setLoading(false);
     };
-    fetch();
-  }, [id]);
+    fetchData();
+  }, [routeSlug]);
 
   const startDraw = useCallback(async () => {
     if (participants.length === 0 || !raffle) return;

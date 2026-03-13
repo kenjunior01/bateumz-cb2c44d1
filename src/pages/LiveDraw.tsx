@@ -18,7 +18,7 @@ interface Participant {
 }
 
 const LiveDraw = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [raffle, setRaffle] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);

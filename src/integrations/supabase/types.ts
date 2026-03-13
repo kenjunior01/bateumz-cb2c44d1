@@ -206,6 +206,7 @@ export type Database = {
           image_url: string | null
           prize_title: string
           prize_value: number
+          slug: string | null
           sold_tickets: number
           start_date: string | null
           status: string
@@ -223,6 +224,7 @@ export type Database = {
           image_url?: string | null
           prize_title: string
           prize_value?: number
+          slug?: string | null
           sold_tickets?: number
           start_date?: string | null
           status?: string
@@ -240,6 +242,7 @@ export type Database = {
           image_url?: string | null
           prize_title?: string
           prize_value?: number
+          slug?: string | null
           sold_tickets?: number
           start_date?: string | null
           status?: string

@@ -53,8 +53,8 @@ const LiveDraw = () => {
       }
       setLoading(false);
     };
-    fetch();
-  }, [id]);
+    fetchData();
+  }, [routeSlug]);
 
   const startDraw = useCallback(async () => {
     if (participants.length === 0 || !raffle) return;

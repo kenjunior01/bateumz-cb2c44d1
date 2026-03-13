@@ -50,6 +50,11 @@ const Navbar = () => {
               <Link to="/dashboard" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 Dashboard
               </Link>
+              {role === "admin" && (
+                <Link to="/admin" className="rounded-lg px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                  Admin
+                </Link>
+              )}
               <button onClick={signOut} className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                 Sair
               </button>

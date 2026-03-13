@@ -19,6 +19,7 @@ import { toast } from "sonner";
 interface Raffle {
   id: string;
   title: string;
+  slug: string | null;
   description: string | null;
   prize_title: string;
   prize_value: number;
@@ -41,7 +42,7 @@ const paymentMethods: { id: PaymentMethod; label: string; icon: typeof Smartphon
 ];
 
 const RaffleDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [raffle, setRaffle] = useState<Raffle | null>(null);
@@ -49,33 +50,39 @@ const RaffleDetail = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const [checkoutStep, setCheckoutStep] = useState(0); // 0=closed, 1=payment, 2=confirm, 3=success
+  const [checkoutStep, setCheckoutStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mpesa");
   const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     const fetchData = async () => {
-      const [raffleRes, participantsRes] = await Promise.all([
-        supabase.from("raffles").select("*").eq("id", id).single(),
-        supabase.from("participants").select("ticket_number").eq("raffle_id", id),
+      // Try slug first, then fall back to id (UUID)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      const query = isUUID
+        ? supabase.from("raffles").select("*").eq("id", slug).single()
+        : supabase.from("raffles").select("*").eq("slug", slug).single();
+
+      const [raffleRes, _] = await Promise.all([
+        query,
+        Promise.resolve(),
       ]);
+
       if (raffleRes.data) {
-        setRaffle(raffleRes.data);
-        // Fetch business name
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("display_name, company_name")
-          .eq("user_id", raffleRes.data.business_user_id)
-          .single();
-        if (profile) setBusinessName(profile.company_name || profile.display_name);
+        setRaffle(raffleRes.data as Raffle);
+        // Fetch participants and business name
+        const [participantsRes, profileRes] = await Promise.all([
+          supabase.from("participants").select("ticket_number").eq("raffle_id", raffleRes.data.id),
+          supabase.from("profiles").select("display_name, company_name").eq("user_id", raffleRes.data.business_user_id).single(),
+        ]);
+        if (profileRes.data) setBusinessName(profileRes.data.company_name || profileRes.data.display_name);
+        if (participantsRes.data) setSoldNumbers(participantsRes.data.map((p) => p.ticket_number));
       }
-      if (participantsRes.data) setSoldNumbers(participantsRes.data.map((p) => p.ticket_number));
       setLoading(false);
     };
     fetchData();
-  }, [id]);
+  }, [slug]);
 
   const toggleNumber = (num: number) => {
     if (soldNumbers.includes(num)) return;
@@ -142,7 +149,6 @@ const RaffleDetail = () => {
         </button>
 
         <div className="grid gap-8 lg:grid-cols-5">
-          {/* Left */}
           <div className="lg:col-span-3 space-y-6">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="relative overflow-hidden rounded-2xl aspect-video bg-secondary">
               {raffle.image_url ? (
@@ -174,7 +180,6 @@ const RaffleDetail = () => {
               {raffle.description && <p className="text-muted-foreground leading-relaxed">{raffle.description}</p>}
             </motion.div>
 
-            {/* Action buttons */}
             <div className="flex gap-3">
               <BlockchainVerification raffleId={raffle.id} raffleTitle={raffle.title} />
               <Button variant="outline" size="sm" className="gap-2 border-accent/30 text-accent hover:bg-accent/10" onClick={() => setBolaoOpen(true)}>
@@ -182,7 +187,6 @@ const RaffleDetail = () => {
               </Button>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <Card className="glass"><CardContent className="p-4 text-center">
                 <Users className="h-5 w-5 text-primary mx-auto mb-1" />
@@ -201,7 +205,6 @@ const RaffleDetail = () => {
               </CardContent></Card>
             </div>
 
-            {/* Progress */}
             <Card className="glass"><CardContent className="p-6">
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-muted-foreground">Progresso</span>
@@ -222,7 +225,6 @@ const RaffleDetail = () => {
             )}
           </div>
 
-          {/* Right - Number Selection */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="glass sticky top-28"><CardContent className="p-6">
               <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
@@ -281,13 +283,7 @@ const RaffleDetail = () => {
       <AnimatePresence>
         {checkoutStep > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-strong rounded-2xl p-8 max-w-md w-full"
-            >
-              {/* Step indicators */}
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-strong rounded-2xl p-8 max-w-md w-full">
               {checkoutStep < 3 && (
                 <div className="flex items-center gap-2 mb-6">
                   {[1, 2].map((s) => (
@@ -310,18 +306,11 @@ const RaffleDetail = () => {
                   <p className="text-sm text-muted-foreground mb-5">Escolha como deseja pagar</p>
                   <div className="space-y-2 mb-6">
                     {paymentMethods.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setPaymentMethod(m.id)}
+                      <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                         className={`w-full flex items-center gap-4 rounded-xl p-4 transition-all border ${
-                          paymentMethod === m.id
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-secondary/50 hover:border-primary/30"
-                        }`}
-                      >
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          paymentMethod === m.id ? "bg-primary/20" : "bg-secondary"
+                          paymentMethod === m.id ? "border-primary bg-primary/10" : "border-border bg-secondary/50 hover:border-primary/30"
                         }`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentMethod === m.id ? "bg-primary/20" : "bg-secondary"}`}>
                           <m.icon className={`h-5 w-5 ${paymentMethod === m.id ? "text-primary" : "text-muted-foreground"}`} />
                         </div>
                         <div className="text-left">
@@ -381,11 +370,8 @@ const RaffleDetail = () => {
 
               {checkoutStep === 3 && (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center py-8">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
-                    transition={{ duration: 0.6 }}
-                    className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 mb-4"
-                  >
+                  <motion.div animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }} transition={{ duration: 0.6 }}
+                    className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 mb-4">
                     <Check className="h-10 w-10 text-primary" />
                   </motion.div>
                   <h3 className="font-display text-2xl font-bold text-foreground mb-2">Compra Confirmada!</h3>

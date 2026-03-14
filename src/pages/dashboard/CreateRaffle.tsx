@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Upload, Calendar, Ticket, Info } from "lucide-react";
+import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,10 @@ export default function CreateRaffle() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -28,6 +32,42 @@ export default function CreateRaffle() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um ficheiro de imagem válido");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+    setUploading(true);
+    const ext = imageFile.name.split(".").pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("raffle-images").upload(path, imageFile);
+    setUploading(false);
+    if (error) {
+      toast.error("Erro ao enviar imagem: " + error.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from("raffle-images").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     if (!form.title || !form.prize_title || !form.ticket_price || !form.total_tickets) {
@@ -35,6 +75,12 @@ export default function CreateRaffle() {
       return;
     }
     setSaving(true);
+
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      imageUrl = await uploadImage();
+    }
+
     const { error } = await supabase.from("raffles").insert({
       business_user_id: user.id,
       title: form.title,
@@ -45,6 +91,7 @@ export default function CreateRaffle() {
       total_tickets: Number(form.total_tickets) || 100,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
+      image_url: imageUrl,
       status: "draft",
     });
     setSaving(false);
@@ -99,13 +146,30 @@ export default function CreateRaffle() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">Imagem do Prémio</label>
-              <div className="flex h-32 w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/20 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary/40">
-                <div className="text-center">
-                  <Upload className="mx-auto h-6 w-6 mb-2" />
-                  <p className="text-xs">Arraste ou clique para enviar</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG até 5MB</p>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+              {imagePreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover" />
+                  <button onClick={removeImage}
+                    className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2">
+                    <span className="rounded-full bg-primary/90 px-3 py-1 text-xs font-medium text-primary-foreground flex items-center gap-1">
+                      <Image className="h-3 w-3" /> {imageFile?.name}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="flex h-32 w-full items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/20 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary/40">
+                  <div className="text-center">
+                    <Upload className="mx-auto h-6 w-6 mb-2" />
+                    <p className="text-xs">Arraste ou clique para enviar</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG até 5MB</p>
+                  </div>
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -163,9 +227,9 @@ export default function CreateRaffle() {
           className="rounded-lg px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
           Cancelar
         </button>
-        <Button onClick={handleSubmit} disabled={saving} className="gap-2 glow-primary">
-          {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <Ticket className="h-4 w-4" />}
-          Criar Sorteio
+        <Button onClick={handleSubmit} disabled={saving || uploading} className="gap-2 glow-primary">
+          {saving || uploading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <Ticket className="h-4 w-4" />}
+          {uploading ? "A enviar imagem..." : saving ? "A criar..." : "Criar Sorteio"}
         </Button>
       </div>
     </div>

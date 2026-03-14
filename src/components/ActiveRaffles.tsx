@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Clock, Users, Ticket } from "lucide-react";
+import { Clock, Users, Ticket, Flame, Sparkles, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import TiltCard from "@/components/TiltCard";
 import prizePhone from "@/assets/prize-phone.jpg";
@@ -8,10 +8,10 @@ import prizeGaming from "@/assets/prize-gaming.jpg";
 import heroPrize from "@/assets/hero-prize.jpg";
 
 const raffles = [
-  { id: 1, title: "Porsche 911 GT3", image: heroPrize, price: "1.890 MZN", sold: 87, total: 1000, participants: 847, endsIn: "2d 14h", tag: "🔥 Quase esgotado", tagColor: "bg-destructive/20 text-destructive" },
-  { id: 2, title: "iPhone 16 Pro Max", image: prizePhone, price: "590 MZN", sold: 62, total: 500, participants: 312, endsIn: "5d 8h", tag: "⚡ Popular", tagColor: "bg-accent/20 text-accent" },
-  { id: 3, title: "Villa em Bali — 7 Noites", image: prizeVilla, price: "1.250 MZN", sold: 45, total: 800, participants: 360, endsIn: "8d 2h", tag: "🌴 Novo", tagColor: "bg-primary/20 text-primary" },
-  { id: 4, title: "Setup Gamer Completo", image: prizeGaming, price: "310 MZN", sold: 91, total: 300, participants: 273, endsIn: "12h 30m", tag: "🔥 Últimas vagas", tagColor: "bg-destructive/20 text-destructive" },
+  { id: 1, title: "Porsche 911 GT3", image: heroPrize, price: "1.890 MZN", sold: 87, total: 1000, participants: 847, endsIn: "2d 14h", tag: "Últimas vagas", tagIcon: Flame, tagColor: "bg-destructive/20 text-destructive" },
+  { id: 2, title: "iPhone 16 Pro Max", image: prizePhone, price: "590 MZN", sold: 62, total: 500, participants: 312, endsIn: "5d 8h", tag: "Mais escolhido", tagIcon: Star, tagColor: "bg-accent/20 text-accent" },
+  { id: 3, title: "Villa em Bali — 7 Noites", image: prizeVilla, price: "1.250 MZN", sold: 45, total: 800, participants: 360, endsIn: "8d 2h", tag: "Acabou de abrir", tagIcon: Sparkles, tagColor: "bg-primary/20 text-primary" },
+  { id: 4, title: "Setup Gamer Completo", image: prizeGaming, price: "310 MZN", sold: 91, total: 300, participants: 273, endsIn: "12h 30m", tag: "A esgotar", tagIcon: Flame, tagColor: "bg-destructive/20 text-destructive" },
 ];
 
 const ActiveRaffles = () => {
@@ -19,10 +19,13 @@ const ActiveRaffles = () => {
     <section id="sorteios" className="relative py-24">
       <div className="absolute left-0 top-0 h-64 w-64 rounded-full bg-primary/5 blur-[100px]" />
       <div className="container mx-auto px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-14 text-center">
-          <span className="mb-3 inline-block text-sm font-semibold uppercase tracking-widest text-primary">Sorteios Ativos</span>
-          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">Escolha o seu prémio</h2>
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-4 text-center">
+          <span className="mb-3 inline-block text-sm font-semibold uppercase tracking-widest text-primary">A decorrer agora</span>
+          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">Escolha o prémio dos seus sonhos</h2>
         </motion.div>
+        <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
+          Cada bilhete é uma oportunidade real. Sem truques, sem letras pequenas — apenas transparência total.
+        </motion.p>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {raffles.map((r, i) => (
@@ -32,14 +35,17 @@ const ActiveRaffles = () => {
                 <div className="relative h-48 overflow-hidden rounded-t-2xl">
                   <img src={r.image} alt={r.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
-                  <span className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${r.tagColor}`}>{r.tag}</span>
+                  <span className={`absolute left-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${r.tagColor}`}>
+                    <r.tagIcon className="h-3 w-3" />
+                    {r.tag}
+                  </span>
                 </div>
 
                 <div className="p-5">
                   <h3 className="mb-3 font-display text-lg font-bold text-foreground">{r.title}</h3>
                   <div className="mb-3">
                     <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                      <span>{r.sold}% vendido</span>
+                      <span>{r.sold}% preenchido</span>
                       <span>{r.total} bilhetes</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-secondary">
@@ -48,12 +54,12 @@ const ActiveRaffles = () => {
                     </div>
                   </div>
                   <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{r.participants}</span>
+                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{r.participants} participantes</span>
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{r.endsIn}</span>
                   </div>
                   <Link to="/marketplace"
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
-                    <Ticket className="h-4 w-4" />{r.price}
+                    <Ticket className="h-4 w-4" />Garantir por {r.price}
                   </Link>
                 </div>
               </TiltCard>

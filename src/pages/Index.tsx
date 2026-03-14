@@ -4,6 +4,7 @@ import StatsBar from "@/components/StatsBar";
 import ActiveRaffles from "@/components/ActiveRaffles";
 import FeaturesGrid from "@/components/FeaturesGrid";
 import WinnersSection from "@/components/WinnersSection";
+import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -15,6 +16,7 @@ const Index = () => {
       <ActiveRaffles />
       <FeaturesGrid />
       <WinnersSection />
+      <CTASection />
       <Footer />
     </div>
   );

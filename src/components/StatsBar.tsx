@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 
 const stats = [
-  { value: "750M+ MZN", label: "Em prémios distribuídos" },
-  { value: "52.847", label: "Vencedores felizes" },
-  { value: "100%", label: "Resultados verificáveis" },
-  { value: "4.9/5", label: "Avaliação dos utilizadores" },
+  { value: "750M+", suffix: " MZN", label: "Já entregues em prémios" },
+  { value: "52.847", suffix: "", label: "Pessoas que já ganharam" },
+  { value: "100%", suffix: "", label: "Dos resultados são verificáveis" },
+  { value: "4.9/5", suffix: "", label: "Nota dos participantes" },
 ];
 
 const StatsBar = () => (
@@ -19,7 +19,9 @@ const StatsBar = () => (
           transition={{ delay: i * 0.1 }}
           className="text-center"
         >
-          <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">{s.value}</div>
+          <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
+            {s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span>
+          </div>
           <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
         </motion.div>
       ))}

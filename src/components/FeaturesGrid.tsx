@@ -4,38 +4,38 @@ import { Shield, Zap, Gift, Users, TrendingUp, Lock } from "lucide-react";
 const features = [
   {
     icon: Shield,
-    title: "Blockchain Verificável",
-    desc: "Cada sorteio gera um hash público. Verifique matematicamente que ninguém manipulou o resultado.",
+    title: "Transparência que se prova",
+    desc: "Cada sorteio gera um registo público e imutável. Qualquer pessoa pode verificar que o resultado é justo — sem depender da nossa palavra.",
     span: "md:col-span-2",
   },
   {
     icon: Zap,
-    title: "Checkout em 2 Segundos",
-    desc: "Pix, Apple Pay e Google Pay. Compre sem criar conta.",
+    title: "Participe em segundos",
+    desc: "M-Pesa, e-Mola ou cartão. Sem burocracia, sem formulários longos.",
     span: "",
   },
   {
     icon: Gift,
-    title: "Escolha o Prémio",
-    desc: "Ganhou? Escolha entre centenas de prémios do seu nível.",
+    title: "Prémios que você escolhe",
+    desc: "Ganhou? Escolha entre dezenas de prémios disponíveis no seu nível.",
     span: "",
   },
   {
     icon: Users,
-    title: "Bolões com Amigos",
-    desc: "Crie grupos e dividam o custo dos bilhetes automaticamente.",
+    title: "Junte os amigos",
+    desc: "Crie um grupo, dividam o custo dos bilhetes e multipliquem as chances juntos.",
     span: "",
   },
   {
     icon: TrendingUp,
-    title: "Luck Points",
-    desc: "Cada compra gera pontos. Troque por bilhetes grátis ou prémios instantâneos.",
+    title: "Cada participação vale mais",
+    desc: "Acumule pontos a cada bilhete. Troque por bilhetes grátis ou prémios exclusivos.",
     span: "",
   },
   {
     icon: Lock,
-    title: "Transparência Total",
-    desc: "Prova de entrega em vídeo, sorteios ao vivo e auditoria pública.",
+    title: "Nada a esconder",
+    desc: "Sorteios transmitidos ao vivo, prova de entrega em vídeo e auditoria pública de cada resultado.",
     span: "md:col-span-2",
   },
 ];
@@ -49,15 +49,19 @@ const FeaturesGrid = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-14 text-center"
+          className="mb-4 text-center"
         >
           <span className="mb-3 inline-block text-sm font-semibold uppercase tracking-widest text-primary">
-            Por que somos diferentes
+            Construído para confiar
           </span>
           <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">
-            Inovação em cada detalhe
+            Tudo o que nos torna diferentes
           </h2>
         </motion.div>
+        <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
+          Não pedimos que acredite. Pedimos que verifique.
+        </motion.p>
 
         <div className="grid gap-4 md:grid-cols-4">
           {features.map((f, i) => (

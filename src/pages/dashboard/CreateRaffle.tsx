@@ -107,7 +107,7 @@ export default function CreateRaffle() {
     navigate("/dashboard/raffles");
   };
 
-  const estimatedRevenue = (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
+  const estimatedRevenue = form.raffle_type === "free" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

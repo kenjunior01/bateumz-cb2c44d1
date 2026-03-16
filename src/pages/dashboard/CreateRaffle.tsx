@@ -89,13 +89,15 @@ export default function CreateRaffle() {
       description: form.description || null,
       prize_title: form.prize_title,
       prize_value: Number(form.prize_value) || 0,
-      ticket_price: Number(form.ticket_price) || 0,
+      ticket_price: form.raffle_type === "free" ? 0 : Number(form.ticket_price) || 0,
       total_tickets: Number(form.total_tickets) || 100,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       image_url: imageUrl,
       status: "draft",
-    });
+      raffle_type: form.raffle_type,
+      points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
+    } as any);
     setSaving(false);
     if (error) {
       toast.error("Erro ao criar sorteio: " + error.message);

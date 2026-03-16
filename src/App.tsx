@@ -24,6 +24,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
+import Install from "./pages/Install.tsx";
+import Referral from "./pages/Referral.tsx";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/raffle/:slug" element={<RaffleDetail />} />
             <Route path="/raffle/:slug/live" element={<LiveDraw />} />
+            <Route path="/install" element={<Install />} />
+            <Route path="/referral" element={<Referral />} />
             <Route
               path="/my-points"
               element={

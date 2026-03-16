@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Mail, Lock, User, Building2, ArrowLeft } from "lucide-react";
+import { Trophy, Mail, Lock, User, Building2, ArrowLeft, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref") || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +38,21 @@ export default function Register() {
     if (error) {
       setError(error.message);
     } else {
+      // Process referral if ref code exists
+      if (refCode) {
+        try {
+          const { data: referrerProfile } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("referral_code", refCode)
+            .single();
+          if (referrerProfile) {
+            // We'll process the referral after email confirmation via a trigger
+            // Store ref code in localStorage for post-confirmation processing
+            localStorage.setItem("sortex_ref", refCode);
+          }
+        } catch {}
+      }
       setSuccess(true);
     }
   };
@@ -166,6 +183,13 @@ export default function Register() {
             </div>
 
             {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
+
+            {refCode && (
+              <div className="flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
+                <Gift className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-xs text-foreground">Convite de amigo! Ambos ganham <span className="font-bold text-primary">50 pontos</span> ao registar</p>
+              </div>
+            )}
 
             <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} type="submit" disabled={loading}
               className="w-full h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50">

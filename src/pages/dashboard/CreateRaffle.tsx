@@ -26,6 +26,8 @@ export default function CreateRaffle() {
     total_tickets: "",
     start_date: "",
     end_date: "",
+    raffle_type: "paid" as "paid" | "free" | "points",
+    points_cost: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -87,13 +89,15 @@ export default function CreateRaffle() {
       description: form.description || null,
       prize_title: form.prize_title,
       prize_value: Number(form.prize_value) || 0,
-      ticket_price: Number(form.ticket_price) || 0,
+      ticket_price: form.raffle_type === "free" ? 0 : Number(form.ticket_price) || 0,
       total_tickets: Number(form.total_tickets) || 100,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       image_url: imageUrl,
       status: "draft",
-    });
+      raffle_type: form.raffle_type,
+      points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
+    } as any);
     setSaving(false);
     if (error) {
       toast.error("Erro ao criar sorteio: " + error.message);
@@ -103,7 +107,7 @@ export default function CreateRaffle() {
     navigate("/dashboard/raffles");
   };
 
-  const estimatedRevenue = (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
+  const estimatedRevenue = form.raffle_type === "free" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -175,18 +179,46 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <Card className="glass border-glass-border">
+          <CardHeader><CardTitle className="text-lg">Tipo de Sorteio</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                { id: "paid" as const, label: "Pago (MZN)", desc: "Bilhetes vendidos por dinheiro", icon: "💰" },
+                { id: "free" as const, label: "Gratuito", desc: "Sorteio grátis para atrair público", icon: "🎁" },
+                { id: "points" as const, label: "Por Pontos", desc: "Participação com pontos acumulados", icon: "⭐" },
+              ]).map((t) => (
+                <button key={t.id} onClick={() => setForm({ ...form, raffle_type: t.id })}
+                  className={`rounded-xl p-4 text-left border transition-all ${
+                    form.raffle_type === t.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:border-primary/30"
+                  }`}>
+                  <span className="text-2xl">{t.icon}</span>
+                  <p className="text-sm font-semibold text-foreground mt-2">{t.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
-                  <Ticket className="h-3.5 w-3.5" /> Preço por Bilhete (MZN) *
-                </label>
-                <input name="ticket_price" type="number" value={form.ticket_price} onChange={handleChange} placeholder="500"
-                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
+              {form.raffle_type !== "free" && (
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                    <Ticket className="h-3.5 w-3.5" /> {form.raffle_type === "points" ? "Custo em Pontos *" : "Preço por Bilhete (MZN) *"}
+                  </label>
+                  <input name={form.raffle_type === "points" ? "points_cost" : "ticket_price"} type="number"
+                    value={form.raffle_type === "points" ? form.points_cost : form.ticket_price}
+                    onChange={handleChange} placeholder={form.raffle_type === "points" ? "50" : "500"}
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+              )}
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                   <Ticket className="h-3.5 w-3.5" /> Total de Bilhetes *

@@ -26,6 +26,8 @@ import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
+import Community from "./pages/Community.tsx";
+import WhiteLabelConfig from "./pages/dashboard/WhiteLabelConfig.tsx";
 
 const queryClient = new QueryClient();
 

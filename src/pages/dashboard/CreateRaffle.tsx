@@ -29,6 +29,8 @@ export default function CreateRaffle() {
     end_date: "",
     raffle_type: "paid" as "paid" | "free" | "points",
     points_cost: "",
+    province: "",
+    city: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

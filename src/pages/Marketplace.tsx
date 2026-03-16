@@ -140,8 +140,14 @@ const Marketplace = () => {
                           </div>
                         )}
                         <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                          {formatMZN(raffle.prize_value)}
+                          {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : formatMZN(raffle.prize_value)}
                         </Badge>
+                        {raffle.province && (
+                          <Badge variant="outline" className="absolute bottom-3 left-3 glass text-foreground border-border text-[10px]">
+                            <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                            {PROVINCES.find(p => p.value === raffle.province)?.label || raffle.province}
+                          </Badge>
+                        )}
                         {raffle.end_date && (
                           <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
                             <Clock className="h-3 w-3 mr-1" />

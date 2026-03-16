@@ -208,14 +208,17 @@ export default function CreateRaffle() {
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
-                  <Ticket className="h-3.5 w-3.5" /> Preço por Bilhete (MZN) *
-                </label>
-                <input name="ticket_price" type="number" value={form.ticket_price} onChange={handleChange} placeholder="500"
-                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
-              <div>
+              {form.raffle_type !== "free" && (
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                    <Ticket className="h-3.5 w-3.5" /> {form.raffle_type === "points" ? "Custo em Pontos *" : "Preço por Bilhete (MZN) *"}
+                  </label>
+                  <input name={form.raffle_type === "points" ? "points_cost" : "ticket_price"} type="number"
+                    value={form.raffle_type === "points" ? form.points_cost : form.ticket_price}
+                    onChange={handleChange} placeholder={form.raffle_type === "points" ? "50" : "500"}
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+              )}
                 <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                   <Ticket className="h-3.5 w-3.5" /> Total de Bilhetes *
                 </label>

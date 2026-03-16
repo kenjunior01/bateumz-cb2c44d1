@@ -9,8 +9,8 @@ const Navbar = () => {
   const { user, role, signOut } = useAuth();
   const links = [
     { label: "Sorteios", href: "/marketplace" },
+    { label: "Comunidade", href: "/community" },
     { label: "Convida & Ganha", href: "/referral" },
-    { label: "Vencedores", href: "#vencedores" },
   ];
 
   return (

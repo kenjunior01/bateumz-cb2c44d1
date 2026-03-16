@@ -8,6 +8,7 @@ import {
   Trophy,
   Bell,
   LogOut,
+  Palette,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,6 +33,7 @@ const mainItems = [
   { title: "Analíticas", url: "/dashboard/analytics", icon: BarChart3 },
   { title: "Participantes", url: "/dashboard/participants", icon: Users },
   { title: "Prémios", url: "/dashboard/prizes", icon: Gift },
+  { title: "White Label", url: "/dashboard/white-label", icon: Palette },
 ];
 
 const secondaryItems = [

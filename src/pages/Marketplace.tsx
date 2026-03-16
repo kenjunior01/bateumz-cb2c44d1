@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Ticket, Clock, Users, ArrowRight } from "lucide-react";
+import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { PROVINCES } from "@/lib/provinces";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,10 @@ interface Raffle {
   end_date: string | null;
   image_url: string | null;
   status: string;
+  raffle_type: string;
+  points_cost: number;
+  province: string | null;
+  city: string | null;
 }
 
 const Marketplace = () => {
@@ -31,6 +36,8 @@ const Marketplace = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"newest" | "ending" | "popular">("newest");
+  const [typeFilter, setTypeFilter] = useState<"all" | "paid" | "free" | "points">("all");
+  const [provinceFilter, setProvinceFilter] = useState("");
 
   useEffect(() => {
     const fetchRaffles = async () => {
@@ -46,7 +53,12 @@ const Marketplace = () => {
   }, []);
 
   const filtered = raffles
-    .filter((r) => r.title.toLowerCase().includes(search.toLowerCase()) || r.prize_title.toLowerCase().includes(search.toLowerCase()))
+    .filter((r) => {
+      if (!r.title.toLowerCase().includes(search.toLowerCase()) && !r.prize_title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (typeFilter !== "all" && r.raffle_type !== typeFilter) return false;
+      if (provinceFilter && r.province !== provinceFilter) return false;
+      return true;
+    })
     .sort((a, b) => {
       if (sortBy === "ending") return (a.end_date || "z").localeCompare(b.end_date || "z");
       if (sortBy === "popular") return b.sold_tickets - a.sold_tickets;
@@ -74,17 +86,31 @@ const Marketplace = () => {
           <p className="text-muted-foreground text-lg">Descubra sorteios incríveis e concorra a prémios de luxo.</p>
         </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar sorteios..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border" />
+        <div className="flex flex-col gap-3 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Pesquisar sorteios..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border" />
+            </div>
+            <div className="flex gap-2">
+              {(["newest", "ending", "popular"] as const).map((s) => (
+                <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
+                  {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {(["newest", "ending", "popular"] as const).map((s) => (
-              <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
-                {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
+          <div className="flex flex-wrap gap-2">
+            {(["all", "paid", "free", "points"] as const).map((t) => (
+              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
+                {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
             ))}
+            <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)}
+              className="h-8 rounded-md border border-border bg-secondary/50 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+              <option value="">📍 Todas Províncias</option>
+              {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
           </div>
         </div>
 
@@ -114,8 +140,14 @@ const Marketplace = () => {
                           </div>
                         )}
                         <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                          {formatMZN(raffle.prize_value)}
+                          {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : formatMZN(raffle.prize_value)}
                         </Badge>
+                        {raffle.province && (
+                          <Badge variant="outline" className="absolute bottom-3 left-3 glass text-foreground border-border text-[10px]">
+                            <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                            {PROVINCES.find(p => p.value === raffle.province)?.label || raffle.province}
+                          </Badge>
+                        )}
                         {raffle.end_date && (
                           <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
                             <Clock className="h-3 w-3 mr-1" />
@@ -129,7 +161,9 @@ const Marketplace = () => {
                         <Progress value={pct} className="h-2 mb-2" />
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
-                          <span className="font-semibold text-foreground">{formatMZN(raffle.ticket_price)}/bilhete</span>
+                          <span className="font-semibold text-foreground">
+                            {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : `${formatMZN(raffle.ticket_price)}/bilhete`}
+                          </span>
                         </div>
                         <div className="mt-4 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                           Participar <ArrowRight className="h-4 w-4" />

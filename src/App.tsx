@@ -26,6 +26,8 @@ import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
+import Community from "./pages/Community.tsx";
+import WhiteLabelConfig from "./pages/dashboard/WhiteLabelConfig.tsx";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,7 @@ const App = () => (
             <Route path="/raffle/:slug/live" element={<LiveDraw />} />
             <Route path="/install" element={<Install />} />
             <Route path="/referral" element={<Referral />} />
+            <Route path="/community" element={<Community />} />
             <Route
               path="/my-points"
               element={
@@ -66,6 +69,7 @@ const App = () => (
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
+              <Route path="white-label" element={<WhiteLabelConfig />} />
             </Route>
             <Route
               path="/admin"

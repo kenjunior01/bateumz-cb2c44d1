@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X } from "lucide-react";
+import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin } from "lucide-react";
+import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export default function CreateRaffle() {
     end_date: "",
     raffle_type: "paid" as "paid" | "free" | "points",
     points_cost: "",
+    province: "",
+    city: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -97,6 +100,8 @@ export default function CreateRaffle() {
       status: "draft",
       raffle_type: form.raffle_type,
       points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
+      province: form.province || null,
+      city: form.city || null,
     } as any);
     setSaving(false);
     if (error) {
@@ -248,6 +253,36 @@ export default function CreateRaffle() {
               <div className="text-xs text-muted-foreground leading-relaxed">
                 <p>Receita estimada: <span className="font-semibold text-foreground">{formatMZN(estimatedRevenue)}</span></p>
                 <p className="mt-1">A plataforma cobra uma comissão de 5% sobre o valor total arrecadado.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Geolocalização */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <Card className="glass border-glass-border">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Localização (Opcional)</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">Restrinja o sorteio a uma província ou cidade específica de Moçambique</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Província</label>
+                <select name="province" value={form.province}
+                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "" })}
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  <option value="">🇲🇿 Todo Moçambique</option>
+                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Cidade</label>
+                <select name="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  disabled={!form.province}
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
+                  <option value="">Todas as cidades</option>
+                  {form.province && CITIES_BY_PROVINCE[form.province]?.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>
           </CardContent>

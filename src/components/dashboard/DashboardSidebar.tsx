@@ -33,6 +33,7 @@ const mainItems = [
   { title: "Analíticas", url: "/dashboard/analytics", icon: BarChart3 },
   { title: "Participantes", url: "/dashboard/participants", icon: Users },
   { title: "Prémios", url: "/dashboard/prizes", icon: Gift },
+  { title: "White Label", url: "/dashboard/white-label", icon: Palette },
 ];
 
 const secondaryItems = [

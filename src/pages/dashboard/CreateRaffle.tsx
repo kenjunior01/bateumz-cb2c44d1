@@ -259,6 +259,36 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
+      {/* Geolocalização */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <Card className="glass border-glass-border">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Localização (Opcional)</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">Restrinja o sorteio a uma província ou cidade específica de Moçambique</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Província</label>
+                <select name="province" value={form.province}
+                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "" })}
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  <option value="">🇲🇿 Todo Moçambique</option>
+                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Cidade</label>
+                <select name="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  disabled={!form.province}
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
+                  <option value="">Todas as cidades</option>
+                  {form.province && CITIES_BY_PROVINCE[form.province]?.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       <div className="flex justify-end gap-3 pb-6">
         <button onClick={() => navigate("/dashboard/raffles")}
           className="rounded-lg px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">

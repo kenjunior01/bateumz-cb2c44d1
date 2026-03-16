@@ -25,6 +25,10 @@ interface Raffle {
   end_date: string | null;
   image_url: string | null;
   status: string;
+  raffle_type: string;
+  points_cost: number;
+  province: string | null;
+  city: string | null;
 }
 
 const Marketplace = () => {

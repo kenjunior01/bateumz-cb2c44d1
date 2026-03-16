@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X } from "lucide-react";
+import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin } from "lucide-react";
+import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

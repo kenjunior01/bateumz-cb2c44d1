@@ -38,6 +38,21 @@ export default function Register() {
     if (error) {
       setError(error.message);
     } else {
+      // Process referral if ref code exists
+      if (refCode) {
+        try {
+          const { data: referrerProfile } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("referral_code", refCode)
+            .single();
+          if (referrerProfile) {
+            // We'll process the referral after email confirmation via a trigger
+            // Store ref code in localStorage for post-confirmation processing
+            localStorage.setItem("sortex_ref", refCode);
+          }
+        } catch {}
+      }
       setSuccess(true);
     }
   };

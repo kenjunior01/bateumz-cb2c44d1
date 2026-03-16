@@ -47,6 +47,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq("user_id", userId)
       .single();
     setRole(roleData?.role ?? "user");
+
+    // Process pending referral
+    const refCode = localStorage.getItem("sortex_ref");
+    if (refCode) {
+      localStorage.removeItem("sortex_ref");
+      try {
+        const { data: referrer } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("referral_code", refCode)
+          .single();
+        if (referrer && referrer.user_id !== userId) {
+          await supabase.from("referrals").insert({
+            referrer_id: referrer.user_id,
+            referred_id: userId,
+            referral_code: refCode,
+            points_awarded: 50,
+          } as any);
+          // Award points to both
+          await Promise.all([
+            supabase.from("luck_points").insert({
+              user_id: referrer.user_id, points: 50, action: "referral",
+              description: "Amigo convidado registou-se na plataforma",
+            }),
+            supabase.from("luck_points").insert({
+              user_id: userId, points: 50, action: "referral_bonus",
+              description: "Bónus de registo por convite de amigo",
+            }),
+          ]);
+        }
+      } catch {}
+    }
   };
 
   useEffect(() => {

@@ -24,6 +24,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
+import Install from "./pages/Install.tsx";
+import Referral from "./pages/Referral.tsx";
 
 const queryClient = new QueryClient();
 

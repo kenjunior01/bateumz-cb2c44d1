@@ -219,6 +219,7 @@ export default function CreateRaffle() {
                     className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                 </div>
               )}
+              <div>
                 <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                   <Ticket className="h-3.5 w-3.5" /> Total de Bilhetes *
                 </label>

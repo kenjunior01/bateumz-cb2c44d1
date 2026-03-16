@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Ticket, Clock, Users, ArrowRight } from "lucide-react";
+import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { PROVINCES } from "@/lib/provinces";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";

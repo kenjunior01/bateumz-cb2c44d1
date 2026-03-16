@@ -44,9 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .single();
-    setRole(roleData?.role ?? "user");
+      .eq("user_id", userId);
+    // Prioritize admin > business > user
+    const roles = roleData?.map((r: any) => r.role) || [];
+    if (roles.includes("admin")) setRole("admin");
+    else if (roles.includes("business")) setRole("business");
+    else setRole(roles[0] ?? "user");
 
     // Process pending referral
     const refCode = localStorage.getItem("sortex_ref");

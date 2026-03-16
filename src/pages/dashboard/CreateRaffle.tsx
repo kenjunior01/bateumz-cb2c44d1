@@ -100,6 +100,8 @@ export default function CreateRaffle() {
       status: "draft",
       raffle_type: form.raffle_type,
       points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
+      province: form.province || null,
+      city: form.city || null,
     } as any);
     setSaving(false);
     if (error) {

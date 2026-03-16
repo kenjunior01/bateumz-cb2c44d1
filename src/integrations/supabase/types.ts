@@ -171,6 +171,7 @@ export type Database = {
           display_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
         }
@@ -181,6 +182,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -191,6 +193,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -204,8 +207,10 @@ export type Database = {
           end_date: string | null
           id: string
           image_url: string | null
+          points_cost: number
           prize_title: string
           prize_value: number
+          raffle_type: string
           slug: string | null
           sold_tickets: number
           start_date: string | null
@@ -222,8 +227,10 @@ export type Database = {
           end_date?: string | null
           id?: string
           image_url?: string | null
+          points_cost?: number
           prize_title: string
           prize_value?: number
+          raffle_type?: string
           slug?: string | null
           sold_tickets?: number
           start_date?: string | null
@@ -240,8 +247,10 @@ export type Database = {
           end_date?: string | null
           id?: string
           image_url?: string | null
+          points_cost?: number
           prize_title?: string
           prize_value?: number
+          raffle_type?: string
           slug?: string | null
           sold_tickets?: number
           start_date?: string | null
@@ -287,6 +296,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          points_awarded: number
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       rewards: {
         Row: {

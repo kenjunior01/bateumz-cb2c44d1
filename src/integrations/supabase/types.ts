@@ -87,6 +87,54 @@ export type Database = {
           },
         ]
       }
+      community_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          likes_count: number
+          message_type: string
+          parent_id: string | null
+          raffle_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          message_type?: string
+          parent_id?: string | null
+          raffle_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          message_type?: string
+          parent_id?: string | null
+          raffle_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_messages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "community_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_messages_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       luck_points: {
         Row: {
           action: string
@@ -121,6 +169,35 @@ export type Database = {
             columns: ["raffle_id"]
             isOneToOne: false
             referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_likes: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_likes_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "community_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -202,6 +279,7 @@ export type Database = {
       raffles: {
         Row: {
           business_user_id: string
+          city: string | null
           created_at: string
           description: string | null
           end_date: string | null
@@ -210,6 +288,7 @@ export type Database = {
           points_cost: number
           prize_title: string
           prize_value: number
+          province: string | null
           raffle_type: string
           slug: string | null
           sold_tickets: number
@@ -222,6 +301,7 @@ export type Database = {
         }
         Insert: {
           business_user_id: string
+          city?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
@@ -230,6 +310,7 @@ export type Database = {
           points_cost?: number
           prize_title: string
           prize_value?: number
+          province?: string | null
           raffle_type?: string
           slug?: string | null
           sold_tickets?: number
@@ -242,6 +323,7 @@ export type Database = {
         }
         Update: {
           business_user_id?: string
+          city?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
@@ -250,6 +332,7 @@ export type Database = {
           points_cost?: number
           prize_title?: string
           prize_value?: number
+          province?: string | null
           raffle_type?: string
           slug?: string | null
           sold_tickets?: number
@@ -375,6 +458,48 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      white_label_configs: {
+        Row: {
+          brand_name: string
+          business_user_id: string
+          created_at: string
+          custom_domain: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+        }
+        Insert: {
+          brand_name: string
+          business_user_id: string
+          created_at?: string
+          custom_domain?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_name?: string
+          business_user_id?: string
+          created_at?: string
+          custom_domain?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
         }
         Relationships: []
       }

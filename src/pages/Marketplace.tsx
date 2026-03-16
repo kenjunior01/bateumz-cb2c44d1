@@ -36,6 +36,8 @@ const Marketplace = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"newest" | "ending" | "popular">("newest");
+  const [typeFilter, setTypeFilter] = useState<"all" | "paid" | "free" | "points">("all");
+  const [provinceFilter, setProvinceFilter] = useState("");
 
   useEffect(() => {
     const fetchRaffles = async () => {

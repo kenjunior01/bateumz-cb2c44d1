@@ -69,6 +69,7 @@ const App = () => (
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
+              <Route path="white-label" element={<WhiteLabelConfig />} />
             </Route>
             <Route
               path="/admin"

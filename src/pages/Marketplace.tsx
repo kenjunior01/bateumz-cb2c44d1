@@ -161,7 +161,9 @@ const Marketplace = () => {
                         <Progress value={pct} className="h-2 mb-2" />
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
-                          <span className="font-semibold text-foreground">{formatMZN(raffle.ticket_price)}/bilhete</span>
+                          <span className="font-semibold text-foreground">
+                            {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : `${formatMZN(raffle.ticket_price)}/bilhete`}
+                          </span>
                         </div>
                         <div className="mt-4 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                           Participar <ArrowRight className="h-4 w-4" />

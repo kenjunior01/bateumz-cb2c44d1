@@ -86,17 +86,31 @@ const Marketplace = () => {
           <p className="text-muted-foreground text-lg">Descubra sorteios incríveis e concorra a prémios de luxo.</p>
         </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar sorteios..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border" />
+        <div className="flex flex-col gap-3 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Pesquisar sorteios..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border" />
+            </div>
+            <div className="flex gap-2">
+              {(["newest", "ending", "popular"] as const).map((s) => (
+                <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
+                  {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {(["newest", "ending", "popular"] as const).map((s) => (
-              <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
-                {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
+          <div className="flex flex-wrap gap-2">
+            {(["all", "paid", "free", "points"] as const).map((t) => (
+              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
+                {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
             ))}
+            <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)}
+              className="h-8 rounded-md border border-border bg-secondary/50 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+              <option value="">📍 Todas Províncias</option>
+              {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
           </div>
         </div>
 

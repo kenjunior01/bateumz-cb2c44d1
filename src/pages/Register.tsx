@@ -184,6 +184,13 @@ export default function Register() {
 
             {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
 
+            {refCode && (
+              <div className="flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
+                <Gift className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-xs text-foreground">Convite de amigo! Ambos ganham <span className="font-bold text-primary">50 pontos</span> ao registar</p>
+              </div>
+            )}
+
             <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} type="submit" disabled={loading}
               className="w-full h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50">
               {loading ? "A criar conta..." : `Criar Conta ${accountType === "business" ? "Empresarial" : "de Participante"}`}

@@ -53,7 +53,12 @@ const Marketplace = () => {
   }, []);
 
   const filtered = raffles
-    .filter((r) => r.title.toLowerCase().includes(search.toLowerCase()) || r.prize_title.toLowerCase().includes(search.toLowerCase()))
+    .filter((r) => {
+      if (!r.title.toLowerCase().includes(search.toLowerCase()) && !r.prize_title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (typeFilter !== "all" && r.raffle_type !== typeFilter) return false;
+      if (provinceFilter && r.province !== provinceFilter) return false;
+      return true;
+    })
     .sort((a, b) => {
       if (sortBy === "ending") return (a.end_date || "z").localeCompare(b.end_date || "z");
       if (sortBy === "popular") return b.sold_tickets - a.sold_tickets;

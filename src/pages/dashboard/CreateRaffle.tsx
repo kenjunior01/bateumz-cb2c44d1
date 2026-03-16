@@ -179,6 +179,30 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <Card className="glass border-glass-border">
+          <CardHeader><CardTitle className="text-lg">Tipo de Sorteio</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                { id: "paid" as const, label: "Pago (MZN)", desc: "Bilhetes vendidos por dinheiro", icon: "💰" },
+                { id: "free" as const, label: "Gratuito", desc: "Sorteio grátis para atrair público", icon: "🎁" },
+                { id: "points" as const, label: "Por Pontos", desc: "Participação com pontos acumulados", icon: "⭐" },
+              ]).map((t) => (
+                <button key={t.id} onClick={() => setForm({ ...form, raffle_type: t.id })}
+                  className={`rounded-xl p-4 text-left border transition-all ${
+                    form.raffle_type === t.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:border-primary/30"
+                  }`}>
+                  <span className="text-2xl">{t.icon}</span>
+                  <p className="text-sm font-semibold text-foreground mt-2">{t.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>

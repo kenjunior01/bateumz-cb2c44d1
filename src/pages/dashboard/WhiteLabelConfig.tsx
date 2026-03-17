@@ -17,6 +17,8 @@ export default function WhiteLabelConfig() {
     secondary_color: "#eab308",
     custom_domain: "",
     description: "",
+    mpesa_number: "",
+    emola_number: "",
   });
   const [existingId, setExistingId] = useState<string | null>(null);
 

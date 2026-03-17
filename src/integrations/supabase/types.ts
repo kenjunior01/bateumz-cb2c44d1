@@ -278,11 +278,15 @@ export type Database = {
       }
       raffles: {
         Row: {
+          auto_draw_days: number | null
+          auto_draw_scheduled_at: string | null
           business_user_id: string
           city: string | null
           created_at: string
           description: string | null
+          draw_mode: string
           end_date: string | null
+          hide_prize_value: boolean
           id: string
           image_url: string | null
           points_cost: number
@@ -295,16 +299,21 @@ export type Database = {
           start_date: string | null
           status: string
           ticket_price: number
+          tickets_threshold: number | null
           title: string
           total_tickets: number
           updated_at: string
         }
         Insert: {
+          auto_draw_days?: number | null
+          auto_draw_scheduled_at?: string | null
           business_user_id: string
           city?: string | null
           created_at?: string
           description?: string | null
+          draw_mode?: string
           end_date?: string | null
+          hide_prize_value?: boolean
           id?: string
           image_url?: string | null
           points_cost?: number
@@ -317,16 +326,21 @@ export type Database = {
           start_date?: string | null
           status?: string
           ticket_price?: number
+          tickets_threshold?: number | null
           title: string
           total_tickets?: number
           updated_at?: string
         }
         Update: {
+          auto_draw_days?: number | null
+          auto_draw_scheduled_at?: string | null
           business_user_id?: string
           city?: string | null
           created_at?: string
           description?: string | null
+          draw_mode?: string
           end_date?: string | null
+          hide_prize_value?: boolean
           id?: string
           image_url?: string | null
           points_cost?: number
@@ -339,6 +353,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           ticket_price?: number
+          tickets_threshold?: number | null
           title?: string
           total_tickets?: number
           updated_at?: string

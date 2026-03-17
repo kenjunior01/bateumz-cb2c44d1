@@ -139,8 +139,8 @@ const Marketplace = () => {
                             <Ticket className="h-12 w-12 text-muted-foreground/20" />
                           </div>
                         )}
-                        <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                          {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : formatMZN(raffle.prize_value)}
+                <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
+                          {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : (raffle as any).hide_prize_value ? "🎁 Surpresa" : formatMZN(raffle.prize_value)}
                         </Badge>
                         {raffle.province && (
                           <Badge variant="outline" className="absolute bottom-3 left-3 glass text-foreground border-border text-[10px]">

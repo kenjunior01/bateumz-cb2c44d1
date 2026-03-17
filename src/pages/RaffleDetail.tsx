@@ -31,6 +31,18 @@ interface Raffle {
   image_url: string | null;
   status: string;
   business_user_id: string;
+  hide_prize_value?: boolean;
+  draw_mode?: string;
+  auto_draw_days?: number | null;
+  tickets_threshold?: number | null;
+  auto_draw_scheduled_at?: string | null;
+}
+
+interface WhiteLabelConfig {
+  brand_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
 }
 
 type PaymentMethod = "mpesa" | "emola" | "card";
@@ -47,6 +59,7 @@ const RaffleDetail = () => {
   const { user } = useAuth();
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
+  const [whiteLabelConfig, setWhiteLabelConfig] = useState<WhiteLabelConfig | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +84,14 @@ const RaffleDetail = () => {
 
       if (raffleRes.data) {
         setRaffle(raffleRes.data as Raffle);
-        // Fetch participants and business name
-        const [participantsRes, profileRes] = await Promise.all([
+        // Fetch participants, business name, and white label config
+        const [participantsRes, profileRes, wlRes] = await Promise.all([
           supabase.from("participants").select("ticket_number").eq("raffle_id", raffleRes.data.id),
           supabase.from("profiles").select("display_name, company_name").eq("user_id", raffleRes.data.business_user_id).single(),
+          supabase.from("white_label_configs").select("brand_name, logo_url, primary_color, secondary_color").eq("business_user_id", raffleRes.data.business_user_id).eq("is_active", true).maybeSingle(),
         ]);
         if (profileRes.data) setBusinessName(profileRes.data.company_name || profileRes.data.display_name);
+        if (wlRes.data) setWhiteLabelConfig(wlRes.data as WhiteLabelConfig);
         if (participantsRes.data) setSoldNumbers(participantsRes.data.map((p) => p.ticket_number));
       }
       setLoading(false);
@@ -120,6 +135,24 @@ const RaffleDetail = () => {
       description: `Comprou ${selectedNumbers.length} bilhete(s) - ${raffle.title}`,
       raffle_id: raffle.id,
     });
+
+    // Update sold_tickets count locally
+    const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
+    
+    // Update sold_tickets in DB
+    await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
+
+    // Check auto-draw threshold if applicable
+    if (raffle.draw_mode === "auto_sold_out") {
+      try {
+        await supabase.functions.invoke("check-ticket-threshold", {
+          body: { raffle_id: raffle.id },
+        });
+      } catch (e) {
+        console.error("Threshold check error:", e);
+      }
+    }
+
     setPurchasing(false);
     setCheckoutStep(3);
     toast.success("Bilhetes comprados com sucesso!");
@@ -127,6 +160,7 @@ const RaffleDetail = () => {
       setCheckoutStep(0);
       setSelectedNumbers([]);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
+      setRaffle((prev) => prev ? { ...prev, sold_tickets: newSoldCount } : prev);
     }, 3000);
   };
 
@@ -142,6 +176,18 @@ const RaffleDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* White-label branding banner */}
+      {whiteLabelConfig && (
+        <div className="w-full py-2 px-4 text-center text-sm font-medium" 
+          style={{ backgroundColor: whiteLabelConfig.primary_color, color: '#fff' }}>
+          <div className="container mx-auto flex items-center justify-center gap-2">
+            {whiteLabelConfig.logo_url && (
+              <img src={whiteLabelConfig.logo_url} alt={whiteLabelConfig.brand_name} className="h-5 w-5 rounded-full object-cover" />
+            )}
+            <span>Sorteio por <strong>{whiteLabelConfig.brand_name}</strong></span>
+          </div>
+        </div>
+      )}
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
@@ -163,9 +209,9 @@ const RaffleDetail = () => {
                 <button className="glass rounded-full p-2 hover:bg-card/80 transition"><Heart className="h-4 w-4 text-foreground" /></button>
               </div>
               <div className="absolute bottom-4 left-4 flex gap-2 items-center">
-                <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
-                  {formatMZN(raffle.prize_value)}
-                </Badge>
+               <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
+                   {(raffle as any).hide_prize_value ? "🎁 Valor Surpresa" : formatMZN(raffle.prize_value)}
+                 </Badge>
                 {businessName && (
                   <Badge variant="outline" className="glass text-foreground border-accent/30 bg-accent/10">
                     🏢 {businessName}
@@ -214,7 +260,37 @@ const RaffleDetail = () => {
               <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} de {raffle.total_tickets} bilhetes vendidos</p>
             </CardContent></Card>
 
-            {raffle.end_date && (
+            {/* Auto-draw countdown */}
+            {raffle.draw_mode === "auto_sold_out" && raffle.auto_draw_scheduled_at && (
+              <Card className="glass border-accent/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-5 w-5 text-accent" />
+                    <p className="font-semibold text-foreground">⚡ Sorteio Automático Agendado</p>
+                  </div>
+                  <CountdownTimer targetDate={new Date(raffle.auto_draw_scheduled_at)} />
+                  <p className="text-xs text-muted-foreground mt-3">O vencedor será selecionado automaticamente quando a contagem terminar</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {raffle.draw_mode === "auto_sold_out" && !raffle.auto_draw_scheduled_at && (
+              <Card className="glass border-primary/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <p className="font-semibold text-foreground">Sorteio Automático</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    O sorteio será realizado <strong className="text-foreground">{raffle.auto_draw_days} dia(s)</strong> após a venda de{" "}
+                    <strong className="text-foreground">{raffle.tickets_threshold || raffle.total_tickets}</strong> bilhetes.
+                    Faltam <strong className="text-accent">{(raffle.tickets_threshold || raffle.total_tickets) - raffle.sold_tickets}</strong> bilhetes.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {raffle.end_date && raffle.draw_mode !== "auto_sold_out" && (
               <Card className="glass border-primary/20"><CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="h-5 w-5 text-primary" />

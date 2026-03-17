@@ -39,6 +39,8 @@ export default function WhiteLabelConfig() {
             secondary_color: (data as any).secondary_color || "#eab308",
             custom_domain: (data as any).custom_domain || "",
             description: (data as any).description || "",
+            mpesa_number: (data as any).mpesa_number || "",
+            emola_number: (data as any).emola_number || "",
           });
         }
       });

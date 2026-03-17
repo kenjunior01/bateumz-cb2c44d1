@@ -308,6 +308,25 @@ export default function DashboardParticipants() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {receiptModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={() => setReceiptModal(null)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()} className="glass rounded-2xl p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-lg font-bold text-foreground">Comprovativo de Pagamento</h3>
+                <button onClick={() => setReceiptModal(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-border">
+                <img src={getReceiptUrl(receiptModal)} alt="Comprovativo" className="w-full max-h-96 object-contain bg-secondary" />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

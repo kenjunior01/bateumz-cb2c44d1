@@ -133,6 +133,32 @@ export default function WhiteLabelConfig() {
               <input name="custom_domain" value={form.custom_domain} onChange={handleChange} placeholder="promo.suaempresa.co.mz"
                 className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary" /> Números de Pagamento</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">Configure os números para receber pagamentos dos participantes via mobile money</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Smartphone className="h-3.5 w-3.5 text-destructive" /> Número M-Pesa
+                </label>
+                <input name="mpesa_number" value={form.mpesa_number} onChange={handleChange} placeholder="84 xxx xxxx"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Wallet className="h-3.5 w-3.5 text-accent" /> Número e-Mola
+                </label>
+                <input name="emola_number" value={form.emola_number} onChange={handleChange} placeholder="86 xxx xxxx"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            </div>
+            </div>
 
             {/* Preview */}
             <div className="rounded-xl border border-border p-4 space-y-3">

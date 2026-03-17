@@ -119,14 +119,35 @@ const RaffleDetail = () => {
     if (!user) { navigate("/login"); return; }
     if (!raffle || selectedNumbers.length === 0) return;
     setPurchasing(true);
+
+    // Upload receipt if provided
+    let receiptUrl: string | null = null;
+    if (receiptFile) {
+      setUploadingReceipt(true);
+      const filePath = `${user.id}/${raffle.id}-${Date.now()}.${receiptFile.name.split('.').pop()}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("payment-receipts")
+        .upload(filePath, receiptFile);
+      if (uploadError) {
+        toast.error("Erro ao enviar comprovativo. Tente novamente.");
+        setPurchasing(false);
+        setUploadingReceipt(false);
+        return;
+      }
+      receiptUrl = filePath;
+      setUploadingReceipt(false);
+    }
+
     const inserts = selectedNumbers.map((num) => ({
       raffle_id: raffle.id,
       user_id: user.id,
       ticket_number: num,
-      status: "active",
-      payment_status: "completed",
+      status: "active" as const,
+      payment_status: (paymentMethod === "card" ? "completed" : "pending") as string,
+      payment_method: paymentMethod,
+      receipt_url: receiptUrl,
     }));
-    const { error } = await supabase.from("participants").insert(inserts);
+    const { error } = await supabase.from("participants").insert(inserts as any);
     if (error) {
       toast.error("Erro ao comprar bilhetes. Tente novamente.");
       setPurchasing(false);
@@ -140,13 +161,9 @@ const RaffleDetail = () => {
       raffle_id: raffle.id,
     });
 
-    // Update sold_tickets count locally
     const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
-    
-    // Update sold_tickets in DB
     await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
 
-    // Check auto-draw threshold if applicable
     if (raffle.draw_mode === "auto_sold_out") {
       try {
         await supabase.functions.invoke("check-ticket-threshold", {
@@ -159,10 +176,13 @@ const RaffleDetail = () => {
 
     setPurchasing(false);
     setCheckoutStep(3);
-    toast.success("Bilhetes comprados com sucesso!");
+    toast.success(paymentMethod === "card" 
+      ? "Bilhetes comprados com sucesso!" 
+      : "Bilhetes reservados! Envie o pagamento e aguarde confirmação.");
     setTimeout(() => {
       setCheckoutStep(0);
       setSelectedNumbers([]);
+      setReceiptFile(null);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
       setRaffle((prev) => prev ? { ...prev, sold_tickets: newSoldCount } : prev);
     }, 3000);

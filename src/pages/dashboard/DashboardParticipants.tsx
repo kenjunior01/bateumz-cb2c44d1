@@ -47,6 +47,8 @@ export default function DashboardParticipants() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [receiptModal, setReceiptModal] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;

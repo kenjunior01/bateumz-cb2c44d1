@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Download, Mail, CheckCircle2, Clock, XCircle, Users, Send, X, Trophy } from "lucide-react";
+import { Search, Download, Mail, CheckCircle2, Clock, XCircle, Users, Send, X, Trophy, Eye, Image } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";

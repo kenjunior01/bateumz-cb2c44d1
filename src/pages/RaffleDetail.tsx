@@ -43,6 +43,8 @@ interface WhiteLabelConfig {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+  mpesa_number: string | null;
+  emola_number: string | null;
 }
 
 type PaymentMethod = "mpesa" | "emola" | "card";

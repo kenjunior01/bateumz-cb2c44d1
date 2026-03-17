@@ -67,11 +67,13 @@ export default function DashboardParticipants() {
         const { data: profiles } = await supabase.from("profiles").select("user_id, display_name");
         const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.display_name || "Utilizador"]));
 
-        setParticipants(parts.map((p) => ({
+        setParticipants(parts.map((p: any) => ({
           ...p,
           raffle_title: raffleMap[p.raffle_id] || "Sorteio",
           user_name: profileMap[p.user_id] || "Utilizador",
           user_email: "",
+          payment_method: p.payment_method || "mpesa",
+          receipt_url: p.receipt_url || null,
         })));
       }
       setLoading(false);

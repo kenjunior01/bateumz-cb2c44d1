@@ -162,27 +162,28 @@ export default function WhiteLabelConfig() {
         </Card>
       </motion.div>
 
-            {/* Preview */}
-            <div className="rounded-xl border border-border p-4 space-y-3">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pré-visualização</p>
-              <div className="flex items-center gap-3">
-                {form.logo_url ? (
-                  <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
-                ) : (
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold"
-                    style={{ backgroundColor: form.primary_color, color: "#fff" }}>
-                    {form.brand_name.charAt(0) || "S"}
-                  </div>
-                )}
-                <span className="font-display text-lg font-bold text-foreground">{form.brand_name || "Sua Marca"}</span>
+      {/* Preview */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <Card className="glass">
+          <CardContent className="p-6 space-y-3">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pré-visualização</p>
+            <div className="flex items-center gap-3">
+              {form.logo_url ? (
+                <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+              ) : (
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold"
+                  style={{ backgroundColor: form.primary_color, color: "#fff" }}>
+                  {form.brand_name.charAt(0) || "S"}
+                </div>
+              )}
+              <span className="font-display text-lg font-bold text-foreground">{form.brand_name || "Sua Marca"}</span>
+            </div>
+            <div className="flex gap-2">
+              <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.primary_color }}>
+                Botão Primário
               </div>
-              <div className="flex gap-2">
-                <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.primary_color }}>
-                  Botão Primário
-                </div>
-                <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.secondary_color }}>
-                  Botão Secundário
-                </div>
+              <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.secondary_color }}>
+                Botão Secundário
               </div>
             </div>
           </CardContent>

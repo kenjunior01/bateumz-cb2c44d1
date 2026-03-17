@@ -112,6 +112,23 @@ export default function DashboardParticipants() {
     URL.revokeObjectURL(url);
   };
 
+  const handleConfirmPayment = async (participantId: string) => {
+    setConfirmingId(participantId);
+    const { error } = await supabase.from("participants").update({ payment_status: "completed" } as any).eq("id", participantId);
+    if (error) {
+      toast.error("Erro ao confirmar pagamento");
+    } else {
+      setParticipants((prev) => prev.map((p) => p.id === participantId ? { ...p, payment_status: "completed" } : p));
+      toast.success("Pagamento confirmado!");
+    }
+    setConfirmingId(null);
+  };
+
+  const getReceiptUrl = (path: string) => {
+    const { data } = supabase.storage.from("payment-receipts").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const stats = useMemo(() => ({
     total: participants.length,
     active: participants.filter((p) => p.status === "active").length,

@@ -404,7 +404,7 @@ const RaffleDetail = () => {
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                   <h3 className="font-display text-xl font-bold text-foreground mb-1">Método de Pagamento</h3>
                   <p className="text-sm text-muted-foreground mb-5">Escolha como deseja pagar</p>
-                  <div className="space-y-2 mb-6">
+                  <div className="space-y-2 mb-4">
                     {paymentMethods.map((m) => (
                       <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                         className={`w-full flex items-center gap-4 rounded-xl p-4 transition-all border ${
@@ -413,14 +413,68 @@ const RaffleDetail = () => {
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentMethod === m.id ? "bg-primary/20" : "bg-secondary"}`}>
                           <m.icon className={`h-5 w-5 ${paymentMethod === m.id ? "text-primary" : "text-muted-foreground"}`} />
                         </div>
-                        <div className="text-left">
+                        <div className="text-left flex-1">
                           <p className="text-sm font-semibold text-foreground">{m.label}</p>
                           <p className="text-xs text-muted-foreground">{m.desc}</p>
                         </div>
-                        {paymentMethod === m.id && <Check className="h-5 w-5 text-primary ml-auto" />}
+                        {/* Show business payment number */}
+                        {m.id === "mpesa" && whiteLabelConfig?.mpesa_number && (
+                          <span className="text-xs font-mono text-primary">{whiteLabelConfig.mpesa_number}</span>
+                        )}
+                        {m.id === "emola" && whiteLabelConfig?.emola_number && (
+                          <span className="text-xs font-mono text-accent">{whiteLabelConfig.emola_number}</span>
+                        )}
+                        {paymentMethod === m.id && <Check className="h-5 w-5 text-primary" />}
                       </button>
                     ))}
                   </div>
+
+                  {/* Payment number display for mobile money */}
+                  {(paymentMethod === "mpesa" || paymentMethod === "emola") && (
+                    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 mb-4 space-y-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        📱 Envie o pagamento de <strong className="text-primary">{formatMZN(totalPrice)}</strong> para:
+                      </p>
+                      {paymentMethod === "mpesa" && whiteLabelConfig?.mpesa_number && (
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="h-4 w-4 text-destructive" />
+                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.mpesa_number}</span>
+                          <span className="text-xs text-muted-foreground">(M-Pesa)</span>
+                        </div>
+                      )}
+                      {paymentMethod === "emola" && whiteLabelConfig?.emola_number && (
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-accent" />
+                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.emola_number}</span>
+                          <span className="text-xs text-muted-foreground">(e-Mola)</span>
+                        </div>
+                      )}
+                      {!whiteLabelConfig?.mpesa_number && paymentMethod === "mpesa" && (
+                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
+                      )}
+                      {!whiteLabelConfig?.emola_number && paymentMethod === "emola" && (
+                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
+                      )}
+
+                      {/* Receipt upload */}
+                      <div className="pt-2 border-t border-border">
+                        <label className="text-xs font-medium text-foreground mb-2 block">Comprovativo de Pagamento (opcional)</label>
+                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border bg-secondary/30 p-3 hover:border-primary/50 transition">
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            {receiptFile ? (
+                              <p className="text-sm text-foreground truncate">{receiptFile.name}</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Toque para enviar foto do comprovativo</p>
+                            )}
+                          </div>
+                          {receiptFile && <Image className="h-4 w-4 text-primary" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => setReceiptFile(e.target.files?.[0] || null)} />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setCheckoutStep(0)}>Cancelar</Button>
                     <Button className="flex-1 glow-primary" onClick={() => setCheckoutStep(2)}>Continuar</Button>

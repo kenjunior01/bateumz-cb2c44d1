@@ -212,6 +212,7 @@ export default function DashboardParticipants() {
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground hidden sm:table-cell">Pagamento</TableHead>
                   <TableHead className="text-muted-foreground hidden lg:table-cell">Data</TableHead>
+                  <TableHead className="text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -228,7 +229,10 @@ export default function DashboardParticipants() {
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
                             {(p.user_name || "U").charAt(0)}
                           </div>
-                          <p className="font-medium text-foreground text-sm">{p.user_name}</p>
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{p.user_name}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{p.payment_method || "mpesa"}</p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell"><span className="text-sm text-foreground">{p.raffle_title}</span></TableCell>
@@ -243,6 +247,26 @@ export default function DashboardParticipants() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-MZ")}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {p.receipt_url && (
+                            <button onClick={() => setReceiptModal(p.receipt_url)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition" title="Ver comprovativo">
+                              <Image className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {p.payment_status === "pending" && (
+                            <button onClick={() => handleConfirmPayment(p.id)} disabled={confirmingId === p.id}
+                              className="flex h-7 items-center gap-1 rounded-lg bg-primary/10 px-2 text-primary hover:bg-primary/20 transition text-[10px] font-medium" title="Confirmar pagamento">
+                              {confirmingId === p.id ? (
+                                <div className="h-3 w-3 animate-spin rounded-full border border-primary border-t-transparent" />
+                              ) : (
+                                <><CheckCircle2 className="h-3 w-3" /> Confirmar</>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet } from "lucide-react";
+import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet, Upload, Image } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,8 @@ interface WhiteLabelConfig {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+  mpesa_number: string | null;
+  emola_number: string | null;
 }
 
 type PaymentMethod = "mpesa" | "emola" | "card";
@@ -67,6 +69,8 @@ const RaffleDetail = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mpesa");
   const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -88,7 +92,7 @@ const RaffleDetail = () => {
         const [participantsRes, profileRes, wlRes] = await Promise.all([
           supabase.from("participants").select("ticket_number").eq("raffle_id", raffleRes.data.id),
           supabase.from("profiles").select("display_name, company_name").eq("user_id", raffleRes.data.business_user_id).single(),
-          supabase.from("white_label_configs").select("brand_name, logo_url, primary_color, secondary_color").eq("business_user_id", raffleRes.data.business_user_id).eq("is_active", true).maybeSingle(),
+          supabase.from("white_label_configs").select("brand_name, logo_url, primary_color, secondary_color, mpesa_number, emola_number").eq("business_user_id", raffleRes.data.business_user_id).eq("is_active", true).maybeSingle(),
         ]);
         if (profileRes.data) setBusinessName(profileRes.data.company_name || profileRes.data.display_name);
         if (wlRes.data) setWhiteLabelConfig(wlRes.data as WhiteLabelConfig);
@@ -115,14 +119,35 @@ const RaffleDetail = () => {
     if (!user) { navigate("/login"); return; }
     if (!raffle || selectedNumbers.length === 0) return;
     setPurchasing(true);
+
+    // Upload receipt if provided
+    let receiptUrl: string | null = null;
+    if (receiptFile) {
+      setUploadingReceipt(true);
+      const filePath = `${user.id}/${raffle.id}-${Date.now()}.${receiptFile.name.split('.').pop()}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("payment-receipts")
+        .upload(filePath, receiptFile);
+      if (uploadError) {
+        toast.error("Erro ao enviar comprovativo. Tente novamente.");
+        setPurchasing(false);
+        setUploadingReceipt(false);
+        return;
+      }
+      receiptUrl = filePath;
+      setUploadingReceipt(false);
+    }
+
     const inserts = selectedNumbers.map((num) => ({
       raffle_id: raffle.id,
       user_id: user.id,
       ticket_number: num,
-      status: "active",
-      payment_status: "completed",
+      status: "active" as const,
+      payment_status: (paymentMethod === "card" ? "completed" : "pending") as string,
+      payment_method: paymentMethod,
+      receipt_url: receiptUrl,
     }));
-    const { error } = await supabase.from("participants").insert(inserts);
+    const { error } = await supabase.from("participants").insert(inserts as any);
     if (error) {
       toast.error("Erro ao comprar bilhetes. Tente novamente.");
       setPurchasing(false);
@@ -136,13 +161,9 @@ const RaffleDetail = () => {
       raffle_id: raffle.id,
     });
 
-    // Update sold_tickets count locally
     const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
-    
-    // Update sold_tickets in DB
     await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
 
-    // Check auto-draw threshold if applicable
     if (raffle.draw_mode === "auto_sold_out") {
       try {
         await supabase.functions.invoke("check-ticket-threshold", {
@@ -155,10 +176,13 @@ const RaffleDetail = () => {
 
     setPurchasing(false);
     setCheckoutStep(3);
-    toast.success("Bilhetes comprados com sucesso!");
+    toast.success(paymentMethod === "card" 
+      ? "Bilhetes comprados com sucesso!" 
+      : "Bilhetes reservados! Envie o pagamento e aguarde confirmação.");
     setTimeout(() => {
       setCheckoutStep(0);
       setSelectedNumbers([]);
+      setReceiptFile(null);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
       setRaffle((prev) => prev ? { ...prev, sold_tickets: newSoldCount } : prev);
     }, 3000);
@@ -380,7 +404,7 @@ const RaffleDetail = () => {
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                   <h3 className="font-display text-xl font-bold text-foreground mb-1">Método de Pagamento</h3>
                   <p className="text-sm text-muted-foreground mb-5">Escolha como deseja pagar</p>
-                  <div className="space-y-2 mb-6">
+                  <div className="space-y-2 mb-4">
                     {paymentMethods.map((m) => (
                       <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                         className={`w-full flex items-center gap-4 rounded-xl p-4 transition-all border ${
@@ -389,14 +413,68 @@ const RaffleDetail = () => {
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentMethod === m.id ? "bg-primary/20" : "bg-secondary"}`}>
                           <m.icon className={`h-5 w-5 ${paymentMethod === m.id ? "text-primary" : "text-muted-foreground"}`} />
                         </div>
-                        <div className="text-left">
+                        <div className="text-left flex-1">
                           <p className="text-sm font-semibold text-foreground">{m.label}</p>
                           <p className="text-xs text-muted-foreground">{m.desc}</p>
                         </div>
-                        {paymentMethod === m.id && <Check className="h-5 w-5 text-primary ml-auto" />}
+                        {/* Show business payment number */}
+                        {m.id === "mpesa" && whiteLabelConfig?.mpesa_number && (
+                          <span className="text-xs font-mono text-primary">{whiteLabelConfig.mpesa_number}</span>
+                        )}
+                        {m.id === "emola" && whiteLabelConfig?.emola_number && (
+                          <span className="text-xs font-mono text-accent">{whiteLabelConfig.emola_number}</span>
+                        )}
+                        {paymentMethod === m.id && <Check className="h-5 w-5 text-primary" />}
                       </button>
                     ))}
                   </div>
+
+                  {/* Payment number display for mobile money */}
+                  {(paymentMethod === "mpesa" || paymentMethod === "emola") && (
+                    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 mb-4 space-y-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        📱 Envie o pagamento de <strong className="text-primary">{formatMZN(totalPrice)}</strong> para:
+                      </p>
+                      {paymentMethod === "mpesa" && whiteLabelConfig?.mpesa_number && (
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="h-4 w-4 text-destructive" />
+                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.mpesa_number}</span>
+                          <span className="text-xs text-muted-foreground">(M-Pesa)</span>
+                        </div>
+                      )}
+                      {paymentMethod === "emola" && whiteLabelConfig?.emola_number && (
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-accent" />
+                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.emola_number}</span>
+                          <span className="text-xs text-muted-foreground">(e-Mola)</span>
+                        </div>
+                      )}
+                      {!whiteLabelConfig?.mpesa_number && paymentMethod === "mpesa" && (
+                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
+                      )}
+                      {!whiteLabelConfig?.emola_number && paymentMethod === "emola" && (
+                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
+                      )}
+
+                      {/* Receipt upload */}
+                      <div className="pt-2 border-t border-border">
+                        <label className="text-xs font-medium text-foreground mb-2 block">Comprovativo de Pagamento (opcional)</label>
+                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border bg-secondary/30 p-3 hover:border-primary/50 transition">
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            {receiptFile ? (
+                              <p className="text-sm text-foreground truncate">{receiptFile.name}</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Toque para enviar foto do comprovativo</p>
+                            )}
+                          </div>
+                          {receiptFile && <Image className="h-4 w-4 text-primary" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => setReceiptFile(e.target.files?.[0] || null)} />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setCheckoutStep(0)}>Cancelar</Button>
                     <Button className="flex-1 glow-primary" onClick={() => setCheckoutStep(2)}>Continuar</Button>

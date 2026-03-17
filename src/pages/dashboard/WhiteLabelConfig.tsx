@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Palette, Save, Eye, Globe } from "lucide-react";
+import { Palette, Save, Eye, Globe, Smartphone, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,8 @@ export default function WhiteLabelConfig() {
     secondary_color: "#eab308",
     custom_domain: "",
     description: "",
+    mpesa_number: "",
+    emola_number: "",
   });
   const [existingId, setExistingId] = useState<string | null>(null);
 
@@ -37,6 +39,8 @@ export default function WhiteLabelConfig() {
             secondary_color: (data as any).secondary_color || "#eab308",
             custom_domain: (data as any).custom_domain || "",
             description: (data as any).description || "",
+            mpesa_number: (data as any).mpesa_number || "",
+            emola_number: (data as any).emola_number || "",
           });
         }
       });
@@ -129,28 +133,57 @@ export default function WhiteLabelConfig() {
               <input name="custom_domain" value={form.custom_domain} onChange={handleChange} placeholder="promo.suaempresa.co.mz"
                 className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-            {/* Preview */}
-            <div className="rounded-xl border border-border p-4 space-y-3">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pré-visualização</p>
-              <div className="flex items-center gap-3">
-                {form.logo_url ? (
-                  <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
-                ) : (
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold"
-                    style={{ backgroundColor: form.primary_color, color: "#fff" }}>
-                    {form.brand_name.charAt(0) || "S"}
-                  </div>
-                )}
-                <span className="font-display text-lg font-bold text-foreground">{form.brand_name || "Sua Marca"}</span>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary" /> Números de Pagamento</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">Configure os números para receber pagamentos dos participantes via mobile money</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Smartphone className="h-3.5 w-3.5 text-destructive" /> Número M-Pesa
+                </label>
+                <input name="mpesa_number" value={form.mpesa_number} onChange={handleChange} placeholder="84 xxx xxxx"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
-              <div className="flex gap-2">
-                <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.primary_color }}>
-                  Botão Primário
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Wallet className="h-3.5 w-3.5 text-accent" /> Número e-Mola
+                </label>
+                <input name="emola_number" value={form.emola_number} onChange={handleChange} placeholder="86 xxx xxxx"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Preview */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <Card className="glass">
+          <CardContent className="p-6 space-y-3">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pré-visualização</p>
+            <div className="flex items-center gap-3">
+              {form.logo_url ? (
+                <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+              ) : (
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold"
+                  style={{ backgroundColor: form.primary_color, color: "#fff" }}>
+                  {form.brand_name.charAt(0) || "S"}
                 </div>
-                <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.secondary_color }}>
-                  Botão Secundário
-                </div>
+              )}
+              <span className="font-display text-lg font-bold text-foreground">{form.brand_name || "Sua Marca"}</span>
+            </div>
+            <div className="flex gap-2">
+              <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.primary_color }}>
+                Botão Primário
+              </div>
+              <div className="h-8 rounded-lg px-4 flex items-center text-xs font-medium text-white" style={{ backgroundColor: form.secondary_color }}>
+                Botão Secundário
               </div>
             </div>
           </CardContent>

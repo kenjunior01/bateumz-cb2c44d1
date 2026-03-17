@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Download, Mail, CheckCircle2, Clock, XCircle, Users, Send, X, Trophy } from "lucide-react";
+import { Search, Download, Mail, CheckCircle2, Clock, XCircle, Users, Send, X, Trophy, Eye, Image } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatMZN } from "@/lib/currency";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Participant {
   id: string;
@@ -14,6 +16,8 @@ interface Participant {
   ticket_number: number;
   status: string;
   payment_status: string;
+  payment_method: string;
+  receipt_url: string | null;
   created_at: string;
   raffle_title?: string;
   user_name?: string;
@@ -43,6 +47,8 @@ export default function DashboardParticipants() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [receiptModal, setReceiptModal] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -61,11 +67,13 @@ export default function DashboardParticipants() {
         const { data: profiles } = await supabase.from("profiles").select("user_id, display_name");
         const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.display_name || "Utilizador"]));
 
-        setParticipants(parts.map((p) => ({
+        setParticipants(parts.map((p: any) => ({
           ...p,
           raffle_title: raffleMap[p.raffle_id] || "Sorteio",
           user_name: profileMap[p.user_id] || "Utilizador",
           user_email: "",
+          payment_method: p.payment_method || "mpesa",
+          receipt_url: p.receipt_url || null,
         })));
       }
       setLoading(false);
@@ -102,6 +110,23 @@ export default function DashboardParticipants() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "participantes-sortex.csv"; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleConfirmPayment = async (participantId: string) => {
+    setConfirmingId(participantId);
+    const { error } = await supabase.from("participants").update({ payment_status: "completed" } as any).eq("id", participantId);
+    if (error) {
+      toast.error("Erro ao confirmar pagamento");
+    } else {
+      setParticipants((prev) => prev.map((p) => p.id === participantId ? { ...p, payment_status: "completed" } : p));
+      toast.success("Pagamento confirmado!");
+    }
+    setConfirmingId(null);
+  };
+
+  const getReceiptUrl = (path: string) => {
+    const { data } = supabase.storage.from("payment-receipts").getPublicUrl(path);
+    return data.publicUrl;
   };
 
   const stats = useMemo(() => ({
@@ -187,6 +212,7 @@ export default function DashboardParticipants() {
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground hidden sm:table-cell">Pagamento</TableHead>
                   <TableHead className="text-muted-foreground hidden lg:table-cell">Data</TableHead>
+                  <TableHead className="text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -203,7 +229,10 @@ export default function DashboardParticipants() {
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
                             {(p.user_name || "U").charAt(0)}
                           </div>
-                          <p className="font-medium text-foreground text-sm">{p.user_name}</p>
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{p.user_name}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{p.payment_method || "mpesa"}</p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell"><span className="text-sm text-foreground">{p.raffle_title}</span></TableCell>
@@ -218,6 +247,26 @@ export default function DashboardParticipants() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-MZ")}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {p.receipt_url && (
+                            <button onClick={() => setReceiptModal(p.receipt_url)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition" title="Ver comprovativo">
+                              <Image className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {p.payment_status === "pending" && (
+                            <button onClick={() => handleConfirmPayment(p.id)} disabled={confirmingId === p.id}
+                              className="flex h-7 items-center gap-1 rounded-lg bg-primary/10 px-2 text-primary hover:bg-primary/20 transition text-[10px] font-medium" title="Confirmar pagamento">
+                              {confirmingId === p.id ? (
+                                <div className="h-3 w-3 animate-spin rounded-full border border-primary border-t-transparent" />
+                              ) : (
+                                <><CheckCircle2 className="h-3 w-3" /> Confirmar</>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -254,6 +303,25 @@ export default function DashboardParticipants() {
                   className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground glow-primary">
                   <Send className="h-4 w-4" /> Enviar
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {receiptModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={() => setReceiptModal(null)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()} className="glass rounded-2xl p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-lg font-bold text-foreground">Comprovativo de Pagamento</h3>
+                <button onClick={() => setReceiptModal(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-border">
+                <img src={getReceiptUrl(receiptModal)} alt="Comprovativo" className="w-full max-h-96 object-contain bg-secondary" />
               </div>
             </motion.div>
           </motion.div>

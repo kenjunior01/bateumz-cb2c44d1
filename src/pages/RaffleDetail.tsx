@@ -69,6 +69,8 @@ const RaffleDetail = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mpesa");
   const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   useEffect(() => {
     if (!slug) return;

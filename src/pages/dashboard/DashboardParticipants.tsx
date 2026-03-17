@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatMZN } from "@/lib/currency";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Participant {
   id: string;

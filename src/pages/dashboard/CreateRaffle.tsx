@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin } from "lucide-react";
+import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin, Eye, EyeOff, Timer, Zap } from "lucide-react";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,10 @@ export default function CreateRaffle() {
     points_cost: "",
     province: "",
     city: "",
+    draw_mode: "manual" as "manual" | "auto_sold_out",
+    hide_prize_value: false,
+    auto_draw_days: "",
+    tickets_threshold: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -40,14 +44,8 @@ export default function CreateRaffle() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 5MB");
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      toast.error("Selecione um ficheiro de imagem válido");
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { toast.error("A imagem deve ter no máximo 5MB"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("Selecione um ficheiro de imagem válido"); return; }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -65,26 +63,27 @@ export default function CreateRaffle() {
     const path = `${user.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("raffle-images").upload(path, imageFile);
     setUploading(false);
-    if (error) {
-      toast.error("Erro ao enviar imagem: " + error.message);
-      return null;
-    }
+    if (error) { toast.error("Erro ao enviar imagem: " + error.message); return null; }
     const { data: urlData } = supabase.storage.from("raffle-images").getPublicUrl(path);
     return urlData.publicUrl;
   };
 
   const handleSubmit = async () => {
     if (!user) return;
-    if (!form.title || !form.prize_title || !form.ticket_price || !form.total_tickets) {
+    if (!form.title || !form.prize_title || !form.total_tickets) {
       toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (form.draw_mode === "auto_sold_out" && !form.auto_draw_days) {
+      toast.error("Defina o número de dias para o sorteio automático.");
       return;
     }
     setSaving(true);
 
     let imageUrl: string | null = null;
-    if (imageFile) {
-      imageUrl = await uploadImage();
-    }
+    if (imageFile) imageUrl = await uploadImage();
+
+    const thresholdValue = form.tickets_threshold ? Number(form.tickets_threshold) : null;
 
     const { error } = await supabase.from("raffles").insert({
       business_user_id: user.id,
@@ -95,19 +94,20 @@ export default function CreateRaffle() {
       ticket_price: form.raffle_type === "free" ? 0 : Number(form.ticket_price) || 0,
       total_tickets: Number(form.total_tickets) || 100,
       start_date: form.start_date || null,
-      end_date: form.end_date || null,
+      end_date: form.draw_mode === "auto_sold_out" ? null : (form.end_date || null),
       image_url: imageUrl,
       status: "draft",
       raffle_type: form.raffle_type,
       points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
       province: form.province || null,
       city: form.city || null,
+      draw_mode: form.draw_mode,
+      hide_prize_value: form.hide_prize_value,
+      auto_draw_days: form.draw_mode === "auto_sold_out" ? Number(form.auto_draw_days) || 1 : null,
+      tickets_threshold: form.draw_mode === "auto_sold_out" ? thresholdValue : null,
     } as any);
     setSaving(false);
-    if (error) {
-      toast.error("Erro ao criar sorteio: " + error.message);
-      return;
-    }
+    if (error) { toast.error("Erro ao criar sorteio: " + error.message); return; }
     toast.success("Sorteio criado com sucesso!");
     navigate("/dashboard/raffles");
   };
@@ -127,6 +127,7 @@ export default function CreateRaffle() {
         </div>
       </div>
 
+      {/* Prize Info */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Informações do Prémio</CardTitle></CardHeader>
@@ -148,9 +149,21 @@ export default function CreateRaffle() {
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Valor do Prémio (MZN)</label>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  Valor do Prémio (MZN)
+                  <button type="button" onClick={() => setForm({ ...form, hide_prize_value: !form.hide_prize_value })}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                      form.hide_prize_value ? "bg-accent/20 text-accent" : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    }`}>
+                    {form.hide_prize_value ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    {form.hide_prize_value ? "Oculto" : "Visível"}
+                  </button>
+                </label>
                 <input name="prize_value" type="number" value={form.prize_value} onChange={handleChange} placeholder="15.000.000"
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                {form.hide_prize_value && (
+                  <p className="text-[10px] text-accent mt-1">O valor será oculto para os participantes</p>
+                )}
               </div>
             </div>
             <div>
@@ -184,6 +197,7 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
+      {/* Raffle Type */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Tipo de Sorteio</CardTitle></CardHeader>
@@ -208,6 +222,62 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
+      {/* Draw Mode */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+        <Card className="glass border-glass-border">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Timer className="h-4 w-4 text-primary" /> Modo de Sorteio</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button onClick={() => setForm({ ...form, draw_mode: "manual" })}
+                className={`rounded-xl p-4 text-left border transition-all ${
+                  form.draw_mode === "manual" ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:border-primary/30"
+                }`}>
+                <Ticket className="h-6 w-6 text-primary mb-2" />
+                <p className="text-sm font-semibold text-foreground">Manual</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Você inicia o sorteio quando quiser, com data de encerramento definida</p>
+              </button>
+              <button onClick={() => setForm({ ...form, draw_mode: "auto_sold_out" })}
+                className={`rounded-xl p-4 text-left border transition-all ${
+                  form.draw_mode === "auto_sold_out" ? "border-accent bg-accent/10" : "border-border bg-secondary/30 hover:border-primary/30"
+                }`}>
+                <Zap className="h-6 w-6 text-accent mb-2" />
+                <p className="text-sm font-semibold text-foreground">Automático</p>
+                <p className="text-xs text-muted-foreground mt-0.5">O sorteio é realizado automaticamente após vender todos os bilhetes (ou atingir um limite)</p>
+              </button>
+            </div>
+
+            {form.draw_mode === "auto_sold_out" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">Dias após meta para sortear *</label>
+                    <input name="auto_draw_days" type="number" min="0" value={form.auto_draw_days} onChange={handleChange} placeholder="Ex: 3"
+                      className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                    <p className="text-[10px] text-muted-foreground mt-1">0 = sorteio imediato quando a meta é atingida</p>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">Meta de bilhetes (opcional)</label>
+                    <input name="tickets_threshold" type="number" value={form.tickets_threshold} onChange={handleChange}
+                      placeholder={form.total_tickets || "Todos os bilhetes"}
+                      className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                    <p className="text-[10px] text-muted-foreground mt-1">Deixe vazio para exigir todos os bilhetes vendidos</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 rounded-xl bg-accent/5 border border-accent/10 p-3">
+                  <Zap className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Quando {form.tickets_threshold ? `${form.tickets_threshold} bilhetes forem vendidos` : "todos os bilhetes forem vendidos"}, 
+                    uma contagem regressiva de <strong className="text-foreground">{form.auto_draw_days || "X"} dia(s)</strong> será iniciada automaticamente. 
+                    O vencedor será selecionado aleatoriamente pelo sistema quando a contagem terminar.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Tickets */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
@@ -232,22 +302,37 @@ export default function CreateRaffle() {
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+
+            {form.draw_mode === "manual" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                    <Calendar className="h-3.5 w-3.5" /> Data de Início
+                  </label>
+                  <input type="datetime-local" name="start_date" value={form.start_date} onChange={handleChange}
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                    <Calendar className="h-3.5 w-3.5" /> Data de Encerramento
+                  </label>
+                  <input type="datetime-local" name="end_date" value={form.end_date} onChange={handleChange}
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+              </div>
+            )}
+
+            {form.draw_mode === "auto_sold_out" && (
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                   <Calendar className="h-3.5 w-3.5" /> Data de Início
                 </label>
                 <input type="datetime-local" name="start_date" value={form.start_date} onChange={handleChange}
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                <p className="text-[10px] text-muted-foreground mt-1">O sorteio não tem data de fim fixa — termina quando a meta de bilhetes é atingida</p>
               </div>
-              <div>
-                <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
-                  <Calendar className="h-3.5 w-3.5" /> Data de Encerramento
-                </label>
-                <input type="datetime-local" name="end_date" value={form.end_date} onChange={handleChange}
-                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
-            </div>
+            )}
+
             <div className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/10 p-3">
               <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground leading-relaxed">
@@ -259,7 +344,7 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
-      {/* Geolocalização */}
+      {/* Location */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Localização (Opcional)</CardTitle></CardHeader>

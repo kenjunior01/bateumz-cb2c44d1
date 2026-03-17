@@ -135,6 +135,24 @@ const RaffleDetail = () => {
       description: `Comprou ${selectedNumbers.length} bilhete(s) - ${raffle.title}`,
       raffle_id: raffle.id,
     });
+
+    // Update sold_tickets count locally
+    const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
+    
+    // Update sold_tickets in DB
+    await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
+
+    // Check auto-draw threshold if applicable
+    if (raffle.draw_mode === "auto_sold_out") {
+      try {
+        await supabase.functions.invoke("check-ticket-threshold", {
+          body: { raffle_id: raffle.id },
+        });
+      } catch (e) {
+        console.error("Threshold check error:", e);
+      }
+    }
+
     setPurchasing(false);
     setCheckoutStep(3);
     toast.success("Bilhetes comprados com sucesso!");
@@ -142,6 +160,7 @@ const RaffleDetail = () => {
       setCheckoutStep(0);
       setSelectedNumbers([]);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
+      setRaffle((prev) => prev ? { ...prev, sold_tickets: newSoldCount } : prev);
     }, 3000);
   };
 

@@ -176,6 +176,18 @@ const RaffleDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* White-label branding banner */}
+      {whiteLabelConfig && (
+        <div className="w-full py-2 px-4 text-center text-sm font-medium" 
+          style={{ backgroundColor: whiteLabelConfig.primary_color, color: '#fff' }}>
+          <div className="container mx-auto flex items-center justify-center gap-2">
+            {whiteLabelConfig.logo_url && (
+              <img src={whiteLabelConfig.logo_url} alt={whiteLabelConfig.brand_name} className="h-5 w-5 rounded-full object-cover" />
+            )}
+            <span>Sorteio por <strong>{whiteLabelConfig.brand_name}</strong></span>
+          </div>
+        </div>
+      )}
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">

@@ -16,6 +16,8 @@ interface Participant {
   ticket_number: number;
   status: string;
   payment_status: string;
+  payment_method: string;
+  receipt_url: string | null;
   created_at: string;
   raffle_title?: string;
   user_name?: string;

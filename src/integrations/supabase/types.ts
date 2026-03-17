@@ -206,8 +206,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          payment_method: string | null
           payment_status: string
           raffle_id: string
+          receipt_url: string | null
           status: string
           ticket_number: number
           user_id: string
@@ -215,8 +217,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          payment_method?: string | null
           payment_status?: string
           raffle_id: string
+          receipt_url?: string | null
           status?: string
           ticket_number: number
           user_id: string
@@ -224,8 +228,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          payment_method?: string | null
           payment_status?: string
           raffle_id?: string
+          receipt_url?: string | null
           status?: string
           ticket_number?: number
           user_id?: string
@@ -483,9 +489,11 @@ export type Database = {
           created_at: string
           custom_domain: string | null
           description: string | null
+          emola_number: string | null
           id: string
           is_active: boolean
           logo_url: string | null
+          mpesa_number: string | null
           primary_color: string
           secondary_color: string
           updated_at: string
@@ -496,9 +504,11 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          emola_number?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          mpesa_number?: string | null
           primary_color?: string
           secondary_color?: string
           updated_at?: string
@@ -509,9 +519,11 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          emola_number?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          mpesa_number?: string | null
           primary_color?: string
           secondary_color?: string
           updated_at?: string

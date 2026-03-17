@@ -260,7 +260,37 @@ const RaffleDetail = () => {
               <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} de {raffle.total_tickets} bilhetes vendidos</p>
             </CardContent></Card>
 
-            {raffle.end_date && (
+            {/* Auto-draw countdown */}
+            {raffle.draw_mode === "auto_sold_out" && raffle.auto_draw_scheduled_at && (
+              <Card className="glass border-accent/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-5 w-5 text-accent" />
+                    <p className="font-semibold text-foreground">⚡ Sorteio Automático Agendado</p>
+                  </div>
+                  <CountdownTimer targetDate={new Date(raffle.auto_draw_scheduled_at)} />
+                  <p className="text-xs text-muted-foreground mt-3">O vencedor será selecionado automaticamente quando a contagem terminar</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {raffle.draw_mode === "auto_sold_out" && !raffle.auto_draw_scheduled_at && (
+              <Card className="glass border-primary/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <p className="font-semibold text-foreground">Sorteio Automático</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    O sorteio será realizado <strong className="text-foreground">{raffle.auto_draw_days} dia(s)</strong> após a venda de{" "}
+                    <strong className="text-foreground">{raffle.tickets_threshold || raffle.total_tickets}</strong> bilhetes.
+                    Faltam <strong className="text-accent">{(raffle.tickets_threshold || raffle.total_tickets) - raffle.sold_tickets}</strong> bilhetes.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {raffle.end_date && raffle.draw_mode !== "auto_sold_out" && (
               <Card className="glass border-primary/20"><CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="h-5 w-5 text-primary" />

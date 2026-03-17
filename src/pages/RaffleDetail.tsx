@@ -59,6 +59,7 @@ const RaffleDetail = () => {
   const { user } = useAuth();
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
+  const [whiteLabelConfig, setWhiteLabelConfig] = useState<WhiteLabelConfig | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);

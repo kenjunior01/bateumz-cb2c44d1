@@ -31,6 +31,18 @@ interface Raffle {
   image_url: string | null;
   status: string;
   business_user_id: string;
+  hide_prize_value?: boolean;
+  draw_mode?: string;
+  auto_draw_days?: number | null;
+  tickets_threshold?: number | null;
+  auto_draw_scheduled_at?: string | null;
+}
+
+interface WhiteLabelConfig {
+  brand_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
 }
 
 type PaymentMethod = "mpesa" | "emola" | "card";

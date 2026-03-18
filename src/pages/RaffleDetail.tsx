@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import BlockchainVerification from "@/components/BlockchainVerification";
 import BolaoModal from "@/components/BolaoModal";
+import PaymentInstructions from "@/components/PaymentInstructions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -445,43 +446,31 @@ const RaffleDetail = () => {
                     ))}
                   </div>
 
-                  {/* Payment number display for mobile money */}
+                  {/* Payment instructions for mobile money */}
                   {(paymentMethod === "mpesa" || paymentMethod === "emola") && (
-                    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 mb-4 space-y-3">
-                      <p className="text-sm font-semibold text-foreground">
-                        📱 Envie o pagamento de <strong className="text-primary">{formatMZN(totalPrice)}</strong> para:
-                      </p>
-                      {paymentMethod === "mpesa" && whiteLabelConfig?.mpesa_number && (
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-destructive" />
-                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.mpesa_number}</span>
-                          <span className="text-xs text-muted-foreground">(M-Pesa)</span>
-                        </div>
-                      )}
-                      {paymentMethod === "emola" && whiteLabelConfig?.emola_number && (
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-accent" />
-                          <span className="font-mono text-lg font-bold text-foreground">{whiteLabelConfig.emola_number}</span>
-                          <span className="text-xs text-muted-foreground">(e-Mola)</span>
-                        </div>
-                      )}
-                      {!whiteLabelConfig?.mpesa_number && paymentMethod === "mpesa" && (
-                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
-                      )}
-                      {!whiteLabelConfig?.emola_number && paymentMethod === "emola" && (
-                        <p className="text-xs text-muted-foreground">Número de pagamento não configurado pela empresa.</p>
-                      )}
+                    <div className="space-y-3 mb-4">
+                      <PaymentInstructions
+                        method={paymentMethod}
+                        number={paymentMethod === "mpesa" ? (whiteLabelConfig?.mpesa_number ?? null) : (whiteLabelConfig?.emola_number ?? null)}
+                        totalAmount={totalPrice}
+                        brandName={whiteLabelConfig?.brand_name}
+                      />
 
                       {/* Receipt upload */}
-                      <div className="pt-2 border-t border-border">
-                        <label className="text-xs font-medium text-foreground mb-2 block">Comprovativo de Pagamento (opcional)</label>
-                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border bg-secondary/30 p-3 hover:border-primary/50 transition">
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <label className="text-xs font-semibold text-foreground mb-2 block uppercase tracking-wider">
+                          📎 Comprovativo de Pagamento
+                        </label>
+                        <p className="text-[11px] text-muted-foreground mb-3">
+                          Envie a screenshot ou foto da confirmação da transferência
+                        </p>
+                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-border bg-secondary/30 p-4 hover:border-primary/50 transition">
                           <Upload className="h-5 w-5 text-muted-foreground" />
                           <div className="flex-1 min-w-0">
                             {receiptFile ? (
-                              <p className="text-sm text-foreground truncate">{receiptFile.name}</p>
+                              <p className="text-sm font-medium text-foreground truncate">{receiptFile.name}</p>
                             ) : (
-                              <p className="text-xs text-muted-foreground">Toque para enviar foto do comprovativo</p>
+                              <p className="text-xs text-muted-foreground">Toque para enviar comprovativo</p>
                             )}
                           </div>
                           {receiptFile && <Image className="h-4 w-4 text-primary" />}

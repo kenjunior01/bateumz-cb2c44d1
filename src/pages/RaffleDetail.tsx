@@ -174,6 +174,22 @@ const RaffleDetail = () => {
       }
     }
 
+    // Notify business about payment receipt
+    if (receiptUrl && (paymentMethod === "mpesa" || paymentMethod === "emola")) {
+      try {
+        await supabase.functions.invoke("notify-payment-receipt", {
+          body: {
+            raffle_id: raffle.id,
+            participant_name: user.email,
+            ticket_numbers: selectedNumbers.join(", "),
+            payment_method: paymentMethod,
+          },
+        });
+      } catch (e) {
+        console.error("Notification error:", e);
+      }
+    }
+
     setPurchasing(false);
     setCheckoutStep(3);
     toast.success(paymentMethod === "card" 

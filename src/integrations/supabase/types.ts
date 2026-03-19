@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      blockchain_verifications: {
+        Row: {
+          block_number: number
+          id: string
+          network: string
+          raffle_id: string
+          seed_data: Json | null
+          tx_hash: string
+          verified_at: string
+          winner_ticket_number: number | null
+        }
+        Insert: {
+          block_number: number
+          id?: string
+          network?: string
+          raffle_id: string
+          seed_data?: Json | null
+          tx_hash: string
+          verified_at?: string
+          winner_ticket_number?: number | null
+        }
+        Update: {
+          block_number?: number
+          id?: string
+          network?: string
+          raffle_id?: string
+          seed_data?: Json | null
+          tx_hash?: string
+          verified_at?: string
+          winner_ticket_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_verifications_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: true
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bolao_members: {
         Row: {
           bolao_id: string
@@ -287,6 +328,7 @@ export type Database = {
           auto_draw_days: number | null
           auto_draw_scheduled_at: string | null
           business_user_id: string
+          category: string | null
           city: string | null
           created_at: string
           description: string | null
@@ -314,6 +356,7 @@ export type Database = {
           auto_draw_days?: number | null
           auto_draw_scheduled_at?: string | null
           business_user_id: string
+          category?: string | null
           city?: string | null
           created_at?: string
           description?: string | null
@@ -341,6 +384,7 @@ export type Database = {
           auto_draw_days?: number | null
           auto_draw_scheduled_at?: string | null
           business_user_id?: string
+          category?: string | null
           city?: string | null
           created_at?: string
           description?: string | null

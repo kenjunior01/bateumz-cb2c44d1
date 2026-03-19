@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import StatsBar from "@/components/StatsBar";
 import CategoryNav from "@/components/CategoryNav";
+import SearchBar from "@/components/SearchBar";
 import MobileActionButtons from "@/components/MobileActionButtons";
 import ActiveRaffles from "@/components/ActiveRaffles";
 import FeaturesGrid from "@/components/FeaturesGrid";
@@ -11,14 +12,16 @@ import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
+import BottomTabBar from "@/components/BottomTabBar";
 
 const Index = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <Navbar />
       <HeroSection />
+      <SearchBar />
       <StatsBar />
       <CategoryNav />
       <MobileActionButtons />
@@ -53,6 +56,7 @@ const Index = () => {
 
       <CTASection />
       <Footer />
+      <BottomTabBar />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet, Upload, Image } from "lucide-react";
+import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet, Upload, Image, Sparkles } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -345,7 +345,26 @@ const RaffleDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card className="glass sticky top-28"><CardContent className="p-6">
               <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
-              <p className="text-sm text-muted-foreground mb-4">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
+              <p className="text-sm text-muted-foreground mb-3">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
+
+              {/* Surpresinha - Quick random buy */}
+              <button
+                onClick={() => {
+                  const available = Array.from({ length: raffle.total_tickets }, (_, i) => i + 1)
+                    .filter((n) => !soldNumbers.includes(n) && !selectedNumbers.includes(n));
+                  if (available.length === 0) return;
+                  const count = Math.min(1, available.length);
+                  const shuffled = available.sort(() => Math.random() - 0.5);
+                  setSelectedNumbers((prev) => {
+                    const remaining = 10 - prev.length;
+                    return [...prev, ...shuffled.slice(0, Math.min(count, remaining))];
+                  });
+                }}
+                className="w-full mb-4 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent"
+              >
+                <Sparkles className="h-4 w-4" />
+                🎲 Surpresinha — Número aleatório
+              </button>
 
               <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
                 {Array.from({ length: raffle.total_tickets }, (_, i) => i + 1).map((num) => {

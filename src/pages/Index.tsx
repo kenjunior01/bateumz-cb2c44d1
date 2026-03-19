@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
@@ -16,6 +17,7 @@ import BottomTabBar from "@/components/BottomTabBar";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const [categoryFilter, setCategoryFilter] = useState("todos");
 
   return (
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
@@ -23,16 +25,14 @@ const Index = () => {
       <HeroSection />
       <SearchBar />
       <StatsBar />
-      <CategoryNav />
+      <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
       <MobileActionButtons />
 
-      {/* Main content with sidebar widgets on desktop */}
       <div className="container mx-auto px-4">
         <div className="relative flex gap-6">
           <div className="flex-1 min-w-0">
-            <ActiveRaffles />
+            <ActiveRaffles categoryFilter={categoryFilter} />
 
-            {/* Mobile live feed - social proof */}
             {isMobile && (
               <section className="py-6">
                 <LiveFeed />
@@ -43,7 +43,6 @@ const Index = () => {
             <WinnersSection />
           </div>
 
-          {/* Desktop sidebar widgets */}
           {!isMobile && (
             <aside className="hidden lg:block w-80 shrink-0 py-12">
               <div className="sticky top-28">

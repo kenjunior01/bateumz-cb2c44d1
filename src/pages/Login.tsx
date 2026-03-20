@@ -111,7 +111,13 @@ export default function Login() {
             </motion.button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Esqueceu a senha?
+            </Link>
+          </div>
+
+          <div className="mt-3 text-center">
             <p className="text-sm text-muted-foreground">
               Não tem conta?{" "}
               <Link to="/register" className="text-primary hover:underline font-medium">Criar conta</Link>

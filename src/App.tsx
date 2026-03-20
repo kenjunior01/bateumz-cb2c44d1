@@ -10,6 +10,8 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Marketplace from "./pages/Marketplace.tsx";
 import RaffleDetail from "./pages/RaffleDetail.tsx";
 import UserDashboard from "./pages/UserDashboard.tsx";
@@ -25,6 +27,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
+import AdminPayments from "./pages/admin/AdminPayments.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -44,6 +47,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/raffle/:slug" element={<RaffleDetail />} />
             <Route path="/raffle/:slug/live" element={<LiveDraw />} />
@@ -85,6 +90,7 @@ const App = () => (
               <Route path="users" element={<AdminUsers />} />
               <Route path="raffles" element={<AdminRaffles />} />
               <Route path="revenue" element={<AdminRevenue />} />
+              <Route path="payments" element={<AdminPayments />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

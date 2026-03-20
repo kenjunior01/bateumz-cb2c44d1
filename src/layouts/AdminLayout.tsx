@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Trophy, Bell, ArrowLeft,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Trophy, Bell, ArrowLeft, CreditCard,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -14,6 +14,7 @@ const items = [
   { title: "Visão Geral", url: "/admin", icon: LayoutDashboard },
   { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
+  { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
 ];
 

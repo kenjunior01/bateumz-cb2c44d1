@@ -17,6 +17,7 @@ const items = [
   { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
   { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
+  { title: "Configurações", url: "/admin/settings", icon: Settings },
 ];
 
 function AdminSidebar() {

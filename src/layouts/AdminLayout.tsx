@@ -14,6 +14,7 @@ const items = [
   { title: "Visão Geral", url: "/admin", icon: LayoutDashboard },
   { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
+  { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
 ];
 

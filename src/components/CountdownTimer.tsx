@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 interface Props {
   targetDate: Date;
@@ -20,16 +21,25 @@ const CountdownTimer = ({ targetDate }: Props) => {
   ];
 
   return (
-    <div className="inline-flex gap-3">
-      {units.map((u) => (
-        <div key={u.label} className="flex flex-col items-center">
-          <div className="glass flex h-16 w-16 items-center justify-center rounded-xl text-2xl font-bold text-foreground font-display md:h-20 md:w-20 md:text-3xl">
-            {String(u.value).padStart(2, "0")}
+    <div className="inline-flex gap-2 md:gap-3">
+      {units.map((u, i) => (
+        <motion.div
+          key={u.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1 }}
+          className="flex flex-col items-center"
+        >
+          <div className="relative flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-xl bg-card border border-border shadow-sm">
+            <span className="font-display text-lg md:text-2xl font-bold text-foreground tabular-nums">
+              {String(u.value).padStart(2, "0")}
+            </span>
+            <div className="absolute inset-x-0 top-1/2 h-px bg-border/30" />
           </div>
-          <span className="mt-1.5 text-xs text-muted-foreground uppercase tracking-wider">
+          <span className="mt-1 text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
             {u.label}
           </span>
-        </div>
+        </motion.div>
       ))}
     </div>
   );

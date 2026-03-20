@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Trophy, Zap, Star } from "lucide-react";
+import { Menu, X, Zap, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import riffaLogo from "@/assets/riffa-logo.png";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -20,15 +21,13 @@ const Navbar = () => {
       animate={{ y: 0, opacity: 1 }}
       className="fixed top-0 left-0 right-0 z-50 glass-strong"
     >
-      <div className="container mx-auto flex items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
-          </div>
+      <div className="container mx-auto flex items-center justify-between px-4 py-3">
+        <Link to="/" className="flex items-center gap-2">
+          <img src={riffaLogo} alt="Riffa" className="h-8 w-8" />
           <span className="font-display text-xl font-bold text-foreground">
-            SORTEX
+            Riffa
           </span>
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
@@ -76,10 +75,7 @@ const Navbar = () => {
 
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
-          <button
-            className="text-foreground"
-            onClick={() => setOpen(!open)}
-          >
+          <button className="text-foreground" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
@@ -104,10 +100,10 @@ const Navbar = () => {
                   {l.label}
                 </Link>
               ))}
-              <button className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+              <Link to="/register" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
                 <Zap className="h-4 w-4" />
                 Participar Agora
-              </button>
+              </Link>
             </div>
           </motion.div>
         )}

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard,
 } from "lucide-react";
-import riffaLogo from "@/assets/riffa-logo.png";
+import bateuLogo from "@/assets/bateu-logo.png";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader, useSidebar,
@@ -34,9 +34,9 @@ function AdminSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-border px-4 py-4">
         <a href="/" className="flex items-center gap-2">
-          <img src={riffaLogo} alt="Riffa" className="h-8 w-8 shrink-0" />
+          <img src={bateuLogo} alt="Bateu" className="h-8 w-8 shrink-0" />
           {!collapsed && (
-            <span className="font-display text-lg font-bold text-foreground">Riffa Admin</span>
+            <span className="font-display text-lg font-bold text-foreground">Bateu Admin</span>
           )}
         </a>
       </SidebarHeader>

@@ -16,13 +16,13 @@ export default function AdminSettings() {
   const [featuredRaffleId, setFeaturedRaffleId] = useState("");
   const [raffles, setRaffles] = useState<any[]>([]);
   const [settings, setSettings] = useState({
-    platformName: "Riffa",
+    platformName: "Bateu",
     platformTagline: "Sorteios que inspiram",
     maintenanceMode: false,
     autoApprovePayments: false,
     maxTicketsPerUser: 10,
     commissionRate: 5,
-    supportEmail: "suporte@riffa.co.mz",
+    supportEmail: "suporte@bateu.co.mz",
     termsUrl: "",
     privacyUrl: "",
   });

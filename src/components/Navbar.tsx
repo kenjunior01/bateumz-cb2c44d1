@@ -4,7 +4,7 @@ import { Menu, X, Zap, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
-import riffaLogo from "@/assets/riffa-logo.png";
+import bateuLogo from "@/assets/bateu-logo.png";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -23,9 +23,9 @@ const Navbar = () => {
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src={riffaLogo} alt="Riffa" className="h-8 w-8" />
+          <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
           <span className="font-display text-xl font-bold text-foreground">
-            Riffa
+            Bateu
           </span>
         </Link>
 

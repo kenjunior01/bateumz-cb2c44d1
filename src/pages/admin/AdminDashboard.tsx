@@ -50,7 +50,7 @@ export default function AdminDashboard() {
         </div>
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Painel de Administração</h1>
-          <p className="text-sm text-muted-foreground">Visão global da plataforma Riffa</p>
+          <p className="text-sm text-muted-foreground">Visão global da plataforma Bateu</p>
         </div>
       </div>
 

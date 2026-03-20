@@ -108,9 +108,12 @@ export default function AdminDashboard() {
             <button onClick={() => navigate("/admin/raffles")} className="w-full flex items-center gap-3 rounded-xl bg-secondary/50 p-3 text-sm text-foreground hover:bg-secondary transition">
               <Ticket className="h-4 w-4 text-accent" /> Gerir Sorteios
             </button>
-            <button onClick={() => navigate("/admin/revenue")} className="w-full flex items-center gap-3 rounded-xl bg-secondary/50 p-3 text-sm text-foreground hover:bg-secondary transition">
-              <DollarSign className="h-4 w-4 text-primary" /> Ver Receitas
-            </button>
+             <button onClick={() => navigate("/admin/revenue")} className="w-full flex items-center gap-3 rounded-xl bg-secondary/50 p-3 text-sm text-foreground hover:bg-secondary transition">
+               <DollarSign className="h-4 w-4 text-primary" /> Ver Receitas
+             </button>
+             <button onClick={() => navigate("/admin/payments")} className="w-full flex items-center gap-3 rounded-xl bg-secondary/50 p-3 text-sm text-foreground hover:bg-secondary transition">
+               <CreditCard className="h-4 w-4 text-accent" /> Aprovar Pagamentos
+             </button>
           </CardContent>
         </Card>
       </div>

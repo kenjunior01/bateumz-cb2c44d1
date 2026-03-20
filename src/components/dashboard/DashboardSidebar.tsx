@@ -5,11 +5,11 @@ import {
   Users,
   Settings,
   Gift,
-  Trophy,
   Bell,
   LogOut,
   Palette,
 } from "lucide-react";
+import riffaLogo from "@/assets/riffa-logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,12 +58,10 @@ export function DashboardSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-border px-4 py-4">
         <a href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <Trophy className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src={riffaLogo} alt="Riffa" className="h-8 w-8 shrink-0" />
           {!collapsed && (
             <span className="font-display text-lg font-bold text-foreground">
-              SORTEX
+              Riffa
             </span>
           )}
         </a>

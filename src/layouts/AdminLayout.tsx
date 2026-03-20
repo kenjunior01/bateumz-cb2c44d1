@@ -2,8 +2,9 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Trophy, Bell, ArrowLeft, CreditCard,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard,
 } from "lucide-react";
+import riffaLogo from "@/assets/riffa-logo.png";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader, useSidebar,
@@ -16,6 +17,7 @@ const items = [
   { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
   { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
+  { title: "Configurações", url: "/admin/settings", icon: Settings },
 ];
 
 function AdminSidebar() {
@@ -32,11 +34,9 @@ function AdminSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-border px-4 py-4">
         <a href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive">
-            <Shield className="h-4 w-4 text-destructive-foreground" />
-          </div>
+          <img src={riffaLogo} alt="Riffa" className="h-8 w-8 shrink-0" />
           {!collapsed && (
-            <span className="font-display text-lg font-bold text-foreground">SORTEX Admin</span>
+            <span className="font-display text-lg font-bold text-foreground">Riffa Admin</span>
           )}
         </a>
       </SidebarHeader>

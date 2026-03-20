@@ -20,6 +20,7 @@ import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
+import DashboardSettings from "./pages/dashboard/DashboardSettings.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
 import LiveDraw from "./pages/LiveDraw.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
@@ -28,6 +29,7 @@ import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
 import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
 import AdminPayments from "./pages/admin/AdminPayments.tsx";
+import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -77,6 +79,7 @@ const App = () => (
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
               <Route path="white-label" element={<WhiteLabelConfig />} />
+              <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route
               path="/admin"
@@ -91,6 +94,7 @@ const App = () => (
               <Route path="raffles" element={<AdminRaffles />} />
               <Route path="revenue" element={<AdminRevenue />} />
               <Route path="payments" element={<AdminPayments />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

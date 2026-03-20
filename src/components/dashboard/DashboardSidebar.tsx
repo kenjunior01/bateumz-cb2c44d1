@@ -5,11 +5,11 @@ import {
   Users,
   Settings,
   Gift,
-  Trophy,
   Bell,
   LogOut,
   Palette,
 } from "lucide-react";
+import riffaLogo from "@/assets/riffa-logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";

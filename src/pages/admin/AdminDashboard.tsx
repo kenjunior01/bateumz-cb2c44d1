@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Ticket, DollarSign, TrendingUp, ArrowUpRight, Shield } from "lucide-react";
+import { Users, Ticket, DollarSign, TrendingUp, ArrowUpRight, Shield, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

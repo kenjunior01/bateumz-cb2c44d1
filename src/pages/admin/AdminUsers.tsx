@@ -44,6 +44,14 @@ export default function AdminUsers() {
     fetchUsers();
   }, []);
 
+  const toggleVerified = async (userId: string, current: boolean) => {
+    const { error } = await supabase.from("profiles").update({ is_verified: !current } as any).eq("user_id", userId);
+    if (!error) {
+      setUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, is_verified: !current } : u));
+      toast.success(!current ? "Empresa verificada!" : "Verificação removida");
+    }
+  };
+
   const filtered = users.filter((u) => {
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
     if (search) {

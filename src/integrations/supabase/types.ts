@@ -294,6 +294,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_verified: boolean | null
           phone: string | null
           referral_code: string | null
           updated_at: string
@@ -305,6 +306,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_verified?: boolean | null
           phone?: string | null
           referral_code?: string | null
           updated_at?: string
@@ -316,6 +318,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_verified?: boolean | null
           phone?: string | null
           referral_code?: string | null
           updated_at?: string
@@ -325,6 +328,8 @@ export type Database = {
       }
       raffles: {
         Row: {
+          activation_fee_paid: boolean | null
+          activation_fee_percentage: number | null
           auto_draw_days: number | null
           auto_draw_scheduled_at: string | null
           business_user_id: string
@@ -342,6 +347,7 @@ export type Database = {
           prize_value: number
           province: string | null
           raffle_type: string
+          rejection_reason: string | null
           slug: string | null
           sold_tickets: number
           start_date: string | null
@@ -353,6 +359,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activation_fee_paid?: boolean | null
+          activation_fee_percentage?: number | null
           auto_draw_days?: number | null
           auto_draw_scheduled_at?: string | null
           business_user_id: string
@@ -370,6 +378,7 @@ export type Database = {
           prize_value?: number
           province?: string | null
           raffle_type?: string
+          rejection_reason?: string | null
           slug?: string | null
           sold_tickets?: number
           start_date?: string | null
@@ -381,6 +390,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activation_fee_paid?: boolean | null
+          activation_fee_percentage?: number | null
           auto_draw_days?: number | null
           auto_draw_scheduled_at?: string | null
           business_user_id?: string
@@ -398,6 +409,7 @@ export type Database = {
           prize_value?: number
           province?: string | null
           raffle_type?: string
+          rejection_reason?: string | null
           slug?: string | null
           sold_tickets?: number
           start_date?: string | null

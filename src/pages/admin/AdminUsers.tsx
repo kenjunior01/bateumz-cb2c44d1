@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, Building2, User, MoreVertical, Ban, CheckCircle2 } from "lucide-react";
+import { Users, Search, Shield, Building2, User, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ interface UserProfile {
   company_name: string | null;
   phone: string | null;
   created_at: string;
+  is_verified: boolean;
   role: string;
 }
 
@@ -42,6 +43,14 @@ export default function AdminUsers() {
     };
     fetchUsers();
   }, []);
+
+  const toggleVerified = async (userId: string, current: boolean) => {
+    const { error } = await supabase.from("profiles").update({ is_verified: !current } as any).eq("user_id", userId);
+    if (!error) {
+      setUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, is_verified: !current } : u));
+      toast.success(!current ? "Empresa verificada!" : "Verificação removida");
+    }
+  };
 
   const filtered = users.filter((u) => {
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
@@ -121,6 +130,7 @@ export default function AdminUsers() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Contacto</TableHead>
                   <TableHead>Data de Registo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -134,7 +144,10 @@ export default function AdminUsers() {
                             {(u.display_name || "U").charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">{u.display_name || "Sem nome"}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-foreground">{u.display_name || "Sem nome"}</p>
+                              {u.is_verified && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
+                            </div>
                             {u.company_name && <p className="text-xs text-muted-foreground">{u.company_name}</p>}
                           </div>
                         </div>
@@ -149,12 +162,25 @@ export default function AdminUsers() {
                       <TableCell className="text-muted-foreground text-sm">
                         {new Date(u.created_at).toLocaleDateString("pt-MZ")}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {u.role === "business" && (
+                          <Button
+                            variant={u.is_verified ? "default" : "outline"}
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={() => toggleVerified(u.user_id, u.is_verified)}
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {u.is_verified ? "Verificada" : "Verificar"}
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       Nenhum utilizador encontrado
                     </TableCell>
                   </TableRow>

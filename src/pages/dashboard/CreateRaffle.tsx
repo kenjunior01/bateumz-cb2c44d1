@@ -96,7 +96,7 @@ export default function CreateRaffle() {
       start_date: form.start_date || null,
       end_date: form.draw_mode === "auto_sold_out" ? null : (form.end_date || null),
       image_url: imageUrl,
-      status: "draft",
+      status: "pending_activation",
       raffle_type: form.raffle_type,
       points_cost: form.raffle_type === "points" ? Number(form.points_cost) || 0 : 0,
       province: form.province || null,
@@ -108,7 +108,7 @@ export default function CreateRaffle() {
     } as any);
     setSaving(false);
     if (error) { toast.error("Erro ao criar sorteio: " + error.message); return; }
-    toast.success("Sorteio criado com sucesso!");
+    toast.success("Sorteio criado! Aguarde a aprovação do administrador.");
     navigate("/dashboard/raffles");
   };
 

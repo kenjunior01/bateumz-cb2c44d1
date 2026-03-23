@@ -15,6 +15,7 @@ interface UserProfile {
   company_name: string | null;
   phone: string | null;
   created_at: string;
+  is_verified: boolean;
   role: string;
 }
 

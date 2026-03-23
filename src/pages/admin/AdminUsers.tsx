@@ -144,7 +144,10 @@ export default function AdminUsers() {
                             {(u.display_name || "U").charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">{u.display_name || "Sem nome"}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-foreground">{u.display_name || "Sem nome"}</p>
+                              {u.is_verified && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
+                            </div>
                             {u.company_name && <p className="text-xs text-muted-foreground">{u.company_name}</p>}
                           </div>
                         </div>

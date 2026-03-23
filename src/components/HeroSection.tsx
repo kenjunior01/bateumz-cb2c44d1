@@ -1,12 +1,22 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import CountdownTimer from "./CountdownTimer";
 
 const HeroSection = () => {
+  const [participantCount, setParticipantCount] = useState(0);
+
+  useEffect(() => {
+    supabase
+      .from("participants")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setParticipantCount(count || 0));
+  }, []);
+
   return (
     <section className="relative overflow-hidden pt-20 pb-4 md:pt-24 md:pb-8">
-      {/* Subtle background */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
       <div className="absolute left-1/4 top-1/3 h-48 w-48 rounded-full bg-primary/8 blur-[100px]" />
       <div className="absolute right-1/4 top-1/4 h-36 w-36 rounded-full bg-accent/8 blur-[80px]" />
@@ -26,7 +36,6 @@ const HeroSection = () => {
             Sorteios transparentes com verificação pública. Prémios reais, vencedores reais.
           </p>
 
-          {/* Countdown - compact and beautiful */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -53,7 +62,7 @@ const HeroSection = () => {
             className="mt-5 md:mt-8 flex flex-wrap items-center justify-center gap-3 md:gap-5 text-[10px] md:text-xs text-muted-foreground"
           >
             <span className="flex items-center gap-1"><Shield className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> Verificação pública</span>
-            <span className="flex items-center gap-1"><Users className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> +52.000 vencedores</span>
+            <span className="flex items-center gap-1"><Users className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {participantCount > 0 ? `+${participantCount.toLocaleString()} participantes` : "Comunidade activa"}</span>
             <span className="flex items-center gap-1"><Clock className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> Novos toda semana</span>
           </motion.div>
         </motion.div>

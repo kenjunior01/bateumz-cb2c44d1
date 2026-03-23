@@ -167,7 +167,7 @@ export default function AdminRaffles() {
                   const config = statusConfig[r.status] || statusConfig.draft;
                   const pct = r.total_tickets > 0 ? Math.round((r.sold_tickets / r.total_tickets) * 100) : 0;
                   const feeAmount = Number(r.ticket_price) * r.total_tickets * (Number(r.activation_fee_percentage || 5) / 100);
-                  const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+                  const profile = r._profile;
                   return (
                     <TableRow key={r.id} className={r.status === "pending_activation" ? "bg-orange-500/5" : ""}>
                       <TableCell>

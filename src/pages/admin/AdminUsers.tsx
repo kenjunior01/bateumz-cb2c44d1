@@ -130,6 +130,7 @@ export default function AdminUsers() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Contacto</TableHead>
                   <TableHead>Data de Registo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

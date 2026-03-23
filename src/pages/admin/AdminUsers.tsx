@@ -162,6 +162,19 @@ export default function AdminUsers() {
                       <TableCell className="text-muted-foreground text-sm">
                         {new Date(u.created_at).toLocaleDateString("pt-MZ")}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {u.role === "business" && (
+                          <Button
+                            variant={u.is_verified ? "default" : "outline"}
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={() => toggleVerified(u.user_id, u.is_verified)}
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {u.is_verified ? "Verificada" : "Verificar"}
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}

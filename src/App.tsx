@@ -34,6 +34,7 @@ import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
 import WhiteLabelConfig from "./pages/dashboard/WhiteLabelConfig.tsx";
+import Profile from "./pages/Profile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,14 @@ const App = () => (
             <Route path="/install" element={<Install />} />
             <Route path="/referral" element={<Referral />} />
             <Route path="/community" element={<Community />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/my-points"
               element={

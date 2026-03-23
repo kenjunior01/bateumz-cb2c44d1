@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, Building2, User, MoreVertical, Ban, CheckCircle2 } from "lucide-react";
+import { Users, Search, Shield, Building2, User, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

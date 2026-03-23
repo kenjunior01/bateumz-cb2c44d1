@@ -192,7 +192,7 @@ const Profile = () => {
                         {profile?.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{profile.phone}</span>}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
-                          Membro desde {new Date(profile?.created_at || "").toLocaleDateString("pt-MZ", { month: "short", year: "numeric" })}
+                          Membro desde {new Date(user?.created_at || "").toLocaleDateString("pt-MZ", { month: "short", year: "numeric" })}
                         </span>
                       </div>
                     </>

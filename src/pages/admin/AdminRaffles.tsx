@@ -33,11 +33,15 @@ export default function AdminRaffles() {
   const [rejectReason, setRejectReason] = useState("");
 
   const fetchRaffles = async () => {
-    const { data } = await supabase
-      .from("raffles")
-      .select("*, profiles!raffles_business_user_id_fkey(display_name, is_verified)")
-      .order("created_at", { ascending: false });
-    if (data) setRaffles(data);
+    const { data } = await supabase.from("raffles").select("*").order("created_at", { ascending: false });
+    if (!data) { setLoading(false); return; }
+    
+    // Fetch business profiles for display
+    const bizIds = [...new Set(data.map((r) => r.business_user_id))];
+    const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, is_verified").in("user_id", bizIds);
+    const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+    
+    setRaffles(data.map((r) => ({ ...r, _profile: profileMap.get(r.business_user_id) || null })));
     setLoading(false);
   };
 

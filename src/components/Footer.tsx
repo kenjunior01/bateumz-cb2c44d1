@@ -17,11 +17,10 @@ const Footer = () => (
       <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
         <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
           <Link to="/marketplace" className="hover:text-foreground transition-colors">Sorteios</Link>
-          <a href="#como-funciona" className="hover:text-foreground transition-colors">Como Funciona</a>
-          <a href="#vencedores" className="hover:text-foreground transition-colors">Vencedores</a>
-          <a href="#" className="hover:text-foreground transition-colors">Termos</a>
-          <a href="#" className="hover:text-foreground transition-colors">Privacidade</a>
-          <a href="#" className="hover:text-foreground transition-colors">Suporte</a>
+          <Link to="/como-funciona" className="hover:text-foreground transition-colors">Como Funciona</Link>
+          <Link to="/termos" className="hover:text-foreground transition-colors">Termos</Link>
+          <Link to="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
+          <Link to="/community" className="hover:text-foreground transition-colors">Comunidade</Link>
         </div>
         <p className="text-sm text-muted-foreground">
           © 2026 Bateu. Todos os direitos reservados.

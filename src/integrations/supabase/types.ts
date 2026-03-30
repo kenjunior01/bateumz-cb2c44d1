@@ -349,6 +349,7 @@ export type Database = {
           raffle_type: string
           rejection_reason: string | null
           slug: string | null
+          social_actions: Json | null
           sold_tickets: number
           start_date: string | null
           status: string
@@ -380,6 +381,7 @@ export type Database = {
           raffle_type?: string
           rejection_reason?: string | null
           slug?: string | null
+          social_actions?: Json | null
           sold_tickets?: number
           start_date?: string | null
           status?: string
@@ -411,6 +413,7 @@ export type Database = {
           raffle_type?: string
           rejection_reason?: string | null
           slug?: string | null
+          social_actions?: Json | null
           sold_tickets?: number
           start_date?: string | null
           status?: string
@@ -519,6 +522,44 @@ export type Database = {
           value?: number
         }
         Relationships: []
+      }
+      social_participations: {
+        Row: {
+          actions_completed: Json | null
+          created_at: string
+          id: string
+          raffle_id: string
+          social_username: string | null
+          user_id: string
+          verified: boolean | null
+        }
+        Insert: {
+          actions_completed?: Json | null
+          created_at?: string
+          id?: string
+          raffle_id: string
+          social_username?: string | null
+          user_id: string
+          verified?: boolean | null
+        }
+        Update: {
+          actions_completed?: Json | null
+          created_at?: string
+          id?: string
+          raffle_id?: string
+          social_username?: string | null
+          user_id?: string
+          verified?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_participations_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

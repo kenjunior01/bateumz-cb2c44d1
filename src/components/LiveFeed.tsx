@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Ticket, Trophy } from "lucide-react";
+import { Ticket, Trophy, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-const fallbackNames = ["João S.", "Maria L.", "Carlos R.", "Ana P.", "Pedro M.", "Luísa F.", "Bruno G.", "Camila T."];
-const fallbackPrizes = ["Porsche 911 GT3", "iPhone 16 Pro Max", "Villa em Bali", "Setup Gamer"];
-const fallbackActions = ["comprou 3 bilhetes", "comprou 1 bilhete", "comprou 5 bilhetes", "entrou no bolão", "comprou 2 bilhetes"];
 
 interface FeedItem {
   id: number;
@@ -18,9 +14,9 @@ interface FeedItem {
 const LiveFeed = () => {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [realData, setRealData] = useState<{ name: string; action: string; prize: string; isWinner: boolean }[]>([]);
+  const [isEmpty, setIsEmpty] = useState(false);
 
   useEffect(() => {
-    // Fetch recent activity from DB
     const fetchActivity = async () => {
       const { data: recentParticipants } = await supabase
         .from("participants")
@@ -44,30 +40,43 @@ const LiveFeed = () => {
           isWinner: p.status === "winner",
         }));
         setRealData(mapped);
+      } else {
+        setIsEmpty(true);
       }
     };
     fetchActivity();
   }, []);
 
   useEffect(() => {
+    if (isEmpty) return;
+    if (realData.length === 0) return;
+    
     let idx = 0;
     const addItem = () => {
-      const useReal = realData.length > 0 && idx < realData.length;
-      const data = useReal
-        ? realData[idx++]
-        : {
-            name: fallbackNames[Math.floor(Math.random() * fallbackNames.length)],
-            action: Math.random() > 0.85 ? "ganhou" : fallbackActions[Math.floor(Math.random() * fallbackActions.length)],
-            prize: fallbackPrizes[Math.floor(Math.random() * fallbackPrizes.length)],
-            isWinner: Math.random() > 0.85,
-          };
-      
+      if (idx >= realData.length) idx = 0;
+      const data = realData[idx++];
       setItems((prev) => [{ id: Date.now(), ...data }, ...prev.slice(0, 4)]);
     };
     addItem();
     const interval = setInterval(addItem, 3500);
     return () => clearInterval(interval);
-  }, [realData]);
+  }, [realData, isEmpty]);
+
+  if (isEmpty) {
+    return (
+      <div className="glass rounded-2xl p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-foreground">Atividade ao Vivo</span>
+        </div>
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Ticket className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">Os primeiros sorteios estão a começar!</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">A atividade aparecerá aqui em tempo real.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass rounded-2xl p-5">

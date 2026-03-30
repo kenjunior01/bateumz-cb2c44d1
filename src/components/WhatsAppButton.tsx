@@ -1,11 +1,28 @@
+import { useState, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
-const WHATSAPP_NUMBER = "258840000000"; // TODO: Replace with real number
+const DEFAULT_NUMBER = "258840000000";
 const WHATSAPP_MESSAGE = "Olá! Preciso de ajuda com a plataforma Bateu.";
 
 export default function WhatsAppButton() {
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+  const [number, setNumber] = useState(DEFAULT_NUMBER);
+
+  useEffect(() => {
+    supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "general")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value && (data.value as any).whatsappNumber) {
+          setNumber((data.value as any).whatsappNumber);
+        }
+      });
+  }, []);
+
+  const url = `https://wa.me/${number}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
   return (
     <motion.a

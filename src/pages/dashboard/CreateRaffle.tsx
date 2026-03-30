@@ -27,7 +27,7 @@ export default function CreateRaffle() {
     total_tickets: "",
     start_date: "",
     end_date: "",
-    raffle_type: "paid" as "paid" | "free" | "points",
+    raffle_type: "paid" as "paid" | "free" | "points" | "social",
     points_cost: "",
     province: "",
     city: "",
@@ -35,6 +35,7 @@ export default function CreateRaffle() {
     hide_prize_value: false,
     auto_draw_days: "",
     tickets_threshold: "",
+    social_actions: [] as { platform: string; action: string; url: string }[],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -91,7 +92,7 @@ export default function CreateRaffle() {
       description: form.description || null,
       prize_title: form.prize_title,
       prize_value: Number(form.prize_value) || 0,
-      ticket_price: form.raffle_type === "free" ? 0 : Number(form.ticket_price) || 0,
+      ticket_price: form.raffle_type === "free" || form.raffle_type === "social" ? 0 : Number(form.ticket_price) || 0,
       total_tickets: Number(form.total_tickets) || 100,
       start_date: form.start_date || null,
       end_date: form.draw_mode === "auto_sold_out" ? null : (form.end_date || null),

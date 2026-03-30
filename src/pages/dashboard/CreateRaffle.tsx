@@ -216,11 +216,12 @@ export default function CreateRaffle() {
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Tipo de Sorteio</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3">
+             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {([
                 { id: "paid" as const, label: "Pago (MZN)", desc: "Bilhetes vendidos por dinheiro", icon: "💰" },
                 { id: "free" as const, label: "Gratuito", desc: "Sorteio grátis para atrair público", icon: "🎁" },
                 { id: "points" as const, label: "Por Pontos", desc: "Participação com pontos acumulados", icon: "⭐" },
+                { id: "social" as const, label: "Social", desc: "Participação por ações nas redes sociais", icon: "📱" },
               ]).map((t) => (
                 <button key={t.id} onClick={() => setForm({ ...form, raffle_type: t.id })}
                   className={`rounded-xl p-4 text-left border transition-all ${
@@ -232,6 +233,45 @@ export default function CreateRaffle() {
                 </button>
               ))}
             </div>
+
+            {form.raffle_type === "social" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Ações Sociais Requeridas</label>
+                  <Button variant="outline" size="sm" onClick={addSocialAction}>+ Adicionar Ação</Button>
+                </div>
+                {form.social_actions.map((sa, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <select value={sa.platform} onChange={(e) => updateSocialAction(idx, "platform", e.target.value)}
+                      className="h-10 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground">
+                      <option value="instagram">Instagram</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="twitter">X (Twitter)</option>
+                    </select>
+                    <select value={sa.action} onChange={(e) => updateSocialAction(idx, "action", e.target.value)}
+                      className="h-10 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground">
+                      <option value="follow">Seguir</option>
+                      <option value="like">Dar Like</option>
+                      <option value="subscribe">Subscrever</option>
+                      <option value="share">Partilhar</option>
+                    </select>
+                    <input value={sa.url} onChange={(e) => updateSocialAction(idx, "url", e.target.value)}
+                      placeholder="URL do perfil ou publicação"
+                      className="h-10 flex-1 rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground" />
+                    <button onClick={() => removeSocialAction(idx)} className="text-destructive hover:text-destructive/80">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {form.social_actions.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4 bg-secondary/20 rounded-lg">
+                    Adicione pelo menos uma ação social que os participantes devem completar
+                  </p>
+                )}
+              </motion.div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

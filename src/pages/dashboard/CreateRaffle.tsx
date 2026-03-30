@@ -106,6 +106,7 @@ export default function CreateRaffle() {
       hide_prize_value: form.hide_prize_value,
       auto_draw_days: form.draw_mode === "auto_sold_out" ? Number(form.auto_draw_days) || 1 : null,
       tickets_threshold: form.draw_mode === "auto_sold_out" ? thresholdValue : null,
+      social_actions: form.raffle_type === "social" ? form.social_actions : [],
     } as any);
     setSaving(false);
     if (error) { toast.error("Erro ao criar sorteio: " + error.message); return; }
@@ -113,7 +114,19 @@ export default function CreateRaffle() {
     navigate("/dashboard/raffles");
   };
 
-  const estimatedRevenue = form.raffle_type === "free" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
+  const estimatedRevenue = form.raffle_type === "free" || form.raffle_type === "social" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
+
+  const addSocialAction = () => {
+    setForm({ ...form, social_actions: [...form.social_actions, { platform: "instagram", action: "follow", url: "" }] });
+  };
+  const removeSocialAction = (idx: number) => {
+    setForm({ ...form, social_actions: form.social_actions.filter((_, i) => i !== idx) });
+  };
+  const updateSocialAction = (idx: number, field: string, value: string) => {
+    const updated = [...form.social_actions];
+    updated[idx] = { ...updated[idx], [field]: value };
+    setForm({ ...form, social_actions: updated });
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

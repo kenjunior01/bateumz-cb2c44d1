@@ -62,6 +62,9 @@ const App = () => (
             <Route path="/install" element={<Install />} />
             <Route path="/referral" element={<Referral />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacy />} />
+            <Route path="/como-funciona" element={<HowItWorks />} />
             <Route
               path="/profile"
               element={

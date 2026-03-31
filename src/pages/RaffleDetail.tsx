@@ -262,7 +262,7 @@ const RaffleDetail = () => {
                 <button className="glass rounded-full p-2 hover:bg-card/80 transition"><Heart className="h-4 w-4 text-foreground" /></button>
               </div>
               <div className="absolute bottom-4 left-4 flex gap-2 items-center">
-                <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
+                <Badge className="font-bold text-lg px-4 py-1" style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
                   {(raffle as any).hide_prize_value ? "🎁 Valor Surpresa" : formatMZN(raffle.prize_value)}
                 </Badge>
                 {businessName && (

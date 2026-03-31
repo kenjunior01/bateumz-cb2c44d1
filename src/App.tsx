@@ -94,6 +94,8 @@ const App = () => (
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
+              <Route path="prizes" element={<DashboardPrizes />} />
+              <Route path="notifications" element={<DashboardNotifications />} />
               <Route path="white-label" element={<WhiteLabelConfig />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>

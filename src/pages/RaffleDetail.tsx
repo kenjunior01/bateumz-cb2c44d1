@@ -404,7 +404,8 @@ const RaffleDetail = () => {
                         <span className="font-display text-2xl font-bold text-foreground">{formatMZN(totalPrice)}</span>
                       </div>
                     </div>
-                    <Button onClick={() => goToStep(1)} className="w-full gap-2 h-12 text-base glow-primary">
+                    <Button onClick={() => goToStep(1)} className="w-full gap-2 h-12 text-base glow-primary"
+                      style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
                       <ShoppingCart className="h-5 w-5" /> Comprar Bilhetes
                     </Button>
                   </motion.div>

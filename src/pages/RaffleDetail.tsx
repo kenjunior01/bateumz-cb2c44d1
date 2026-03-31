@@ -213,15 +213,30 @@ const RaffleDetail = () => {
   const needsReceipt = paymentMethod === "mpesa" || paymentMethod === "emola";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={whiteLabelConfig ? {
+      '--wl-primary': whiteLabelConfig.primary_color,
+      '--wl-secondary': whiteLabelConfig.secondary_color,
+    } as React.CSSProperties : undefined}>
       {whiteLabelConfig && (
-        <div className="w-full py-2 px-4 text-center text-sm font-medium"
-          style={{ backgroundColor: whiteLabelConfig.primary_color, color: '#fff' }}>
-          <div className="container mx-auto flex items-center justify-center gap-2">
-            {whiteLabelConfig.logo_url && (
-              <img src={whiteLabelConfig.logo_url} alt={whiteLabelConfig.brand_name} className="h-5 w-5 rounded-full object-cover" />
-            )}
-            <span>Sorteio por <strong>{whiteLabelConfig.brand_name}</strong></span>
+        <div className="w-full py-3 px-4"
+          style={{ background: `linear-gradient(135deg, ${whiteLabelConfig.primary_color}, ${whiteLabelConfig.secondary_color})`, color: '#fff' }}>
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {whiteLabelConfig.logo_url ? (
+                <img src={whiteLabelConfig.logo_url} alt={whiteLabelConfig.brand_name} className="h-8 w-8 rounded-lg object-cover border border-white/20" />
+              ) : (
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold bg-white/20">
+                  {whiteLabelConfig.brand_name.charAt(0)}
+                </div>
+              )}
+              <div>
+                <span className="font-display font-bold text-sm">{whiteLabelConfig.brand_name}</span>
+                <span className="text-white/70 text-xs ml-2">apresenta</span>
+              </div>
+            </div>
+            <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur-sm">
+              ✨ Sorteio Exclusivo
+            </Badge>
           </div>
         </div>
       )}
@@ -247,7 +262,7 @@ const RaffleDetail = () => {
                 <button className="glass rounded-full p-2 hover:bg-card/80 transition"><Heart className="h-4 w-4 text-foreground" /></button>
               </div>
               <div className="absolute bottom-4 left-4 flex gap-2 items-center">
-                <Badge className="bg-primary text-primary-foreground font-bold text-lg px-4 py-1">
+                <Badge className="font-bold text-lg px-4 py-1" style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
                   {(raffle as any).hide_prize_value ? "🎁 Valor Surpresa" : formatMZN(raffle.prize_value)}
                 </Badge>
                 {businessName && (
@@ -389,7 +404,8 @@ const RaffleDetail = () => {
                         <span className="font-display text-2xl font-bold text-foreground">{formatMZN(totalPrice)}</span>
                       </div>
                     </div>
-                    <Button onClick={() => goToStep(1)} className="w-full gap-2 h-12 text-base glow-primary">
+                    <Button onClick={() => goToStep(1)} className="w-full gap-2 h-12 text-base glow-primary"
+                      style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
                       <ShoppingCart className="h-5 w-5" /> Comprar Bilhetes
                     </Button>
                   </motion.div>

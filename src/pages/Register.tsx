@@ -96,10 +96,8 @@ export default function Register() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-2xl font-bold text-foreground">SORTEX</span>
+            <img src="/assets/bateu-logo.png" alt="Bateu" className="h-10 w-10 rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <span className="font-display text-2xl font-bold text-foreground">Bateu</span>
           </Link>
           <h1 className="font-display text-2xl font-bold text-foreground">Criar Conta</h1>
           <p className="text-sm text-muted-foreground mt-1">Escolha o tipo de conta para começar</p>

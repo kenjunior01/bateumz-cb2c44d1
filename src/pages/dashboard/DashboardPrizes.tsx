@@ -47,15 +47,15 @@ export default function DashboardPrizes() {
       const winnerUserIds = winners?.map(w => w.user_id) || [];
       const { data: profiles } = winnerUserIds.length > 0
         ? await supabase.from("profiles").select("user_id, display_name").in("user_id", winnerUserIds)
-        : { data: [] };
+        : { data: [] as any[] };
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
-      const winnerMap = new Map(winners?.map(w => [w.raffle_id, { ticket: w.ticket_number, name: profileMap.get(w.user_id) || "Anónimo" }]) || []);
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name]));
+      const winnerMap = new Map((winners || []).map((w: any) => [w.raffle_id, { ticket: w.ticket_number, name: profileMap.get(w.user_id) || "Anónimo" }]));
 
       setRaffles(rafflesData.map(r => ({
         ...r,
         winner_ticket: winnerMap.get(r.id)?.ticket,
-        winner_name: winnerMap.get(r.id)?.name,
+        winner_name: winnerMap.get(r.id)?.name as string | undefined,
       })));
       setLoading(false);
     };

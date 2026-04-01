@@ -39,24 +39,35 @@ const StatsBar = () => {
     fetchStats();
   }, []);
 
+  // Hide section if no real data yet (all numeric values are 0)
+  const hasData = stats.some((s) => s.value !== "0" && s.value !== "100%");
+
   return (
     <section className="relative border-y border-border bg-card/50">
       <div className="container mx-auto grid grid-cols-2 gap-6 px-6 py-12 md:grid-cols-4">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1 }}
-            className="text-center"
-          >
-            <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
-              {s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span>
-            </div>
-            <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
-          </motion.div>
-        ))}
+        {stats.map((s, i) => {
+          // Skip zero counters to avoid credibility issues
+          const isZero = s.value === "0";
+          return (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="text-center"
+            >
+              <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
+                {isZero ? (
+                  <span className="text-xl md:text-2xl text-muted-foreground">Em breve</span>
+                ) : (
+                  <>{s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span></>
+                )}
+              </div>
+              <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
+            </motion.div>
+          );
+        })}
       </div>
     </section>
   );

@@ -62,8 +62,8 @@ export default function Referral() {
   const handleShare = async () => {
     if (navigator.share) {
       await navigator.share({
-        title: "SORTEX — Sorteios Premium",
-        text: "Junta-te ao SORTEX e ganha pontos para participar em sorteios incríveis! Usa o meu link:",
+        title: "Bateu — Sorteios Premium",
+        text: "Junta-te ao Bateu e ganha pontos para participar em sorteios incríveis! Usa o meu link:",
         url: referralLink,
       });
     } else {

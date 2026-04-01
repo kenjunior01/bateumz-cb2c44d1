@@ -144,7 +144,7 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                       ) : (
                         <>
                           <p className="text-sm font-semibold text-accent">Pendente</p>
-                          <p className="text-xs text-muted-foreground">A verificação será registada após o sorteio</p>
+                          <p className="text-xs text-muted-foreground">A verificação será registada automaticamente na blockchain assim que o sorteio for realizado e o vencedor seleccionado. Este processo garante que o resultado é imutável e verificável por qualquer pessoa.</p>
                         </>
                       )}
                     </div>

@@ -68,6 +68,7 @@ const App = () => (
             <Route path="/termos" element={<Terms />} />
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/como-funciona" element={<HowItWorks />} />
+            <Route path="/faq" element={<FAQ />} />
             <Route
               path="/profile"
               element={

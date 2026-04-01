@@ -40,6 +40,7 @@ import Profile from "./pages/Profile.tsx";
 import Terms from "./pages/Terms.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import HowItWorks from "./pages/HowItWorks.tsx";
+import FAQ from "./pages/FAQ.tsx";
 import WhatsAppButton from "./components/WhatsAppButton.tsx";
 
 const queryClient = new QueryClient();

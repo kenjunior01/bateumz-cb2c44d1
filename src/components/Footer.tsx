@@ -21,6 +21,7 @@ const Footer = () => (
           <Link to="/termos" className="hover:text-foreground transition-colors">Termos</Link>
           <Link to="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
           <Link to="/community" className="hover:text-foreground transition-colors">Comunidade</Link>
+          <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
         </div>
         <p className="text-sm text-muted-foreground">
           © 2026 Bateu. Todos os direitos reservados.

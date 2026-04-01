@@ -38,6 +38,8 @@ interface Raffle {
   auto_draw_days?: number | null;
   tickets_threshold?: number | null;
   auto_draw_scheduled_at?: string | null;
+  raffle_type?: string;
+  social_actions?: any[];
 }
 
 interface WhiteLabelConfig {

@@ -124,7 +124,7 @@ const Marketplace = () => {
             <p className="text-xl text-muted-foreground">Nenhum sorteio encontrado</p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {filtered.map((raffle, i) => {
               const pct = (raffle.sold_tickets / raffle.total_tickets) * 100;
               return (

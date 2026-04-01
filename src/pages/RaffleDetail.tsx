@@ -430,6 +430,7 @@ const RaffleDetail = () => {
                 <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary/50 inline-block" /> Vendido</span>
               </div>
             </CardContent></Card>
+            )}
           </div>
         </div>
       </div>

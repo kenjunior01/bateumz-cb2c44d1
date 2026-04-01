@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet, Upload, Image, Sparkles, X, ChevronRight, PartyPopper } from "lucide-react";
+import SocialRaffleEntry from "@/components/SocialRaffleEntry";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,8 @@ interface Raffle {
   auto_draw_days?: number | null;
   tickets_threshold?: number | null;
   auto_draw_scheduled_at?: string | null;
+  raffle_type?: string;
+  social_actions?: any[];
 }
 
 interface WhiteLabelConfig {
@@ -349,8 +352,17 @@ const RaffleDetail = () => {
             )}
           </div>
 
-          {/* Right column - Number selection */}
+          {/* Right column - Number selection or Social Entry */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Social raffle entry */}
+            {raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0 ? (
+              <SocialRaffleEntry
+                raffleId={raffle.id}
+                socialActions={raffle.social_actions}
+                totalTickets={raffle.total_tickets}
+                soldTickets={raffle.sold_tickets}
+              />
+            ) : (
             <Card className="glass sticky top-28"><CardContent className="p-6">
               <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
               <p className="text-sm text-muted-foreground mb-3">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
@@ -418,6 +430,7 @@ const RaffleDetail = () => {
                 <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary/50 inline-block" /> Vendido</span>
               </div>
             </CardContent></Card>
+            )}
           </div>
         </div>
       </div>

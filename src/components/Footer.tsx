@@ -17,6 +17,7 @@ const Footer = () => (
       <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
         <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
           <Link to="/marketplace" className="hover:text-foreground transition-colors">Sorteios</Link>
+          <Link to="/historico" className="hover:text-foreground transition-colors">Vencedores</Link>
           <Link to="/como-funciona" className="hover:text-foreground transition-colors">Como Funciona</Link>
           <Link to="/termos" className="hover:text-foreground transition-colors">Termos</Link>
           <Link to="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>

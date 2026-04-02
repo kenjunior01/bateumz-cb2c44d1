@@ -112,8 +112,8 @@ export default function SocialRaffleManager() {
   const handleReject = async (entry: Entry) => {
     if (!rejectionReason.trim()) { toast.error("Indique o motivo da rejeição"); return; }
     setProcessing(true);
-    const { error } = await supabase
-      .from("social_raffle_entries" as any)
+    const { error } = await (supabase as any)
+      .from("social_raffle_entries")
       .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString(), rejection_reason: rejectionReason.trim() })
       .eq("id", entry.id);
     if (error) { toast.error("Erro: " + error.message); }

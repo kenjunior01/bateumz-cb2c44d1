@@ -35,7 +35,7 @@ export default function CreateRaffle() {
     hide_prize_value: false,
     auto_draw_days: "",
     tickets_threshold: "",
-    social_actions: [] as { platform: string; action: string; url: string }[],
+    social_actions: [] as { platform: string; action: string; url: string; requires_proof: boolean; requires_approval: boolean }[],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

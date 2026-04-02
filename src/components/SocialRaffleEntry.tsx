@@ -198,8 +198,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       if (error) { toast.error("Erro ao registar participação: " + error.message); setSubmitting(false); return; }
       setEntry(data);
     } else {
-      const { error } = await supabase
-        .from("social_raffle_entries" as any)
+      const { error } = await (supabase as any)
+        .from("social_raffle_entries")
         .update({
           social_username: username.trim(),
           missions_completed: completedActions,

@@ -209,6 +209,11 @@ export default function DashboardRaffles() {
                                     <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/edit`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                       <Edit className="h-3.5 w-3.5" /> Editar
                                     </button>
+                                   )}
+                                  {raffle.raffle_type === "social" && (
+                                    <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/social`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
+                                      <Users className="h-3.5 w-3.5" /> Gestão Social
+                                    </button>
                                   )}
                                   {(raffle.status === "draft" || raffle.status === "active") && (
                                     <button onClick={() => handleStatusToggle(raffle)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">

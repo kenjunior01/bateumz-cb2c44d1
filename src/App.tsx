@@ -42,6 +42,8 @@ import Privacy from "./pages/Privacy.tsx";
 import HowItWorks from "./pages/HowItWorks.tsx";
 import FAQ from "./pages/FAQ.tsx";
 import RaffleHistory from "./pages/RaffleHistory.tsx";
+import MyTickets from "./pages/MyTickets.tsx";
+import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import WhatsAppButton from "./components/WhatsAppButton.tsx";
 
 const queryClient = new QueryClient();
@@ -80,6 +82,14 @@ const App = () => (
               }
             />
             <Route
+              path="/my-tickets"
+              element={
+                <ProtectedRoute>
+                  <MyTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/my-points"
               element={
                 <ProtectedRoute>
@@ -98,6 +108,7 @@ const App = () => (
               <Route index element={<DashboardOverview />} />
               <Route path="raffles" element={<DashboardRaffles />} />
               <Route path="raffles/create" element={<CreateRaffle />} />
+              <Route path="raffles/:id/edit" element={<EditRaffle />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
               <Route path="prizes" element={<DashboardPrizes />} />

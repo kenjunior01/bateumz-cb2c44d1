@@ -13,11 +13,14 @@ import { toast } from "sonner";
 
 type RaffleStatus = "active" | "draft" | "completed" | "cancelled";
 
-const statusConfig: Record<RaffleStatus, { label: string; color: string; bg: string; icon: typeof Clock }> = {
+const statusConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary", bg: "bg-primary/10", icon: CheckCircle2 },
   draft: { label: "Rascunho", color: "text-accent", bg: "bg-accent/10", icon: Clock },
   completed: { label: "Concluído", color: "text-muted-foreground", bg: "bg-muted/40", icon: CheckCircle2 },
   cancelled: { label: "Cancelado", color: "text-destructive", bg: "bg-destructive/10", icon: XCircle },
+  pending_activation: { label: "Aguarda Aprovação", color: "text-orange-500", bg: "bg-orange-500/10", icon: Clock },
+  pending_payment: { label: "Aguarda Pagamento", color: "text-yellow-500", bg: "bg-yellow-500/10", icon: Clock },
+  rejected: { label: "Rejeitado", color: "text-destructive", bg: "bg-destructive/10", icon: XCircle },
 };
 
 const filterTabs: { label: string; value: RaffleStatus | "all" }[] = [
@@ -202,6 +205,11 @@ export default function DashboardRaffles() {
                                   <button onClick={() => navigate(`/raffle/${raffle.slug || raffle.id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                     <Eye className="h-3.5 w-3.5" /> Ver detalhes
                                   </button>
+                                  {(raffle.status === "draft" || raffle.status === "active" || raffle.status === "pending_activation") && (
+                                    <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/edit`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
+                                      <Edit className="h-3.5 w-3.5" /> Editar
+                                    </button>
+                                  )}
                                   {(raffle.status === "draft" || raffle.status === "active") && (
                                     <button onClick={() => handleStatusToggle(raffle)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                       <Edit className="h-3.5 w-3.5" /> {raffle.status === "draft" ? "Ativar" : "Pausar"}

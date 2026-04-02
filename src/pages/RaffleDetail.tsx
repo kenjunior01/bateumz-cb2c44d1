@@ -355,10 +355,10 @@ const RaffleDetail = () => {
           {/* Right column - Number selection or Social Entry */}
           <div className="lg:col-span-2 space-y-6">
             {/* Social raffle entry */}
-            {raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0 ? (
+            {(raffle.raffle_type === "social" || (raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0)) ? (
               <SocialRaffleEntry
                 raffleId={raffle.id}
-                socialActions={raffle.social_actions}
+                socialActions={raffle.social_actions || []}
                 totalTickets={raffle.total_tickets}
                 soldTickets={raffle.sold_tickets}
               />

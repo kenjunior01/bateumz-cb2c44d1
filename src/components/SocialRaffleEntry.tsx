@@ -83,8 +83,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     if (!user) return;
     const fetch = async () => {
       // Check new social_raffle_entries table
-      const { data } = await supabase
-        .from("social_raffle_entries" as any)
+      const { data } = await (supabase as any)
+        .from("social_raffle_entries")
         .select("*")
         .eq("raffle_id", raffleId)
         .eq("user_id", user.id)

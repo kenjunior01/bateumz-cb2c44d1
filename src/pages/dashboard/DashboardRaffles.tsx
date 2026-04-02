@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, Search, MoreVertical, Eye, Edit, Trash2, CheckCircle2, Clock, XCircle, Ticket, Trophy,
+  Plus, Search, MoreVertical, Eye, Edit, Trash2, CheckCircle2, Clock, XCircle, Ticket, Trophy, Users,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

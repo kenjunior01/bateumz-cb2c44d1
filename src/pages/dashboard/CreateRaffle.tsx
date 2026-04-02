@@ -124,7 +124,8 @@ export default function CreateRaffle() {
   };
   const updateSocialAction = (idx: number, field: string, value: string) => {
     const updated = [...form.social_actions];
-    updated[idx] = { ...updated[idx], [field]: value };
+    const parsedValue = value === "true" ? true : value === "false" ? false : value;
+    updated[idx] = { ...updated[idx], [field]: parsedValue };
     setForm({ ...form, social_actions: updated });
   };
 

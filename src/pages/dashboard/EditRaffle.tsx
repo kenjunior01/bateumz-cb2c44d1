@@ -167,7 +167,7 @@ export default function EditRaffle() {
                 >
                   <option value="">Selecionar...</option>
                   {PROVINCES.map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
               </div>

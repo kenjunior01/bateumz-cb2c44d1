@@ -190,8 +190,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     };
 
     if (!entry) {
-      const { data, error } = await supabase
-        .from("social_raffle_entries" as any)
+      const { data, error } = await (supabase as any)
+        .from("social_raffle_entries")
         .insert(entryData)
         .select()
         .single();

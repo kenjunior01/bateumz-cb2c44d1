@@ -110,6 +110,7 @@ const App = () => (
               <Route path="raffles" element={<DashboardRaffles />} />
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="raffles/:id/edit" element={<EditRaffle />} />
+              <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
               <Route path="prizes" element={<DashboardPrizes />} />

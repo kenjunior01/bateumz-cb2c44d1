@@ -282,6 +282,20 @@ export default function CreateRaffle() {
                     <input value={sa.url} onChange={(e) => updateSocialAction(idx, "url", e.target.value)}
                       placeholder="https://instagram.com/seuperfil ou link da publicação"
                       className="h-9 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground" />
+                    <div className="flex gap-4 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={sa.requires_proof !== false}
+                          onChange={(e) => updateSocialAction(idx, "requires_proof", e.target.checked ? "true" : "false")}
+                          className="rounded border-border" />
+                        <span className="text-[11px] text-muted-foreground">📷 Exigir comprovativo (screenshot)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={sa.requires_approval !== false}
+                          onChange={(e) => updateSocialAction(idx, "requires_approval", e.target.checked ? "true" : "false")}
+                          className="rounded border-border" />
+                        <span className="text-[11px] text-muted-foreground">👁️ Revisão manual obrigatória</span>
+                      </label>
+                    </div>
                   </div>
                 ))}
                 

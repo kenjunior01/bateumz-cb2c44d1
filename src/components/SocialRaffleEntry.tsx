@@ -99,8 +99,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         setProofUrls(urlMap);
       }
       // Count participants
-      const { count } = await supabase
-        .from("social_raffle_entries" as any)
+      const { count } = await (supabase as any)
+        .from("social_raffle_entries")
         .select("id", { count: "exact", head: true })
         .eq("raffle_id", raffleId);
       if (count) setParticipantCount(count);

@@ -235,40 +235,73 @@ export default function CreateRaffle() {
             </div>
 
             {form.raffle_type === "social" && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-foreground">Ações Sociais Requeridas</label>
-                  <Button variant="outline" size="sm" onClick={addSocialAction}>+ Adicionar Ação</Button>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-6 space-y-4">
+                <div className="rounded-xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="h-5 w-5 text-accent" />
+                    <h4 className="text-sm font-bold text-foreground">Sorteio de Engajamento Social</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Os participantes completam missões nas redes sociais para ganhar entrada gratuita. 
+                    Quanto mais missões completarem, maior o multiplicador de chance. Sistema com níveis: 
+                    <strong className="text-foreground"> Iniciante → Engajado → Super Fã → Lenda</strong>.
+                  </p>
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Missões Sociais</label>
+                  <Button variant="outline" size="sm" onClick={addSocialAction} className="gap-1">
+                    <span className="text-lg">+</span> Adicionar Missão
+                  </Button>
+                </div>
+                
                 {form.social_actions.map((sa, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <select value={sa.platform} onChange={(e) => updateSocialAction(idx, "platform", e.target.value)}
-                      className="h-10 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground">
-                      <option value="instagram">Instagram</option>
-                      <option value="youtube">YouTube</option>
-                      <option value="tiktok">TikTok</option>
-                      <option value="facebook">Facebook</option>
-                      <option value="twitter">X (Twitter)</option>
-                    </select>
-                    <select value={sa.action} onChange={(e) => updateSocialAction(idx, "action", e.target.value)}
-                      className="h-10 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground">
-                      <option value="follow">Seguir</option>
-                      <option value="like">Dar Like</option>
-                      <option value="subscribe">Subscrever</option>
-                      <option value="share">Partilhar</option>
-                    </select>
+                  <div key={idx} className="rounded-xl border border-border bg-secondary/20 p-3 space-y-2">
+                    <div className="flex gap-2 items-center">
+                      <span className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">{idx + 1}</span>
+                      <select value={sa.platform} onChange={(e) => updateSocialAction(idx, "platform", e.target.value)}
+                        className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground">
+                        <option value="instagram">📸 Instagram</option>
+                        <option value="youtube">🎬 YouTube</option>
+                        <option value="tiktok">🎵 TikTok</option>
+                        <option value="facebook">👍 Facebook</option>
+                        <option value="twitter">🐦 X (Twitter)</option>
+                      </select>
+                      <select value={sa.action} onChange={(e) => updateSocialAction(idx, "action", e.target.value)}
+                        className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground">
+                        <option value="follow">Seguir</option>
+                        <option value="like">Dar Like</option>
+                        <option value="subscribe">Subscrever</option>
+                        <option value="share">Partilhar</option>
+                        <option value="comment">Comentar</option>
+                      </select>
+                      <button onClick={() => removeSocialAction(idx)} className="h-9 w-9 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                     <input value={sa.url} onChange={(e) => updateSocialAction(idx, "url", e.target.value)}
-                      placeholder="URL do perfil ou publicação"
-                      className="h-10 flex-1 rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground" />
-                    <button onClick={() => removeSocialAction(idx)} className="text-destructive hover:text-destructive/80">
-                      <X className="h-4 w-4" />
-                    </button>
+                      placeholder="https://instagram.com/seuperfil ou link da publicação"
+                      className="h-9 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground" />
                   </div>
                 ))}
+                
                 {form.social_actions.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4 bg-secondary/20 rounded-lg">
-                    Adicione pelo menos uma ação social que os participantes devem completar
-                  </p>
+                  <div className="text-center py-8 rounded-xl border-2 border-dashed border-border bg-secondary/10">
+                    <span className="text-3xl mb-2 block">📱</span>
+                    <p className="text-sm font-medium text-foreground">Nenhuma missão adicionada</p>
+                    <p className="text-xs text-muted-foreground mt-1">Adicione missões como "Seguir no Instagram" ou "Subscrever no YouTube"</p>
+                  </div>
+                )}
+
+                {form.social_actions.length > 0 && (
+                  <div className="rounded-xl bg-accent/5 border border-accent/10 p-3 flex items-start gap-2">
+                    <Info className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="text-foreground">{form.social_actions.length} missão(ões)</strong> configuradas. 
+                      Participantes que completarem todas ganham nível <strong className="text-accent">Lenda (3x chance)</strong>.
+                      Bilhetes gratuitos — o valor está no engajamento para a sua marca!
+                    </p>
+                  </div>
                 )}
               </motion.div>
             )}

@@ -96,8 +96,8 @@ export default function SocialRaffleManager() {
 
   const handleApprove = async (entry: Entry) => {
     setProcessing(true);
-    const { error } = await supabase
-      .from("social_raffle_entries" as any)
+    const { error } = await (supabase as any)
+      .from("social_raffle_entries")
       .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString(), rejection_reason: null })
       .eq("id", entry.id);
     if (error) { toast.error("Erro: " + error.message); }

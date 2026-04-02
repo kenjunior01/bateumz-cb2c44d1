@@ -42,6 +42,8 @@ import Privacy from "./pages/Privacy.tsx";
 import HowItWorks from "./pages/HowItWorks.tsx";
 import FAQ from "./pages/FAQ.tsx";
 import RaffleHistory from "./pages/RaffleHistory.tsx";
+import MyTickets from "./pages/MyTickets.tsx";
+import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import WhatsAppButton from "./components/WhatsAppButton.tsx";
 
 const queryClient = new QueryClient();

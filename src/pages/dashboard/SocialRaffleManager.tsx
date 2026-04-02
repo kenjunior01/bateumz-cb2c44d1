@@ -72,13 +72,13 @@ export default function SocialRaffleManager() {
     const fetchData = async () => {
       const [raffleRes, entriesRes] = await Promise.all([
         supabase.from("raffles").select("id, title, social_actions, total_tickets").eq("id", id).single(),
-        supabase.from("social_raffle_entries" as any).select("*").eq("raffle_id", id).order("created_at", { ascending: false }),
+        (supabase as any).from("social_raffle_entries").select("*").eq("raffle_id", id).order("created_at", { ascending: false }),
       ]);
       if (raffleRes.data) setRaffle(raffleRes.data as any);
       if (entriesRes.data) {
-        setEntries(entriesRes.data as Entry[]);
+        setEntries(entriesRes.data as unknown as Entry[]);
         // Fetch profiles
-        const userIds = (entriesRes.data as Entry[]).map(e => e.user_id);
+        const userIds = (entriesRes.data as unknown as Entry[]).map(e => e.user_id);
         if (userIds.length > 0) {
           const { data: profileData } = await supabase
             .from("profiles").select("user_id, display_name").in("user_id", userIds);

@@ -202,6 +202,11 @@ export default function DashboardRaffles() {
                                   <button onClick={() => navigate(`/raffle/${raffle.slug || raffle.id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                     <Eye className="h-3.5 w-3.5" /> Ver detalhes
                                   </button>
+                                  {(raffle.status === "draft" || raffle.status === "active" || raffle.status === "pending_activation") && (
+                                    <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/edit`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
+                                      <Edit className="h-3.5 w-3.5" /> Editar
+                                    </button>
+                                  )}
                                   {(raffle.status === "draft" || raffle.status === "active") && (
                                     <button onClick={() => handleStatusToggle(raffle)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                       <Edit className="h-3.5 w-3.5" /> {raffle.status === "draft" ? "Ativar" : "Pausar"}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, Search, MoreVertical, Eye, Edit, Trash2, CheckCircle2, Clock, XCircle, Ticket, Trophy,
+  Plus, Search, MoreVertical, Eye, Edit, Trash2, CheckCircle2, Clock, XCircle, Ticket, Trophy, Users,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -208,6 +208,11 @@ export default function DashboardRaffles() {
                                   {(raffle.status === "draft" || raffle.status === "active" || raffle.status === "pending_activation") && (
                                     <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/edit`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
                                       <Edit className="h-3.5 w-3.5" /> Editar
+                                    </button>
+                                   )}
+                                  {raffle.raffle_type === "social" && (
+                                    <button onClick={() => navigate(`/dashboard/raffles/${raffle.id}/social`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-secondary">
+                                      <Users className="h-3.5 w-3.5" /> Gestão Social
                                     </button>
                                   )}
                                   {(raffle.status === "draft" || raffle.status === "active") && (

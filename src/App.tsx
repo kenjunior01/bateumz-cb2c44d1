@@ -44,6 +44,7 @@ import FAQ from "./pages/FAQ.tsx";
 import RaffleHistory from "./pages/RaffleHistory.tsx";
 import MyTickets from "./pages/MyTickets.tsx";
 import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
+import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
 import WhatsAppButton from "./components/WhatsAppButton.tsx";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,7 @@ const App = () => (
               <Route path="raffles" element={<DashboardRaffles />} />
               <Route path="raffles/create" element={<CreateRaffle />} />
               <Route path="raffles/:id/edit" element={<EditRaffle />} />
+              <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
               <Route path="prizes" element={<DashboardPrizes />} />

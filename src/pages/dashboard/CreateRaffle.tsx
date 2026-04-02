@@ -35,7 +35,7 @@ export default function CreateRaffle() {
     hide_prize_value: false,
     auto_draw_days: "",
     tickets_threshold: "",
-    social_actions: [] as { platform: string; action: string; url: string }[],
+    social_actions: [] as { platform: string; action: string; url: string; requires_proof: boolean; requires_approval: boolean }[],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -117,14 +117,15 @@ export default function CreateRaffle() {
   const estimatedRevenue = form.raffle_type === "free" || form.raffle_type === "social" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
 
   const addSocialAction = () => {
-    setForm({ ...form, social_actions: [...form.social_actions, { platform: "instagram", action: "follow", url: "" }] });
+    setForm({ ...form, social_actions: [...form.social_actions, { platform: "instagram", action: "follow", url: "", requires_proof: true, requires_approval: true }] });
   };
   const removeSocialAction = (idx: number) => {
     setForm({ ...form, social_actions: form.social_actions.filter((_, i) => i !== idx) });
   };
   const updateSocialAction = (idx: number, field: string, value: string) => {
     const updated = [...form.social_actions];
-    updated[idx] = { ...updated[idx], [field]: value };
+    const parsedValue = value === "true" ? true : value === "false" ? false : value;
+    updated[idx] = { ...updated[idx], [field]: parsedValue };
     setForm({ ...form, social_actions: updated });
   };
 
@@ -282,6 +283,20 @@ export default function CreateRaffle() {
                     <input value={sa.url} onChange={(e) => updateSocialAction(idx, "url", e.target.value)}
                       placeholder="https://instagram.com/seuperfil ou link da publicação"
                       className="h-9 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground" />
+                    <div className="flex gap-4 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={sa.requires_proof !== false}
+                          onChange={(e) => updateSocialAction(idx, "requires_proof", e.target.checked ? "true" : "false")}
+                          className="rounded border-border" />
+                        <span className="text-[11px] text-muted-foreground">📷 Exigir comprovativo (screenshot)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={sa.requires_approval !== false}
+                          onChange={(e) => updateSocialAction(idx, "requires_approval", e.target.checked ? "true" : "false")}
+                          className="rounded border-border" />
+                        <span className="text-[11px] text-muted-foreground">👁️ Revisão manual obrigatória</span>
+                      </label>
+                    </div>
                   </div>
                 ))}
                 
@@ -370,7 +385,7 @@ export default function CreateRaffle() {
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              {form.raffle_type !== "free" && (
+              {form.raffle_type !== "free" && form.raffle_type !== "social" && (
                 <div>
                   <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                     <Ticket className="h-3.5 w-3.5" /> {form.raffle_type === "points" ? "Custo em Pontos *" : "Preço por Bilhete (MZN) *"}

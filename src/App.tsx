@@ -82,6 +82,14 @@ const App = () => (
               }
             />
             <Route
+              path="/my-tickets"
+              element={
+                <ProtectedRoute>
+                  <MyTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/my-points"
               element={
                 <ProtectedRoute>

@@ -131,8 +131,8 @@ export default function SocialRaffleManager() {
     if (pending.length === 0) return;
     setProcessing(true);
     const ids = pending.map(e => e.id);
-    const { error } = await supabase
-      .from("social_raffle_entries" as any)
+    const { error } = await (supabase as any)
+      .from("social_raffle_entries")
       .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .in("id", ids);
     if (error) { toast.error("Erro: " + error.message); }

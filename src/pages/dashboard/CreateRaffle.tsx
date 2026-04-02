@@ -117,7 +117,7 @@ export default function CreateRaffle() {
   const estimatedRevenue = form.raffle_type === "free" || form.raffle_type === "social" ? 0 : (Number(form.ticket_price) || 0) * (Number(form.total_tickets) || 0);
 
   const addSocialAction = () => {
-    setForm({ ...form, social_actions: [...form.social_actions, { platform: "instagram", action: "follow", url: "" }] });
+    setForm({ ...form, social_actions: [...form.social_actions, { platform: "instagram", action: "follow", url: "", requires_proof: true, requires_approval: true }] });
   };
   const removeSocialAction = (idx: number) => {
     setForm({ ...form, social_actions: form.social_actions.filter((_, i) => i !== idx) });

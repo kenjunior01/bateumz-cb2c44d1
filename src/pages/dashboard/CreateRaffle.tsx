@@ -385,7 +385,7 @@ export default function CreateRaffle() {
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              {form.raffle_type !== "free" && (
+              {form.raffle_type !== "free" && form.raffle_type !== "social" && (
                 <div>
                   <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
                     <Ticket className="h-3.5 w-3.5" /> {form.raffle_type === "points" ? "Custo em Pontos *" : "Preço por Bilhete (MZN) *"}

@@ -19,6 +19,7 @@ import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
+import SocialAnalytics from "./pages/dashboard/SocialAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
 import DashboardSettings from "./pages/dashboard/DashboardSettings.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
@@ -112,6 +113,7 @@ const App = () => (
               <Route path="raffles/:id/edit" element={<EditRaffle />} />
               <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
+              <Route path="social-analytics" element={<SocialAnalytics />} />
               <Route path="participants" element={<DashboardParticipants />} />
               <Route path="prizes" element={<DashboardPrizes />} />
               <Route path="notifications" element={<DashboardNotifications />} />

@@ -8,6 +8,7 @@ import {
   Bell,
   LogOut,
   Palette,
+  Zap,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import { NavLink } from "@/components/NavLink";
@@ -31,6 +32,7 @@ const mainItems = [
   { title: "Painel Geral", url: "/dashboard", icon: LayoutDashboard },
   { title: "Meus Sorteios", url: "/dashboard/raffles", icon: Ticket },
   { title: "Analíticas", url: "/dashboard/analytics", icon: BarChart3 },
+  { title: "Analíticas Sociais", url: "/dashboard/social-analytics", icon: Zap },
   { title: "Participantes", url: "/dashboard/participants", icon: Users },
   { title: "Prémios", url: "/dashboard/prizes", icon: Gift },
   { title: "White Label", url: "/dashboard/white-label", icon: Palette },

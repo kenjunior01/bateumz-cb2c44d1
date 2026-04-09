@@ -203,7 +203,36 @@ export default function SocialRaffleManager() {
             <CheckCircle2 className="h-4 w-4" /> Aprovar Todos ({stats.pending})
           </Button>
         )}
+        {stats.approved > 0 && !winner && (
+          <Button onClick={handleDrawWinner} disabled={drawingWinner} size="sm" variant="outline" className="gap-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10">
+            {drawingWinner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+            Sortear Vencedor
+          </Button>
+        )}
       </div>
+
+      {/* Winner announcement */}
+      {winner && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+          <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-primary/5">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="h-14 w-14 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <Trophy className="h-7 w-7 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-amber-500 font-medium uppercase tracking-wider">Vencedor do Sorteio</p>
+                <p className="text-xl font-bold text-foreground">@{winner.social_username}</p>
+                <p className="text-sm text-muted-foreground">
+                  Nível: <span className="text-foreground font-medium">{winner.tier}</span> • 
+                  Multiplicador: <span className="text-foreground font-medium">{winner.multiplier}x</span> • 
+                  {winner.missions_completed} missões completadas
+                </p>
+              </div>
+              <Sparkles className="h-6 w-6 text-amber-500 animate-pulse" />
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">

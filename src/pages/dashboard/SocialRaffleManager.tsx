@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Check, X, Eye, Clock, Users, Search, Filter, CheckCircle2,
   AlertCircle, Camera, Instagram, Youtube, Music2, Share2, MessageCircle,
-  Crown, Shield, Loader2, ChevronDown,
+  Crown, Shield, Loader2, ChevronDown, Trophy, Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,8 @@ export default function SocialRaffleManager() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [processing, setProcessing] = useState(false);
   const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
+  const [drawingWinner, setDrawingWinner] = useState(false);
+  const [winner, setWinner] = useState<any>(null);
 
   useEffect(() => {
     if (!id || !user) return;

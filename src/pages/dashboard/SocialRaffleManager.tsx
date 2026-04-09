@@ -145,6 +145,25 @@ export default function SocialRaffleManager() {
     setProcessing(false);
   };
 
+  const handleDrawWinner = async () => {
+    if (!id) return;
+    const confirmed = window.confirm("Tem certeza que deseja sortear o vencedor? Esta ação é irreversível.");
+    if (!confirmed) return;
+    setDrawingWinner(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("draw-social-winner", {
+        body: { raffle_id: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setWinner(data.winner);
+      toast.success(`🎉 Vencedor: @${data.winner.social_username} (${data.winner.tier}, ${data.winner.multiplier}x)`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao sortear vencedor");
+    }
+    setDrawingWinner(false);
+  };
+
   const filteredEntries = entries.filter(e => {
     if (filter !== "all" && e.status !== filter) return false;
     if (search && !e.social_username?.toLowerCase().includes(search.toLowerCase())

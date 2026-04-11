@@ -139,7 +139,7 @@ export default function MascotBuddy() {
   const modeRef = useRef<MascotMode>(mode);
   modeRef.current = mode;
 
-  const userName = profile?.display_name || user?.email?.split("@")[0] || "amigo";
+  const userName = profile?.display_name || "amigo/a";
   const { context, mood } = useMemo(() => getRouteContext(location.pathname), [location.pathname]);
 
   // Show mini mascots in various positions

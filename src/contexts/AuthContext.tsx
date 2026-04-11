@@ -57,7 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("bateu_signup_extra");
       try {
         const extra = JSON.parse(extraRaw);
-        const updates: Record<string, any> = {};
+        const updates: {
+          phone?: string;
+          province?: string;
+          city?: string;
+          interests?: string[];
+        } = {};
         if (extra.phone) updates.phone = extra.phone;
         if (extra.province) updates.province = extra.province;
         if (extra.city) updates.city = extra.city;

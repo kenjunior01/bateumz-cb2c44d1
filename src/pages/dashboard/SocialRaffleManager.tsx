@@ -96,6 +96,24 @@ export default function SocialRaffleManager() {
     fetchData();
   }, [id, user]);
 
+  const sendNotification = async (entry: Entry, status: "approved" | "rejected", reason?: string) => {
+    if (!raffle) return;
+    const title = status === "approved"
+      ? "✅ Participação Aprovada!"
+      : "❌ Participação Rejeitada";
+    const message = status === "approved"
+      ? `A sua participação no sorteio "${raffle.title}" foi aprovada! Você está concorrendo ao prémio.`
+      : `A sua participação no sorteio "${raffle.title}" foi rejeitada.${reason ? ` Motivo: ${reason}` : ""}`;
+    await (supabase as any).from("notifications").insert({
+      user_id: entry.user_id,
+      title,
+      message,
+      type: status === "approved" ? "social_approved" : "social_rejected",
+      raffle_id: raffle.id,
+      metadata: { social_username: entry.social_username, entry_id: entry.id },
+    });
+  };
+
   const handleApprove = async (entry: Entry) => {
     setProcessing(true);
     const { error } = await (supabase as any)
@@ -106,6 +124,7 @@ export default function SocialRaffleManager() {
     else {
       toast.success(`✅ Participação de @${entry.social_username} aprovada!`);
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: "approved", reviewed_at: new Date().toISOString() } : e));
+      await sendNotification(entry, "approved");
     }
     setProcessing(false);
     setSelectedEntry(null);
@@ -122,6 +141,7 @@ export default function SocialRaffleManager() {
     else {
       toast.success(`Participação de @${entry.social_username} rejeitada.`);
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: "rejected", rejection_reason: rejectionReason.trim() } : e));
+      await sendNotification(entry, "rejected", rejectionReason.trim());
     }
     setProcessing(false);
     setSelectedEntry(null);
@@ -141,6 +161,8 @@ export default function SocialRaffleManager() {
     else {
       toast.success(`✅ ${pending.length} participações aprovadas!`);
       setEntries(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: "approved" } : e));
+      // Send notifications to all approved
+      await Promise.all(pending.map(e => sendNotification(e, "approved")));
     }
     setProcessing(false);
   };

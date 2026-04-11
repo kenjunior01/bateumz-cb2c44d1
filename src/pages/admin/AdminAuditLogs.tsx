@@ -56,7 +56,7 @@ export default function AdminAuditLogs() {
   const fetchLogs = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from("audit_logs")
+      .from("audit_logs" as any)
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);

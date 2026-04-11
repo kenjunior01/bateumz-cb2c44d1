@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -17,6 +17,7 @@ const items = [
   { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
   { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
+  { title: "Auditoria", url: "/admin/audit", icon: ScrollText },
   { title: "Configurações", url: "/admin/settings", icon: Settings },
 ];
 

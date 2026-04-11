@@ -55,29 +55,116 @@ function getRouteContext(pathname: string): { context: string; mood: MascotMood 
   if (pathname.startsWith("/dashboard")) return { context: "dashboard de negócio", mood: "thinking" };
   if (pathname === "/historico") return { context: "histórico de vencedores", mood: "winner" };
   if (pathname === "/como-funciona") return { context: "como funciona a plataforma", mood: "thinking" };
+  if (pathname === "/referral") return { context: "programa de referências", mood: "excited" };
+  if (pathname === "/faq") return { context: "perguntas frequentes", mood: "thinking" };
+  if (pathname === "/install") return { context: "instalação da app", mood: "excited" };
+  if (pathname === "/login") return { context: "página de login", mood: "happy" };
+  if (pathname === "/register") return { context: "página de registo", mood: "excited" };
+  if (pathname === "/termos") return { context: "termos e condições", mood: "thinking" };
+  if (pathname === "/privacidade") return { context: "política de privacidade", mood: "thinking" };
   return { context: "navegação geral", mood: "happy" };
 }
+
+// Route-specific messages that override generic fallbacks when on certain pages
+const ROUTE_MESSAGES: Record<string, ((name: string) => string)[]> = {
+  "/": [
+    (n) => `${n}! 🏠 Bem-vindo ao Bateu! Aqui os sonhos viram realidade!`,
+    (n) => `Ei ${n}! ✨ Explora os sorteios em destaque e tenta a tua sorte!`,
+    (n) => `${n}! 🎯 Milhares de prémios à tua espera! Por onde queres começar?`,
+    (n) => `Olá ${n}! 🌟 Hoje pode ser o teu dia de sorte! Vamos ver os sorteios?`,
+  ],
+  "/marketplace": [
+    (n) => `${n}! 🛒 O marketplace está cheio de oportunidades hoje!`,
+    (n) => `WOW ${n}! 🎁 Tantos prémios novos! Qual te chama mais atenção?`,
+    (n) => `${n}! 💎 Dica: filtra por categoria para encontrar o sorteio perfeito!`,
+    (n) => `${n}! 🔥 Os sorteios mais populares estão a esgotar rápido!`,
+    (n) => `Ei ${n}! 🎲 Quanto mais exploras, mais chances encontras!`,
+  ],
+  "/community": [
+    (n) => `${n}! 👥 A comunidade Bateu é incrível! Partilha a tua experiência!`,
+    (n) => `Ei ${n}! 💬 Já viste as últimas conversas? Muita gente animada!`,
+    (n) => `${n}! 🤝 Conecta-te com outros participantes e troca dicas!`,
+    (n) => `${n}! 🎤 A tua opinião conta! Deixa um comentário!`,
+  ],
+  "/my-tickets": [
+    (n) => `${n}! 🎫 Aqui estão os teus bilhetes! Cruza os dedos! 🤞`,
+    (n) => `Ei ${n}! 📋 Acompanha o estado de cada bilhete aqui!`,
+    (n) => `${n}! 🍀 Cada bilhete é uma chance! Quanto mais, melhor!`,
+    (n) => `${n}! ⏰ Verifica os prazos dos teus sorteios activos!`,
+  ],
+  "/my-points": [
+    (n) => `${n}! 💰 Os teus Luck Points são valiosos! Usa-os com sabedoria!`,
+    (n) => `Ei ${n}! 🌟 Ganha mais pontos participando e convidando amigos!`,
+    (n) => `${n}! 🎁 Sabias que podes trocar pontos por bilhetes grátis?`,
+    (n) => `${n}! 🚀 Quanto mais activo, mais pontos acumulas!`,
+  ],
+  "/profile": [
+    (n) => `${n}! 👤 O teu perfil está com boa energia! Mantém-no actualizado!`,
+    (n) => `Ei ${n}! 📸 Um perfil completo inspira mais confiança!`,
+    (n) => `${n}! ✏️ Verifica se os teus dados estão correctos!`,
+  ],
+  "/referral": [
+    (n) => `${n}! 🎉 Convida amigos e ganhem ambos 50 Luck Points!`,
+    (n) => `Ei ${n}! 🔗 Partilha o teu link e faz crescer a comunidade!`,
+    (n) => `${n}! 💪 Quanto mais amigos convidares, mais pontos ganhas!`,
+    (n) => `${n}! 📲 Envia o link por WhatsApp, é super fácil!`,
+  ],
+  "/como-funciona": [
+    (n) => `${n}! 📖 Boa ideia! Entender como funciona é o primeiro passo!`,
+    (n) => `Ei ${n}! 🧠 Aqui encontras tudo sobre a plataforma!`,
+    (n) => `${n}! 💡 Sabias que os sorteios são verificados por blockchain?`,
+    (n) => `${n}! 🔒 Transparência é a nossa prioridade! Lê com atenção!`,
+  ],
+  "/faq": [
+    (n) => `${n}! ❓ Tem dúvidas? Estás no sítio certo!`,
+    (n) => `Ei ${n}! 📚 As perguntas mais comuns estão todas aqui!`,
+    (n) => `${n}! 💬 Se não encontrares a resposta, fala comigo no chat!`,
+  ],
+  "/historico": [
+    (n) => `${n}! 🏆 Vê quem já ganhou! O próximo podes ser tu!`,
+    (n) => `Ei ${n}! 👑 Inspira-te com os vencedores anteriores!`,
+    (n) => `${n}! 🎊 Tantas histórias de sucesso! A tua está a caminho!`,
+    (n) => `${n}! ✅ Todos os resultados são verificados e transparentes!`,
+  ],
+  "/install": [
+    (n) => `${n}! 📱 Instala a app e recebe notificações dos sorteios!`,
+    (n) => `Ei ${n}! 🔔 Com a app nunca perdes um sorteio importante!`,
+    (n) => `${n}! ⚡ A app é rápida e funciona offline também!`,
+  ],
+};
 
 const FALLBACK_MESSAGES: Record<MascotMood, ((name: string) => string)[]> = {
   happy: [
     (n) => `Ei ${n}! 🌟 Que bom ver-te! Explora os sorteios e tenta a tua sorte!`,
     (n) => `Olá ${n}! 😄 Bem-vindo ao Bateu! A diversão começa aqui!`,
     (n) => `${n}! 🎈 Estás pronto para ganhar? Eu acredito em ti!`,
+    (n) => `${n}! 😊 Cada dia é uma nova oportunidade de ganhar!`,
+    (n) => `Ei ${n}! 🌈 A sorte sorri a quem participa!`,
+    (n) => `${n}! 🎀 Que bom ter-te aqui! Vamos descobrir prémios juntos!`,
   ],
   thinking: [
     (n) => `Hmm ${n}... 🤔 Este sorteio parece interessante! Já viste os detalhes?`,
     (n) => `${n}, analisa bem! 🧐 Quanto mais bilhetes, mais chances!`,
     (n) => `${n}! 💡 Sabias que podes usar Luck Points para participar grátis?`,
+    (n) => `${n}! 🔍 Lê sempre a descrição completa antes de participar!`,
+    (n) => `Hmm ${n}... 📊 Verifica quantos bilhetes já foram vendidos!`,
+    (n) => `${n}! 🧮 Menos participantes = mais chances! Pensa nisso!`,
   ],
   excited: [
     (n) => `${n}!! 🎉 Tantos prémios incríveis! Não percas esta oportunidade!`,
     (n) => `WOW ${n}! 🚀 Os sorteios estão a bombar! Participa agora!`,
     (n) => `${n}! 🔥 Olha só estes prémios! Eu não resistia!`,
+    (n) => `${n}! 💥 Está tudo a acontecer! Não fiques de fora!`,
+    (n) => `${n}! ⚡ A energia está no máximo! Vamos ganhar!`,
+    (n) => `INCRÍVEL ${n}! 🤩 Novos sorteios acabaram de abrir!`,
   ],
   winner: [
     (n) => `${n}! 🏆 Alguém vai ganhar hoje! Será que és tu?!`,
     (n) => `${n}! 👑 Os vencedores são verificados por blockchain!`,
     (n) => `${n}! 🎊 Estou tão animado! O próximo vencedor pode ser tu!`,
+    (n) => `${n}! 🥇 A emoção está no ar! Quem será o sortudo?!`,
+    (n) => `${n}! 🎆 Momento mágico a chegar! Prepara-te!`,
+    (n) => `${n}! 🌟 Os vencedores de hoje são os corajosos de ontem!`,
   ],
 };
 
@@ -88,6 +175,10 @@ const QUICK_QUESTIONS = [
   "Quantos sorteios estão activos?",
   "O que são sorteios sociais?",
   "A plataforma é segura?",
+  "Como convido amigos?",
+  "Como instalo a app?",
+  "Posso participar grátis?",
+  "Como sei se ganhei?",
 ];
 
 // Mini floating mascot that appears in different screen positions
@@ -175,7 +266,9 @@ export default function MascotBuddy() {
       if (error || !data?.message) throw new Error("No message");
       setMessage(data.message);
     } catch {
-      const pool = FALLBACK_MESSAGES[currentMood];
+      // Use route-specific messages first, then fall back to mood-based
+      const routePool = ROUTE_MESSAGES[location.pathname];
+      const pool = routePool && routePool.length > 0 ? routePool : FALLBACK_MESSAGES[currentMood];
       setMessage(pool[Math.floor(Math.random() * pool.length)](userName));
     } finally {
       setLoading(false);

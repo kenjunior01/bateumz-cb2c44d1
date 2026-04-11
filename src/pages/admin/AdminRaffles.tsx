@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Ticket, Search, Eye, Trash2, CheckCircle2, Clock, XCircle, Trophy, ExternalLink, ShieldCheck, AlertTriangle, DollarSign, Ban } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export default function AdminRaffles() {
   const handleApprove = async (id: string) => {
     const { error } = await supabase.from("raffles").update({ status: "active", activation_fee_paid: true } as any).eq("id", id);
     if (!error) {
+      await logAudit("raffle_approved", "raffle", id);
       toast.success("Sorteio aprovado e ativado!");
       fetchRaffles();
     }
@@ -68,6 +70,7 @@ export default function AdminRaffles() {
     if (!rejectReason.trim()) { toast.error("Indique o motivo da rejeição"); return; }
     const { error } = await supabase.from("raffles").update({ status: "rejected", rejection_reason: rejectReason } as any).eq("id", rejectModal.id);
     if (!error) {
+      await logAudit("raffle_rejected", "raffle", rejectModal.id, { reason: rejectReason });
       toast.success("Sorteio rejeitado");
       setRejectModal({ open: false, id: "" });
       setRejectReason("");

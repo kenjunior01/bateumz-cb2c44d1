@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CreditCard, Search, CheckCircle2, Clock, XCircle, Eye, Smartphone, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,7 @@ export default function AdminPayments() {
       .update({ payment_status: "completed" })
       .eq("id", id);
     if (!error) {
+      await logAudit("payment_approved", "payment", id);
       toast.success("Pagamento aprovado!");
       fetchPayments();
     }
@@ -80,6 +82,7 @@ export default function AdminPayments() {
       .update({ payment_status: "rejected" })
       .eq("id", id);
     if (!error) {
+      await logAudit("payment_rejected", "payment", id);
       toast.success("Pagamento rejeitado");
       fetchPayments();
     }

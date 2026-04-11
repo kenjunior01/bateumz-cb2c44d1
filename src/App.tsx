@@ -48,7 +48,7 @@ import RaffleHistory from "./pages/RaffleHistory.tsx";
 import MyTickets from "./pages/MyTickets.tsx";
 import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
-import WhatsAppButton from "./components/WhatsAppButton.tsx";
+
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();
 
@@ -141,7 +141,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <WhatsAppButton />
+          
           <MascotBuddy />
         </BrowserRouter>
       </TooltipProvider>

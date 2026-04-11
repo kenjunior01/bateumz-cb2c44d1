@@ -4,12 +4,14 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import { Trophy, ArrowLeft, Users, Ticket, Sparkles, Crown, Star, Zap, Heart, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMZN } from "@/lib/currency";
+import { playWinSound, playDrumRoll, playTickSound } from "@/lib/sounds";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import mascotWinner from "@/assets/mascot-winner.png";
 
 interface Participant {
   id: string;

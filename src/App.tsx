@@ -33,6 +33,7 @@ import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
 import AdminPayments from "./pages/admin/AdminPayments.tsx";
 import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs.tsx";
+import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -137,6 +138,7 @@ const App = () => (
               <Route path="revenue" element={<AdminRevenue />} />
               <Route path="payments" element={<AdminPayments />} />
               <Route path="audit" element={<AdminAuditLogs />} />
+              <Route path="cron" element={<AdminCronJobs />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

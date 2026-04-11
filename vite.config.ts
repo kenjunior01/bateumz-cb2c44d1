@@ -18,14 +18,15 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt"],
+      devOptions: { enabled: false },
+      includeAssets: ["favicon.png", "robots.txt"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,webp}"],
       },
       manifest: {
-        name: "SORTEX — Sorteios Premium",
-        short_name: "SORTEX",
+        name: "Bateu — Sorteios Premium",
+        short_name: "Bateu",
         description: "Sorteios transparentes e verificáveis. Realize seus sonhos com a plataforma mais confiável de Moçambique.",
         theme_color: "#0a0a0f",
         background_color: "#0a0a0f",

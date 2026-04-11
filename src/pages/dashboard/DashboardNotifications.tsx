@@ -1,125 +1,83 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, CheckCircle2, Ticket, Users, DollarSign, Trophy, Clock, Trash2 } from "lucide-react";
+import { Bell, CheckCircle2, Ticket, DollarSign, Trophy, Clock, Instagram, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatMZN } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 
-interface Notification {
+interface DbNotification {
   id: string;
-  type: "purchase" | "payment" | "winner" | "approval";
   title: string;
-  description: string;
-  time: string;
+  message: string;
+  type: string;
   read: boolean;
-  raffleSlug?: string;
+  raffle_id: string | null;
+  metadata: any;
+  created_at: string;
 }
 
 export default function DashboardNotifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<DbNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchNotifications = async () => {
     if (!user) return;
-    const fetchNotifications = async () => {
-      // Build notifications from recent participants on user's raffles
-      const { data: raffles } = await supabase
-        .from("raffles")
-        .select("id, title, slug, status")
-        .eq("business_user_id", user.id);
+    const { data } = await (supabase as any)
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (data) setNotifications(data);
+    setLoading(false);
+  };
 
-      if (!raffles || raffles.length === 0) { setLoading(false); return; }
-
-      const raffleIds = raffles.map(r => r.id);
-      const raffleMap = new Map(raffles.map(r => [r.id, r]));
-
-      const { data: participants } = await supabase
-        .from("participants")
-        .select("id, ticket_number, payment_status, payment_method, created_at, raffle_id, status")
-        .in("raffle_id", raffleIds)
-        .order("created_at", { ascending: false })
-        .limit(30);
-
-      const notifs: Notification[] = [];
-
-      participants?.forEach(p => {
-        const raffle = raffleMap.get(p.raffle_id);
-        if (!raffle) return;
-
-        if (p.status === "winner") {
-          notifs.push({
-            id: `winner-${p.id}`,
-            type: "winner",
-            title: `🏆 Vencedor escolhido!`,
-            description: `Bilhete #${p.ticket_number} venceu o sorteio "${raffle.title}"`,
-            time: p.created_at,
-            read: false,
-            raffleSlug: raffle.slug || raffle.id,
-          });
-        } else if (p.payment_status === "pending") {
-          notifs.push({
-            id: `payment-${p.id}`,
-            type: "payment",
-            title: "💳 Pagamento pendente",
-            description: `Bilhete #${p.ticket_number} em "${raffle.title}" aguarda confirmação`,
-            time: p.created_at,
-            read: false,
-            raffleSlug: raffle.slug || raffle.id,
-          });
-        } else {
-          notifs.push({
-            id: `purchase-${p.id}`,
-            type: "purchase",
-            title: "🎫 Nova compra de bilhete",
-            description: `Bilhete #${p.ticket_number} comprado para "${raffle.title}"`,
-            time: p.created_at,
-            read: true,
-            raffleSlug: raffle.slug || raffle.id,
-          });
-        }
-      });
-
-      // Add approval notifications
-      raffles.filter(r => r.status === "active").forEach(r => {
-        notifs.push({
-          id: `approval-${r.id}`,
-          type: "approval",
-          title: "✅ Sorteio aprovado",
-          description: `O sorteio "${r.title}" foi aprovado e está ativo`,
-          time: new Date().toISOString(),
-          read: true,
-          raffleSlug: r.slug || r.id,
-        });
-      });
-
-      setNotifications(notifs.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()));
-      setLoading(false);
-    };
+  useEffect(() => {
     fetchNotifications();
+
+    // Realtime subscription
+    if (!user) return;
+    const channel = supabase
+      .channel("user-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload: any) => {
+          setNotifications(prev => [payload.new as DbNotification, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const iconConfig = {
+  const iconConfig: Record<string, { icon: typeof Bell; color: string }> = {
+    social_approved: { icon: CheckCircle2, color: "text-primary bg-primary/10" },
+    social_rejected: { icon: X, color: "text-destructive bg-destructive/10" },
     purchase: { icon: Ticket, color: "text-primary bg-primary/10" },
     payment: { icon: DollarSign, color: "text-accent bg-accent/10" },
     winner: { icon: Trophy, color: "text-yellow-500 bg-yellow-500/10" },
-    approval: { icon: CheckCircle2, color: "text-primary bg-primary/10" },
+    info: { icon: Bell, color: "text-muted-foreground bg-secondary" },
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    await (supabase as any).from("notifications").update({ read: true }).in("id", unreadIds);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "agora";
     if (mins < 60) return `${mins}m atrás`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h atrás`;
@@ -177,7 +135,7 @@ export default function DashboardNotifications() {
             <div className="divide-y divide-border">
               <AnimatePresence>
                 {notifications.map((n, i) => {
-                  const config = iconConfig[n.type];
+                  const config = iconConfig[n.type] || iconConfig.info;
                   const Icon = config.icon;
                   return (
                     <motion.div
@@ -185,7 +143,6 @@ export default function DashboardNotifications() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      onClick={() => n.raffleSlug && navigate(`/raffle/${n.raffleSlug}`)}
                       className={`flex items-start gap-4 p-4 cursor-pointer transition-colors hover:bg-secondary/30 ${
                         !n.read ? "bg-primary/[0.03]" : ""
                       }`}
@@ -200,9 +157,9 @@ export default function DashboardNotifications() {
                           </p>
                           {!n.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{n.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                       </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0 mt-1">{timeAgo(n.time)}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0 mt-1">{timeAgo(n.created_at)}</span>
                     </motion.div>
                   );
                 })}

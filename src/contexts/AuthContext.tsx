@@ -51,6 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else if (roles.includes("business")) setRole("business");
     else setRole(roles[0] ?? "user");
 
+    // Save extra signup data (phone, province, city, interests) if pending
+    const extraRaw = localStorage.getItem("bateu_signup_extra");
+    if (extraRaw) {
+      localStorage.removeItem("bateu_signup_extra");
+      try {
+        const extra = JSON.parse(extraRaw);
+        const updates: Record<string, any> = {};
+        if (extra.phone) updates.phone = extra.phone;
+        if (extra.province) updates.province = extra.province;
+        if (extra.city) updates.city = extra.city;
+        if (extra.interests?.length > 0) updates.interests = extra.interests;
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("profiles").update(updates).eq("user_id", userId);
+        }
+      } catch {}
+    }
+
     // Process pending referral
     const refCode = localStorage.getItem("sortex_ref");
     if (refCode) {
@@ -68,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             referral_code: refCode,
             points_awarded: 50,
           } as any);
-          // Award points to both
           await Promise.all([
             supabase.from("luck_points").insert({
               user_id: referrer.user_id, points: 50, action: "referral",

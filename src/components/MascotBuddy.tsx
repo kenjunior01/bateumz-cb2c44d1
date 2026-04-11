@@ -266,7 +266,9 @@ export default function MascotBuddy() {
       if (error || !data?.message) throw new Error("No message");
       setMessage(data.message);
     } catch {
-      const pool = FALLBACK_MESSAGES[currentMood];
+      // Use route-specific messages first, then fall back to mood-based
+      const routePool = ROUTE_MESSAGES[location.pathname];
+      const pool = routePool && routePool.length > 0 ? routePool : FALLBACK_MESSAGES[currentMood];
       setMessage(pool[Math.floor(Math.random() * pool.length)](userName));
     } finally {
       setLoading(false);

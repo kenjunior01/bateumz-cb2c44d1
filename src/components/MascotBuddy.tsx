@@ -71,7 +71,9 @@ const QUICK_QUESTIONS = [
   "Como participar num sorteio?",
   "O que são Luck Points?",
   "Como funciona o blockchain?",
+  "Quantos sorteios estão activos?",
   "O que são sorteios sociais?",
+  "A plataforma é segura?",
 ];
 
 export default function MascotBuddy() {

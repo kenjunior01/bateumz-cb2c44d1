@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { toast } from "@/hooks/use-toast";
 
 export default function AdminSettings() {
@@ -82,6 +83,7 @@ export default function AdminSettings() {
       upsertSetting("announcements", announcements),
       upsertSetting("featured", { raffleId: featuredRaffleId, countdownEnabled }),
     ]);
+    await logAudit("settings_updated", "settings", undefined, { countdownEnabled, maintenance: maintenance.enabled });
     setSaving(false);
     toast({ title: "Configurações guardadas", description: "As alterações foram aplicadas com sucesso." });
   };

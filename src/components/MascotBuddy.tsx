@@ -1,9 +1,31 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import mascotImg from "@/assets/mascot.png";
+import { playPopSound, playDismissSound } from "@/lib/sounds";
+
+import mascotHappy from "@/assets/mascot-happy.png";
+import mascotThinking from "@/assets/mascot-thinking.png";
+import mascotExcited from "@/assets/mascot-excited.png";
+import mascotWinner from "@/assets/mascot-winner.png";
+
+type MascotMood = "happy" | "thinking" | "excited" | "winner";
+
+const MOOD_IMAGES: Record<MascotMood, string> = {
+  happy: mascotHappy,
+  thinking: mascotThinking,
+  excited: mascotExcited,
+  winner: mascotWinner,
+};
+
+const MOOD_ANIMATIONS: Record<MascotMood, Record<string, number[]>> = {
+  happy: { y: [0, -8, 0], rotate: [0, 3, -3, 0] },
+  thinking: { y: [0, -4, 0], rotate: [0, -5, 0] },
+  excited: { y: [0, -14, 0, -10, 0], rotate: [0, 5, -5, 3, 0], scale: [1, 1.05, 1, 1.03, 1] },
+  winner: { y: [0, -16, 0], rotate: [0, 8, -8, 0], scale: [1, 1.1, 1] },
+};
 
 const POSITIONS = [
   { bottom: "6rem", right: "1.5rem" },
@@ -14,21 +36,52 @@ const POSITIONS = [
   { bottom: "40%", left: "1.5rem" },
 ];
 
-const CONTEXTS = [
-  "homepage", "marketplace", "sorteios ativos", "comunidade",
-  "perfil do utilizador", "como funciona", "dashboard",
-];
+interface RouteContext {
+  context: string;
+  mood: MascotMood;
+}
 
-const FALLBACK_MESSAGES = [
-  (name: string) => `Ei ${name}! 🌟 Sabia que podes ganhar prémios incríveis? Dá uma olhada nos sorteios!`,
-  (name: string) => `${name}, a sorte sorri aos audazes! 🎰 Tenta a tua sorte num sorteio hoje!`,
-  (name: string) => `Olá ${name}! 🎉 Todos os sorteios são verificados por blockchain. Transparência total!`,
-  (name: string) => `Boas ${name}! ⭐ Convida amigos e ganha pontos de sorte extra!`,
-  (name: string) => `${name}! 🏆 Já viste os últimos vencedores? Podes ser o próximo!`,
-];
+function getRouteContext(pathname: string): RouteContext {
+  if (pathname === "/") return { context: "homepage", mood: "happy" };
+  if (pathname === "/marketplace") return { context: "marketplace de sorteios", mood: "excited" };
+  if (pathname.startsWith("/raffle") && pathname.includes("/live")) return { context: "sorteio ao vivo", mood: "winner" };
+  if (pathname.startsWith("/raffle")) return { context: "detalhes do sorteio", mood: "thinking" };
+  if (pathname === "/community") return { context: "comunidade", mood: "happy" };
+  if (pathname === "/my-points") return { context: "pontos de sorte", mood: "excited" };
+  if (pathname === "/my-tickets") return { context: "bilhetes do utilizador", mood: "thinking" };
+  if (pathname === "/profile") return { context: "perfil do utilizador", mood: "happy" };
+  if (pathname.startsWith("/dashboard")) return { context: "dashboard de negócio", mood: "thinking" };
+  if (pathname === "/historico") return { context: "histórico de vencedores", mood: "winner" };
+  if (pathname === "/como-funciona") return { context: "como funciona a plataforma", mood: "thinking" };
+  return { context: "navegação geral", mood: "happy" };
+}
+
+const FALLBACK_MESSAGES: Record<MascotMood, ((name: string) => string)[]> = {
+  happy: [
+    (n) => `Ei ${n}! 🌟 Que bom ver-te! Explora os sorteios e tenta a tua sorte!`,
+    (n) => `Olá ${n}! 😄 Bem-vindo ao Bateu! A diversão começa aqui!`,
+    (n) => `${n}! ⭐ Convida amigos e ganha pontos de sorte extra!`,
+  ],
+  thinking: [
+    (n) => `Hmm ${n}... 🤔 Este sorteio parece interessante! Já viste os detalhes?`,
+    (n) => `${n}, analisa bem as probabilidades! 🧐 Quanto mais bilhetes, mais chances!`,
+    (n) => `Pensando bem ${n}... 💭 Blockchain garante que tudo é justo e transparente!`,
+  ],
+  excited: [
+    (n) => `${n}!! 🎉 Tantos prémios incríveis! Não percas esta oportunidade!`,
+    (n) => `WOW ${n}! 🚀 Os sorteios estão a bombar! Participa agora!`,
+    (n) => `${n}! 🔥 Tens pontos suficientes para resgatar recompensas!`,
+  ],
+  winner: [
+    (n) => `${n}! 🏆 Alguém vai ganhar hoje! Será que és tu?!`,
+    (n) => `INCRÍVEL ${n}! 🎊 O momento da verdade chegou!`,
+    (n) => `${n}! 👑 Os vencedores são verificados por blockchain! Transparência total!`,
+  ],
+};
 
 export default function MascotBuddy() {
   const { profile, user } = useAuth();
+  const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
   const [position, setPosition] = useState(POSITIONS[0]);
@@ -38,19 +91,19 @@ export default function MascotBuddy() {
   const appearCountRef = useRef(0);
 
   const userName = profile?.display_name || user?.email?.split("@")[0] || "amigo";
+  const { context, mood } = useMemo(() => getRouteContext(location.pathname), [location.pathname]);
 
-  const fetchMessage = useCallback(async () => {
-    const ctx = CONTEXTS[Math.floor(Math.random() * CONTEXTS.length)];
+  const fetchMessage = useCallback(async (ctx: string, currentMood: MascotMood) => {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke("mascot-message", {
-        body: { userName, context: ctx },
+        body: { userName, context: ctx, mood: currentMood },
       });
       if (error || !data?.message) throw new Error("No message");
       setMessage(data.message);
     } catch {
-      const fn = FALLBACK_MESSAGES[Math.floor(Math.random() * FALLBACK_MESSAGES.length)];
-      setMessage(fn(userName));
+      const pool = FALLBACK_MESSAGES[currentMood];
+      setMessage(pool[Math.floor(Math.random() * pool.length)](userName));
     } finally {
       setLoading(false);
     }
@@ -60,41 +113,44 @@ export default function MascotBuddy() {
     if (dismissed) return;
     const pos = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
     setPosition(pos);
-    await fetchMessage();
+    await fetchMessage(context, mood);
     setVisible(true);
     appearCountRef.current += 1;
+    playPopSound();
 
-    // Auto-hide after 8 seconds
     timerRef.current = setTimeout(() => {
       setVisible(false);
-      // Schedule next appearance (longer intervals over time)
       const baseDelay = Math.min(30000 + appearCountRef.current * 15000, 120000);
       const jitter = Math.random() * 20000;
       timerRef.current = setTimeout(showMascot, baseDelay + jitter);
     }, 8000);
-  }, [dismissed, fetchMessage]);
+  }, [dismissed, fetchMessage, context, mood]);
 
+  // Re-trigger on route change
   useEffect(() => {
-    // First appearance after 5 seconds
-    const initial = setTimeout(showMascot, 5000);
-    return () => {
-      clearTimeout(initial);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [showMascot]);
+    if (dismissed) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const delay = appearCountRef.current === 0 ? 5000 : 3000;
+    timerRef.current = setTimeout(showMascot, delay);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [location.pathname, showMascot, dismissed]);
 
   const handleDismiss = () => {
     setVisible(false);
+    playDismissSound();
     if (timerRef.current) clearTimeout(timerRef.current);
-    // Come back after longer delay
     timerRef.current = setTimeout(showMascot, 60000 + Math.random() * 60000);
   };
 
   const handleClose = () => {
     setVisible(false);
     setDismissed(true);
+    playDismissSound();
     if (timerRef.current) clearTimeout(timerRef.current);
   };
+
+  const currentImage = MOOD_IMAGES[mood];
+  const currentAnimation = MOOD_ANIMATIONS[mood];
 
   return (
     <AnimatePresence>
@@ -121,6 +177,17 @@ export default function MascotBuddy() {
             >
               <X className="h-3 w-3" />
             </button>
+
+            {/* Mood indicator */}
+            <div className="mb-1 flex items-center gap-1">
+              <span className="text-[10px] font-medium text-muted-foreground capitalize">
+                {mood === "happy" && "😊 Feliz"}
+                {mood === "thinking" && "🤔 Pensativo"}
+                {mood === "excited" && "🤩 Animado"}
+                {mood === "winner" && "🏆 Festivo"}
+              </span>
+            </div>
+
             {loading ? (
               <div className="flex items-center gap-2 py-1">
                 <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
@@ -142,18 +209,16 @@ export default function MascotBuddy() {
             className="cursor-pointer"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            animate={{
-              y: [0, -8, 0],
-              rotate: [0, 3, -3, 0],
-            }}
+            animate={currentAnimation}
             transition={{
-              y: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-              rotate: { repeat: Infinity, duration: 3, ease: "easeInOut" },
+              y: { repeat: Infinity, duration: mood === "excited" ? 1.5 : 2, ease: "easeInOut" },
+              rotate: { repeat: Infinity, duration: mood === "excited" ? 2 : 3, ease: "easeInOut" },
+              scale: { repeat: Infinity, duration: mood === "excited" ? 1.5 : 2, ease: "easeInOut" },
             }}
           >
             <img
-              src={mascotImg}
-              alt="Bateu Mascote"
+              src={currentImage}
+              alt={`Bateu Mascote - ${mood}`}
               className="h-20 w-20 drop-shadow-lg"
               width={80}
               height={80}

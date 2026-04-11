@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, MessageCircle, Send, ChevronDown } from "lucide-react";
+import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { playPopSound, playDismissSound, playSendSound } from "@/lib/sounds";
+import { playPopSound, playDismissSound, playSendSound, playWinSound } from "@/lib/sounds";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotThinking from "@/assets/mascot-thinking.png";
@@ -209,6 +209,122 @@ function FloatingMiniMascot({ mood, onClick, position }: { mood: MascotMood; onC
   );
 }
 
+// ── Celebration overlay ──
+const CELEBRATION_EMOJIS = ["🎉", "🎊", "✨", "🌟", "🏆", "💎", "🎁", "👑", "🥇", "💰"];
+const POINT_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
+
+interface CelebrationData {
+  type: "win" | "milestone";
+  title: string;
+  subtitle: string;
+  emoji: string;
+}
+
+function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 6000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+    >
+      {/* Particle burst */}
+      {CELEBRATION_EMOJIS.map((e, i) => (
+        <motion.span
+          key={i}
+          className="absolute text-2xl sm:text-3xl pointer-events-none"
+          initial={{
+            x: 0, y: 0, opacity: 1, scale: 0,
+          }}
+          animate={{
+            x: (Math.random() - 0.5) * 500,
+            y: (Math.random() - 0.5) * 500,
+            opacity: 0,
+            scale: [0, 1.5, 0],
+            rotate: Math.random() * 720,
+          }}
+          transition={{ duration: 2 + Math.random(), delay: i * 0.08, ease: "easeOut" }}
+        >
+          {e}
+        </motion.span>
+      ))}
+
+      {/* Central card */}
+      <motion.div
+        initial={{ scale: 0, rotate: -10 }}
+        animate={{ scale: 1, rotate: 0 }}
+        exit={{ scale: 0, rotate: 10 }}
+        transition={{ type: "spring", damping: 10, stiffness: 150, delay: 0.2 }}
+        className="pointer-events-auto glass rounded-3xl p-6 sm:p-8 text-center max-w-sm mx-4 border-2 border-primary/30 shadow-2xl relative overflow-hidden"
+      >
+        {/* Glow ring */}
+        <motion.div
+          className="absolute inset-0 rounded-3xl"
+          animate={{ boxShadow: [
+            "0 0 20px hsl(var(--primary) / 0.2)",
+            "0 0 60px hsl(var(--primary) / 0.4)",
+            "0 0 20px hsl(var(--primary) / 0.2)",
+          ]}}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+
+        <motion.div
+          className="text-5xl mb-3"
+          animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+        >
+          {data.emoji}
+        </motion.div>
+
+        <motion.img
+          src={mascotWinner}
+          alt="Bateu celebra!"
+          className="h-20 w-20 mx-auto mb-3"
+          width={80} height={80}
+          animate={{
+            y: [0, -20, 0],
+            rotate: [0, 12, -12, 8, -8, 0],
+            scale: [1, 1.15, 1, 1.1, 1],
+          }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+        />
+
+        <motion.h3
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="font-display text-xl font-bold text-foreground"
+        >
+          {data.title}
+        </motion.h3>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="text-sm text-muted-foreground mt-1"
+        >
+          {data.subtitle}
+        </motion.p>
+
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          onClick={onClose}
+          className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          Obrigado, Bateu! 🎉
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function MascotBuddy() {
   const { profile, user } = useAuth();
   const location = useLocation();
@@ -222,6 +338,9 @@ export default function MascotBuddy() {
   const [dismissed, setDismissed] = useState(false);
   const [positionIndex, setPositionIndex] = useState(0);
   const [miniMascots, setMiniMascots] = useState<number[]>([]);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const lastPointsRef = useRef<number | null>(null);
+  const celebratedMilestonesRef = useRef<Set<number>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const miniTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appearCountRef = useRef(0);
@@ -232,6 +351,75 @@ export default function MascotBuddy() {
 
   const userName = profile?.display_name || "amigo/a";
   const { context, mood } = useMemo(() => getRouteContext(location.pathname), [location.pathname]);
+
+  // ── Track point milestones ──
+  useEffect(() => {
+    if (!user) return;
+    const checkPoints = async () => {
+      const { data } = await supabase
+        .from("luck_points")
+        .select("points")
+        .eq("user_id", user.id);
+      if (!data) return;
+      const total = data.reduce((sum, r) => sum + r.points, 0);
+
+      if (lastPointsRef.current !== null) {
+        for (const milestone of POINT_MILESTONES) {
+          if (
+            total >= milestone &&
+            lastPointsRef.current < milestone &&
+            !celebratedMilestonesRef.current.has(milestone)
+          ) {
+            celebratedMilestonesRef.current.add(milestone);
+            playWinSound();
+            setCelebration({
+              type: "milestone",
+              title: `${milestone} Luck Points! 🌟`,
+              subtitle: `Parabéns, ${userName}! Alcançaste um marco incrível!`,
+              emoji: milestone >= 1000 ? "💎" : milestone >= 500 ? "🏆" : "⭐",
+            });
+            break;
+          }
+        }
+      }
+      lastPointsRef.current = total;
+    };
+
+    checkPoints();
+    const interval = setInterval(checkPoints, 30000);
+    return () => clearInterval(interval);
+  }, [user, userName]);
+
+  // ── Listen for raffle wins via notifications ──
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("mascot-celebrations")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row.type === "winner" || row.title?.toLowerCase().includes("ganhas")) {
+            playWinSound();
+            setCelebration({
+              type: "win",
+              title: "GANHASTE! 🏆🎊",
+              subtitle: row.message || `Parabéns, ${userName}! Foste o grande vencedor!`,
+              emoji: "👑",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, userName]);
 
   // Show mini mascots in various positions
   useEffect(() => {
@@ -373,6 +561,13 @@ export default function MascotBuddy() {
 
   return (
     <>
+      {/* Celebration overlay */}
+      <AnimatePresence>
+        {celebration && (
+          <CelebrationOverlay data={celebration} onClose={() => setCelebration(null)} />
+        )}
+      </AnimatePresence>
+
       {/* Mini mascots floating around */}
       <AnimatePresence>
         {miniMascots.map((pos) => (

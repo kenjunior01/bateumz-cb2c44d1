@@ -51,10 +51,10 @@ export default function Login() {
   }, [email, password, error, focusedField]);
 
   const mascotMessages: Record<string, string> = {
-    happy: "Olá! Que bom te ver! 👋",
-    excited: "Tudo pronto! Vamos lá! 🚀",
-    thinking: "Hmm... algo não está certo 🤔",
-    winner: "Bem-vindo de volta! 🎉",
+    happy: "Olá, amigo! Que bom te ver! 👋",
+    excited: "Tudo pronto, amigo! Vamos lá! 🚀",
+    thinking: "Hmm... algo não está certo, amigo 🤔",
+    winner: "Bem-vindo de volta, amigo! 🎉",
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

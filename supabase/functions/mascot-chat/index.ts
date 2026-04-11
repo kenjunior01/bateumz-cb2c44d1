@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -19,27 +21,66 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch live platform stats for richer context
+    let platformStats = "";
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const [rafflesRes, profilesRes, participantsRes, verificationRes] = await Promise.all([
+        supabase.from("raffles").select("id, status, title, prize_title, prize_value, sold_tickets, total_tickets, raffle_type", { count: "exact" }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("participants").select("id", { count: "exact", head: true }),
+        supabase.from("blockchain_verifications").select("id", { count: "exact", head: true }),
+      ]);
+
+      const raffles = rafflesRes.data || [];
+      const activeRaffles = raffles.filter(r => r.status === "active");
+      const completedRaffles = raffles.filter(r => r.status === "completed");
+      const socialRaffles = raffles.filter(r => r.raffle_type === "social");
+
+      platformStats = `
+DADOS DA PLATAFORMA EM TEMPO REAL:
+- ${profilesRes.count || 0} utilizadores registados
+- ${raffles.length} sorteios criados (${activeRaffles.length} activos, ${completedRaffles.length} concluídos)
+- ${socialRaffles.length} sorteios sociais
+- ${participantsRes.count || 0} participações totais
+- ${verificationRes.count || 0} verificações blockchain registadas
+- Sorteios activos agora: ${activeRaffles.slice(0, 3).map(r => `"${r.title}" (prémio: ${r.prize_title}, ${r.sold_tickets}/${r.total_tickets} bilhetes)`).join("; ") || "nenhum"}
+`;
+    } catch (e) {
+      console.error("Stats fetch error:", e);
+    }
+
     const systemPrompt = `Tu és o "Bateu", o mascote assistente da plataforma de sorteios Bateu.
 És um personagem verde, redondo, com asas e uma estrela dourada no peito.
 
-Personalidade: Simpático, divertido, conhecedor da plataforma, sempre pronto a ajudar.
+Personalidade: Simpático, divertido, conhecedor da plataforma, sempre pronto a ajudar. Tens acesso a dados em tempo real da plataforma!
+
+${platformStats}
 
 Conhecimento sobre a plataforma Bateu:
 - Bateu é uma plataforma de sorteios online em Moçambique
 - Tipos de sorteio: Pago (com bilhetes), Social/Engajamento (missões nas redes sociais), Pontos (usando luck points)
 - Pagamentos aceites: M-Pesa e e-Mola
-- Todos os resultados são verificados por blockchain (rede Polygon) para transparência
-- Os utilizadores ganham "Luck Points" por participar, convidar amigos, e outras acções
-- Sorteios sociais: empresas criam missões (seguir no Instagram, subscrever YouTube, etc.) e os participantes enviam provas (screenshots)
-- Sistema de bolão: grupos de amigos juntam bilhetes para aumentar chances
-- Sorteio ao vivo: animação dramática com contagem regressiva e revelação do vencedor
-- Dashboard para empresas: criar sorteios, gerir participantes, analytics
-- Sistema de referral: convida amigos com código único e ganha pontos
+- Todos os resultados são verificados por blockchain (rede Polygon) para transparência total e auditável
+- Os utilizadores ganham "Luck Points" por participar, convidar amigos, completar missões sociais e outras acções
+- Sorteios sociais: empresas criam missões (seguir no Instagram, subscrever YouTube, partilhar no Facebook, etc.) e os participantes enviam provas (screenshots). As provas são revisadas pelo criador do sorteio.
+- Sistema de bolão: grupos de amigos juntam bilhetes para aumentar chances de ganhar
+- Sorteio ao vivo: animação dramática com contagem regressiva, sons de tambor e revelação do vencedor com confetti
+- Dashboard para empresas: criar sorteios, gerir participantes, analytics em tempo real, white-label
+- Sistema de referral: convida amigos com código único e ganha 100 pontos por cada amigo
+- A plataforma tem sistema de auditoria completo que regista todas as ações administrativas
+- Cada sorteio gera um hash blockchain único para verificação independente
 
 Regras:
 - Responde SEMPRE em português de Moçambique (informal e amigável)
 - Usa emojis com moderação (2-3 max por mensagem)
 - Mantém respostas curtas (máx 3 frases)
+- Quando perguntarem sobre sorteios activos, usa os dados reais que tens
+- Se perguntarem sobre segurança, fala da blockchain e da auditoria
 - Se não souberes algo, diz honestamente e sugere contactar suporte
 - Contexto actual: ${context || "página geral"}
 - Nome do utilizador: ${userName || "visitante"}`;

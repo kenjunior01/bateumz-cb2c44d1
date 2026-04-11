@@ -1,18 +1,49 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, Shield, Users, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Shield, Users, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import CountdownTimer from "./CountdownTimer";
 
+interface FeaturedRaffle {
+  id: string;
+  title: string;
+  prize_title: string;
+  end_date: string | null;
+}
+
 const HeroSection = () => {
   const [participantCount, setParticipantCount] = useState(0);
+  const [featuredRaffle, setFeaturedRaffle] = useState<FeaturedRaffle | null>(null);
+  const [countdownEnabled, setCountdownEnabled] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("participants")
-      .select("id", { count: "exact", head: true })
-      .then(({ count }) => setParticipantCount(count || 0));
+    const load = async () => {
+      const [{ count }, { data: settings }] = await Promise.all([
+        supabase.from("participants").select("id", { count: "exact", head: true }),
+        supabase.from("platform_settings").select("key, value").eq("key", "featured").maybeSingle(),
+      ]);
+
+      setParticipantCount(count || 0);
+
+      if (settings?.value) {
+        const featured = settings.value as any;
+        const isEnabled = featured.countdownEnabled === true;
+        setCountdownEnabled(isEnabled);
+
+        if (isEnabled && featured.raffleId) {
+          const { data: raffle } = await supabase
+            .from("raffles")
+            .select("id, title, prize_title, end_date")
+            .eq("id", featured.raffleId)
+            .eq("status", "active")
+            .maybeSingle();
+
+          if (raffle) setFeaturedRaffle(raffle);
+        }
+      }
+    };
+    load();
   }, []);
 
   return (
@@ -36,14 +67,28 @@ const HeroSection = () => {
             Sorteios transparentes com verificação pública. Prémios reais, vencedores reais.
           </p>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mb-5 md:mb-6"
-          >
-            <CountdownTimer targetDate={new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)} />
-          </motion.div>
+          {/* Countdown — only when admin enables it */}
+          <AnimatePresence>
+            {countdownEnabled && featuredRaffle && featuredRaffle.end_date && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, height: 0 }}
+                animate={{ opacity: 1, scale: 1, height: "auto" }}
+                exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                transition={{ duration: 0.4 }}
+                className="mb-5 md:mb-6"
+              >
+                <div className="inline-flex flex-col items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/5 px-5 py-3">
+                  <div className="flex items-center gap-2 text-xs text-primary font-semibold">
+                    <Trophy className="h-3.5 w-3.5" />
+                    <span>{featuredRaffle.title}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-accent">{featuredRaffle.prize_title}</span>
+                  </div>
+                  <CountdownTimer targetDate={new Date(featuredRaffle.end_date)} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:justify-center">
             <Link

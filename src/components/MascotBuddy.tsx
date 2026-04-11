@@ -561,6 +561,13 @@ export default function MascotBuddy() {
 
   return (
     <>
+      {/* Celebration overlay */}
+      <AnimatePresence>
+        {celebration && (
+          <CelebrationOverlay data={celebration} onClose={() => setCelebration(null)} />
+        )}
+      </AnimatePresence>
+
       {/* Mini mascots floating around */}
       <AnimatePresence>
         {miniMascots.map((pos) => (

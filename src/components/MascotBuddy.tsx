@@ -20,7 +20,7 @@ const MOOD_IMAGES: Record<MascotMood, string> = {
   winner: mascotWinner,
 };
 
-const MOOD_ANIMATIONS: Record<MascotMood, object> = {
+const MOOD_ANIMATIONS: Record<MascotMood, Record<string, number[]>> = {
   happy: { y: [0, -8, 0], rotate: [0, 3, -3, 0] },
   thinking: { y: [0, -4, 0], rotate: [0, -5, 0] },
   excited: { y: [0, -14, 0, -10, 0], rotate: [0, 5, -5, 3, 0], scale: [1, 1.05, 1, 1.03, 1] },

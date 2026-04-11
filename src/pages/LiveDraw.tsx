@@ -4,12 +4,14 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import { Trophy, ArrowLeft, Users, Ticket, Sparkles, Crown, Star, Zap, Heart, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMZN } from "@/lib/currency";
+import { playWinSound, playDrumRoll, playTickSound } from "@/lib/sounds";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import mascotWinner from "@/assets/mascot-winner.png";
 
 interface Participant {
   id: string;
@@ -311,11 +313,33 @@ function WinnerReveal({
           </Card>
         </motion.div>
 
+        {/* Mascot celebration */}
+        <motion.div
+          initial={{ scale: 0, y: 50 }}
+          animate={{ scale: 1, y: 0 }}
+          transition={{ type: "spring", delay: 1.8, damping: 10 }}
+          className="mt-6 flex justify-center"
+        >
+          <motion.img
+            src={mascotWinner}
+            alt="Bateu celebrando"
+            className="h-24 w-24 drop-shadow-lg"
+            width={96}
+            height={96}
+            animate={{
+              y: [0, -12, 0],
+              rotate: [0, 10, -10, 0],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+          />
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2 }}
-          className="mt-8"
+          className="mt-4"
         >
           <Button onClick={onClose} size="lg" className="gap-2 glow-primary">
             <PartyPopper className="h-5 w-5" /> Fantástico!
@@ -377,12 +401,14 @@ const LiveDraw = () => {
   const onCountdownComplete = useCallback(async () => {
     setPhase("drawing");
     setHeartbeat(true);
+    playDrumRoll();
 
     // Dramatic number cycling — accelerate then slow down
     const totalCycles = 40;
     for (let i = 0; i < totalCycles; i++) {
       const randomIdx = Math.floor(Math.random() * participants.length);
       setCurrentNumber(participants[randomIdx].ticket_number);
+      if (i % 3 === 0) playTickSound();
       // Speed up first, then dramatically slow down
       const speed = i < 20 ? 50 + i * 2 : 50 + i * 8;
       await new Promise((r) => setTimeout(r, speed));
@@ -409,6 +435,7 @@ const LiveDraw = () => {
 
     // Dramatic pause before reveal
     await new Promise(r => setTimeout(r, 1500));
+    playWinSound();
     setWinner(selectedWinner);
     setPhase("winner");
     setHeartbeat(false);

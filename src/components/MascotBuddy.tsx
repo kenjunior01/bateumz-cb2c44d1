@@ -112,18 +112,18 @@ export default function MascotBuddy() {
   }, [userName]);
 
   const showMascot = useCallback(async () => {
-    if (dismissed || mode === "chat") return;
+    if (dismissed || modeRef.current === "chat") return;
     await fetchMessage(context, mood);
     setVisible(true);
     appearCountRef.current += 1;
     playPopSound();
 
     timerRef.current = setTimeout(() => {
-      if (mode !== "chat") setVisible(false);
+      if (modeRef.current !== "chat") setVisible(false);
       const baseDelay = Math.min(30000 + appearCountRef.current * 15000, 120000);
       timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 20000);
     }, 8000);
-  }, [dismissed, fetchMessage, context, mood, mode]);
+  }, [dismissed, fetchMessage, context, mood]);
 
   useEffect(() => {
     if (dismissed) return;

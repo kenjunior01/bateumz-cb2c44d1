@@ -379,12 +379,14 @@ const LiveDraw = () => {
   const onCountdownComplete = useCallback(async () => {
     setPhase("drawing");
     setHeartbeat(true);
+    playDrumRoll();
 
     // Dramatic number cycling — accelerate then slow down
     const totalCycles = 40;
     for (let i = 0; i < totalCycles; i++) {
       const randomIdx = Math.floor(Math.random() * participants.length);
       setCurrentNumber(participants[randomIdx].ticket_number);
+      if (i % 3 === 0) playTickSound();
       // Speed up first, then dramatically slow down
       const speed = i < 20 ? 50 + i * 2 : 50 + i * 8;
       await new Promise((r) => setTimeout(r, speed));
@@ -411,6 +413,7 @@ const LiveDraw = () => {
 
     // Dramatic pause before reveal
     await new Promise(r => setTimeout(r, 1500));
+    playWinSound();
     setWinner(selectedWinner);
     setPhase("winner");
     setHeartbeat(false);

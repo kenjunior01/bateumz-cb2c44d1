@@ -89,6 +89,8 @@ export default function MascotBuddy() {
   const appearCountRef = useRef(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modeRef = useRef<MascotMode>(mode);
+  modeRef.current = mode;
 
   const userName = profile?.display_name || user?.email?.split("@")[0] || "amigo";
   const { context, mood } = useMemo(() => getRouteContext(location.pathname), [location.pathname]);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Copy, Users, Gift, Star, Check, Share2, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Copy, Users, Gift, Star, Check, Share2, ArrowRight, MessageCircle, Send, Smartphone, Trophy, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { playPopSound } from "@/lib/sounds";
 
 export default function Referral() {
   const { user, profile } = useAuth();
@@ -22,7 +23,6 @@ export default function Referral() {
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
-      // Get referral code from profile
       const { data: prof } = await supabase
         .from("profiles")
         .select("referral_code")
@@ -30,15 +30,13 @@ export default function Referral() {
         .single();
       setReferralCode(prof?.referral_code || null);
 
-      // Get referrals
       const { data: refs } = await supabase
         .from("referrals")
-        .select("*, profiles!referrals_referred_id_fkey(display_name)")
+        .select("*")
         .eq("referrer_id", user.id)
         .order("created_at", { ascending: false });
       setReferrals(refs || []);
 
-      // Get total points
       const { data: points } = await supabase
         .from("luck_points")
         .select("points")
@@ -52,10 +50,13 @@ export default function Referral() {
     ? `${window.location.origin}/register?ref=${referralCode}`
     : "";
 
+  const shareText = "🎁 Junta-te ao Bateu e ganha pontos para participar em sorteios incríveis! Regista-te com o meu link e ambos ganhamos 50 Luck Points! 🏆";
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
-    toast.success("Link copiado!");
+    playPopSound();
+    toast.success("Link copiado! 🎉");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -63,7 +64,7 @@ export default function Referral() {
     if (navigator.share) {
       await navigator.share({
         title: "Bateu — Sorteios Premium",
-        text: "Junta-te ao Bateu e ganha pontos para participar em sorteios incríveis! Usa o meu link:",
+        text: shareText,
         url: referralLink,
       });
     } else {
@@ -71,18 +72,40 @@ export default function Referral() {
     }
   };
 
+  const handleWhatsApp = () => {
+    playPopSound();
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${referralLink}`)}`, "_blank");
+  };
+
+  const handleFacebook = () => {
+    playPopSound();
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(shareText)}`, "_blank");
+  };
+
+  const handleTwitter = () => {
+    playPopSound();
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(referralLink)}`, "_blank");
+  };
+
+  const handleSMS = () => {
+    playPopSound();
+    window.open(`sms:?body=${encodeURIComponent(`${shareText}\n\n${referralLink}`)}`, "_blank");
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 pt-28 pb-20 text-center">
-          <Gift className="h-16 w-16 text-primary mx-auto mb-4" />
-          <h1 className="font-display text-3xl font-bold text-foreground mb-3">Convida amigos, ganha pontos</h1>
-          <p className="text-muted-foreground mb-6">Crie uma conta para começar a convidar amigos e acumular pontos</p>
-          <div className="flex justify-center gap-3">
-            <Button onClick={() => navigate("/login")} variant="outline">Entrar</Button>
-            <Button onClick={() => navigate("/register")} className="glow-primary">Criar Conta</Button>
-          </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Gift className="h-16 w-16 text-primary mx-auto mb-4" />
+            <h1 className="font-display text-3xl font-bold text-foreground mb-3">Convida amigos, ganha pontos</h1>
+            <p className="text-muted-foreground mb-6">Crie uma conta para começar a convidar amigos e acumular pontos</p>
+            <div className="flex justify-center gap-3">
+              <Button onClick={() => navigate("/login")} variant="outline">Entrar</Button>
+              <Button onClick={() => navigate("/register")} className="glow-primary">Criar Conta</Button>
+            </div>
+          </motion.div>
         </div>
         <Footer />
       </div>
@@ -90,133 +113,232 @@ export default function Referral() {
   }
 
   const rewards = [
-    { points: 50, reward: "1 bilhete grátis em sorteio diário" },
-    { points: 150, reward: "3 bilhetes em qualquer sorteio gratuito" },
-    { points: 500, reward: "Desconto de 20% em sorteio premium" },
-    { points: 1000, reward: "Bilhete VIP em sorteio exclusivo" },
+    { points: 50, reward: "1 bilhete grátis em sorteio diário", emoji: "🎫" },
+    { points: 150, reward: "3 bilhetes em qualquer sorteio gratuito", emoji: "🎁" },
+    { points: 500, reward: "Desconto de 20% em sorteio premium", emoji: "💎" },
+    { points: 1000, reward: "Bilhete VIP em sorteio exclusivo", emoji: "👑" },
   ];
+
+  const nextMilestone = rewards.find(r => totalPoints < r.points);
+  const progressToNext = nextMilestone ? Math.min(100, (totalPoints / nextMilestone.points) * 100) : 100;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
+        {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-2xl mx-auto mb-10">
-          <Gift className="h-12 w-12 text-accent mx-auto mb-4" />
+          <motion.div
+            animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            className="inline-block mb-4"
+          >
+            <Gift className="h-14 w-14 text-accent" />
+          </motion.div>
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Convida & Ganha
+            Convida & Ganha 🎉
           </h1>
           <p className="text-muted-foreground">
-            Cada amigo que se regista com o teu link dá-te <span className="text-primary font-bold">50 pontos</span>. 
+            Cada amigo que se regista com o teu link dá-te <span className="text-primary font-bold">50 Luck Points</span>. 
             Usa os pontos para participar em sorteios gratuitos!
           </p>
         </motion.div>
 
+        {/* Stats cards */}
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="glass">
-              <CardContent className="p-5 text-center">
-                <Star className="h-6 w-6 text-accent mx-auto mb-2" />
-                <p className="font-display text-3xl font-bold text-foreground">{totalPoints}</p>
-                <p className="text-xs text-muted-foreground">Pontos totais</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="glass">
-              <CardContent className="p-5 text-center">
-                <Users className="h-6 w-6 text-primary mx-auto mb-2" />
-                <p className="font-display text-3xl font-bold text-foreground">{referrals.length}</p>
-                <p className="text-xs text-muted-foreground">Amigos convidados</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="glass">
-              <CardContent className="p-5 text-center">
-                <Gift className="h-6 w-6 text-primary mx-auto mb-2" />
-                <p className="font-display text-3xl font-bold text-foreground">{referrals.length * 50}</p>
-                <p className="text-xs text-muted-foreground">Pontos de referral</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          {[
+            { icon: Star, label: "Pontos totais", value: totalPoints, color: "text-accent", delay: 0 },
+            { icon: Users, label: "Amigos convidados", value: referrals.length, color: "text-primary", delay: 0.1 },
+            { icon: Trophy, label: "Pontos de referral", value: referrals.length * 50, color: "text-primary", delay: 0.2 },
+          ].map((stat) => (
+            <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: stat.delay }}>
+              <Card className="glass hover:border-primary/20 transition-colors">
+                <CardContent className="p-5 text-center">
+                  <stat.icon className={`h-6 w-6 ${stat.color} mx-auto mb-2`} />
+                  <motion.p
+                    className="font-display text-3xl font-bold text-foreground"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: stat.delay + 0.2 }}
+                  >
+                    {stat.value}
+                  </motion.p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
+        {/* Progress to next milestone */}
+        {nextMilestone && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="max-w-xl mx-auto mb-8">
+            <Card className="glass border-accent/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Próximo prémio</span>
+                  <span className="text-xs font-bold text-accent">{nextMilestone.emoji} {nextMilestone.reward}</span>
+                </div>
+                <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressToNext}%` }}
+                    transition={{ duration: 1, delay: 0.5 }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 text-right">{totalPoints} / {nextMilestone.points} pontos</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Share Link */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="max-w-xl mx-auto mb-10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="max-w-xl mx-auto mb-8">
           <Card className="glass border-primary/20">
             <CardContent className="p-6">
-              <h2 className="font-display text-lg font-bold text-foreground mb-3">O teu link de convite</h2>
-              <div className="flex gap-2">
-                <div className="flex-1 rounded-lg bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground truncate">
-                  {referralLink}
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-lg font-bold text-foreground">O teu link de convite</h2>
+              </div>
+              
+              <div className="flex gap-2 mb-4">
+                <div className="flex-1 rounded-xl bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground truncate font-mono">
+                  {referralLink || "A gerar..."}
                 </div>
-                <Button size="sm" variant="outline" onClick={handleCopy} className="gap-1 shrink-0">
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? "Copiado" : "Copiar"}
+                <Button size="sm" variant="outline" onClick={handleCopy} className="gap-1 shrink-0 rounded-xl">
+                  {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Copiado!" : "Copiar"}
                 </Button>
               </div>
-              <Button onClick={handleShare} className="w-full mt-3 gap-2 glow-primary">
-                <Share2 className="h-4 w-4" /> Partilhar com amigos
+
+              {/* Share buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <Button onClick={handleWhatsApp} size="sm" className="gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white rounded-xl h-10">
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Button>
+                <Button onClick={handleFacebook} size="sm" className="gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-xl h-10">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  Facebook
+                </Button>
+                <Button onClick={handleTwitter} size="sm" variant="outline" className="gap-2 rounded-xl h-10">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  X/Twitter
+                </Button>
+                <Button onClick={handleSMS} size="sm" variant="outline" className="gap-2 rounded-xl h-10">
+                  <Smartphone className="h-4 w-4" />
+                  SMS
+                </Button>
+              </div>
+
+              <Button onClick={handleShare} className="w-full gap-2 glow-primary rounded-xl">
+                <Share2 className="h-4 w-4" /> Partilhar de outra forma
               </Button>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Points Rewards */}
+        {/* Points Rewards & Friends */}
         <div className="grid gap-6 lg:grid-cols-2 max-w-4xl mx-auto">
-          <Card className="glass">
-            <CardHeader><CardTitle className="text-lg">O que podes ganhar</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {rewards.map((r) => (
-                <div key={r.points} className="flex items-center gap-3 rounded-xl bg-secondary/30 p-3">
-                  <Badge className={`${totalPoints >= r.points ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-                    {r.points} pts
-                  </Badge>
-                  <span className="text-sm text-foreground flex-1">{r.reward}</span>
-                  {totalPoints >= r.points && <Check className="h-4 w-4 text-primary" />}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
+            <Card className="glass">
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Gift className="h-5 w-5 text-accent" /> O que podes ganhar</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {rewards.map((r) => (
+                  <motion.div
+                    key={r.points}
+                    className={`flex items-center gap-3 rounded-xl p-3 transition-all ${
+                      totalPoints >= r.points
+                        ? "bg-primary/10 border border-primary/20"
+                        : "bg-secondary/30"
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <span className="text-xl">{r.emoji}</span>
+                    <Badge className={`shrink-0 ${totalPoints >= r.points ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                      {r.points} pts
+                    </Badge>
+                    <span className="text-sm text-foreground flex-1">{r.reward}</span>
+                    {totalPoints >= r.points && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                        <Check className="h-4 w-4 text-primary" />
+                      </motion.div>
+                    )}
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card className="glass">
-            <CardHeader><CardTitle className="text-lg">Amigos convidados</CardTitle></CardHeader>
-            <CardContent>
-              {referrals.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Ainda sem convites. Partilha o teu link!</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {referrals.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-xl bg-secondary/30 p-3">
-                      <span className="text-sm text-foreground">{r.profiles?.display_name || "Utilizador"}</span>
-                      <Badge className="bg-primary/20 text-primary">+{r.points_awarded} pts</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
+            <Card className="glass">
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Amigos convidados</CardTitle></CardHeader>
+              <CardContent>
+                {referrals.length === 0 ? (
+                  <div className="text-center py-8">
+                    <motion.div
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                    >
+                      <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    </motion.div>
+                    <p className="text-sm text-muted-foreground mb-2">Ainda sem convites</p>
+                    <p className="text-xs text-muted-foreground">Partilha o teu link e começa a ganhar pontos!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    <AnimatePresence>
+                      {referrals.map((r, i) => (
+                        <motion.div
+                          key={r.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="flex items-center justify-between rounded-xl bg-secondary/30 p-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                              {(r.referred_id || "?").slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-sm text-foreground">Amigo #{i + 1}</span>
+                          </div>
+                          <Badge className="bg-primary/20 text-primary">+{r.points_awarded} pts</Badge>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
 
         {/* How it works */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-12 max-w-2xl mx-auto">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-12 max-w-2xl mx-auto">
           <h2 className="font-display text-xl font-bold text-foreground text-center mb-6">Como funciona</h2>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             {[
-              { step: "1", text: "Partilha o teu link" },
-              { step: "2", text: "O amigo regista-se" },
-              { step: "3", text: "Ambos ganham 50 pontos" },
+              { step: "1", text: "Partilha o teu link", emoji: "🔗" },
+              { step: "2", text: "O amigo regista-se", emoji: "✅" },
+              { step: "3", text: "Ambos ganham 50 pontos", emoji: "🎁" },
             ].map((s, i) => (
-              <div key={s.step} className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
-                  {s.step}
+              <motion.div
+                key={s.step}
+                className="flex items-center gap-3 flex-1"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 + i * 0.1 }}
+              >
+                <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                  <span className="text-xl">{s.emoji}</span>
                 </div>
-                <p className="text-sm text-foreground">{s.text}</p>
+                <div>
+                  <p className="text-xs text-muted-foreground">Passo {s.step}</p>
+                  <p className="text-sm font-medium text-foreground">{s.text}</p>
+                </div>
                 {i < 2 && <ArrowRight className="h-4 w-4 text-muted-foreground hidden sm:block" />}
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>

@@ -79,14 +79,36 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     playPopSound();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) {
-      setError(error.message);
+    if (result.error) {
+      setError(result.error.message || "Erro ao conectar com Google");
       setGoogleLoading(false);
     }
+    if (result.redirected) return;
+    // If tokens returned directly
+    setMascotMood("winner");
+    setSuccess(true);
+    playPopSound();
+    setTimeout(() => navigate("/dashboard"), 1200);
+  };
+
+  const handleAppleLogin = async () => {
+    setAppleLoading(true);
+    playPopSound();
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setError(result.error.message || "Erro ao conectar com Apple");
+      setAppleLoading(false);
+    }
+    if (result.redirected) return;
+    setMascotMood("winner");
+    setSuccess(true);
+    playPopSound();
+    setTimeout(() => navigate("/dashboard"), 1200);
   };
 
   if (success) {

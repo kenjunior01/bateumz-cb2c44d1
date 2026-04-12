@@ -4,7 +4,7 @@ import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } fro
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { playPopSound, playDismissSound, playSendSound, playWinSound } from "@/lib/sounds";
+import { playPopSound, playDismissSound, playSendSound, playWinSound, playVictoryFanfare, playMilestoneChime } from "@/lib/sounds";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotThinking from "@/assets/mascot-thinking.png";

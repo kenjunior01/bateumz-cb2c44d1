@@ -139,14 +139,30 @@ export default function Register() {
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) {
-      setError(error.message);
+    if (result.error) {
+      setError(result.error.message || "Erro ao conectar com Google");
       setGoogleLoading(false);
     }
+    if (result.redirected) return;
+    setSuccess(true);
+    playPopSound();
+  };
+
+  const handleAppleSignUp = async () => {
+    setGoogleLoading(true);
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setError(result.error.message || "Erro ao conectar com Apple");
+      setGoogleLoading(false);
+    }
+    if (result.redirected) return;
+    setSuccess(true);
+    playPopSound();
   };
 
   const mascotForStep = step === 0 ? mascotHappy : step === 1 ? mascotExcited : step === 2 ? mascotHappy : mascotWinner;

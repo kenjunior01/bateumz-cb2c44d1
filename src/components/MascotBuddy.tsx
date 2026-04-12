@@ -107,7 +107,11 @@ const ROUTE_MESSAGES: Record<string, ((name: string) => string)[]> = {
     (n) => `${n}! 🎉 Convida amigos e ganhem ambos 50 Luck Points!`,
     (n) => `Ei ${n}! 🔗 Partilha o teu link e faz crescer a comunidade!`,
     (n) => `${n}! 💪 Quanto mais amigos convidares, mais pontos ganhas!`,
-    (n) => `${n}! 📲 Envia o link por WhatsApp, é super fácil!`,
+    (n) => `${n}! 📲 Envia o link por WhatsApp — é super fácil!`,
+    (n) => `${n}! 🎁 Sabias que cada amigo te dá 50 pontos? Convida já!`,
+    (n) => `Ei ${n}! 🤝 Os teus amigos também ganham 50 pontos ao registar-se!`,
+    (n) => `${n}! 🚀 Top dica: partilha o link no teu grupo de WhatsApp!`,
+    (n) => `${n}! 💰 Com 5 amigos ganhas 250 pontos — quase um bilhete grátis!`,
   ],
   "/como-funciona": [
     (n) => `${n}! 📖 Boa ideia! Entender como funciona é o primeiro passo!`,

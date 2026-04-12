@@ -36,6 +36,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mascotMood, setMascotMood] = useState<"happy" | "excited" | "thinking" | "winner">("happy");
   const [success, setSuccess] = useState(false);

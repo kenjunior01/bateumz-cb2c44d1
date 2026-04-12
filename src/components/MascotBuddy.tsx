@@ -375,7 +375,7 @@ export default function MascotBuddy() {
             !celebratedMilestonesRef.current.has(milestone)
           ) {
             celebratedMilestonesRef.current.add(milestone);
-            playWinSound();
+            playMilestoneChime();
             setCelebration({
               type: "milestone",
               title: `${milestone} Luck Points! 🌟`,

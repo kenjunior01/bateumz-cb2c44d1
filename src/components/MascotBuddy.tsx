@@ -4,7 +4,7 @@ import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } fro
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { playPopSound, playDismissSound, playSendSound, playWinSound } from "@/lib/sounds";
+import { playPopSound, playDismissSound, playSendSound, playWinSound, playVictoryFanfare, playMilestoneChime } from "@/lib/sounds";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotThinking from "@/assets/mascot-thinking.png";
@@ -107,7 +107,11 @@ const ROUTE_MESSAGES: Record<string, ((name: string) => string)[]> = {
     (n) => `${n}! 🎉 Convida amigos e ganhem ambos 50 Luck Points!`,
     (n) => `Ei ${n}! 🔗 Partilha o teu link e faz crescer a comunidade!`,
     (n) => `${n}! 💪 Quanto mais amigos convidares, mais pontos ganhas!`,
-    (n) => `${n}! 📲 Envia o link por WhatsApp, é super fácil!`,
+    (n) => `${n}! 📲 Envia o link por WhatsApp — é super fácil!`,
+    (n) => `${n}! 🎁 Sabias que cada amigo te dá 50 pontos? Convida já!`,
+    (n) => `Ei ${n}! 🤝 Os teus amigos também ganham 50 pontos ao registar-se!`,
+    (n) => `${n}! 🚀 Top dica: partilha o link no teu grupo de WhatsApp!`,
+    (n) => `${n}! 💰 Com 5 amigos ganhas 250 pontos — quase um bilhete grátis!`,
   ],
   "/como-funciona": [
     (n) => `${n}! 📖 Boa ideia! Entender como funciona é o primeiro passo!`,
@@ -371,7 +375,7 @@ export default function MascotBuddy() {
             !celebratedMilestonesRef.current.has(milestone)
           ) {
             celebratedMilestonesRef.current.add(milestone);
-            playWinSound();
+            playMilestoneChime();
             setCelebration({
               type: "milestone",
               title: `${milestone} Luck Points! 🌟`,
@@ -406,7 +410,7 @@ export default function MascotBuddy() {
         (payload) => {
           const row = payload.new as any;
           if (row.type === "winner" || row.title?.toLowerCase().includes("ganhas")) {
-            playWinSound();
+            playVictoryFanfare();
             setCelebration({
               type: "win",
               title: "GANHASTE! 🏆🎊",

@@ -410,7 +410,7 @@ export default function MascotBuddy() {
         (payload) => {
           const row = payload.new as any;
           if (row.type === "winner" || row.title?.toLowerCase().includes("ganhas")) {
-            playWinSound();
+            playVictoryFanfare();
             setCelebration({
               type: "win",
               title: "GANHASTE! 🏆🎊",

@@ -12,8 +12,12 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  const adminEmail = "admin@bateu.co.mz";
-  const adminPassword = "BateuAdmin2026!";
+  const { email: adminEmail, password: adminPassword } = await req.json().catch(() => ({}));
+  if (!adminEmail || !adminPassword) {
+    return new Response(JSON.stringify({ error: "Email and password required" }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     // Create admin user

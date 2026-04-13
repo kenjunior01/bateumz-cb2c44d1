@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const { data: raffles, error: fetchErr } = await supabase
       .from("raffles")
-      .select("id, title")
+      .select("id, title, max_winners")
       .eq("status", "active")
       .eq("draw_mode", "auto_sold_out")
       .not("auto_draw_scheduled_at", "is", null)
@@ -30,7 +30,6 @@ Deno.serve(async (req) => {
 
     const results = [];
     for (const raffle of raffles) {
-      // Get active participants
       const { data: participants } = await supabase
         .from("participants")
         .select("id, ticket_number, user_id")
@@ -42,22 +41,28 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Pick random winner
-      const winnerIdx = Math.floor(Math.random() * participants.length);
-      const winner = participants[winnerIdx];
+      const numWinners = Math.min(raffle.max_winners || 1, participants.length);
+      const winners = [];
+      const pool = [...participants];
+      
+      for (let i = 0; i < numWinners; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        winners.push(pool.splice(idx, 1)[0]);
+      }
 
-      // Update winner + raffle status
-      await supabase.from("participants").update({ status: "winner" }).eq("id", winner.id);
+      for (const winner of winners) {
+        await supabase.from("participants").update({ status: "winner" }).eq("id", winner.id);
+        await supabase.from("luck_points").insert({
+          user_id: winner.user_id,
+          points: 500,
+          action: "bonus",
+          description: `Vencedor do sorteio automático: ${raffle.title}`,
+          raffle_id: raffle.id,
+        });
+      }
+
       await supabase.from("raffles").update({ status: "completed" }).eq("id", raffle.id);
-      await supabase.from("luck_points").insert({
-        user_id: winner.user_id,
-        points: 500,
-        action: "bonus",
-        description: `Vencedor do sorteio automático: ${raffle.title}`,
-        raffle_id: raffle.id,
-      });
-
-      results.push({ raffle_id: raffle.id, winner_ticket: winner.ticket_number, status: "drawn" });
+      results.push({ raffle_id: raffle.id, winners: winners.map(w => w.ticket_number), status: "drawn" });
     }
 
     return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

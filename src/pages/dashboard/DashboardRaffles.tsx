@@ -58,29 +58,32 @@ export default function DashboardRaffles() {
   const handleDraw = async (raffle: any) => {
     setDrawingRaffle(raffle.id);
     setOpenMenu(null);
-    // Get all participants
     const { data: participants } = await supabase.from("participants").select("*").eq("raffle_id", raffle.id).eq("status", "active");
     if (!participants || participants.length === 0) {
       toast.error("Nenhum participante ativo para sortear!");
       setDrawingRaffle(null);
       return;
     }
-    // Pick random winner
-    const winner = participants[Math.floor(Math.random() * participants.length)];
-    // Update winner status
-    await supabase.from("participants").update({ status: "winner" }).eq("id", winner.id);
-    // Mark raffle as completed
+    const numWinners = Math.min(raffle.max_winners || 1, participants.length);
+    const pool = [...participants];
+    const winners = [];
+    for (let i = 0; i < numWinners; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      winners.push(pool.splice(idx, 1)[0]);
+    }
+    for (const winner of winners) {
+      await supabase.from("participants").update({ status: "winner" }).eq("id", winner.id);
+      await supabase.from("luck_points").insert({
+        user_id: winner.user_id,
+        points: 500,
+        action: "bonus",
+        description: `Vencedor do sorteio: ${raffle.title}`,
+        raffle_id: raffle.id,
+      });
+    }
     await supabase.from("raffles").update({ status: "completed" }).eq("id", raffle.id);
-    // Award bonus luck points to winner
-    await supabase.from("luck_points").insert({
-      user_id: winner.user_id,
-      points: 500,
-      action: "bonus",
-      description: `Vencedor do sorteio: ${raffle.title}`,
-      raffle_id: raffle.id,
-    });
-
-    toast.success(`Sorteio realizado! Vencedor: Bilhete #${winner.ticket_number}`);
+    const winnerNums = winners.map(w => `#${w.ticket_number}`).join(", ");
+    toast.success(`Sorteio realizado! Vencedor${numWinners > 1 ? "es" : ""}: Bilhete ${winnerNums}`);
     setDrawingRaffle(null);
     fetchRaffles();
   };

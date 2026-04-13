@@ -480,7 +480,7 @@ export default function MascotBuddy() {
       if (modeRef.current !== "chat") setVisible(false);
       const baseDelay = Math.min(30000 + appearCountRef.current * 15000, 120000);
       timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 20000);
-    }, 8000);
+    }, 15000);
   }, [dismissed, fetchMessage, context, mood]);
 
   useEffect(() => {

@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("sortex_ref");
       try {
         const { data: referrer } = await supabase
-          .from("profiles")
+          .from("profiles_public")
           .select("user_id")
           .eq("referral_code", refCode)
           .single();

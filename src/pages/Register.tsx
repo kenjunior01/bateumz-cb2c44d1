@@ -118,7 +118,7 @@ export default function Register() {
       if (refCode) {
         try {
           const { data: referrerProfile } = await supabase
-            .from("profiles")
+            .from("profiles_public")
             .select("user_id")
             .eq("referral_code", refCode)
             .single();

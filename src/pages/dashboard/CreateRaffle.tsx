@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin, Eye, EyeOff, Timer, Zap } from "lucide-react";
+import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin, Eye, EyeOff, Timer, Zap, Trophy, Users } from "lucide-react";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,8 @@ export default function CreateRaffle() {
     auto_draw_days: "",
     tickets_threshold: "",
     social_actions: [] as { platform: string; action: string; url: string; requires_proof: boolean; requires_approval: boolean }[],
+    max_winners: "1",
+    max_tickets_per_user: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -107,6 +109,8 @@ export default function CreateRaffle() {
       auto_draw_days: form.draw_mode === "auto_sold_out" ? Number(form.auto_draw_days) || 1 : null,
       tickets_threshold: form.draw_mode === "auto_sold_out" ? thresholdValue : null,
       social_actions: form.raffle_type === "social" ? form.social_actions : [],
+      max_winners: Number(form.max_winners) || 1,
+      max_tickets_per_user: form.max_tickets_per_user ? Number(form.max_tickets_per_user) : null,
     } as any);
     setSaving(false);
     if (error) { toast.error("Erro ao criar sorteio: " + error.message); return; }
@@ -402,6 +406,25 @@ export default function CreateRaffle() {
                 </label>
                 <input name="total_tickets" type="number" value={form.total_tickets} onChange={handleChange} placeholder="1000"
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                  <Trophy className="h-3.5 w-3.5" /> Número de Vencedores
+                </label>
+                <input name="max_winners" type="number" min="1" value={form.max_winners} onChange={handleChange} placeholder="1"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                <p className="text-[10px] text-muted-foreground mt-1">Quantos vencedores serão sorteados</p>
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
+                  <Users className="h-3.5 w-3.5" /> Máx. bilhetes por utilizador
+                </label>
+                <input name="max_tickets_per_user" type="number" min="1" value={form.max_tickets_per_user} onChange={handleChange} placeholder="Sem limite"
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                <p className="text-[10px] text-muted-foreground mt-1">Deixe vazio para sem limite</p>
               </div>
             </div>
 

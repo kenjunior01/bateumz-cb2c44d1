@@ -28,6 +28,8 @@ export default function EditRaffle() {
     province: "",
     city: "",
     hide_prize_value: false,
+    max_winners: "1",
+    max_tickets_per_user: "",
   });
 
   useEffect(() => {
@@ -55,6 +57,8 @@ export default function EditRaffle() {
           province: data.province || "",
           city: data.city || "",
           hide_prize_value: data.hide_prize_value || false,
+          max_winners: String((data as any).max_winners || 1),
+          max_tickets_per_user: (data as any).max_tickets_per_user ? String((data as any).max_tickets_per_user) : "",
         });
         setLoading(false);
       });
@@ -76,7 +80,9 @@ export default function EditRaffle() {
         province: form.province || null,
         city: form.city || null,
         hide_prize_value: form.hide_prize_value,
-      })
+        max_winners: Number(form.max_winners) || 1,
+        max_tickets_per_user: form.max_tickets_per_user ? Number(form.max_tickets_per_user) : null,
+      } as any)
       .eq("id", id)
       .eq("business_user_id", user.id);
 
@@ -151,6 +157,18 @@ export default function EditRaffle() {
               <div className="space-y-2">
                 <Label>Total de Bilhetes</Label>
                 <Input type="number" value={form.total_tickets} onChange={(e) => setForm({ ...form, total_tickets: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Número de Vencedores</Label>
+                <Input type="number" min="1" value={form.max_winners} onChange={(e) => setForm({ ...form, max_winners: e.target.value })} />
+                <p className="text-[10px] text-muted-foreground">Quantos vencedores serão sorteados</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Máx. bilhetes por utilizador</Label>
+                <Input type="number" min="1" value={form.max_tickets_per_user} onChange={(e) => setForm({ ...form, max_tickets_per_user: e.target.value })} placeholder="Sem limite" />
+                <p className="text-[10px] text-muted-foreground">Deixe vazio para sem limite</p>
               </div>
             </div>
             <div className="space-y-2">

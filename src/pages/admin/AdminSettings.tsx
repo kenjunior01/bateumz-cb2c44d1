@@ -177,10 +177,10 @@ export default function AdminSettings() {
                   </div>
                   <div className="space-y-2">
                     <Label>Sorteio em Destaque</Label>
-                    <Select value={featuredRaffleId} onValueChange={setFeaturedRaffleId}>
+                    <Select value={featuredRaffleId || "none"} onValueChange={(v) => setFeaturedRaffleId(v === "none" ? "" : v)}>
                       <SelectTrigger><SelectValue placeholder="Selecione um sorteio..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {raffles.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.title} — {r.prize_title}</SelectItem>
                         ))}

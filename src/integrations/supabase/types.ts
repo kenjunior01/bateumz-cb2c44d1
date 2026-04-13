@@ -536,6 +536,8 @@ export type Database = {
           hide_prize_value: boolean
           id: string
           image_url: string | null
+          max_tickets_per_user: number | null
+          max_winners: number
           points_cost: number
           prize_title: string
           prize_value: number
@@ -568,6 +570,8 @@ export type Database = {
           hide_prize_value?: boolean
           id?: string
           image_url?: string | null
+          max_tickets_per_user?: number | null
+          max_winners?: number
           points_cost?: number
           prize_title: string
           prize_value?: number
@@ -600,6 +604,8 @@ export type Database = {
           hide_prize_value?: boolean
           id?: string
           image_url?: string | null
+          max_tickets_per_user?: number | null
+          max_winners?: number
           points_cost?: number
           prize_title?: string
           prize_value?: number
@@ -927,6 +933,48 @@ export type Database = {
           is_verified?: boolean | null
           referral_code?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      white_label_configs_public: {
+        Row: {
+          brand_name: string | null
+          business_user_id: string | null
+          created_at: string | null
+          custom_domain: string | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          business_user_id?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          business_user_id?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

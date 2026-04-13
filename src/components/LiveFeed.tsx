@@ -53,12 +53,18 @@ const LiveFeed = () => {
     
     let idx = 0;
     const addItem = () => {
-      if (idx >= realData.length) idx = 0;
+      if (idx >= realData.length) return; // Stop after showing all real data once
       const data = realData[idx++];
       setItems((prev) => [{ id: Date.now(), ...data }, ...prev.slice(0, 4)]);
     };
     addItem();
-    const interval = setInterval(addItem, 3500);
+    const interval = setInterval(() => {
+      if (idx >= realData.length) {
+        clearInterval(interval);
+        return;
+      }
+      addItem();
+    }, 3500);
     return () => clearInterval(interval);
   }, [realData, isEmpty]);
 

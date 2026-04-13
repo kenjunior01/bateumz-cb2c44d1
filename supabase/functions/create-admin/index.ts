@@ -12,6 +12,27 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  // Require authentication and admin role
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Forbidden: admin only" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const { email: adminEmail, password: adminPassword } = await req.json().catch(() => ({}));
   if (!adminEmail || !adminPassword) {
     return new Response(JSON.stringify({ error: "Email and password required" }), {
@@ -20,7 +41,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create admin user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: adminEmail,
       password: adminPassword,
@@ -29,15 +49,11 @@ Deno.serve(async (req) => {
     });
 
     if (authError) {
-      // Check if user already exists
       if (authError.message?.includes("already been registered")) {
-        // Get user by email
         const { data: users } = await supabase.auth.admin.listUsers();
         const existingUser = users?.users?.find((u: any) => u.email === adminEmail);
         if (existingUser) {
-          // Update password
           await supabase.auth.admin.updateUserById(existingUser.id, { password: adminPassword });
-          // Ensure admin role exists
           const { data: existingRole } = await supabase
             .from("user_roles")
             .select("id")
@@ -48,7 +64,7 @@ Deno.serve(async (req) => {
           if (!existingRole) {
             await supabase.from("user_roles").insert({ user_id: existingUser.id, role: "admin" });
           }
-          return new Response(JSON.stringify({ success: true, message: "Admin updated", email: adminEmail }), {
+          return new Response(JSON.stringify({ success: true, message: "Admin updated" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
@@ -59,13 +75,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true, 
       message: "Admin created",
-      email: adminEmail,
-      userId: authData.user?.id,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: "Operation failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -58,7 +58,7 @@ export default function RaffleHistory() {
 
         const winnerUserIds = [...new Set((winners || []).map((w) => w.user_id))];
         const { data: profiles } = winnerUserIds.length > 0
-          ? await supabase.from("profiles").select("user_id, display_name").in("user_id", winnerUserIds)
+          ? await supabase.from("profiles_public").select("user_id, display_name").in("user_id", winnerUserIds)
           : { data: [] };
 
         const profileMap = new Map((profiles || []).map((p) => [p.user_id, p.display_name]));

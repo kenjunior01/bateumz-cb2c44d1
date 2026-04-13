@@ -29,7 +29,7 @@ const WinnersSection = () => {
         const raffleIds = [...new Set(winnerParticipants.map((w) => w.raffle_id))];
 
         const [{ data: profiles }, { data: raffles }] = await Promise.all([
-          supabase.from("profiles").select("user_id, display_name").in("user_id", userIds),
+          supabase.from("profiles_public").select("user_id, display_name").in("user_id", userIds),
           supabase.from("raffles").select("id, prize_title, city").in("id", raffleIds),
         ]);
 

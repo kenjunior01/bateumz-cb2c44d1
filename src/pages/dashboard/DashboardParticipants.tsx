@@ -64,7 +64,7 @@ export default function DashboardParticipants() {
       if (parts) {
         // Get profiles for user display names
         const userIds = [...new Set(parts.map((p) => p.user_id))];
-        const { data: profiles } = await supabase.from("profiles").select("user_id, display_name");
+        const { data: profiles } = await supabase.from("profiles_public").select("user_id, display_name");
         const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.display_name || "Utilizador"]));
 
         setParticipants(parts.map((p: any) => ({

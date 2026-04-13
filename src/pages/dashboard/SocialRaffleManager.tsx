@@ -83,7 +83,7 @@ export default function SocialRaffleManager() {
         const userIds = (entriesRes.data as unknown as Entry[]).map(e => e.user_id);
         if (userIds.length > 0) {
           const { data: profileData } = await supabase
-            .from("profiles").select("user_id, display_name").in("user_id", userIds);
+            .from("profiles_public").select("user_id, display_name").in("user_id", userIds);
           if (profileData) {
             const map: Record<string, string> = {};
             profileData.forEach(p => { map[p.user_id] = p.display_name || "Anónimo"; });

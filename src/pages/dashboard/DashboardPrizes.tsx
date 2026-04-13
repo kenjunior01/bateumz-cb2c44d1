@@ -46,7 +46,7 @@ export default function DashboardPrizes() {
 
       const winnerUserIds = winners?.map(w => w.user_id) || [];
       const { data: profiles } = winnerUserIds.length > 0
-        ? await supabase.from("profiles").select("user_id, display_name").in("user_id", winnerUserIds)
+        ? await supabase.from("profiles_public").select("user_id, display_name").in("user_id", winnerUserIds)
         : { data: [] as any[] };
 
       const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name]));

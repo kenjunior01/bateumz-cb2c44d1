@@ -99,7 +99,7 @@ const RaffleDetail = () => {
         setRaffle(raffleRes.data as Raffle);
         const [participantsRes, profileRes, wlRes] = await Promise.all([
           supabase.from("participants").select("ticket_number").eq("raffle_id", raffleRes.data.id),
-          supabase.from("profiles").select("display_name, company_name").eq("user_id", raffleRes.data.business_user_id).single(),
+          supabase.from("profiles_public").select("display_name, company_name").eq("user_id", raffleRes.data.business_user_id).single(),
           supabase.from("white_label_configs").select("brand_name, logo_url, primary_color, secondary_color, mpesa_number, emola_number").eq("business_user_id", raffleRes.data.business_user_id).eq("is_active", true).maybeSingle(),
         ]);
         if (profileRes.data) setBusinessName(profileRes.data.company_name || profileRes.data.display_name);

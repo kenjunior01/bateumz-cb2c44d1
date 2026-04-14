@@ -133,11 +133,13 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     return sum + (actionLabels[action]?.points || 5);
   }, 0);
 
-  const allProofsProvided = socialActions.every((sa) => {
+  // Count how many proofs were provided (optional - gives bonus points)
+  const proofsProvided = socialActions.filter((sa) => {
     const key = `${sa.platform}_${sa.action}`;
-    if (!sa.requires_proof) return true;
     return proofFiles[key] || proofUrls[key];
-  });
+  }).length;
+  const hasAnyProofs = proofsProvided > 0;
+  const proofBonusPoints = proofsProvided * 10; // +10 pts per proof
 
   const handleAction = async (action: SocialAction) => {
     const actionKey = `${action.platform}_${action.action}`;
@@ -179,7 +181,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     if (!user) { toast.error("Faça login para participar"); return; }
     if (!username.trim()) { toast.error("Insira o seu @username das redes sociais"); return; }
     if (!allCompleted) { toast.error("Complete todas as missões sociais"); return; }
-    if (!allProofsProvided) { toast.error("Envie todos os comprovativos necessários"); return; }
     if (!selectedNumber) { toast.error("Escolha o seu número da sorte!"); return; }
 
     setSubmitting(true);
@@ -234,13 +235,13 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       setEntry({ ...entry, ...entryData });
     }
 
-    // Award luck points
-    const bonusPoints = progressPct === 100 ? 50 : 25;
+    // Award luck points (base + proof bonus)
+    const bonusPoints = (progressPct === 100 ? 50 : 25) + proofBonusPoints;
     await supabase.from("luck_points").insert({
       user_id: user.id,
       points: bonusPoints,
       action: "social_engagement",
-      description: `Completou ${socialActions.length} missões sociais — Nível ${tier.label}`,
+      description: `Completou ${socialActions.length} missões sociais — Nível ${tier.label}${hasAnyProofs ? ` (+${proofBonusPoints} bónus por comprovativos)` : ""}`,
       raffle_id: raffleId,
     });
 
@@ -434,11 +435,9 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
                           <Zap className="h-2.5 w-2.5 text-accent" /> +{actionConfig.points} pts
                         </Badge>
-                        {requiresProof && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-amber-500/30 text-amber-600">
-                            <Camera className="h-2.5 w-2.5" /> Comprovativo
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-accent/30 text-accent">
+                          <Camera className="h-2.5 w-2.5" /> +10 bónus
+                        </Badge>
                       </div>
                     </div>
 
@@ -454,12 +453,12 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                     )}
                   </div>
 
-                  {/* Proof upload section */}
-                  {requiresProof && completed && isEditable && (
+                  {/* Proof upload section - optional, gives bonus points */}
+                  {completed && isEditable && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                       className="border-t border-border pt-3">
                       <p className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
-                        <Camera className="h-3.5 w-3.5 text-accent" /> Envie o comprovativo (screenshot)
+                        <Camera className="h-3.5 w-3.5 text-accent" /> Comprovativo <span className="text-[10px] text-accent font-normal">(opcional — +10 pts bónus)</span>
                       </p>
                       <input type="file" accept="image/*" className="hidden"
                         ref={(el) => { if (el) fileInputRefs.current[actionKey] = el; }}
@@ -503,7 +502,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                   )}
 
                   {/* Show existing proof if not editable */}
-                  {requiresProof && !isEditable && proofUrls[actionKey] && (
+                  {!isEditable && proofUrls[actionKey] && (
                     <div className="border-t border-border pt-3">
                       <img src={proofUrls[actionKey]} alt="Comprovativo" className="w-full h-24 object-cover rounded-lg" />
                     </div>
@@ -516,7 +515,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       </div>
 
       {/* Number Selection - appears after completing all missions */}
-      {isEditable && allCompleted && allProofsProvided && (
+      {isEditable && allCompleted && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="overflow-hidden border-0 shadow-xl border-primary/20">
             <div className="h-1.5 bg-gradient-to-r from-accent to-primary" />
@@ -576,14 +575,18 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       {isEditable && (
         <motion.div className="space-y-3">
           <Button onClick={handleSubmit}
-            disabled={!allCompleted || !username.trim() || submitting || !allProofsProvided || !selectedNumber}
+            disabled={!allCompleted || !username.trim() || submitting || !selectedNumber}
             className="w-full h-14 text-base font-bold gap-2 glow-primary" size="lg">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> :
               !allCompleted ? <><Target className="h-5 w-5" /> Complete {socialActions.length - completedActions.length} missão(ões)</> :
-                !allProofsProvided ? <><Camera className="h-5 w-5" /> Envie todos os comprovativos</> :
-                  !selectedNumber ? <><Sparkles className="h-5 w-5" /> Escolha o seu número</> :
-                    <><CheckCircle2 className="h-5 w-5" /> Confirmar Número #{selectedNumber} — {tier.label}</>}
+                !selectedNumber ? <><Sparkles className="h-5 w-5" /> Escolha o seu número</> :
+                  <><CheckCircle2 className="h-5 w-5" /> Confirmar Número #{selectedNumber} — {tier.label}{hasAnyProofs ? ` (+${proofBonusPoints} bónus)` : ""}</>}
           </Button>
+          {!hasAnyProofs && allCompleted && (
+            <p className="text-[11px] text-center text-muted-foreground">
+              💡 <strong className="text-accent">Dica:</strong> Envie comprovativos (screenshots) para ganhar <strong>+10 pontos extra</strong> por cada missão!
+            </p>
+          )}
         </motion.div>
       )}
 

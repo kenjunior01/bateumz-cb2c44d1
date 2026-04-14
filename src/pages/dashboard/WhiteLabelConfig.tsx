@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Palette, Save, Eye, Globe, Smartphone, Wallet } from "lucide-react";
+import { Palette, Save, Eye, Globe, Smartphone, Wallet, Upload, X, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,10 @@ import { toast } from "sonner";
 export default function WhiteLabelConfig() {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     brand_name: "",
     logo_url: "",
@@ -42,9 +46,37 @@ export default function WhiteLabelConfig() {
             mpesa_number: (data as any).mpesa_number || "",
             emola_number: (data as any).emola_number || "",
           });
+          if ((data as any).logo_url) setLogoPreview((data as any).logo_url);
         }
       });
   }, [user]);
+
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("O logo deve ter no máximo 5MB"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("Selecione um ficheiro de imagem válido"); return; }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(form.logo_url || null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadLogo = async (): Promise<string | null> => {
+    if (!logoFile || !user) return null;
+    setUploading(true);
+    const ext = logoFile.name.split(".").pop();
+    const path = `${user.id}/logo-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("white-label-logos").upload(path, logoFile);
+    setUploading(false);
+    if (error) { toast.error("Erro ao enviar logo: " + error.message); return null; }
+    const { data: urlData } = supabase.storage.from("white-label-logos").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
 
   const handleSave = async () => {
     if (!user || !form.brand_name) {
@@ -52,16 +84,23 @@ export default function WhiteLabelConfig() {
       return;
     }
     setSaving(true);
-    const payload = { ...form, business_user_id: user.id } as any;
+
+    let logoUrl = form.logo_url;
+    if (logoFile) {
+      const uploaded = await uploadLogo();
+      if (uploaded) logoUrl = uploaded;
+    }
+
+    const payload = { ...form, logo_url: logoUrl, business_user_id: user.id } as any;
 
     if (existingId) {
       const { error } = await supabase.from("white_label_configs").update(payload).eq("id", existingId);
       if (error) { toast.error("Erro: " + error.message); }
-      else { toast.success("Configuração atualizada!"); }
+      else { setForm(prev => ({ ...prev, logo_url: logoUrl })); setLogoFile(null); toast.success("Configuração atualizada!"); }
     } else {
       const { data, error } = await supabase.from("white_label_configs").insert(payload).select().single();
       if (error) { toast.error("Erro: " + error.message); }
-      else { setExistingId((data as any).id); toast.success("Marca White Label criada!"); }
+      else { setExistingId((data as any).id); setForm(prev => ({ ...prev, logo_url: logoUrl })); setLogoFile(null); toast.success("Marca White Label criada!"); }
     }
     setSaving(false);
   };
@@ -69,6 +108,8 @@ export default function WhiteLabelConfig() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const displayLogoUrl = logoPreview || form.logo_url;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -93,10 +134,51 @@ export default function WhiteLabelConfig() {
               <textarea name="description" value={form.description} onChange={handleChange} rows={2} placeholder="Descrição da sua campanha..."
                 className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
             </div>
+            
+            {/* Logo Upload */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">URL do Logotipo</label>
-              <input name="logo_url" value={form.logo_url} onChange={handleChange} placeholder="https://..."
-                className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              <label className="mb-1.5 block text-sm font-medium text-foreground">Logotipo</label>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
+              
+              {displayLogoUrl ? (
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <img src={displayLogoUrl} alt="Logo" className="h-20 w-20 rounded-xl object-cover border border-border shadow-sm" />
+                    <button onClick={() => { setLogoFile(null); setLogoPreview(null); setForm(prev => ({ ...prev, logo_url: "" })); }}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/80 transition-colors shadow-sm">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
+                      <Upload className="h-3.5 w-3.5" /> Trocar Logo
+                    </Button>
+                    {logoFile && (
+                      <p className="text-[11px] text-accent flex items-center gap-1">
+                        <Image className="h-3 w-3" /> Novo ficheiro selecionado: {logoFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="flex h-24 w-full items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/20 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary/40">
+                  <div className="text-center">
+                    <Upload className="mx-auto h-6 w-6 mb-1.5" />
+                    <p className="text-xs font-medium">Enviar logo</p>
+                    <p className="text-[10px] text-muted-foreground">PNG, JPG até 5MB</p>
+                  </div>
+                </button>
+              )}
+
+              <div className="mt-3">
+                <label className="mb-1 block text-[11px] text-muted-foreground">Ou cole o link directo:</label>
+                <input name="logo_url" value={form.logo_url} onChange={(e) => {
+                  handleChange(e);
+                  if (e.target.value && !logoFile) setLogoPreview(e.target.value);
+                }} placeholder="https://..."
+                  className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -168,8 +250,8 @@ export default function WhiteLabelConfig() {
           <CardContent className="p-6 space-y-3">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pré-visualização</p>
             <div className="flex items-center gap-3">
-              {form.logo_url ? (
-                <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+              {displayLogoUrl ? (
+                <img src={displayLogoUrl} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
               ) : (
                 <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold"
                   style={{ backgroundColor: form.primary_color, color: "#fff" }}>
@@ -191,9 +273,9 @@ export default function WhiteLabelConfig() {
       </motion.div>
 
       <div className="flex justify-end gap-3 pb-6">
-        <Button onClick={handleSave} disabled={saving} className="gap-2 glow-primary">
-          {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <Save className="h-4 w-4" />}
-          {saving ? "A guardar..." : existingId ? "Atualizar Marca" : "Criar Marca White Label"}
+        <Button onClick={handleSave} disabled={saving || uploading} className="gap-2 glow-primary">
+          {saving || uploading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <Save className="h-4 w-4" />}
+          {uploading ? "A enviar logo..." : saving ? "A guardar..." : existingId ? "Atualizar Marca" : "Criar Marca White Label"}
         </Button>
       </div>
     </div>

@@ -773,6 +773,7 @@ export type Database = {
           reviewed_by: string | null
           social_username: string | null
           status: string
+          ticket_number: number | null
           updated_at: string
           user_id: string
         }
@@ -787,6 +788,7 @@ export type Database = {
           reviewed_by?: string | null
           social_username?: string | null
           status?: string
+          ticket_number?: number | null
           updated_at?: string
           user_id: string
         }
@@ -801,6 +803,7 @@ export type Database = {
           reviewed_by?: string | null
           social_username?: string | null
           status?: string
+          ticket_number?: number | null
           updated_at?: string
           user_id?: string
         }

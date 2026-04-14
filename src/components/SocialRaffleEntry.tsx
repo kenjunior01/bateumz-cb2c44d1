@@ -455,12 +455,12 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                     )}
                   </div>
 
-                  {/* Proof upload section */}
-                  {requiresProof && completed && isEditable && (
+                  {/* Proof upload section - optional, gives bonus points */}
+                  {completed && isEditable && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                       className="border-t border-border pt-3">
                       <p className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
-                        <Camera className="h-3.5 w-3.5 text-accent" /> Envie o comprovativo (screenshot)
+                        <Camera className="h-3.5 w-3.5 text-accent" /> Comprovativo <span className="text-[10px] text-accent font-normal">(opcional — +10 pts bónus)</span>
                       </p>
                       <input type="file" accept="image/*" className="hidden"
                         ref={(el) => { if (el) fileInputRefs.current[actionKey] = el; }}

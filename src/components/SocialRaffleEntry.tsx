@@ -435,11 +435,9 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
                           <Zap className="h-2.5 w-2.5 text-accent" /> +{actionConfig.points} pts
                         </Badge>
-                        {requiresProof && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-amber-500/30 text-amber-600">
-                            <Camera className="h-2.5 w-2.5" /> Comprovativo
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-accent/30 text-accent">
+                          <Camera className="h-2.5 w-2.5" /> +10 bónus
+                        </Badge>
                       </div>
                     </div>
 

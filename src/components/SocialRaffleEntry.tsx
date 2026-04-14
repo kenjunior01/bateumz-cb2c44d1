@@ -504,7 +504,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                   )}
 
                   {/* Show existing proof if not editable */}
-                  {requiresProof && !isEditable && proofUrls[actionKey] && (
+                  {!isEditable && proofUrls[actionKey] && (
                     <div className="border-t border-border pt-3">
                       <img src={proofUrls[actionKey]} alt="Comprovativo" className="w-full h-24 object-cover rounded-lg" />
                     </div>

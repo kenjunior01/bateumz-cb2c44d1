@@ -294,12 +294,6 @@ export default function CreateRaffle() {
                           className="rounded border-border" />
                         <span className="text-[11px] text-muted-foreground">📷 Exigir comprovativo (screenshot)</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={sa.requires_approval !== false}
-                          onChange={(e) => updateSocialAction(idx, "requires_approval", e.target.checked ? "true" : "false")}
-                          className="rounded border-border" />
-                        <span className="text-[11px] text-muted-foreground">👁️ Revisão manual obrigatória</span>
-                      </label>
                     </div>
                   </div>
                 ))}

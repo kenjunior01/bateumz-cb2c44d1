@@ -58,13 +58,6 @@ function getTier(pct: number) {
   return [...TIER_CONFIG].reverse().find(t => pct >= t.min) || TIER_CONFIG[0];
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  pending: { label: "Pendente", color: "text-amber-500", icon: Clock },
-  under_review: { label: "Em Análise", color: "text-blue-500", icon: Eye },
-  approved: { label: "Aprovado", color: "text-primary", icon: CheckCircle2 },
-  rejected: { label: "Rejeitado", color: "text-destructive", icon: AlertCircle },
-};
-
 export default function SocialRaffleEntry({ raffleId, socialActions, totalTickets, soldTickets }: Props) {
   const { user } = useAuth();
   const [username, setUsername] = useState("");
@@ -79,10 +72,14 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
   const [streak, setStreak] = useState(0);
   const fileInputRefs = useRef<Record<string, HTMLInputElement>>({});
 
+  // Number selection state
+  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
+
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
-      // Check new social_raffle_entries table
+      // Check existing entry
       const { data } = await (supabase as any)
         .from("social_raffle_entries")
         .select("*")
@@ -97,6 +94,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         const urlMap: Record<string, string> = {};
         existingProofs.forEach((p: any) => { urlMap[p.mission_key] = p.url; });
         setProofUrls(urlMap);
+        if (data.ticket_number) setSelectedNumber(data.ticket_number);
       }
       // Count participants
       const { count } = await (supabase as any)
@@ -104,6 +102,23 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         .select("id", { count: "exact", head: true })
         .eq("raffle_id", raffleId);
       if (count) setParticipantCount(count);
+
+      // Get sold numbers (from participants table + social entries with ticket_number)
+      const { data: participants } = await supabase
+        .from("participants")
+        .select("ticket_number")
+        .eq("raffle_id", raffleId);
+      
+      const { data: socialEntries } = await (supabase as any)
+        .from("social_raffle_entries")
+        .select("ticket_number")
+        .eq("raffle_id", raffleId)
+        .not("ticket_number", "is", null);
+      
+      const sold: number[] = [];
+      if (participants) sold.push(...participants.map((p: any) => p.ticket_number));
+      if (socialEntries) sold.push(...socialEntries.map((e: any) => e.ticket_number).filter(Boolean));
+      setSoldNumbers(sold);
     };
     fetch();
   }, [user, raffleId]);
@@ -118,14 +133,11 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     return sum + (actionLabels[action]?.points || 5);
   }, 0);
 
-  // Check if all proofs are provided for missions that require them
   const allProofsProvided = socialActions.every((sa) => {
     const key = `${sa.platform}_${sa.action}`;
     if (!sa.requires_proof) return true;
     return proofFiles[key] || proofUrls[key];
   });
-
-  const needsApproval = socialActions.some(sa => sa.requires_approval);
 
   const handleAction = async (action: SocialAction) => {
     const actionKey = `${action.platform}_${action.action}`;
@@ -155,11 +167,20 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     setProofFiles(prev => ({ ...prev, [actionKey]: file }));
   };
 
+  const handleRandomNumber = () => {
+    const available = Array.from({ length: totalTickets }, (_, i) => i + 1)
+      .filter((n) => !soldNumbers.includes(n) && n !== selectedNumber);
+    if (available.length === 0) return;
+    const random = available[Math.floor(Math.random() * available.length)];
+    setSelectedNumber(random);
+  };
+
   const handleSubmit = async () => {
     if (!user) { toast.error("Faça login para participar"); return; }
     if (!username.trim()) { toast.error("Insira o seu @username das redes sociais"); return; }
     if (!allCompleted) { toast.error("Complete todas as missões sociais"); return; }
     if (!allProofsProvided) { toast.error("Envie todos os comprovativos necessários"); return; }
+    if (!selectedNumber) { toast.error("Escolha o seu número da sorte!"); return; }
 
     setSubmitting(true);
 
@@ -173,20 +194,21 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       const { data: urlData } = supabase.storage.from("social-proofs").getPublicUrl(path);
       uploadedProofs.push({ mission_key: key, url: urlData.publicUrl });
     }
-    // Keep previously uploaded proofs
     for (const [key, url] of Object.entries(proofUrls)) {
       if (!uploadedProofs.find(p => p.mission_key === key)) {
         uploadedProofs.push({ mission_key: key, url });
       }
     }
 
+    // Always auto-approve - no waiting!
     const entryData = {
       raffle_id: raffleId,
       user_id: user.id,
       social_username: username.trim(),
       missions_completed: completedActions,
       proofs: uploadedProofs,
-      status: needsApproval ? "pending" : "approved",
+      status: "approved",
+      ticket_number: selectedNumber,
     };
 
     if (!entry) {
@@ -204,7 +226,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
           social_username: username.trim(),
           missions_completed: completedActions,
           proofs: uploadedProofs,
-          status: needsApproval ? "pending" : "approved",
+          status: "approved",
+          ticket_number: selectedNumber,
         })
         .eq("id", entry.id);
       if (error) { toast.error("Erro ao actualizar: " + error.message); setSubmitting(false); return; }
@@ -221,18 +244,18 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       raffle_id: raffleId,
     });
 
+    // Update sold_tickets count
+    await supabase.from("raffles").update({ sold_tickets: participantCount + 1 }).eq("id", raffleId);
+
     setParticipantCount(prev => prev + 1);
+    setSoldNumbers(prev => [...prev, selectedNumber]);
     setSubmitting(false);
     setShowConfetti(true);
-    toast.success(needsApproval
-      ? "🎉 Participação enviada! Aguarde a verificação do criador do sorteio."
-      : "🎉 Participação confirmada automaticamente!"
-    );
+    toast.success("🎉 Participação confirmada! Número " + selectedNumber + " é seu!");
   };
 
   const entryStatus = entry?.status || null;
-  const statusInfo = entryStatus ? STATUS_MAP[entryStatus] : null;
-  const isEditable = !entryStatus || entryStatus === "pending" || entryStatus === "rejected";
+  const isEditable = !entryStatus || entryStatus === "rejected";
 
   return (
     <div className="space-y-5 relative">
@@ -253,45 +276,40 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         )}
       </AnimatePresence>
 
-      {/* Status Banner if already submitted */}
-      {statusInfo && (
+      {/* Success Banner if already submitted */}
+      {entryStatus === "approved" && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className={`overflow-hidden border-0 shadow-lg`}>
-            <div className={`h-1.5 bg-gradient-to-r ${entryStatus === 'approved' ? 'from-primary to-accent' : entryStatus === 'rejected' ? 'from-destructive to-destructive/50' : 'from-amber-500 to-amber-300'}`} />
+          <Card className="overflow-hidden border-0 shadow-lg">
+            <div className="h-1.5 bg-gradient-to-r from-primary to-accent" />
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${entryStatus === 'approved' ? 'bg-primary/10' : entryStatus === 'rejected' ? 'bg-destructive/10' : 'bg-amber-500/10'}`}>
-                  <statusInfo.icon className={`h-6 w-6 ${statusInfo.color}`} />
+                <div className="h-12 w-12 rounded-2xl flex items-center justify-center bg-primary/10">
+                  <CheckCircle2 className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-foreground flex items-center gap-2">
-                    Estado: {statusInfo.label}
-                    <Badge className={`${statusInfo.color} bg-background border text-[10px]`}>{tier.label} — {tier.multiplier}</Badge>
+                    ✅ Participação Confirmada!
+                    <Badge className="text-primary bg-background border text-[10px]">{tier.label} — {tier.multiplier}</Badge>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {entryStatus === 'approved' && "A sua participação foi verificada! Está oficialmente no sorteio."}
-                    {entryStatus === 'pending' && "Aguardando verificação pelo criador do sorteio. Você será notificado."}
-                    {entryStatus === 'under_review' && "O criador está a analisar os seus comprovativos."}
-                    {entryStatus === 'rejected' && `Motivo: ${entry?.rejection_reason || "Comprovativos insuficientes"}. Pode reenviar.`}
+                    O seu número <strong className="text-primary text-sm">#{entry?.ticket_number || selectedNumber}</strong> está reservado. Boa sorte!
                   </p>
                 </div>
               </div>
-              {entryStatus === 'approved' && (
-                <div className="grid grid-cols-3 gap-3 mt-4">
-                  <div className="rounded-xl bg-secondary/50 p-3 text-center">
-                    <p className="text-lg font-bold text-foreground">{completedActions.length}</p>
-                    <p className="text-[10px] text-muted-foreground">Missões</p>
-                  </div>
-                  <div className="rounded-xl bg-secondary/50 p-3 text-center">
-                    <p className="text-lg font-bold text-accent">{totalPointsEarned}</p>
-                    <p className="text-[10px] text-muted-foreground">Pontos</p>
-                  </div>
-                  <div className="rounded-xl bg-secondary/50 p-3 text-center">
-                    <p className="text-lg font-bold text-primary">{tier.multiplier}</p>
-                    <p className="text-[10px] text-muted-foreground">Multiplicador</p>
-                  </div>
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-lg font-bold text-foreground">{completedActions.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Missões</p>
                 </div>
-              )}
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-lg font-bold text-accent">{totalPointsEarned}</p>
+                  <p className="text-[10px] text-muted-foreground">Pontos</p>
+                </div>
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-lg font-bold text-primary">#{entry?.ticket_number || selectedNumber}</p>
+                  <p className="text-[10px] text-muted-foreground">Número</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -310,7 +328,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                 </motion.div>
                 <div>
                   <h3 className="font-display text-xl font-bold text-foreground">Missões Sociais</h3>
-                  <p className="text-xs text-muted-foreground">Complete as missões e envie comprovativos</p>
+                  <p className="text-xs text-muted-foreground">Complete, escolha o número e participe!</p>
                 </div>
               </div>
               <Badge className={`${tier.color} bg-background/80 border gap-1 px-3 py-1.5`}>
@@ -376,7 +394,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
           const ActionIcon = actionConfig.icon;
           const PlatformIcon = config.icon;
           const hasProof = proofFiles[actionKey] || proofUrls[actionKey];
-          const requiresProof = action.requires_proof !== false; // default true
+          const requiresProof = action.requires_proof !== false;
 
           return (
             <motion.div key={actionKey} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
@@ -419,11 +437,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                         {requiresProof && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-amber-500/30 text-amber-600">
                             <Camera className="h-2.5 w-2.5" /> Comprovativo
-                          </Badge>
-                        )}
-                        {action.requires_approval && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-blue-500/30 text-blue-500">
-                            <Eye className="h-2.5 w-2.5" /> Revisão manual
                           </Badge>
                         )}
                       </div>
@@ -502,24 +515,75 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         })}
       </div>
 
+      {/* Number Selection - appears after completing all missions */}
+      {isEditable && allCompleted && allProofsProvided && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="overflow-hidden border-0 shadow-xl border-primary/20">
+            <div className="h-1.5 bg-gradient-to-r from-accent to-primary" />
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-foreground">Escolha seu Número</h3>
+                  <p className="text-xs text-muted-foreground">Selecione o seu número da sorte para o sorteio</p>
+                </div>
+              </div>
+
+              <button onClick={handleRandomNumber}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent">
+                <Sparkles className="h-4 w-4" />
+                🎲 Surpresinha — Número aleatório
+              </button>
+
+              <div className="grid grid-cols-10 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
+                {Array.from({ length: totalTickets }, (_, i) => i + 1).map((num) => {
+                  const isSold = soldNumbers.includes(num) && num !== selectedNumber;
+                  const isSelected = selectedNumber === num;
+                  return (
+                    <motion.button key={num} whileTap={{ scale: 0.9 }}
+                      onClick={() => !isSold && setSelectedNumber(isSelected ? null : num)}
+                      disabled={isSold}
+                      className={`aspect-square rounded-lg text-xs font-bold transition-all ${
+                        isSold ? "bg-secondary/50 text-muted-foreground/30 cursor-not-allowed"
+                        : isSelected ? "bg-primary text-primary-foreground glow-primary"
+                        : "bg-secondary text-foreground hover:bg-secondary/80 hover:border-primary/50 border border-transparent"
+                      }`}
+                    >{num}</motion.button>
+                  );
+                })}
+              </div>
+
+              {selectedNumber && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl bg-primary/10 border border-primary/20 p-3 text-center">
+                  <p className="text-sm text-muted-foreground">Número escolhido</p>
+                  <p className="text-3xl font-display font-bold text-primary">#{selectedNumber}</p>
+                </motion.div>
+              )}
+
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary inline-block" /> Disponível</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-primary inline-block" /> Selecionado</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-secondary/50 inline-block" /> Ocupado</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Submit Button */}
       {isEditable && (
         <motion.div className="space-y-3">
           <Button onClick={handleSubmit}
-            disabled={!allCompleted || !username.trim() || submitting || !allProofsProvided}
+            disabled={!allCompleted || !username.trim() || submitting || !allProofsProvided || !selectedNumber}
             className="w-full h-14 text-base font-bold gap-2 glow-primary" size="lg">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> :
               !allCompleted ? <><Target className="h-5 w-5" /> Complete {socialActions.length - completedActions.length} missão(ões)</> :
                 !allProofsProvided ? <><Camera className="h-5 w-5" /> Envie todos os comprovativos</> :
-                  needsApproval ? <><Shield className="h-5 w-5" /> Enviar para Verificação</> :
-                    <><Sparkles className="h-5 w-5" /> Confirmar Participação — {tier.label}</>}
+                  !selectedNumber ? <><Sparkles className="h-5 w-5" /> Escolha o seu número</> :
+                    <><CheckCircle2 className="h-5 w-5" /> Confirmar Número #{selectedNumber} — {tier.label}</>}
           </Button>
-
-          {needsApproval && allCompleted && allProofsProvided && (
-            <p className="text-[11px] text-center text-muted-foreground">
-              ⚠️ Este sorteio requer verificação manual. O criador irá analisar os seus comprovativos antes de aprovar a participação.
-            </p>
-          )}
         </motion.div>
       )}
 
@@ -536,8 +600,8 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
               {[
                 { icon: Target, color: "text-primary", bg: "bg-primary/10", title: "1. Complete Missões", desc: "Siga, curta e partilhe nas redes sociais conforme indicado" },
                 { icon: Camera, color: "text-accent", bg: "bg-accent/10", title: "2. Envie Comprovativos", desc: "Tire screenshot de cada acção realizada como prova" },
-                { icon: Shield, color: "text-blue-500", bg: "bg-blue-500/10", title: "3. Verificação", desc: "O criador analisa os comprovativos e aprova a participação" },
-                { icon: Crown, color: "text-amber-500", bg: "bg-amber-500/10", title: "4. Vencedor Justo", desc: "Seleção aleatória entre todos os participantes aprovados" },
+                { icon: Sparkles, color: "text-blue-500", bg: "bg-blue-500/10", title: "3. Escolha o Número", desc: "Selecione o seu número da sorte — confirmação imediata!" },
+                { icon: Crown, color: "text-amber-500", bg: "bg-amber-500/10", title: "4. Vencedor Justo", desc: "Seleção aleatória entre todos os participantes confirmados" },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/30">
                   <div className={`h-9 w-9 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>

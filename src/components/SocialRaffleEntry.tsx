@@ -133,11 +133,13 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     return sum + (actionLabels[action]?.points || 5);
   }, 0);
 
-  const allProofsProvided = socialActions.every((sa) => {
+  // Count how many proofs were provided (optional - gives bonus points)
+  const proofsProvided = socialActions.filter((sa) => {
     const key = `${sa.platform}_${sa.action}`;
-    if (!sa.requires_proof) return true;
     return proofFiles[key] || proofUrls[key];
-  });
+  }).length;
+  const hasAnyProofs = proofsProvided > 0;
+  const proofBonusPoints = proofsProvided * 10; // +10 pts per proof
 
   const handleAction = async (action: SocialAction) => {
     const actionKey = `${action.platform}_${action.action}`;

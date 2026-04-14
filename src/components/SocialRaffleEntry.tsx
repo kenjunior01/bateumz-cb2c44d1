@@ -181,7 +181,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
     if (!user) { toast.error("Faça login para participar"); return; }
     if (!username.trim()) { toast.error("Insira o seu @username das redes sociais"); return; }
     if (!allCompleted) { toast.error("Complete todas as missões sociais"); return; }
-    if (!allProofsProvided) { toast.error("Envie todos os comprovativos necessários"); return; }
     if (!selectedNumber) { toast.error("Escolha o seu número da sorte!"); return; }
 
     setSubmitting(true);
@@ -236,13 +235,13 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       setEntry({ ...entry, ...entryData });
     }
 
-    // Award luck points
-    const bonusPoints = progressPct === 100 ? 50 : 25;
+    // Award luck points (base + proof bonus)
+    const bonusPoints = (progressPct === 100 ? 50 : 25) + proofBonusPoints;
     await supabase.from("luck_points").insert({
       user_id: user.id,
       points: bonusPoints,
       action: "social_engagement",
-      description: `Completou ${socialActions.length} missões sociais — Nível ${tier.label}`,
+      description: `Completou ${socialActions.length} missões sociais — Nível ${tier.label}${hasAnyProofs ? ` (+${proofBonusPoints} bónus por comprovativos)` : ""}`,
       raffle_id: raffleId,
     });
 
@@ -518,7 +517,7 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       </div>
 
       {/* Number Selection - appears after completing all missions */}
-      {isEditable && allCompleted && allProofsProvided && (
+      {isEditable && allCompleted && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="overflow-hidden border-0 shadow-xl border-primary/20">
             <div className="h-1.5 bg-gradient-to-r from-accent to-primary" />
@@ -578,14 +577,18 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       {isEditable && (
         <motion.div className="space-y-3">
           <Button onClick={handleSubmit}
-            disabled={!allCompleted || !username.trim() || submitting || !allProofsProvided || !selectedNumber}
+            disabled={!allCompleted || !username.trim() || submitting || !selectedNumber}
             className="w-full h-14 text-base font-bold gap-2 glow-primary" size="lg">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> :
               !allCompleted ? <><Target className="h-5 w-5" /> Complete {socialActions.length - completedActions.length} missão(ões)</> :
-                !allProofsProvided ? <><Camera className="h-5 w-5" /> Envie todos os comprovativos</> :
-                  !selectedNumber ? <><Sparkles className="h-5 w-5" /> Escolha o seu número</> :
-                    <><CheckCircle2 className="h-5 w-5" /> Confirmar Número #{selectedNumber} — {tier.label}</>}
+                !selectedNumber ? <><Sparkles className="h-5 w-5" /> Escolha o seu número</> :
+                  <><CheckCircle2 className="h-5 w-5" /> Confirmar Número #{selectedNumber} — {tier.label}{hasAnyProofs ? ` (+${proofBonusPoints} bónus)` : ""}</>}
           </Button>
+          {!hasAnyProofs && allCompleted && (
+            <p className="text-[11px] text-center text-muted-foreground">
+              💡 <strong className="text-accent">Dica:</strong> Envie comprovativos (screenshots) para ganhar <strong>+10 pontos extra</strong> por cada missão!
+            </p>
+          )}
         </motion.div>
       )}
 

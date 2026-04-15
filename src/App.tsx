@@ -52,6 +52,9 @@ import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
 import Contests from "./pages/Contests.tsx";
 import ContestDetail from "./pages/ContestDetail.tsx";
 import AdminContests from "./pages/admin/AdminContests.tsx";
+import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
+import BusinessProfile from "./pages/BusinessProfile.tsx";
+import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();
@@ -84,6 +87,8 @@ const App = () => (
             <Route path="/historico" element={<RaffleHistory />} />
             <Route path="/concursos" element={<Contests />} />
             <Route path="/concursos/:id" element={<ContestDetail />} />
+            <Route path="/empresas" element={<BusinessDirectory />} />
+            <Route path="/empresa/:id" element={<BusinessProfile />} />
             <Route
               path="/profile"
               element={
@@ -127,6 +132,7 @@ const App = () => (
               <Route path="prizes" element={<DashboardPrizes />} />
               <Route path="notifications" element={<DashboardNotifications />} />
               <Route path="white-label" element={<WhiteLabelConfig />} />
+              <Route path="contests" element={<DashboardContests />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route

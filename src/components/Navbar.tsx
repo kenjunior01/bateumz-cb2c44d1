@@ -12,6 +12,7 @@ const Navbar = () => {
   const links = [
     { label: "Sorteios", href: "/marketplace" },
     { label: "Concursos", href: "/concursos" },
+    { label: "Empresas", href: "/empresas" },
     { label: "Comunidade", href: "/community" },
     { label: "Convida & Ganha", href: "/referral" },
   ];

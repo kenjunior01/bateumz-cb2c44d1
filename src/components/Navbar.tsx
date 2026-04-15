@@ -11,6 +11,7 @@ const Navbar = () => {
   const { user, role, signOut } = useAuth();
   const links = [
     { label: "Sorteios", href: "/marketplace" },
+    { label: "Concursos", href: "/concursos" },
     { label: "Comunidade", href: "/community" },
     { label: "Convida & Ganha", href: "/referral" },
   ];

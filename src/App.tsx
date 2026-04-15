@@ -49,6 +49,9 @@ import RaffleHistory from "./pages/RaffleHistory.tsx";
 import MyTickets from "./pages/MyTickets.tsx";
 import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
+import Contests from "./pages/Contests.tsx";
+import ContestDetail from "./pages/ContestDetail.tsx";
+import AdminContests from "./pages/admin/AdminContests.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();
@@ -79,6 +82,8 @@ const App = () => (
             <Route path="/como-funciona" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/historico" element={<RaffleHistory />} />
+            <Route path="/concursos" element={<Contests />} />
+            <Route path="/concursos/:id" element={<ContestDetail />} />
             <Route
               path="/profile"
               element={
@@ -140,6 +145,7 @@ const App = () => (
               <Route path="audit" element={<AdminAuditLogs />} />
               <Route path="cron" element={<AdminCronJobs />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="contests" element={<AdminContests />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

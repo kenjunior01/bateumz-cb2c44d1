@@ -209,6 +209,142 @@ export type Database = {
           },
         ]
       }
+      contest_submissions: {
+        Row: {
+          contest_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_winner: boolean
+          participant_name: string
+          photo_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          video_url: string | null
+          views_count: number
+          votes_count: number
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_winner?: boolean
+          participant_name: string
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+          views_count?: number
+          votes_count?: number
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_winner?: boolean
+          participant_name?: string
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+          views_count?: number
+          votes_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_submissions_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contest_votes: {
+        Row: {
+          created_at: string
+          id: string
+          submission_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          submission_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          submission_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "contest_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contests: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          evaluation_type: string
+          id: string
+          image_url: string | null
+          max_submissions_per_user: number
+          prize_description: string | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          winner_submission_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          evaluation_type?: string
+          id?: string
+          image_url?: string | null
+          max_submissions_per_user?: number
+          prize_description?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          winner_submission_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          evaluation_type?: string
+          id?: string
+          image_url?: string | null
+          max_submissions_per_user?: number
+          prize_description?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          winner_submission_id?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string

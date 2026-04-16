@@ -29,11 +29,13 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      const [rafflesRes, profilesRes, participantsRes, verificationRes] = await Promise.all([
+      const [rafflesRes, profilesRes, participantsRes, verificationRes, contestsRes, contestSubsRes] = await Promise.all([
         supabase.from("raffles").select("id, status, title, prize_title, prize_value, sold_tickets, total_tickets, raffle_type", { count: "exact" }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("participants").select("id", { count: "exact", head: true }),
         supabase.from("blockchain_verifications").select("id", { count: "exact", head: true }),
+        supabase.from("contests").select("id, title, status, evaluation_type, prize_description, end_date", { count: "exact" }),
+        supabase.from("contest_submissions").select("id", { count: "exact", head: true }),
       ]);
 
       const raffles = rafflesRes.data || [];
@@ -41,14 +43,21 @@ Deno.serve(async (req) => {
       const completedRaffles = raffles.filter(r => r.status === "completed");
       const socialRaffles = raffles.filter(r => r.raffle_type === "social");
 
+      const contests = contestsRes.data || [];
+      const activeContests = contests.filter(c => c.status === "active" || c.status === "voting");
+      const completedContests = contests.filter(c => c.status === "completed");
+
       platformStats = `
 DADOS DA PLATAFORMA EM TEMPO REAL:
 - ${profilesRes.count || 0} utilizadores registados
 - ${raffles.length} sorteios criados (${activeRaffles.length} activos, ${completedRaffles.length} concluídos)
 - ${socialRaffles.length} sorteios sociais
-- ${participantsRes.count || 0} participações totais
+- ${participantsRes.count || 0} participações totais em sorteios
 - ${verificationRes.count || 0} verificações blockchain registadas
+- ${contests.length} concursos criados (${activeContests.length} activos, ${completedContests.length} encerrados)
+- ${contestSubsRes.count || 0} participações em concursos
 - Sorteios activos agora: ${activeRaffles.slice(0, 3).map(r => `"${r.title}" (prémio: ${r.prize_title}, ${r.sold_tickets}/${r.total_tickets} bilhetes)`).join("; ") || "nenhum"}
+- Concursos activos agora: ${activeContests.slice(0, 3).map(c => `"${c.title}" (prémio: ${c.prize_description || "N/A"}, avaliação: ${c.evaluation_type === "views" ? "visualizações" : "votos"})`).join("; ") || "nenhum"}
 `;
     } catch (e) {
       console.error("Stats fetch error:", e);
@@ -68,7 +77,8 @@ Conhecimento sobre a plataforma Bateu:
 - Todos os resultados são verificados por blockchain (rede Polygon) para transparência total e auditável
 - Os utilizadores ganham "Luck Points" por participar, convidar amigos, completar missões sociais e outras acções
 - Sorteios sociais: empresas criam missões (seguir no Instagram, subscrever YouTube, partilhar no Facebook, etc.) e os participantes enviam provas (screenshots). As provas são revisadas pelo criador do sorteio.
-- Sistema de bolão: grupos de amigos juntam bilhetes para aumentar chances de ganhar
+- Sistema de concursos: empresas criam concursos (ex: receitas Caldo Benny), participantes submetem fotos/vídeos, e são avaliados por votos do público ou visualizações de vídeo. Os participantes escolhem o número do sorteio. Há ranking com barras de progresso.
+- Marketplace unificado: sorteios e concursos aparecem juntos no marketplace com filtros para separar
 - Sorteio ao vivo: animação dramática com contagem regressiva, sons de tambor e revelação do vencedor com confetti
 - Dashboard para empresas: criar sorteios, gerir participantes, analytics em tempo real, white-label
 - Sistema de referral: convida amigos com código único e ganha 100 pontos por cada amigo

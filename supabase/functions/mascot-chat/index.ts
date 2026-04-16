@@ -77,7 +77,8 @@ Conhecimento sobre a plataforma Bateu:
 - Todos os resultados são verificados por blockchain (rede Polygon) para transparência total e auditável
 - Os utilizadores ganham "Luck Points" por participar, convidar amigos, completar missões sociais e outras acções
 - Sorteios sociais: empresas criam missões (seguir no Instagram, subscrever YouTube, partilhar no Facebook, etc.) e os participantes enviam provas (screenshots). As provas são revisadas pelo criador do sorteio.
-- Sistema de bolão: grupos de amigos juntam bilhetes para aumentar chances de ganhar
+- Sistema de concursos: empresas criam concursos (ex: receitas Caldo Benny), participantes submetem fotos/vídeos, e são avaliados por votos do público ou visualizações de vídeo. Os participantes escolhem o número do sorteio. Há ranking com barras de progresso.
+- Marketplace unificado: sorteios e concursos aparecem juntos no marketplace com filtros para separar
 - Sorteio ao vivo: animação dramática com contagem regressiva, sons de tambor e revelação do vencedor com confetti
 - Dashboard para empresas: criar sorteios, gerir participantes, analytics em tempo real, white-label
 - Sistema de referral: convida amigos com código único e ganha 100 pontos por cada amigo

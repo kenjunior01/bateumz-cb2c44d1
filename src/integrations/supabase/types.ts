@@ -214,6 +214,7 @@ export type Database = {
           contest_id: string
           created_at: string
           description: string | null
+          extra_fields: Json
           id: string
           is_winner: boolean
           participant_name: string
@@ -229,6 +230,7 @@ export type Database = {
           contest_id: string
           created_at?: string
           description?: string | null
+          extra_fields?: Json
           id?: string
           is_winner?: boolean
           participant_name: string
@@ -244,6 +246,7 @@ export type Database = {
           contest_id?: string
           created_at?: string
           description?: string | null
+          extra_fields?: Json
           id?: string
           is_winner?: boolean
           participant_name?: string
@@ -296,49 +299,70 @@ export type Database = {
       }
       contests: {
         Row: {
+          category: string
           created_at: string
           created_by: string
           description: string | null
           end_date: string | null
           evaluation_type: string
+          hashtag: string | null
           id: string
           image_url: string | null
           max_submissions_per_user: number
+          min_age: number | null
           prize_description: string | null
+          requires_photo: boolean
+          requires_video: boolean
+          rules: Json
           start_date: string | null
           status: string
+          submission_fields: Json
           title: string
           updated_at: string
           winner_submission_id: string | null
         }
         Insert: {
+          category?: string
           created_at?: string
           created_by: string
           description?: string | null
           end_date?: string | null
           evaluation_type?: string
+          hashtag?: string | null
           id?: string
           image_url?: string | null
           max_submissions_per_user?: number
+          min_age?: number | null
           prize_description?: string | null
+          requires_photo?: boolean
+          requires_video?: boolean
+          rules?: Json
           start_date?: string | null
           status?: string
+          submission_fields?: Json
           title: string
           updated_at?: string
           winner_submission_id?: string | null
         }
         Update: {
+          category?: string
           created_at?: string
           created_by?: string
           description?: string | null
           end_date?: string | null
           evaluation_type?: string
+          hashtag?: string | null
           id?: string
           image_url?: string | null
           max_submissions_per_user?: number
+          min_age?: number | null
           prize_description?: string | null
+          requires_photo?: boolean
+          requires_video?: boolean
+          rules?: Json
           start_date?: string | null
           status?: string
+          submission_fields?: Json
           title?: string
           updated_at?: string
           winner_submission_id?: string | null

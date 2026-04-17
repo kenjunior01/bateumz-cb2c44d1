@@ -54,7 +54,7 @@ export default function ContestDetail() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: "photo" | "video" } | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: "photo" | "video"; submissionId?: string } | null>(null);
   const [votingId, setVotingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
@@ -163,9 +163,8 @@ export default function ContestDetail() {
     setVotingId(null);
   };
 
-  const handleViewVideo = async (sub: Submission) => {
-    setSelectedMedia({ url: sub.video_url!, type: "video" });
-    await supabase.from("contest_submissions").update({ views_count: sub.views_count + 1 }).eq("id", sub.id);
+  const handleViewVideo = (sub: Submission) => {
+    setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id });
   };
 
   const timeLeft = (date: string | null) => {
@@ -456,7 +455,36 @@ export default function ContestDetail() {
             {selectedMedia?.type === "photo" ? (
               <img src={selectedMedia.url} alt="Submissão" className="w-full rounded-lg" />
             ) : selectedMedia?.type === "video" ? (
-              <video src={selectedMedia.url} controls autoPlay className="w-full rounded-lg" />
+              <video
+                src={selectedMedia.url}
+                controls
+                autoPlay
+                className="w-full rounded-lg"
+                onPlay={(e) => {
+                  const video = e.currentTarget;
+                  const subId = selectedMedia.submissionId;
+                  if (!subId || (video as any)._viewTracked) return;
+                  // Require 3 continuous seconds of playback
+                  const startedAt = video.currentTime;
+                  const timer = window.setTimeout(async () => {
+                    if (!video.paused && video.currentTime - startedAt >= 2.5) {
+                      (video as any)._viewTracked = true;
+                      const sub = submissions.find((s) => s.id === subId);
+                      if (sub) {
+                        await supabase
+                          .from("contest_submissions")
+                          .update({ views_count: sub.views_count + 1 })
+                          .eq("id", subId);
+                        setSubmissions((prev) =>
+                          prev.map((s) => (s.id === subId ? { ...s, views_count: s.views_count + 1 } : s))
+                        );
+                      }
+                    }
+                  }, 3000);
+                  video.addEventListener("pause", () => window.clearTimeout(timer), { once: true });
+                  video.addEventListener("ended", () => window.clearTimeout(timer), { once: true });
+                }}
+              />
             ) : null}
           </motion.div>
         </DialogContent>

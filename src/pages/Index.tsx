@@ -14,6 +14,7 @@ import Footer from "@/components/Footer";
 import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
 import BottomTabBar from "@/components/BottomTabBar";
+import PopularLeaderboard from "@/components/PopularLeaderboard";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -32,6 +33,8 @@ const Index = () => {
         <div className="relative flex gap-6">
           <div className="flex-1 min-w-0">
             <ActiveRaffles categoryFilter={categoryFilter} />
+
+            <PopularLeaderboard />
 
             {isMobile && (
               <section className="py-6">

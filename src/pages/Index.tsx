@@ -15,7 +15,7 @@ import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
 import BottomTabBar from "@/components/BottomTabBar";
 import PopularLeaderboard from "@/components/PopularLeaderboard";
-import FeaturedContestsCarousel from "@/components/FeaturedContestsCarousel";
+import ContestTypesShowcase from "@/components/ContestTypesShowcase";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -25,7 +25,7 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <Navbar />
       <HeroSection />
-      <FeaturedContestsCarousel />
+      <ContestTypesShowcase />
       <SearchBar />
       <StatsBar />
       <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />

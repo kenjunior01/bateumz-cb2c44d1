@@ -331,7 +331,7 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
 
 export default function MascotBuddy() {
   const { profile, user } = useAuth();
-  const lang = "pt" as const;
+  const lang: "pt" | "en" = "pt";
   const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");

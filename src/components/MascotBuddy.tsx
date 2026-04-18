@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playPopSound, playDismissSound, playSendSound, playWinSound, playVictoryFanfare, playMilestoneChime } from "@/lib/sounds";
@@ -331,6 +332,8 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
 
 export default function MascotBuddy() {
   const { profile, user } = useAuth();
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith("en") ? "en" : "pt";
   const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
@@ -353,7 +356,7 @@ export default function MascotBuddy() {
   const modeRef = useRef<MascotMode>(mode);
   modeRef.current = mode;
 
-  const userName = profile?.display_name || "amigo/a";
+  const userName = profile?.display_name || (lang === "en" ? "friend" : "amigo/a");
   const { context, mood } = useMemo(() => getRouteContext(location.pathname), [location.pathname]);
 
   // ── Track point milestones ──
@@ -453,19 +456,18 @@ export default function MascotBuddy() {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke("mascot-message", {
-        body: { userName, context: ctx, mood: currentMood },
+        body: { userName, context: ctx, mood: currentMood, lang, userId: user?.id },
       });
       if (error || !data?.message) throw new Error("No message");
       setMessage(data.message);
     } catch {
-      // Use route-specific messages first, then fall back to mood-based
       const routePool = ROUTE_MESSAGES[location.pathname];
       const pool = routePool && routePool.length > 0 ? routePool : FALLBACK_MESSAGES[currentMood];
       setMessage(pool[Math.floor(Math.random() * pool.length)](userName));
     } finally {
       setLoading(false);
     }
-  }, [userName]);
+  }, [userName, lang, user?.id, location.pathname]);
 
   const showMascot = useCallback(async () => {
     if (dismissed || modeRef.current === "chat") return;
@@ -505,7 +507,9 @@ export default function MascotBuddy() {
     if (chatMessages.length === 0) {
       setChatMessages([{
         role: "assistant",
-        content: `Olá ${userName}! 😊 Sou o Bateu, o teu assistente. Pergunta-me qualquer coisa sobre a plataforma!`,
+        content: lang === "en"
+          ? `Hey ${userName}! 😊 I'm Bateu, your assistant. Ask me anything about the platform!`
+          : `Olá ${userName}! 😊 Sou o Bateu, o teu assistente. Pergunta-me qualquer coisa sobre a plataforma!`,
       }]);
     }
     setTimeout(() => inputRef.current?.focus(), 300);
@@ -526,12 +530,14 @@ export default function MascotBuddy() {
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           userName,
           context,
+          lang,
+          userId: user?.id,
         },
       });
       if (error || !data?.message) throw new Error("No response");
       setChatMessages(prev => [...prev, { role: "assistant", content: data.message }]);
     } catch {
-      setChatMessages(prev => [...prev, { role: "assistant", content: "Ops, não consegui responder! 😅 Tenta de novo." }]);
+      setChatMessages(prev => [...prev, { role: "assistant", content: lang === "en" ? "Oops, couldn't reply! 😅 Try again." : "Ops, não consegui responder! 😅 Tenta de novo." }]);
     } finally {
       setChatLoading(false);
     }
@@ -707,7 +713,7 @@ export default function MascotBuddy() {
                 ref={inputRef}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Pergunta ao Bateu..."
+                placeholder={lang === "en" ? "Ask Bateu..." : "Pergunta ao Bateu..."}
                 className="flex-1 bg-secondary rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/30"
                 disabled={chatLoading}
               />

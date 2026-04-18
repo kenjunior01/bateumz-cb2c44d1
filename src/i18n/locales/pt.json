@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "raffles": "Sorteios",
+    "contests": "Concursos",
+    "businesses": "Empresas",
+    "community": "Comunidade",
+    "referral": "Convida & Ganha",
+    "points": "Pontos",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "signOut": "Sair",
+    "signIn": "Entrar",
+    "join": "Participar"
+  },
+  "hero": {
+    "title1": "O seu próximo",
+    "title2": "grande momento",
+    "subtitle": "Sorteios transparentes com verificação pública. Prémios reais, vencedores reais.",
+    "cta": "Participar agora",
+    "verified": "Verificação pública",
+    "participantsMany": "+{{count}} participantes",
+    "communityActive": "Comunidade activa",
+    "newWeek": "Novos toda semana"
+  },
+  "footer": {
+    "tagline": "A plataforma onde cada sorteio é uma oportunidade real e verificável. Transparência não é promessa — é prova.",
+    "raffles": "Sorteios",
+    "winners": "Vencedores",
+    "howItWorks": "Como Funciona",
+    "terms": "Termos",
+    "privacy": "Privacidade",
+    "community": "Comunidade",
+    "faq": "FAQ",
+    "rights": "© 2026 Bateu. Todos os direitos reservados."
+  },
+  "lang": {
+    "pt": "Português",
+    "en": "English",
+    "switch": "Idioma"
+  }
+}

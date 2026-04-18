@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playPopSound, playDismissSound, playSendSound, playWinSound, playVictoryFanfare, playMilestoneChime } from "@/lib/sounds";
@@ -332,8 +331,7 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
 
 export default function MascotBuddy() {
   const { profile, user } = useAuth();
-  const { i18n } = useTranslation();
-  const lang = i18n.language?.startsWith("en") ? "en" : "pt";
+  const lang = "pt" as const;
   const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");

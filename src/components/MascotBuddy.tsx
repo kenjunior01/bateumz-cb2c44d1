@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, MessageCircle, Send, ChevronDown, Trophy, Star, Gift } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playPopSound, playDismissSound, playSendSound, playWinSound, playVictoryFanfare, playMilestoneChime } from "@/lib/sounds";

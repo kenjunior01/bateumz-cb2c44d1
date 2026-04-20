@@ -3,18 +3,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Zap, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, role, signOut } = useAuth();
+  const { t } = useLanguage();
   const links = [
-    { label: "Sorteios", href: "/marketplace" },
-    { label: "Concursos", href: "/concursos" },
-    { label: "Empresas", href: "/empresas" },
-    { label: "Comunidade", href: "/community" },
-    { label: "Convida & Ganha", href: "/referral" },
+    { label: t("nav.raffles"), href: "/marketplace" },
+    { label: t("nav.contests"), href: "/concursos" },
+    { label: t("nav.business"), href: "/empresas" },
+    { label: t("nav.community"), href: "/community" },
+    { label: t("nav.referral"), href: "/referral" },
   ];
 
   return (
@@ -43,39 +46,41 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
+          <LanguageSwitcher />
           <ThemeToggle />
           {user ? (
             <>
               <Link to="/my-points" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
-                <Star className="h-4 w-4 text-accent" /> Pontos
+                <Star className="h-4 w-4 text-accent" /> {t("nav.points")}
               </Link>
               <Link to="/dashboard" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                Dashboard
+                {t("nav.dashboard")}
               </Link>
               {role === "admin" && (
                 <Link to="/admin" className="rounded-lg px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
-                  Admin
+                  {t("nav.admin")}
                 </Link>
               )}
               <button onClick={signOut} className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                Sair
+                {t("nav.signout")}
               </button>
             </>
           ) : (
             <>
               <Link to="/login" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                Entrar
+                {t("nav.signin")}
               </Link>
               <Link to="/register" className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary">
                 <Zap className="h-4 w-4" />
-                Participar
+                {t("nav.signup")}
               </Link>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-1 md:hidden">
+          <LanguageSwitcher />
           <ThemeToggle />
           <button className="text-foreground" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -104,7 +109,7 @@ const Navbar = () => {
               ))}
               <Link to="/register" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
                 <Zap className="h-4 w-4" />
-                Participar
+                {t("nav.signup")}
               </Link>
             </div>
           </motion.div>

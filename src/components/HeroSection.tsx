@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Shield, Users, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import CountdownTimer from "./CountdownTimer";
 
 interface FeaturedRaffle {
@@ -13,6 +14,7 @@ interface FeaturedRaffle {
 }
 
 const HeroSection = () => {
+  const { t } = useLanguage();
   const [participantCount, setParticipantCount] = useState(0);
   const [featuredRaffle, setFeaturedRaffle] = useState<FeaturedRaffle | null>(null);
   const [countdownEnabled, setCountdownEnabled] = useState(false);
@@ -60,11 +62,11 @@ const HeroSection = () => {
           className="max-w-3xl mx-auto"
         >
           <h1 className="mb-3 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight md:text-5xl">
-            O seu próximo <span className="text-gradient-primary">grande momento</span>
+            {t("hero.title.prefix")} <span className="text-gradient-primary">{t("hero.title.highlight")}</span>
           </h1>
 
           <p className="mx-auto mb-5 max-w-xl text-xs md:text-base text-muted-foreground">
-            Sorteios transparentes com verificação pública. Prémios reais, vencedores reais.
+            {t("hero.subtitle")}
           </p>
 
           {/* Countdown — only when admin enables it */}
@@ -95,7 +97,7 @@ const HeroSection = () => {
               to="/marketplace"
               className="group flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 md:px-7 md:py-3 text-sm md:text-base font-semibold text-primary-foreground transition-all glow-primary hover:opacity-90"
             >
-              Participar agora
+              {t("hero.cta")}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
@@ -106,9 +108,9 @@ const HeroSection = () => {
             transition={{ delay: 0.5 }}
             className="mt-5 md:mt-8 flex flex-wrap items-center justify-center gap-3 md:gap-5 text-[10px] md:text-xs text-muted-foreground"
           >
-            <span className="flex items-center gap-1"><Shield className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> Verificação pública</span>
-            <span className="flex items-center gap-1"><Users className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {participantCount > 0 ? `+${participantCount.toLocaleString()} participantes` : "Comunidade activa"}</span>
-            <span className="flex items-center gap-1"><Clock className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> Novos toda semana</span>
+            <span className="flex items-center gap-1"><Shield className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {t("hero.badge.verification")}</span>
+            <span className="flex items-center gap-1"><Users className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {participantCount > 0 ? `+${participantCount.toLocaleString()} ${t("hero.badge.participants")}` : t("hero.badge.community")}</span>
+            <span className="flex items-center gap-1"><Clock className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {t("hero.badge.weekly")}</span>
           </motion.div>
         </motion.div>
       </div>

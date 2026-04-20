@@ -7,6 +7,7 @@ import { formatMZN } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { getRegions } from "@/lib/regions";
 
 interface Raffle {
   id: string;
@@ -187,8 +188,7 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
   if (region) {
     visible = visible.filter((r) => (r as any).province === region);
   } else if (country) {
-    // dynamic import avoided; do lightweight match by checking province codes for that country
-    const regs = (require("@/lib/regions") as typeof import("@/lib/regions")).getRegions(country).map((x) => x.value);
+    const regs = getRegions(country).map((x) => x.value);
     if (regs.length) visible = visible.filter((r) => !(r as any).province || regs.includes((r as any).province));
   }
 

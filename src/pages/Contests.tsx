@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Calendar, Eye, ThumbsUp, Video, ArrowRight, Clock, Flame, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import CountryRegionFilter from "@/components/CountryRegionFilter";
+import ContestCountdown from "@/components/ContestCountdown";
 
 interface Contest {
   id: string;
@@ -33,6 +35,8 @@ export default function Contests() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -47,10 +51,11 @@ export default function Contests() {
     load();
   }, []);
 
-  const filtered = contests.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    (c.description || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = contests.filter((c) => {
+    const q = search.toLowerCase();
+    if (q && !c.title.toLowerCase().includes(q) && !(c.description || "").toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   const active = filtered.filter((c) => c.status === "active" || c.status === "voting");
   const past = filtered.filter((c) => c.status === "completed");
@@ -87,11 +92,10 @@ export default function Contests() {
               <Badge className={`absolute top-3 left-3 ${status.color}`}>
                 {status.emoji} {status.label}
               </Badge>
-              {contest.end_date && timeLeft(contest.end_date) && (
-                <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {timeLeft(contest.end_date)}
-                </Badge>
+              {contest.end_date && timeLeft(contest.end_date) && contest.status !== "completed" && (
+                <div className="absolute top-3 right-3">
+                  <ContestCountdown endDate={contest.end_date} compact />
+                </div>
               )}
               <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
             </div>
@@ -143,12 +147,13 @@ export default function Contests() {
           </p>
         </motion.div>
 
-        {/* Search */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="max-w-md mx-auto mb-8">
-          <div className="relative">
+        {/* Search + Country/Region */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="max-w-3xl mx-auto mb-8 flex flex-col sm:flex-row gap-3 items-stretch">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar concursos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass" />
           </div>
+          <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
         </motion.div>
 
         {loading ? (

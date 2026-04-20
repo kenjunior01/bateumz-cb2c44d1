@@ -16,10 +16,13 @@ import LiveFeed from "@/components/LiveFeed";
 import BottomTabBar from "@/components/BottomTabBar";
 import PopularLeaderboard from "@/components/PopularLeaderboard";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
+import CountryRegionFilter from "@/components/CountryRegionFilter";
 
 const Index = () => {
   const isMobile = useIsMobile();
   const [categoryFilter, setCategoryFilter] = useState("todos");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
 
   return (
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
@@ -29,12 +32,18 @@ const Index = () => {
       <SearchBar />
       <StatsBar />
       <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
+      <section className="container mx-auto px-4 -mt-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">🌍 Filtrar por região:</span>
+          <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} compact />
+        </div>
+      </section>
       <MobileActionButtons />
 
       <div className="container mx-auto px-4">
         <div className="relative flex gap-6">
           <div className="flex-1 min-w-0">
-            <ActiveRaffles categoryFilter={categoryFilter} />
+            <ActiveRaffles categoryFilter={categoryFilter} country={country} region={region} />
 
             <PopularLeaderboard />
 

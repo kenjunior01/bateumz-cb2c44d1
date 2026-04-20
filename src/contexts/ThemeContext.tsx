@@ -7,16 +7,17 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ theme: "dark", toggleTheme: () => {} });
+const ThemeContext = createContext<ThemeContextType>({ theme: "light", toggleTheme: () => {} });
 
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("sortex-theme") as Theme) || "dark";
+      const stored = localStorage.getItem("sortex-theme") as Theme | null;
+      return stored === "dark" || stored === "light" ? stored : "light";
     }
-    return "dark";
+    return "light";
   });
 
   useEffect(() => {

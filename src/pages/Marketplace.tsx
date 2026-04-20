@@ -5,8 +5,10 @@ import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PROVINCES } from "@/lib/provinces";
+import { getRegions } from "@/lib/regions";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import CountryRegionFilter from "@/components/CountryRegionFilter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,7 +54,8 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"newest" | "ending" | "popular">("newest");
   const [typeFilter, setTypeFilter] = useState<"all" | "paid" | "free" | "points">("all");
-  const [provinceFilter, setProvinceFilter] = useState("");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
   const [contentType, setContentType] = useState<ContentType>("all");
 
   useEffect(() => {
@@ -72,7 +75,11 @@ const Marketplace = () => {
     .filter((r) => {
       if (!r.title.toLowerCase().includes(search.toLowerCase()) && !r.prize_title.toLowerCase().includes(search.toLowerCase())) return false;
       if (typeFilter !== "all" && r.raffle_type !== typeFilter) return false;
-      if (provinceFilter && r.province !== provinceFilter) return false;
+      if (region && r.province !== region) return false;
+      if (country && !region) {
+        const regs = getRegions(country).map((x) => x.value);
+        if (r.province && !regs.includes(r.province)) return false;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -145,6 +152,11 @@ const Marketplace = () => {
             ))}
           </div>
 
+          {/* Country / Region filter */}
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center gap-2">
+            <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
+          </motion.div>
+
           {/* Raffle sub-filters */}
           {showRaffles && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex flex-wrap gap-2">
@@ -153,11 +165,6 @@ const Marketplace = () => {
                   {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
                 </Button>
               ))}
-              <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)}
-                className="h-8 rounded-md border border-border bg-secondary/50 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="">📍 Todas Províncias</option>
-                {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
             </motion.div>
           )}
         </div>

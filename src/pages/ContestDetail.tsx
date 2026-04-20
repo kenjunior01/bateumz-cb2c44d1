@@ -13,8 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ThumbsUp, Eye, Calendar, Send, Video, Image as ImageIcon, Heart, ArrowLeft, Flame, Clock, Users, Share2 } from "lucide-react";
+import { Trophy, ThumbsUp, Eye, Calendar, Send, Video, Image as ImageIcon, Heart, ArrowLeft, Flame, Clock, Users, Share2, Crown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import ContestCountdown from "@/components/ContestCountdown";
+import ShareButtons from "@/components/ShareButtons";
+import { fireConfetti, fireSideCannons } from "@/lib/celebrate";
 
 interface Contest {
   id: string;
@@ -133,6 +136,7 @@ export default function ContestDetail() {
       }
 
       toast({ title: "🎉 Participação enviada!", description: "A sua submissão foi registada com sucesso." });
+      fireSideCannons();
       setShowForm(false);
       setName("");
       setDesc("");
@@ -158,6 +162,7 @@ export default function ContestDetail() {
     } else {
       await supabase.from("contest_votes").insert({ submission_id: submissionId, user_id: user.id });
       setMyVotes((prev) => new Set(prev).add(submissionId));
+      fireConfetti({ intensity: "low" });
     }
     await loadData();
     setVotingId(null);
@@ -236,6 +241,15 @@ export default function ContestDetail() {
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
               <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">{contest.title}</h1>
               {contest.description && <p className="text-muted-foreground mt-2 max-w-2xl">{contest.description}</p>}
+              {contest.end_date && (isOpen || isVoting) && (
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">⏰ Termina em</p>
+                  <ContestCountdown endDate={contest.end_date} />
+                </div>
+              )}
+              <div className="mt-4">
+                <ShareButtons data={{ title: contest.title, text: `${contest.title} — participa e ganha!`, url: typeof window !== "undefined" ? window.location.href : "" }} />
+              </div>
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="flex items-center gap-3">
               {!contest.image_url && (

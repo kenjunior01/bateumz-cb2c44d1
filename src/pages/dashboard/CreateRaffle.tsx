@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin, Eye, EyeOff, Timer, Zap, Trophy, Users } from "lucide-react";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
+import { COUNTRIES, getRegions } from "@/lib/regions";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export default function CreateRaffle() {
     end_date: "",
     raffle_type: "paid" as "paid" | "free" | "points" | "social",
     points_cost: "",
+    country: "MZ",
     province: "",
     city: "",
     draw_mode: "manual" as "manual" | "auto_sold_out",
@@ -468,25 +470,42 @@ export default function CreateRaffle() {
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Localização (Opcional)</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-xs text-muted-foreground">Restrinja o sorteio a uma província ou cidade específica de Moçambique</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <p className="text-xs text-muted-foreground">Restrinja o sorteio a um país, região ou cidade específica</p>
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Província</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">País</label>
+                <select
+                  value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value, province: "", city: "" })}
+                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Região / Província</label>
                 <select name="province" value={form.province}
                   onChange={(e) => setForm({ ...form, province: e.target.value, city: "" })}
                   className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                  <option value="">🇲🇿 Todo Moçambique</option>
-                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  <option value="">Toda a região</option>
+                  {getRegions(form.country).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">Cidade</label>
-                <select name="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  disabled={!form.province}
-                  className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
-                  <option value="">Todas as cidades</option>
-                  {form.province && CITIES_BY_PROVINCE[form.province]?.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                {form.country === "MZ" ? (
+                  <select name="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    disabled={!form.province}
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
+                    <option value="">Todas as cidades</option>
+                    {form.province && CITIES_BY_PROVINCE[form.province]?.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                ) : (
+                  <input name="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    placeholder="Opcional"
+                    className="h-10 w-full rounded-lg border border-border bg-secondary/50 px-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                )}
               </div>
             </div>
           </CardContent>

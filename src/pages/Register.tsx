@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
+import { COUNTRIES, getRegions } from "@/lib/regions";
 import { playPopSound } from "@/lib/sounds";
 
 import mascotHappy from "@/assets/mascot-happy.png";
@@ -65,6 +66,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("MZ");
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
@@ -419,18 +421,31 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Província</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">País</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <select value={country} onChange={(e) => { setCountry(e.target.value); setProvince(""); setCity(""); }}
+                        className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none">
+                        {COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Região / Província</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <select value={province} onChange={(e) => { setProvince(e.target.value); setCity(""); }}
                         className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none">
                         <option value="">Selecione...</option>
-                        {PROVINCES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        {getRegions(country).map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                       </select>
                     </div>
                   </div>
 
-                  {province && CITIES_BY_PROVINCE[province] && (
+                  {province && country === "MZ" && CITIES_BY_PROVINCE[province] && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                       <label className="mb-1.5 block text-xs font-medium text-foreground">Cidade</label>
                       <div className="relative">

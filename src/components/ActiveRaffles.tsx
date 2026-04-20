@@ -145,9 +145,11 @@ const RaffleSection = ({ title, icon, raffles, emptyText = "Nenhum sorteio" }: S
 
 interface ActiveRafflesProps {
   categoryFilter?: string;
+  country?: string;
+  region?: string;
 }
 
-const ActiveRaffles = ({ categoryFilter }: ActiveRafflesProps) => {
+const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -180,16 +182,26 @@ const ActiveRaffles = ({ categoryFilter }: ActiveRafflesProps) => {
     );
   }
 
+  // Region/country filter (client-side)
+  let visible = raffles;
+  if (region) {
+    visible = visible.filter((r) => (r as any).province === region);
+  } else if (country) {
+    // dynamic import avoided; do lightweight match by checking province codes for that country
+    const regs = (require("@/lib/regions") as typeof import("@/lib/regions")).getRegions(country).map((x) => x.value);
+    if (regs.length) visible = visible.filter((r) => !(r as any).province || regs.includes((r as any).province));
+  }
+
   // Split into sections
   const now = Date.now();
-  const featured = raffles.filter((r) => {
+  const featured = visible.filter((r) => {
     const pct = (r.sold_tickets / r.total_tickets) * 100;
     return pct > 50 || (r.end_date && new Date(r.end_date).getTime() - now < 3 * 86400000);
   });
   const featuredIds = new Set(featured.map((r) => r.id));
-  const recent = raffles.filter((r) => !featuredIds.has(r.id));
+  const recent = visible.filter((r) => !featuredIds.has(r.id));
 
-  const hasResults = raffles.length > 0;
+  const hasResults = visible.length > 0;
 
   return (
     <section id="sorteios" className="relative py-6 md:py-12">

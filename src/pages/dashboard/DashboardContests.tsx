@@ -197,6 +197,12 @@ export default function DashboardContests() {
       min_age: c.min_age?.toString() || "",
       rules: Array.isArray(c.rules) ? c.rules : [],
       submission_fields: Array.isArray(c.submission_fields) ? c.submission_fields : [],
+      contest_mode: (c as any).contest_mode || "single",
+      phases: Array.isArray((c as any).phases) ? (c as any).phases : [],
+      sponsor_name: (c as any).sponsor_name || "",
+      sponsor_logo_url: (c as any).sponsor_logo_url || "",
+      entry_fee: (c as any).entry_fee || 0,
+      max_participants: (c as any).max_participants?.toString() || "",
     });
     setStep("details");
     setShowCreate(true);

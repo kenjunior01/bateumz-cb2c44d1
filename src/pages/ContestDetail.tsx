@@ -294,6 +294,46 @@ export default function ContestDetail() {
             </motion.div>
           </div>
 
+          {/* Phases Timeline */}
+          {(contest as any).contest_mode === "multi" && Array.isArray((contest as any).phases) && (contest as any).phases.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="mt-6 p-4 rounded-xl glass">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold flex items-center gap-1">🏆 Fases do Concurso</p>
+              <div className="flex items-center gap-1 overflow-x-auto pb-2">
+                {((contest as any).phases as { name: string; durationDays: number; type: string }[]).map((phase, i) => {
+                  const isCurrent = i === ((contest as any).current_phase || 0);
+                  const isPast = i < ((contest as any).current_phase || 0);
+                  return (
+                    <div key={i} className="flex items-center gap-1 shrink-0">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.4 + i * 0.1, type: "spring" }}
+                        className={`px-3 py-2 rounded-lg text-center border transition-all ${
+                          isCurrent ? "border-primary bg-primary/10 ring-2 ring-primary/30" : isPast ? "border-muted bg-muted/50 opacity-60" : "border-border/50 bg-background/50"
+                        }`}
+                      >
+                        <p className={`text-xs font-bold ${isCurrent ? "text-primary" : "text-foreground"}`}>{phase.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{phase.durationDays}d</p>
+                      </motion.div>
+                      {i < (contest as any).phases.length - 1 && (
+                        <div className={`w-6 h-0.5 ${isPast ? "bg-primary" : "bg-border"}`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Sponsor Badge */}
+          {(contest as any).sponsor_name && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/30 bg-accent/5">
+              {(contest as any).sponsor_logo_url && <img src={(contest as any).sponsor_logo_url} alt="" className="h-5 w-5 rounded-full object-cover" />}
+              <span className="text-xs text-muted-foreground">Patrocinado por</span>
+              <span className="text-xs font-semibold text-foreground">{(contest as any).sponsor_name}</span>
+            </motion.div>
+          )}
+
           {/* Stats bar */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap gap-4 mt-6 p-4 rounded-xl glass">
             {contest.prize_description && (
@@ -318,6 +358,12 @@ export default function ContestDetail() {
               </div>
               <div><span className="text-muted-foreground text-xs">Avaliação</span><p className="font-semibold text-foreground">{contest.evaluation_type === "views" ? "Visualizações" : "Votos"}</p></div>
             </div>
+            {(contest as any).entry_fee > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center"><span className="text-xs font-bold text-accent">$</span></div>
+                <div><span className="text-muted-foreground text-xs">Inscrição</span><p className="font-semibold text-foreground">{(contest as any).entry_fee} MZN</p></div>
+              </div>
+            )}
           </motion.div>
         </motion.div>
 

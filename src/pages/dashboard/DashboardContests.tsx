@@ -13,9 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trophy, Trash2, Check, X, Eye, ThumbsUp, Video, Users, Calendar, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { Plus, Edit, Trophy, Trash2, Check, X, Eye, ThumbsUp, Video, Users, Calendar, ArrowLeft, ArrowRight, Sparkles, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CONTEST_CATEGORIES, getCategory } from "@/lib/contestCategories";
+import { CONTEST_CATEGORIES, getCategory, PHASE_TEMPLATES } from "@/lib/contestCategories";
 
 interface Contest {
   id: string;
@@ -60,6 +60,10 @@ const initialForm = {
   max_submissions_per_user: 1, category: "", hashtag: "",
   requires_video: false, requires_photo: false, min_age: "",
   rules: [] as string[], submission_fields: [] as any[],
+  contest_mode: "single" as "single" | "multi",
+  phases: [] as { name: string; description: string; durationDays: number; type: string }[],
+  sponsor_name: "", sponsor_logo_url: "",
+  entry_fee: 0, max_participants: "",
 };
 
 export default function DashboardContests() {
@@ -133,6 +137,12 @@ export default function DashboardContests() {
       min_age: form.min_age ? parseInt(form.min_age) : null,
       rules: form.rules,
       submission_fields: form.submission_fields,
+      contest_mode: form.contest_mode,
+      phases: form.phases,
+      sponsor_name: form.sponsor_name || null,
+      sponsor_logo_url: form.sponsor_logo_url || null,
+      entry_fee: form.entry_fee || 0,
+      max_participants: form.max_participants ? parseInt(form.max_participants as string) : null,
     };
     try {
       if (editContest) {

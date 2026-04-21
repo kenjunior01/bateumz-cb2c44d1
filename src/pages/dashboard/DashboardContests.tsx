@@ -358,6 +358,64 @@ export default function DashboardContests() {
                     </div>
                   </div>
 
+                  {/* Contest Mode: Single vs Multi-phase */}
+                  <div className="rounded-lg border border-primary/20 p-3 space-y-3 bg-gradient-to-br from-primary/5 to-transparent">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold">Modo do Concurso</p>
+                    </div>
+                    <Select value={form.contest_mode} onValueChange={(v: "single" | "multi") => setForm({ ...form, contest_mode: v, phases: v === "single" ? [] : form.phases })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">🎯 Fase Única — submissão e votação simples</SelectItem>
+                        <SelectItem value="multi">🏆 Multi-fases — eliminação progressiva</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.contest_mode === "multi" && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">Escolha um modelo de fases ou personalize:</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {PHASE_TEMPLATES.map((tmpl, i) => (
+                            <Button key={i} type="button" size="sm" variant={form.phases.length === tmpl.length ? "default" : "outline"} className="text-xs" onClick={() => setForm({ ...form, phases: [...tmpl] })}>
+                              {tmpl.length} Fases
+                            </Button>
+                          ))}
+                        </div>
+                        {form.phases.length > 0 && (
+                          <div className="space-y-2">
+                            {form.phases.map((phase, i) => (
+                              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                                className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-background/50">
+                                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{i + 1}</div>
+                                <div className="flex-1 min-w-0">
+                                  <Input value={phase.name} onChange={(e) => { const p = [...form.phases]; p[i] = { ...p[i], name: e.target.value }; setForm({ ...form, phases: p }); }} className="h-7 text-xs" />
+                                </div>
+                                <Input type="number" min={1} value={phase.durationDays} onChange={(e) => { const p = [...form.phases]; p[i] = { ...p[i], durationDays: parseInt(e.target.value) || 1 }; setForm({ ...form, phases: p }); }} className="h-7 w-16 text-xs" />
+                                <span className="text-[10px] text-muted-foreground">dias</span>
+                                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setForm({ ...form, phases: form.phases.filter((_, idx) => idx !== i) })}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sponsor & Entry Fee */}
+                  <div className="rounded-lg border border-border/50 p-3 space-y-3">
+                    <p className="text-sm font-semibold">💼 Patrocínio & Acesso</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label className="text-xs">Nome do patrocinador</Label><Input maxLength={80} value={form.sponsor_name} onChange={(e) => setForm({ ...form, sponsor_name: e.target.value })} placeholder="Opcional" /></div>
+                      <div><Label className="text-xs">Logo do patrocinador (URL)</Label><Input value={form.sponsor_logo_url} onChange={(e) => setForm({ ...form, sponsor_logo_url: e.target.value })} placeholder="https://..." /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label className="text-xs">Taxa de inscrição (MZN)</Label><Input type="number" min={0} value={form.entry_fee} onChange={(e) => setForm({ ...form, entry_fee: parseFloat(e.target.value) || 0 })} /></div>
+                      <div><Label className="text-xs">Máx. participantes</Label><Input type="number" min={0} placeholder="Ilimitado" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} /></div>
+                    </div>
+                  </div>
+
                   <div className="rounded-lg border border-border/50 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Regras do concurso</p>

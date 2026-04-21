@@ -72,41 +72,60 @@ export default function Contests() {
 
   const ContestCard = ({ contest, index }: { contest: Contest; index: number }) => {
     const status = statusMap[contest.status] || statusMap.active;
+    const isFeatured = (contest as any).featured;
+    const isMultiPhase = (contest as any).contest_mode === "multi";
+    const sponsor = (contest as any).sponsor_name;
     return (
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: index * 0.06, type: "spring", stiffness: 200 }}
-        whileHover={{ y: -4 }}
+        whileHover={{ y: -6, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
       >
         <Link to={`/concursos/${contest.id}`}>
-          <Card className="overflow-hidden glass group hover:border-primary/30 transition-all cursor-pointer h-full">
+          <Card className={`overflow-hidden glass group hover:border-primary/30 transition-all cursor-pointer h-full relative ${isFeatured ? "ring-2 ring-primary/40 shadow-lg" : ""}`}>
+            {isFeatured && (
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-accent to-primary z-10" />
+            )}
             <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
               {contest.image_url ? (
-                <img src={contest.image_url} alt={contest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={contest.image_url} alt={contest.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
-                  <Trophy className="h-12 w-12 text-primary/30" />
+                  <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 4 }}>
+                    <Trophy className="h-12 w-12 text-primary/30" />
+                  </motion.div>
                 </div>
               )}
-              <Badge className={`absolute top-3 left-3 ${status.color}`}>
+              <Badge className={`absolute top-3 left-3 ${status.color} shadow-md`}>
                 {status.emoji} {status.label}
               </Badge>
+              {isMultiPhase && (
+                <Badge className="absolute top-3 left-[50%] -translate-x-1/2 bg-accent/90 text-accent-foreground text-[10px] shadow-md">
+                  🏆 Multi-fases
+                </Badge>
+              )}
               {contest.end_date && timeLeft(contest.end_date) && contest.status !== "completed" && (
                 <div className="absolute top-3 right-3">
                   <ContestCountdown endDate={contest.end_date} compact />
                 </div>
               )}
-              <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-            <CardContent className="p-5 space-y-2">
-              <h3 className="font-display text-lg font-bold text-foreground group-hover:text-primary transition-colors">{contest.title}</h3>
-              {contest.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{contest.description}</p>
+              <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+              {sponsor && (
+                <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] text-muted-foreground flex items-center gap-1">
+                  💼 {sponsor}
+                </div>
               )}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            </div>
+            <CardContent className="p-4 space-y-2">
+              <h3 className="font-display text-sm md:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">{contest.title}</h3>
+              {contest.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">{contest.description}</p>
+              )}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 {contest.evaluation_type === "views" ? (
-                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> Visualizações</span>
+                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> Views</span>
                 ) : (
                   <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" /> Votos</span>
                 )}
@@ -118,13 +137,13 @@ export default function Contests() {
                 )}
               </div>
               {contest.prize_description && (
-                <div className="flex items-center gap-1 text-sm font-medium text-primary">
-                  <Trophy className="h-4 w-4" />
-                  {contest.prize_description}
+                <div className="flex items-center gap-1 text-xs font-medium text-primary">
+                  <Trophy className="h-3 w-3" />
+                  <span className="line-clamp-1">{contest.prize_description}</span>
                 </div>
               )}
-              <div className="pt-2 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                Participar <ArrowRight className="h-4 w-4" />
+              <div className="pt-1 flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                Participar <ArrowRight className="h-3 w-3" />
               </div>
             </CardContent>
           </Card>

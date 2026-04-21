@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, CheckCircle, Ticket, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, Search, CheckCircle, Ticket, Trophy, TrendingUp, Star, ArrowRight, Users, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface BusinessItem {
@@ -19,15 +21,22 @@ interface BusinessItem {
   contest_count: number;
 }
 
+const SHOWCASE_STATS = [
+  { icon: Users, label: "Empresas Ativas", value: "50+", color: "text-primary" },
+  { icon: Trophy, label: "Concursos Realizados", value: "200+", color: "text-accent" },
+  { icon: TrendingUp, label: "Participações Totais", value: "10K+", color: "text-primary" },
+  { icon: Star, label: "Taxa de Engajamento", value: "85%", color: "text-accent" },
+];
+
 export default function BusinessDirectory() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      // Get all business role users
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "business");
       if (!roles || roles.length === 0) { setLoading(false); return; }
       
@@ -59,7 +68,6 @@ export default function BusinessDirectory() {
         contest_count: contestsByUser[p.user_id] || 0,
       }));
 
-      // Sort: verified first, then by activity
       items.sort((a, b) => {
         if (a.is_verified !== b.is_verified) return a.is_verified ? -1 : 1;
         return (b.raffle_count + b.contest_count) - (a.raffle_count + a.contest_count);
@@ -83,29 +91,94 @@ export default function BusinessDirectory() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Diretório de Empresas</h1>
-          <p className="text-muted-foreground">Encontre empresas, veja os seus sorteios e concursos</p>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Hero */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12 pt-16">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }}>
+            <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-8 w-8 text-primary" />
+            </div>
+          </motion.div>
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
+            Diretório de Empresas
+          </h1>
+          <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+            Descubra empresas que criam experiências incríveis — sorteios, concursos e muito mais para a sua comunidade
+          </p>
+          {!user && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Link to="/register">
+                <Button size="lg" className="gap-2 shadow-lg">
+                  <Sparkles className="h-4 w-4" /> Crie o seu primeiro concurso grátis
+                </Button>
+              </Link>
+            </motion.div>
+          )}
         </motion.div>
 
-        <div className="relative mb-8">
+        {/* Stats showcase */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"
+        >
+          {SHOWCASE_STATS.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 + i * 0.08, type: "spring" }}
+              whileHover={{ y: -2 }}
+              className="glass rounded-xl p-4 text-center"
+            >
+              <stat.icon className={`h-6 w-6 mx-auto mb-2 ${stat.color}`} />
+              <p className="text-xl md:text-2xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* CTA banner for businesses */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="mb-10 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20 flex flex-col md:flex-row items-center gap-4"
+        >
+          <div className="flex-1 text-center md:text-left">
+            <h2 className="text-lg md:text-xl font-bold text-foreground mb-1">
+              🚀 A sua empresa ainda não está aqui?
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Registe-se como empresa e crie concursos que atraiam milhares de participantes. O primeiro concurso é grátis!
+            </p>
+          </div>
+          <Link to="/register">
+            <Button className="gap-2 shrink-0 shadow-md">
+              Começar Agora <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </motion.div>
+
+        {/* Search */}
+        <div className="relative mb-8 max-w-md mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Pesquisar empresas..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 glass"
           />
         </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
-            <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <Building2 className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
             <p className="text-lg font-medium mb-1">Nenhuma empresa encontrada</p>
             <p className="text-sm text-muted-foreground">Tente uma pesquisa diferente</p>
           </div>
@@ -117,14 +190,15 @@ export default function BusinessDirectory() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
+                whileHover={{ y: -4 }}
               >
                 <Card
-                  className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/30"
+                  className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/30 glass"
                   onClick={() => navigate(`/empresa/${b.user_id}`)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-xl bg-primary/20 flex items-center justify-center text-xl font-bold text-primary shrink-0">
+                      <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-bold text-primary shrink-0 overflow-hidden">
                         {b.avatar_url ? (
                           <img src={b.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover" />
                         ) : (

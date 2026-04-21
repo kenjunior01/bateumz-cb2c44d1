@@ -13,11 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ThumbsUp, Eye, Calendar, Send, Video, Image as ImageIcon, Heart, ArrowLeft, Flame, Clock, Users, Share2, Crown } from "lucide-react";
+import { Trophy, ThumbsUp, Eye, Calendar, Send, Video, Image as ImageIcon, Heart, ArrowLeft, Flame, Clock, Users, Share2, Crown, Link2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import ContestCountdown from "@/components/ContestCountdown";
 import ShareButtons from "@/components/ShareButtons";
 import { fireConfetti, fireSideCannons } from "@/lib/celebrate";
+import LiveLeaderboard from "@/components/LiveLeaderboard";
+import EmojiReactions from "@/components/EmojiReactions";
+import SocialVideoEmbed from "@/components/SocialVideoEmbed";
 
 interface Contest {
   id: string;
@@ -64,6 +67,8 @@ export default function ContestDetail() {
   const [desc, setDesc] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoLink, setVideoLink] = useState("");
+  const [uploadMode, setUploadMode] = useState<"file" | "link">("link");
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -102,13 +107,15 @@ export default function ContestDetail() {
         }
       }
 
-      if (videoFile) {
+      if (uploadMode === "file" && videoFile) {
         const path = `${user.id}/${Date.now()}-${videoFile.name}`;
         const { error } = await supabase.storage.from("contest-media").upload(path, videoFile);
         if (!error) {
           const { data: urlData } = supabase.storage.from("contest-media").getPublicUrl(path);
           video_url = urlData.publicUrl;
         }
+      } else if (uploadMode === "link" && videoLink.trim()) {
+        video_url = videoLink.trim();
       }
 
       const { error } = await supabase.from("contest_submissions").insert({
@@ -123,7 +130,6 @@ export default function ContestDetail() {
 
       if (error) throw error;
 
-      // Notify admins and contest creator
       const { data: admins } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
       if (admins) {
         const notifications = admins.map((a: any) => ({
@@ -142,6 +148,7 @@ export default function ContestDetail() {
       setDesc("");
       setPhotoFile(null);
       setVideoFile(null);
+      setVideoLink("");
       loadData();
     } catch {
       toast({ title: "Erro", description: "Não foi possível enviar a participação.", variant: "destructive" });
@@ -168,8 +175,12 @@ export default function ContestDetail() {
     setVotingId(null);
   };
 
-  const handleViewVideo = (sub: Submission) => {
-    setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id });
+  const isVideoLink = (url: string) => {
+    try {
+      const u = new URL(url);
+      return u.hostname.includes("youtube") || u.hostname.includes("youtu.be") ||
+        u.hostname.includes("instagram") || u.hostname.includes("tiktok");
+    } catch { return false; }
   };
 
   const timeLeft = (date: string | null) => {
@@ -277,10 +288,28 @@ export default function ContestDetail() {
                         <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Foto</Label>
                         <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} />
                       </div>
+
+                      {/* Video: link or file */}
                       <div>
-                        <Label className="flex items-center gap-2"><Video className="h-4 w-4" /> Vídeo</Label>
-                        <Input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
+                        <Label className="flex items-center gap-2 mb-2"><Video className="h-4 w-4" /> Vídeo</Label>
+                        <div className="flex gap-2 mb-2">
+                          <Button type="button" variant={uploadMode === "link" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("link")} className="gap-1 text-xs">
+                            <Link2 className="h-3 w-3" /> Link (Instagram/TikTok/YouTube)
+                          </Button>
+                          <Button type="button" variant={uploadMode === "file" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("file")} className="gap-1 text-xs">
+                            <Video className="h-3 w-3" /> Upload ficheiro
+                          </Button>
+                        </div>
+                        {uploadMode === "link" ? (
+                          <Input value={videoLink} onChange={(e) => setVideoLink(e.target.value)} placeholder="https://instagram.com/reel/... ou https://youtube.com/watch?v=..." />
+                        ) : (
+                          <Input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          💡 Use links de redes sociais para economizar espaço — o vídeo será reproduzido diretamente na plataforma
+                        </p>
                       </div>
+
                       <Button onClick={handleSubmit} disabled={submitting || !name.trim()} className="w-full gap-2">
                         {submitting ? "A enviar..." : <><Send className="h-4 w-4" /> Enviar Participação</>}
                       </Button>
@@ -367,33 +396,38 @@ export default function ContestDetail() {
           </motion.div>
         </motion.div>
 
+        {/* Live Leaderboard */}
+        {sorted.length > 0 && (isOpen || isVoting) && (
+          <LiveLeaderboard contestId={contest.id} evaluationType={contest.evaluation_type} />
+        )}
+
         {/* Winners Section */}
         <AnimatePresence>
           {winners.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-                  <Trophy className="h-6 w-6 text-yellow-500" />
+                  <Trophy className="h-6 w-6 text-accent" />
                 </motion.div>
                 Vencedores
               </h2>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {winners.map((w, i) => (
                   <motion.div key={w.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1, type: "spring" }}>
-                    <Card className="border-yellow-500/50 bg-gradient-to-br from-yellow-500/5 to-yellow-500/10 overflow-hidden">
+                    <Card className="border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 overflow-hidden">
                       {w.photo_url && (
                         <div className="relative">
                           <img src={w.photo_url} alt={w.participant_name} className="w-full aspect-video object-cover" />
                           <div className="absolute top-3 right-3">
                             <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                              <Badge className="bg-yellow-500 text-black shadow-lg">🏆 Vencedor</Badge>
+                              <Badge className="bg-accent text-accent-foreground shadow-lg">🏆 Vencedor</Badge>
                             </motion.div>
                           </div>
                         </div>
                       )}
                       <CardContent className="pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Trophy className="h-5 w-5 text-yellow-500" />
+                          <Trophy className="h-5 w-5 text-accent" />
                           <span className="font-bold text-lg">{w.participant_name}</span>
                         </div>
                         {w.description && <p className="text-sm text-muted-foreground">{w.description}</p>}
@@ -424,11 +458,12 @@ export default function ContestDetail() {
               {isOpen && <p className="text-sm text-muted-foreground mt-1">Seja o primeiro a participar!</p>}
             </motion.div>
           ) : (
-            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-3">
               {sorted.map((sub, i) => {
                 const score = contest.evaluation_type === "views" ? sub.views_count : sub.votes_count;
                 const pct = topScore > 0 ? (score / topScore) * 100 : 0;
                 const rank = i + 1;
+                const hasSocialVideo = sub.video_url && isVideoLink(sub.video_url);
 
                 return (
                   <motion.div
@@ -438,7 +473,7 @@ export default function ContestDetail() {
                     transition={{ delay: i * 0.05, type: "spring", stiffness: 200 }}
                     whileHover={{ y: -4 }}
                   >
-                    <Card className={`overflow-hidden glass transition-all ${sub.is_winner ? "ring-2 ring-yellow-500" : ""} ${rank <= 3 ? "border-primary/20" : ""}`}>
+                    <Card className={`overflow-hidden glass transition-all ${sub.is_winner ? "ring-2 ring-accent" : ""} ${rank <= 3 ? "border-primary/20" : ""}`}>
                       {sub.photo_url && (
                         <div className="aspect-video overflow-hidden cursor-pointer relative group" onClick={() => setSelectedMedia({ url: sub.photo_url!, type: "photo" })}>
                           <img src={sub.photo_url} alt={sub.participant_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -447,56 +482,71 @@ export default function ContestDetail() {
                           </div>
                           {rank <= 3 && (
                             <div className="absolute top-2 left-2">
-                              <Badge className={rank === 1 ? "bg-yellow-500 text-black" : rank === 2 ? "bg-gray-400 text-black" : "bg-amber-700 text-white"}>
+                              <Badge className={rank === 1 ? "bg-accent text-accent-foreground" : rank === 2 ? "bg-muted text-muted-foreground" : "bg-secondary text-secondary-foreground"}>
                                 #{rank}
                               </Badge>
                             </div>
                           )}
                         </div>
                       )}
-                      <CardContent className="pt-4 space-y-2">
+
+                      {/* Inline social video embed */}
+                      {hasSocialVideo && !sub.photo_url && (
+                        <SocialVideoEmbed url={sub.video_url!} className="aspect-video" />
+                      )}
+
+                      <CardContent className="pt-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-foreground">{sub.participant_name}</span>
-                          {sub.is_winner && <Badge className="bg-yellow-500 text-black">🏆</Badge>}
+                          <span className="font-semibold text-foreground text-sm">{sub.participant_name}</span>
+                          {sub.is_winner && <Badge className="bg-accent text-accent-foreground text-[10px]">🏆</Badge>}
                         </div>
-                        {sub.description && <p className="text-sm text-muted-foreground line-clamp-2">{sub.description}</p>}
+                        {sub.description && <p className="text-xs text-muted-foreground line-clamp-2">{sub.description}</p>}
 
                         {/* Score bar */}
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{contest.evaluation_type === "views" ? "Visualizações" : "Votos"}</span>
+                            <span>{contest.evaluation_type === "views" ? "Views" : "Votos"}</span>
                             <span className="font-semibold text-foreground">{score}</span>
                           </div>
                           <Progress value={pct} className="h-1.5" />
                         </div>
 
-                        {sub.video_url && (
-                          <Button variant="outline" size="sm" onClick={() => handleViewVideo(sub)} className="w-full gap-2">
-                            <Video className="h-4 w-4" /> Ver Vídeo ({sub.views_count} views)
+                        {/* Social video button if also has photo */}
+                        {hasSocialVideo && sub.photo_url && (
+                          <Button variant="outline" size="sm" onClick={() => setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id })} className="w-full gap-2 text-xs">
+                            <Video className="h-3 w-3" /> Ver Vídeo
                           </Button>
                         )}
 
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1"><Heart className="h-4 w-4" /> {sub.votes_count}</span>
-                            <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {sub.views_count}</span>
+                        {/* Direct video */}
+                        {sub.video_url && !hasSocialVideo && (
+                          <Button variant="outline" size="sm" onClick={() => setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id })} className="w-full gap-2 text-xs">
+                            <Video className="h-3 w-3" /> Ver Vídeo ({sub.views_count} views)
+                          </Button>
+                        )}
+
+                        {/* Emoji reactions + vote row */}
+                        <div className="flex items-center justify-between pt-1">
+                          <EmojiReactions compact onReact={() => {}} />
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Eye className="h-3 w-3" />{sub.views_count}</span>
+                            {(isOpen || isVoting) && contest.evaluation_type === "votes" && (
+                              <motion.div whileTap={{ scale: 0.9 }}>
+                                <Button
+                                  size="sm"
+                                  variant={myVotes.has(sub.id) ? "default" : "outline"}
+                                  onClick={() => handleVote(sub.id)}
+                                  disabled={votingId === sub.id}
+                                  className="gap-1 h-7 text-xs"
+                                >
+                                  <motion.div animate={myVotes.has(sub.id) ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.3 }}>
+                                    <ThumbsUp className="h-3 w-3" />
+                                  </motion.div>
+                                  {myVotes.has(sub.id) ? "Votado" : "Votar"}
+                                </Button>
+                              </motion.div>
+                            )}
                           </div>
-                          {(isOpen || isVoting) && contest.evaluation_type === "votes" && (
-                            <motion.div whileTap={{ scale: 0.9 }}>
-                              <Button
-                                size="sm"
-                                variant={myVotes.has(sub.id) ? "default" : "outline"}
-                                onClick={() => handleVote(sub.id)}
-                                disabled={votingId === sub.id}
-                                className="gap-1"
-                              >
-                                <motion.div animate={myVotes.has(sub.id) ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.3 }}>
-                                  <ThumbsUp className="h-4 w-4" />
-                                </motion.div>
-                                {myVotes.has(sub.id) ? "Votado" : "Votar"}
-                              </Button>
-                            </motion.div>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -515,36 +565,39 @@ export default function ContestDetail() {
             {selectedMedia?.type === "photo" ? (
               <img src={selectedMedia.url} alt="Submissão" className="w-full rounded-lg" />
             ) : selectedMedia?.type === "video" ? (
-              <video
-                src={selectedMedia.url}
-                controls
-                autoPlay
-                className="w-full rounded-lg"
-                onPlay={(e) => {
-                  const video = e.currentTarget;
-                  const subId = selectedMedia.submissionId;
-                  if (!subId || (video as any)._viewTracked) return;
-                  // Require 3 continuous seconds of playback
-                  const startedAt = video.currentTime;
-                  const timer = window.setTimeout(async () => {
-                    if (!video.paused && video.currentTime - startedAt >= 2.5) {
-                      (video as any)._viewTracked = true;
-                      const sub = submissions.find((s) => s.id === subId);
-                      if (sub) {
-                        await supabase
-                          .from("contest_submissions")
-                          .update({ views_count: sub.views_count + 1 })
-                          .eq("id", subId);
-                        setSubmissions((prev) =>
-                          prev.map((s) => (s.id === subId ? { ...s, views_count: s.views_count + 1 } : s))
-                        );
+              isVideoLink(selectedMedia.url) ? (
+                <SocialVideoEmbed url={selectedMedia.url} />
+              ) : (
+                <video
+                  src={selectedMedia.url}
+                  controls
+                  autoPlay
+                  className="w-full rounded-lg"
+                  onPlay={(e) => {
+                    const video = e.currentTarget;
+                    const subId = selectedMedia.submissionId;
+                    if (!subId || (video as any)._viewTracked) return;
+                    const startedAt = video.currentTime;
+                    const timer = window.setTimeout(async () => {
+                      if (!video.paused && video.currentTime - startedAt >= 2.5) {
+                        (video as any)._viewTracked = true;
+                        const sub = submissions.find((s) => s.id === subId);
+                        if (sub) {
+                          await supabase
+                            .from("contest_submissions")
+                            .update({ views_count: sub.views_count + 1 })
+                            .eq("id", subId);
+                          setSubmissions((prev) =>
+                            prev.map((s) => (s.id === subId ? { ...s, views_count: s.views_count + 1 } : s))
+                          );
+                        }
                       }
-                    }
-                  }, 3000);
-                  video.addEventListener("pause", () => window.clearTimeout(timer), { once: true });
-                  video.addEventListener("ended", () => window.clearTimeout(timer), { once: true });
-                }}
-              />
+                    }, 3000);
+                    video.addEventListener("pause", () => window.clearTimeout(timer), { once: true });
+                    video.addEventListener("ended", () => window.clearTimeout(timer), { once: true });
+                  }}
+                />
+              )
             ) : null}
           </motion.div>
         </DialogContent>

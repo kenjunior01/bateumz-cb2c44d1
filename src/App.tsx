@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import PageTransition from "@/components/PageTransition";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -60,6 +62,103 @@ import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();
 
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <PageTransition key={location.pathname}>
+        <Routes location={location}>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/raffle/:slug" element={<RaffleDetail />} />
+          <Route path="/raffle/:slug/live" element={<LiveDraw />} />
+          <Route path="/install" element={<Install />} />
+          <Route path="/referral" element={<Referral />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/termos" element={<Terms />} />
+          <Route path="/privacidade" element={<Privacy />} />
+          <Route path="/como-funciona" element={<HowItWorks />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/historico" element={<RaffleHistory />} />
+          <Route path="/concursos" element={<Contests />} />
+          <Route path="/concursos/:id" element={<ContestDetail />} />
+          <Route path="/empresas" element={<BusinessDirectory />} />
+          <Route path="/empresa/:id" element={<BusinessProfile />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-tickets"
+            element={
+              <ProtectedRoute>
+                <MyTickets />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-points"
+            element={
+              <ProtectedRoute>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute requiredRole="business">
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardOverview />} />
+            <Route path="raffles" element={<DashboardRaffles />} />
+            <Route path="raffles/create" element={<CreateRaffle />} />
+            <Route path="raffles/:id/edit" element={<EditRaffle />} />
+            <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
+            <Route path="analytics" element={<DashboardAnalytics />} />
+            <Route path="social-analytics" element={<SocialAnalytics />} />
+            <Route path="participants" element={<DashboardParticipants />} />
+            <Route path="prizes" element={<DashboardPrizes />} />
+            <Route path="notifications" element={<DashboardNotifications />} />
+            <Route path="white-label" element={<WhiteLabelConfig />} />
+            <Route path="contests" element={<DashboardContests />} />
+            <Route path="settings" element={<DashboardSettings />} />
+          </Route>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="raffles" element={<AdminRaffles />} />
+            <Route path="revenue" element={<AdminRevenue />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="audit" element={<AdminAuditLogs />} />
+            <Route path="cron" element={<AdminCronJobs />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="contests" element={<AdminContests />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </PageTransition>
+    </AnimatePresence>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -70,94 +169,7 @@ const App = () => (
         <Sonner />
         <BackgroundDecorations />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/raffle/:slug" element={<RaffleDetail />} />
-            <Route path="/raffle/:slug/live" element={<LiveDraw />} />
-            <Route path="/install" element={<Install />} />
-            <Route path="/referral" element={<Referral />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/termos" element={<Terms />} />
-            <Route path="/privacidade" element={<Privacy />} />
-            <Route path="/como-funciona" element={<HowItWorks />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/historico" element={<RaffleHistory />} />
-            <Route path="/concursos" element={<Contests />} />
-            <Route path="/concursos/:id" element={<ContestDetail />} />
-            <Route path="/empresas" element={<BusinessDirectory />} />
-            <Route path="/empresa/:id" element={<BusinessProfile />} />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-tickets"
-              element={
-                <ProtectedRoute>
-                  <MyTickets />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-points"
-              element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute requiredRole="business">
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DashboardOverview />} />
-              <Route path="raffles" element={<DashboardRaffles />} />
-              <Route path="raffles/create" element={<CreateRaffle />} />
-              <Route path="raffles/:id/edit" element={<EditRaffle />} />
-              <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
-              <Route path="analytics" element={<DashboardAnalytics />} />
-              <Route path="social-analytics" element={<SocialAnalytics />} />
-              <Route path="participants" element={<DashboardParticipants />} />
-              <Route path="prizes" element={<DashboardPrizes />} />
-              <Route path="notifications" element={<DashboardNotifications />} />
-              <Route path="white-label" element={<WhiteLabelConfig />} />
-              <Route path="contests" element={<DashboardContests />} />
-              <Route path="settings" element={<DashboardSettings />} />
-            </Route>
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="raffles" element={<AdminRaffles />} />
-              <Route path="revenue" element={<AdminRevenue />} />
-              <Route path="payments" element={<AdminPayments />} />
-              <Route path="audit" element={<AdminAuditLogs />} />
-              <Route path="cron" element={<AdminCronJobs />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="contests" element={<AdminContests />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          
+          <AnimatedRoutes />
           <MascotBuddy />
         </BrowserRouter>
       </TooltipProvider>

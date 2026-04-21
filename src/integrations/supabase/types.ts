@@ -300,20 +300,29 @@ export type Database = {
       contests: {
         Row: {
           category: string
+          contest_mode: string
+          country: string | null
           created_at: string
           created_by: string
+          current_phase: number
           description: string | null
           end_date: string | null
+          entry_fee: number
           evaluation_type: string
+          featured: boolean
           hashtag: string | null
           id: string
           image_url: string | null
+          max_participants: number | null
           max_submissions_per_user: number
           min_age: number | null
+          phases: Json
           prize_description: string | null
           requires_photo: boolean
           requires_video: boolean
           rules: Json
+          sponsor_logo_url: string | null
+          sponsor_name: string | null
           start_date: string | null
           status: string
           submission_fields: Json
@@ -323,20 +332,29 @@ export type Database = {
         }
         Insert: {
           category?: string
+          contest_mode?: string
+          country?: string | null
           created_at?: string
           created_by: string
+          current_phase?: number
           description?: string | null
           end_date?: string | null
+          entry_fee?: number
           evaluation_type?: string
+          featured?: boolean
           hashtag?: string | null
           id?: string
           image_url?: string | null
+          max_participants?: number | null
           max_submissions_per_user?: number
           min_age?: number | null
+          phases?: Json
           prize_description?: string | null
           requires_photo?: boolean
           requires_video?: boolean
           rules?: Json
+          sponsor_logo_url?: string | null
+          sponsor_name?: string | null
           start_date?: string | null
           status?: string
           submission_fields?: Json
@@ -346,20 +364,29 @@ export type Database = {
         }
         Update: {
           category?: string
+          contest_mode?: string
+          country?: string | null
           created_at?: string
           created_by?: string
+          current_phase?: number
           description?: string | null
           end_date?: string | null
+          entry_fee?: number
           evaluation_type?: string
+          featured?: boolean
           hashtag?: string | null
           id?: string
           image_url?: string | null
+          max_participants?: number | null
           max_submissions_per_user?: number
           min_age?: number | null
+          phases?: Json
           prize_description?: string | null
           requires_photo?: boolean
           requires_video?: boolean
           rules?: Json
+          sponsor_logo_url?: string | null
+          sponsor_name?: string | null
           start_date?: string | null
           status?: string
           submission_fields?: Json

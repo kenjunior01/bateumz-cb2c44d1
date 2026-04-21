@@ -13,6 +13,13 @@ export interface SubmissionField {
   maxLength?: number;
 }
 
+export interface ContestPhaseTemplate {
+  name: string;
+  description: string;
+  durationDays: number;
+  type: "submission" | "voting" | "elimination" | "final";
+}
+
 export interface ContestCategory {
   id: string;
   label: string;
@@ -29,25 +36,46 @@ export interface ContestCategory {
   prizeIdea: string;
 }
 
+export const PHASE_TEMPLATES: ContestPhaseTemplate[][] = [
+  // 2-phase: Submit + Vote
+  [
+    { name: "Submissões", description: "Os participantes enviam as suas criações", durationDays: 14, type: "submission" },
+    { name: "Votação Final", description: "O público vota no vencedor", durationDays: 7, type: "voting" },
+  ],
+  // 3-phase: Submit + Elimination + Final
+  [
+    { name: "Inscrições", description: "Fase de submissão aberta a todos", durationDays: 10, type: "submission" },
+    { name: "Semifinal", description: "Top 10 avança para votação pública", durationDays: 7, type: "elimination" },
+    { name: "Grande Final", description: "Os finalistas competem pelo prémio", durationDays: 5, type: "final" },
+  ],
+  // 4-phase: Submit + Group + Semi + Final
+  [
+    { name: "Inscrições", description: "Submissão aberta", durationDays: 10, type: "submission" },
+    { name: "Grupos", description: "Participantes divididos em grupos para votação", durationDays: 7, type: "elimination" },
+    { name: "Semifinal", description: "Melhores de cada grupo avançam", durationDays: 5, type: "elimination" },
+    { name: "Final", description: "Votação final para o grande vencedor", durationDays: 3, type: "final" },
+  ],
+];
+
 export const CONTEST_CATEGORIES: ContestCategory[] = [
   {
     id: "culinaria",
     label: "Culinária",
     icon: ChefHat,
     description: "Receitas, pratos típicos e criações gastronómicas",
-    example: "Ex: Melhor caldo de Benny",
+    example: "Ex: Melhor receita tradicional",
     defaultEvaluation: "votes",
     requiresPhoto: true,
     requiresVideo: false,
     gradient: "from-orange-500/20 to-red-500/20",
     iconColor: "text-orange-500",
     defaultRules: [
-      "A receita deve ser original ou tradicional moçambicana",
+      "A receita deve ser original ou tradicional",
       "Foto do prato finalizado é obrigatória",
       "Listar ingredientes principais e modo de preparo",
     ],
     submissionFields: [
-      { key: "recipe_name", label: "Nome do prato", type: "text", required: true, maxLength: 80, placeholder: "Ex: Caldo de Benny da minha avó" },
+      { key: "recipe_name", label: "Nome do prato", type: "text", required: true, maxLength: 80, placeholder: "Ex: Matapa da minha avó" },
       { key: "ingredients", label: "Ingredientes principais", type: "textarea", required: true, maxLength: 500, placeholder: "Liste os ingredientes..." },
       { key: "preparation", label: "Modo de preparo (resumo)", type: "textarea", required: false, maxLength: 800 },
       { key: "serves", label: "Serve quantas pessoas?", type: "number" },
@@ -59,7 +87,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     label: "Música & Dança",
     icon: Music,
     description: "Performances musicais, coreografias e talentos",
-    example: "Ex: Melhor afro-beat moçambicano",
+    example: "Ex: Melhor performance musical",
     defaultEvaluation: "views",
     requiresPhoto: false,
     requiresVideo: true,
@@ -72,7 +100,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     ],
     submissionFields: [
       { key: "song_title", label: "Título da música/coreografia", type: "text", required: true, maxLength: 80 },
-      { key: "genre", label: "Género", type: "select", required: true, options: ["Marrabenta", "Pandza", "Afro-beat", "Hip-hop", "Gospel", "R&B", "Outro"] },
+      { key: "genre", label: "Género", type: "select", required: true, options: ["Marrabenta", "Pandza", "Afro-beat", "Hip-hop", "Gospel", "R&B", "Samba", "Kizomba", "Outro"] },
       { key: "instrument", label: "Instrumento principal (se aplicável)", type: "text" },
       { key: "duration", label: "Duração (segundos)", type: "number" },
     ],
@@ -82,8 +110,8 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     id: "fotografia",
     label: "Fotografia",
     icon: Camera,
-    description: "Capture momentos, paisagens e a beleza de Moçambique",
-    example: "Ex: Melhor pôr do sol em Maputo",
+    description: "Capture momentos, paisagens e beleza",
+    example: "Ex: Melhor fotografia de paisagem",
     defaultEvaluation: "votes",
     requiresPhoto: true,
     requiresVideo: false,
@@ -96,8 +124,8 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     ],
     submissionFields: [
       { key: "photo_title", label: "Título da fotografia", type: "text", required: true, maxLength: 80 },
-      { key: "location", label: "Local da fotografia", type: "text", required: true, placeholder: "Ex: Praia da Costa do Sol, Maputo" },
-      { key: "camera", label: "Câmara/equipamento", type: "text", placeholder: "Ex: iPhone 13, Canon EOS..." },
+      { key: "location", label: "Local da fotografia", type: "text", required: true, placeholder: "Ex: Praia da Costa do Sol" },
+      { key: "camera", label: "Câmara/equipamento", type: "text", placeholder: "Ex: iPhone 15, Canon EOS..." },
       { key: "story", label: "História por trás da foto", type: "textarea", maxLength: 500 },
     ],
     prizeIdea: "Câmara fotográfica + workshop de fotografia",
@@ -107,7 +135,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     label: "Vídeo Viral",
     icon: Video,
     description: "Vídeos curtos, criativos e cheios de humor",
-    example: "Ex: TikTok mais engraçado",
+    example: "Ex: Vídeo mais criativo do mês",
     defaultEvaluation: "views",
     requiresPhoto: false,
     requiresVideo: true,
@@ -130,7 +158,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     label: "Arte & Design",
     icon: Palette,
     description: "Pinturas, ilustrações, design gráfico e artesanato",
-    example: "Ex: Melhor logo de marca local",
+    example: "Ex: Melhor ilustração digital",
     defaultEvaluation: "votes",
     requiresPhoto: true,
     requiresVideo: false,
@@ -153,8 +181,8 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     id: "comedia",
     label: "Comédia & Stand-up",
     icon: Mic,
-    description: "Faça rir Moçambique com o seu talento",
-    example: "Ex: Melhor piada em changana",
+    description: "Faça rir com o seu talento humorístico",
+    example: "Ex: Melhor stand-up em 2 minutos",
     defaultEvaluation: "views",
     requiresPhoto: false,
     requiresVideo: true,
@@ -163,11 +191,11 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     defaultRules: [
       "Vídeo de até 2 minutos",
       "Conteúdo respeitoso, sem ofensas a grupos",
-      "Pode usar línguas locais (com legenda recomendada)",
+      "Pode usar qualquer idioma (com legenda recomendada)",
     ],
     submissionFields: [
       { key: "skit_title", label: "Título do esquete", type: "text", required: true, maxLength: 80 },
-      { key: "language", label: "Idioma principal", type: "select", required: true, options: ["Português", "Changana", "Macua", "Sena", "Misto"] },
+      { key: "language", label: "Idioma principal", type: "select", required: true, options: ["Português", "Inglês", "Francês", "Changana", "Macua", "Misto"] },
       { key: "synopsis", label: "Sinopse", type: "textarea", maxLength: 300 },
     ],
     prizeIdea: "Microfone + apresentação em evento ao vivo",
@@ -176,8 +204,8 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     id: "moda",
     label: "Moda & Estilo",
     icon: Shirt,
-    description: "Looks, capulanas modernas e tendências",
-    example: "Ex: Melhor look com capulana",
+    description: "Looks, moda local e tendências internacionais",
+    example: "Ex: Look do mês mais votado",
     defaultEvaluation: "votes",
     requiresPhoto: true,
     requiresVideo: false,
@@ -190,7 +218,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     ],
     submissionFields: [
       { key: "look_name", label: "Nome do look", type: "text", required: true, maxLength: 80 },
-      { key: "style", label: "Estilo", type: "select", required: true, options: ["Tradicional", "Casual", "Formal", "Streetwear", "Afro-fusion"] },
+      { key: "style", label: "Estilo", type: "select", required: true, options: ["Tradicional", "Casual", "Formal", "Streetwear", "Afro-fusion", "Vintage"] },
       { key: "pieces", label: "Peças do look", type: "textarea", maxLength: 400 },
       { key: "designer", label: "Designer/marca (se aplicável)", type: "text" },
     ],
@@ -201,7 +229,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     label: "Desporto & Fitness",
     icon: Dumbbell,
     description: "Desafios físicos, jogadas e habilidades",
-    example: "Ex: Melhor golo amador",
+    example: "Ex: Desafio fitness mais inspirador",
     defaultEvaluation: "views",
     requiresPhoto: false,
     requiresVideo: true,
@@ -214,7 +242,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     ],
     submissionFields: [
       { key: "challenge_name", label: "Nome do desafio", type: "text", required: true, maxLength: 80 },
-      { key: "sport", label: "Modalidade", type: "select", required: true, options: ["Futebol", "Basquete", "Atletismo", "Fitness", "Calistenia", "Dança", "Outro"] },
+      { key: "sport", label: "Modalidade", type: "select", required: true, options: ["Futebol", "Basquete", "Atletismo", "Fitness", "Calistenia", "Dança", "Surfe", "Outro"] },
       { key: "achievement", label: "Marca/recorde alcançado", type: "text" },
     ],
     prizeIdea: "Equipamento desportivo + assinatura de ginásio",
@@ -237,7 +265,7 @@ export const CONTEST_CATEGORIES: ContestCategory[] = [
     ],
     submissionFields: [
       { key: "project_name", label: "Nome do projeto/startup", type: "text", required: true, maxLength: 80 },
-      { key: "sector", label: "Sector", type: "select", required: true, options: ["Tecnologia", "Agricultura", "Saúde", "Educação", "Energia", "Social", "Outro"] },
+      { key: "sector", label: "Sector", type: "select", required: true, options: ["Tecnologia", "Agricultura", "Saúde", "Educação", "Energia", "Social", "FinTech", "Outro"] },
       { key: "problem", label: "Problema que resolve", type: "textarea", required: true, maxLength: 400 },
       { key: "solution", label: "Solução proposta", type: "textarea", required: true, maxLength: 400 },
       { key: "stage", label: "Fase do projeto", type: "select", options: ["Ideia", "Protótipo", "MVP", "Em operação"] },

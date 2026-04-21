@@ -153,7 +153,7 @@ export default function AdminContests() {
             <div className="space-y-4">
               <div><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
               <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
-              <div><Label>Prémio</Label><Input value={form.prize_description} onChange={(e) => setForm({ ...form, prize_description: e.target.value })} placeholder="Ex: Cesta Benny + 5000 MT" /></div>
+              <div><Label>Prémio</Label><Input value={form.prize_description} onChange={(e) => setForm({ ...form, prize_description: e.target.value })} placeholder="Ex: Voucher + 5000 MT" /></div>
               <div><Label>URL da imagem de capa</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

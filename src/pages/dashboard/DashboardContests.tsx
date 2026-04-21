@@ -287,11 +287,11 @@ export default function DashboardContests() {
                     );
                   })()}
 
-                  <div><Label>Título *</Label><Input maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Melhor caldo de Benny 2025" /></div>
+                  <div><Label>Título *</Label><Input maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Melhor receita tradicional 2026" /></div>
                   <div><Label>Descrição</Label><Textarea maxLength={1000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><Label>Prémio</Label><Input maxLength={200} value={form.prize_description} onChange={(e) => setForm({ ...form, prize_description: e.target.value })} /></div>
-                    <div><Label>Hashtag oficial</Label><Input maxLength={40} value={form.hashtag} onChange={(e) => setForm({ ...form, hashtag: e.target.value })} placeholder="caldoBenny2025" /></div>
+                    <div><Label>Hashtag oficial</Label><Input maxLength={40} value={form.hashtag} onChange={(e) => setForm({ ...form, hashtag: e.target.value })} placeholder="MeuConcurso2026" /></div>
                   </div>
                   <div><Label>URL da imagem de capa</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></div>
 

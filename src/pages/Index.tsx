@@ -17,6 +17,9 @@ import BottomTabBar from "@/components/BottomTabBar";
 import PopularLeaderboard from "@/components/PopularLeaderboard";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
 import CountryRegionFilter from "@/components/CountryRegionFilter";
+import StoriesCarousel from "@/components/StoriesCarousel";
+import AIRecommendations from "@/components/AIRecommendations";
+import TrustSignals from "@/components/TrustSignals";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -27,6 +30,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <Navbar />
+      <StoriesCarousel />
       <HeroSection />
       <ContestTypesShowcase />
       <SearchBar />
@@ -43,6 +47,7 @@ const Index = () => {
       <div className="container mx-auto px-4">
         <div className="relative flex gap-6">
           <div className="flex-1 min-w-0">
+            <AIRecommendations />
             <ActiveRaffles categoryFilter={categoryFilter} country={country} region={region} />
 
             <PopularLeaderboard />
@@ -53,6 +58,7 @@ const Index = () => {
               </section>
             )}
 
+            <TrustSignals />
             <FeaturesGrid />
             <WinnersSection />
           </div>

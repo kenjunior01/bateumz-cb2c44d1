@@ -120,8 +120,8 @@ const Marketplace = () => {
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-display text-4xl font-bold text-foreground mb-2">Marketplace</h1>
-          <p className="text-muted-foreground text-lg">Descubra sorteios e concursos incríveis.</p>
+          <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-2">Marketplace</h1>
+          <p className="text-muted-foreground text-sm sm:text-lg">Descubra sorteios e concursos incríveis.</p>
         </motion.div>
 
         <div className="flex flex-col gap-3 mb-8">

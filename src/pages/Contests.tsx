@@ -88,7 +88,7 @@ export default function Contests() {
             {isFeatured && (
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-accent to-primary z-10" />
             )}
-            <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
+            <div className="relative aspect-[3/2] sm:aspect-[4/3] bg-secondary overflow-hidden">
               {contest.image_url ? (
                 <img src={contest.image_url} alt={contest.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               ) : (
@@ -98,7 +98,7 @@ export default function Contests() {
                   </motion.div>
                 </div>
               )}
-              <Badge className={`absolute top-3 left-3 ${status.color} shadow-md`}>
+              <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${status.color} shadow-md text-[10px] sm:text-xs`}>
                 {status.emoji} {status.label}
               </Badge>
               {isMultiPhase && (
@@ -118,31 +118,31 @@ export default function Contests() {
                 </div>
               )}
             </div>
-            <CardContent className="p-4 space-y-2">
-              <h3 className="font-display text-sm md:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">{contest.title}</h3>
+            <CardContent className="p-3 sm:p-4 space-y-1.5 sm:space-y-2">
+              <h3 className="font-display text-xs sm:text-sm md:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight">{contest.title}</h3>
               {contest.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{contest.description}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2">{contest.description}</p>
               )}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
                 {contest.evaluation_type === "views" ? (
-                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> Views</span>
+                  <span className="flex items-center gap-0.5"><Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Views</span>
                 ) : (
-                  <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" /> Votos</span>
+                  <span className="flex items-center gap-0.5"><ThumbsUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Votos</span>
                 )}
                 {contest.end_date && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
+                  <span className="flex items-center gap-0.5">
+                    <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     {new Date(contest.end_date).toLocaleDateString("pt-MZ")}
                   </span>
                 )}
               </div>
               {contest.prize_description && (
-                <div className="flex items-center gap-1 text-xs font-medium text-primary">
-                  <Trophy className="h-3 w-3" />
+                <div className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-primary">
+                  <Trophy className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
                   <span className="line-clamp-1">{contest.prize_description}</span>
                 </div>
               )}
-              <div className="pt-1 flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="pt-0.5 sm:pt-1 hidden sm:flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                 Participar <ArrowRight className="h-3 w-3" />
               </div>
             </CardContent>
@@ -192,7 +192,7 @@ export default function Contests() {
                   <p className="text-lg text-muted-foreground">Nenhum concurso ativo de momento.</p>
                 </motion.div>
               ) : (
-                <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3">
                   {active.map((c, i) => <ContestCard key={c.id} contest={c} index={i} />)}
                 </div>
               )}
@@ -204,7 +204,7 @@ export default function Contests() {
                   <p className="text-lg text-muted-foreground">Nenhum concurso encerrado.</p>
                 </motion.div>
               ) : (
-                <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3">
                   {past.map((c, i) => <ContestCard key={c.id} contest={c} index={i} />)}
                 </div>
               )}

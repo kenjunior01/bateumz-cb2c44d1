@@ -215,10 +215,10 @@ const Marketplace = () => {
                             )}
                             <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
                           </div>
-                          <CardContent className="p-5">
-                            <h3 className="font-display text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{contest.title}</h3>
+                          <CardContent className="p-3 sm:p-5">
+                            <h3 className="font-display text-sm sm:text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2">{contest.title}</h3>
                             {contest.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{contest.description}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{contest.description}</p>
                             )}
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
@@ -230,8 +230,8 @@ const Marketplace = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-4 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                              Participar <ArrowRight className="h-4 w-4" />
+                            <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                              Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                             </div>
                           </CardContent>
                         </Card>
@@ -300,9 +300,9 @@ const Marketplace = () => {
                                   </Badge>
                                 )}
                               </div>
-                              <CardContent className="p-5">
-                                <h3 className="font-display text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{raffle.title}</h3>
-                                <p className="text-sm text-primary mb-3">{raffle.prize_title}</p>
+                              <CardContent className="p-3 sm:p-5">
+                                <h3 className="font-display text-sm sm:text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2">{raffle.title}</h3>
+                                <p className="text-xs sm:text-sm text-primary mb-2 sm:mb-3 line-clamp-1">{raffle.prize_title}</p>
                                 <Progress value={pct} className="h-2 mb-2" />
                                 <div className="flex justify-between items-center text-xs text-muted-foreground">
                                   <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
@@ -310,8 +310,8 @@ const Marketplace = () => {
                                     {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : `${formatMZN(raffle.ticket_price)}/bilhete`}
                                   </span>
                                 </div>
-                                <div className="mt-4 flex items-center gap-1 text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Participar <ArrowRight className="h-4 w-4" />
+                                <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </div>
                               </CardContent>
                             </Card>

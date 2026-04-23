@@ -58,6 +58,8 @@ import AdminContests from "./pages/admin/AdminContests.tsx";
 import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
 import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
+import InstantWin from "./pages/InstantWin.tsx";
+import Transparency from "./pages/Transparency.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();

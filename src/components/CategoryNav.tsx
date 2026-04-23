@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { Smartphone, Car, Home, Plane, Gamepad2, ShoppingBag, Gift, Sparkles } from "lucide-react";
 
@@ -18,13 +19,22 @@ interface CategoryNavProps {
 }
 
 const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   return (
     <section className="py-6">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Categorias</h3>
+          <span className="text-[10px] text-muted-foreground hidden sm:inline">← deslize →</span>
         </div>
-        <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+
+        {/* Mobile: horizontal swipe scroll */}
+        <div
+          ref={scrollRef}
+          className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-8 sm:gap-3 sm:overflow-visible sm:pb-0"
+          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+        >
           {categories.map((cat, i) => {
             const isActive = selected === cat.value;
             return (
@@ -33,10 +43,11 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
+                className="snap-start shrink-0"
               >
                 <button
                   onClick={() => onSelect?.(cat.value)}
-                  className={`flex w-full flex-col items-center gap-2 rounded-2xl p-3 transition-all group ${
+                  className={`flex w-20 sm:w-full flex-col items-center gap-2 rounded-2xl p-3 transition-all group ${
                     isActive ? "bg-primary/10 ring-2 ring-primary/30" : "hover:bg-secondary"
                   }`}
                 >

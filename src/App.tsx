@@ -58,6 +58,8 @@ import AdminContests from "./pages/admin/AdminContests.tsx";
 import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
 import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
+import InstantWin from "./pages/InstantWin.tsx";
+import Transparency from "./pages/Transparency.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 const queryClient = new QueryClient();
@@ -88,6 +90,8 @@ function AnimatedRoutes() {
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
+          <Route path="/instant-win" element={<InstantWin />} />
+          <Route path="/transparencia" element={<Transparency />} />
           <Route
             path="/profile"
             element={

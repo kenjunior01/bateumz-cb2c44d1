@@ -62,6 +62,8 @@ const Index = () => {
 
             <FeaturesGrid />
             <WinnersSection />
+            <HeroSection />
+            <StatsBar />
             <TrustSignals />
           </div>
 

@@ -62,6 +62,7 @@ import InstantWin from "./pages/InstantWin.tsx";
 import Transparency from "./pages/Transparency.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
+import SupportChatbot from "./components/SupportChatbot.tsx";
 const queryClient = new QueryClient();
 
 function AnimatedRoutes() {
@@ -175,6 +176,7 @@ const App = () => (
         <BrowserRouter>
           <AnimatedRoutes />
           <MascotBuddy />
+          <SupportChatbot />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Facebook, Twitter, Send, Linkedin, Link2, Share2 } from "lucide-react";
+import { Facebook, Twitter, Send, Linkedin, Link2, Share2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { shareTo, type ShareData } from "@/lib/share";
 
@@ -9,6 +9,7 @@ interface Props {
 }
 
 const buttons = [
+  { p: "whatsapp" as const, icon: MessageCircle, label: "WhatsApp", cls: "hover:text-[#25d366]" },
   { p: "facebook" as const, icon: Facebook, label: "Facebook", cls: "hover:text-[#1877f2]" },
   { p: "twitter" as const, icon: Twitter, label: "X / Twitter", cls: "hover:text-foreground" },
   { p: "telegram" as const, icon: Send, label: "Telegram", cls: "hover:text-[#0088cc]" },

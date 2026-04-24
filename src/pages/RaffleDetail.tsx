@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { getOneClick, saveOneClick } from "@/lib/oneClick";
 
 interface Raffle {
   id: string;
@@ -79,7 +80,10 @@ const RaffleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutStep, setCheckoutStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mpesa");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
+    const saved = getOneClick();
+    return (saved?.method ?? "mpesa") as PaymentMethod;
+  });
   const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -175,6 +179,9 @@ const RaffleDetail = () => {
 
     const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
     await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
+
+    // Remember this method for next time → enables 1-click flow
+    saveOneClick({ method: paymentMethod });
 
     if (raffle.draw_mode === "auto_sold_out") {
       try {

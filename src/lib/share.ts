@@ -1,6 +1,6 @@
 import { toast } from "@/hooks/use-toast";
 
-export type SharePlatform = "facebook" | "twitter" | "telegram" | "linkedin" | "copy" | "native";
+export type SharePlatform = "facebook" | "twitter" | "telegram" | "linkedin" | "whatsapp" | "copy" | "native";
 
 export interface ShareData {
   title: string;
@@ -34,6 +34,7 @@ export const shareTo = async (platform: SharePlatform, data: ShareData) => {
     twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
     telegram: `https://t.me/share/url?url=${url}&text=${text}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+    whatsapp: `https://wa.me/?text=${text}%20${url}`,
   };
   window.open(urls[platform as keyof typeof urls], "_blank", "noopener,noreferrer,width=600,height=500");
 };

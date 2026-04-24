@@ -20,6 +20,7 @@ import CountryRegionFilter from "@/components/CountryRegionFilter";
 import StoriesCarousel from "@/components/StoriesCarousel";
 import AIRecommendations from "@/components/AIRecommendations";
 import TrustSignals from "@/components/TrustSignals";
+import LiveTicker from "@/components/LiveTicker";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -30,6 +31,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <Navbar />
+      <LiveTicker />
       <StoriesCarousel />
       <HeroSection />
       <ContestTypesShowcase />

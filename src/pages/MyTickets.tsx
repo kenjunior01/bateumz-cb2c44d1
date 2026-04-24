@@ -85,8 +85,8 @@ export default function MyTickets() {
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         {(!online || fromCache) && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
-            <WifiOff className="h-3.5 w-3.5 shrink-0" />
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
+            <WifiOff className="h-3.5 w-3.5 shrink-0 text-accent" />
             <span>
               {online
                 ? "A mostrar bilhetes em cache — a sincronizar…"

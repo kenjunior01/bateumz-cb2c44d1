@@ -157,8 +157,8 @@ const StoriesCarousel = () => {
 
   return (
     <>
-      <section className="container mx-auto px-4 py-3">
-        <div className="relative">
+      <section className="sticky top-14 lg:top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-0 px-4 py-2 sm:py-3">
+        <div className="relative container mx-auto">
           <button onClick={() => scrollBy(-1)} className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-card/80 shadow-md text-foreground hover:bg-card">
             <ChevronLeft className="h-4 w-4" />
           </button>

@@ -34,7 +34,9 @@ const Index = () => {
       <LiveTicker />
       <StoriesCarousel />
       <HeroSection />
-      <ContestTypesShowcase />
+      <div className="hidden lg:block">
+        <ContestTypesShowcase />
+      </div>
       <SearchBar />
       <StatsBar />
       <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
@@ -60,9 +62,9 @@ const Index = () => {
               </section>
             )}
 
-            <TrustSignals />
             <FeaturesGrid />
             <WinnersSection />
+            <TrustSignals />
           </div>
 
           {!isMobile && (

@@ -60,9 +60,9 @@ const Index = () => {
               </section>
             )}
 
-            <TrustSignals />
             <FeaturesGrid />
             <WinnersSection />
+            <TrustSignals />
           </div>
 
           {!isMobile && (

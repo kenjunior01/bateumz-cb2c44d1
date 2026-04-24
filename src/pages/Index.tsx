@@ -33,12 +33,10 @@ const Index = () => {
       <Navbar />
       <LiveTicker />
       <StoriesCarousel />
-      <HeroSection />
       <div className="hidden lg:block">
         <ContestTypesShowcase />
       </div>
       <SearchBar />
-      <StatsBar />
       <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
       <section className="container mx-auto px-4 -mt-2 mb-2">
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
@@ -64,6 +62,8 @@ const Index = () => {
 
             <FeaturesGrid />
             <WinnersSection />
+            <HeroSection />
+            <StatsBar />
             <TrustSignals />
           </div>
 

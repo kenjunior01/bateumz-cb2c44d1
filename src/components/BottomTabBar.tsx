@@ -6,14 +6,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
 
-type Tab =
-  | { icon: typeof Home; label: string; href: string; auth?: boolean; action?: undefined }
-  | { icon: typeof Home; label: string; action: "contests"; href?: undefined; auth?: undefined };
+interface Tab {
+  icon: typeof Home;
+  label: string;
+  href: string;
+  auth?: boolean;
+  isContestSheet?: boolean;
+}
 
 const tabs: Tab[] = [
   { icon: Home, label: "Início", href: "/" },
   { icon: Search, label: "Explorar", href: "/marketplace" },
-  { icon: Trophy, label: "Concursos", action: "contests" },
+  { icon: Trophy, label: "Concursos", href: "#", isContestSheet: true },
   { icon: Ticket, label: "Bilhetes", href: "/my-points", auth: true },
   { icon: User, label: "Perfil", href: "/dashboard", auth: true },
 ];

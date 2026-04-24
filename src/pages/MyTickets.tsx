@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Ticket, Trophy, Clock, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Ticket, Trophy, Clock, CheckCircle2, XCircle, Eye, WifiOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { formatMZN } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useOnline } from "@/hooks/use-online";
 
 const statusMap: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary bg-primary/10", icon: CheckCircle2 },
@@ -28,23 +29,47 @@ const paymentStatusMap: Record<string, { label: string; color: string }> = {
 export default function MyTickets() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const online = useOnline();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "winner">("all");
+  const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => {
-      const { data } = await supabase
+    const cacheKey = `bateu_tickets_${user.id}`;
+
+    // Hydrate from cache first for instant + offline view
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setTickets(parsed);
+        setFromCache(true);
+        setLoading(false);
+      }
+    } catch {}
+
+    if (!navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchTickets = async () => {
+      const { data, error } = await supabase
         .from("participants")
         .select("*, raffles(title, slug, image_url, ticket_price, status, end_date, prize_title)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      if (data) setTickets(data);
+      if (!error && data) {
+        setTickets(data);
+        setFromCache(false);
+        try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch {}
+      }
       setLoading(false);
     };
-    fetch();
-  }, [user]);
+    fetchTickets();
+  }, [user, online]);
 
   const filtered = tickets.filter((t) => {
     if (filter === "active") return t.status === "active" && t.raffles?.status === "active";
@@ -59,6 +84,16 @@ export default function MyTickets() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
+        {(!online || fromCache) && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+            <WifiOff className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {online
+                ? "A mostrar bilhetes em cache — a sincronizar…"
+                : "Estás offline. A mostrar a tua última versão guardada dos bilhetes."}
+            </span>
+          </div>
+        )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">Meus Bilhetes</h1>
           <p className="text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>

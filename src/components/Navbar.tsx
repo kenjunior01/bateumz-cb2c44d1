@@ -117,32 +117,32 @@ const Navbar = () => {
           </NavigationMenu>
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <LanguageSwitcher />
           <ThemeToggle />
           {user ? (
             <>
-              <Link to="/my-points" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
+              <Link to="/my-points" className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
                 <Star className="h-4 w-4 text-accent" /> {t("nav.points")}
               </Link>
-              <Link to="/dashboard" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+              <Link to="/dashboard" className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 {t("nav.dashboard")}
               </Link>
               {role === "admin" && (
-                <Link to="/admin" className="rounded-lg px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                <Link to="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
                   {t("nav.admin")}
                 </Link>
               )}
-              <button onClick={signOut} className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              <button onClick={signOut} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                 {t("nav.signout")}
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+              <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 {t("nav.signin")}
               </Link>
-              <Link to="/register" className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary">
+              <Link to="/register" className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary">
                 <Zap className="h-4 w-4" />
                 {t("nav.signup")}
               </Link>
@@ -150,7 +150,7 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-1 md:hidden">
+        <div className="flex items-center gap-1 lg:hidden">
           <LanguageSwitcher />
           <ThemeToggle />
           <button className="text-foreground" onClick={() => setOpen(!open)}>
@@ -165,18 +165,31 @@ const Navbar = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border md:hidden"
+            className="overflow-hidden border-t border-border lg:hidden"
           >
-            <div className="flex flex-col gap-2 px-6 py-4">
-              {links.map((l) => (
-                <Link
-                  key={l.label}
-                  to={l.href}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  onClick={() => setOpen(false)}
-                >
-                  {l.label}
-                </Link>
+            <div className="flex flex-col gap-4 px-6 py-4 max-h-[70vh] overflow-y-auto">
+              {groups.map((g) => (
+                <div key={g.label}>
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">{g.label}</p>
+                  <div className="flex flex-col gap-0.5">
+                    {g.items.map((item) => (
+                      <Link
+                        key={item.label}
+                        to={item.href}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                      >
+                        <item.icon className="h-4 w-4 text-primary" />
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
               <Link to="/register" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
                 <Zap className="h-4 w-4" />

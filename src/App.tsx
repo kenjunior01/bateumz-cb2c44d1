@@ -60,6 +60,7 @@ import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 import InstantWin from "./pages/InstantWin.tsx";
 import Transparency from "./pages/Transparency.tsx";
+import Prestacoes from "./pages/Prestacoes.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -93,6 +94,7 @@ function AnimatedRoutes() {
           <Route path="/empresa/:id" element={<BusinessProfile />} />
           <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/transparencia" element={<Transparency />} />
+          <Route path="/prestacoes" element={<Prestacoes />} />
           <Route
             path="/profile"
             element={

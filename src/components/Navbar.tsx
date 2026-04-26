@@ -1,24 +1,66 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap, Star } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import bateuLogo from "@/assets/bateu-logo.png";
+
+type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string };
+type MenuGroup = { label: string; items: SubItem[] };
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, role, signOut } = useAuth();
   const { t } = useLanguage();
-  const links = [
-    { label: t("nav.raffles"), href: "/marketplace" },
-    { label: t("nav.contests"), href: "/concursos" },
-    { label: t("nav.business"), href: "/empresas" },
-    { label: t("nav.community"), href: "/community" },
-    { label: t("nav.referral"), href: "/referral" },
+
+  const groups: MenuGroup[] = [
+    {
+      label: "Sorteios",
+      items: [
+        { label: "Marketplace", href: "/marketplace", icon: Store, desc: "Todos os sorteios ativos" },
+        { label: "Concursos", href: "/concursos", icon: Trophy, desc: "Fotos, vídeos, talentos" },
+        { label: "Instant Win", href: "/instant-win", icon: Sparkles, desc: "Raspadinhas e roda da sorte" },
+        { label: "Meus Bilhetes", href: "/my-tickets", icon: Ticket, desc: "Acompanhar participações" },
+      ],
+    },
+    {
+      label: "Empresas",
+      items: [
+        { label: "Diretório", href: "/empresas", icon: Building2, desc: "Empresas parceiras verificadas" },
+        { label: "Vendas a Prestações", href: "/prestacoes", icon: Calendar, desc: "Pague em até 60x", badge: "Em breve" },
+        { label: "Criar Sorteio", href: "/dashboard/raffles/new", icon: Gift, desc: "Para o seu negócio" },
+      ],
+    },
+    {
+      label: "Comunidade",
+      items: [
+        { label: "Hub", href: "/community", icon: MessageCircle, desc: "Chat e enquetes em tempo real" },
+        { label: "Histórico de Vencedores", href: "/historico", icon: History, desc: "Sorteios finalizados" },
+        { label: "Transparência", href: "/transparencia", icon: ShieldCheck, desc: "Verificação blockchain" },
+        { label: "Live Draw", href: "/marketplace", icon: Radio, desc: "Sorteios ao vivo" },
+      ],
+    },
+    {
+      label: "Mais",
+      items: [
+        { label: "Como Funciona", href: "/como-funciona", icon: BookOpen, desc: "Guia rápido da plataforma" },
+        { label: "Programa de Referência", href: "/referral", icon: Users, desc: "Convide e ganhe pontos" },
+        { label: "FAQ", href: "/faq", icon: HelpCircle, desc: "Perguntas frequentes" },
+      ],
+    },
   ];
+
+
 
   return (
     <motion.nav

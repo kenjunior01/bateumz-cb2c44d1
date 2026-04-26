@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -34,13 +34,32 @@ import { useToast } from "@/hooks/use-toast";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 
-const categories = [
+type CategoryId = "viaturas" | "imoveis" | "eletronicos" | "equipamentos";
+
+const categories: {
+  id: CategoryId;
+  icon: typeof Car;
+  label: string;
+  desc: string;
+  color: string;
+  // indicative annual rate range (used by tiers)
+  baseRate: number; // % year for "small" amount
+  bestRate: number; // % year for "large" amount
+  maxMonths: number;
+  defaultValue: number;
+  defaultDownPct: number;
+}[] = [
   {
     id: "viaturas",
     icon: Car,
     label: "Viaturas",
     desc: "Carros novos e seminovos com plano flexível",
     color: "from-primary/30 to-primary/5",
+    baseRate: 0.18,
+    bestRate: 0.13,
+    maxMonths: 60,
+    defaultValue: 800_000,
+    defaultDownPct: 0.2,
   },
   {
     id: "imoveis",
@@ -48,6 +67,11 @@ const categories = [
     label: "Imóveis",
     desc: "Apartamentos, casas e terrenos",
     color: "from-accent/30 to-accent/5",
+    baseRate: 0.12,
+    bestRate: 0.09,
+    maxMonths: 60,
+    defaultValue: 3_000_000,
+    defaultDownPct: 0.25,
   },
   {
     id: "eletronicos",
@@ -55,6 +79,11 @@ const categories = [
     label: "Eletrónicos",
     desc: "Smartphones, TVs, computadores",
     color: "from-secondary/40 to-secondary/5",
+    baseRate: 0.24,
+    bestRate: 0.18,
+    maxMonths: 24,
+    defaultValue: 60_000,
+    defaultDownPct: 0.2,
   },
   {
     id: "equipamentos",
@@ -62,8 +91,13 @@ const categories = [
     label: "Equipamentos",
     desc: "Para empresas e profissionais",
     color: "from-primary/30 to-accent/5",
+    baseRate: 0.2,
+    bestRate: 0.15,
+    maxMonths: 48,
+    defaultValue: 250_000,
+    defaultDownPct: 0.2,
   },
-] as const;
+];
 
 const sections = [
   { id: "categorias", label: "Categorias" },
@@ -77,39 +111,67 @@ function scrollToId(id: string) {
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// Simple price-based annual interest rate (illustrative)
-function annualRateFor(amount: number) {
-  if (amount >= 2_000_000) return 0.14;
-  if (amount >= 500_000) return 0.16;
-  if (amount >= 100_000) return 0.18;
-  return 0.2;
+function getCategory(id: string) {
+  return categories.find((c) => c.id === id) ?? categories[0];
 }
 
-function simulate(value: number, downPayment: number, months: number) {
+// Per-category indicative annual rate that decreases with amount
+function annualRateFor(categoryId: string, amount: number) {
+  const cat = getCategory(categoryId);
+  // anchor amount where the "best" rate is reached
+  const anchor =
+    cat.id === "imoveis"
+      ? 5_000_000
+      : cat.id === "viaturas"
+        ? 2_000_000
+        : cat.id === "equipamentos"
+          ? 1_000_000
+          : 200_000; // eletrónicos
+  const t = Math.min(1, Math.max(0, amount / anchor));
+  // linear interpolation base → best rate
+  return cat.baseRate + (cat.bestRate - cat.baseRate) * t;
+}
+
+function simulate(categoryId: string, value: number, downPayment: number, months: number) {
   const principal = Math.max(0, value - downPayment);
-  const annualRate = annualRateFor(value);
+  const annualRate = annualRateFor(categoryId, value);
   const monthlyRate = annualRate / 12;
   const monthly =
-    monthlyRate === 0
-      ? principal / months
+    monthlyRate === 0 || months === 0
+      ? principal / Math.max(1, months)
       : (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
   const total = monthly * months + downPayment;
   const interest = total - value;
   return { principal, monthly, total, interest, annualRate };
 }
 
+function buildWhatsAppUrl(phoneRaw: string, message: string) {
+  const phone = phoneRaw.replace(/\D/g, "");
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
 export default function Prestacoes() {
   const { toast } = useToast();
 
   // Simulator state
-  const [productType, setProductType] = useState<string>("viaturas");
-  const [value, setValue] = useState<number>(500_000);
-  const [downPayment, setDownPayment] = useState<number>(100_000);
+  const [productType, setProductType] = useState<CategoryId>("viaturas");
+  const [value, setValue] = useState<number>(800_000);
+  const [downPayment, setDownPayment] = useState<number>(160_000);
   const [months, setMonths] = useState<number>(24);
 
+  // Switch defaults when category changes
+  const handleCategoryChange = (id: string) => {
+    const cat = getCategory(id);
+    setProductType(cat.id);
+    setValue(cat.defaultValue);
+    setDownPayment(Math.round(cat.defaultValue * cat.defaultDownPct));
+    if (months > cat.maxMonths) setMonths(cat.maxMonths);
+  };
+
+  const currentCat = getCategory(productType);
   const sim = useMemo(
-    () => simulate(value, Math.min(downPayment, value), months),
-    [value, downPayment, months],
+    () => simulate(productType, value, Math.min(downPayment, value), months),
+    [productType, value, downPayment, months],
   );
 
   // Lead form state
@@ -118,6 +180,36 @@ export default function Prestacoes() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [opsWhatsapp, setOpsWhatsapp] = useState<string>("+258840000000");
+
+  // Load operational WhatsApp from platform_settings
+  useEffect(() => {
+    supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "prestacoes_whatsapp")
+      .maybeSingle()
+      .then(({ data }) => {
+        const v = (data?.value as unknown) as string | undefined;
+        if (typeof v === "string" && v.trim()) setOpsWhatsapp(v.trim());
+      });
+  }, []);
+
+  const buildLeadMessage = () =>
+    [
+      `Olá! Quero entrar na lista de espera de Vendas a Prestações da Bateu.`,
+      ``,
+      `👤 Nome: ${name || "(por preencher)"}`,
+      `📦 Produto: ${currentCat.label}`,
+      `💰 Valor do bem: ${formatMZN(value)}`,
+      `💵 Entrada: ${formatMZN(Math.min(downPayment, value))}`,
+      `📅 Prazo: ${months} meses`,
+      `📈 Prestação estimada: ${formatMZN(sim.monthly)}/mês`,
+      `   (taxa indicativa ${(sim.annualRate * 100).toFixed(1)}% / ano)`,
+      notes ? `\n📝 Notas: ${notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,10 +238,18 @@ export default function Prestacoes() {
       return;
     }
     setSubmitted(true);
+    toast({ title: "Inscrição registada!", description: "Pode também enviar a sua simulação por WhatsApp." });
+  };
+
+  const handleOpenWhatsApp = () => {
+    window.open(buildWhatsAppUrl(opsWhatsapp, buildLeadMessage()), "_blank", "noopener,noreferrer");
+  };
+
+  const resetForm = () => {
+    setSubmitted(false);
     setName("");
     setWhatsapp("");
     setNotes("");
-    toast({ title: "Inscrição registada!", description: "Entraremos em contacto via WhatsApp." });
   };
 
   return (
@@ -173,7 +273,6 @@ export default function Prestacoes() {
             diretamente das melhores empresas de Moçambique.
           </p>
 
-          {/* Section nav */}
           <div className="mt-8 flex flex-wrap justify-center gap-2">
             {sections.map((s) => (
               <button
@@ -216,7 +315,7 @@ export default function Prestacoes() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
                 onClick={() => {
-                  setProductType(cat.id);
+                  handleCategoryChange(cat.id);
                   scrollToId("simulador");
                 }}
                 className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${cat.color} p-6 text-left transition-all hover:scale-[1.02] hover:border-primary/50`}
@@ -224,7 +323,10 @@ export default function Prestacoes() {
                 <cat.icon className="h-10 w-10 text-foreground" />
                 <p className="mt-3 font-display text-lg font-semibold text-foreground">{cat.label}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{cat.desc}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                <p className="mt-2 text-[11px] font-medium text-primary">
+                  {(cat.bestRate * 100).toFixed(1)}–{(cat.baseRate * 100).toFixed(1)}% / ano · até {cat.maxMonths}m
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
                   Simular <ArrowRight className="h-3 w-3" />
                 </span>
               </motion.button>
@@ -246,15 +348,16 @@ export default function Prestacoes() {
             </div>
 
             <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
-              {/* Inputs */}
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Tipo de produto</Label>
-                  <Select value={productType} onValueChange={setProductType}>
+                  <Select value={productType} onValueChange={handleCategoryChange}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.label} — {(c.bestRate * 100).toFixed(1)}–{(c.baseRate * 100).toFixed(1)}%/ano
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -312,35 +415,36 @@ export default function Prestacoes() {
                   <Slider
                     value={[months]}
                     min={3}
-                    max={60}
+                    max={currentCat.maxMonths}
                     step={1}
                     onValueChange={(v) => setMonths(v[0])}
                   />
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {[6, 12, 24, 36, 48, 60].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setMonths(m)}
-                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                          months === m
-                            ? "border-primary bg-primary/15 text-primary"
-                            : "border-border text-muted-foreground hover:border-primary/40"
-                        }`}
-                      >
-                        {m}m
-                      </button>
-                    ))}
+                    {[6, 12, 24, 36, 48, 60]
+                      .filter((m) => m <= currentCat.maxMonths)
+                      .map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMonths(m)}
+                          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                            months === m
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {m}m
+                        </button>
+                      ))}
                   </div>
                 </div>
               </div>
 
-              {/* Result */}
               <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Prestação mensal estimada</p>
                 <p className="mt-2 font-display text-4xl font-bold text-foreground">{formatMZN(sim.monthly)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Taxa indicativa de {(sim.annualRate * 100).toFixed(1)}% / ano
+                  {currentCat.label} · taxa indicativa {(sim.annualRate * 100).toFixed(1)}% / ano
                 </p>
 
                 <div className="mt-6 space-y-3 text-sm">
@@ -350,10 +454,7 @@ export default function Prestacoes() {
                   <Row label="Prazo" value={`${months} meses`} muted />
                 </div>
 
-                <Button
-                  className="mt-6 w-full gap-2"
-                  onClick={() => scrollToId("interesse")}
-                >
+                <Button className="mt-6 w-full gap-2" onClick={() => scrollToId("interesse")}>
                   <MessageCircle className="h-4 w-4" /> Quero esta proposta
                 </Button>
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
@@ -388,6 +489,10 @@ export default function Prestacoes() {
               </motion.div>
             ))}
           </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Quando o catálogo abrir, cada empresa terá o seu próprio número de WhatsApp e receberá
+            os pedidos diretamente.
+          </p>
         </section>
 
         {/* Lead form */}
@@ -410,7 +515,7 @@ export default function Prestacoes() {
                 </p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                   {[
-                    "Simulador de prestações interativo",
+                    "Simulador com taxas por categoria",
                     "Candidatura 100% online",
                     "Pagamentos via M-Pesa, e-Mola e Multicaixa",
                     "Acompanhamento em painel pessoal",
@@ -429,9 +534,12 @@ export default function Prestacoes() {
                   <CheckCircle2 className="h-12 w-12 text-accent" />
                   <h3 className="mt-4 font-display text-xl font-semibold text-foreground">Inscrição registada!</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Vamos contactá-lo via WhatsApp assim que o serviço estiver disponível.
+                    Envie também a sua simulação por WhatsApp para acelerar o contacto.
                   </p>
-                  <Button variant="outline" className="mt-6" onClick={() => setSubmitted(false)}>
+                  <Button onClick={handleOpenWhatsApp} className="mt-6 w-full gap-2 bg-[hsl(142_70%_45%)] text-white hover:bg-[hsl(142_70%_40%)]">
+                    <MessageCircle className="h-4 w-4" /> Abrir WhatsApp com a simulação
+                  </Button>
+                  <Button variant="outline" className="mt-3 w-full" onClick={resetForm}>
                     Submeter outro pedido
                   </Button>
                 </div>
@@ -462,7 +570,7 @@ export default function Prestacoes() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lead-product">Tipo de produto *</Label>
-                    <Select value={productType} onValueChange={setProductType}>
+                    <Select value={productType} onValueChange={handleCategoryChange}>
                       <SelectTrigger id="lead-product"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {categories.map((c) => (

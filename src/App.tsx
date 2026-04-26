@@ -94,6 +94,7 @@ function AnimatedRoutes() {
           <Route path="/empresa/:id" element={<BusinessProfile />} />
           <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/transparencia" element={<Transparency />} />
+          <Route path="/prestacoes" element={<Prestacoes />} />
           <Route
             path="/profile"
             element={

@@ -76,16 +76,45 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-8 md:flex">
-          {links.map((l) => (
-            <Link
-              key={l.label}
-              to={l.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {l.label}
-            </Link>
-          ))}
+        <div className="hidden lg:flex">
+          <NavigationMenu>
+            <NavigationMenuList>
+              {groups.map((g) => (
+                <NavigationMenuItem key={g.label}>
+                  <NavigationMenuTrigger className="bg-transparent text-sm font-medium text-muted-foreground hover:text-foreground data-[state=open]:text-foreground">
+                    {g.label}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[420px] gap-1 p-3">
+                      {g.items.map((item) => (
+                        <li key={item.label}>
+                          <Link
+                            to={item.href}
+                            className="group flex items-start gap-3 rounded-lg p-3 transition-colors hover:bg-secondary"
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary group-hover:bg-primary/20">
+                              <item.icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">{item.label}</span>
+                                {item.badge && (
+                                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.desc}</p>
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              ))}
+            </NavigationMenuList>
+          </NavigationMenu>
         </div>
 
         <div className="hidden items-center gap-2 md:flex">

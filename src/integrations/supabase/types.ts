@@ -659,6 +659,48 @@ export type Database = {
         }
         Relationships: []
       }
+      prestacao_leads: {
+        Row: {
+          created_at: string
+          desired_months: number | null
+          down_payment: number | null
+          estimated_value: number | null
+          id: string
+          name: string
+          notes: string | null
+          product_type: string
+          status: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          desired_months?: number | null
+          down_payment?: number | null
+          estimated_value?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          product_type: string
+          status?: string
+          updated_at?: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          desired_months?: number | null
+          down_payment?: number | null
+          estimated_value?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          product_type?: string
+          status?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -701,6 +701,62 @@ export type Database = {
         }
         Relationships: []
       }
+      prestacao_product_leads: {
+        Row: {
+          business_user_id: string
+          created_at: string
+          down_payment: number
+          id: string
+          monthly_estimate: number
+          months: number
+          product_id: string
+          source: string
+          total_price: number
+          user_agent: string | null
+          visitor_name: string | null
+          visitor_user_id: string | null
+          visitor_whatsapp: string | null
+        }
+        Insert: {
+          business_user_id: string
+          created_at?: string
+          down_payment?: number
+          id?: string
+          monthly_estimate?: number
+          months?: number
+          product_id: string
+          source?: string
+          total_price?: number
+          user_agent?: string | null
+          visitor_name?: string | null
+          visitor_user_id?: string | null
+          visitor_whatsapp?: string | null
+        }
+        Update: {
+          business_user_id?: string
+          created_at?: string
+          down_payment?: number
+          id?: string
+          monthly_estimate?: number
+          months?: number
+          product_id?: string
+          source?: string
+          total_price?: number
+          user_agent?: string | null
+          visitor_name?: string | null
+          visitor_user_id?: string | null
+          visitor_whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestacao_product_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "prestacao_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prestacao_products: {
         Row: {
           annual_rate: number
@@ -1301,6 +1357,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_prestacao_product_views: {
+        Args: { _product_id: string }
+        Returns: undefined
       }
       move_to_dlq: {
         Args: {

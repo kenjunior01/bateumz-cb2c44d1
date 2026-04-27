@@ -63,6 +63,7 @@ import Transparency from "./pages/Transparency.tsx";
 import Prestacoes from "./pages/Prestacoes.tsx";
 import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";
 import PrestacoesProduto from "./pages/PrestacoesProduto.tsx";
+import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -143,6 +144,7 @@ function AnimatedRoutes() {
             <Route path="notifications" element={<DashboardNotifications />} />
             <Route path="white-label" element={<WhiteLabelConfig />} />
             <Route path="contests" element={<DashboardContests />} />
+            <Route path="prestacoes" element={<DashboardPrestacoes />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route

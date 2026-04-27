@@ -12,6 +12,7 @@ import {
   Loader2,
   ArrowRight,
   SlidersHorizontal,
+  Eye,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -28,10 +29,17 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatMZN } from "@/lib/currency";
 import { PROVINCES } from "@/lib/provinces";
 import { supabase } from "@/integrations/supabase/client";
+import { monthlyInstallment } from "@/lib/prestacoes";
 
 type Product = {
   id: string;
@@ -48,6 +56,8 @@ type Product = {
   brand: string | null;
   model: string | null;
   featured: boolean;
+  views_count: number;
+  stock: number;
 };
 
 const categoryMeta: Record<string, { label: string; icon: typeof Car }> = {
@@ -58,12 +68,7 @@ const categoryMeta: Record<string, { label: string; icon: typeof Car }> = {
   outros: { label: "Outros", icon: ShoppingBag },
 };
 
-function monthlyInstallment(principal: number, annualRate: number, months: number) {
-  if (months <= 0) return 0;
-  const r = annualRate / 12;
-  if (r === 0) return principal / months;
-  return (principal * r) / (1 - Math.pow(1 + r, -months));
-}
+type SortKey = "recent" | "price-asc" | "price-desc" | "monthly-asc" | "popular";
 
 export default function PrestacoesCatalogo() {
   const [loading, setLoading] = useState(true);
@@ -71,15 +76,19 @@ export default function PrestacoesCatalogo() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [province, setProvince] = useState<string>("all");
+  const [brand, setBrand] = useState<string>("all");
+  const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
-  const [sort, setSort] = useState<"recent" | "price-asc" | "price-desc">("recent");
+  const [sort, setSort] = useState<SortKey>("recent");
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       const { data } = await supabase
         .from("prestacao_products")
-        .select("id,title,category,description,total_price,min_down_payment,max_months,annual_rate,images,province,city,brand,model,featured")
+        .select(
+          "id,title,category,description,total_price,min_down_payment,max_months,annual_rate,images,province,city,brand,model,featured,views_count,stock",
+        )
         .eq("status", "active")
         .order("featured", { ascending: false })
         .order("created_at", { ascending: false })
@@ -94,6 +103,14 @@ export default function PrestacoesCatalogo() {
     })();
   }, []);
 
+  // Brands available given current category filter
+  const brandOptions = useMemo(() => {
+    const base = category === "all" ? products : products.filter((p) => p.category === category);
+    const set = new Set<string>();
+    for (const p of base) if (p.brand) set.add(p.brand);
+    return Array.from(set).sort();
+  }, [products, category]);
+
   const filtered = useMemo(() => {
     let list = products;
     if (search.trim()) {
@@ -102,30 +119,73 @@ export default function PrestacoesCatalogo() {
         (p) =>
           p.title.toLowerCase().includes(q) ||
           (p.brand ?? "").toLowerCase().includes(q) ||
-          (p.model ?? "").toLowerCase().includes(q),
+          (p.model ?? "").toLowerCase().includes(q) ||
+          (p.description ?? "").toLowerCase().includes(q),
       );
     }
     if (category !== "all") list = list.filter((p) => p.category === category);
     if (province !== "all") list = list.filter((p) => p.province === province);
+    if (brand !== "all") list = list.filter((p) => p.brand === brand);
+    const minP = Number(minPrice);
+    if (minP > 0) list = list.filter((p) => Number(p.total_price) >= minP);
     const maxP = Number(maxPrice);
     if (maxP > 0) list = list.filter((p) => Number(p.total_price) <= maxP);
+
+    const withMonthly = list.map((p) => {
+      const principal = Math.max(
+        Number(p.total_price) - Number(p.min_down_payment),
+        0,
+      );
+      const monthly = monthlyInstallment(
+        principal,
+        Number(p.annual_rate),
+        p.max_months,
+      );
+      return { p, monthly };
+    });
+
     if (sort === "price-asc")
-      list = [...list].sort((a, b) => Number(a.total_price) - Number(b.total_price));
-    if (sort === "price-desc")
-      list = [...list].sort((a, b) => Number(b.total_price) - Number(a.total_price));
-    return list;
-  }, [products, search, category, province, maxPrice, sort]);
+      withMonthly.sort((a, b) => Number(a.p.total_price) - Number(b.p.total_price));
+    else if (sort === "price-desc")
+      withMonthly.sort((a, b) => Number(b.p.total_price) - Number(a.p.total_price));
+    else if (sort === "monthly-asc")
+      withMonthly.sort((a, b) => a.monthly - b.monthly);
+    else if (sort === "popular")
+      withMonthly.sort((a, b) => (b.p.views_count ?? 0) - (a.p.views_count ?? 0));
+
+    return withMonthly;
+  }, [products, search, category, province, brand, minPrice, maxPrice, sort]);
+
+  function resetFilters() {
+    setSearch("");
+    setCategory("all");
+    setProvince("all");
+    setBrand("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("recent");
+  }
 
   const FiltersBlock = (
     <div className="space-y-4">
       <div>
         <Label>Categoria</Label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+        <Select
+          value={category}
+          onValueChange={(v) => {
+            setCategory(v);
+            setBrand("all");
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             {Object.entries(categoryMeta).map(([id, meta]) => (
-              <SelectItem key={id} value={id}>{meta.label}</SelectItem>
+              <SelectItem key={id} value={id}>
+                {meta.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -133,35 +193,77 @@ export default function PrestacoesCatalogo() {
       <div>
         <Label>Província</Label>
         <Select value={province} onValueChange={setProvince}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             {PROVINCES.map((p) => (
-              <SelectItem key={p.value} value={p.label}>{p.label}</SelectItem>
+              <SelectItem key={p.value} value={p.label}>
+                {p.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label>Preço máximo (MZN)</Label>
-        <Input
-          type="number"
-          placeholder="Ex.: 1000000"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
+      {brandOptions.length > 0 && (
+        <div>
+          <Label>Marca</Label>
+          <Select value={brand} onValueChange={setBrand}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {brandOptions.map((b) => (
+                <SelectItem key={b} value={b}>
+                  {b}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Preço mín. (MZN)</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="0"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Preço máx. (MZN)</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="Ex.: 1.000.000"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+          />
+        </div>
       </div>
       <div>
         <Label>Ordenar</Label>
-        <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="recent">Mais recentes</SelectItem>
-            <SelectItem value="price-asc">Preço: menor primeiro</SelectItem>
-            <SelectItem value="price-desc">Preço: maior primeiro</SelectItem>
+            <SelectItem value="popular">Mais vistos</SelectItem>
+            <SelectItem value="monthly-asc">Mensalidade: menor</SelectItem>
+            <SelectItem value="price-asc">Preço: menor</SelectItem>
+            <SelectItem value="price-desc">Preço: maior</SelectItem>
           </SelectContent>
         </Select>
       </div>
+      <Button variant="ghost" size="sm" className="w-full" onClick={resetFilters}>
+        Limpar filtros
+      </Button>
     </div>
   );
 
@@ -182,13 +284,14 @@ export default function PrestacoesCatalogo() {
               </p>
             </div>
             <Link to="/prestacoes">
-              <Button variant="outline" size="sm">Saber mais</Button>
+              <Button variant="outline" size="sm">
+                Saber mais
+              </Button>
             </Link>
           </div>
         </motion.header>
 
         <div className="grid md:grid-cols-[260px_1fr] gap-6">
-          {/* Sidebar desktop */}
           <aside className="hidden md:block">
             <Card>
               <CardContent className="p-4">{FiltersBlock}</CardContent>
@@ -196,7 +299,6 @@ export default function PrestacoesCatalogo() {
           </aside>
 
           <section>
-            {/* Search row */}
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -207,7 +309,6 @@ export default function PrestacoesCatalogo() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              {/* Mobile filters */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" className="md:hidden">
@@ -223,12 +324,14 @@ export default function PrestacoesCatalogo() {
               </Sheet>
             </div>
 
-            {/* Quick category chips */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
               <Button
                 size="sm"
                 variant={category === "all" ? "default" : "outline"}
-                onClick={() => setCategory("all")}
+                onClick={() => {
+                  setCategory("all");
+                  setBrand("all");
+                }}
               >
                 Todas
               </Button>
@@ -239,7 +342,10 @@ export default function PrestacoesCatalogo() {
                     key={id}
                     size="sm"
                     variant={category === id ? "default" : "outline"}
-                    onClick={() => setCategory(id)}
+                    onClick={() => {
+                      setCategory(id);
+                      setBrand("all");
+                    }}
                     className="shrink-0"
                   >
                     <Icon className="h-3.5 w-3.5 mr-1" />
@@ -248,6 +354,10 @@ export default function PrestacoesCatalogo() {
                 );
               })}
             </div>
+
+            <p className="text-xs text-muted-foreground mb-3">
+              {loading ? "A carregar..." : `${filtered.length} produto(s)`}
+            </p>
 
             {loading ? (
               <div className="flex items-center justify-center py-20">
@@ -259,26 +369,24 @@ export default function PrestacoesCatalogo() {
                   <ShoppingBag className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                   <h3 className="font-semibold">Sem produtos disponíveis</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Ainda não há ofertas que correspondam aos seus filtros. Volte em breve.
+                    Ainda não há ofertas que correspondam aos seus filtros.
                   </p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>
+                    Limpar filtros
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.map((p, i) => {
+                {filtered.map(({ p, monthly }, i) => {
                   const Icon = categoryMeta[p.category]?.icon ?? ShoppingBag;
-                  const principal = Number(p.total_price) - Number(p.min_down_payment);
-                  const monthly = monthlyInstallment(
-                    Math.max(principal, 0),
-                    Number(p.annual_rate),
-                    p.max_months,
-                  );
+                  const outOfStock = p.stock <= 0;
                   return (
                     <motion.div
                       key={p.id}
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
+                      transition={{ delay: Math.min(i * 0.02, 0.3) }}
                     >
                       <Link to={`/prestacoes/${p.id}`}>
                         <Card className="overflow-hidden hover:shadow-elegant transition group h-full">
@@ -298,6 +406,11 @@ export default function PrestacoesCatalogo() {
                             {p.featured && (
                               <Badge className="absolute top-2 left-2">Destaque</Badge>
                             )}
+                            {outOfStock && (
+                              <Badge variant="destructive" className="absolute bottom-2 left-2">
+                                Sem stock
+                              </Badge>
+                            )}
                             <Badge variant="secondary" className="absolute top-2 right-2">
                               {categoryMeta[p.category]?.label ?? p.category}
                             </Badge>
@@ -312,20 +425,31 @@ export default function PrestacoesCatalogo() {
                             <div className="flex items-baseline justify-between">
                               <span className="text-xs text-muted-foreground">desde</span>
                               <span className="text-lg font-bold text-primary">
-                                {formatMZN(monthly)}<span className="text-xs text-muted-foreground">/mês</span>
+                                {formatMZN(monthly)}
+                                <span className="text-xs text-muted-foreground">/mês</span>
                               </span>
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center justify-between">
                               <span>Total: {formatMZN(Number(p.total_price))}</span>
                               <span>{p.max_months}x</span>
                             </div>
-                            {(p.province || p.city) && (
-                              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {[p.city, p.province].filter(Boolean).join(", ")}
-                              </div>
-                            )}
-                            <Button variant="ghost" size="sm" className="w-full justify-between mt-2">
+                            <div className="text-xs text-muted-foreground flex items-center justify-between">
+                              {(p.province || p.city) ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {[p.city, p.province].filter(Boolean).join(", ")}
+                                </span>
+                              ) : <span />}
+                              <span className="inline-flex items-center gap-1">
+                                <Eye className="h-3 w-3" />
+                                {p.views_count ?? 0}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-between mt-2"
+                            >
                               Ver detalhes <ArrowRight className="h-3.5 w-3.5" />
                             </Button>
                           </CardContent>

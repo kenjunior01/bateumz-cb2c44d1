@@ -10,6 +10,7 @@ import {
   Palette,
   Zap,
   Trophy,
+  Wallet,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import { NavLink } from "@/components/NavLink";
@@ -38,6 +39,7 @@ const mainItems = [
   { title: "Prémios", url: "/dashboard/prizes", icon: Gift },
   { title: "White Label", url: "/dashboard/white-label", icon: Palette },
   { title: "Concursos", url: "/dashboard/contests", icon: Trophy },
+  { title: "Prestações", url: "/dashboard/prestacoes", icon: Wallet },
 ];
 
 const secondaryItems = [

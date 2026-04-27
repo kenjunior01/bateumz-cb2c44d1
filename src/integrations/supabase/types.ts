@@ -701,6 +701,81 @@ export type Database = {
         }
         Relationships: []
       }
+      prestacao_products: {
+        Row: {
+          annual_rate: number
+          brand: string | null
+          business_user_id: string
+          category: string
+          city: string | null
+          created_at: string
+          description: string | null
+          featured: boolean
+          id: string
+          images: Json
+          max_months: number
+          min_down_payment: number
+          model: string | null
+          province: string | null
+          status: string
+          stock: number
+          title: string
+          total_price: number
+          updated_at: string
+          views_count: number
+          whatsapp: string
+          year: number | null
+        }
+        Insert: {
+          annual_rate?: number
+          brand?: string | null
+          business_user_id: string
+          category?: string
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          images?: Json
+          max_months?: number
+          min_down_payment?: number
+          model?: string | null
+          province?: string | null
+          status?: string
+          stock?: number
+          title: string
+          total_price?: number
+          updated_at?: string
+          views_count?: number
+          whatsapp: string
+          year?: number | null
+        }
+        Update: {
+          annual_rate?: number
+          brand?: string | null
+          business_user_id?: string
+          category?: string
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          images?: Json
+          max_months?: number
+          min_down_payment?: number
+          model?: string | null
+          province?: string | null
+          status?: string
+          stock?: number
+          title?: string
+          total_price?: number
+          updated_at?: string
+          views_count?: number
+          whatsapp?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

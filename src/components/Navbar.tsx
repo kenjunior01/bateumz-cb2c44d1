@@ -37,7 +37,8 @@ const Navbar = () => {
       label: "Empresas",
       items: [
         { label: "Diretório", href: "/empresas", icon: Building2, desc: "Empresas parceiras verificadas" },
-        { label: "Vendas a Prestações", href: "/prestacoes", icon: Calendar, desc: "Pague em até 60x", badge: "Em breve" },
+        { label: "Catálogo a Prestações", href: "/prestacoes/catalogo", icon: Calendar, desc: "Viaturas, imóveis e mais", badge: "Novo" },
+        { label: "Sobre Prestações", href: "/prestacoes", icon: Calendar, desc: "Como funciona o pagamento parcelado" },
         { label: "Criar Sorteio", href: "/dashboard/raffles/new", icon: Gift, desc: "Para o seu negócio" },
       ],
     },

@@ -286,11 +286,16 @@ export default function Prestacoes() {
           </div>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button onClick={() => scrollToId("simulador")} className="gap-2">
+            <a href="/prestacoes/catalogo">
+              <Button className="gap-2">
+                Ver catálogo de produtos <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
+            <Button variant="outline" onClick={() => scrollToId("simulador")} className="gap-2">
               <Calculator className="h-4 w-4" /> Abrir simulador
             </Button>
-            <Button variant="outline" onClick={() => scrollToId("interesse")} className="gap-2">
-              Entrar na lista <ArrowRight className="h-4 w-4" />
+            <Button variant="ghost" onClick={() => scrollToId("interesse")} className="gap-2">
+              Entrar na lista
             </Button>
           </div>
         </motion.section>

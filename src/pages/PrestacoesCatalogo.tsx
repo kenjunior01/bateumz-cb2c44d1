@@ -30,7 +30,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatMZN } from "@/lib/currency";
-import { provinces } from "@/lib/provinces";
+import { PROVINCES } from "@/lib/provinces";
 import { supabase } from "@/integrations/supabase/client";
 
 type Product = {

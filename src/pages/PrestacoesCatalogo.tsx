@@ -136,8 +136,8 @@ export default function PrestacoesCatalogo() {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
-            {provinces.map((p) => (
-              <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+            {PROVINCES.map((p) => (
+              <SelectItem key={p.value} value={p.label}>{p.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
+  Eye,
   Loader2,
   MapPin,
   MessageCircle,
@@ -21,6 +22,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  buildWhatsAppMessage,
+  clampSimulation,
+  monthlyInstallment,
+} from "@/lib/prestacoes";
 
 type Product = {
   id: string;
@@ -40,6 +46,8 @@ type Product = {
   year: number | null;
   whatsapp: string;
   stock: number;
+  status: string;
+  views_count: number;
 };
 
 type Seller = {
@@ -49,13 +57,6 @@ type Seller = {
   avatar_url: string | null;
   is_verified: boolean | null;
 };
-
-function monthlyInstallment(principal: number, annualRate: number, months: number) {
-  if (months <= 0) return 0;
-  const r = annualRate / 12;
-  if (r === 0) return principal / months;
-  return (principal * r) / (1 - Math.pow(1 + r, -months));
-}
 
 export default function PrestacoesProduto() {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +69,7 @@ export default function PrestacoesProduto() {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     (async () => {
       setLoading(true);
       const { data } = await supabase
@@ -75,6 +77,7 @@ export default function PrestacoesProduto() {
         .select("*")
         .eq("id", id)
         .maybeSingle();
+      if (cancelled) return;
       if (data) {
         const p: Product = {
           ...(data as any),
@@ -83,41 +86,86 @@ export default function PrestacoesProduto() {
         setProduct(p);
         setDownPayment(Number(p.min_down_payment));
         setMonths(p.max_months);
+        // Increment views (fire and forget)
+        supabase.rpc("increment_prestacao_product_views", { _product_id: p.id });
         const { data: s } = await supabase
           .from("profiles_public")
           .select("user_id,display_name,company_name,avatar_url,is_verified")
           .eq("user_id", p.business_user_id)
           .maybeSingle();
-        setSeller(s as Seller | null);
+        if (!cancelled) setSeller(s as Seller | null);
       }
       setLoading(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
+  const clamped = useMemo(() => {
+    if (!product) return { downPayment: 0, months: 12 };
+    return clampSimulation({
+      totalPrice: Number(product.total_price),
+      minDownPayment: Number(product.min_down_payment),
+      maxMonths: product.max_months,
+      downPayment,
+      months,
+    });
+  }, [product, downPayment, months]);
+
   const principal = useMemo(
-    () => Math.max((product?.total_price ?? 0) - downPayment, 0),
-    [product, downPayment],
+    () => Math.max((product?.total_price ?? 0) - clamped.downPayment, 0),
+    [product, clamped],
   );
   const monthly = useMemo(
-    () => monthlyInstallment(principal, Number(product?.annual_rate ?? 0), months),
-    [principal, product, months],
+    () =>
+      monthlyInstallment(
+        principal,
+        Number(product?.annual_rate ?? 0),
+        clamped.months,
+      ),
+    [principal, product, clamped],
   );
-  const total = useMemo(() => monthly * months + downPayment, [monthly, months, downPayment]);
+  const total = useMemo(
+    () => monthly * clamped.months + clamped.downPayment,
+    [monthly, clamped],
+  );
 
-  function openWhatsApp() {
+  async function openWhatsApp() {
     if (!product) return;
-    const msg = [
-      `Olá! Vi o seu anúncio na Bateu:`,
-      `📦 ${product.title}`,
-      `💰 Valor total: ${formatMZN(Number(product.total_price))}`,
-      `💵 Entrada que pretendo: ${formatMZN(downPayment)}`,
-      `📅 Prazo: ${months} meses`,
-      `📊 Mensalidade estimada: ${formatMZN(monthly)}`,
-      ``,
-      `Gostaria de mais informações sobre a aquisição.`,
-    ].join("\n");
+    const msg = buildWhatsAppMessage({
+      productTitle: product.title,
+      totalPrice: Number(product.total_price),
+      downPayment: clamped.downPayment,
+      months: clamped.months,
+      monthly,
+    });
     const num = product.whatsapp.replace(/\D/g, "");
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, "_blank");
+
+    // Log lead (best-effort, never block the user)
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      await supabase.from("prestacao_product_leads").insert({
+        product_id: product.id,
+        business_user_id: product.business_user_id,
+        visitor_user_id: auth.user?.id ?? null,
+        total_price: Number(product.total_price),
+        down_payment: clamped.downPayment,
+        months: clamped.months,
+        monthly_estimate: Math.round(monthly),
+        source: "product",
+        user_agent:
+          typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 200) : null,
+      });
+    } catch {
+      /* ignore lead errors */
+    }
+
+    window.open(
+      `https://wa.me/${num}?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   if (loading) {
@@ -128,35 +176,54 @@ export default function PrestacoesProduto() {
     );
   }
 
-  if (!product) {
+  if (!product || product.status !== "active") {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pt-24 pb-12">
-          <Card><CardContent className="py-16 text-center">
-            <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <h2 className="font-semibold">Produto não encontrado</h2>
-            <Link to="/prestacoes/catalogo">
-              <Button variant="outline" className="mt-4">Voltar ao catálogo</Button>
-            </Link>
-          </CardContent></Card>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <h2 className="font-semibold">Produto indisponível</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Este anúncio já não está disponível ou ainda não foi publicado.
+              </p>
+              <Link to="/prestacoes/catalogo">
+                <Button variant="outline" className="mt-4">
+                  Voltar ao catálogo
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </main>
         <Footer />
       </div>
     );
   }
 
+  const outOfStock = product.stock <= 0;
+  const maxDown = Math.max(
+    Number(product.total_price) * 0.9,
+    Number(product.min_down_payment),
+  );
+
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
       <Navbar />
       <main className="container mx-auto px-4 pt-24">
-        <Link to="/prestacoes/catalogo" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+        <Link
+          to="/prestacoes/catalogo"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar ao catálogo
         </Link>
 
         <div className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
-          {/* Gallery + info */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
             <Card className="overflow-hidden">
               <div className="aspect-video bg-muted">
                 {product.images[activeImage] ? (
@@ -190,9 +257,16 @@ export default function PrestacoesProduto() {
 
             <Card>
               <CardContent className="p-6 space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary">{product.category}</Badge>
                   {product.year && <Badge variant="outline">{product.year}</Badge>}
+                  {outOfStock && (
+                    <Badge variant="destructive">Sem stock</Badge>
+                  )}
+                  <span className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Eye className="h-3.5 w-3.5" />
+                    {product.views_count + 1} visualizações
+                  </span>
                 </div>
                 <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
                 {(product.brand || product.model) && (
@@ -219,7 +293,11 @@ export default function PrestacoesProduto() {
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-muted overflow-hidden flex items-center justify-center">
                     {seller.avatar_url ? (
-                      <img src={seller.avatar_url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={seller.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <Building2 className="h-6 w-6 text-muted-foreground" />
                     )}
@@ -233,17 +311,20 @@ export default function PrestacoesProduto() {
                         <ShieldCheck className="h-4 w-4 text-primary" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">Vendedor verificado</p>
+                    <p className="text-xs text-muted-foreground">
+                      {seller.is_verified ? "Vendedor verificado" : "Vendedor"}
+                    </p>
                   </div>
                   <Link to={`/empresa/${seller.user_id}`}>
-                    <Button variant="outline" size="sm">Ver loja</Button>
+                    <Button variant="outline" size="sm">
+                      Ver loja
+                    </Button>
                   </Link>
                 </CardContent>
               </Card>
             )}
           </motion.div>
 
-          {/* Simulator + CTA */}
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -254,7 +335,9 @@ export default function PrestacoesProduto() {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs text-muted-foreground">Valor total</span>
-                  <span className="text-2xl font-bold">{formatMZN(Number(product.total_price))}</span>
+                  <span className="text-2xl font-bold">
+                    {formatMZN(Number(product.total_price))}
+                  </span>
                 </div>
 
                 <div className="border-t pt-4">
@@ -267,32 +350,40 @@ export default function PrestacoesProduto() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <Label className="text-xs">Entrada</Label>
-                        <span className="text-sm font-semibold">{formatMZN(downPayment)}</span>
+                        <span className="text-sm font-semibold">
+                          {formatMZN(clamped.downPayment)}
+                        </span>
                       </div>
                       <Slider
                         min={Number(product.min_down_payment)}
-                        max={Number(product.total_price) * 0.7}
+                        max={maxDown}
                         step={1000}
-                        value={[downPayment]}
+                        value={[clamped.downPayment]}
                         onValueChange={(v) => setDownPayment(v[0])}
                       />
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Mínimo: {formatMZN(Number(product.min_down_payment))}
+                        Mínimo: {formatMZN(Number(product.min_down_payment))} ·
+                        Máximo: {formatMZN(maxDown)}
                       </p>
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <Label className="text-xs">Prazo</Label>
-                        <span className="text-sm font-semibold">{months} meses</span>
+                        <span className="text-sm font-semibold">
+                          {clamped.months} meses
+                        </span>
                       </div>
                       <Slider
                         min={3}
                         max={product.max_months}
                         step={1}
-                        value={[months]}
+                        value={[clamped.months]}
                         onValueChange={(v) => setMonths(v[0])}
                       />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Entre 3 e {product.max_months} meses
+                      </p>
                     </div>
                   </div>
 
@@ -316,12 +407,20 @@ export default function PrestacoesProduto() {
                   </div>
                 </div>
 
-                <Button onClick={openWhatsApp} className="w-full" size="lg">
+                <Button
+                  onClick={openWhatsApp}
+                  className="w-full"
+                  size="lg"
+                  disabled={outOfStock}
+                >
                   <MessageCircle className="h-4 w-4 mr-2" />
-                  Contactar vendedor (WhatsApp)
+                  {outOfStock
+                    ? "Sem stock disponível"
+                    : "Contactar vendedor (WhatsApp)"}
                 </Button>
                 <p className="text-[10px] text-muted-foreground text-center">
-                  Os valores são simulações indicativas. Condições finais a confirmar com o vendedor.
+                  Os valores são simulações indicativas. Condições finais a confirmar
+                  com o vendedor.
                 </p>
               </CardContent>
             </Card>

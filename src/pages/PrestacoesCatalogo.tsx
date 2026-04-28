@@ -72,14 +72,25 @@ type SortKey = "recent" | "price-asc" | "price-desc" | "monthly-asc" | "popular"
 
 export default function PrestacoesCatalogo() {
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("all");
-  const [province, setProvince] = useState<string>("all");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [category, setCategory] = useState<string>(searchParams.get("category") ?? "all");
+  const [province, setProvince] = useState<string>(searchParams.get("province") ?? "all");
   const [brand, setBrand] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("recent");
+
+  // Keep filters in URL for shareable links
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (category === "all") next.delete("category"); else next.set("category", category);
+    if (province === "all") next.delete("province"); else next.set("province", province);
+    if (search.trim()) next.set("q", search.trim()); else next.delete("q");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, province, search]);
 
   useEffect(() => {
     (async () => {

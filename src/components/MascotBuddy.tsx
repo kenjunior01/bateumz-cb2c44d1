@@ -427,24 +427,25 @@ export default function MascotBuddy() {
     return () => { supabase.removeChannel(channel); };
   }, [user, userName]);
 
-  // Show mini mascots in various positions
+  // Show mini mascots in various positions (rare, max 1, only desktop)
   useEffect(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) return; // No floating minis on mobile to avoid clutter
     const spawnMini = () => {
       if (modeRef.current === "chat") return;
       const pos = Math.floor(Math.random() * POSITIONS.length);
-      setMiniMascots(prev => {
-        if (prev.length >= 2) return prev;
+      setMiniMascots((prev) => {
+        if (prev.length >= 1) return prev;
         if (prev.includes(pos)) return prev;
         return [...prev, pos];
       });
       setTimeout(() => {
-        setMiniMascots(prev => prev.filter(p => p !== pos));
-      }, 5000 + Math.random() * 5000);
+        setMiniMascots((prev) => prev.filter((p) => p !== pos));
+      }, 4000);
     };
 
-    miniTimerRef.current = setInterval(spawnMini, 15000 + Math.random() * 20000);
-    // Initial spawn after delay
-    const initial = setTimeout(spawnMini, 8000);
+    miniTimerRef.current = setInterval(spawnMini, 90000 + Math.random() * 60000);
+    const initial = setTimeout(spawnMini, 30000);
     return () => {
       if (miniTimerRef.current) clearInterval(miniTimerRef.current);
       clearTimeout(initial);
@@ -479,16 +480,16 @@ export default function MascotBuddy() {
 
     timerRef.current = setTimeout(() => {
       if (modeRef.current !== "chat") setVisible(false);
-      const baseDelay = Math.min(30000 + appearCountRef.current * 15000, 120000);
-      timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 20000);
-    }, 15000);
+      const baseDelay = Math.min(90000 + appearCountRef.current * 30000, 240000);
+      timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 30000);
+    }, 10000);
   }, [dismissed, fetchMessage, context, mood]);
 
   useEffect(() => {
     if (dismissed) return;
     if (mode === "chat") return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    const delay = appearCountRef.current === 0 ? 5000 : 3000;
+    const delay = appearCountRef.current === 0 ? 12000 : 8000;
     timerRef.current = setTimeout(showMascot, delay);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [location.pathname, showMascot, dismissed, mode]);

@@ -142,19 +142,24 @@ export default function DashboardPrestacoes() {
   async function load() {
     if (!user) return;
     setLoading(true);
-    const [{ data: prods }, { data: ls }] = await Promise.all([
-      supabase
-        .from("prestacao_products")
-        .select("*")
-        .eq("business_user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("prestacao_product_leads")
-        .select("*")
-        .eq("business_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
+    const { data: prods } = await supabase
+      .from("prestacao_products")
+      .select("*")
+      .eq("business_user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    const productIds = (prods ?? []).map((p: any) => p.id);
+    const orFilter = productIds.length > 0
+      ? `business_user_id.eq.${user.id},product_id.in.(${productIds.join(",")})`
+      : `business_user_id.eq.${user.id}`;
+
+    const { data: ls } = await supabase
+      .from("prestacao_product_leads")
+      .select("*")
+      .or(orFilter)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
     setProducts(
       (prods ?? []).map((p: any) => ({
         ...p,

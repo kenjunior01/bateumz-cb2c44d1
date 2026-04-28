@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Eye,
   X,
+  Filter,
+  Inbox,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -69,7 +72,8 @@ type Product = {
 
 type Lead = {
   id: string;
-  product_id: string;
+  product_id: string | null;
+  business_user_id: string | null;
   visitor_name: string | null;
   visitor_whatsapp: string | null;
   total_price: number;
@@ -77,6 +81,9 @@ type Lead = {
   months: number;
   monthly_estimate: number;
   source: string;
+  status: string;
+  category: string | null;
+  notes: string | null;
   created_at: string;
 };
 
@@ -135,19 +142,24 @@ export default function DashboardPrestacoes() {
   async function load() {
     if (!user) return;
     setLoading(true);
-    const [{ data: prods }, { data: ls }] = await Promise.all([
-      supabase
-        .from("prestacao_products")
-        .select("*")
-        .eq("business_user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("prestacao_product_leads")
-        .select("*")
-        .eq("business_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
+    const { data: prods } = await supabase
+      .from("prestacao_products")
+      .select("*")
+      .eq("business_user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    const productIds = (prods ?? []).map((p: any) => p.id);
+    const orFilter = productIds.length > 0
+      ? `business_user_id.eq.${user.id},product_id.in.(${productIds.join(",")})`
+      : `business_user_id.eq.${user.id}`;
+
+    const { data: ls } = await supabase
+      .from("prestacao_product_leads")
+      .select("*")
+      .or(orFilter)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
     setProducts(
       (prods ?? []).map((p: any) => ({
         ...p,
@@ -314,113 +326,97 @@ export default function DashboardPrestacoes() {
         ))}
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="font-semibold mb-3">Os meus produtos</h2>
-          {loading ? (
-            <div className="py-10 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              Ainda não tem produtos. Clique em "Novo produto" para começar.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {products.map((p) => (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                >
-                  <div className="w-14 h-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                    {p.images[0] ? (
-                      <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{p.title}</p>
-                      <Badge
-                        variant={p.status === "active" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {p.status}
-                      </Badge>
-                      {p.featured && <Badge variant="outline">Destaque</Badge>}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex gap-3 flex-wrap mt-1">
-                      <span>{formatMZN(Number(p.total_price))}</span>
-                      <span>Stock: {p.stock}</span>
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {p.views_count ?? 0}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleStatus(p)}
-                    >
-                      {p.status === "active" ? "Ocultar" : "Publicar"}
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => remove(p.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="products" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm">
+          <TabsTrigger value="products" className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5" /> Produtos
+          </TabsTrigger>
+          <TabsTrigger value="leads" className="flex items-center gap-1.5">
+            <Inbox className="h-3.5 w-3.5" /> Leads
+            {leads.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {leads.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" /> Últimos pedidos via WhatsApp
-          </h2>
-          {leads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Sem pedidos registados ainda. Cada clique em "Contactar vendedor" no
-              catálogo aparece aqui.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {leads.map((l) => {
-                const product = products.find((p) => p.id === l.product_id);
-                return (
-                  <div
-                    key={l.id}
-                    className="text-sm flex items-center justify-between gap-3 p-2 rounded border"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
-                        {product?.title ?? "Produto"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Entrada {formatMZN(Number(l.down_payment))} ·{" "}
-                        {l.months} meses · ~{formatMZN(Number(l.monthly_estimate))}/mês
-                      </p>
-                    </div>
-                    <div className="text-xs text-muted-foreground shrink-0">
-                      {new Date(l.created_at).toLocaleString("pt-PT")}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="products" className="mt-4">
+          <Card>
+            <CardContent className="p-3 sm:p-4">
+              <h2 className="font-semibold mb-3 text-sm sm:text-base">Os meus produtos</h2>
+              {loading ? (
+                <div className="py-10 text-center">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+                </div>
+              ) : products.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Ainda não tem produtos. Clique em "Novo produto" para começar.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {products.map((p) => (
+                    <motion.div
+                      key={p.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card"
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                        {p.images[0] ? (
+                          <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium truncate text-sm sm:text-base">{p.title}</p>
+                          <Badge
+                            variant={p.status === "active" ? "default" : "secondary"}
+                            className="capitalize text-[10px] px-1.5 py-0"
+                          >
+                            {p.status}
+                          </Badge>
+                          {p.featured && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Destaque</Badge>}
+                        </div>
+                        <div className="text-[11px] sm:text-xs text-muted-foreground flex gap-2 sm:gap-3 flex-wrap mt-1">
+                          <span>{formatMZN(Number(p.total_price))}</span>
+                          <span>Stock: {p.stock}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {p.views_count ?? 0}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => toggleStatus(p)}
+                        >
+                          {p.status === "active" ? "Ocultar" : "Publicar"}
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(p.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="leads" className="mt-4">
+          <LeadsPanel leads={leads} products={products} />
+        </TabsContent>
+      </Tabs>
 
       {/* Form dialog */}
       <Dialog open={!!form} onOpenChange={(o) => !o && setForm(null)}>
@@ -640,5 +636,173 @@ export default function DashboardPrestacoes() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ─── Leads panel with filters ───────────────────────────────────────────
+type LeadsPanelProps = {
+  leads: Lead[];
+  products: Product[];
+};
+
+function LeadsPanel({ leads, products }: LeadsPanelProps) {
+  const [category, setCategory] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
+  const [period, setPeriod] = useState<string>("all");
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const cutoff: Record<string, number> = {
+      "7": 7 * 24 * 3600 * 1000,
+      "30": 30 * 24 * 3600 * 1000,
+      "90": 90 * 24 * 3600 * 1000,
+    };
+    return leads.filter((l) => {
+      const product = products.find((p) => p.id === l.product_id);
+      const cat = l.category ?? product?.category ?? null;
+      if (category !== "all" && cat !== category) return false;
+      if (status !== "all" && (l.status ?? "new") !== status) return false;
+      if (period !== "all") {
+        const ms = cutoff[period];
+        if (ms && now - new Date(l.created_at).getTime() > ms) return false;
+      }
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        const haystack = [
+          l.visitor_name,
+          l.visitor_whatsapp,
+          product?.title,
+          l.notes,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [leads, products, category, status, period, query]);
+
+  const generalCount = leads.filter((l) => !l.product_id).length;
+  const productCount = leads.filter((l) => l.product_id).length;
+
+  return (
+    <Card>
+      <CardContent className="p-3 sm:p-4 space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="font-semibold text-sm sm:text-base flex items-center gap-1.5">
+            <MessageSquare className="h-4 w-4" /> Leads recebidos
+          </h2>
+          <Badge variant="outline" className="text-[10px]">
+            {productCount} por produto
+          </Badge>
+          <Badge variant="outline" className="text-[10px]">
+            {generalCount} gerais
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="h-9 text-xs">
+              <Filter className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {PRESTACAO_CATEGORIES.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos estados</SelectItem>
+              <SelectItem value="new">Novo</SelectItem>
+              <SelectItem value="contacted">Contactado</SelectItem>
+              <SelectItem value="closed">Fechado</SelectItem>
+              <SelectItem value="lost">Perdido</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Sempre</SelectItem>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            placeholder="Buscar nome, WhatsApp..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9 text-xs"
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-xs sm:text-sm text-muted-foreground py-6 text-center">
+            Nenhum lead corresponde aos filtros.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((l) => {
+              const product = products.find((p) => p.id === l.product_id);
+              const isGeneral = !l.product_id;
+              return (
+                <div
+                  key={l.id}
+                  className="text-xs sm:text-sm flex items-start justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-medium truncate">
+                        {product?.title ?? l.visitor_name ?? "Interesse geral"}
+                      </p>
+                      <Badge
+                        variant={isGeneral ? "secondary" : "default"}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {isGeneral ? "Geral" : "Produto"}
+                      </Badge>
+                      {(l.category ?? product?.category) && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">
+                          {l.category ?? product?.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">
+                      {l.visitor_name && <span>{l.visitor_name} · </span>}
+                      {l.visitor_whatsapp && <span>{l.visitor_whatsapp} · </span>}
+                      Entrada {formatMZN(Number(l.down_payment))} · {l.months}m · ~
+                      {formatMZN(Number(l.monthly_estimate))}/mês
+                    </p>
+                    {l.notes && (
+                      <p className="text-[11px] text-muted-foreground mt-1 italic line-clamp-2">
+                        "{l.notes}"
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground shrink-0 text-right">
+                    {new Date(l.created_at).toLocaleDateString("pt-PT")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

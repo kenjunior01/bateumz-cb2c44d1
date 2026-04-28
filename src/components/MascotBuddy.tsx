@@ -427,24 +427,25 @@ export default function MascotBuddy() {
     return () => { supabase.removeChannel(channel); };
   }, [user, userName]);
 
-  // Show mini mascots in various positions
+  // Show mini mascots in various positions (rare, max 1, only desktop)
   useEffect(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) return; // No floating minis on mobile to avoid clutter
     const spawnMini = () => {
       if (modeRef.current === "chat") return;
       const pos = Math.floor(Math.random() * POSITIONS.length);
-      setMiniMascots(prev => {
-        if (prev.length >= 2) return prev;
+      setMiniMascots((prev) => {
+        if (prev.length >= 1) return prev;
         if (prev.includes(pos)) return prev;
         return [...prev, pos];
       });
       setTimeout(() => {
-        setMiniMascots(prev => prev.filter(p => p !== pos));
-      }, 5000 + Math.random() * 5000);
+        setMiniMascots((prev) => prev.filter((p) => p !== pos));
+      }, 4000);
     };
 
-    miniTimerRef.current = setInterval(spawnMini, 15000 + Math.random() * 20000);
-    // Initial spawn after delay
-    const initial = setTimeout(spawnMini, 8000);
+    miniTimerRef.current = setInterval(spawnMini, 90000 + Math.random() * 60000);
+    const initial = setTimeout(spawnMini, 30000);
     return () => {
       if (miniTimerRef.current) clearInterval(miniTimerRef.current);
       clearTimeout(initial);
@@ -479,16 +480,16 @@ export default function MascotBuddy() {
 
     timerRef.current = setTimeout(() => {
       if (modeRef.current !== "chat") setVisible(false);
-      const baseDelay = Math.min(30000 + appearCountRef.current * 15000, 120000);
-      timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 20000);
-    }, 15000);
+      const baseDelay = Math.min(90000 + appearCountRef.current * 30000, 240000);
+      timerRef.current = setTimeout(showMascot, baseDelay + Math.random() * 30000);
+    }, 10000);
   }, [dismissed, fetchMessage, context, mood]);
 
   useEffect(() => {
     if (dismissed) return;
     if (mode === "chat") return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    const delay = appearCountRef.current === 0 ? 5000 : 3000;
+    const delay = appearCountRef.current === 0 ? 12000 : 8000;
     timerRef.current = setTimeout(showMascot, delay);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [location.pathname, showMascot, dismissed, mode]);
@@ -588,15 +589,15 @@ export default function MascotBuddy() {
       {!visible && !dismissed && (
         <motion.button
           onClick={openChat}
-          className="fixed bottom-24 right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed bottom-20 right-3 sm:bottom-24 sm:right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-shadow"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <img src={currentImage} alt="Bateu" className="h-14 w-14 drop-shadow-md" width={56} height={56} />
+          <img src={currentImage} alt="Bateu" className="h-11 w-11 sm:h-14 sm:w-14 drop-shadow-md" width={56} height={56} />
           <motion.div
-            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary"
+            className="absolute -top-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-primary"
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
           />
@@ -783,7 +784,7 @@ export default function MascotBuddy() {
                 scale: { repeat: Infinity, duration: mood === "excited" ? 1.5 : 2, ease: "easeInOut" },
               }}
             >
-              <img src={currentImage} alt={`Bateu - ${mood}`} className="h-20 w-20 drop-shadow-lg" width={80} height={80} />
+              <img src={currentImage} alt={`Bateu - ${mood}`} className="h-14 w-14 sm:h-20 sm:w-20 drop-shadow-lg" width={80} height={80} />
             </motion.div>
           </motion.div>
         ) : null}

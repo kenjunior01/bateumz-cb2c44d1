@@ -326,113 +326,97 @@ export default function DashboardPrestacoes() {
         ))}
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="font-semibold mb-3">Os meus produtos</h2>
-          {loading ? (
-            <div className="py-10 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              Ainda não tem produtos. Clique em "Novo produto" para começar.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {products.map((p) => (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                >
-                  <div className="w-14 h-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                    {p.images[0] ? (
-                      <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{p.title}</p>
-                      <Badge
-                        variant={p.status === "active" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {p.status}
-                      </Badge>
-                      {p.featured && <Badge variant="outline">Destaque</Badge>}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex gap-3 flex-wrap mt-1">
-                      <span>{formatMZN(Number(p.total_price))}</span>
-                      <span>Stock: {p.stock}</span>
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {p.views_count ?? 0}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleStatus(p)}
-                    >
-                      {p.status === "active" ? "Ocultar" : "Publicar"}
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => remove(p.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="products" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm">
+          <TabsTrigger value="products" className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5" /> Produtos
+          </TabsTrigger>
+          <TabsTrigger value="leads" className="flex items-center gap-1.5">
+            <Inbox className="h-3.5 w-3.5" /> Leads
+            {leads.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {leads.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" /> Últimos pedidos via WhatsApp
-          </h2>
-          {leads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Sem pedidos registados ainda. Cada clique em "Contactar vendedor" no
-              catálogo aparece aqui.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {leads.map((l) => {
-                const product = products.find((p) => p.id === l.product_id);
-                return (
-                  <div
-                    key={l.id}
-                    className="text-sm flex items-center justify-between gap-3 p-2 rounded border"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
-                        {product?.title ?? "Produto"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Entrada {formatMZN(Number(l.down_payment))} ·{" "}
-                        {l.months} meses · ~{formatMZN(Number(l.monthly_estimate))}/mês
-                      </p>
-                    </div>
-                    <div className="text-xs text-muted-foreground shrink-0">
-                      {new Date(l.created_at).toLocaleString("pt-PT")}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="products" className="mt-4">
+          <Card>
+            <CardContent className="p-3 sm:p-4">
+              <h2 className="font-semibold mb-3 text-sm sm:text-base">Os meus produtos</h2>
+              {loading ? (
+                <div className="py-10 text-center">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+                </div>
+              ) : products.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Ainda não tem produtos. Clique em "Novo produto" para começar.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {products.map((p) => (
+                    <motion.div
+                      key={p.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card"
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                        {p.images[0] ? (
+                          <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium truncate text-sm sm:text-base">{p.title}</p>
+                          <Badge
+                            variant={p.status === "active" ? "default" : "secondary"}
+                            className="capitalize text-[10px] px-1.5 py-0"
+                          >
+                            {p.status}
+                          </Badge>
+                          {p.featured && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Destaque</Badge>}
+                        </div>
+                        <div className="text-[11px] sm:text-xs text-muted-foreground flex gap-2 sm:gap-3 flex-wrap mt-1">
+                          <span>{formatMZN(Number(p.total_price))}</span>
+                          <span>Stock: {p.stock}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {p.views_count ?? 0}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => toggleStatus(p)}
+                        >
+                          {p.status === "active" ? "Ocultar" : "Publicar"}
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(p.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="leads" className="mt-4">
+          <LeadsPanel leads={leads} products={products} />
+        </TabsContent>
+      </Tabs>
 
       {/* Form dialog */}
       <Dialog open={!!form} onOpenChange={(o) => !o && setForm(null)}>

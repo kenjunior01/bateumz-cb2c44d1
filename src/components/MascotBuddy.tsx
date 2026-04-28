@@ -589,15 +589,15 @@ export default function MascotBuddy() {
       {!visible && !dismissed && (
         <motion.button
           onClick={openChat}
-          className="fixed bottom-24 right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed bottom-20 right-3 sm:bottom-24 sm:right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-shadow"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <img src={currentImage} alt="Bateu" className="h-14 w-14 drop-shadow-md" width={56} height={56} />
+          <img src={currentImage} alt="Bateu" className="h-11 w-11 sm:h-14 sm:w-14 drop-shadow-md" width={56} height={56} />
           <motion.div
-            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary"
+            className="absolute -top-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-primary"
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
           />
@@ -784,7 +784,7 @@ export default function MascotBuddy() {
                 scale: { repeat: Infinity, duration: mood === "excited" ? 1.5 : 2, ease: "easeInOut" },
               }}
             >
-              <img src={currentImage} alt={`Bateu - ${mood}`} className="h-20 w-20 drop-shadow-lg" width={80} height={80} />
+              <img src={currentImage} alt={`Bateu - ${mood}`} className="h-14 w-14 sm:h-20 sm:w-20 drop-shadow-lg" width={80} height={80} />
             </motion.div>
           </motion.div>
         ) : null}

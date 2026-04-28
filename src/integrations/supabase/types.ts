@@ -659,58 +659,19 @@ export type Database = {
         }
         Relationships: []
       }
-      prestacao_leads: {
-        Row: {
-          created_at: string
-          desired_months: number | null
-          down_payment: number | null
-          estimated_value: number | null
-          id: string
-          name: string
-          notes: string | null
-          product_type: string
-          status: string
-          updated_at: string
-          whatsapp: string
-        }
-        Insert: {
-          created_at?: string
-          desired_months?: number | null
-          down_payment?: number | null
-          estimated_value?: number | null
-          id?: string
-          name: string
-          notes?: string | null
-          product_type: string
-          status?: string
-          updated_at?: string
-          whatsapp: string
-        }
-        Update: {
-          created_at?: string
-          desired_months?: number | null
-          down_payment?: number | null
-          estimated_value?: number | null
-          id?: string
-          name?: string
-          notes?: string | null
-          product_type?: string
-          status?: string
-          updated_at?: string
-          whatsapp?: string
-        }
-        Relationships: []
-      }
       prestacao_product_leads: {
         Row: {
-          business_user_id: string
+          business_user_id: string | null
+          category: string | null
           created_at: string
           down_payment: number
           id: string
           monthly_estimate: number
           months: number
-          product_id: string
+          notes: string | null
+          product_id: string | null
           source: string
+          status: string
           total_price: number
           user_agent: string | null
           visitor_name: string | null
@@ -718,14 +679,17 @@ export type Database = {
           visitor_whatsapp: string | null
         }
         Insert: {
-          business_user_id: string
+          business_user_id?: string | null
+          category?: string | null
           created_at?: string
           down_payment?: number
           id?: string
           monthly_estimate?: number
           months?: number
-          product_id: string
+          notes?: string | null
+          product_id?: string | null
           source?: string
+          status?: string
           total_price?: number
           user_agent?: string | null
           visitor_name?: string | null
@@ -733,14 +697,17 @@ export type Database = {
           visitor_whatsapp?: string | null
         }
         Update: {
-          business_user_id?: string
+          business_user_id?: string | null
+          category?: string | null
           created_at?: string
           down_payment?: number
           id?: string
           monthly_estimate?: number
           months?: number
-          product_id?: string
+          notes?: string | null
+          product_id?: string | null
           source?: string
+          status?: string
           total_price?: number
           user_agent?: string | null
           visitor_name?: string | null

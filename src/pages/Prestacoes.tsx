@@ -451,7 +451,19 @@ export default function Prestacoes() {
                 </div>
 
                 <Button className="mt-6 w-full gap-2" onClick={() => scrollToId("interesse")}>
-                  <MessageCircle className="h-4 w-4" /> Quero esta proposta
+                  <ArrowRight className="h-4 w-4" /> Quero esta proposta
+                </Button>
+                <a href={`/prestacoes/catalogo?category=${productType}`} className="mt-3 block">
+                  <Button variant="outline" className="w-full gap-2">
+                    Ver {currentCat.label.toLowerCase()} disponíveis
+                  </Button>
+                </a>
+                <Button
+                  variant="ghost"
+                  className="mt-2 w-full gap-2 text-[hsl(142_70%_45%)] hover:text-[hsl(142_70%_40%)]"
+                  onClick={openWhatsAppShare}
+                >
+                  <MessageCircle className="h-4 w-4" /> Partilhar no WhatsApp
                 </Button>
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
                   Valores meramente indicativos. A proposta final depende de análise de crédito e

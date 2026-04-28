@@ -176,6 +176,28 @@ export default function Prestacoes() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const buildShareMessage = () =>
+    [
+      `Olá! Estou interessado/a em comprar a prestações via Bateu:`,
+      ``,
+      `📦 Categoria: ${currentCat.label}`,
+      `💰 Valor do bem: ${formatMZN(value)}`,
+      `💵 Entrada: ${formatMZN(Math.min(downPayment, value))}`,
+      `📅 Prazo: ${months} meses`,
+      `📈 Mensalidade estimada: ${formatMZN(sim.monthly)}`,
+      `   (taxa indicativa ${(sim.annualRate * 100).toFixed(1)}%/ano)`,
+      ``,
+      name ? `Sou ${name}.` : `Gostaria de mais informações.`,
+      notes ? `\nNotas: ${notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+  const openWhatsAppShare = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(buildShareMessage())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || name.trim().length < 2) {
@@ -188,15 +210,22 @@ export default function Prestacoes() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from("prestacao_leads" as never).insert({
-      name: name.trim().slice(0, 120),
-      whatsapp: phoneDigits.slice(0, 20),
-      product_type: productType,
-      estimated_value: value,
+    const principal = Math.max(0, value - Math.min(downPayment, value));
+    const { error } = await supabase.from("prestacao_product_leads").insert({
+      product_id: null,
+      business_user_id: null,
+      visitor_name: name.trim().slice(0, 120),
+      visitor_whatsapp: phoneDigits.slice(0, 20),
+      total_price: value,
       down_payment: Math.min(downPayment, value),
-      desired_months: months,
+      months,
+      monthly_estimate: sim.monthly,
+      source: "waitlist",
+      category: productType,
       notes: notes.trim().slice(0, 500) || null,
-    } as never);
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 200) : null,
+    });
+    void principal;
     setSubmitting(false);
     if (error) {
       toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
@@ -205,6 +234,7 @@ export default function Prestacoes() {
     setSubmitted(true);
     toast({ title: "Inscrição registada!", description: "A nossa equipa entra em contacto em breve." });
   };
+
 
   const resetForm = () => {
     setSubmitted(false);

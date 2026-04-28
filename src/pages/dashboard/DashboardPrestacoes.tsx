@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Eye,
   X,
+  Filter,
+  Inbox,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -69,7 +72,8 @@ type Product = {
 
 type Lead = {
   id: string;
-  product_id: string;
+  product_id: string | null;
+  business_user_id: string | null;
   visitor_name: string | null;
   visitor_whatsapp: string | null;
   total_price: number;
@@ -77,6 +81,9 @@ type Lead = {
   months: number;
   monthly_estimate: number;
   source: string;
+  status: string;
+  category: string | null;
+  notes: string | null;
   created_at: string;
 };
 

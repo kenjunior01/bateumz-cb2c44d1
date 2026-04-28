@@ -256,10 +256,10 @@ export default function Prestacoes() {
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
             <Sparkles className="h-3.5 w-3.5" /> EM BREVE • LISTA DE ESPERA ABERTA
           </div>
-          <h1 className="mt-6 font-display text-4xl font-bold text-foreground md:text-6xl">
+          <h1 className="mt-5 sm:mt-6 font-display text-3xl sm:text-4xl font-bold text-foreground md:text-6xl leading-tight">
             Vendas a <span className="text-accent">Prestações</span>
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground">
             Compre viaturas, imóveis e eletrónicos com pagamento facilitado em até 60 prestações,
             diretamente das melhores empresas de Moçambique.
           </p>

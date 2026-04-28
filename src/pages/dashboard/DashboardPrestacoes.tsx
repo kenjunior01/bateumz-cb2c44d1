@@ -638,3 +638,171 @@ export default function DashboardPrestacoes() {
     </div>
   );
 }
+
+// ─── Leads panel with filters ───────────────────────────────────────────
+type LeadsPanelProps = {
+  leads: Lead[];
+  products: Product[];
+};
+
+function LeadsPanel({ leads, products }: LeadsPanelProps) {
+  const [category, setCategory] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
+  const [period, setPeriod] = useState<string>("all");
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const cutoff: Record<string, number> = {
+      "7": 7 * 24 * 3600 * 1000,
+      "30": 30 * 24 * 3600 * 1000,
+      "90": 90 * 24 * 3600 * 1000,
+    };
+    return leads.filter((l) => {
+      const product = products.find((p) => p.id === l.product_id);
+      const cat = l.category ?? product?.category ?? null;
+      if (category !== "all" && cat !== category) return false;
+      if (status !== "all" && (l.status ?? "new") !== status) return false;
+      if (period !== "all") {
+        const ms = cutoff[period];
+        if (ms && now - new Date(l.created_at).getTime() > ms) return false;
+      }
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        const haystack = [
+          l.visitor_name,
+          l.visitor_whatsapp,
+          product?.title,
+          l.notes,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [leads, products, category, status, period, query]);
+
+  const generalCount = leads.filter((l) => !l.product_id).length;
+  const productCount = leads.filter((l) => l.product_id).length;
+
+  return (
+    <Card>
+      <CardContent className="p-3 sm:p-4 space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="font-semibold text-sm sm:text-base flex items-center gap-1.5">
+            <MessageSquare className="h-4 w-4" /> Leads recebidos
+          </h2>
+          <Badge variant="outline" className="text-[10px]">
+            {productCount} por produto
+          </Badge>
+          <Badge variant="outline" className="text-[10px]">
+            {generalCount} gerais
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="h-9 text-xs">
+              <Filter className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {PRESTACAO_CATEGORIES.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos estados</SelectItem>
+              <SelectItem value="new">Novo</SelectItem>
+              <SelectItem value="contacted">Contactado</SelectItem>
+              <SelectItem value="closed">Fechado</SelectItem>
+              <SelectItem value="lost">Perdido</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Sempre</SelectItem>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            placeholder="Buscar nome, WhatsApp..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9 text-xs"
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-xs sm:text-sm text-muted-foreground py-6 text-center">
+            Nenhum lead corresponde aos filtros.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((l) => {
+              const product = products.find((p) => p.id === l.product_id);
+              const isGeneral = !l.product_id;
+              return (
+                <div
+                  key={l.id}
+                  className="text-xs sm:text-sm flex items-start justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-medium truncate">
+                        {product?.title ?? l.visitor_name ?? "Interesse geral"}
+                      </p>
+                      <Badge
+                        variant={isGeneral ? "secondary" : "default"}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {isGeneral ? "Geral" : "Produto"}
+                      </Badge>
+                      {(l.category ?? product?.category) && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">
+                          {l.category ?? product?.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">
+                      {l.visitor_name && <span>{l.visitor_name} · </span>}
+                      {l.visitor_whatsapp && <span>{l.visitor_whatsapp} · </span>}
+                      Entrada {formatMZN(Number(l.down_payment))} · {l.months}m · ~
+                      {formatMZN(Number(l.monthly_estimate))}/mês
+                    </p>
+                    {l.notes && (
+                      <p className="text-[11px] text-muted-foreground mt-1 italic line-clamp-2">
+                        "{l.notes}"
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground shrink-0 text-right">
+                    {new Date(l.created_at).toLocaleDateString("pt-PT")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

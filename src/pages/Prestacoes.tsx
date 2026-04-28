@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -145,11 +145,6 @@ function simulate(categoryId: string, value: number, downPayment: number, months
   return { principal, monthly, total, interest, annualRate };
 }
 
-function buildWhatsAppUrl(phoneRaw: string, message: string) {
-  const phone = phoneRaw.replace(/\D/g, "");
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-}
-
 export default function Prestacoes() {
   const { toast } = useToast();
 
@@ -180,36 +175,6 @@ export default function Prestacoes() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [opsWhatsapp, setOpsWhatsapp] = useState<string>("+258840000000");
-
-  // Load operational WhatsApp from platform_settings
-  useEffect(() => {
-    supabase
-      .from("platform_settings")
-      .select("value")
-      .eq("key", "prestacoes_whatsapp")
-      .maybeSingle()
-      .then(({ data }) => {
-        const v = (data?.value as unknown) as string | undefined;
-        if (typeof v === "string" && v.trim()) setOpsWhatsapp(v.trim());
-      });
-  }, []);
-
-  const buildLeadMessage = () =>
-    [
-      `Olá! Quero entrar na lista de espera de Vendas a Prestações da Bateu.`,
-      ``,
-      `👤 Nome: ${name || "(por preencher)"}`,
-      `📦 Produto: ${currentCat.label}`,
-      `💰 Valor do bem: ${formatMZN(value)}`,
-      `💵 Entrada: ${formatMZN(Math.min(downPayment, value))}`,
-      `📅 Prazo: ${months} meses`,
-      `📈 Prestação estimada: ${formatMZN(sim.monthly)}/mês`,
-      `   (taxa indicativa ${(sim.annualRate * 100).toFixed(1)}% / ano)`,
-      notes ? `\n📝 Notas: ${notes}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,11 +203,7 @@ export default function Prestacoes() {
       return;
     }
     setSubmitted(true);
-    toast({ title: "Inscrição registada!", description: "Pode também enviar a sua simulação por WhatsApp." });
-  };
-
-  const handleOpenWhatsApp = () => {
-    window.open(buildWhatsAppUrl(opsWhatsapp, buildLeadMessage()), "_blank", "noopener,noreferrer");
+    toast({ title: "Inscrição registada!", description: "A nossa equipa entra em contacto em breve." });
   };
 
   const resetForm = () => {
@@ -539,11 +500,14 @@ export default function Prestacoes() {
                   <CheckCircle2 className="h-12 w-12 text-accent" />
                   <h3 className="mt-4 font-display text-xl font-semibold text-foreground">Inscrição registada!</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Envie também a sua simulação por WhatsApp para acelerar o contacto.
+                    A nossa equipa entrará em contacto em breve. Entretanto, explore os produtos
+                    disponíveis no catálogo — cada empresa parceira tem o seu próprio WhatsApp.
                   </p>
-                  <Button onClick={handleOpenWhatsApp} className="mt-6 w-full gap-2 bg-[hsl(142_70%_45%)] text-white hover:bg-[hsl(142_70%_40%)]">
-                    <MessageCircle className="h-4 w-4" /> Abrir WhatsApp com a simulação
-                  </Button>
+                  <a href="/prestacoes/catalogo" className="mt-6 w-full">
+                    <Button className="w-full gap-2">
+                      Ver catálogo <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </a>
                   <Button variant="outline" className="mt-3 w-full" onClick={resetForm}>
                     Submeter outro pedido
                   </Button>

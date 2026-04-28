@@ -530,17 +530,27 @@ export default function Prestacoes() {
                   <CheckCircle2 className="h-12 w-12 text-accent" />
                   <h3 className="mt-4 font-display text-xl font-semibold text-foreground">Inscrição registada!</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    A nossa equipa entrará em contacto em breve. Entretanto, explore os produtos
-                    disponíveis no catálogo — cada empresa parceira tem o seu próprio WhatsApp.
+                    A nossa equipa entrará em contacto em breve. Pode também partilhar a simulação
+                    diretamente por WhatsApp ou explorar produtos já disponíveis no catálogo.
                   </p>
-                  <a href="/prestacoes/catalogo" className="mt-6 w-full">
-                    <Button className="w-full gap-2">
-                      Ver catálogo <ArrowRight className="h-4 w-4" />
+                  <Button
+                    onClick={openWhatsAppShare}
+                    className="mt-6 w-full gap-2 bg-[hsl(142_70%_45%)] text-white hover:bg-[hsl(142_70%_40%)]"
+                  >
+                    <MessageCircle className="h-4 w-4" /> Partilhar simulação no WhatsApp
+                  </Button>
+                  <a href={`/prestacoes/catalogo?category=${productType}`} className="mt-3 w-full">
+                    <Button variant="outline" className="w-full gap-2">
+                      Ver {currentCat.label.toLowerCase()} no catálogo <ArrowRight className="h-4 w-4" />
                     </Button>
                   </a>
-                  <Button variant="outline" className="mt-3 w-full" onClick={resetForm}>
+                  <button
+                    type="button"
+                    className="mt-3 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={resetForm}
+                  >
                     Submeter outro pedido
-                  </Button>
+                  </button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-background/40 p-6">

@@ -92,15 +92,18 @@ export default function PrestacoesCatalogo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, province, search]);
 
+  const businessFilter = searchParams.get("business");
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from("prestacao_products")
         .select(
           "id,title,category,description,total_price,min_down_payment,max_months,annual_rate,images,province,city,brand,model,featured,views_count,stock",
         )
-        .eq("status", "active")
+        .eq("status", "active");
+      if (businessFilter) query = query.eq("business_user_id", businessFilter);
+      const { data } = await query
         .order("featured", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(200);
@@ -112,7 +115,7 @@ export default function PrestacoesCatalogo() {
       );
       setLoading(false);
     })();
-  }, []);
+  }, [businessFilter]);
 
   // Brands available given current category filter
   const brandOptions = useMemo(() => {

@@ -55,6 +55,7 @@ interface Raffle {
   end_date: string | null;
   category: string | null;
   hide_prize_value: boolean | null;
+  created_at?: string | null;
 }
 
 interface Contest {
@@ -66,6 +67,7 @@ interface Contest {
   status: string;
   evaluation_type: string;
   end_date: string | null;
+  created_at?: string | null;
 }
 
 interface PrestacaoProduct {
@@ -82,6 +84,7 @@ interface PrestacaoProduct {
   province: string | null;
   views_count: number | null;
   status: string;
+  created_at?: string | null;
 }
 
 interface RaffleWinner {

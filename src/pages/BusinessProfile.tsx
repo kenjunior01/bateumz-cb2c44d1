@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Ticket,
   Trophy,
@@ -54,6 +55,7 @@ interface Raffle {
   end_date: string | null;
   category: string | null;
   hide_prize_value: boolean | null;
+  created_at?: string | null;
 }
 
 interface Contest {
@@ -65,6 +67,7 @@ interface Contest {
   status: string;
   evaluation_type: string;
   end_date: string | null;
+  created_at?: string | null;
 }
 
 interface PrestacaoProduct {
@@ -81,6 +84,7 @@ interface PrestacaoProduct {
   province: string | null;
   views_count: number | null;
   status: string;
+  created_at?: string | null;
 }
 
 interface RaffleWinner {
@@ -393,25 +397,27 @@ export default function BusinessProfile() {
       {/* Content */}
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
         <Tabs defaultValue="all">
-          <TabsList className="mb-6 w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
-            <TabsTrigger value="all" className="text-[11px] sm:text-sm">
-              <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-              Tudo
-            </TabsTrigger>
-            <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
-              Sorteios
-            </TabsTrigger>
-            <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
-              Concursos
-            </TabsTrigger>
-            <TabsTrigger value="products" className="text-[11px] sm:text-sm">
-              Prestações
-            </TabsTrigger>
-            <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
-              <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-              Vencedores
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-14 sm:top-16 z-30 -mx-4 px-4 py-2 bg-background/85 backdrop-blur-md border-b border-border/40 mb-4 sm:mb-6">
+            <TabsList className="w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
+              <TabsTrigger value="all" className="text-[11px] sm:text-sm">
+                <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
+                Tudo
+              </TabsTrigger>
+              <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
+                Sorteios
+              </TabsTrigger>
+              <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
+                Concursos
+              </TabsTrigger>
+              <TabsTrigger value="products" className="text-[11px] sm:text-sm">
+                Prestações
+              </TabsTrigger>
+              <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
+                <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
+                Vencedores
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* TAB: ALL */}
           <TabsContent value="all">
@@ -424,7 +430,10 @@ export default function BusinessProfile() {
                     title="Sorteios"
                     icon={Ticket}
                     moreLabel="Ver todos"
-                    onMore={() => navigate(`/?business=${business.user_id}`)}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="raffles"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {raffles.slice(0, 6).map((r) => (
@@ -439,7 +448,10 @@ export default function BusinessProfile() {
                     title="Concursos"
                     icon={Trophy}
                     moreLabel="Ver todos"
-                    onMore={() => navigate("/concursos")}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="contests"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {contests.slice(0, 6).map((c) => (
@@ -454,7 +466,10 @@ export default function BusinessProfile() {
                     title="Vendas a Prestações"
                     icon={ShoppingBag}
                     moreLabel="Ver todos"
-                    onMore={goToCatalogForBusiness}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="products"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {products.slice(0, 6).map((p) => (
@@ -488,46 +503,84 @@ export default function BusinessProfile() {
           </TabsContent>
 
           <TabsContent value="raffles">
-            {raffles.length === 0 ? (
-              <EmptyState message="Nenhum sorteio disponível." />
-            ) : (
-              <Grid>
-                {raffles.map((r) => (
-                  <RaffleCard key={r.id} raffle={r} navigate={navigate} />
-                ))}
-              </Grid>
-            )}
+            <FilteredList
+              items={raffles}
+              statuses={[
+                { value: "all", label: "Todos" },
+                { value: "active", label: "Ativo" },
+                { value: "completed", label: "Encerrado" },
+                { value: "drawn", label: "Sorteado" },
+              ]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "popular", label: "Mais populares" },
+                { value: "ending", label: "A terminar" },
+              ]}
+              renderItem={(r) => <RaffleCard key={r.id} raffle={r} navigate={navigate} />}
+              getStatus={(r) => r.status}
+              getSortValue={(r, sort) => {
+                if (sort === "popular") return r.sold_tickets || 0;
+                if (sort === "ending") return r.end_date ? -new Date(r.end_date).getTime() : 0;
+                return 0;
+              }}
+              emptyMessage="Nenhum sorteio nesse estado."
+            />
           </TabsContent>
 
           <TabsContent value="contests">
-            {contests.length === 0 ? (
-              <EmptyState message="Nenhum concurso disponível." />
-            ) : (
-              <Grid>
-                {contests.map((c) => (
-                  <ContestCard key={c.id} contest={c} navigate={navigate} />
-                ))}
-              </Grid>
-            )}
+            <FilteredList
+              items={contests}
+              statuses={[
+                { value: "all", label: "Todos" },
+                { value: "active", label: "Ativo" },
+                { value: "voting", label: "Em votação" },
+                { value: "completed", label: "Encerrado" },
+              ]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "ending", label: "A terminar" },
+              ]}
+              renderItem={(c) => <ContestCard key={c.id} contest={c} navigate={navigate} />}
+              getStatus={(c) => c.status}
+              getSortValue={(c, sort) => {
+                if (sort === "ending") return c.end_date ? -new Date(c.end_date).getTime() : 0;
+                return 0;
+              }}
+              emptyMessage="Nenhum concurso nesse estado."
+            />
           </TabsContent>
 
           <TabsContent value="products">
-            {products.length === 0 ? (
-              <EmptyState message="Esta empresa ainda não publicou produtos a prestações." />
-            ) : (
-              <>
-                <div className="mb-4 flex justify-end">
-                  <Button variant="outline" size="sm" onClick={goToCatalogForBusiness} className="gap-2">
-                    Ver no catálogo completo <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Grid>
-                  {products.map((p) => (
-                    <ProductCard key={p.id} product={p} navigate={navigate} />
-                  ))}
-                </Grid>
-              </>
-            )}
+            <FilteredList
+              items={products}
+              extraAction={
+                <Button variant="outline" size="sm" onClick={goToCatalogForBusiness} className="gap-2 text-xs">
+                  Catálogo completo <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              }
+              statuses={[{ value: "all", label: "Todos" }, { value: "active", label: "Disponível" }]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "popular", label: "Mais vistos" },
+                { value: "monthly-asc", label: "Mensalidade ↑" },
+                { value: "monthly-desc", label: "Mensalidade ↓" },
+                { value: "price-asc", label: "Preço ↑" },
+                { value: "price-desc", label: "Preço ↓" },
+              ]}
+              renderItem={(p) => <ProductCard key={p.id} product={p} navigate={navigate} />}
+              getStatus={(p) => p.status}
+              getSortValue={(p, sort) => {
+                if (sort === "popular") return p.views_count || 0;
+                if (sort === "price-asc") return -p.total_price;
+                if (sort === "price-desc") return p.total_price;
+                if (sort === "monthly-asc" || sort === "monthly-desc") {
+                  const monthly = Math.max(0, (p.total_price - p.min_down_payment) / Math.max(1, p.max_months));
+                  return sort === "monthly-asc" ? -monthly : monthly;
+                }
+                return 0;
+              }}
+              emptyMessage="Esta empresa ainda não publicou produtos a prestações."
+            />
           </TabsContent>
 
           <TabsContent value="winners">
@@ -936,6 +989,146 @@ function WinnersAndRankings({
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/* -------------------- FilteredList: status filter + sort + pagination -------------------- */
+
+interface StatusOption { value: string; label: string }
+interface SortOption { value: string; label: string }
+
+function FilteredList<T extends { id: string; created_at?: string | null }>({
+  items,
+  statuses,
+  sorts,
+  renderItem,
+  getStatus,
+  getSortValue,
+  emptyMessage,
+  extraAction,
+  pageSize = 9,
+}: {
+  items: T[];
+  statuses: StatusOption[];
+  sorts: SortOption[];
+  renderItem: (item: T) => React.ReactNode;
+  getStatus: (item: T) => string;
+  getSortValue: (item: T, sort: string) => number;
+  emptyMessage: string;
+  extraAction?: React.ReactNode;
+  pageSize?: number;
+}) {
+  const [status, setStatus] = useState<string>(statuses[0]?.value ?? "all");
+  const [sort, setSort] = useState<string>(sorts[0]?.value ?? "recent");
+  const [page, setPage] = useState(1);
+
+  // Reset page when filter/sort changes
+  useEffect(() => {
+    setPage(1);
+  }, [status, sort]);
+
+  const filtered = useMemo(() => {
+    let list = status === "all" ? items : items.filter((i) => getStatus(i) === status);
+    if (sort === "recent") {
+      list = [...list].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+    } else {
+      list = [...list].sort((a, b) => getSortValue(b, sort) - getSortValue(a, sort));
+    }
+    return list;
+  }, [items, status, sort, getStatus, getSortValue]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visible = filtered.slice(0, page * pageSize);
+  const canLoadMore = page < totalPages;
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { all: items.length };
+    for (const i of items) {
+      const s = getStatus(i);
+      map[s] = (map[s] ?? 0) + 1;
+    }
+    return map;
+  }, [items, getStatus]);
+
+  if (items.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  return (
+    <div>
+      {/* Controls */}
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {statuses.map((s) => {
+            const active = status === s.value;
+            const count = counts[s.value] ?? 0;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setStatus(s.value)}
+                className={`text-[11px] sm:text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                {s.label}
+                <span className="ml-1 opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+          </p>
+          <div className="flex items-center gap-2">
+            {extraAction}
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-8 text-xs w-[150px] sm:w-[170px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sorts.map((s) => (
+                  <SelectItem key={s.value} value={s.value} className="text-xs">
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState message="Nenhum resultado para os filtros selecionados." />
+      ) : (
+        <>
+          <Grid>{visible.map((item) => renderItem(item))}</Grid>
+
+          {canLoadMore && (
+            <div className="mt-6 flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} className="gap-2">
+                Carregar mais
+                <span className="text-xs text-muted-foreground">
+                  ({visible.length}/{filtered.length})
+                </span>
+              </Button>
+            </div>
+          )}
+          {!canLoadMore && filtered.length > pageSize && (
+            <p className="mt-6 text-center text-[11px] text-muted-foreground">
+              Mostrando todos os {filtered.length} itens
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

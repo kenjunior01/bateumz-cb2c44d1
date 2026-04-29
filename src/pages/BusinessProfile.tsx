@@ -393,25 +393,27 @@ export default function BusinessProfile() {
       {/* Content */}
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
         <Tabs defaultValue="all">
-          <TabsList className="mb-6 w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
-            <TabsTrigger value="all" className="text-[11px] sm:text-sm">
-              <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-              Tudo
-            </TabsTrigger>
-            <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
-              Sorteios
-            </TabsTrigger>
-            <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
-              Concursos
-            </TabsTrigger>
-            <TabsTrigger value="products" className="text-[11px] sm:text-sm">
-              Prestações
-            </TabsTrigger>
-            <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
-              <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-              Vencedores
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-14 sm:top-16 z-30 -mx-4 px-4 py-2 bg-background/85 backdrop-blur-md border-b border-border/40 mb-4 sm:mb-6">
+            <TabsList className="w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
+              <TabsTrigger value="all" className="text-[11px] sm:text-sm">
+                <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
+                Tudo
+              </TabsTrigger>
+              <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
+                Sorteios
+              </TabsTrigger>
+              <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
+                Concursos
+              </TabsTrigger>
+              <TabsTrigger value="products" className="text-[11px] sm:text-sm">
+                Prestações
+              </TabsTrigger>
+              <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
+                <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
+                Vencedores
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* TAB: ALL */}
           <TabsContent value="all">
@@ -424,7 +426,10 @@ export default function BusinessProfile() {
                     title="Sorteios"
                     icon={Ticket}
                     moreLabel="Ver todos"
-                    onMore={() => navigate(`/?business=${business.user_id}`)}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="raffles"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {raffles.slice(0, 6).map((r) => (
@@ -439,7 +444,10 @@ export default function BusinessProfile() {
                     title="Concursos"
                     icon={Trophy}
                     moreLabel="Ver todos"
-                    onMore={() => navigate("/concursos")}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="contests"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {contests.slice(0, 6).map((c) => (
@@ -454,7 +462,10 @@ export default function BusinessProfile() {
                     title="Vendas a Prestações"
                     icon={ShoppingBag}
                     moreLabel="Ver todos"
-                    onMore={goToCatalogForBusiness}
+                    onMore={() => {
+                      const t = document.querySelector<HTMLButtonElement>('[role="tab"][value="products"]');
+                      t?.click();
+                    }}
                   >
                     <Grid>
                       {products.slice(0, 6).map((p) => (
@@ -488,46 +499,84 @@ export default function BusinessProfile() {
           </TabsContent>
 
           <TabsContent value="raffles">
-            {raffles.length === 0 ? (
-              <EmptyState message="Nenhum sorteio disponível." />
-            ) : (
-              <Grid>
-                {raffles.map((r) => (
-                  <RaffleCard key={r.id} raffle={r} navigate={navigate} />
-                ))}
-              </Grid>
-            )}
+            <FilteredList
+              items={raffles}
+              statuses={[
+                { value: "all", label: "Todos" },
+                { value: "active", label: "Ativo" },
+                { value: "completed", label: "Encerrado" },
+                { value: "drawn", label: "Sorteado" },
+              ]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "popular", label: "Mais populares" },
+                { value: "ending", label: "A terminar" },
+              ]}
+              renderItem={(r) => <RaffleCard key={r.id} raffle={r} navigate={navigate} />}
+              getStatus={(r) => r.status}
+              getSortValue={(r, sort) => {
+                if (sort === "popular") return r.sold_tickets || 0;
+                if (sort === "ending") return r.end_date ? -new Date(r.end_date).getTime() : 0;
+                return 0;
+              }}
+              emptyMessage="Nenhum sorteio nesse estado."
+            />
           </TabsContent>
 
           <TabsContent value="contests">
-            {contests.length === 0 ? (
-              <EmptyState message="Nenhum concurso disponível." />
-            ) : (
-              <Grid>
-                {contests.map((c) => (
-                  <ContestCard key={c.id} contest={c} navigate={navigate} />
-                ))}
-              </Grid>
-            )}
+            <FilteredList
+              items={contests}
+              statuses={[
+                { value: "all", label: "Todos" },
+                { value: "active", label: "Ativo" },
+                { value: "voting", label: "Em votação" },
+                { value: "completed", label: "Encerrado" },
+              ]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "ending", label: "A terminar" },
+              ]}
+              renderItem={(c) => <ContestCard key={c.id} contest={c} navigate={navigate} />}
+              getStatus={(c) => c.status}
+              getSortValue={(c, sort) => {
+                if (sort === "ending") return c.end_date ? -new Date(c.end_date).getTime() : 0;
+                return 0;
+              }}
+              emptyMessage="Nenhum concurso nesse estado."
+            />
           </TabsContent>
 
           <TabsContent value="products">
-            {products.length === 0 ? (
-              <EmptyState message="Esta empresa ainda não publicou produtos a prestações." />
-            ) : (
-              <>
-                <div className="mb-4 flex justify-end">
-                  <Button variant="outline" size="sm" onClick={goToCatalogForBusiness} className="gap-2">
-                    Ver no catálogo completo <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Grid>
-                  {products.map((p) => (
-                    <ProductCard key={p.id} product={p} navigate={navigate} />
-                  ))}
-                </Grid>
-              </>
-            )}
+            <FilteredList
+              items={products}
+              extraAction={
+                <Button variant="outline" size="sm" onClick={goToCatalogForBusiness} className="gap-2 text-xs">
+                  Catálogo completo <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              }
+              statuses={[{ value: "all", label: "Todos" }, { value: "active", label: "Disponível" }]}
+              sorts={[
+                { value: "recent", label: "Mais recentes" },
+                { value: "popular", label: "Mais vistos" },
+                { value: "monthly-asc", label: "Mensalidade ↑" },
+                { value: "monthly-desc", label: "Mensalidade ↓" },
+                { value: "price-asc", label: "Preço ↑" },
+                { value: "price-desc", label: "Preço ↓" },
+              ]}
+              renderItem={(p) => <ProductCard key={p.id} product={p} navigate={navigate} />}
+              getStatus={(p) => p.status}
+              getSortValue={(p, sort) => {
+                if (sort === "popular") return p.views_count || 0;
+                if (sort === "price-asc") return -p.total_price;
+                if (sort === "price-desc") return p.total_price;
+                if (sort === "monthly-asc" || sort === "monthly-desc") {
+                  const monthly = Math.max(0, (p.total_price - p.min_down_payment) / Math.max(1, p.max_months));
+                  return sort === "monthly-asc" ? -monthly : monthly;
+                }
+                return 0;
+              }}
+              emptyMessage="Esta empresa ainda não publicou produtos a prestações."
+            />
           </TabsContent>
 
           <TabsContent value="winners">

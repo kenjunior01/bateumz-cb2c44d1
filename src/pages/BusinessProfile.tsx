@@ -989,3 +989,143 @@ function WinnersAndRankings({
     </div>
   );
 }
+
+/* -------------------- FilteredList: status filter + sort + pagination -------------------- */
+
+interface StatusOption { value: string; label: string }
+interface SortOption { value: string; label: string }
+
+function FilteredList<T extends { id: string; created_at?: string | null }>({
+  items,
+  statuses,
+  sorts,
+  renderItem,
+  getStatus,
+  getSortValue,
+  emptyMessage,
+  extraAction,
+  pageSize = 9,
+}: {
+  items: T[];
+  statuses: StatusOption[];
+  sorts: SortOption[];
+  renderItem: (item: T) => React.ReactNode;
+  getStatus: (item: T) => string;
+  getSortValue: (item: T, sort: string) => number;
+  emptyMessage: string;
+  extraAction?: React.ReactNode;
+  pageSize?: number;
+}) {
+  const [status, setStatus] = useState<string>(statuses[0]?.value ?? "all");
+  const [sort, setSort] = useState<string>(sorts[0]?.value ?? "recent");
+  const [page, setPage] = useState(1);
+
+  // Reset page when filter/sort changes
+  useEffect(() => {
+    setPage(1);
+  }, [status, sort]);
+
+  const filtered = useMemo(() => {
+    let list = status === "all" ? items : items.filter((i) => getStatus(i) === status);
+    if (sort === "recent") {
+      list = [...list].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+    } else {
+      list = [...list].sort((a, b) => getSortValue(b, sort) - getSortValue(a, sort));
+    }
+    return list;
+  }, [items, status, sort, getStatus, getSortValue]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visible = filtered.slice(0, page * pageSize);
+  const canLoadMore = page < totalPages;
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { all: items.length };
+    for (const i of items) {
+      const s = getStatus(i);
+      map[s] = (map[s] ?? 0) + 1;
+    }
+    return map;
+  }, [items, getStatus]);
+
+  if (items.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  return (
+    <div>
+      {/* Controls */}
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {statuses.map((s) => {
+            const active = status === s.value;
+            const count = counts[s.value] ?? 0;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setStatus(s.value)}
+                className={`text-[11px] sm:text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                {s.label}
+                <span className="ml-1 opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+          </p>
+          <div className="flex items-center gap-2">
+            {extraAction}
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-8 text-xs w-[150px] sm:w-[170px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sorts.map((s) => (
+                  <SelectItem key={s.value} value={s.value} className="text-xs">
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState message="Nenhum resultado para os filtros selecionados." />
+      ) : (
+        <>
+          <Grid>{visible.map((item) => renderItem(item))}</Grid>
+
+          {canLoadMore && (
+            <div className="mt-6 flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} className="gap-2">
+                Carregar mais
+                <span className="text-xs text-muted-foreground">
+                  ({visible.length}/{filtered.length})
+                </span>
+              </Button>
+            </div>
+          )}
+          {!canLoadMore && filtered.length > pageSize && (
+            <p className="mt-6 text-center text-[11px] text-muted-foreground">
+              Mostrando todos os {filtered.length} itens
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

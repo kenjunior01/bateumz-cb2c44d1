@@ -533,12 +533,20 @@ export default function BusinessProfile() {
                 { value: "popular", label: "Mais populares" },
                 { value: "ending", label: "A terminar" },
               ]}
-              renderItem={(r) => <RaffleCard key={r.id} raffle={r} navigate={navigate} />}
+              renderItem={(r, meta) => <RaffleCard key={r.id} raffle={r} navigate={navigate} rankMeta={meta} />}
               getStatus={(r) => r.status}
               getSortValue={(r, sort) => {
                 if (sort === "popular") return r.sold_tickets || 0;
                 if (sort === "ending") return r.end_date ? -new Date(r.end_date).getTime() : 0;
                 return 0;
+              }}
+              formatScore={(r, sort) => {
+                if (sort === "popular") return `${r.sold_tickets || 0} bilhetes`;
+                if (sort === "ending" && r.end_date)
+                  return new Date(r.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                if (sort === "recent" && r.created_at)
+                  return new Date(r.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Nenhum sorteio nesse estado."
             />
@@ -557,11 +565,18 @@ export default function BusinessProfile() {
                 { value: "recent", label: "Mais recentes" },
                 { value: "ending", label: "A terminar" },
               ]}
-              renderItem={(c) => <ContestCard key={c.id} contest={c} navigate={navigate} />}
+              renderItem={(c, meta) => <ContestCard key={c.id} contest={c} navigate={navigate} rankMeta={meta} />}
               getStatus={(c) => c.status}
               getSortValue={(c, sort) => {
                 if (sort === "ending") return c.end_date ? -new Date(c.end_date).getTime() : 0;
                 return 0;
+              }}
+              formatScore={(c, sort) => {
+                if (sort === "ending" && c.end_date)
+                  return new Date(c.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                if (sort === "recent" && c.created_at)
+                  return new Date(c.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Nenhum concurso nesse estado."
             />
@@ -584,7 +599,7 @@ export default function BusinessProfile() {
                 { value: "price-asc", label: "Preço ↑" },
                 { value: "price-desc", label: "Preço ↓" },
               ]}
-              renderItem={(p) => <ProductCard key={p.id} product={p} navigate={navigate} />}
+              renderItem={(p, meta) => <ProductCard key={p.id} product={p} navigate={navigate} rankMeta={meta} />}
               getStatus={(p) => p.status}
               getSortValue={(p, sort) => {
                 if (sort === "popular") return p.views_count || 0;
@@ -595,6 +610,17 @@ export default function BusinessProfile() {
                   return sort === "monthly-asc" ? -monthly : monthly;
                 }
                 return 0;
+              }}
+              formatScore={(p, sort) => {
+                if (sort === "popular") return `${p.views_count || 0} views`;
+                if (sort === "price-asc" || sort === "price-desc") return formatMZN(p.total_price);
+                if (sort === "monthly-asc" || sort === "monthly-desc") {
+                  const monthly = Math.max(0, (p.total_price - p.min_down_payment) / Math.max(1, p.max_months));
+                  return `${formatMZN(monthly)}/mês`;
+                }
+                if (sort === "recent" && p.created_at)
+                  return new Date(p.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Esta empresa ainda não publicou produtos a prestações."
             />

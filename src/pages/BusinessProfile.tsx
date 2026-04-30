@@ -1080,6 +1080,7 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   renderItem,
   getStatus,
   getSortValue,
+  formatScore,
   emptyMessage,
   extraAction,
   pageSize = 9,
@@ -1087,9 +1088,10 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   items: T[];
   statuses: StatusOption[];
   sorts: SortOption[];
-  renderItem: (item: T) => React.ReactNode;
+  renderItem: (item: T, meta: { rank: number; total: number; criterion: string; scoreLabel?: string }) => React.ReactNode;
   getStatus: (item: T) => string;
   getSortValue: (item: T, sort: string) => number;
+  formatScore?: (item: T, sort: string) => string | undefined;
   emptyMessage: string;
   extraAction?: React.ReactNode;
   pageSize?: number;
@@ -1097,10 +1099,14 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   const [status, setStatus] = useState<string>(statuses[0]?.value ?? "all");
   const [sort, setSort] = useState<string>(sorts[0]?.value ?? "recent");
   const [page, setPage] = useState(1);
+  const [transitioning, setTransitioning] = useState(false);
 
-  // Reset page when filter/sort changes
+  // Reset page + show brief skeleton when filter/sort changes
   useEffect(() => {
     setPage(1);
+    setTransitioning(true);
+    const t = setTimeout(() => setTransitioning(false), 280);
+    return () => clearTimeout(t);
   }, [status, sort]);
 
   const filtered = useMemo(() => {
@@ -1129,6 +1135,8 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
     }
     return map;
   }, [items, getStatus]);
+
+  const sortLabel = sorts.find((s) => s.value === sort)?.label || "Ordem";
 
   if (items.length === 0) {
     return <EmptyState message={emptyMessage} />;
@@ -1162,11 +1170,12 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] sm:text-xs text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+            <span className="hidden sm:inline"> · ordenado por <span className="text-foreground font-medium">{sortLabel.toLowerCase()}</span></span>
           </p>
           <div className="flex items-center gap-2">
             {extraAction}
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-8 text-xs w-[150px] sm:w-[170px]">
+              <SelectTrigger className="h-8 text-xs w-[140px] sm:w-[170px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1181,11 +1190,22 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {transitioning ? (
+        <SkeletonCardGrid count={Math.min(pageSize, 6)} />
+      ) : filtered.length === 0 ? (
         <EmptyState message="Nenhum resultado para os filtros selecionados." />
       ) : (
         <>
-          <Grid>{visible.map((item) => renderItem(item))}</Grid>
+          <Grid>
+            {visible.map((item, idx) =>
+              renderItem(item, {
+                rank: idx + 1,
+                total: filtered.length,
+                criterion: sortLabel,
+                scoreLabel: formatScore?.(item, sort),
+              }),
+            )}
+          </Grid>
 
           {canLoadMore && (
             <div className="mt-6 flex justify-center">

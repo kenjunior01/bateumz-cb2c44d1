@@ -801,9 +801,11 @@ function RaffleCard({
 function ContestCard({
   contest,
   navigate,
+  rankMeta,
 }: {
   contest: Contest;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const target = `/concursos/${contest.id}`;
   const canEnter = contest.status === "active";
@@ -827,6 +829,14 @@ function ContestCard({
         <Badge className="absolute top-2 left-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px]">
           {statusLabels[contest.status] || contest.status}
         </Badge>
+        {rankMeta && (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{contest.title}</h3>

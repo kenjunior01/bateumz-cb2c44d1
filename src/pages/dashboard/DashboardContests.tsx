@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trophy, Trash2, Check, X, Eye, ThumbsUp, Video, Users, Calendar, ArrowLeft, ArrowRight, Sparkles, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CONTEST_CATEGORIES, getCategory, PHASE_TEMPLATES } from "@/lib/contestCategories";
+import ImageUploadField from "@/components/ImageUploadField";
 
 interface Contest {
   id: string;
@@ -309,7 +310,14 @@ export default function DashboardContests() {
                     <div><Label>Prémio</Label><Input maxLength={200} value={form.prize_description} onChange={(e) => setForm({ ...form, prize_description: e.target.value })} /></div>
                     <div><Label>Hashtag oficial</Label><Input maxLength={40} value={form.hashtag} onChange={(e) => setForm({ ...form, hashtag: e.target.value })} placeholder="MeuConcurso2026" /></div>
                   </div>
-                  <div><Label>URL da imagem de capa</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></div>
+                  <ImageUploadField
+                    label="Imagem de capa"
+                    bucket="contest-media"
+                    pathPrefix={`covers/${user?.id || "anon"}`}
+                    value={form.image_url}
+                    onChange={(url) => setForm({ ...form, image_url: url })}
+                    helper="Recomendado 1200×630. PNG ou JPG."
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -406,9 +414,16 @@ export default function DashboardContests() {
                   {/* Sponsor & Entry Fee */}
                   <div className="rounded-lg border border-border/50 p-3 space-y-3">
                     <p className="text-sm font-semibold">💼 Patrocínio & Acesso</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div><Label className="text-xs">Nome do patrocinador</Label><Input maxLength={80} value={form.sponsor_name} onChange={(e) => setForm({ ...form, sponsor_name: e.target.value })} placeholder="Opcional" /></div>
-                      <div><Label className="text-xs">Logo do patrocinador (URL)</Label><Input value={form.sponsor_logo_url} onChange={(e) => setForm({ ...form, sponsor_logo_url: e.target.value })} placeholder="https://..." /></div>
+                      <ImageUploadField
+                        label="Logo do patrocinador"
+                        bucket="contest-media"
+                        pathPrefix={`sponsors/${user?.id || "anon"}`}
+                        value={form.sponsor_logo_url}
+                        onChange={(url) => setForm({ ...form, sponsor_logo_url: url })}
+                        maxSizeMB={2}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label className="text-xs">Taxa de inscrição (MZN)</Label><Input type="number" min={0} value={form.entry_fee} onChange={(e) => setForm({ ...form, entry_fee: parseFloat(e.target.value) || 0 })} /></div>

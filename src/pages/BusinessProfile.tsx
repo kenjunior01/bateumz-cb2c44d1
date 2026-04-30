@@ -868,9 +868,11 @@ function ContestCard({
 function ProductCard({
   product,
   navigate,
+  rankMeta,
 }: {
   product: PrestacaoProduct;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const cover = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   const monthly = Math.max(
@@ -895,24 +897,33 @@ function ProductCard({
             <ShoppingBag className="h-8 w-8 text-primary/40" />
           </div>
         )}
-        {(product.views_count ?? 0) > 0 && (
-          <Badge className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px] gap-1">
-            <Eye className="h-3 w-3" /> {product.views_count}
-          </Badge>
-        )}
-        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[10px] capitalize">
+        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[9px] sm:text-[10px] capitalize max-w-[60%] truncate">
           {product.category}
         </Badge>
+        {rankMeta ? (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        ) : (
+          (product.views_count ?? 0) > 0 && (
+            <Badge className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px] gap-1">
+              <Eye className="h-3 w-3" /> {product.views_count}
+            </Badge>
+          )
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{product.title}</h3>
+        <h3 className="font-semibold text-xs sm:text-base line-clamp-1">{product.title}</h3>
         {(product.brand || product.model) && (
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">
             {[product.brand, product.model].filter(Boolean).join(" • ")}
           </p>
         )}
 
-        <div className="mt-2 flex items-baseline gap-1">
+        <div className="mt-2 flex items-baseline gap-1 flex-wrap">
           <span className="text-[10px] sm:text-xs text-muted-foreground">desde</span>
           <span className="text-sm sm:text-base font-bold text-primary">
             {formatMZN(monthly)}
@@ -920,37 +931,37 @@ function ProductCard({
           <span className="text-[10px] text-muted-foreground">/mês</span>
         </div>
 
-        <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] sm:text-[11px] text-muted-foreground">
+        <div className="mt-1.5 flex flex-col sm:grid sm:grid-cols-2 gap-y-1 sm:gap-x-2 text-[10px] sm:text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1 min-w-0">
             <Wallet className="h-3 w-3 shrink-0 text-primary/70" />
             <span className="truncate">Entrada {formatMZN(product.min_down_payment)}</span>
           </span>
           <span className="flex items-center gap-1 min-w-0">
             <Clock className="h-3 w-3 shrink-0 text-primary/70" />
-            <span className="truncate">até {product.max_months} meses</span>
+            <span className="truncate">até {product.max_months}m</span>
           </span>
-          <span className="col-span-2 text-foreground/80 font-medium">
+          <span className="sm:col-span-2 text-foreground/80 font-medium truncate">
             Total: {formatMZN(product.total_price)}
           </span>
         </div>
 
         {(product.city || product.province) && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {[product.city, product.province].filter(Boolean).join(", ")}
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-1 min-w-0">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{[product.city, product.province].filter(Boolean).join(", ")}</span>
           </p>
         )}
 
         <Button
           size="sm"
-          className="mt-3 w-full gap-1.5 text-xs"
+          className="mt-3 w-full gap-1.5 text-[11px] sm:text-xs"
           onClick={(e) => {
             e.stopPropagation();
             navigate(target);
           }}
         >
           <Calculator className="h-3.5 w-3.5" />
-          Simular & solicitar
+          <span className="truncate">Simular & solicitar</span>
         </Button>
       </CardContent>
     </Card>

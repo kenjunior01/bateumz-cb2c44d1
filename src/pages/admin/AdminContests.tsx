@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trophy, Trash2, Check, X, Eye, ThumbsUp, Video } from "lucide-react";
+import ImageUploadField from "@/components/ImageUploadField";
 
 interface Contest {
   id: string;
@@ -154,7 +155,13 @@ export default function AdminContests() {
               <div><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
               <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
               <div><Label>Prémio</Label><Input value={form.prize_description} onChange={(e) => setForm({ ...form, prize_description: e.target.value })} placeholder="Ex: Voucher + 5000 MT" /></div>
-              <div><Label>URL da imagem de capa</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></div>
+              <ImageUploadField
+                label="Imagem de capa"
+                bucket="contest-media"
+                pathPrefix={`admin-covers/${user?.id || "anon"}`}
+                value={form.image_url}
+                onChange={(url) => setForm({ ...form, image_url: url })}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Estado</Label>

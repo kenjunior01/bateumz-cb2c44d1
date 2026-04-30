@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Ticket,
   Trophy,
@@ -266,8 +267,24 @@ export default function BusinessProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-2/3 max-w-xs" />
+              <Skeleton className="h-3 w-1/3 max-w-[140px]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 sm:h-24 rounded-xl" />
+            ))}
+          </div>
+          <SkeletonCardGrid count={6} />
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -516,12 +533,20 @@ export default function BusinessProfile() {
                 { value: "popular", label: "Mais populares" },
                 { value: "ending", label: "A terminar" },
               ]}
-              renderItem={(r) => <RaffleCard key={r.id} raffle={r} navigate={navigate} />}
+              renderItem={(r, meta) => <RaffleCard key={r.id} raffle={r} navigate={navigate} rankMeta={meta} />}
               getStatus={(r) => r.status}
               getSortValue={(r, sort) => {
                 if (sort === "popular") return r.sold_tickets || 0;
                 if (sort === "ending") return r.end_date ? -new Date(r.end_date).getTime() : 0;
                 return 0;
+              }}
+              formatScore={(r, sort) => {
+                if (sort === "popular") return `${r.sold_tickets || 0} bilhetes`;
+                if (sort === "ending" && r.end_date)
+                  return new Date(r.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                if (sort === "recent" && r.created_at)
+                  return new Date(r.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Nenhum sorteio nesse estado."
             />
@@ -540,11 +565,18 @@ export default function BusinessProfile() {
                 { value: "recent", label: "Mais recentes" },
                 { value: "ending", label: "A terminar" },
               ]}
-              renderItem={(c) => <ContestCard key={c.id} contest={c} navigate={navigate} />}
+              renderItem={(c, meta) => <ContestCard key={c.id} contest={c} navigate={navigate} rankMeta={meta} />}
               getStatus={(c) => c.status}
               getSortValue={(c, sort) => {
                 if (sort === "ending") return c.end_date ? -new Date(c.end_date).getTime() : 0;
                 return 0;
+              }}
+              formatScore={(c, sort) => {
+                if (sort === "ending" && c.end_date)
+                  return new Date(c.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                if (sort === "recent" && c.created_at)
+                  return new Date(c.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Nenhum concurso nesse estado."
             />
@@ -567,7 +599,7 @@ export default function BusinessProfile() {
                 { value: "price-asc", label: "Preço ↑" },
                 { value: "price-desc", label: "Preço ↓" },
               ]}
-              renderItem={(p) => <ProductCard key={p.id} product={p} navigate={navigate} />}
+              renderItem={(p, meta) => <ProductCard key={p.id} product={p} navigate={navigate} rankMeta={meta} />}
               getStatus={(p) => p.status}
               getSortValue={(p, sort) => {
                 if (sort === "popular") return p.views_count || 0;
@@ -578,6 +610,17 @@ export default function BusinessProfile() {
                   return sort === "monthly-asc" ? -monthly : monthly;
                 }
                 return 0;
+              }}
+              formatScore={(p, sort) => {
+                if (sort === "popular") return `${p.views_count || 0} views`;
+                if (sort === "price-asc" || sort === "price-desc") return formatMZN(p.total_price);
+                if (sort === "monthly-asc" || sort === "monthly-desc") {
+                  const monthly = Math.max(0, (p.total_price - p.min_down_payment) / Math.max(1, p.max_months));
+                  return `${formatMZN(monthly)}/mês`;
+                }
+                if (sort === "recent" && p.created_at)
+                  return new Date(p.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                return undefined;
               }}
               emptyMessage="Esta empresa ainda não publicou produtos a prestações."
             />
@@ -646,12 +689,72 @@ function EmptyState({ message = "Esta empresa ainda não publicou nada." }: { me
   );
 }
 
+function SkeletonCardGrid({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-lg border border-border/60 bg-card overflow-hidden flex flex-col"
+        >
+          <Skeleton className="aspect-video w-full rounded-none" />
+          <div className="p-3 sm:p-4 space-y-2">
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-1.5 w-full mt-2" />
+            <Skeleton className="h-7 w-full mt-3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankBadge({
+  rank,
+  total,
+  criterion,
+  scoreLabel,
+}: {
+  rank: number;
+  total: number;
+  criterion: string;
+  scoreLabel?: string;
+}) {
+  const isTop = rank <= 3;
+  return (
+    <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
+      <Badge
+        className={`text-[9px] sm:text-[10px] gap-0.5 border-0 shadow-sm ${
+          isTop
+            ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-white"
+            : "bg-background/95 text-foreground"
+        }`}
+      >
+        <Crown className="h-2.5 w-2.5" />#{rank}
+        <span className="opacity-70">/{total}</span>
+      </Badge>
+      {scoreLabel && (
+        <Badge
+          variant="outline"
+          className="text-[8.5px] sm:text-[10px] bg-background/85 backdrop-blur border-border/60 px-1.5"
+          title={criterion}
+        >
+          {scoreLabel}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 function RaffleCard({
   raffle,
   navigate,
+  rankMeta,
 }: {
   raffle: Raffle;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const pct = raffle.total_tickets > 0 ? (raffle.sold_tickets / raffle.total_tickets) * 100 : 0;
   const target = `/raffle/${raffle.slug || raffle.id}`;
@@ -676,6 +779,14 @@ function RaffleCard({
         <Badge className="absolute top-2 left-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px]">
           {statusLabels[raffle.status] || raffle.status}
         </Badge>
+        {rankMeta && (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{raffle.title}</h3>
@@ -716,9 +827,11 @@ function RaffleCard({
 function ContestCard({
   contest,
   navigate,
+  rankMeta,
 }: {
   contest: Contest;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const target = `/concursos/${contest.id}`;
   const canEnter = contest.status === "active";
@@ -742,6 +855,14 @@ function ContestCard({
         <Badge className="absolute top-2 left-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px]">
           {statusLabels[contest.status] || contest.status}
         </Badge>
+        {rankMeta && (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{contest.title}</h3>
@@ -773,9 +894,11 @@ function ContestCard({
 function ProductCard({
   product,
   navigate,
+  rankMeta,
 }: {
   product: PrestacaoProduct;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const cover = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   const monthly = Math.max(
@@ -800,24 +923,33 @@ function ProductCard({
             <ShoppingBag className="h-8 w-8 text-primary/40" />
           </div>
         )}
-        {(product.views_count ?? 0) > 0 && (
-          <Badge className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px] gap-1">
-            <Eye className="h-3 w-3" /> {product.views_count}
-          </Badge>
-        )}
-        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[10px] capitalize">
+        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[9px] sm:text-[10px] capitalize max-w-[60%] truncate">
           {product.category}
         </Badge>
+        {rankMeta ? (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        ) : (
+          (product.views_count ?? 0) > 0 && (
+            <Badge className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px] gap-1">
+              <Eye className="h-3 w-3" /> {product.views_count}
+            </Badge>
+          )
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{product.title}</h3>
+        <h3 className="font-semibold text-xs sm:text-base line-clamp-1">{product.title}</h3>
         {(product.brand || product.model) && (
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">
             {[product.brand, product.model].filter(Boolean).join(" • ")}
           </p>
         )}
 
-        <div className="mt-2 flex items-baseline gap-1">
+        <div className="mt-2 flex items-baseline gap-1 flex-wrap">
           <span className="text-[10px] sm:text-xs text-muted-foreground">desde</span>
           <span className="text-sm sm:text-base font-bold text-primary">
             {formatMZN(monthly)}
@@ -825,37 +957,37 @@ function ProductCard({
           <span className="text-[10px] text-muted-foreground">/mês</span>
         </div>
 
-        <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] sm:text-[11px] text-muted-foreground">
+        <div className="mt-1.5 flex flex-col sm:grid sm:grid-cols-2 gap-y-1 sm:gap-x-2 text-[10px] sm:text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1 min-w-0">
             <Wallet className="h-3 w-3 shrink-0 text-primary/70" />
             <span className="truncate">Entrada {formatMZN(product.min_down_payment)}</span>
           </span>
           <span className="flex items-center gap-1 min-w-0">
             <Clock className="h-3 w-3 shrink-0 text-primary/70" />
-            <span className="truncate">até {product.max_months} meses</span>
+            <span className="truncate">até {product.max_months}m</span>
           </span>
-          <span className="col-span-2 text-foreground/80 font-medium">
+          <span className="sm:col-span-2 text-foreground/80 font-medium truncate">
             Total: {formatMZN(product.total_price)}
           </span>
         </div>
 
         {(product.city || product.province) && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {[product.city, product.province].filter(Boolean).join(", ")}
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-1 min-w-0">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{[product.city, product.province].filter(Boolean).join(", ")}</span>
           </p>
         )}
 
         <Button
           size="sm"
-          className="mt-3 w-full gap-1.5 text-xs"
+          className="mt-3 w-full gap-1.5 text-[11px] sm:text-xs"
           onClick={(e) => {
             e.stopPropagation();
             navigate(target);
           }}
         >
           <Calculator className="h-3.5 w-3.5" />
-          Simular & solicitar
+          <span className="truncate">Simular & solicitar</span>
         </Button>
       </CardContent>
     </Card>
@@ -1005,6 +1137,7 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   renderItem,
   getStatus,
   getSortValue,
+  formatScore,
   emptyMessage,
   extraAction,
   pageSize = 9,
@@ -1012,9 +1145,10 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   items: T[];
   statuses: StatusOption[];
   sorts: SortOption[];
-  renderItem: (item: T) => React.ReactNode;
+  renderItem: (item: T, meta: { rank: number; total: number; criterion: string; scoreLabel?: string }) => React.ReactNode;
   getStatus: (item: T) => string;
   getSortValue: (item: T, sort: string) => number;
+  formatScore?: (item: T, sort: string) => string | undefined;
   emptyMessage: string;
   extraAction?: React.ReactNode;
   pageSize?: number;
@@ -1022,10 +1156,14 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
   const [status, setStatus] = useState<string>(statuses[0]?.value ?? "all");
   const [sort, setSort] = useState<string>(sorts[0]?.value ?? "recent");
   const [page, setPage] = useState(1);
+  const [transitioning, setTransitioning] = useState(false);
 
-  // Reset page when filter/sort changes
+  // Reset page + show brief skeleton when filter/sort changes
   useEffect(() => {
     setPage(1);
+    setTransitioning(true);
+    const t = setTimeout(() => setTransitioning(false), 280);
+    return () => clearTimeout(t);
   }, [status, sort]);
 
   const filtered = useMemo(() => {
@@ -1054,6 +1192,8 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
     }
     return map;
   }, [items, getStatus]);
+
+  const sortLabel = sorts.find((s) => s.value === sort)?.label || "Ordem";
 
   if (items.length === 0) {
     return <EmptyState message={emptyMessage} />;
@@ -1087,11 +1227,12 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] sm:text-xs text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+            <span className="hidden sm:inline"> · ordenado por <span className="text-foreground font-medium">{sortLabel.toLowerCase()}</span></span>
           </p>
           <div className="flex items-center gap-2">
             {extraAction}
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-8 text-xs w-[150px] sm:w-[170px]">
+              <SelectTrigger className="h-8 text-xs w-[140px] sm:w-[170px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1106,11 +1247,22 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {transitioning ? (
+        <SkeletonCardGrid count={Math.min(pageSize, 6)} />
+      ) : filtered.length === 0 ? (
         <EmptyState message="Nenhum resultado para os filtros selecionados." />
       ) : (
         <>
-          <Grid>{visible.map((item) => renderItem(item))}</Grid>
+          <Grid>
+            {visible.map((item, idx) =>
+              renderItem(item, {
+                rank: idx + 1,
+                total: filtered.length,
+                criterion: sortLabel,
+                scoreLabel: formatScore?.(item, sort),
+              }),
+            )}
+          </Grid>
 
           {canLoadMore && (
             <div className="mt-6 flex justify-center">

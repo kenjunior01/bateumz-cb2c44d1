@@ -663,6 +663,64 @@ function EmptyState({ message = "Esta empresa ainda não publicou nada." }: { me
   );
 }
 
+function SkeletonCardGrid({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-lg border border-border/60 bg-card overflow-hidden flex flex-col"
+        >
+          <Skeleton className="aspect-video w-full rounded-none" />
+          <div className="p-3 sm:p-4 space-y-2">
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-1.5 w-full mt-2" />
+            <Skeleton className="h-7 w-full mt-3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankBadge({
+  rank,
+  total,
+  criterion,
+  scoreLabel,
+}: {
+  rank: number;
+  total: number;
+  criterion: string;
+  scoreLabel?: string;
+}) {
+  const isTop = rank <= 3;
+  return (
+    <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
+      <Badge
+        className={`text-[9px] sm:text-[10px] gap-0.5 border-0 shadow-sm ${
+          isTop
+            ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-white"
+            : "bg-background/95 text-foreground"
+        }`}
+      >
+        <Crown className="h-2.5 w-2.5" />#{rank}
+        <span className="opacity-70">/{total}</span>
+      </Badge>
+      {scoreLabel && (
+        <Badge
+          variant="outline"
+          className="text-[8.5px] sm:text-[10px] bg-background/85 backdrop-blur border-border/60 px-1.5"
+          title={criterion}
+        >
+          {scoreLabel}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 function RaffleCard({
   raffle,
   navigate,

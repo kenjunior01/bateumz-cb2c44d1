@@ -267,8 +267,24 @@ export default function BusinessProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-2/3 max-w-xs" />
+              <Skeleton className="h-3 w-1/3 max-w-[140px]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 sm:h-24 rounded-xl" />
+            ))}
+          </div>
+          <SkeletonCardGrid count={6} />
+        </div>
+        <Footer />
       </div>
     );
   }

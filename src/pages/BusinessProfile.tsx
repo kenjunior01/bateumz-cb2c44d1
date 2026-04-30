@@ -724,9 +724,11 @@ function RankBadge({
 function RaffleCard({
   raffle,
   navigate,
+  rankMeta,
 }: {
   raffle: Raffle;
   navigate: ReturnType<typeof useNavigate>;
+  rankMeta?: { rank: number; total: number; criterion: string; scoreLabel?: string };
 }) {
   const pct = raffle.total_tickets > 0 ? (raffle.sold_tickets / raffle.total_tickets) * 100 : 0;
   const target = `/raffle/${raffle.slug || raffle.id}`;
@@ -751,6 +753,14 @@ function RaffleCard({
         <Badge className="absolute top-2 left-2 bg-background/90 backdrop-blur text-foreground border-0 text-[10px]">
           {statusLabels[raffle.status] || raffle.status}
         </Badge>
+        {rankMeta && (
+          <RankBadge
+            rank={rankMeta.rank}
+            total={rankMeta.total}
+            criterion={rankMeta.criterion}
+            scoreLabel={rankMeta.scoreLabel}
+          />
+        )}
       </div>
       <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{raffle.title}</h3>

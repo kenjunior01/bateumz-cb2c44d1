@@ -78,6 +78,7 @@ const Index = () => {
       </div>
 
       <CTASection />
+      <Footer />
     </div>
   );
 };

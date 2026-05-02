@@ -415,4 +415,14 @@ const Marketplace = () => {
   );
 };
 
+const Chip = ({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) => (
+  <button
+    onClick={onRemove}
+    className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 transition-colors"
+  >
+    {children}
+    <X className="h-3 w-3" />
+  </button>
+);
+
 export default Marketplace;

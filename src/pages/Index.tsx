@@ -13,7 +13,7 @@ import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
-import BottomTabBar from "@/components/BottomTabBar";
+
 import PopularLeaderboard from "@/components/PopularLeaderboard";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
 import CountryRegionFilter from "@/components/CountryRegionFilter";
@@ -78,8 +78,6 @@ const Index = () => {
       </div>
 
       <CTASection />
-      <Footer />
-      <BottomTabBar />
     </div>
   );
 };

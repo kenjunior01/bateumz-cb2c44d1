@@ -59,6 +59,8 @@ const Marketplace = () => {
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
   const [contentType, setContentType] = useState<ContentType>("all");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchData = async () => {

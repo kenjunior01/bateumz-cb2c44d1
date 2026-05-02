@@ -315,98 +315,114 @@ export default function BusinessProfile() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border/50">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.25) 0, transparent 40%), radial-gradient(circle at 80% 60%, hsl(var(--accent)/0.2) 0, transparent 40%)",
-          }}
-        />
-
-        <div className="container relative mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      {/* Hero - estilo cartão de empresa premium */}
+      <div className="relative">
+        {/* Cover image / gradient */}
+        <div className="relative h-32 sm:h-48 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/80 to-accent" />
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 80%, rgba(255,255,255,0.3) 0, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0, transparent 50%)",
+            }}
+          />
+          {/* Pattern overlay */}
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+            }}
+          />
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={() => navigate("/empresas")}
-            className="mb-4 sm:mb-6"
+            className="absolute top-3 left-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
           </Button>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center gap-5"
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleShare}
+            className="absolute top-3 right-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-accent blur-md opacity-50" />
-              <div className="relative h-full w-full rounded-2xl bg-card border-2 border-primary/30 flex items-center justify-center text-3xl sm:text-4xl font-bold text-primary overflow-hidden shadow-xl">
-                {business.avatar_url ? (
-                  <img
-                    src={business.avatar_url}
-                    alt={displayName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  initial
-                )}
-              </div>
-            </div>
+            <Share2 className="h-3.5 w-3.5" /> Partilhar
+          </Button>
+        </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-3xl font-bold truncate">{displayName}</h1>
+        <div className="container mx-auto max-w-6xl px-4">
+          {/* Avatar overlapping cover */}
+          <div className="-mt-12 sm:-mt-16 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col sm:flex-row sm:items-end gap-4"
+            >
+              <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-accent blur-md opacity-50" />
+                <div className="relative h-full w-full rounded-2xl bg-card border-4 border-background flex items-center justify-center text-3xl sm:text-4xl font-bold text-primary overflow-hidden shadow-2xl">
+                  {business.avatar_url ? (
+                    <img src={business.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    initial
+                  )}
+                </div>
                 {business.is_verified && (
-                  <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/20">
-                    <CheckCircle className="h-3 w-3 mr-1" /> Verificada
-                  </Badge>
+                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary flex items-center justify-center ring-2 ring-background shadow-lg">
+                    <CheckCircle className="h-4 w-4 text-primary-foreground" />
+                  </div>
                 )}
               </div>
-              {business.company_name && business.display_name && (
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                  {business.display_name}
+
+              <div className="flex-1 min-w-0 sm:pb-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-bold truncate">{displayName}</h1>
+                  {business.is_verified && (
+                    <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/20 text-[10px]">
+                      Verificada
+                    </Badge>
+                  )}
+                </div>
+                {business.company_name && business.display_name && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {business.display_name}
+                  </p>
+                )}
+                <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Membro desde{" "}
+                  {business.created_at
+                    ? new Date(business.created_at).toLocaleDateString("pt-MZ", { month: "long", year: "numeric" })
+                    : "—"}
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Membro desde{" "}
-                {business.created_at
-                  ? new Date(business.created_at).toLocaleDateString("pt-MZ", {
-                      month: "long",
-                      year: "numeric",
-                    })
-                  : "—"}
-              </p>
+              </div>
+            </motion.div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-4 sm:mt-6">
+              {[
+                { icon: Ticket, label: "Sorteios", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
+                { icon: Trophy, label: "Concursos", value: stats.contests, color: "text-accent", bg: "bg-accent/10" },
+                { icon: ShoppingBag, label: "Prestações", value: stats.products, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                { icon: TrendingUp, label: "Vendidos", value: stats.totalSold, color: "text-amber-500", bg: "bg-amber-500/10" },
+              ].map((s, i) => (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="rounded-xl border border-border/60 bg-card p-2 sm:p-3 text-center sm:text-left"
+                >
+                  <div className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg ${s.bg} mb-1`}>
+                    <s.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${s.color}`} />
+                  </div>
+                  <p className="font-display text-base sm:text-xl font-bold leading-none">{s.value}</p>
+                  <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-tight mt-0.5">{s.label}</p>
+                </motion.div>
+              ))}
             </div>
-
-            <Button onClick={handleShare} className="sm:self-start gap-2">
-              <Share2 className="h-4 w-4" /> Partilhar perfil
-            </Button>
-          </motion.div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6">
-            {[
-              { icon: Ticket, label: "Sorteios ativos", value: stats.activeRaffles, color: "text-primary" },
-              { icon: Trophy, label: "Concursos", value: stats.contests, color: "text-accent" },
-              { icon: ShoppingBag, label: "Prestações", value: stats.products, color: "text-primary" },
-              { icon: TrendingUp, label: "Bilhetes vendidos", value: stats.totalSold, color: "text-accent" },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i }}
-                className="rounded-xl border border-border/60 bg-card/70 backdrop-blur p-3 sm:p-4"
-              >
-                <s.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${s.color}`} />
-                <p className="font-display text-lg sm:text-2xl font-bold mt-1">{s.value}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">{s.label}</p>
-              </motion.div>
-            ))}
           </div>
         </div>
       </div>

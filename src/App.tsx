@@ -67,6 +67,8 @@ import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
+import MobileTopBar from "./components/MobileTopBar.tsx";
+import BottomTabBar from "./components/BottomTabBar.tsx";
 const queryClient = new QueryClient();
 
 function AnimatedRoutes() {
@@ -182,9 +184,11 @@ const App = () => (
         <Sonner />
         <BackgroundDecorations />
         <BrowserRouter>
+          <MobileTopBar />
           <AnimatedRoutes />
           <MascotBuddy />
           <SupportChatbot />
+          <BottomTabBar />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

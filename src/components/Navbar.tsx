@@ -67,7 +67,7 @@ const Navbar = () => {
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 glass-strong"
+      className="fixed top-0 left-0 right-0 z-50 glass-strong hidden lg:block"
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">

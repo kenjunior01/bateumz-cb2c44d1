@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video } from "lucide-react";
+import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video, X, SlidersHorizontal } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Raffle {
   id: string;
@@ -57,6 +59,8 @@ const Marketplace = () => {
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
   const [contentType, setContentType] = useState<ContentType>("all");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,57 +119,129 @@ const Marketplace = () => {
     completed: { label: "Encerrado", color: "bg-muted text-muted-foreground" },
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-2">Marketplace</h1>
-          <p className="text-muted-foreground text-sm sm:text-lg">Descubra sorteios e concursos incríveis.</p>
-        </motion.div>
+  const activeFilterCount =
+    (typeFilter !== "all" ? 1 : 0) +
+    (contentType !== "all" ? 1 : 0) +
+    (country ? 1 : 0) +
+    (region ? 1 : 0) +
+    (sortBy !== "newest" ? 1 : 0);
 
-        <div className="flex flex-col gap-3 mb-8">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Pesquisar sorteios e concursos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border" />
-            </div>
-            <div className="flex gap-2">
-              {(["newest", "ending", "popular"] as const).map((s) => (
-                <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
-                  {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
-                </Button>
-              ))}
-            </div>
-          </div>
+  const sortLabel = sortBy === "newest" ? "Recentes" : sortBy === "ending" ? "A terminar" : "Populares";
+  const typeLabel = typeFilter === "all" ? null : typeFilter === "paid" ? "Pagos" : typeFilter === "free" ? "Gratuitos" : "Pontos";
+  const contentLabel = contentType === "all" ? null : contentType === "raffles" ? "Sorteios" : "Concursos";
 
-          {/* Content type filter */}
+  const FiltersBody = () => (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tipo de conteúdo</p>
+        <div className="flex flex-wrap gap-2">
+          {([
+            { value: "all" as ContentType, label: "🔥 Tudo" },
+            { value: "raffles" as ContentType, label: "🎟️ Sorteios" },
+            { value: "contests" as ContentType, label: "🏆 Concursos" },
+          ]).map((t) => (
+            <Button key={t.value} variant={contentType === t.value ? "default" : "outline"} size="sm" onClick={() => setContentType(t.value)}>
+              {t.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar</p>
+        <div className="flex flex-wrap gap-2">
+          {(["newest", "ending", "popular"] as const).map((s) => (
+            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
+              {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {showRaffles && (
+        <div>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidade de sorteio</p>
           <div className="flex flex-wrap gap-2">
-            {([
-              { value: "all" as ContentType, label: "🔥 Tudo", icon: null },
-              { value: "raffles" as ContentType, label: "🎟️ Sorteios", icon: null },
-              { value: "contests" as ContentType, label: "🏆 Concursos", icon: null },
-            ]).map((t) => (
-              <Button key={t.value} variant={contentType === t.value ? "default" : "outline"} size="sm" onClick={() => setContentType(t.value)}>
-                {t.label}
+            {(["all", "paid", "free", "points"] as const).map((t) => (
+              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
+                {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
             ))}
           </div>
+        </div>
+      )}
+      <div>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Região</p>
+        <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
+      </div>
+    </div>
+  );
 
-          {/* Country / Region filter */}
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center gap-2">
-            <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
-          </motion.div>
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto px-4 pt-4 lg:pt-28 pb-20">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-4 sm:mb-10">
+          <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-1 sm:mb-2">Marketplace</h1>
+          <p className="text-muted-foreground text-xs sm:text-lg">Descubra sorteios e concursos incríveis.</p>
+        </motion.div>
 
-          {/* Raffle sub-filters */}
-          {showRaffles && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex flex-wrap gap-2">
-              {(["all", "paid", "free", "points"] as const).map((t) => (
-                <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
-                  {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
+        {/* Search + Filter button */}
+        <div className="flex flex-col gap-3 mb-5 sm:mb-8">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Pesquisar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border h-10" />
+            </div>
+            <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 gap-1.5 shrink-0 relative">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filtros</span>
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </Button>
-              ))}
-            </motion.div>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+                <SheetHeader>
+                  <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-border" />
+                  <SheetTitle className="text-left flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-primary" /> Filtros
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="py-4">
+                  <FiltersBody />
+                </div>
+                <div className="sticky bottom-0 bg-background pt-3 pb-2 flex gap-2 border-t border-border">
+                  <Button variant="outline" className="flex-1" onClick={() => {
+                    setTypeFilter("all"); setContentType("all"); setCountry(""); setRegion(""); setSortBy("newest");
+                  }}>Limpar</Button>
+                  <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>Aplicar</Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Active filters chips */}
+          {activeFilterCount > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {contentLabel && (
+                <Chip onRemove={() => setContentType("all")}>{contentLabel}</Chip>
+              )}
+              {typeLabel && (
+                <Chip onRemove={() => setTypeFilter("all")}>{typeLabel}</Chip>
+              )}
+              {sortBy !== "newest" && (
+                <Chip onRemove={() => setSortBy("newest")}>{sortLabel}</Chip>
+              )}
+              {region && (
+                <Chip onRemove={() => setRegion("")}>{PROVINCES.find(p => p.value === region)?.label || region}</Chip>
+              )}
+              {country && !region && (
+                <Chip onRemove={() => setCountry("")}>{country.toUpperCase()}</Chip>
+              )}
+            </div>
           )}
         </div>
 
@@ -338,5 +414,15 @@ const Marketplace = () => {
     </div>
   );
 };
+
+const Chip = ({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) => (
+  <button
+    onClick={onRemove}
+    className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 transition-colors"
+  >
+    {children}
+    <X className="h-3 w-3" />
+  </button>
+);
 
 export default Marketplace;

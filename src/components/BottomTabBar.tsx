@@ -120,10 +120,10 @@ const BottomTabBar = () => {
                   <button
                     key={tab.label}
                     onClick={() => setContestsOpen(true)}
-                    className="relative flex flex-col items-center gap-0.5 py-1.5 min-h-[52px]"
+                    className="relative flex flex-col items-center gap-1 py-2 min-h-[56px]"
                   >
-                    <tab.icon className="h-[22px] w-[22px] text-muted-foreground" />
-                    <span className="text-[10px] font-medium text-muted-foreground">{tab.label}</span>
+                    <tab.icon className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-[11px] font-medium text-muted-foreground">{tab.label}</span>
                   </button>
                 );
               }
@@ -133,7 +133,7 @@ const BottomTabBar = () => {
                 <Link
                   key={tab.label}
                   to={tab.href}
-                  className="relative flex flex-col items-center gap-0.5 py-1.5 min-h-[52px]"
+                  className="relative flex flex-col items-center gap-1 py-2 min-h-[56px]"
                 >
                   {active && (
                     <motion.div
@@ -142,8 +142,8 @@ const BottomTabBar = () => {
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
-                  <tab.icon className={`h-[22px] w-[22px] transition-colors ${active ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className={`text-[10px] font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+                  <tab.icon className={`h-6 w-6 transition-colors ${active ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-[11px] font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
                     {tab.label}
                   </span>
                 </Link>

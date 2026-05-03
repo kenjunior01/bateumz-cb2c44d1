@@ -115,17 +115,40 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20">
+      <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Meus Luck Points</h1>
-          <p className="text-muted-foreground">Acumule pontos, suba de nível e resgate recompensas exclusivas.</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5 lg:mb-10">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">Meus Luck Points</h1>
+          <p className="text-sm text-muted-foreground">Acumule pontos, suba de nível e resgate recompensas exclusivas.</p>
         </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
+        {/* Hero Pontos card mobile */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-4 lg:hidden">
+          <Card className="glass border-primary/30 bg-gradient-to-br from-primary/15 via-card to-accent/10 overflow-hidden relative">
+            <CardContent className="p-4 relative z-10">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20">
+                  <Star className="h-6 w-6 text-primary fill-primary/40" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Total de Pontos</p>
+                  <p className="font-display text-3xl font-bold text-foreground leading-none mt-0.5">{totalPoints.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-muted-foreground">Nível</p>
+                  <p className="font-display text-2xl font-bold text-accent leading-none">{level}</p>
+                </div>
+              </div>
+              <Progress value={progressToNext} className="h-2" />
+              <p className="text-[11px] text-muted-foreground mt-1.5">{500 - (totalPoints % 500)} pts para o próximo nível</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Stats Cards desktop */}
+        <div className="hidden lg:grid gap-4 md:grid-cols-3 mb-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="glass border-primary/20 glow-primary">
               <CardContent className="flex items-center gap-4 p-6">
@@ -166,6 +189,28 @@ const UserDashboard = () => {
               </CardContent>
             </Card>
           </motion.div>
+        </div>
+
+        {/* Mini stats mobile */}
+        <div className="grid grid-cols-2 gap-2 mb-4 lg:hidden">
+          <Card className="glass">
+            <CardContent className="p-3 flex items-center gap-2.5">
+              <Gift className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Resgatadas</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">{redeemed.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass">
+            <CardContent className="p-3 flex items-center gap-2.5">
+              <History className="h-5 w-5 text-accent" />
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Histórico</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">{history.length}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tabs */}

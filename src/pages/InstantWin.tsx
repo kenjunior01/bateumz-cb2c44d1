@@ -245,20 +245,20 @@ const InstantWin = () => {
   const [scratchKey, setScratchKey] = useState(0);
 
   return (
-    <div className="min-h-screen bg-background pb-16 lg:pb-0">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
 
-      <section className="container mx-auto px-4 py-8">
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <Sparkles className="h-4 w-4" />
+      <section className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-5 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium mb-3">
+            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Ganho Instantâneo
           </div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1.5">
             Tente a Sua <span className="text-primary">Sorte!</span>
           </h1>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto">
-            Raspe a raspadinha ou gire a roda da sorte para ganhar pontos, bilhetes e prémios instantâneos!
+          <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto px-2">
+            Raspe a raspadinha ou gire a roda para ganhar pontos, bilhetes e prémios instantâneos!
           </p>
         </motion.div>
 

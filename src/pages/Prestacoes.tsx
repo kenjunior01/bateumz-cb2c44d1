@@ -341,7 +341,7 @@ export default function Prestacoes() {
 
         {/* Simulator */}
         <section id="simulador" className="mt-16 scroll-mt-24">
-          <div className="rounded-3xl border border-border bg-card p-6 md:p-10">
+          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6 md:p-10">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <Calculator className="h-6 w-6" />
@@ -518,7 +518,7 @@ export default function Prestacoes() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="rounded-3xl border border-border bg-card p-6 md:p-10"
+            className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6 md:p-10"
           >
             <div className="grid gap-8 md:grid-cols-2 md:items-start">
               <div>

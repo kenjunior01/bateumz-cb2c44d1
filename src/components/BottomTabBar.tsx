@@ -228,14 +228,14 @@ const BottomTabBar = () => {
                       onClick={() => goOrAuth(item.href)}
                       className="relative flex flex-col items-center gap-1.5 rounded-2xl bg-card border border-border/60 p-2.5 hover:border-primary/40 active:bg-secondary/40 transition-colors"
                     >
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.grad} shadow-md`}>
-                        <item.icon className="h-5 w-5 text-white" strokeWidth={2.2} />
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${item.grad} shadow-md`}>
+                        <item.icon className="h-6 w-6 text-white" strokeWidth={2.2} />
                       </div>
-                      <span className="text-[10.5px] font-semibold leading-tight text-center line-clamp-2 px-0.5">
+                      <span className="text-[11.5px] font-semibold leading-tight text-center line-clamp-2 px-0.5">
                         {item.label}
                       </span>
                       {item.badge && (
-                        <span className="absolute -top-1 -right-1 rounded-full bg-accent px-1.5 py-0.5 text-[8px] font-bold uppercase text-accent-foreground shadow">
+                        <span className="absolute -top-1 -right-1 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase text-accent-foreground shadow">
                           {item.badge}
                         </span>
                       )}

@@ -81,11 +81,11 @@ export default function MyTickets() {
   const activeCount = tickets.filter((t) => t.status === "active" && t.raffles?.status === "active").length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20">
+      <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
         {(!online || fromCache) && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
             <WifiOff className="h-3.5 w-3.5 shrink-0 text-accent" />
             <span>
               {online
@@ -94,49 +94,49 @@ export default function MyTickets() {
             </span>
           </div>
         )}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Meus Bilhetes</h1>
-          <p className="text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">Meus Bilhetes</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-3 mb-8">
+        {/* Stats compact horizontal */}
+        <div className="grid gap-2 grid-cols-3 mb-5">
           <Card className="glass">
-            <CardContent className="p-4 text-center">
-              <Ticket className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">{tickets.length}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
+            <CardContent className="p-3 text-center">
+              <Ticket className="h-5 w-5 text-primary mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-foreground leading-none">{tickets.length}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Total</p>
             </CardContent>
           </Card>
           <Card className="glass">
-            <CardContent className="p-4 text-center">
-              <Clock className="h-6 w-6 text-accent mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">{activeCount}</p>
-              <p className="text-xs text-muted-foreground">Ativos</p>
+            <CardContent className="p-3 text-center">
+              <Clock className="h-5 w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-foreground leading-none">{activeCount}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Ativos</p>
             </CardContent>
           </Card>
           <Card className="glass border-accent/20">
-            <CardContent className="p-4 text-center">
-              <Trophy className="h-6 w-6 text-accent mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-accent">{winCount}</p>
-              <p className="text-xs text-muted-foreground">Vitórias</p>
+            <CardContent className="p-3 text-center">
+              <Trophy className="h-5 w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-accent leading-none">{winCount}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Vitórias</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 mb-6">
+        {/* Filter tabs - sticky */}
+        <div className="sticky top-12 lg:top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-background/85 backdrop-blur-xl mb-3 flex gap-2 overflow-x-auto no-scrollbar">
           {[
-            { value: "all" as const, label: "Todos" },
-            { value: "active" as const, label: "Ativos" },
-            { value: "winner" as const, label: "Vitórias" },
+            { value: "all" as const, label: `Todos (${tickets.length})` },
+            { value: "active" as const, label: `Ativos (${activeCount})` },
+            { value: "winner" as const, label: `Vitórias (${winCount})` },
           ].map((tab) => (
             <button
               key={tab.value}
               onClick={() => setFilter(tab.value)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
                 filter === tab.value
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >

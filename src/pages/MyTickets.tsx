@@ -147,8 +147,18 @@ export default function MyTickets() {
 
         {/* Tickets list */}
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="space-y-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="glass">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-14 w-14 rounded-xl bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-muted/70 animate-pulse" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">

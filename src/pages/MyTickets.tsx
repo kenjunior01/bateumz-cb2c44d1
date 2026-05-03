@@ -81,11 +81,11 @@ export default function MyTickets() {
   const activeCount = tickets.filter((t) => t.status === "active" && t.raffles?.status === "active").length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20">
+      <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
         {(!online || fromCache) && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
             <WifiOff className="h-3.5 w-3.5 shrink-0 text-accent" />
             <span>
               {online
@@ -94,49 +94,49 @@ export default function MyTickets() {
             </span>
           </div>
         )}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Meus Bilhetes</h1>
-          <p className="text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">Meus Bilhetes</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-3 mb-8">
+        {/* Stats compact horizontal */}
+        <div className="grid gap-2 grid-cols-3 mb-5">
           <Card className="glass">
-            <CardContent className="p-4 text-center">
-              <Ticket className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">{tickets.length}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
+            <CardContent className="p-3 text-center">
+              <Ticket className="h-5 w-5 text-primary mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-foreground leading-none">{tickets.length}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Total</p>
             </CardContent>
           </Card>
           <Card className="glass">
-            <CardContent className="p-4 text-center">
-              <Clock className="h-6 w-6 text-accent mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">{activeCount}</p>
-              <p className="text-xs text-muted-foreground">Ativos</p>
+            <CardContent className="p-3 text-center">
+              <Clock className="h-5 w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-foreground leading-none">{activeCount}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Ativos</p>
             </CardContent>
           </Card>
           <Card className="glass border-accent/20">
-            <CardContent className="p-4 text-center">
-              <Trophy className="h-6 w-6 text-accent mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-accent">{winCount}</p>
-              <p className="text-xs text-muted-foreground">Vitórias</p>
+            <CardContent className="p-3 text-center">
+              <Trophy className="h-5 w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-xl font-bold text-accent leading-none">{winCount}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Vitórias</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 mb-6">
+        {/* Filter tabs - sticky */}
+        <div className="sticky top-12 lg:top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-background/85 backdrop-blur-xl mb-3 flex gap-2 overflow-x-auto no-scrollbar">
           {[
-            { value: "all" as const, label: "Todos" },
-            { value: "active" as const, label: "Ativos" },
-            { value: "winner" as const, label: "Vitórias" },
+            { value: "all" as const, label: `Todos (${tickets.length})` },
+            { value: "active" as const, label: `Ativos (${activeCount})` },
+            { value: "winner" as const, label: `Vitórias (${winCount})` },
           ].map((tab) => (
             <button
               key={tab.value}
               onClick={() => setFilter(tab.value)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
                 filter === tab.value
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -147,8 +147,18 @@ export default function MyTickets() {
 
         {/* Tickets list */}
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="space-y-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="glass">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-14 w-14 rounded-xl bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-muted/70 animate-pulse" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -174,44 +184,44 @@ export default function MyTickets() {
                   transition={{ delay: i * 0.03 }}
                 >
                   <Card className={`glass ${isWinner ? "border-accent/40 glow-accent" : ""}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3">
                         {raffle?.image_url ? (
                           <img
                             src={raffle.image_url}
                             alt={raffle.title}
-                            className="h-14 w-14 rounded-xl object-cover shrink-0"
+                            className="h-14 w-14 sm:h-16 sm:w-16 rounded-xl object-cover shrink-0"
                           />
                         ) : (
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary">
+                          <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-xl bg-secondary">
                             <Ticket className="h-6 w-6 text-muted-foreground" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-foreground truncate">{raffle?.title || "Sorteio"}</p>
-                            <Badge variant="outline" className={st.color}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-sm sm:text-base text-foreground truncate flex-1 min-w-0">{raffle?.title || "Sorteio"}</p>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${st.color}`}>
                               {st.label}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Bilhete #{ticket.ticket_number}</span>
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] sm:text-xs text-muted-foreground flex-wrap">
+                            <span className="font-mono">#{ticket.ticket_number}</span>
                             <span>·</span>
                             <span>{formatMZN(Number(raffle?.ticket_price || 0))}</span>
-                            <span>·</span>
-                            <Badge variant="outline" className={`text-[10px] ${ps.color}`}>
+                            <Badge variant="outline" className={`text-[9px] px-1 py-0 ${ps.color}`}>
                               {ps.label}
                             </Badge>
                           </div>
                           {raffle?.prize_title && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Prémio: {raffle.prize_title}
+                            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+                              🏆 {raffle.prize_title}
                             </p>
                           )}
                         </div>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => navigate(`/raffle/${raffle?.slug || ticket.raffle_id}`)}
                         >
                           <Eye className="h-4 w-4" />

@@ -153,43 +153,53 @@ export default function Contests() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 pt-24 pb-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }}>
-            <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />
+      <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-24 pb-10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-5 lg:mb-10">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }} className="inline-flex">
+            <Trophy className="h-8 w-8 lg:h-12 lg:w-12 text-primary mx-auto mb-2 lg:mb-3" />
           </motion.div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2">Concursos</h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Participe nos concursos, mostre o seu talento e ganhe prémios incríveis!
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-foreground mb-1">Concursos</h1>
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto px-2">
+            Participe, mostre o seu talento e ganhe prémios incríveis!
           </p>
         </motion.div>
 
-        {/* Search + Country/Region */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="max-w-3xl mx-auto mb-8 flex flex-col sm:flex-row gap-3 items-stretch">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar concursos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass" />
+        {/* Search + Country/Region - sticky on mobile */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="sticky top-12 lg:top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-background/85 backdrop-blur-xl mb-4 max-w-3xl mx-auto">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Pesquisar concursos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10 glass" />
+            </div>
+            <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} compact />
           </div>
-          <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
         </motion.div>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="aspect-[3/2] bg-muted animate-pulse" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+                  <div className="h-3 w-1/2 rounded bg-muted/70 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="active" className="gap-1"><Flame className="h-3 w-3" /> Ativos ({active.length})</TabsTrigger>
-              <TabsTrigger value="past" className="gap-1"><Trophy className="h-3 w-3" /> Encerrados ({past.length})</TabsTrigger>
+            <TabsList className="mb-4 lg:mb-6">
+              <TabsTrigger value="active" className="gap-1 text-xs sm:text-sm"><Flame className="h-3 w-3" /> Ativos ({active.length})</TabsTrigger>
+              <TabsTrigger value="past" className="gap-1 text-xs sm:text-sm"><Trophy className="h-3 w-3" /> Encerrados ({past.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="active">
               {active.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 glass rounded-2xl">
-                  <Trophy className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-lg text-muted-foreground">Nenhum concurso ativo de momento.</p>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 glass rounded-2xl">
+                  <Trophy className="h-14 w-14 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-base text-muted-foreground">Nenhum concurso ativo de momento.</p>
                 </motion.div>
               ) : (
                 <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3">
@@ -199,9 +209,9 @@ export default function Contests() {
             </TabsContent>
             <TabsContent value="past">
               {past.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 glass rounded-2xl">
-                  <Trophy className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-lg text-muted-foreground">Nenhum concurso encerrado.</p>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 glass rounded-2xl">
+                  <Trophy className="h-14 w-14 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-base text-muted-foreground">Nenhum concurso encerrado.</p>
                 </motion.div>
               ) : (
                 <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3">

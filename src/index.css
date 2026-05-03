@@ -205,3 +205,8 @@
   background: hsl(var(--muted));
   border-radius: 3px;
 }
+
+/* Utilities */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }

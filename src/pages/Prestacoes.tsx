@@ -246,25 +246,37 @@ export default function Prestacoes() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 pb-32 lg:pb-16">
+      <main className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-24 pb-24 lg:pb-16">
         {/* Hero */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mx-auto max-w-3xl text-center"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
-            <Sparkles className="h-3.5 w-3.5" /> EM BREVE • LISTA DE ESPERA ABERTA
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] sm:text-xs font-semibold text-accent">
+            <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> EM BREVE • LISTA DE ESPERA ABERTA
           </div>
-          <h1 className="mt-5 sm:mt-6 font-display text-3xl sm:text-4xl font-bold text-foreground md:text-6xl leading-tight">
+          <h1 className="mt-3 sm:mt-6 font-display text-2xl sm:text-4xl font-bold text-foreground md:text-6xl leading-tight">
             Vendas a <span className="text-accent">Prestações</span>
           </h1>
-          <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground">
-            Compre viaturas, imóveis e eletrónicos com pagamento facilitado em até 60 prestações,
-            diretamente das melhores empresas de Moçambique.
+          <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground px-2">
+            Compre viaturas, imóveis e eletrónicos em até 60 prestações,
+            das melhores empresas de Moçambique.
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-2">
+          {/* Quick CTAs - mobile prominent */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:hidden">
+            <a href="/prestacoes/catalogo">
+              <Button className="w-full gap-1 h-11 text-sm">
+                Ver catálogo <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </a>
+            <Button variant="outline" onClick={() => scrollToId("simulador")} className="w-full gap-1 h-11 text-sm">
+              <Calculator className="h-3.5 w-3.5" /> Simular
+            </Button>
+          </div>
+
+          <div className="mt-6 hidden sm:flex flex-wrap justify-center gap-2">
             {sections.map((s) => (
               <button
                 key={s.id}
@@ -276,7 +288,7 @@ export default function Prestacoes() {
             ))}
           </div>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-4 sm:mt-6 hidden sm:flex flex-wrap justify-center gap-3">
             <a href="/prestacoes/catalogo">
               <Button className="gap-2">
                 Ver catálogo de produtos <ArrowRight className="h-4 w-4" />
@@ -292,39 +304,36 @@ export default function Prestacoes() {
         </motion.section>
 
         {/* Categories */}
-        <section id="categorias" className="mt-16 scroll-mt-24">
-          <div className="mb-6 flex items-end justify-between">
-            <h2 className="font-display text-2xl font-bold text-foreground md:text-3xl">Categorias disponíveis</h2>
+        <section id="categorias" className="mt-8 sm:mt-16 scroll-mt-24">
+          <div className="mb-3 sm:mb-6 flex items-end justify-between">
+            <h2 className="font-display text-lg sm:text-2xl font-bold text-foreground md:text-3xl">Categorias</h2>
             <button
               onClick={() => scrollToId("simulador")}
-              className="hidden text-sm font-medium text-primary hover:underline md:inline-flex"
+              className="text-xs sm:text-sm font-medium text-primary hover:underline"
             >
-              Simular agora →
+              Simular →
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-4">
             {categories.map((cat, i) => (
               <motion.button
                 key={cat.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
+                transition={{ delay: i * 0.06 }}
                 onClick={() => {
                   handleCategoryChange(cat.id);
                   scrollToId("simulador");
                 }}
-                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${cat.color} p-6 text-left transition-all hover:scale-[1.02] hover:border-primary/50`}
+                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${cat.color} p-3 sm:p-6 text-left transition-all hover:scale-[1.02] hover:border-primary/50`}
               >
-                <cat.icon className="h-10 w-10 text-foreground" />
-                <p className="mt-3 font-display text-lg font-semibold text-foreground">{cat.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{cat.desc}</p>
-                <p className="mt-2 text-[11px] font-medium text-primary">
-                  {(cat.bestRate * 100).toFixed(1)}–{(cat.baseRate * 100).toFixed(1)}% / ano · até {cat.maxMonths}m
+                <cat.icon className="h-7 w-7 sm:h-10 sm:w-10 text-foreground" />
+                <p className="mt-2 sm:mt-3 font-display text-sm sm:text-lg font-semibold text-foreground">{cat.label}</p>
+                <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-muted-foreground line-clamp-2">{cat.desc}</p>
+                <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] font-medium text-primary">
+                  {(cat.bestRate * 100).toFixed(1)}–{(cat.baseRate * 100).toFixed(1)}%/ano · {cat.maxMonths}m
                 </p>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Simular <ArrowRight className="h-3 w-3" />
-                </span>
               </motion.button>
             ))}
           </div>
@@ -332,7 +341,7 @@ export default function Prestacoes() {
 
         {/* Simulator */}
         <section id="simulador" className="mt-16 scroll-mt-24">
-          <div className="rounded-3xl border border-border bg-card p-6 md:p-10">
+          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6 md:p-10">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <Calculator className="h-6 w-6" />
@@ -509,7 +518,7 @@ export default function Prestacoes() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="rounded-3xl border border-border bg-card p-6 md:p-10"
+            className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6 md:p-10"
           >
             <div className="grid gap-8 md:grid-cols-2 md:items-start">
               <div>

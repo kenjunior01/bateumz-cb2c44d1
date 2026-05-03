@@ -61,35 +61,35 @@ export default function DashboardOverview() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Painel Geral</h1>
-          <p className="text-sm text-muted-foreground">Visão geral da sua plataforma de sorteios</p>
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">Painel Geral</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Visão geral da sua plataforma</p>
         </div>
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           onClick={() => navigate("/dashboard/raffles/create")}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary">
-          <Plus className="h-4 w-4" /> Novo Sorteio
+          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary shadow-md">
+          <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo Sorteio</span><span className="sm:hidden">Novo</span>
         </motion.button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2.5 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
-          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <Card className="glass border-glass-border">
-              <CardContent className="p-5">
+          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+            <Card className="glass border-glass-border h-full">
+              <CardContent className="p-3 sm:p-5">
                 <div className="flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <stat.icon className="h-5 w-5" />
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <stat.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <span className={`flex items-center gap-1 text-xs font-medium ${stat.up ? "text-primary" : "text-destructive"}`}>
+                  <span className={`flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${stat.up ? "text-primary" : "text-destructive"}`}>
                     {stat.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                     {stat.change}
                   </span>
                 </div>
-                <p className="mt-3 font-display text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="mt-2 sm:mt-3 font-display text-lg sm:text-2xl font-bold text-foreground leading-tight truncate">{stat.value}</p>
+                <p className="text-[10.5px] sm:text-xs text-muted-foreground">{stat.label}</p>
               </CardContent>
             </Card>
           </motion.div>

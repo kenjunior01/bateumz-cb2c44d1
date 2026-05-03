@@ -184,44 +184,44 @@ export default function MyTickets() {
                   transition={{ delay: i * 0.03 }}
                 >
                   <Card className={`glass ${isWinner ? "border-accent/40 glow-accent" : ""}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3">
                         {raffle?.image_url ? (
                           <img
                             src={raffle.image_url}
                             alt={raffle.title}
-                            className="h-14 w-14 rounded-xl object-cover shrink-0"
+                            className="h-14 w-14 sm:h-16 sm:w-16 rounded-xl object-cover shrink-0"
                           />
                         ) : (
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary">
+                          <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-xl bg-secondary">
                             <Ticket className="h-6 w-6 text-muted-foreground" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-foreground truncate">{raffle?.title || "Sorteio"}</p>
-                            <Badge variant="outline" className={st.color}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-sm sm:text-base text-foreground truncate flex-1 min-w-0">{raffle?.title || "Sorteio"}</p>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${st.color}`}>
                               {st.label}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Bilhete #{ticket.ticket_number}</span>
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] sm:text-xs text-muted-foreground flex-wrap">
+                            <span className="font-mono">#{ticket.ticket_number}</span>
                             <span>·</span>
                             <span>{formatMZN(Number(raffle?.ticket_price || 0))}</span>
-                            <span>·</span>
-                            <Badge variant="outline" className={`text-[10px] ${ps.color}`}>
+                            <Badge variant="outline" className={`text-[9px] px-1 py-0 ${ps.color}`}>
                               {ps.label}
                             </Badge>
                           </div>
                           {raffle?.prize_title && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Prémio: {raffle.prize_title}
+                            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+                              🏆 {raffle.prize_title}
                             </p>
                           )}
                         </div>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => navigate(`/raffle/${raffle?.slug || ticket.raffle_id}`)}
                         >
                           <Eye className="h-4 w-4" />

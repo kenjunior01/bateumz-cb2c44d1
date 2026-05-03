@@ -34,7 +34,7 @@ const ACTION_GROUPS: { title: string; items: ActionItem[] }[] = [
     items: [
       { icon: Building2, label: "Diretório", href: "/empresas", grad: "from-blue-500 to-cyan-500" },
       { icon: Calendar, label: "Prestações", href: "/prestacoes/catalogo", grad: "from-rose-500 to-pink-500", badge: "Novo" },
-      { icon: Gift, label: "Criar Sorteio", href: "/dashboard/raffles/new", grad: "from-yellow-500 to-amber-500" },
+      { icon: Gift, label: "Criar Sorteio", href: "/dashboard/raffles/create", grad: "from-yellow-500 to-amber-500" },
     ],
   },
   {

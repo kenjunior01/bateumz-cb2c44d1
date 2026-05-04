@@ -42,7 +42,7 @@ const Index = () => {
       <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
       <section className="container mx-auto px-4 -mt-2 mb-2">
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">🌍 Filtrar por região:</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("cat.filterByRegion")}</span>
           <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} compact />
         </div>
       </section>

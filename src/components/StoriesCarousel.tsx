@@ -237,26 +237,12 @@ const StoriesCarousel = () => {
                   className="flex flex-col items-center gap-1.5 shrink-0 snap-start group"
                 >
                   <div className="relative">
-                    {/* Animated rotating gradient ring (unviewed only) */}
+                    {/* Static gradient ring (no infinite rotation = stable on mobile) */}
                     {!viewed && (
-                      <motion.div
-                        className={`absolute inset-0 rounded-full bg-gradient-to-tr ${typeRing[story.type]} blur-[1px]`}
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                      />
+                      <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${typeRing[story.type]}`} />
                     )}
-                    {/* Static viewed ring */}
                     {viewed && (
                       <div className="absolute inset-0 rounded-full bg-muted-foreground/30" />
-                    )}
-
-                    {/* Pulse halo for hot stories */}
-                    {!viewed && story.type === "hot" && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-orange-500/40"
-                        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
-                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                      />
                     )}
 
                     <div className="relative h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full p-[3px]">
@@ -334,40 +320,9 @@ const StoriesCarousel = () => {
                 if (activeStory.link) navigate(activeStory.link);
               }}
             >
-              {/* Animated mesh background */}
-              <motion.div
-                className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl"
-                animate={{ x: [0, 40, 0], y: [0, 30, 0] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <motion.div
-                className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-black/30 blur-3xl"
-                animate={{ x: [0, -40, 0], y: [0, -30, 0] }}
-                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-              />
-
-              {/* Floating sparkle particles */}
-              {Array.from({ length: 12 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute h-1.5 w-1.5 rounded-full bg-white/80"
-                  initial={{
-                    x: (Math.random() - 0.5) * 300,
-                    y: 200,
-                    opacity: 0,
-                  }}
-                  animate={{
-                    y: -300,
-                    opacity: [0, 1, 1, 0],
-                  }}
-                  transition={{
-                    duration: 4 + Math.random() * 3,
-                    repeat: Infinity,
-                    delay: i * 0.4,
-                    ease: "easeOut",
-                  }}
-                />
-              ))}
+              {/* Static decorative blobs (no parallax loop = stable) */}
+              <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-black/30 blur-3xl pointer-events-none" />
 
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
 

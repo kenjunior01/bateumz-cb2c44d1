@@ -1,7 +1,11 @@
 // Stores user payment preferences locally for "1-Click Buy" flow.
 // Nothing sensitive — only the chosen method label and phone hint.
 
-export type StoredMethod = "mpesa" | "emola" | "card";
+export type StoredMethod =
+  | "mpesa" | "emola" | "card"
+  | "multicaixa" | "unitelMoney" | "africellMoney" | "baiTransfer" | "bfaTransfer"
+  | "pix" | "boleto" | "cardBR"
+  | "paypal";
 
 const KEY = "bateu_oneclick_v1";
 

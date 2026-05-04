@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import StatsBar from "@/components/StatsBar";
@@ -24,6 +25,7 @@ import LiveTicker from "@/components/LiveTicker";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState("todos");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");

@@ -210,3 +210,21 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Respect user OS preference: kill heavy infinite animations & parallax for stability */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobile stability: tone down infinite shimmer/pulse on small screens to reduce visual fatigue */
+@media (max-width: 640px) {
+  .shimmer::after { animation-duration: 4s; }
+  .animate-pulse-soft { animation-duration: 3.6s; }
+  .animate-float-soft { animation-duration: 6s; }
+}
+

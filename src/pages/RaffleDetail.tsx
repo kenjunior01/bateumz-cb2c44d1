@@ -52,15 +52,37 @@ interface WhiteLabelConfig {
   emola_number: string | null;
 }
 
-type PaymentMethod = "mpesa" | "emola" | "card";
+type PaymentMethod =
+  | "mpesa" | "emola" | "card"
+  | "multicaixa" | "unitelMoney" | "africellMoney" | "baiTransfer" | "bfaTransfer"
+  | "pix" | "boleto" | "cardBR"
+  | "paypal";
 
-const paymentMethods: { id: PaymentMethod; label: string; icon: typeof Smartphone; desc: string; emoji: string }[] = [
-  { id: "mpesa", label: "M-Pesa", icon: Smartphone, desc: "Pagamento via M-Pesa", emoji: "📱" },
-  { id: "emola", label: "e-Mola", icon: Wallet, desc: "Pagamento via e-Mola", emoji: "💳" },
-  { id: "card", label: "Cartão", icon: CreditCard, desc: "Visa / Mastercard", emoji: "💎" },
+const paymentMethods: { id: PaymentMethod; labelKey: string; descKey: string; emoji: string; group: "MZ" | "AO" | "BR" | "INT" }[] = [
+  // 🇲🇿 Moçambique
+  { id: "mpesa",         labelKey: "pay.method.mpesa",         descKey: "pay.method.mpesa.desc",         emoji: "📱", group: "MZ" },
+  { id: "emola",         labelKey: "pay.method.emola",         descKey: "pay.method.emola.desc",         emoji: "💳", group: "MZ" },
+  { id: "card",          labelKey: "pay.method.card",          descKey: "pay.method.card.desc",          emoji: "💎", group: "MZ" },
+  // 🇦🇴 Angola
+  { id: "multicaixa",    labelKey: "pay.method.multicaixa",    descKey: "pay.method.multicaixa.desc",    emoji: "🅼", group: "AO" },
+  { id: "unitelMoney",   labelKey: "pay.method.unitelMoney",   descKey: "pay.method.unitelMoney.desc",   emoji: "📲", group: "AO" },
+  { id: "africellMoney", labelKey: "pay.method.africellMoney", descKey: "pay.method.africellMoney.desc", emoji: "💜", group: "AO" },
+  { id: "baiTransfer",   labelKey: "pay.method.baiTransfer",   descKey: "pay.method.baiTransfer.desc",   emoji: "🏦", group: "AO" },
+  { id: "bfaTransfer",   labelKey: "pay.method.bfaTransfer",   descKey: "pay.method.bfaTransfer.desc",   emoji: "🏛️", group: "AO" },
+  // 🇧🇷 Brasil
+  { id: "pix",           labelKey: "pay.method.pix",           descKey: "pay.method.pix.desc",           emoji: "⚡", group: "BR" },
+  { id: "boleto",        labelKey: "pay.method.boleto",        descKey: "pay.method.boleto.desc",        emoji: "🧾", group: "BR" },
+  { id: "cardBR",        labelKey: "pay.method.cardBR",        descKey: "pay.method.cardBR.desc",        emoji: "💳", group: "BR" },
+  // 🌍 Internacional
+  { id: "paypal",        labelKey: "pay.method.paypal",        descKey: "pay.method.paypal.desc",        emoji: "🅿️", group: "INT" },
 ];
 
-const stepLabels = ["Pagamento", "Comprovativo", "Confirmar"];
+const groupLabels: Record<"MZ" | "AO" | "BR" | "INT", string> = {
+  MZ: "🇲🇿 Moçambique",
+  AO: "🇦🇴 Angola",
+  BR: "🇧🇷 Brasil",
+  INT: "🌍 Internacional",
+};
 
 const slideVariants = {
   enter: (direction: number) => ({ x: direction > 0 ? 120 : -120, opacity: 0, scale: 0.95 }),

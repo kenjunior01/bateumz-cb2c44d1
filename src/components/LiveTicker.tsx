@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Trophy, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TickerItem {
   id: string;
@@ -11,7 +12,7 @@ interface TickerItem {
 
 const LiveTicker = () => {
   const [items, setItems] = useState<TickerItem[]>([]);
-
+  const { t } = useLanguage();
   useEffect(() => {
     const load = async () => {
       const { data: parts } = await supabase
@@ -50,17 +51,14 @@ const LiveTicker = () => {
     <div className="w-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-y border-border/60 overflow-hidden">
       <div className="container mx-auto px-3 py-1.5 flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
-          Ao vivo
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          {t("ticker.live")}
         </div>
         <div className="flex-1 overflow-hidden relative">
           <motion.div
-            className="flex gap-8 whitespace-nowrap text-xs text-foreground/80"
+            className="flex gap-8 whitespace-nowrap text-xs text-foreground/80 motion-reduce:!transform-none"
             animate={{ x: ["0%", "-50%"] }}
-            transition={{ duration: items.length * 4, ease: "linear", repeat: Infinity }}
+            transition={{ duration: items.length * 8, ease: "linear", repeat: Infinity }}
           >
             {loop.map((it, i) => (
               <span key={`${it.id}-${i}`} className="flex items-center gap-1.5">

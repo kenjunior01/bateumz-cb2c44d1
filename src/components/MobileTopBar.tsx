@@ -44,11 +44,7 @@ const MobileTopBar = () => {
   }, [user]);
 
   return (
-    <motion.header
-      initial={{ y: -10, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="lg:hidden sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/40"
-    >
+    <header className="lg:hidden sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/40">
       <div className="flex items-center justify-between px-3 py-2.5">
         <Link to="/" className="flex items-center gap-1.5">
           <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
@@ -60,9 +56,9 @@ const MobileTopBar = () => {
             <button
               onClick={() => navigate("/my-points")}
               className="flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-1.5 text-xs font-bold text-accent"
-              aria-label="Pontos"
+              aria-label={t("menu.points")}
             >
-              <Star className="h-3.5 w-3.5 fill-accent" /> Pontos
+              <Star className="h-3.5 w-3.5 fill-accent" /> {t("menu.points")}
             </button>
           )}
           <LanguageSwitcher />
@@ -70,7 +66,7 @@ const MobileTopBar = () => {
           <button
             onClick={() => navigate(user ? "/dashboard/notifications" : "/login")}
             className="relative p-2 text-foreground"
-            aria-label={user ? `${unread} notificações não lidas` : "Notificações"}
+            aria-label={t("nav.notifications")}
           >
             <Bell className="h-5 w-5" />
             {user && unread > 0 && (
@@ -81,7 +77,7 @@ const MobileTopBar = () => {
           </button>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 };
 

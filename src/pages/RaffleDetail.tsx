@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { getOneClick, saveOneClick } from "@/lib/oneClick";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Raffle {
   id: string;

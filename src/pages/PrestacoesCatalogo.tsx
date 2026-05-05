@@ -7,12 +7,10 @@ import {
   Home,
   Smartphone,
   Building2,
-  MapPin,
   ShoppingBag,
   Loader2,
   ArrowRight,
   SlidersHorizontal,
-  Eye,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -28,18 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { formatMZN } from "@/lib/currency";
 import { PROVINCES } from "@/lib/provinces";
 import { supabase } from "@/integrations/supabase/client";
 import { monthlyInstallment } from "@/lib/prestacoes";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
+import ProductCardMeituan from "@/components/meituan/ProductCardMeituan";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 type Product = {
   id: string;
@@ -60,12 +54,12 @@ type Product = {
   stock: number;
 };
 
-const categoryMeta: Record<string, { label: string; icon: typeof Car }> = {
-  viaturas: { label: "Viaturas", icon: Car },
-  imoveis: { label: "Imóveis", icon: Home },
-  eletronicos: { label: "Eletrónicos", icon: Smartphone },
-  equipamentos: { label: "Equipamentos", icon: Building2 },
-  outros: { label: "Outros", icon: ShoppingBag },
+const categoryMeta: Record<string, { label: string; icon: typeof Car; emoji: string }> = {
+  viaturas: { label: "Viaturas", icon: Car, emoji: "🚗" },
+  imoveis: { label: "Imóveis", icon: Home, emoji: "🏠" },
+  eletronicos: { label: "Eletrónicos", icon: Smartphone, emoji: "📱" },
+  equipamentos: { label: "Equipamentos", icon: Building2, emoji: "🛠️" },
+  outros: { label: "Outros", icon: ShoppingBag, emoji: "🛍️" },
 };
 
 type SortKey = "recent" | "price-asc" | "price-desc" | "monthly-asc" | "popular";
@@ -81,6 +75,7 @@ export default function PrestacoesCatalogo() {
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("recent");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Keep filters in URL for shareable links
   useEffect(() => {
@@ -117,7 +112,6 @@ export default function PrestacoesCatalogo() {
     })();
   }, [businessFilter]);
 
-  // Brands available given current category filter
   const brandOptions = useMemo(() => {
     const base = category === "all" ? products : products.filter((p) => p.category === category);
     const set = new Set<string>();
@@ -146,15 +140,8 @@ export default function PrestacoesCatalogo() {
     if (maxP > 0) list = list.filter((p) => Number(p.total_price) <= maxP);
 
     const withMonthly = list.map((p) => {
-      const principal = Math.max(
-        Number(p.total_price) - Number(p.min_down_payment),
-        0,
-      );
-      const monthly = monthlyInstallment(
-        principal,
-        Number(p.annual_rate),
-        p.max_months,
-      );
+      const principal = Math.max(Number(p.total_price) - Number(p.min_down_payment), 0);
+      const monthly = monthlyInstallment(principal, Number(p.annual_rate), p.max_months);
       return { p, monthly };
     });
 
@@ -180,42 +167,35 @@ export default function PrestacoesCatalogo() {
     setSort("recent");
   }
 
+  // Counts per category for chips
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach((p) => {
+      counts[p.category] = (counts[p.category] ?? 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  const chipCategories = [
+    { id: "all", label: "Todas", icon: "✨", count: products.length },
+    ...Object.entries(categoryMeta).map(([id, m]) => ({
+      id,
+      label: m.label,
+      icon: m.emoji,
+      count: catCounts[id] ?? 0,
+    })),
+  ];
+
   const FiltersBlock = (
     <div className="space-y-4">
       <div>
-        <Label>Categoria</Label>
-        <Select
-          value={category}
-          onValueChange={(v) => {
-            setCategory(v);
-            setBrand("all");
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            {Object.entries(categoryMeta).map(([id, meta]) => (
-              <SelectItem key={id} value={id}>
-                {meta.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
         <Label>Província</Label>
         <Select value={province} onValueChange={setProvince}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             {PROVINCES.map((p) => (
-              <SelectItem key={p.value} value={p.label}>
-                {p.label}
-              </SelectItem>
+              <SelectItem key={p.value} value={p.label}>{p.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -224,15 +204,11 @@ export default function PrestacoesCatalogo() {
         <div>
           <Label>Marca</Label>
           <Select value={brand} onValueChange={setBrand}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               {brandOptions.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {b}
-                </SelectItem>
+                <SelectItem key={b} value={b}>{b}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -241,31 +217,19 @@ export default function PrestacoesCatalogo() {
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>Preço mín. (MZN)</Label>
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-          />
+          <Input type="number" inputMode="numeric" placeholder="0"
+            value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
         </div>
         <div>
           <Label>Preço máx. (MZN)</Label>
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder="Ex.: 1.000.000"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-          />
+          <Input type="number" inputMode="numeric" placeholder="Ex.: 1.000.000"
+            value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
         </div>
       </div>
       <div>
         <Label>Ordenar</Label>
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="recent">Mais recentes</SelectItem>
             <SelectItem value="popular">Mais vistos</SelectItem>
@@ -275,6 +239,25 @@ export default function PrestacoesCatalogo() {
           </SelectContent>
         </Select>
       </div>
+    </div>
+  );
+
+  // Desktop also needs category select for the sidebar
+  const DesktopFiltersBlock = (
+    <div className="space-y-4">
+      <div>
+        <Label>Categoria</Label>
+        <Select value={category} onValueChange={(v) => { setCategory(v); setBrand("all"); }}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {Object.entries(categoryMeta).map(([id, meta]) => (
+              <SelectItem key={id} value={id}>{meta.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {FiltersBlock}
       <Button variant="ghost" size="sm" className="w-full" onClick={resetFilters}>
         Limpar filtros
       </Button>
@@ -283,12 +266,29 @@ export default function PrestacoesCatalogo() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
-      <Navbar />
-      <main className="container mx-auto px-4 pt-24">
+      {/* Desktop navbar */}
+      <div className="hidden md:block">
+        <Navbar />
+      </div>
+
+      <main className="container mx-auto px-4 md:pt-24">
+        {/* Mobile sticky header (Meituan style) */}
+        <MobileDiscoveryHeader
+          title="Catálogo a Prestações"
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Pesquisar produto, marca ou modelo..."
+          categories={chipCategories}
+          activeCategory={category}
+          onCategoryChange={(id) => { setCategory(id); setBrand("all"); }}
+          onOpenFilters={() => setFiltersOpen(true)}
+        />
+
+        {/* Desktop header */}
         <motion.header
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="mb-6 hidden md:block"
         >
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
@@ -298,86 +298,62 @@ export default function PrestacoesCatalogo() {
               </p>
             </div>
             <Link to="/prestacoes">
-              <Button variant="outline" size="sm">
-                Saber mais
-              </Button>
+              <Button variant="outline" size="sm">Saber mais</Button>
             </Link>
           </div>
         </motion.header>
 
-        <div className="grid md:grid-cols-[260px_1fr] gap-6">
+        <div className="grid md:grid-cols-[260px_1fr] gap-6 mt-3 md:mt-0">
           <aside className="hidden md:block">
             <Card>
-              <CardContent className="p-4">{FiltersBlock}</CardContent>
+              <CardContent className="p-4">{DesktopFiltersBlock}</CardContent>
             </Card>
           </aside>
 
           <section>
-            <div className="flex items-center gap-2 mb-4">
+            {/* Desktop search row */}
+            <div className="hidden md:flex items-center gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-9"
+                <Input className="pl-9"
                   placeholder="Pesquisar produto, marca ou modelo..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                  value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="md:hidden">
-                    <SlidersHorizontal className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80">
-                  <SheetHeader>
-                    <SheetTitle>Filtros</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4">{FiltersBlock}</div>
-                </SheetContent>
-              </Sheet>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
-              <Button
-                size="sm"
-                variant={category === "all" ? "default" : "outline"}
-                onClick={() => {
-                  setCategory("all");
-                  setBrand("all");
-                }}
-              >
-                Todas
-              </Button>
-              {Object.entries(categoryMeta).map(([id, meta]) => {
-                const Icon = meta.icon;
-                return (
-                  <Button
-                    key={id}
-                    size="sm"
-                    variant={category === id ? "default" : "outline"}
-                    onClick={() => {
-                      setCategory(id);
-                      setBrand("all");
-                    }}
-                    className="shrink-0"
-                  >
-                    <Icon className="h-3.5 w-3.5 mr-1" />
-                    {meta.label}
-                  </Button>
-                );
-              })}
+            {/* Result count + active filters summary (mobile + desktop) */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <p className="text-[11px] md:text-xs text-muted-foreground">
+                {loading ? "A carregar..." : `${filtered.length} produto${filtered.length === 1 ? "" : "s"}`}
+              </p>
+              {!loading && (province !== "all" || brand !== "all" || minPrice || maxPrice || sort !== "recent") && (
+                <button
+                  onClick={resetFilters}
+                  className="text-[11px] md:text-xs text-primary font-medium md:hidden"
+                >
+                  Limpar
+                </button>
+              )}
+              {/* Desktop sort outside sidebar */}
+              <div className="hidden md:block">
+                <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(true)}>
+                  <SlidersHorizontal className="h-4 w-4 mr-1" /> Mais filtros
+                </Button>
+              </div>
             </div>
-
-            <p className="text-xs text-muted-foreground mb-3">
-              {loading ? "A carregar..." : `${filtered.length} produto(s)`}
-            </p>
 
             {loading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="md:hidden">
+                <MeituanSkeleton count={6} />
+              </div>
+            ) : null}
+            {loading && (
+              <div className="hidden md:flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ) : filtered.length === 0 ? (
+            )}
+
+            {!loading && filtered.length === 0 && (
               <Card>
                 <CardContent className="py-16 text-center">
                   <ShoppingBag className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
@@ -390,86 +366,41 @@ export default function PrestacoesCatalogo() {
                   </Button>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            )}
+
+            {!loading && filtered.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {filtered.map(({ p, monthly }, i) => {
                   const Icon = categoryMeta[p.category]?.icon ?? ShoppingBag;
                   const outOfStock = p.stock <= 0;
                   return (
-                    <motion.div
+                    <ProductCardMeituan
                       key={p.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(i * 0.02, 0.3) }}
-                    >
-                      <Link to={`/prestacoes/${p.id}`}>
-                        <Card className="overflow-hidden hover:shadow-elegant transition group h-full">
-                          <div className="aspect-video bg-muted relative overflow-hidden">
-                            {p.images[0] ? (
-                              <img
-                                src={p.images[0]}
-                                alt={p.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Icon className="h-10 w-10 text-muted-foreground" />
-                              </div>
-                            )}
-                            {p.featured && (
-                              <Badge className="absolute top-2 left-2">Destaque</Badge>
-                            )}
-                            {outOfStock && (
-                              <Badge variant="destructive" className="absolute bottom-2 left-2">
-                                Sem stock
-                              </Badge>
-                            )}
-                            <Badge variant="secondary" className="absolute top-2 right-2">
-                              {categoryMeta[p.category]?.label ?? p.category}
-                            </Badge>
-                          </div>
-                          <CardContent className="p-4 space-y-2">
-                            <h3 className="font-semibold line-clamp-1">{p.title}</h3>
-                            {(p.brand || p.model) && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {[p.brand, p.model].filter(Boolean).join(" · ")}
-                              </p>
-                            )}
-                            <div className="flex items-baseline justify-between">
-                              <span className="text-xs text-muted-foreground">desde</span>
-                              <span className="text-lg font-bold text-primary">
-                                {formatMZN(monthly)}
-                                <span className="text-xs text-muted-foreground">/mês</span>
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center justify-between">
-                              <span>Total: {formatMZN(Number(p.total_price))}</span>
-                              <span>{p.max_months}x</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center justify-between">
-                              {(p.province || p.city) ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {[p.city, p.province].filter(Boolean).join(", ")}
-                                </span>
-                              ) : <span />}
-                              <span className="inline-flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                {p.views_count ?? 0}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-between mt-2"
-                            >
-                              Ver detalhes <ArrowRight className="h-3.5 w-3.5" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    </motion.div>
+                      index={i}
+                      to={`/prestacoes/${p.id}`}
+                      image={p.images[0]}
+                      imageFallback={<Icon className="h-10 w-10" />}
+                      title={p.title}
+                      subtitle={[p.brand, p.model].filter(Boolean).join(" · ") || null}
+                      topLeftBadge={p.featured ? { label: "Destaque", tone: "primary" } : null}
+                      topRightChip={categoryMeta[p.category]?.label ?? p.category}
+                      bottomLeftBadge={outOfStock ? { label: "Sem stock", tone: "danger" } : null}
+                      priceLine={
+                        <>
+                          {formatMZN(monthly)}
+                          <span className="text-[10px] text-muted-foreground font-normal">/mês</span>
+                        </>
+                      }
+                      secondaryPriceLine={`Total ${formatMZN(Number(p.total_price))}`}
+                      rightStat={`${p.max_months}x`}
+                      location={[p.city, p.province].filter(Boolean).join(", ") || null}
+                      views={p.views_count ?? 0}
+                      footer={
+                        <div className="hidden md:flex items-center justify-between text-[11px] text-primary font-medium pt-1">
+                          Ver detalhes <ArrowRight className="h-3 w-3" />
+                        </div>
+                      }
+                    />
                   );
                 })}
               </div>
@@ -477,7 +408,22 @@ export default function PrestacoesCatalogo() {
           </section>
         </div>
       </main>
-      <Footer />
+
+      {/* Mobile filter bottom sheet */}
+      <MobileFilterSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title="Filtrar produtos"
+        resultCount={filtered.length}
+        onReset={resetFilters}
+        onApply={() => { /* state already applied */ }}
+      >
+        {FiltersBlock}
+      </MobileFilterSheet>
+
+      <div className="hidden md:block">
+        <Footer />
+      </div>
       <BottomTabBar />
     </div>
   );

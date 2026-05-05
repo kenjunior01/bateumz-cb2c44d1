@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
 
 interface Raffle {
   id: string;
@@ -175,17 +177,59 @@ const Marketplace = () => {
     </div>
   );
 
+  const chipCategories = [
+    { id: "all", label: "Tudo", icon: "🔥", count: raffles.length + contests.length },
+    { id: "raffles", label: "Sorteios", icon: "🎟️", count: raffles.length },
+    { id: "contests", label: "Concursos", icon: "🏆", count: contests.length },
+    { id: "paid", label: "Pagos", icon: "💎" },
+    { id: "free", label: "Grátis", icon: "🎁" },
+    { id: "points", label: "Pontos", icon: "⭐" },
+    { id: "ending", label: "A terminar", icon: "⏰" },
+    { id: "popular", label: "Populares", icon: "🚀" },
+  ];
+
+  const handleChipChange = (id: string) => {
+    if (id === "all") { setContentType("all"); setTypeFilter("all"); setSortBy("newest"); return; }
+    if (id === "raffles" || id === "contests") { setContentType(id); return; }
+    if (id === "paid" || id === "free" || id === "points") { setTypeFilter(id); setContentType("raffles"); return; }
+    if (id === "ending") { setSortBy("ending"); return; }
+    if (id === "popular") { setSortBy("popular"); return; }
+  };
+  const activeChip =
+    sortBy === "ending" ? "ending" :
+    sortBy === "popular" ? "popular" :
+    typeFilter !== "all" ? typeFilter :
+    contentType !== "all" ? contentType :
+    "all";
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-4 pt-4 lg:pt-28 pb-20">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-4 sm:mb-10">
-          <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-1 sm:mb-2">Marketplace</h1>
-          <p className="text-muted-foreground text-xs sm:text-lg">Descubra sorteios e concursos incríveis.</p>
+      {/* Desktop navbar */}
+      <div className="hidden md:block">
+        <Navbar />
+      </div>
+
+      <div className="container mx-auto px-4 md:pt-28 pb-20">
+        {/* Mobile sticky header (Meituan) */}
+        <MobileDiscoveryHeader
+          title="Marketplace"
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Pesquisar sorteios, concursos..."
+          categories={chipCategories}
+          activeCategory={activeChip}
+          onCategoryChange={handleChipChange}
+          onOpenFilters={() => setFilterSheetOpen(true)}
+        />
+
+        {/* Desktop title */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 hidden md:block">
+          <h1 className="font-display text-4xl font-bold text-foreground mb-2">Marketplace</h1>
+          <p className="text-muted-foreground text-lg">Descubra sorteios e concursos incríveis.</p>
         </motion.div>
 
-        {/* Search + Filter button */}
-        <div className="flex flex-col gap-3 mb-5 sm:mb-8">
+        {/* Desktop search + filter */}
+        <div className="hidden md:flex flex-col gap-3 mb-8">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -195,7 +239,7 @@ const Marketplace = () => {
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="h-10 gap-1.5 shrink-0 relative">
                   <SlidersHorizontal className="h-4 w-4" />
-                  <span className="hidden sm:inline">Filtros</span>
+                  <span>Filtros</span>
                   {activeFilterCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
                       {activeFilterCount}
@@ -223,27 +267,29 @@ const Marketplace = () => {
             </Sheet>
           </div>
 
-          {/* Active filters chips */}
           {activeFilterCount > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {contentLabel && (
-                <Chip onRemove={() => setContentType("all")}>{contentLabel}</Chip>
-              )}
-              {typeLabel && (
-                <Chip onRemove={() => setTypeFilter("all")}>{typeLabel}</Chip>
-              )}
-              {sortBy !== "newest" && (
-                <Chip onRemove={() => setSortBy("newest")}>{sortLabel}</Chip>
-              )}
-              {region && (
-                <Chip onRemove={() => setRegion("")}>{PROVINCES.find(p => p.value === region)?.label || region}</Chip>
-              )}
-              {country && !region && (
-                <Chip onRemove={() => setCountry("")}>{country.toUpperCase()}</Chip>
-              )}
+              {contentLabel && (<Chip onRemove={() => setContentType("all")}>{contentLabel}</Chip>)}
+              {typeLabel && (<Chip onRemove={() => setTypeFilter("all")}>{typeLabel}</Chip>)}
+              {sortBy !== "newest" && (<Chip onRemove={() => setSortBy("newest")}>{sortLabel}</Chip>)}
+              {region && (<Chip onRemove={() => setRegion("")}>{PROVINCES.find(p => p.value === region)?.label || region}</Chip>)}
+              {country && !region && (<Chip onRemove={() => setCountry("")}>{country.toUpperCase()}</Chip>)}
             </div>
           )}
         </div>
+
+        {/* Mobile filter sheet */}
+        <MobileFilterSheet
+          open={filterSheetOpen && isMobile}
+          onOpenChange={setFilterSheetOpen}
+          title="Filtrar"
+          onReset={() => { setTypeFilter("all"); setContentType("all"); setCountry(""); setRegion(""); setSortBy("newest"); }}
+          onApply={() => {}}
+        >
+          <FiltersBody />
+        </MobileFilterSheet>
+
+        <div className="mt-3 md:mt-0" />
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -410,7 +456,7 @@ const Marketplace = () => {
           </div>
         )}
       </div>
-      <Footer />
+      <div className="hidden md:block"><Footer /></div>
     </div>
   );
 };

@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Calendar, Eye, ThumbsUp, Video, ArrowRight, Clock, Flame, Search } from "lucide-react";
+import { Trophy, Calendar, Eye, ThumbsUp, ArrowRight, Flame, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import CountryRegionFilter from "@/components/CountryRegionFilter";
 import ContestCountdown from "@/components/ContestCountdown";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 interface Contest {
   id: string;
@@ -152,22 +154,39 @@ export default function Contests() {
     );
   };
 
+  const [tab, setTab] = useState<"active" | "past">("active");
+
+  const chips = [
+    { id: "active", label: "Ativos", icon: "🔥", count: active.length },
+    { id: "past", label: "Encerrados", icon: "🏆", count: past.length },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      <Navbar />
-      <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-24 pb-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-5 lg:mb-10">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }} className="inline-flex">
-            <Trophy className="h-8 w-8 lg:h-12 lg:w-12 text-primary mx-auto mb-2 lg:mb-3" />
-          </motion.div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-foreground mb-1">Concursos</h1>
+      <div className="hidden md:block"><Navbar /></div>
+      <div className="container mx-auto px-3 sm:px-4 md:pt-24 pb-10">
+        {/* Mobile sticky header */}
+        <MobileDiscoveryHeader
+          title="Concursos"
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Pesquisar concursos..."
+          categories={chips}
+          activeCategory={tab}
+          onCategoryChange={(id) => setTab(id as "active" | "past")}
+        />
+
+        {/* Desktop hero */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10 hidden md:block">
+          <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-1">Concursos</h1>
           <p className="text-sm text-muted-foreground max-w-xl mx-auto px-2">
             Participe, mostre o seu talento e ganhe prémios incríveis!
           </p>
         </motion.div>
 
-        {/* Search + Country/Region - sticky on mobile */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="sticky top-12 lg:top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-background/85 backdrop-blur-xl mb-4 max-w-3xl mx-auto">
+        {/* Desktop search row */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-4 max-w-3xl mx-auto hidden md:block">
           <div className="flex flex-col sm:flex-row gap-2 items-stretch">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -190,8 +209,8 @@ export default function Contests() {
             ))}
           </div>
         ) : (
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-4 lg:mb-6">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "past")} className="w-full">
+            <TabsList className="mb-4 lg:mb-6 hidden md:inline-flex">
               <TabsTrigger value="active" className="gap-1 text-xs sm:text-sm"><Flame className="h-3 w-3" /> Ativos ({active.length})</TabsTrigger>
               <TabsTrigger value="past" className="gap-1 text-xs sm:text-sm"><Trophy className="h-3 w-3" /> Encerrados ({past.length})</TabsTrigger>
             </TabsList>
@@ -222,7 +241,7 @@ export default function Contests() {
           </Tabs>
         )}
       </div>
-      <Footer />
+      <div className="hidden md:block"><Footer /></div>
     </div>
   );
 }

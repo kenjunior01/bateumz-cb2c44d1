@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Calendar, Eye, ThumbsUp, Video, ArrowRight, Clock, Flame, Search } from "lucide-react";
+import { Trophy, Calendar, Eye, ThumbsUp, ArrowRight, Flame, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import CountryRegionFilter from "@/components/CountryRegionFilter";
 import ContestCountdown from "@/components/ContestCountdown";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 interface Contest {
   id: string;

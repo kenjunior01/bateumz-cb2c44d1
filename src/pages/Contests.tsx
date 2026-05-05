@@ -241,7 +241,7 @@ export default function Contests() {
           </Tabs>
         )}
       </div>
-      <Footer />
+      <div className="hidden md:block"><Footer /></div>
     </div>
   );
 }

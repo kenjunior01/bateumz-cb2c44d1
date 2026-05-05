@@ -209,8 +209,8 @@ export default function Contests() {
             ))}
           </div>
         ) : (
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-4 lg:mb-6">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "past")} className="w-full">
+            <TabsList className="mb-4 lg:mb-6 hidden md:inline-flex">
               <TabsTrigger value="active" className="gap-1 text-xs sm:text-sm"><Flame className="h-3 w-3" /> Ativos ({active.length})</TabsTrigger>
               <TabsTrigger value="past" className="gap-1 text-xs sm:text-sm"><Trophy className="h-3 w-3" /> Encerrados ({past.length})</TabsTrigger>
             </TabsList>

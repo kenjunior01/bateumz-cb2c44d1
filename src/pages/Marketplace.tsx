@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
 
 interface Raffle {
   id: string;

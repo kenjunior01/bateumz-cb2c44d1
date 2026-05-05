@@ -634,7 +634,7 @@ const RaffleDetail = () => {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Pagamento</span>
-                          <span className="text-foreground">{paymentMethods.find(m => m.id === paymentMethod)?.label}</span>
+                          <span className="text-foreground">{(() => { const m = paymentMethods.find(m => m.id === paymentMethod); return m ? t(m.labelKey) : ""; })()}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Preço unitário</span>

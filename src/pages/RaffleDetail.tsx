@@ -553,8 +553,8 @@ const RaffleDetail = () => {
                           >
                             <span className="text-xl">{m.emoji}</span>
                             <div className="text-left flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-foreground">{m.label}</p>
-                              <p className="text-[11px] text-muted-foreground">{m.desc}</p>
+                              <p className="text-sm font-semibold text-foreground">{t(m.labelKey)}</p>
+                              <p className="text-[11px] text-muted-foreground">{t(m.descKey)}</p>
                             </div>
                             {paymentMethod === m.id && (
                               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">

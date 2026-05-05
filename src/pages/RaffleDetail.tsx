@@ -95,6 +95,8 @@ const RaffleDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const stepLabels = [t("checkout.step.method") || "Método", t("checkout.step.receipt") || "Comprovativo", t("checkout.step.confirm") || "Confirmar"];
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [whiteLabelConfig, setWhiteLabelConfig] = useState<WhiteLabelConfig | null>(null);

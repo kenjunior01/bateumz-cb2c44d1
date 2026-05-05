@@ -94,10 +94,8 @@ export default function MobileDiscoveryHeader({
       {/* Category chips row */}
       {categories.length > 0 && (
         <div className="mt-2 -mx-4 px-4">
-          <div
-            className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x"
-            style={{ scrollbarWidth: "none" }}
-          >
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar snap-x">
+
             {categories.map((cat) => {
               const active = cat.id === activeCategory;
               return (

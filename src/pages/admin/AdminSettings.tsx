@@ -382,6 +382,10 @@ export default function AdminSettings() {
                     <Switch checked={payments.multicaixaEnabled} onCheckedChange={(v) => setPayments({ ...payments, multicaixaEnabled: v })} />
                   </div>
                   <div className="space-y-2">
+                    <Label>Número Comerciante (instruções)</Label>
+                    <Input value={payments.multicaixaNumber} onChange={(e) => setPayments({ ...payments, multicaixaNumber: e.target.value })} placeholder="9XXXXXXXX (mostrado ao cliente)" />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Merchant ID</Label>
                     <Input value={payments.multicaixaMerchantId} onChange={(e) => setPayments({ ...payments, multicaixaMerchantId: e.target.value })} placeholder="ID do comerciante" />
                   </div>

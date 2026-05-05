@@ -433,6 +433,173 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
+            {/* Angola - Africell Money */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+              <Card className="glass border-pink-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5 text-pink-600" />
+                    Africell Money
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇦🇴 Angola</Badge>
+                  </CardTitle>
+                  <CardDescription>Carteira móvel Africell Angola</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-pink-500/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Africell Money</p>
+                    <Switch checked={payments.africellMoneyEnabled} onCheckedChange={(v) => setPayments({ ...payments, africellMoneyEnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número Comerciante</Label>
+                    <Input value={payments.africellMoneyNumber} onChange={(e) => setPayments({ ...payments, africellMoneyNumber: e.target.value })} placeholder="9XXXXXXXX (mostrado ao cliente)" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Angola - Transferência BAI */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+              <Card className="glass border-emerald-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-emerald-600" />
+                    Transferência BAI
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇦🇴 Angola</Badge>
+                  </CardTitle>
+                  <CardDescription>Transferência bancária IBAN Banco BAI</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-emerald-500/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Transferência BAI</p>
+                    <Switch checked={payments.baiTransferEnabled} onCheckedChange={(v) => setPayments({ ...payments, baiTransferEnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IBAN</Label>
+                    <Input value={payments.baiIban} onChange={(e) => setPayments({ ...payments, baiIban: e.target.value })} placeholder="AO06 0040 0000 ..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Titular da conta</Label>
+                    <Input value={payments.baiHolder} onChange={(e) => setPayments({ ...payments, baiHolder: e.target.value })} placeholder="Nome do titular" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Angola - Transferência BFA */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
+              <Card className="glass border-amber-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-amber-600" />
+                    Transferência BFA
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇦🇴 Angola</Badge>
+                  </CardTitle>
+                  <CardDescription>Transferência bancária IBAN Banco BFA</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-amber-500/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Transferência BFA</p>
+                    <Switch checked={payments.bfaTransferEnabled} onCheckedChange={(v) => setPayments({ ...payments, bfaTransferEnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IBAN</Label>
+                    <Input value={payments.bfaIban} onChange={(e) => setPayments({ ...payments, bfaIban: e.target.value })} placeholder="AO06 0006 0000 ..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Titular da conta</Label>
+                    <Input value={payments.bfaHolder} onChange={(e) => setPayments({ ...payments, bfaHolder: e.target.value })} placeholder="Nome do titular" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Brasil - Pix */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+              <Card className="glass border-emerald-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5 text-emerald-600" />
+                    Pix
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇧🇷 Brasil</Badge>
+                  </CardTitle>
+                  <CardDescription>Pagamento instantâneo brasileiro via chave Pix</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-emerald-500/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Pix</p>
+                    <Switch checked={payments.pixEnabled} onCheckedChange={(v) => setPayments({ ...payments, pixEnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Chave Pix</Label>
+                    <Input value={payments.pixKey} onChange={(e) => setPayments({ ...payments, pixKey: e.target.value })} placeholder="CPF/CNPJ, e-mail, telefone ou aleatória" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Titular da chave</Label>
+                    <Input value={payments.pixHolder} onChange={(e) => setPayments({ ...payments, pixHolder: e.target.value })} placeholder="Nome do titular" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Brasil - Boleto */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Card className="glass border-slate-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-slate-600" />
+                    Boleto Bancário
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇧🇷 Brasil</Badge>
+                  </CardTitle>
+                  <CardDescription>Boleto com vencimento em 1-3 dias úteis</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-slate-500/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Boleto</p>
+                    <Switch checked={payments.boletoEnabled} onCheckedChange={(v) => setPayments({ ...payments, boletoEnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Instruções/observações</Label>
+                    <Textarea value={payments.boletoInstructions} onChange={(e) => setPayments({ ...payments, boletoInstructions: e.target.value })} placeholder="Texto de instruções para o cliente (ex.: emissão manual, prazo, contacto)" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Brasil - Cartão */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
+              <Card className="glass border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Cartão (Brasil)
+                    <Badge variant="outline" className="ml-auto text-[10px]">🇧🇷 Brasil</Badge>
+                  </CardTitle>
+                  <CardDescription>Crédito ou débito com parcelamento</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-primary/5 p-3">
+                    <p className="text-sm font-medium text-foreground">Ativar Cartão (BR)</p>
+                    <Switch checked={payments.cardBREnabled} onCheckedChange={(v) => setPayments({ ...payments, cardBREnabled: v })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gateway</Label>
+                    <Select value={payments.cardBRGateway || ""} onValueChange={(v: any) => setPayments({ ...payments, cardBRGateway: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o gateway" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="stripe">Stripe</SelectItem>
+                        <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                        <SelectItem value="pagseguro">PagSeguro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>API Key</Label>
+                    <Input type="password" value={payments.cardBRApiKey} onChange={(e) => setPayments({ ...payments, cardBRApiKey: e.target.value })} placeholder="Chave secreta do gateway" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
             {/* PayPal */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
               <Card className="glass border-[#003087]/20">

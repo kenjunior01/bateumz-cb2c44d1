@@ -143,12 +143,12 @@ export default function BusinessDirectory() {
           )}
         </motion.div>
 
-        {/* Stats showcase */}
+        {/* Stats showcase (desktop only) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"
+          className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"
         >
           {SHOWCASE_STATS.map((stat, i) => (
             <motion.div
@@ -166,12 +166,12 @@ export default function BusinessDirectory() {
           ))}
         </motion.div>
 
-        {/* CTA banner for businesses */}
+        {/* CTA banner (desktop only — mobile fica mais limpo) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="mb-10 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20 flex flex-col md:flex-row items-center gap-4"
+          className="hidden md:flex mb-10 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20 flex-col md:flex-row items-center gap-4"
         >
           <div className="flex-1 text-center md:text-left">
             <h2 className="text-lg md:text-xl font-bold text-foreground mb-1">
@@ -188,8 +188,8 @@ export default function BusinessDirectory() {
           </Link>
         </motion.div>
 
-        {/* Search */}
-        <div className="relative mb-8 max-w-md mx-auto">
+        {/* Search (desktop only) */}
+        <div className="hidden md:block relative mb-8 max-w-md mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Pesquisar empresas..."
@@ -200,8 +200,11 @@ export default function BusinessDirectory() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+          <div className="mt-3 md:mt-0">
+            <div className="md:hidden"><MeituanSkeleton count={6} /></div>
+            <div className="hidden md:flex justify-center py-12">
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
@@ -210,44 +213,46 @@ export default function BusinessDirectory() {
             <p className="text-sm text-muted-foreground">Tente uma pesquisa diferente</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-3 md:mt-0">
             {filtered.map((b, i) => (
               <motion.div
                 key={b.user_id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: Math.min(i, 8) * 0.04 }}
                 whileHover={{ y: -4 }}
               >
                 <Card
-                  className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/30 glass"
+                  className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/30 glass rounded-2xl"
                   onClick={() => navigate(`/empresa/${b.user_id}`)}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-bold text-primary shrink-0 overflow-hidden">
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex items-center gap-2.5 md:gap-4 mb-3 md:mb-4">
+                      <div className="h-11 w-11 md:h-14 md:w-14 rounded-xl bg-primary/10 flex items-center justify-center text-base md:text-xl font-bold text-primary shrink-0 overflow-hidden">
                         {b.avatar_url ? (
-                          <img src={b.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover" />
+                          <img src={b.avatar_url} alt="" className="h-11 w-11 md:h-14 md:w-14 rounded-xl object-cover" />
                         ) : (
                           (b.company_name || b.display_name || "E").charAt(0).toUpperCase()
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-semibold truncate">{b.company_name || b.display_name}</p>
-                          {b.is_verified && <CheckCircle className="h-4 w-4 text-primary shrink-0" />}
+                        <div className="flex items-center gap-1">
+                          <p className="font-semibold text-sm md:text-base truncate">{b.company_name || b.display_name}</p>
+                          {b.is_verified && <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />}
                         </div>
                         {b.company_name && b.display_name && b.company_name !== b.display_name && (
-                          <p className="text-xs text-muted-foreground truncate">{b.display_name}</p>
+                          <p className="text-[11px] md:text-xs text-muted-foreground truncate">{b.display_name}</p>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 md:gap-4 text-[11px] md:text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Ticket className="h-3.5 w-3.5" /> {b.raffle_count} sorteios
+                        <Ticket className="h-3 w-3 md:h-3.5 md:w-3.5" /> {b.raffle_count}
+                        <span className="hidden md:inline">sorteios</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <Trophy className="h-3.5 w-3.5" /> {b.contest_count} concursos
+                        <Trophy className="h-3 w-3 md:h-3.5 md:w-3.5" /> {b.contest_count}
+                        <span className="hidden md:inline">concursos</span>
                       </span>
                     </div>
                   </CardContent>

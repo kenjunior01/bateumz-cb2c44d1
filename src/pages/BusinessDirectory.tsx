@@ -81,21 +81,46 @@ export default function BusinessDirectory() {
     load();
   }, []);
 
+  const [filter, setFilter] = useState<"all" | "verified" | "active">("all");
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return businesses;
-    const q = search.toLowerCase();
-    return businesses.filter(b =>
-      (b.company_name || "").toLowerCase().includes(q) ||
-      (b.display_name || "").toLowerCase().includes(q)
-    );
-  }, [businesses, search]);
+    let list = businesses;
+    if (filter === "verified") list = list.filter((b) => b.is_verified);
+    if (filter === "active") list = list.filter((b) => b.raffle_count + b.contest_count > 0);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (b) =>
+          (b.company_name || "").toLowerCase().includes(q) ||
+          (b.display_name || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [businesses, search, filter]);
+
+  const chipCategories = [
+    { id: "all", label: "Todas", icon: "🏢", count: businesses.length },
+    { id: "verified", label: "Verificadas", icon: "✅", count: businesses.filter((b) => b.is_verified).length },
+    { id: "active", label: "Ativas", icon: "⚡", count: businesses.filter((b) => b.raffle_count + b.contest_count > 0).length },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Hero */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12 pt-16">
+      <div className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-10 max-w-6xl">
+        {/* Mobile sticky header */}
+        <MobileDiscoveryHeader
+          title="Diretório de Empresas"
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Pesquisar empresa..."
+          categories={chipCategories}
+          activeCategory={filter}
+          onCategoryChange={(id) => setFilter(id as any)}
+        />
+
+        {/* Hero (desktop) */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block text-center mb-12 pt-16">
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }}>
             <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-8 w-8 text-primary" />

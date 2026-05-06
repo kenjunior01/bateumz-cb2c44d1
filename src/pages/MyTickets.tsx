@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useOnline } from "@/hooks/use-online";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 const statusMap: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary bg-primary/10", icon: CheckCircle2 },
@@ -80,10 +82,26 @@ export default function MyTickets() {
   const winCount = tickets.filter((t) => t.status === "winner").length;
   const activeCount = tickets.filter((t) => t.status === "active" && t.raffles?.status === "active").length;
 
+  const chipCategories = [
+    { id: "all", label: "Todos", icon: "🎟️", count: tickets.length },
+    { id: "active", label: "Ativos", icon: "⏳", count: activeCount },
+    { id: "winner", label: "Vitórias", icon: "🏆", count: winCount },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
+        {/* Mobile sticky discovery header */}
+        <MobileDiscoveryHeader
+          title="Meus Bilhetes"
+          searchValue=""
+          onSearchChange={() => {}}
+          searchPlaceholder="Pesquisar bilhete..."
+          categories={chipCategories}
+          activeCategory={filter}
+          onCategoryChange={(id) => setFilter(id as any)}
+        />
         {(!online || fromCache) && (
           <div className="mb-3 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
             <WifiOff className="h-3.5 w-3.5 shrink-0 text-accent" />

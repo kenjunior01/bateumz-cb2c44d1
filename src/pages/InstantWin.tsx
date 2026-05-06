@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
 import { useAuth } from "@/contexts/AuthContext";
 import confetti from "canvas-confetti";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 
 // --- Scratch Card ---
 const SCRATCH_PRIZES = [
@@ -248,8 +249,23 @@ const InstantWin = () => {
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
 
-      <section className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-5 sm:mb-8">
+      <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
+        {/* Mobile sticky header with game chips */}
+        <MobileDiscoveryHeader
+          title="Ganho Instantâneo"
+          searchValue=""
+          onSearchChange={() => {}}
+          searchPlaceholder="Procurar prémio..."
+          categories={[
+            { id: "scratch", label: "Raspadinha", icon: "🎫" },
+            { id: "wheel", label: "Roda da Sorte", icon: "🎰" },
+          ]}
+          activeCategory={tab}
+          onCategoryChange={(id) => setTab(id as any)}
+        />
+
+        {/* Desktop header */}
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block text-center mb-5 sm:mb-8 mt-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium mb-3">
             <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Ganho Instantâneo
@@ -262,8 +278,8 @@ const InstantWin = () => {
           </p>
         </motion.div>
 
-        {/* Tabs */}
-        <div className="flex justify-center gap-2 mb-8">
+        {/* Tabs (desktop only — mobile usa chips do header) */}
+        <div className="hidden md:flex justify-center gap-2 mb-8">
           <button
             onClick={() => setTab("scratch")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
@@ -283,6 +299,8 @@ const InstantWin = () => {
             Roda da Sorte
           </button>
         </div>
+
+        <div className="mt-4 md:mt-0" />
 
         {/* Game Area */}
         <AnimatePresence mode="wait">

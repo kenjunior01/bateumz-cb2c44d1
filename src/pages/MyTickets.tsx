@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useOnline } from "@/hooks/use-online";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 const statusMap: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary bg-primary/10", icon: CheckCircle2 },
@@ -80,10 +82,26 @@ export default function MyTickets() {
   const winCount = tickets.filter((t) => t.status === "winner").length;
   const activeCount = tickets.filter((t) => t.status === "active" && t.raffles?.status === "active").length;
 
+  const chipCategories = [
+    { id: "all", label: "Todos", icon: "🎟️", count: tickets.length },
+    { id: "active", label: "Ativos", icon: "⏳", count: activeCount },
+    { id: "winner", label: "Vitórias", icon: "🏆", count: winCount },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
+        {/* Mobile sticky discovery header */}
+        <MobileDiscoveryHeader
+          title="Meus Bilhetes"
+          searchValue=""
+          onSearchChange={() => {}}
+          searchPlaceholder="Pesquisar bilhete..."
+          categories={chipCategories}
+          activeCategory={filter}
+          onCategoryChange={(id) => setFilter(id as any)}
+        />
         {(!online || fromCache) && (
           <div className="mb-3 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
             <WifiOff className="h-3.5 w-3.5 shrink-0 text-accent" />
@@ -94,38 +112,38 @@ export default function MyTickets() {
             </span>
           </div>
         )}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block mb-5 mt-3">
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">Meus Bilhetes</h1>
           <p className="text-sm text-muted-foreground">Acompanhe todos os seus bilhetes e resultados</p>
         </motion.div>
 
-        {/* Stats compact horizontal */}
-        <div className="grid gap-2 grid-cols-3 mb-5">
+        {/* Stats compact horizontal — mobile shows compact 3-up under header */}
+        <div className="grid gap-2 grid-cols-3 mt-3 mb-4 md:mb-5">
           <Card className="glass">
-            <CardContent className="p-3 text-center">
-              <Ticket className="h-5 w-5 text-primary mx-auto mb-1" />
-              <p className="font-display text-xl font-bold text-foreground leading-none">{tickets.length}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Total</p>
+            <CardContent className="p-2.5 md:p-3 text-center">
+              <Ticket className="h-4 w-4 md:h-5 md:w-5 text-primary mx-auto mb-1" />
+              <p className="font-display text-lg md:text-xl font-bold text-foreground leading-none">{tickets.length}</p>
+              <p className="text-[10px] md:text-[11px] text-muted-foreground mt-1">Total</p>
             </CardContent>
           </Card>
           <Card className="glass">
-            <CardContent className="p-3 text-center">
-              <Clock className="h-5 w-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-xl font-bold text-foreground leading-none">{activeCount}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Ativos</p>
+            <CardContent className="p-2.5 md:p-3 text-center">
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-lg md:text-xl font-bold text-foreground leading-none">{activeCount}</p>
+              <p className="text-[10px] md:text-[11px] text-muted-foreground mt-1">Ativos</p>
             </CardContent>
           </Card>
           <Card className="glass border-accent/20">
-            <CardContent className="p-3 text-center">
-              <Trophy className="h-5 w-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-xl font-bold text-accent leading-none">{winCount}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Vitórias</p>
+            <CardContent className="p-2.5 md:p-3 text-center">
+              <Trophy className="h-4 w-4 md:h-5 md:w-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-lg md:text-xl font-bold text-accent leading-none">{winCount}</p>
+              <p className="text-[10px] md:text-[11px] text-muted-foreground mt-1">Vitórias</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filter tabs - sticky */}
-        <div className="sticky top-12 lg:top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-background/85 backdrop-blur-xl mb-3 flex gap-2 overflow-x-auto no-scrollbar">
+        {/* Filter tabs (desktop only — mobile usa chips do header sticky) */}
+        <div className="hidden md:flex sticky top-0 z-10 -mx-4 px-4 py-2 bg-background/85 backdrop-blur-xl mb-3 gap-2 overflow-x-auto no-scrollbar">
           {[
             { value: "all" as const, label: `Todos (${tickets.length})` },
             { value: "active" as const, label: `Ativos (${activeCount})` },

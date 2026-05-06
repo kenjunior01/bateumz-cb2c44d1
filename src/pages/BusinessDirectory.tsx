@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Search, CheckCircle, Ticket, Trophy, TrendingUp, Star, ArrowRight, Users, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 interface BusinessItem {
   user_id: string;

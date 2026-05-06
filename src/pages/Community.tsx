@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 
 interface Message {
   id: string;
@@ -217,19 +218,38 @@ export default function Community() {
     }
   };
 
+  const chipCategories = MESSAGE_TYPES.map((t) => ({
+    id: t.id,
+    label: t.label.replace(/[🏆⭐📊]/g, "").trim(),
+    icon: t.id === "winner" ? "🏆" : t.id === "tip" ? "⭐" : t.id === "poll" ? "📊" : t.id === "general" ? "💬" : "📰",
+    count: t.id === "all" ? messages.length : messages.filter((m) => m.message_type === t.id).length,
+  }));
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20 max-w-3xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+      <div className="container mx-auto px-3 sm:px-4 pt-2 md:pt-28 pb-10 md:pb-20 max-w-3xl">
+        {/* Mobile sticky header */}
+        <MobileDiscoveryHeader
+          title="Comunidade"
+          searchValue=""
+          onSearchChange={() => {}}
+          searchPlaceholder="Pesquisar mensagem..."
+          categories={chipCategories}
+          activeCategory={filter}
+          onCategoryChange={setFilter}
+        />
+
+        {/* Desktop header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block mb-8">
           <h1 className="font-display text-3xl font-bold text-foreground flex items-center gap-3">
             <MessageCircle className="h-8 w-8 text-primary" /> Comunidade
           </h1>
           <p className="text-muted-foreground mt-1">Partilhe testemunhos, dicas, crie sondagens e celebre com outros participantes</p>
         </motion.div>
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {/* Filters (desktop only — mobile usa chips no header) */}
+        <div className="hidden md:flex gap-2 mb-6 overflow-x-auto pb-2">
           {MESSAGE_TYPES.map(t => (
             <Button key={t.id} variant={filter === t.id ? "default" : "outline"} size="sm" onClick={() => setFilter(t.id)} className="shrink-0">
               {t.label}

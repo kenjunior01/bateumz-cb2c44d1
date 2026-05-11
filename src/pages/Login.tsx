@@ -29,7 +29,7 @@ function FloatingEmoji({ emoji, delay, x, y }: { emoji: string; delay: number; x
 }
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, role } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +43,12 @@ export default function Login() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const mascotImages = { happy: mascotHappy, excited: mascotExcited, thinking: mascotThinking, winner: mascotWinner };
+
+  const navigateAfterLogin = () => {
+    if (role === "admin") navigate("/admin");
+    else if (role === "business") navigate("/dashboard");
+    else navigate("/profile");
+  };
 
   // Change mascot mood based on interaction
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function Login() {
       setMascotMood("winner");
       setSuccess(true);
       playPopSound();
-      setTimeout(() => navigate("/dashboard"), 1200);
+      setTimeout(navigateAfterLogin, 1200);
     }
   };
 
@@ -91,7 +97,7 @@ export default function Login() {
     setMascotMood("winner");
     setSuccess(true);
     playPopSound();
-    setTimeout(() => navigate("/dashboard"), 1200);
+    setTimeout(navigateAfterLogin, 1200);
   };
 
   const handleAppleLogin = async () => {
@@ -108,7 +114,7 @@ export default function Login() {
     setMascotMood("winner");
     setSuccess(true);
     playPopSound();
-    setTimeout(() => navigate("/dashboard"), 1200);
+    setTimeout(navigateAfterLogin, 1200);
   };
 
   if (success) {

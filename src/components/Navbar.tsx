@@ -39,7 +39,7 @@ const Navbar = () => {
         { label: "Diretório", href: "/empresas", icon: Building2, desc: "Empresas parceiras verificadas" },
         { label: "Catálogo a Prestações", href: "/prestacoes/catalogo", icon: Calendar, desc: "Viaturas, imóveis e mais", badge: "Novo" },
         { label: "Sobre Prestações", href: "/prestacoes", icon: Calendar, desc: "Como funciona o pagamento parcelado" },
-        { label: "Criar Sorteio", href: "/dashboard/raffles/new", icon: Gift, desc: "Para o seu negócio" },
+        { label: "Criar Sorteio", href: "/dashboard/raffles/create", icon: Gift, desc: "Para o seu negócio" },
       ],
     },
     {
@@ -126,8 +126,8 @@ const Navbar = () => {
               <Link to="/my-points" className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
                 <Star className="h-4 w-4 text-accent" /> {t("nav.points")}
               </Link>
-              <Link to="/dashboard" className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                {t("nav.dashboard")}
+              <Link to={role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile"} className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+                {role === "business" || role === "admin" ? t("nav.dashboard") : t("nav.profile")}
               </Link>
               {role === "admin" && (
                 <Link to="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">

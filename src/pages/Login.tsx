@@ -44,6 +44,24 @@ export default function Login() {
 
   const mascotImages = { happy: mascotHappy, excited: mascotExcited, thinking: mascotThinking, winner: mascotWinner };
 
+  const navigateAfterLogin = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+    const roles = data?.map((item: any) => item.role) || [];
+
+    if (roles.includes("admin")) navigate("/admin");
+    else if (roles.includes("business")) navigate("/dashboard");
+    else navigate("/profile");
+  };
+
   // Change mascot mood based on interaction
   useEffect(() => {
     if (error) setMascotMood("thinking");
@@ -72,7 +90,7 @@ export default function Login() {
       setMascotMood("winner");
       setSuccess(true);
       playPopSound();
-      setTimeout(() => navigate("/dashboard"), 1200);
+      setTimeout(navigateAfterLogin, 1200);
     }
   };
 
@@ -91,7 +109,7 @@ export default function Login() {
     setMascotMood("winner");
     setSuccess(true);
     playPopSound();
-    setTimeout(() => navigate("/dashboard"), 1200);
+    setTimeout(navigateAfterLogin, 1200);
   };
 
   const handleAppleLogin = async () => {
@@ -108,7 +126,7 @@ export default function Login() {
     setMascotMood("winner");
     setSuccess(true);
     playPopSound();
-    setTimeout(() => navigate("/dashboard"), 1200);
+    setTimeout(navigateAfterLogin, 1200);
   };
 
   if (success) {

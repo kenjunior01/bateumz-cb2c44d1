@@ -3,10 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   children: React.ReactNode;
-  requiredRole?: string;
+  requiredRole?: "business" | "admin";
+  blockRoles?: string[];
 }
 
-export default function ProtectedRoute({ children, requiredRole }: Props) {
+export default function ProtectedRoute({ children, requiredRole, blockRoles = [] }: Props) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
@@ -21,8 +22,20 @@ export default function ProtectedRoute({ children, requiredRole }: Props) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && role !== requiredRole && role !== "admin") {
-    return <Navigate to="/" replace />;
+  if (role && blockRoles.includes(role)) {
+    return <Navigate to={role === "admin" ? "/admin" : "/dashboard"} replace />;
+  }
+
+  if (requiredRole === "admin" && role !== "admin") {
+    return <Navigate to={role === "business" ? "/dashboard" : "/profile"} replace />;
+  }
+
+  if (requiredRole === "business" && role === "admin") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (requiredRole === "business" && role !== "business") {
+    return <Navigate to="/profile" replace />;
   }
 
   return <>{children}</>;

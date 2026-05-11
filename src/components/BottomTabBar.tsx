@@ -189,9 +189,9 @@ const BottomTabBar = () => {
             ) : (
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { icon: User, labelKey: "fab.dashboard", href: "/dashboard" },
-                  { icon: Bell, labelKey: "fab.alerts", href: "/dashboard/notifications" },
-                  { icon: Settings, labelKey: "fab.account", href: "/dashboard/settings" },
+                  { icon: User, labelKey: role === "user" ? "tab.profile" : "fab.dashboard", href: role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile" },
+                  { icon: Bell, labelKey: "fab.alerts", href: role === "business" ? "/dashboard/notifications" : "/profile" },
+                  { icon: Settings, labelKey: "fab.account", href: role === "business" ? "/dashboard/settings" : "/profile" },
                   ...(role === "admin"
                     ? [{ icon: ShieldCheck, labelKey: "fab.admin", href: "/admin" }]
                     : [{ icon: LogOut, labelKey: "fab.logout", href: "__logout" }]),

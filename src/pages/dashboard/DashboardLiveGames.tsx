@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Radio, ExternalLink, Save, RotateCcw, Plus, Trash2, Sparkles, Trophy, Users, Eye, Sliders, Search, Vote, Zap, Brain, Package } from "lucide-react";
-import { useEffect as useLayoutTitle } from "react";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -73,10 +73,6 @@ const DashboardLiveGames = () => {
 
   return (
     <div className="space-y-6">
-      <Helmet>
-        <title>Jogos da Live · Dashboard | Bateu</title>
-        <meta name="description" content="Configure os jogos da sua live: roda de prémios, caça à palavra, batalha de emojis, quiz e mais." />
-      </Helmet>
 
       {/* Header */}
       <header className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/5 p-5 md:p-7">

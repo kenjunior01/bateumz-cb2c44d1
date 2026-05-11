@@ -261,7 +261,10 @@ const InstantWin = () => {
           searchPlaceholder="Procurar prémio..."
           categories={[
             { id: "scratch", label: "Raspadinha", icon: "🎫" },
-            { id: "wheel", label: "Roda da Sorte", icon: "🎰" },
+            { id: "wheel", label: "Roda", icon: "🎰" },
+            { id: "tap", label: "Tap Battle", icon: "⚡" },
+            { id: "quiz", label: "Quiz", icon: "🧠" },
+            { id: "mystery", label: "Caixa", icon: "🎁" },
           ]}
           activeCategory={tab}
           onCategoryChange={(id) => setTab(id as any)}

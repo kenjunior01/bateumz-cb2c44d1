@@ -152,9 +152,28 @@ const LiveHub = () => {
     toast({ title: "Live iniciada", description: `Código gerado: ${code}` });
   };
 
-  const endLive = () => {
-    if (!isLive || !liveCode) return;
-    if (!confirm("Encerrar a live agora? O código será invalidado.")) return;
+  const [endOpen, setEndOpen] = useState(false);
+  const [endCountdown, setEndCountdown] = useState(3);
+  const [ending, setEnding] = useState(false);
+
+  // Countdown timer for end-live confirmation
+  useEffect(() => {
+    if (!endOpen) return;
+    setEndCountdown(3);
+    const t = setInterval(() => {
+      setEndCountdown((c) => (c > 0 ? c - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [endOpen]);
+
+  const requestEndLive = () => {
+    if (!isLive || !liveCode || ending) return;
+    setEndOpen(true);
+  };
+
+  const confirmEndLive = () => {
+    if (ending || endCountdown > 0) return;
+    setEnding(true);
     const endedAt = Date.now();
     appendHistory({
       code: liveCode,
@@ -178,6 +197,8 @@ const LiveHub = () => {
       localStorage.setItem("liveActive", "0");
     } catch {}
     toast({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
+    setEndOpen(false);
+    setEnding(false);
   };
 
   const copyCode = async () => {
@@ -224,7 +245,7 @@ const LiveHub = () => {
                       {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  <button onClick={endLive} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90">
+                  <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
                     <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
                   </button>
                 </>
@@ -392,6 +413,56 @@ const LiveHub = () => {
 
       <Footer />
       <BottomTabBar />
+
+      <AnimatePresence>
+        {endOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => !ending && setEndOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }}
+              className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center">
+                  <Square className="h-5 w-5 fill-current" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold">Encerrar a Live?</h3>
+                  <p className="text-xs text-muted-foreground">O código <span className="font-mono font-bold text-foreground">{liveCode}</span> será invalidado e o ranking será arquivado no histórico.</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-muted/40 border border-border p-4 mb-4 text-center">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Confirmação disponível em</p>
+                <p className={`font-mono text-3xl font-bold ${endCountdown === 0 ? "text-destructive" : "text-primary"}`}>
+                  {endCountdown > 0 ? `${endCountdown}s` : "Pronto"}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => !ending && setEndOpen(false)}
+                  disabled={ending}
+                  className="flex-1 px-4 py-2.5 rounded-full bg-secondary text-foreground text-sm font-bold disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmEndLive}
+                  disabled={endCountdown > 0 || ending}
+                  className="flex-1 px-4 py-2.5 rounded-full bg-destructive text-destructive-foreground text-sm font-bold hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {ending ? "A encerrar…" : "Encerrar Live"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

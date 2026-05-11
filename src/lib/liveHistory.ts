@@ -29,6 +29,91 @@ export const clearHistory = () => {
   try { localStorage.removeItem(KEY); } catch { /* noop */ }
 };
 
+/* ---------- Per-game aggregations ---------- */
+
+export type GameAggregate = {
+  game: string;
+  plays: number;
+  totalScore: number;
+  uniquePlayers: number;
+  topPlayers: { name: string; score: number; plays: number }[]; // sorted desc
+  livesCount: number;
+};
+
+export const aggregateByGame = (sessions: LiveSession[]): GameAggregate[] => {
+  const byGame = new Map<string, { plays: number; total: number; lives: Set<string>; players: Map<string, { score: number; plays: number }> }>();
+  sessions.forEach((s) => {
+    s.leaderboard.forEach((e) => {
+      const g = e.game || "—";
+      if (!byGame.has(g)) byGame.set(g, { plays: 0, total: 0, lives: new Set(), players: new Map() });
+      const bucket = byGame.get(g)!;
+      bucket.plays += 1;
+      bucket.total += e.score;
+      bucket.lives.add(s.code);
+      const p = bucket.players.get(e.name) || { score: 0, plays: 0 };
+      p.score += e.score; p.plays += 1;
+      bucket.players.set(e.name, p);
+    });
+  });
+  return Array.from(byGame.entries()).map(([game, b]) => ({
+    game,
+    plays: b.plays,
+    totalScore: b.total,
+    uniquePlayers: b.players.size,
+    livesCount: b.lives.size,
+    topPlayers: Array.from(b.players.entries())
+      .map(([name, v]) => ({ name, score: v.score, plays: v.plays }))
+      .sort((a, b) => b.score - a.score),
+  })).sort((a, b) => b.plays - a.plays);
+};
+
+export const exportGameAggregateCSV = (aggregates: GameAggregate[]): string => {
+  const header = "game,player,total_score,plays\n";
+  const rows: string[] = [];
+  aggregates.forEach((g) => {
+    g.topPlayers.forEach((p) => {
+      rows.push([
+        `"${g.game.replace(/"/g, '""')}"`,
+        `"${p.name.replace(/"/g, '""')}"`,
+        p.score,
+        p.plays,
+      ].join(","));
+    });
+  });
+  return header + rows.join("\n");
+};
+
+export const printGameAggregatePDF = (aggregates: GameAggregate[]) => {
+  const w = window.open("", "_blank", "width=900,height=1100");
+  if (!w) return;
+  const html = `<!doctype html><html><head><meta charset="utf-8"/>
+<title>Ranking por Jogo — Bateu</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:#0f172a;margin:32px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  h2{font-size:15px;margin:24px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;}
+  .meta{font-size:11px;color:#64748b;margin-bottom:12px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}
+  th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:left;}
+  th{background:#f1f5f9;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:9999px;background:#10b98120;color:#059669;font-size:10px;font-weight:600;}
+  .winner{background:#fef9c3;}
+  @media print{ button{display:none;} }
+</style></head><body>
+<h1>Ranking agregado por Jogo — Bateu</h1>
+<div class="meta">Gerado em ${new Date().toLocaleString("pt-PT")} · ${aggregates.length} jogo(s)</div>
+<button onclick="window.print()" style="padding:8px 14px;border-radius:9999px;border:none;background:#10b981;color:white;font-weight:600;cursor:pointer;margin-bottom:16px;">Imprimir / Guardar como PDF</button>
+${aggregates.map((g) => `
+  <h2>${g.game} <span class="badge">${g.plays} jogadas · ${g.uniquePlayers} jogador(es) · ${g.livesCount} live(s)</span></h2>
+  <table><thead><tr><th>#</th><th>Jogador</th><th>Pontuação total</th><th>Jogadas</th></tr></thead>
+  <tbody>${g.topPlayers.map((p, i) => `
+    <tr class="${i===0?"winner":""}"><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td><td>${p.plays}</td></tr>`).join("")}
+  ${g.topPlayers.length===0?'<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Sem jogadores</td></tr>':''}</tbody></table>
+`).join("")}
+</body></html>`;
+  w.document.write(html); w.document.close();
+};
+
 export const exportSessionsCSV = (sessions: LiveSession[]): string => {
   const header = "live_code,started_at,ended_at,duration_sec,active_game,player,score,game,played_at\n";
   const rows: string[] = [];

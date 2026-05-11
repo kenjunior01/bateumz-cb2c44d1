@@ -19,6 +19,29 @@ const LiveOverlay = () => {
   const [round, setRound] = useState<RoundState | null>(() => readLatest<RoundState>("roundState"));
   const [ended, setEnded] = useState(false);
 
+  // Re-hydrate phase from latest liveStarted vs liveEnded events on mount.
+  useEffect(() => {
+    const started = readLatest<{ code: string; at: number }>("liveStarted");
+    const endedEvt = readLatest<{ code: string; at: number }>("liveEnded");
+    const startedAt = started?.at || 0;
+    const endedAt = endedEvt?.at || 0;
+    setEnded(endedAt > startedAt);
+  }, []);
+
+  // Local countdown so timeLeft keeps ticking after a reload, derived from the
+  // last roundState's timestamp without waiting for a new event.
+  useEffect(() => {
+    if (!round || round.phase !== "running" || !round.timeLeft) return;
+    const baseAt = round.at;
+    const baseLeft = round.timeLeft;
+    const t = setInterval(() => {
+      const left = Math.max(0, baseLeft - Math.floor((Date.now() - baseAt) / 1000));
+      setRound((r) => (r ? { ...r, timeLeft: left } : r));
+      if (left === 0) clearInterval(t);
+    }, 500);
+    return () => clearInterval(t);
+  }, [round?.at, round?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!codeFromUrl) {
       const c = readLatest<string>("liveCode");

@@ -27,9 +27,12 @@ const guessSchema = z.object({
 const norm = (s: string) => s.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 const KeywordHunt = ({ liveCode, onScore, onWinner }: Props) => {
-  const [keyword, setKeyword] = useState("BATEU");
-  const [clue, setClue] = useState("Sinónimo de 'acertou' em moçambicano 😉");
-  const [points, setPoints] = useState(100);
+  const initial = (() => {
+    try { const s = localStorage.getItem("liveKeywordConfig"); return s ? JSON.parse(s) : null; } catch { return null; }
+  })();
+  const [keyword, setKeyword] = useState<string>(initial?.keyword || "BATEU");
+  const [clue, setClue] = useState<string>(initial?.clue || "Sinónimo de 'acertou' em moçambicano 😉");
+  const [points, setPoints] = useState<number>(initial?.points || 100);
   const [running, setRunning] = useState(false);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [winner, setWinner] = useState<string | null>(null);

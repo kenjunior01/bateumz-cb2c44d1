@@ -29,7 +29,7 @@ function FloatingEmoji({ emoji, delay, x, y }: { emoji: string; delay: number; x
 }
 
 export default function Login() {
-  const { signIn, role } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,9 +44,21 @@ export default function Login() {
 
   const mascotImages = { happy: mascotHappy, excited: mascotExcited, thinking: mascotThinking, winner: mascotWinner };
 
-  const navigateAfterLogin = () => {
-    if (role === "admin") navigate("/admin");
-    else if (role === "business") navigate("/dashboard");
+  const navigateAfterLogin = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+    const roles = data?.map((item: any) => item.role) || [];
+
+    if (roles.includes("admin")) navigate("/admin");
+    else if (roles.includes("business")) navigate("/dashboard");
     else navigate("/profile");
   };
 

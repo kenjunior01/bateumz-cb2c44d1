@@ -3,7 +3,7 @@ import { useParams, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Clock, ExternalLink, Trophy, Share2, Users, Loader2, Sparkles, Youtube, Instagram, Music2, Facebook, Globe, Tv } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchScheduledLiveBySlug, fetchScheduledLiveRanking, buildScheduledAmbassadorUrl, consumePendingAttendance, confirmAttendance, type ScheduledLive, type ScheduledLiveRanking } from "@/lib/scheduledLives";
+import { fetchScheduledLiveBySlug, fetchScheduledLiveRanking, buildScheduledAmbassadorUrl, consumePendingAttendance, confirmAttendance, clearPendingAttendance, type ScheduledLive, type ScheduledLiveRanking } from "@/lib/scheduledLives";
 import { ensureAmbassador, buildShareLink, type ShareChannel } from "@/lib/ambassador";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

@@ -165,13 +165,49 @@ const LiveStudio = () => {
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 rounded-full bg-secondary/50 w-fit">
-        {tabs.map((tk) => (
-          <button key={tk} onClick={() => setTab(tk)} className={`px-4 py-1.5 text-xs font-bold rounded-full ${tab === tk ? "bg-card shadow" : "text-muted-foreground"}`}>
-            {tk === "pre" ? "Pré-Live" : tk === "during" ? "Ao Vivo" : "Pós-Live"}
-          </button>
-        ))}
-      </div>
+      {(() => {
+        const recommended: TabKey = isLive ? "during" : (isEnded || isCancelled) ? "post" : "pre";
+        const labels: Record<TabKey, string> = { pre: "Pré-Live", during: "Ao Vivo", post: "Pós-Live" };
+        return (
+          <div className="flex gap-1 p-1 rounded-full bg-secondary/50 w-fit overflow-x-auto">
+            {tabs.map((tk) => (
+              <button key={tk} onClick={() => setTab(tk)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full whitespace-nowrap relative ${tab === tk ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}>
+                {labels[tk]}
+                {recommended === tk && tab !== tk && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 align-middle" />}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {(() => {
+        const phaseFor = (t: TabKey): ChecklistPhase => t;
+        const items = checklist.filter((c) => c.phase === phaseFor(tab));
+        if (items.length === 0) return null;
+        const done = items.filter((i) => i.done).length;
+        return (
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display font-bold flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Checklist {tab === "pre" ? "pré-live" : tab === "during" ? "durante" : "pós-live"}</h2>
+              <span className="text-[10px] font-bold text-muted-foreground">{done}/{items.length}</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-3">
+              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }} />
+            </div>
+            <ul className="grid gap-1 sm:grid-cols-2">
+              {items.map((c) => (
+                <li key={c.key}>
+                  <button onClick={async () => { await setChecklistItem(live.id, c.key, !c.done); reload(live.id); }} className="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg hover:bg-secondary">
+                    {c.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+                    <span className={`text-sm ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })()}
 
       {tab === "pre" && (
         <div className="grid gap-4 md:grid-cols-2">

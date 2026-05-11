@@ -32,12 +32,25 @@ const DashboardLiveHistory = () => {
     winners: sessions.reduce((a, s) => a + s.winners.length, 0),
   }), [sessions]);
 
+  const aggregates = useMemo(() => aggregateByGame(filtered), [filtered]);
+
   const onExportCSV = () => {
+    if (view === "games") {
+      if (!aggregates.length) return;
+      downloadCSV(`bateu-ranking-jogos-${Date.now()}.csv`, exportGameAggregateCSV(aggregates));
+      toast({ title: "CSV exportado", description: `${aggregates.length} jogo(s)` });
+      return;
+    }
     if (!filtered.length) return;
     downloadCSV(`bateu-lives-${Date.now()}.csv`, exportSessionsCSV(filtered));
     toast({ title: "CSV exportado", description: `${filtered.length} live(s)` });
   };
   const onPDF = () => {
+    if (view === "games") {
+      if (!aggregates.length) return;
+      printGameAggregatePDF(aggregates);
+      return;
+    }
     if (!filtered.length) return;
     printSessionsPDF(filtered);
   };

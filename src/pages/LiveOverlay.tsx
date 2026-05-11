@@ -62,8 +62,25 @@ const LiveOverlay = () => {
     <div className="min-h-screen bg-transparent text-white p-6 font-display">
       <style>{`html,body,#root{background:transparent !important;}`}</style>
 
-      <div className="absolute top-6 left-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur text-white text-xs font-bold shadow-lg">
-        <Radio className="h-3.5 w-3.5 animate-pulse" /> LIVE · {code}
+      <div className="absolute top-6 left-6 flex flex-col gap-2 items-start">
+        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur text-white text-xs font-bold shadow-lg ${ended ? "bg-slate-700/90" : "bg-red-500/90"}`}>
+          <Radio className={`h-3.5 w-3.5 ${ended ? "" : "animate-pulse"}`} /> {ended ? "ENCERRADA" : "LIVE"} · {code}
+        </div>
+        {round && !ended && (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur text-white text-[11px] font-medium shadow-lg">
+            <Gamepad2 className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="uppercase tracking-wider">{round.game}</span>
+            <span className="opacity-50">·</span>
+            <span className={`${round.phase === "running" ? "text-emerald-300" : "text-amber-300"}`}>{round.phase}</span>
+            {round.timeLeft > 0 && (
+              <>
+                <span className="opacity-50">·</span>
+                <Clock className="h-3 w-3" />
+                <span className="font-mono">{round.timeLeft}s</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="absolute top-6 right-6 w-72 rounded-2xl bg-black/70 backdrop-blur-md border border-white/10 overflow-hidden shadow-2xl">

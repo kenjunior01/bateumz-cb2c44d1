@@ -61,10 +61,15 @@ Deno.serve(async (req) => {
       : `day:${new Date().toISOString().slice(0, 10)}`;
     const visitorHash = await sha256(`${ip}|${userAgent}|${visitorId}|${scope}`);
 
-    // Anti self-referral: block ambassador clicking their own link
-    // (we identify by visitorId persisted in localStorage; not bulletproof but cheap)
-    // Heavier check happens server-side at confirm_live_attendance via auth.uid().
-    const isSelf = visitorId && amb.user_id && visitorId === amb.user_id;
+    // Anti self-referral at tracking time is best-effort; the strong check
+    // happens at confirm_live_attendance via auth.uid(). Here we only block
+    // the obvious case where the request is authenticated as the ambassador.
+    const authHeader = req.headers.get("authorization") || "";
+    let isSelf = false;
+    if (authHeader.startsWith("Bearer ")) {
+      const { data: u } = await supa.auth.getUser(authHeader.slice(7));
+      if (u?.user?.id && u.user.id === amb.user_id) isSelf = true;
+    }
 
     let visitId: string | null = null;
     let counted = false;

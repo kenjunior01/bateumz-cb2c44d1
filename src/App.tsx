@@ -119,7 +119,7 @@ function AnimatedRoutes() {
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute blockRoles={["business", "admin"]}>
                 <Profile />
               </ProtectedRoute>
             }

@@ -73,6 +73,8 @@ import AmbassadorRedirect from "./pages/AmbassadorRedirect.tsx";
 import LiveAmbassadorsRanking from "./pages/LiveAmbassadorsRanking.tsx";
 import ScheduledLivePage from "./pages/ScheduledLivePage.tsx";
 import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.tsx";
+import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
+import OverlayLive from "./pages/OverlayLive.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -165,8 +167,10 @@ function AnimatedRoutes() {
             <Route path="live-history" element={<DashboardLiveHistory />} />
             <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
+            <Route path="live-studio/:id" element={<LiveStudio />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
+          <Route path="/overlay/live/:id" element={<OverlayLive />} />
           <Route
             path="/admin"
             element={

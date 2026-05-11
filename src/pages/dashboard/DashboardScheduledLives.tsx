@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Plus, Trophy, Copy, ExternalLink, X, Loader2, Trash2 } from "lucide-react";
+import { Calendar, Plus, Trophy, Copy, ExternalLink, X, Loader2, Trash2, Radio } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -128,8 +129,10 @@ const DashboardScheduledLives = () => {
                   className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-secondary"><Copy className="h-3 w-3" /> URL</button>
                 <a href={buildScheduledLiveUrl(sl.slug)} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-secondary"><ExternalLink className="h-3 w-3" /> Abrir</a>
+                <Link to={`/dashboard/live-studio/${sl.id}`}
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-sm"><Radio className="h-3 w-3" /> Studio</Link>
                 <button onClick={() => setSelected(sl)}
-                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-emerald-500 text-white"><Trophy className="h-3 w-3" /> Prémios</button>
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-secondary"><Trophy className="h-3 w-3" /> Prémios</button>
                 {sl.status !== "cancelled" && sl.status !== "ended" && (
                   <button onClick={async () => { await cancelScheduledLive(sl.id); toast.success("Cancelada"); load(); }}
                     className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-muted text-foreground"><X className="h-3 w-3" /> Cancelar</button>

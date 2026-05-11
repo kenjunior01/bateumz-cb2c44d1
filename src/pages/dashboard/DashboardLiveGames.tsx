@@ -10,6 +10,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
 import { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
+import { publish } from "@/lib/liveBus";
+
+const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
+  { id: "wheel", label: "Roda de Prémios", emoji: "🎰" },
+  { id: "keyword", label: "Caça à Palavra", emoji: "🔎" },
+  { id: "emoji", label: "Batalha de Emojis", emoji: "💥" },
+  { id: "tap", label: "Tap Battle", emoji: "⚡" },
+  { id: "quiz", label: "Quiz Battle", emoji: "🧠" },
+  { id: "mystery", label: "Caixa Misteriosa", emoji: "🎁" },
+];
 
 type EmojiOpt = { id: string; emoji: string; label: string };
 type KeywordCfg = { keyword: string; clue: string; points: number };
@@ -36,10 +46,20 @@ const DashboardLiveGames = () => {
   const [wheel, setWheel] = useState<WheelPrize[]>(() => readArr("liveWheelPrizes", DEFAULT_WHEEL_PRIZES));
   const [emojis, setEmojis] = useState<EmojiOpt[]>(() => readArr("liveEmojiOptions", DEFAULT_EMOJI));
   const [keyword, setKeyword] = useState<KeywordCfg>(() => readJSON("liveKeywordConfig", DEFAULT_KEYWORD));
+  const [activeGame, setActiveGame] = useState<string>(() => {
+    try { return localStorage.getItem("liveActiveGame") || "wheel"; } catch { return "wheel"; }
+  });
 
   const totalWeight = useMemo(() => wheel.reduce((s, p) => s + Math.max(0, p.weight || 0), 0), [wheel]);
 
   const persist = (k: string, v: any) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  const setAndBroadcastActive = (id: string) => {
+    setActiveGame(id);
+    try { localStorage.setItem("liveActiveGame", id); } catch {}
+    publish({ type: "activeGame", payload: id });
+    toast({ title: "Jogo ativo aplicado", description: `O Live Hub vai mudar para ${GAME_OPTIONS.find(g => g.id === id)?.label}.` });
+  };
 
   const saveAll = () => {
     persist("liveGameConfig", config);
@@ -117,6 +137,40 @@ const DashboardLiveGames = () => {
             <p className="text-[10px] text-muted-foreground/70 mt-0.5">{s.hint}</p>
           </div>
         ))}
+      </section>
+
+      {/* Jogo ativo no momento — aplica imediatamente no Live Hub */}
+      <section className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-card p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider mb-1">
+              <Radio className="h-3 w-3 animate-pulse" /> Ao vivo agora
+            </div>
+            <h3 className="font-display text-lg font-bold">Jogo ativo no momento</h3>
+            <p className="text-xs text-muted-foreground">
+              O Live Hub e o overlay vão mudar automaticamente para este jogo. Resumo visível para o anfitrião.
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold whitespace-nowrap">
+            {GAME_OPTIONS.find(g => g.id === activeGame)?.emoji} {GAME_OPTIONS.find(g => g.id === activeGame)?.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {GAME_OPTIONS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setAndBroadcastActive(g.id)}
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
+                activeGame === g.id
+                  ? "border-primary bg-primary/10 shadow-md"
+                  : "border-border bg-card hover:border-primary/40"
+              }`}
+            >
+              <div className="text-2xl mb-1">{g.emoji}</div>
+              <p className="text-[10px] font-bold leading-tight">{g.label}</p>
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Tabs per game */}

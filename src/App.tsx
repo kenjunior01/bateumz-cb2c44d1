@@ -68,6 +68,8 @@ import PrestacoesProduto from "./pages/PrestacoesProduto.tsx";
 import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
 import DashboardLiveGames from "./pages/dashboard/DashboardLiveGames.tsx";
 import DashboardLiveHistory from "./pages/dashboard/DashboardLiveHistory.tsx";
+import DashboardAmbassadors from "./pages/dashboard/DashboardAmbassadors.tsx";
+import AmbassadorRedirect from "./pages/AmbassadorRedirect.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -108,6 +110,7 @@ function AnimatedRoutes() {
           <Route path="/prestacoes" element={<Prestacoes />} />
           <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />
           <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
+          <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
           <Route
             path="/profile"
             element={
@@ -155,6 +158,7 @@ function AnimatedRoutes() {
             <Route path="prestacoes" element={<DashboardPrestacoes />} />
             <Route path="live-games" element={<DashboardLiveGames />} />
             <Route path="live-history" element={<DashboardLiveHistory />} />
+            <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route

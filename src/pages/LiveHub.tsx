@@ -18,6 +18,8 @@ import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/l
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
+import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
 
@@ -34,6 +36,7 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 const LiveHub = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [active, setActive] = useState<GameId>(() => {
     try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
   });
@@ -384,6 +387,14 @@ const LiveHub = () => {
               onResetConfig={resetConfig}
             />
             <LiveLeaderboard entries={leaderboard} onClear={() => setLeaderboard([])} />
+            {user && (
+              <AmbassadorPanel
+                businessUserId={user.id}
+                businessName={user.email?.split("@")[0] || "esta empresa"}
+                liveCode={liveCode}
+                compact
+              />
+            )}
 
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">

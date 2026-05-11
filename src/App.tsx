@@ -167,8 +167,10 @@ function AnimatedRoutes() {
             <Route path="live-history" element={<DashboardLiveHistory />} />
             <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
+            <Route path="live-studio/:id" element={<LiveStudio />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
+          <Route path="/overlay/live/:id" element={<OverlayLive />} />
           <Route
             path="/admin"
             element={

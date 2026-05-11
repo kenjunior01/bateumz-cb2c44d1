@@ -117,21 +117,51 @@ const LiveStudio = () => {
   if (live.business_user_id !== user?.id) return <div className="text-center py-24 text-sm text-muted-foreground">Esta live não te pertence.</div>;
 
   const isLive = live.status === "live";
+  const isEnded = live.status === "ended";
+  const isCancelled = live.status === "cancelled";
+  const isScheduled = live.status === "scheduled";
+
+  const overlayRanking = buildOverlayUrl(live.id, "ranking");
+  const openOverlay = (view: "ranking" | "prizes" | "countdown" | "announcement" = "ranking") => {
+    window.open(buildOverlayUrl(live.id, view), "_blank", "noopener,width=1280,height=720");
+  };
+
+  const statusBg = isLive
+    ? "from-red-500/15 via-amber-500/10 to-emerald-500/10"
+    : isEnded
+      ? "from-zinc-500/10 via-zinc-400/5 to-zinc-500/10"
+      : isCancelled
+        ? "from-rose-500/10 via-zinc-400/5 to-rose-500/10"
+        : "from-emerald-500/10 via-amber-500/10 to-blue-500/10";
+
+  const statusLabel = isLive ? "AO VIVO" : isEnded ? "Encerrada" : isCancelled ? "Cancelada" : "Agendada";
+  const statusPill = isLive
+    ? "bg-red-500 text-white animate-pulse"
+    : isEnded
+      ? "bg-zinc-700 text-white"
+      : isCancelled
+        ? "bg-rose-500 text-white"
+        : "bg-emerald-500/20 text-emerald-700";
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl bg-gradient-to-br from-red-500/10 via-amber-500/10 to-emerald-500/10 border border-border p-4">
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${isLive ? "bg-red-500 text-white animate-pulse" : "bg-emerald-500/20 text-emerald-700"}`}>{live.status}</span>
+      <div className={`rounded-3xl bg-gradient-to-br ${statusBg} border border-border p-4`}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${statusPill}`}>{statusLabel}</span>
           <span className="text-[11px] text-muted-foreground"><Calendar className="inline h-3 w-3 mr-1" />{new Date(live.scheduled_at).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short" })}</span>
         </div>
         <h1 className="font-display text-xl sm:text-2xl font-extrabold mt-2">{live.title}</h1>
+        {isCancelled && <p className="text-xs text-rose-600 mt-1">Esta live foi cancelada. Apenas o resumo está disponível.</p>}
+        {isEnded && <p className="text-xs text-muted-foreground mt-1">Live encerrada — vê o resumo na aba Pós-Live.</p>}
         <div className="flex flex-wrap gap-2 mt-3">
-          <button onClick={() => { navigator.clipboard.writeText(liveUrl); toast.success("Link copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link público</button>
-          <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><ExternalLink className="h-3 w-3" />Abrir</a>
-          {!isLive && <button onClick={() => setStatus("live")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-red-500 text-white font-bold"><Play className="h-3 w-3" />Ir Live</button>}
+          <button onClick={() => { navigator.clipboard.writeText(liveUrl); toast.success("Link público copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link público</button>
+          <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><ExternalLink className="h-3 w-3" />Abrir live</a>
+          <button onClick={() => openOverlay("ranking")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-blue-500 text-white font-bold"><Tv className="h-3 w-3" />Abrir overlay</button>
+          <button onClick={() => { navigator.clipboard.writeText(overlayRanking); toast.success("Link do overlay copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link overlay</button>
+          {!isLive && !isEnded && !isCancelled && <button onClick={() => setStatus("live")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-red-500 text-white font-bold"><Play className="h-3 w-3" />Ir Live</button>}
           {isLive && <button onClick={() => setStatus("scheduled")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-amber-500 text-white font-bold"><Pause className="h-3 w-3" />Pausar</button>}
-          {live.status !== "ended" && <button onClick={() => setStatus("ended")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-zinc-700 text-white font-bold"><Square className="h-3 w-3" />Encerrar</button>}
+          {!isEnded && !isCancelled && <button onClick={() => setStatus("ended")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-zinc-700 text-white font-bold"><Square className="h-3 w-3" />Encerrar</button>}
+          {isEnded && <button onClick={() => setStatus("scheduled")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-emerald-500 text-white font-bold"><Play className="h-3 w-3" />Reabrir</button>}
         </div>
       </div>
 

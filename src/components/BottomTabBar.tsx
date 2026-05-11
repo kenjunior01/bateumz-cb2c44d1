@@ -68,6 +68,11 @@ const BottomTabBar = () => {
 
   const isActive = (href: string) => location.pathname === href;
 
+  // Hide global tab bar on dashboard/admin/overlay routes (they have their own)
+  if (location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/admin") || location.pathname.startsWith("/overlay")) {
+    return null;
+  }
+
   const tabs = [
     { icon: Home, labelKey: "tab.home", href: "/" },
     { icon: Search, labelKey: "tab.explore", href: "/marketplace" },

@@ -188,6 +188,7 @@ export default function AdminUsers() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

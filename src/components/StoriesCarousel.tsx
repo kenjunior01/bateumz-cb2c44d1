@@ -287,6 +287,20 @@ const StoriesCarousel = () => {
           </button>
 
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1" style={{ scrollbarWidth: "none" }}>
+            <button
+              onClick={() => user ? setCreateOpen(true) : navigate("/login")}
+              className="flex flex-col items-center gap-1.5 shrink-0 snap-start group"
+              aria-label="Publicar status"
+            >
+              <div className="relative h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full p-[3px] bg-gradient-to-tr from-primary to-accent">
+                <div className="relative h-full w-full rounded-full bg-card ring-2 ring-background flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-primary" strokeWidth={2.5} />
+                </div>
+              </div>
+              <span className="text-[10px] font-medium text-foreground max-w-[68px] truncate">
+                Seu Status
+              </span>
+            </button>
             {stories.map((story, idx) => {
               const viewed = viewedIds.has(story.id);
               return (

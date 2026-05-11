@@ -1,33 +1,52 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Trophy, Sparkles, Loader2, Copy, Check, Share2, ArrowLeft, Users } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
+import { Trophy, Sparkles, Loader2, Copy, Check, Share2, ArrowLeft, Users, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchRanking, buildLiveRankingUrl, type AmbassadorRanking } from "@/lib/ambassador";
 import { toast } from "sonner";
 
+const PAGE_SIZE = 50;
+
 const LiveAmbassadorsRanking = () => {
   const { liveCode } = useParams<{ liveCode: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const code = (liveCode || "").toUpperCase();
+  const businessFilter = searchParams.get("biz") || "";
+
   const [ranking, setRanking] = useState<AmbassadorRanking[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = useMemo(() => buildLiveRankingUrl(code), [code]);
+  const shareUrl = useMemo(() => {
+    const base = buildLiveRankingUrl(code);
+    return businessFilter ? `${base}?biz=${encodeURIComponent(businessFilter)}` : base;
+  }, [code, businessFilter]);
   const totalVisits = useMemo(() => ranking.reduce((s, r) => s + r.visits, 0), [ranking]);
 
+  const loadPage = useCallback(async (pageIndex: number, append: boolean) => {
+    if (pageIndex === 0) setLoading(true); else setLoadingMore(true);
+    try {
+      const r = await fetchRanking(businessFilter || "", code, {
+        limit: PAGE_SIZE,
+        offset: pageIndex * PAGE_SIZE,
+      });
+      setHasMore(r.length === PAGE_SIZE);
+      setRanking((prev) => append ? [...prev, ...r] : r);
+      setPage(pageIndex);
+    } finally {
+      setLoading(false); setLoadingMore(false);
+    }
+  }, [code, businessFilter]);
+
+  // Initial load + auto-refresh of the first page
   useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const r = await fetchRanking("", code);
-        if (alive) setRanking(r);
-      } finally { if (alive) setLoading(false); }
-    };
-    load();
-    const t = setInterval(load, 8000);
-    return () => { alive = false; clearInterval(t); };
-  }, [code]);
+    loadPage(0, false);
+    const t = setInterval(() => loadPage(0, false), 12000);
+    return () => clearInterval(t);
+  }, [loadPage]);
 
   const copy = async () => {
     await navigator.clipboard.writeText(shareUrl);
@@ -41,6 +60,12 @@ const LiveAmbassadorsRanking = () => {
       catch { /* fall through */ }
     }
     copy();
+  };
+
+  const clearFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("biz");
+    setSearchParams(next, { replace: true });
   };
 
   return (
@@ -61,7 +86,7 @@ const LiveAmbassadorsRanking = () => {
           <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
               <p className="text-[10px] uppercase opacity-80">Embaixadores</p>
-              <p className="text-2xl font-extrabold">{ranking.length}</p>
+              <p className="text-2xl font-extrabold">{ranking.length}{hasMore ? "+" : ""}</p>
             </div>
             <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
               <p className="text-[10px] uppercase opacity-80">Visitas únicas</p>
@@ -69,6 +94,14 @@ const LiveAmbassadorsRanking = () => {
             </div>
           </div>
         </div>
+
+        {businessFilter && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-xs">
+            <span className="font-bold">Filtrado por empresa</span>
+            <code className="font-mono text-[10px] truncate flex-1">{businessFilter}</code>
+            <button onClick={clearFilter} className="text-[11px] underline">Limpar</button>
+          </div>
+        )}
 
         <div className="mt-4 rounded-2xl border border-border bg-card p-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-emerald-500" />
@@ -96,26 +129,40 @@ const LiveAmbassadorsRanking = () => {
               Ainda sem visitas registadas. Sê o primeiro embaixador a partilhar!
             </p>
           ) : (
-            <ul className="divide-y divide-border">
-              <AnimatePresence initial={false}>
-                {ranking.map((r, i) => (
-                  <motion.li key={r.ambassador_id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                    className="px-4 py-3 flex items-center gap-3">
-                    <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-extrabold ${
-                      i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-slate-300 text-black" :
-                      i === 2 ? "bg-amber-700 text-white" : "bg-muted text-muted-foreground"
-                    }`}>
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold truncate">{r.display_name || r.ref_code.toUpperCase()}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">#{r.ref_code}</p>
-                    </div>
-                    <span className="text-lg font-extrabold text-emerald-600">{r.visits}</span>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
+            <>
+              <ul className="divide-y divide-border">
+                <AnimatePresence initial={false}>
+                  {ranking.map((r, i) => (
+                    <motion.li key={r.ambassador_id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      className="px-4 py-3 flex items-center gap-3">
+                      <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-extrabold ${
+                        i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-slate-300 text-black" :
+                        i === 2 ? "bg-amber-700 text-white" : "bg-muted text-muted-foreground"
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">{r.display_name || r.ref_code.toUpperCase()}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">#{r.ref_code}</p>
+                      </div>
+                      <span className="text-lg font-extrabold text-emerald-600">{r.visits}</span>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+
+              <div className="p-4 border-t border-border flex items-center justify-center">
+                {hasMore ? (
+                  <button onClick={() => loadPage(page + 1, true)} disabled={loadingMore}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50">
+                    {loadingMore ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronDown className="h-3 w-3" />}
+                    Carregar mais (+{PAGE_SIZE})
+                  </button>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Fim do ranking</p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

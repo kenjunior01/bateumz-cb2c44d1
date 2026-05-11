@@ -73,12 +73,16 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
 
         <div className="space-y-2">
           <a
-            href={`/lives/overlay?code=${liveCode}`}
+            href={overlayUrl}
             target="_blank" rel="noreferrer"
             className="flex items-center justify-between w-full px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90"
           >
             <span className="inline-flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Abrir Overlay (OBS)</span>
           </a>
+          <div className="rounded-lg bg-muted/40 border border-border px-3 py-2">
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">URL do overlay</p>
+            <p className="text-[11px] font-mono break-all text-foreground/80">{overlayUrl}</p>
+          </div>
           <button onClick={copyOverlay} className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-full bg-secondary text-foreground text-xs font-medium">
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             Copiar URL do overlay
@@ -95,6 +99,20 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
             </button>
           </div>
         </div>
+
+        {!onPublic && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">Abra o Live Hub em {baseUrl}</p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                O overlay sincroniza com o Live Hub apenas quando ambos estão abertos no mesmo domínio público
+                ({baseUrl}). Está actualmente em <span className="font-mono">{typeof window !== "undefined" ? window.location.origin : ""}</span>,
+                então o OBS não receberá as actualizações em tempo real.
+              </p>
+            </div>
+          </div>
+        )}
 
         <p className="text-[10px] text-muted-foreground text-center">
           Cole o URL do overlay como <strong>Browser Source</strong> no OBS / Streamlabs (1280×720, transparente).

@@ -296,6 +296,55 @@ const DashboardAmbassadors = () => {
           </ul>
         )}
       </div>
+
+      {/* Audit / History */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+          <Clock className="h-4 w-4 text-sky-500" />
+          <h3 className="font-display text-sm font-bold flex-1">Auditoria de prémios</h3>
+          <span className="text-[10px] text-muted-foreground">{prizes.length} registo(s)</span>
+        </div>
+        {prizes.length === 0 ? (
+          <p className="text-sm text-muted-foreground p-6 text-center">Sem histórico ainda.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2 font-bold">Prémio</th>
+                  <th className="text-left px-3 py-2 font-bold">Âmbito</th>
+                  <th className="text-left px-3 py-2 font-bold">Posição</th>
+                  <th className="text-left px-3 py-2 font-bold">Estado</th>
+                  <th className="text-left px-3 py-2 font-bold">Modo</th>
+                  <th className="text-left px-3 py-2 font-bold">Atribuído em</th>
+                  <th className="text-left px-3 py-2 font-bold">Notificado em</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {prizes.map((p) => {
+                  const state = !p.winner_user_id ? "pendente" : p.notified_at ? "notificado" : "atribuído";
+                  const stateColor = state === "pendente"
+                    ? "bg-amber-500/15 text-amber-700"
+                    : state === "notificado" ? "bg-sky-500/15 text-sky-700" : "bg-emerald-500/15 text-emerald-700";
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/20">
+                      <td className="px-3 py-2 font-medium">{p.title}</td>
+                      <td className="px-3 py-2">{p.scope === "live" ? `Live ${p.live_code}` : "Acumulado"}</td>
+                      <td className="px-3 py-2">#{p.position}</td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${stateColor}`}>{state}</span>
+                      </td>
+                      <td className="px-3 py-2">{p.award_mode ? (p.award_mode === "auto" ? "Automático" : "Manual") : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{p.awarded_at ? new Date(p.awarded_at).toLocaleString("pt-PT") : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{p.notified_at ? new Date(p.notified_at).toLocaleString("pt-PT") : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

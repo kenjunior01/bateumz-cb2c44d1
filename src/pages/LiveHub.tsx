@@ -387,6 +387,14 @@ const LiveHub = () => {
               onResetConfig={resetConfig}
             />
             <LiveLeaderboard entries={leaderboard} onClear={() => setLeaderboard([])} />
+            {user && (
+              <AmbassadorPanel
+                businessUserId={user.id}
+                businessName={user.email?.split("@")[0] || "esta empresa"}
+                liveCode={liveCode}
+                compact
+              />
+            )}
 
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">

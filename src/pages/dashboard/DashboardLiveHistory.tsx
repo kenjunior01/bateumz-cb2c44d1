@@ -173,7 +173,7 @@ const DashboardLiveHistory = () => {
             })}
           </div>
         )
-      ) : (
+      ) : filtered.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border p-10 text-center">
           <Trophy className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
           <p className="text-sm text-muted-foreground">

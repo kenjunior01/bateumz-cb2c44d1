@@ -154,6 +154,7 @@ function AnimatedRoutes() {
             <Route path="contests" element={<DashboardContests />} />
             <Route path="prestacoes" element={<DashboardPrestacoes />} />
             <Route path="live-games" element={<DashboardLiveGames />} />
+            <Route path="live-history" element={<DashboardLiveHistory />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route

@@ -1459,6 +1459,7 @@ export type Database = {
       }
     }
     Functions: {
+      award_ambassador_prize: { Args: { p_prize_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1466,6 +1467,17 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_live_ambassador_ranking: {
+        Args: { p_live_code: string }
+        Returns: {
+          ambassador_id: string
+          business_user_id: string
+          display_name: string
+          ref_code: string
+          user_id: string
+          visits: number
+        }[]
       }
       has_role: {
         Args: {

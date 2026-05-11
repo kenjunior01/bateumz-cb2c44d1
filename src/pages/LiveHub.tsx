@@ -41,12 +41,18 @@ const LiveHub = () => {
       return s ? JSON.parse(s) : DEFAULT_WHEEL_PRIZES;
     } catch { return DEFAULT_WHEEL_PRIZES; }
   });
-  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>(() => {
+    try {
+      const s = localStorage.getItem("liveLeaderboard");
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
   const [liveCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase());
   const [copied, setCopied] = useState(false);
 
   useEffect(() => { try { localStorage.setItem("liveGameConfig", JSON.stringify(config)); } catch {} }, [config]);
   useEffect(() => { try { localStorage.setItem("liveWheelPrizes", JSON.stringify(wheelPrizes)); } catch {} }, [wheelPrizes]);
+  useEffect(() => { try { localStorage.setItem("liveLeaderboard", JSON.stringify(leaderboard)); } catch {} }, [leaderboard]);
 
   const recordScore = (game: string) => (name: string, score: number) => {
     if (!name) return;
@@ -55,6 +61,12 @@ const LiveHub = () => {
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
     ]);
   };
+
+  const broadcastWinner = (name: string, meta?: string) => {
+    try { localStorage.setItem("liveLastWinner", JSON.stringify({ name, meta })); } catch {}
+  };
+
+  const resetConfig = () => { setConfig(DEFAULT_CONFIG); setWheelPrizes(DEFAULT_WHEEL_PRIZES); };
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(`${window.location.origin}/lives?code=${liveCode}`);

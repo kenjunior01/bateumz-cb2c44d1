@@ -70,6 +70,7 @@ import DashboardLiveGames from "./pages/dashboard/DashboardLiveGames.tsx";
 import DashboardLiveHistory from "./pages/dashboard/DashboardLiveHistory.tsx";
 import DashboardAmbassadors from "./pages/dashboard/DashboardAmbassadors.tsx";
 import AmbassadorRedirect from "./pages/AmbassadorRedirect.tsx";
+import LiveAmbassadorsRanking from "./pages/LiveAmbassadorsRanking.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -106,6 +107,7 @@ function AnimatedRoutes() {
           <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/lives" element={<LiveHub />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
+          <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
           <Route path="/transparencia" element={<Transparency />} />
           <Route path="/prestacoes" element={<Prestacoes />} />
           <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />

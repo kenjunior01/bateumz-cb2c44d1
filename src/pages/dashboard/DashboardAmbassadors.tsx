@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Trophy, Plus, Trash2, Award, Loader2, Sparkles, Download, Save, X } from "lucide-react";
+import { Trophy, Plus, Trash2, Award, Loader2, Sparkles, Download, Save, X, ExternalLink, Copy, CheckCircle2, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchRanking, type AmbassadorRanking } from "@/lib/ambassador";
+import { fetchRanking, buildLiveRankingUrl, type AmbassadorRanking } from "@/lib/ambassador";
 import { toast } from "sonner";
 
 type Prize = {
@@ -38,9 +39,25 @@ const DashboardAmbassadors = () => {
         .select("*")
         .eq("business_user_id", user.id)
         .order("created_at", { ascending: false });
-      setPrizes((data || []) as Prize[]);
+      const list = (data || []) as Prize[];
+      setPrizes(list);
       const r = await fetchRanking(user.id, scope === "live" ? filterCode : undefined);
       setRanking(r);
+      // Auto-attribute prizes whose position now has a leader.
+      for (const p of list) {
+        if (p.winner_user_id) continue;
+        if (p.scope === "live" && (!filterCode || p.live_code !== filterCode)) {
+          // skip if we don't have ranking for that live loaded
+          continue;
+        }
+        const candidate = r[p.position - 1];
+        if (candidate?.user_id) {
+          const { data: res, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: p.id });
+          if (!error && res && (res as any).winner_user_id) {
+            toast.success(`Prémio "${p.title}" atribuído automaticamente`);
+          }
+        }
+      }
     } finally { setLoading(false); }
   };
 
@@ -74,15 +91,18 @@ const DashboardAmbassadors = () => {
   };
 
   const awardPrize = async (prize: Prize) => {
-    const winner = ranking[prize.position - 1];
-    if (!winner) return toast.error("Ainda não há embaixador na posição " + prize.position);
-    const { error } = await supabase
-      .from("live_ambassador_prizes")
-      .update({ winner_user_id: winner.user_id, awarded_at: new Date().toISOString() })
-      .eq("id", prize.id);
+    const { data, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: prize.id });
     if (error) return toast.error(error.message);
-    toast.success(`Prémio atribuído a ${winner.display_name || winner.ref_code}`);
+    const res = data as any;
+    if (res?.no_winner) return toast.error("Ainda não há embaixador na posição " + prize.position);
+    if (res?.already_awarded) return toast.info("Este prémio já foi atribuído.");
+    toast.success(`Prémio atribuído${res?.winner_name ? ` a ${res.winner_name}` : ""}. Vencedor notificado.`);
     reload();
+  };
+
+  const copyLiveLink = async (code: string) => {
+    await navigator.clipboard.writeText(buildLiveRankingUrl(code));
+    toast.success("Link público do ranking copiado!");
   };
 
   const exportCSV = () => {
@@ -172,18 +192,41 @@ const DashboardAmbassadors = () => {
         ) : (
           <ul className="divide-y divide-border">
             {prizes.map((p) => (
-              <li key={p.id} className="p-4 flex items-center gap-3">
+              <li key={p.id} className="p-4 flex items-center gap-3 flex-wrap">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/15 text-amber-600 font-bold">
                   {p.position}º
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{p.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold truncate">{p.title}</p>
+                    {p.winner_user_id ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-bold">
+                        <CheckCircle2 className="h-3 w-3" /> Atribuído
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 font-bold">
+                        <Clock className="h-3 w-3" /> A aguardar
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-muted-foreground">
-                    {p.scope === "live" ? `Live ${p.live_code}` : "Acumulado"}
+                    {p.scope === "live" ? `Live ${p.live_code}` : "Acumulado (sempre)"}
                     {p.description ? ` · ${p.description}` : ""}
-                    {p.winner_user_id ? ` · Atribuído ${p.awarded_at ? new Date(p.awarded_at).toLocaleDateString() : ""}` : ""}
+                    {p.winner_user_id && p.awarded_at ? ` · ${new Date(p.awarded_at).toLocaleString("pt-PT")}` : ""}
                   </p>
                 </div>
+                {p.scope === "live" && p.live_code && (
+                  <>
+                    <button onClick={() => copyLiveLink(p.live_code!)}
+                      className="text-[11px] px-2 py-1.5 rounded-full bg-secondary inline-flex items-center gap-1">
+                      <Copy className="h-3 w-3" /> Link
+                    </button>
+                    <Link to={`/lives/${p.live_code}/ranking`} target="_blank"
+                      className="text-[11px] px-2 py-1.5 rounded-full bg-secondary inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> Ver
+                    </Link>
+                  </>
+                )}
                 {!p.winner_user_id && (
                   <button onClick={() => awardPrize(p)} className="text-[11px] px-3 py-1.5 rounded-full bg-emerald-500 text-white font-bold">
                     Atribuir ao #{p.position}

@@ -30,8 +30,12 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
     URL.revokeObjectURL(url);
   };
 
+  const overlayUrl = buildOverlayUrl(liveCode);
+  const baseUrl = getPublicBaseUrl();
+  const onPublic = isOnPublicDomain();
+
   const copyOverlay = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/lives/overlay?code=${liveCode}`);
+    await navigator.clipboard.writeText(overlayUrl);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
 

@@ -3,16 +3,18 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sparkles, Loader2 } from "lucide-react";
 import { recordAmbassadorVisit } from "@/lib/ambassador";
+import { storePendingAttendance, fetchScheduledLiveById } from "@/lib/scheduledLives";
 
 /**
  * Public landing for ambassador links: /e/:businessId/:refCode
  * Records a unique visit (server-side dedup by IP+UA+visitorId+day) and
- * forwards to the company page (or the live hub if liveCode provided).
+ * forwards to the company page (or scheduled live page / live hub).
  */
 const AmbassadorRedirect = () => {
   const { businessId, refCode } = useParams<{ businessId: string; refCode: string }>();
   const [params] = useSearchParams();
   const liveCode = params.get("live") || "";
+  const scheduledLiveId = params.get("sl") || "";
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -20,19 +22,33 @@ const AmbassadorRedirect = () => {
     let cancelled = false;
     const run = async () => {
       if (!refCode) { setError("Link inválido"); return; }
+      let visitId: string | null = null;
       try {
-        await recordAmbassadorVisit(refCode, liveCode);
+        const res: any = await recordAmbassadorVisit(refCode, liveCode, scheduledLiveId || undefined);
+        visitId = res?.data?.visitId || null;
       } catch (e) {
-        // Don't block navigation on tracking errors.
         console.warn("ambassador visit failed", e);
       }
       if (cancelled) return;
-      const target = liveCode ? `/lives?code=${encodeURIComponent(liveCode)}&ref=${encodeURIComponent(refCode)}` : `/empresa/${businessId}?ref=${encodeURIComponent(refCode)}`;
-      setTimeout(() => navigate(target, { replace: true }), 900);
+
+      // If we know the scheduled live, store visit for later attendance confirmation
+      // and redirect to the public event page.
+      if (scheduledLiveId) {
+        if (visitId) storePendingAttendance(visitId, scheduledLiveId);
+        const sl = await fetchScheduledLiveById(scheduledLiveId);
+        const target = sl ? `/live-evento/${sl.slug}?ref=${encodeURIComponent(refCode)}` : "/";
+        setTimeout(() => navigate(target, { replace: true }), 700);
+        return;
+      }
+
+      const target = liveCode
+        ? `/lives?code=${encodeURIComponent(liveCode)}&ref=${encodeURIComponent(refCode)}`
+        : `/empresa/${businessId}?ref=${encodeURIComponent(refCode)}`;
+      setTimeout(() => navigate(target, { replace: true }), 700);
     };
     run();
     return () => { cancelled = true; };
-  }, [refCode, businessId, liveCode, navigate]);
+  }, [refCode, businessId, liveCode, scheduledLiveId, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-emerald-500/5 px-6">

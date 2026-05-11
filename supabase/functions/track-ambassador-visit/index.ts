@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
     const refCode = String(body?.refCode || "").trim();
     const liveCode = String(body?.liveCode || "").trim();
     const visitorId = String(body?.visitorId || "").trim();
+    const scheduledLiveId = (body?.scheduledLiveId ? String(body.scheduledLiveId).trim() : null) || null;
     const userAgent = req.headers.get("user-agent") || "";
     const referrer = String(body?.referrer || "");
 

@@ -5,7 +5,7 @@ import { Loader2, Radio, Calendar, Trophy, Megaphone, BarChart3, Copy, ExternalL
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchScheduledLiveById, updateScheduledLive, fetchScheduledLiveRanking, buildScheduledLiveUrl, type ScheduledLive } from "@/lib/scheduledLives";
-import { listLiveLinks, addLiveLink, removeLiveLink, listPolls, createPoll, closePoll, listPollVotes, listAnnouncements, postAnnouncement, listChecklist, setChecklistItem, getStudioSummary, buildOverlayUrl, PLATFORM_META, type LiveLink, type LivePoll, type LiveAnnouncement, type ChecklistItem, type LivePlatform, type StudioSummary } from "@/lib/liveStudio";
+import { listLiveLinks, addLiveLink, removeLiveLink, listPolls, createPoll, closePoll, listPollVotes, listAnnouncements, postAnnouncement, listChecklist, setChecklistItem, getStudioSummary, buildOverlayUrl, PLATFORM_META, type LiveLink, type LivePoll, type LiveAnnouncement, type ChecklistItem, type LivePlatform, type StudioSummary, type ChecklistPhase } from "@/lib/liveStudio";
 import { toast } from "sonner";
 
 const tabs = ["pre", "during", "post"] as const;
@@ -57,7 +57,13 @@ const LiveStudio = () => {
       const sl = await fetchScheduledLiveById(id);
       if (!active) return;
       setLive(sl);
-      if (sl) await reload(sl.id);
+      if (sl) {
+        await reload(sl.id);
+        // Auto-select the most relevant tab based on status
+        if (sl.status === "live") setTab("during");
+        else if (sl.status === "ended" || sl.status === "cancelled") setTab("post");
+        else setTab("pre");
+      }
       setLoading(false);
     })();
     return () => { active = false; };
@@ -111,39 +117,86 @@ const LiveStudio = () => {
   if (live.business_user_id !== user?.id) return <div className="text-center py-24 text-sm text-muted-foreground">Esta live não te pertence.</div>;
 
   const isLive = live.status === "live";
+  const isEnded = live.status === "ended";
+  const isCancelled = live.status === "cancelled";
+  const isScheduled = live.status === "scheduled";
+
+  const overlayRanking = buildOverlayUrl(live.id, "ranking");
+  const openOverlay = (view: "ranking" | "prizes" | "countdown" | "announcement" = "ranking") => {
+    window.open(buildOverlayUrl(live.id, view), "_blank", "noopener,width=1280,height=720");
+  };
+
+  const statusBg = isLive
+    ? "from-red-500/15 via-amber-500/10 to-emerald-500/10"
+    : isEnded
+      ? "from-zinc-500/10 via-zinc-400/5 to-zinc-500/10"
+      : isCancelled
+        ? "from-rose-500/10 via-zinc-400/5 to-rose-500/10"
+        : "from-emerald-500/10 via-amber-500/10 to-blue-500/10";
+
+  const statusLabel = isLive ? "AO VIVO" : isEnded ? "Encerrada" : isCancelled ? "Cancelada" : "Agendada";
+  const statusPill = isLive
+    ? "bg-red-500 text-white animate-pulse"
+    : isEnded
+      ? "bg-zinc-700 text-white"
+      : isCancelled
+        ? "bg-rose-500 text-white"
+        : "bg-emerald-500/20 text-emerald-700";
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl bg-gradient-to-br from-red-500/10 via-amber-500/10 to-emerald-500/10 border border-border p-4">
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${isLive ? "bg-red-500 text-white animate-pulse" : "bg-emerald-500/20 text-emerald-700"}`}>{live.status}</span>
+      <div className={`rounded-3xl bg-gradient-to-br ${statusBg} border border-border p-4`}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${statusPill}`}>{statusLabel}</span>
           <span className="text-[11px] text-muted-foreground"><Calendar className="inline h-3 w-3 mr-1" />{new Date(live.scheduled_at).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short" })}</span>
         </div>
         <h1 className="font-display text-xl sm:text-2xl font-extrabold mt-2">{live.title}</h1>
+        {isCancelled && <p className="text-xs text-rose-600 mt-1">Esta live foi cancelada. Apenas o resumo está disponível.</p>}
+        {isEnded && <p className="text-xs text-muted-foreground mt-1">Live encerrada — vê o resumo na aba Pós-Live.</p>}
         <div className="flex flex-wrap gap-2 mt-3">
-          <button onClick={() => { navigator.clipboard.writeText(liveUrl); toast.success("Link copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link público</button>
-          <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><ExternalLink className="h-3 w-3" />Abrir</a>
-          {!isLive && <button onClick={() => setStatus("live")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-red-500 text-white font-bold"><Play className="h-3 w-3" />Ir Live</button>}
+          <button onClick={() => { navigator.clipboard.writeText(liveUrl); toast.success("Link público copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link público</button>
+          <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><ExternalLink className="h-3 w-3" />Abrir live</a>
+          <button onClick={() => openOverlay("ranking")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-blue-500 text-white font-bold"><Tv className="h-3 w-3" />Abrir overlay</button>
+          <button onClick={() => { navigator.clipboard.writeText(overlayRanking); toast.success("Link do overlay copiado!"); }} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-secondary"><Copy className="h-3 w-3" />Link overlay</button>
+          {!isLive && !isEnded && !isCancelled && <button onClick={() => setStatus("live")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-red-500 text-white font-bold"><Play className="h-3 w-3" />Ir Live</button>}
           {isLive && <button onClick={() => setStatus("scheduled")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-amber-500 text-white font-bold"><Pause className="h-3 w-3" />Pausar</button>}
-          {live.status !== "ended" && <button onClick={() => setStatus("ended")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-zinc-700 text-white font-bold"><Square className="h-3 w-3" />Encerrar</button>}
+          {!isEnded && !isCancelled && <button onClick={() => setStatus("ended")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-zinc-700 text-white font-bold"><Square className="h-3 w-3" />Encerrar</button>}
+          {isEnded && <button onClick={() => setStatus("scheduled")} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-emerald-500 text-white font-bold"><Play className="h-3 w-3" />Reabrir</button>}
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 rounded-full bg-secondary/50 w-fit">
-        {tabs.map((tk) => (
-          <button key={tk} onClick={() => setTab(tk)} className={`px-4 py-1.5 text-xs font-bold rounded-full ${tab === tk ? "bg-card shadow" : "text-muted-foreground"}`}>
-            {tk === "pre" ? "Pré-Live" : tk === "during" ? "Ao Vivo" : "Pós-Live"}
-          </button>
-        ))}
-      </div>
+      {(() => {
+        const recommended: TabKey = isLive ? "during" : (isEnded || isCancelled) ? "post" : "pre";
+        const labels: Record<TabKey, string> = { pre: "Pré-Live", during: "Ao Vivo", post: "Pós-Live" };
+        return (
+          <div className="flex gap-1 p-1 rounded-full bg-secondary/50 w-fit overflow-x-auto">
+            {tabs.map((tk) => (
+              <button key={tk} onClick={() => setTab(tk)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full whitespace-nowrap relative ${tab === tk ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}>
+                {labels[tk]}
+                {recommended === tk && tab !== tk && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 align-middle" />}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
-      {tab === "pre" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Checklist */}
+      {(() => {
+        const phaseFor = (t: TabKey): ChecklistPhase => t;
+        const items = checklist.filter((c) => c.phase === phaseFor(tab));
+        if (items.length === 0) return null;
+        const done = items.filter((i) => i.done).length;
+        return (
           <section className="rounded-2xl border border-border bg-card p-4">
-            <h2 className="font-display font-bold mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Checklist</h2>
-            <ul className="space-y-1.5">
-              {checklist.map((c) => (
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display font-bold flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Checklist {tab === "pre" ? "pré-live" : tab === "during" ? "durante" : "pós-live"}</h2>
+              <span className="text-[10px] font-bold text-muted-foreground">{done}/{items.length}</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-3">
+              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }} />
+            </div>
+            <ul className="grid gap-1 sm:grid-cols-2">
+              {items.map((c) => (
                 <li key={c.key}>
                   <button onClick={async () => { await setChecklistItem(live.id, c.key, !c.done); reload(live.id); }} className="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg hover:bg-secondary">
                     {c.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
@@ -153,7 +206,11 @@ const LiveStudio = () => {
               ))}
             </ul>
           </section>
+        );
+      })()}
 
+      {tab === "pre" && (
+        <div className="grid gap-4 md:grid-cols-2">
           {/* Multi-platform links */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><LinkIcon className="h-4 w-4 text-blue-500" />Links das plataformas</h2>

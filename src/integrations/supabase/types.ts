@@ -483,6 +483,125 @@ export type Database = {
         }
         Relationships: []
       }
+      live_ambassador_prizes: {
+        Row: {
+          awarded_at: string | null
+          business_user_id: string
+          created_at: string
+          description: string | null
+          id: string
+          live_code: string | null
+          position: number
+          scope: string
+          title: string
+          updated_at: string
+          winner_user_id: string | null
+        }
+        Insert: {
+          awarded_at?: string | null
+          business_user_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          live_code?: string | null
+          position?: number
+          scope?: string
+          title: string
+          updated_at?: string
+          winner_user_id?: string | null
+        }
+        Update: {
+          awarded_at?: string | null
+          business_user_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          live_code?: string | null
+          position?: number
+          scope?: string
+          title?: string
+          updated_at?: string
+          winner_user_id?: string | null
+        }
+        Relationships: []
+      }
+      live_ambassador_visits: {
+        Row: {
+          ambassador_id: string
+          business_user_id: string
+          created_at: string
+          id: string
+          live_code: string
+          referrer: string | null
+          user_agent: string | null
+          visitor_hash: string
+        }
+        Insert: {
+          ambassador_id: string
+          business_user_id: string
+          created_at?: string
+          id?: string
+          live_code?: string
+          referrer?: string | null
+          user_agent?: string | null
+          visitor_hash: string
+        }
+        Update: {
+          ambassador_id?: string
+          business_user_id?: string
+          created_at?: string
+          id?: string
+          live_code?: string
+          referrer?: string | null
+          user_agent?: string | null
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_ambassador_visits_ambassador_id_fkey"
+            columns: ["ambassador_id"]
+            isOneToOne: false
+            referencedRelation: "live_ambassadors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_ambassadors: {
+        Row: {
+          business_user_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          ref_code: string
+          total_visits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_user_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          ref_code: string
+          total_visits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_user_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          ref_code?: string
+          total_visits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       luck_points: {
         Row: {
           action: string

@@ -79,17 +79,17 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
             <Shield className="h-5 w-5 text-destructive" />
           </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Painel de Administração</h1>
-            <p className="text-sm text-muted-foreground">Visão global da plataforma Bateu</p>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground truncate">Painel de Administração</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Visão global da plataforma Bateu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {platformStatus.maintenance && (
             <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
               <AlertTriangle className="h-3 w-3 mr-1" /> Manutenção

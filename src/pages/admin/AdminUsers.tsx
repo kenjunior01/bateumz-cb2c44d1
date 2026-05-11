@@ -109,9 +109,9 @@ export default function AdminUsers() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Pesquisar utilizadores..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap -mx-1 px-1 overflow-x-auto sm:overflow-visible">
           {["all", "user", "business", "admin"].map((r) => (
-            <Button key={r} variant={roleFilter === r ? "default" : "outline"} size="sm" onClick={() => setRoleFilter(r)}>
+            <Button key={r} variant={roleFilter === r ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => setRoleFilter(r)}>
               {r === "all" ? "Todos" : roleConfig[r]?.label || r}
             </Button>
           ))}
@@ -123,6 +123,7 @@ export default function AdminUsers() {
           {loading ? (
             <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -187,6 +188,7 @@ export default function AdminUsers() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

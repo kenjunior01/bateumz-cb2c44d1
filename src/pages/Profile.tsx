@@ -147,7 +147,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 pt-28 pb-20">
+      <div className="container mx-auto px-3 sm:px-4 pt-24 sm:pt-28 pb-24">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -156,8 +156,8 @@ const Profile = () => {
         >
           <Card className="glass border-primary/10 overflow-hidden">
             <div className="h-24 bg-gradient-to-r from-primary/30 via-primary/10 to-accent/20" />
-            <CardContent className="relative px-6 pb-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-10">
+            <CardContent className="relative px-4 sm:px-6 pb-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10 text-center sm:text-left">
                 <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
@@ -184,11 +184,11 @@ const Profile = () => {
                     </div>
                   ) : (
                     <>
-                      <h1 className="text-2xl font-bold text-foreground truncate">
+                      <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                         {profile?.display_name || "Utilizador"}
                       </h1>
-                      <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{user?.email}</span>
+                      <div className="flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1 max-w-full truncate"><Mail className="h-3.5 w-3.5 shrink-0" />{user?.email}</span>
                         {profile?.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{profile.phone}</span>}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
@@ -240,9 +240,9 @@ const Profile = () => {
         {/* Participation History */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="all">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground">Histórico de Participações</h2>
-              <TabsList className="glass border border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">Histórico de Participações</h2>
+              <TabsList className="glass border border-border self-start sm:self-auto">
                 <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
                 <TabsTrigger value="confirmed" className="text-xs">Confirmados</TabsTrigger>
                 <TabsTrigger value="pending" className="text-xs">Pendentes</TabsTrigger>

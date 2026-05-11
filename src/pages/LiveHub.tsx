@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,7 +15,9 @@ import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/liveg
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
-import { publish } from "@/lib/liveBus";
+import { publish, subscribe, readLatest } from "@/lib/liveBus";
+import { appendHistory } from "@/lib/liveHistory";
+import { useToast } from "@/hooks/use-toast";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
 
@@ -28,8 +30,13 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500" },
 ];
 
+const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
+
 const LiveHub = () => {
-  const [active, setActive] = useState<GameId>("wheel");
+  const { toast } = useToast();
+  const [active, setActive] = useState<GameId>(() => {
+    try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
+  });
   const [config, setConfig] = useState<LiveGameConfig>(() => {
     try {
       const s = localStorage.getItem("liveGameConfig");
@@ -48,9 +55,29 @@ const LiveHub = () => {
       return s ? JSON.parse(s) : [];
     } catch { return []; }
   });
-  const [liveCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase());
-  const [copied, setCopied] = useState(false);
 
+  // Live session lifecycle
+  const [isLive, setIsLive] = useState<boolean>(() => {
+    try { return localStorage.getItem("liveActive") === "1"; } catch { return false; }
+  });
+  const [liveCode, setLiveCode] = useState<string>(() => {
+    try { return localStorage.getItem("liveCurrentCode") || ""; } catch { return ""; }
+  });
+  const [startedAt, setStartedAt] = useState<number>(() => {
+    try { return Number(localStorage.getItem("liveStartedAt") || 0); } catch { return 0; }
+  });
+  const winnersRef = useRef<{ name: string; meta?: string; at: number }[]>([]);
+  const [copied, setCopied] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  // Session timer
+  useEffect(() => {
+    if (!isLive || !startedAt) return;
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [isLive, startedAt]);
+
+  // Persist & broadcast
   useEffect(() => {
     try { localStorage.setItem("liveGameConfig", JSON.stringify(config)); } catch {}
     publish({ type: "config", payload: config });
@@ -62,11 +89,35 @@ const LiveHub = () => {
   useEffect(() => {
     try { localStorage.setItem("liveLeaderboard", JSON.stringify(leaderboard)); } catch {}
     publish({ type: "leaderboard", payload: leaderboard });
-  }, [leaderboard]);
-  useEffect(() => { publish({ type: "liveCode", payload: liveCode }); }, [liveCode]);
+    if (isLive) {
+      const myScore = leaderboard.filter((e) => e.game === active).reduce((a, b) => a + b.score, 0);
+      publish({
+        type: "roundState",
+        payload: { game: active, phase: "running", timeLeft: 0, score: myScore, at: Date.now() },
+      });
+    }
+  }, [leaderboard, isLive, active]);
+  useEffect(() => {
+    try { localStorage.setItem("liveActiveGame", active); } catch {}
+    publish({ type: "activeGame", payload: active });
+    if (isLive) publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: Date.now() } });
+  }, [active, isLive]);
+
+  // Listen for active-game changes from the dashboard tab
+  useEffect(() => {
+    const unsub = subscribe((evt) => {
+      if (evt.type === "activeGame" && (evt.payload as GameId) !== active) {
+        setActive(evt.payload as GameId);
+      }
+    });
+    // Hydrate latest from bus
+    const latest = readLatest<string>("activeGame");
+    if (latest && latest !== active) setActive(latest as GameId);
+    return unsub;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const recordScore = (game: string) => (name: string, score: number) => {
-    if (!name) return;
+    if (!name || !isLive) return;
     setLeaderboard((prev) => [
       ...prev,
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
@@ -74,16 +125,70 @@ const LiveHub = () => {
   };
 
   const broadcastWinner = (name: string, meta?: string) => {
-    publish({ type: "winner", payload: { name, meta, at: Date.now() } });
+    if (!isLive) return;
+    const w = { name, meta, at: Date.now() };
+    winnersRef.current = [...winnersRef.current, w];
+    publish({ type: "winner", payload: w });
   };
 
   const resetConfig = () => { setConfig(DEFAULT_CONFIG); setWheelPrizes(DEFAULT_WHEEL_PRIZES); };
 
+  const startLive = () => {
+    const code = genCode();
+    const now = Date.now();
+    setLiveCode(code);
+    setStartedAt(now);
+    setIsLive(true);
+    setLeaderboard([]);
+    winnersRef.current = [];
+    try {
+      localStorage.setItem("liveCurrentCode", code);
+      localStorage.setItem("liveStartedAt", String(now));
+      localStorage.setItem("liveActive", "1");
+    } catch {}
+    publish({ type: "liveCode", payload: code });
+    publish({ type: "liveStarted", payload: { code, at: now } });
+    publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: now } });
+    toast({ title: "Live iniciada", description: `Código gerado: ${code}` });
+  };
+
+  const endLive = () => {
+    if (!isLive || !liveCode) return;
+    if (!confirm("Encerrar a live agora? O código será invalidado.")) return;
+    const endedAt = Date.now();
+    appendHistory({
+      code: liveCode,
+      startedAt: startedAt || endedAt,
+      endedAt,
+      durationSec: Math.max(1, Math.floor((endedAt - (startedAt || endedAt)) / 1000)),
+      activeGame: active,
+      winners: winnersRef.current,
+      leaderboard,
+    });
+    publish({ type: "liveEnded", payload: { code: liveCode, at: endedAt } });
+    publish({ type: "roundState", payload: { game: active, phase: "ended", timeLeft: 0, at: endedAt } });
+    publish({ type: "liveCode", payload: "" });
+    setIsLive(false);
+    setLiveCode("");
+    setStartedAt(0);
+    setElapsed(0);
+    try {
+      localStorage.removeItem("liveCurrentCode");
+      localStorage.removeItem("liveStartedAt");
+      localStorage.setItem("liveActive", "0");
+    } catch {}
+    toast({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
+  };
+
   const copyCode = async () => {
+    if (!liveCode) return;
     await navigator.clipboard.writeText(`${window.location.origin}/lives?code=${liveCode}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  const fmtTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const activeMeta = GAMES.find((g) => g.id === active);
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">

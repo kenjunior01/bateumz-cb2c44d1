@@ -71,9 +71,10 @@ const DashboardLiveGames = () => {
   const updEmoji = (id: string, patch: Partial<EmojiOpt>) => setEmojis((p) => p.map((x) => x.id === id ? { ...x, ...patch } : x));
   const rmEmoji = (id: string) => setEmojis((p) => p.filter((x) => x.id !== id));
 
+  useEffect(() => { document.title = "Jogos da Live · Dashboard | Bateu"; }, []);
+
   return (
     <div className="space-y-6">
-  useEffect(() => { document.title = "Jogos da Live · Dashboard | Bateu"; }, []);
 
       {/* Header */}
       <header className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/5 p-5 md:p-7">

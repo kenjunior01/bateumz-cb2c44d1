@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Radio, ExternalLink, Save, RotateCcw, Plus, Trash2, Sparkles, Trophy, Users, Eye, Sliders, Search, Vote, Zap, Brain, Package } from "lucide-react";
-import { Helmet } from "react-helmet-async";
+import { useEffect as useLayoutTitle } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";

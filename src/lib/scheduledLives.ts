@@ -138,7 +138,19 @@ export const consumePendingAttendance = (scheduledLiveId: string): string | null
   } catch { return null; }
 };
 
-export const confirmAttendance = async (visitId: string): Promise<boolean> => {
+export type AttendanceResult = {
+  ok: boolean;
+  counted?: boolean;
+  already?: boolean;
+  reason?: "too_early" | "too_late" | "self_referral" | "cancelled" | "no_live" | "live_not_found" | "visit_not_found";
+};
+
+export const confirmAttendance = async (visitId: string): Promise<AttendanceResult> => {
   const { data } = await supabase.rpc("confirm_live_attendance", { p_visit_id: visitId });
-  return !!(data as any)?.ok;
+  return (data as AttendanceResult) || { ok: false };
+};
+
+export const clearPendingAttendance = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(ATTEND_KEY);
 };

@@ -60,6 +60,7 @@ import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 import InstantWin from "./pages/InstantWin.tsx";
 import LiveHub from "./pages/LiveHub.tsx";
+import LiveOverlay from "./pages/LiveOverlay.tsx";
 import Transparency from "./pages/Transparency.tsx";
 import Prestacoes from "./pages/Prestacoes.tsx";
 import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";
@@ -100,6 +101,7 @@ function AnimatedRoutes() {
           <Route path="/empresa/:id" element={<BusinessProfile />} />
           <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/lives" element={<LiveHub />} />
+          <Route path="/lives/overlay" element={<LiveOverlay />} />
           <Route path="/transparencia" element={<Transparency />} />
           <Route path="/prestacoes" element={<Prestacoes />} />
           <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />

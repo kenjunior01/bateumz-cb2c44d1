@@ -15,6 +15,7 @@ import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/liveg
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
+import { publish } from "@/lib/liveBus";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
 
@@ -50,9 +51,19 @@ const LiveHub = () => {
   const [liveCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase());
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => { try { localStorage.setItem("liveGameConfig", JSON.stringify(config)); } catch {} }, [config]);
-  useEffect(() => { try { localStorage.setItem("liveWheelPrizes", JSON.stringify(wheelPrizes)); } catch {} }, [wheelPrizes]);
-  useEffect(() => { try { localStorage.setItem("liveLeaderboard", JSON.stringify(leaderboard)); } catch {} }, [leaderboard]);
+  useEffect(() => {
+    try { localStorage.setItem("liveGameConfig", JSON.stringify(config)); } catch {}
+    publish({ type: "config", payload: config });
+  }, [config]);
+  useEffect(() => {
+    try { localStorage.setItem("liveWheelPrizes", JSON.stringify(wheelPrizes)); } catch {}
+    publish({ type: "wheelPrizes", payload: wheelPrizes });
+  }, [wheelPrizes]);
+  useEffect(() => {
+    try { localStorage.setItem("liveLeaderboard", JSON.stringify(leaderboard)); } catch {}
+    publish({ type: "leaderboard", payload: leaderboard });
+  }, [leaderboard]);
+  useEffect(() => { publish({ type: "liveCode", payload: liveCode }); }, [liveCode]);
 
   const recordScore = (game: string) => (name: string, score: number) => {
     if (!name) return;
@@ -63,7 +74,7 @@ const LiveHub = () => {
   };
 
   const broadcastWinner = (name: string, meta?: string) => {
-    try { localStorage.setItem("liveLastWinner", JSON.stringify({ name, meta })); } catch {}
+    publish({ type: "winner", payload: { name, meta, at: Date.now() } });
   };
 
   const resetConfig = () => { setConfig(DEFAULT_CONFIG); setWheelPrizes(DEFAULT_WHEEL_PRIZES); };

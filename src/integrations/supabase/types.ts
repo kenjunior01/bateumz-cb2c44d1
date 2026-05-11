@@ -485,12 +485,14 @@ export type Database = {
       }
       live_ambassador_prizes: {
         Row: {
+          award_mode: string | null
           awarded_at: string | null
           business_user_id: string
           created_at: string
           description: string | null
           id: string
           live_code: string | null
+          notified_at: string | null
           position: number
           scope: string
           title: string
@@ -498,12 +500,14 @@ export type Database = {
           winner_user_id: string | null
         }
         Insert: {
+          award_mode?: string | null
           awarded_at?: string | null
           business_user_id: string
           created_at?: string
           description?: string | null
           id?: string
           live_code?: string | null
+          notified_at?: string | null
           position?: number
           scope?: string
           title: string
@@ -511,12 +515,14 @@ export type Database = {
           winner_user_id?: string | null
         }
         Update: {
+          award_mode?: string | null
           awarded_at?: string | null
           business_user_id?: string
           created_at?: string
           description?: string | null
           id?: string
           live_code?: string | null
+          notified_at?: string | null
           position?: number
           scope?: string
           title?: string
@@ -1459,7 +1465,9 @@ export type Database = {
       }
     }
     Functions: {
-      award_ambassador_prize: { Args: { p_prize_id: string }; Returns: Json }
+      award_ambassador_prize:
+        | { Args: { p_prize_id: string }; Returns: Json }
+        | { Args: { p_mode?: string; p_prize_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1469,7 +1477,12 @@ export type Database = {
         Returns: number
       }
       get_live_ambassador_ranking: {
-        Args: { p_live_code: string }
+        Args: {
+          p_business_user_id?: string
+          p_limit?: number
+          p_live_code: string
+          p_offset?: number
+        }
         Returns: {
           ambassador_id: string
           business_user_id: string

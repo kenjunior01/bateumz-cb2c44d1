@@ -74,16 +74,20 @@ export type AmbassadorRanking = {
 export const fetchRanking = async (
   businessUserId: string,
   liveCode?: string,
+  opts?: { limit?: number; offset?: number },
 ): Promise<AmbassadorRanking[]> => {
   if (liveCode) {
     // Per-live: use public security-definer RPC (works for anon too).
-    const { data } = await supabase.rpc("get_live_ambassador_ranking", { p_live_code: liveCode });
-    return ((data || []) as any[])
-      .filter((r) => !businessUserId || r.business_user_id === businessUserId)
-      .map((r) => ({
-        ambassador_id: r.ambassador_id, user_id: r.user_id, display_name: r.display_name,
-        ref_code: r.ref_code, visits: Number(r.visits) || 0,
-      }));
+    const { data } = await supabase.rpc("get_live_ambassador_ranking", {
+      p_live_code: liveCode,
+      p_limit: opts?.limit ?? 50,
+      p_offset: opts?.offset ?? 0,
+      p_business_user_id: businessUserId || null,
+    });
+    return ((data || []) as any[]).map((r) => ({
+      ambassador_id: r.ambassador_id, user_id: r.user_id, display_name: r.display_name,
+      ref_code: r.ref_code, visits: Number(r.visits) || 0,
+    }));
   }
   // All-time: use precomputed counter.
   const { data } = await supabase
@@ -91,7 +95,7 @@ export const fetchRanking = async (
     .select("id, user_id, display_name, ref_code, total_visits")
     .eq("business_user_id", businessUserId)
     .order("total_visits", { ascending: false })
-    .limit(50);
+    .range(opts?.offset ?? 0, (opts?.offset ?? 0) + (opts?.limit ?? 50) - 1);
   return (data || []).map((a: any) => ({
     ambassador_id: a.id, user_id: a.user_id, display_name: a.display_name,
     ref_code: a.ref_code, visits: a.total_visits || 0,

@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Trophy, Flame, Star, Megaphone, X, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trophy, Flame, Star, Megaphone, X, Clock, Plus, User as UserIcon, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import CreateStoryDialog from "@/components/CreateStoryDialog";
+import { toast } from "sonner";
 
 interface Story {
   id: string;
-  type: "hot" | "winner" | "announcement" | "new";
+  type: "hot" | "winner" | "announcement" | "new" | "user";
   title: string;
   subtitle: string;
   image?: string;
@@ -14,10 +17,14 @@ interface Story {
   icon: typeof Trophy;
   link?: string;
   createdAt: number; // timestamp ms
+  authorId?: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 
 const STORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const VIEWED_KEY = "bateu_stories_viewed";
+
 
 const StoriesCarousel = () => {
   const navigate = useNavigate();

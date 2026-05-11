@@ -12,6 +12,7 @@ import {
   Trophy,
   Wallet,
   Radio,
+  Sparkles,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import { NavLink } from "@/components/NavLink";

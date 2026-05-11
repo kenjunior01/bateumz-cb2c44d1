@@ -1,12 +1,15 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star } from "lucide-react";
+import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star, Zap, Brain, Package } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
 import { useAuth } from "@/contexts/AuthContext";
 import confetti from "canvas-confetti";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import TapBattle from "@/components/livegames/TapBattle";
+import QuizBattle from "@/components/livegames/QuizBattle";
+import MysteryBox from "@/components/livegames/MysteryBox";
 
 // --- Scratch Card ---
 const SCRATCH_PRIZES = [
@@ -242,7 +245,7 @@ const SpinWheel = () => {
 // --- Main Page ---
 const InstantWin = () => {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"scratch" | "wheel">("scratch");
+  const [tab, setTab] = useState<"scratch" | "wheel" | "tap" | "quiz" | "mystery">("scratch");
   const [scratchKey, setScratchKey] = useState(0);
 
   return (
@@ -258,7 +261,10 @@ const InstantWin = () => {
           searchPlaceholder="Procurar prémio..."
           categories={[
             { id: "scratch", label: "Raspadinha", icon: "🎫" },
-            { id: "wheel", label: "Roda da Sorte", icon: "🎰" },
+            { id: "wheel", label: "Roda", icon: "🎰" },
+            { id: "tap", label: "Tap Battle", icon: "⚡" },
+            { id: "quiz", label: "Quiz", icon: "🧠" },
+            { id: "mystery", label: "Caixa", icon: "🎁" },
           ]}
           activeCategory={tab}
           onCategoryChange={(id) => setTab(id as any)}
@@ -279,32 +285,41 @@ const InstantWin = () => {
         </motion.div>
 
         {/* Tabs (desktop only — mobile usa chips do header) */}
-        <div className="hidden md:flex justify-center gap-2 mb-8">
-          <button
-            onClick={() => setTab("scratch")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-              tab === "scratch" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-secondary"
-            }`}
-          >
-            <Ticket className="h-4 w-4" />
-            Raspadinha
-          </button>
-          <button
-            onClick={() => setTab("wheel")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-              tab === "wheel" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-secondary"
-            }`}
-          >
-            <RotateCcw className="h-4 w-4" />
-            Roda da Sorte
-          </button>
+        <div className="hidden md:flex flex-wrap justify-center gap-2 mb-8">
+          {[
+            { id: "scratch", label: "Raspadinha", Icon: Ticket },
+            { id: "wheel", label: "Roda da Sorte", Icon: RotateCcw },
+            { id: "tap", label: "Tap Battle", Icon: Zap },
+            { id: "quiz", label: "Quiz Battle", Icon: Brain },
+            { id: "mystery", label: "Caixa Misteriosa", Icon: Package },
+          ].map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id as any)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                tab === id ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-secondary"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="mt-4 md:mt-0" />
 
+        {/* Live engagement banner */}
+        <div className="max-w-sm mx-auto mb-5 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-3 flex items-center gap-3">
+          <span className="text-2xl">📡</span>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-foreground">Live Engagement</p>
+            <p className="text-[11px] text-muted-foreground">Empresas podem ativar estes jogos durante lives para animar a audiência.</p>
+          </div>
+        </div>
+
         {/* Game Area */}
         <AnimatePresence mode="wait">
-          {tab === "scratch" ? (
+          {tab === "scratch" && (
             <motion.div key={`scratch-${scratchKey}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
               <ScratchCard />
               <div className="text-center mt-4">
@@ -313,9 +328,25 @@ const InstantWin = () => {
                 </button>
               </div>
             </motion.div>
-          ) : (
+          )}
+          {tab === "wheel" && (
             <motion.div key="wheel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <SpinWheel />
+            </motion.div>
+          )}
+          {tab === "tap" && (
+            <motion.div key="tap" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <TapBattle />
+            </motion.div>
+          )}
+          {tab === "quiz" && (
+            <motion.div key="quiz" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <QuizBattle />
+            </motion.div>
+          )}
+          {tab === "mystery" && (
+            <motion.div key="mystery" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <MysteryBox />
             </motion.div>
           )}
         </AnimatePresence>

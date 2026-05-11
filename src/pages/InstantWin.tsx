@@ -330,13 +330,16 @@ const InstantWin = () => {
 
         <div className="mt-4 md:mt-0" />
 
-        {/* Live engagement banner */}
-        <div className="max-w-sm mx-auto mb-5 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-3 flex items-center gap-3">
-          <span className="text-2xl">📡</span>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-foreground">Live Engagement</p>
-            <p className="text-[11px] text-muted-foreground">Empresas podem ativar estes jogos durante lives para animar a audiência.</p>
+        {/* Live engagement banner + settings */}
+        <div className="max-w-sm mx-auto mb-5 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-3">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-2xl">📡</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-foreground">Live Engagement</p>
+              <p className="text-[11px] text-muted-foreground">Empresas podem ativar e configurar estes jogos durante lives.</p>
+            </div>
           </div>
+          <LiveGameSettings config={config} onChange={updateConfig} />
         </div>
 
         {/* Game Area */}
@@ -358,20 +361,31 @@ const InstantWin = () => {
           )}
           {tab === "tap" && (
             <motion.div key="tap" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <TapBattle />
+              <TapBattle duration={config.tapDuration} onScore={recordScore("Tap Battle")} />
             </motion.div>
           )}
           {tab === "quiz" && (
             <motion.div key="quiz" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <QuizBattle />
+              <QuizBattle totalQuestions={config.quizQuestions} timePerQ={config.quizTimePerQ} onScore={recordScore("Quiz Battle")} />
             </motion.div>
           )}
           {tab === "mystery" && (
             <motion.div key="mystery" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <MysteryBox />
+              <MysteryBox
+                highChance={config.mysteryHigh}
+                lowChance={config.mysteryLow}
+                noneChance={config.mysteryNone}
+                onScore={recordScore("Caixa Misteriosa")}
+              />
             </motion.div>
           )}
         </AnimatePresence>
+
+        {(tab === "tap" || tab === "quiz" || tab === "mystery") && (
+          <div className="mt-8">
+            <LiveLeaderboard entries={leaderboard} onClear={() => setLeaderboard([])} />
+          </div>
+        )}
 
         {/* Prize Table */}
         <div className="max-w-sm mx-auto mt-10">

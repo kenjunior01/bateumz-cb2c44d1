@@ -73,7 +73,7 @@ const BottomTabBar = () => {
     { icon: Search, labelKey: "tab.explore", href: "/marketplace" },
     null,
     { icon: Trophy, labelKey: "tab.contests", href: "#contests" },
-    { icon: User, labelKey: "tab.profile", href: user ? "/dashboard" : "/login" },
+    { icon: User, labelKey: "tab.profile", href: !user ? "/login" : (role === "business" || role === "admin") ? "/dashboard" : "/profile" },
   ];
 
   const goOrAuth = (href: string, requiresAuth = false) => {

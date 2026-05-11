@@ -249,6 +249,26 @@ const InstantWin = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState<"scratch" | "wheel" | "tap" | "quiz" | "mystery">("scratch");
   const [scratchKey, setScratchKey] = useState(0);
+  const [config, setConfig] = useState<LiveGameConfig>(() => {
+    try {
+      const stored = localStorage.getItem("liveGameConfig");
+      return stored ? { ...DEFAULT_CONFIG, ...JSON.parse(stored) } : DEFAULT_CONFIG;
+    } catch { return DEFAULT_CONFIG; }
+  });
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+
+  const updateConfig = (c: LiveGameConfig) => {
+    setConfig(c);
+    try { localStorage.setItem("liveGameConfig", JSON.stringify(c)); } catch {}
+  };
+
+  const recordScore = (game: string) => (name: string, score: number) => {
+    if (!name) return;
+    setLeaderboard((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
+    ]);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">

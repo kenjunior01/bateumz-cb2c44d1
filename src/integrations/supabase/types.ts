@@ -1186,6 +1186,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stories: {
+        Row: {
+          background: string
+          content: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          image_url: string | null
+          user_id: string
+        }
+        Insert: {
+          background?: string
+          content?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+          user_id: string
+        }
+        Update: {
+          background?: string
+          content?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       white_label_configs: {
         Row: {
           brand_name: string

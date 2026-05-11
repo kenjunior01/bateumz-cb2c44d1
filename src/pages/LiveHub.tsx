@@ -152,9 +152,28 @@ const LiveHub = () => {
     toast({ title: "Live iniciada", description: `Código gerado: ${code}` });
   };
 
-  const endLive = () => {
-    if (!isLive || !liveCode) return;
-    if (!confirm("Encerrar a live agora? O código será invalidado.")) return;
+  const [endOpen, setEndOpen] = useState(false);
+  const [endCountdown, setEndCountdown] = useState(3);
+  const [ending, setEnding] = useState(false);
+
+  // Countdown timer for end-live confirmation
+  useEffect(() => {
+    if (!endOpen) return;
+    setEndCountdown(3);
+    const t = setInterval(() => {
+      setEndCountdown((c) => (c > 0 ? c - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [endOpen]);
+
+  const requestEndLive = () => {
+    if (!isLive || !liveCode || ending) return;
+    setEndOpen(true);
+  };
+
+  const confirmEndLive = () => {
+    if (ending || endCountdown > 0) return;
+    setEnding(true);
     const endedAt = Date.now();
     appendHistory({
       code: liveCode,
@@ -178,6 +197,8 @@ const LiveHub = () => {
       localStorage.setItem("liveActive", "0");
     } catch {}
     toast({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
+    setEndOpen(false);
+    setEnding(false);
   };
 
   const copyCode = async () => {

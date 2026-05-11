@@ -10,6 +10,8 @@ import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import TapBattle from "@/components/livegames/TapBattle";
 import QuizBattle from "@/components/livegames/QuizBattle";
 import MysteryBox from "@/components/livegames/MysteryBox";
+import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
+import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
 
 // --- Scratch Card ---
 const SCRATCH_PRIZES = [

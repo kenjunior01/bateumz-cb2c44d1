@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Download, Trash2, Users, Trophy, Sliders, Copy, Check, ExternalLink } from "lucide-react";
+import { Download, Trash2, Users, Trophy, Sliders, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import { LeaderEntry } from "./LiveLeaderboard";
+import { buildOverlayUrl, getPublicBaseUrl, isOnPublicDomain } from "@/lib/publicUrl";
 
 interface Props {
   liveCode: string;

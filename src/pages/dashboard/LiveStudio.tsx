@@ -57,7 +57,13 @@ const LiveStudio = () => {
       const sl = await fetchScheduledLiveById(id);
       if (!active) return;
       setLive(sl);
-      if (sl) await reload(sl.id);
+      if (sl) {
+        await reload(sl.id);
+        // Auto-select the most relevant tab based on status
+        if (sl.status === "live") setTab("during");
+        else if (sl.status === "ended" || sl.status === "cancelled") setTab("post");
+        else setTab("pre");
+      }
       setLoading(false);
     })();
     return () => { active = false; };

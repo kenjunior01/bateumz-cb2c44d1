@@ -494,6 +494,7 @@ export type Database = {
           live_code: string | null
           notified_at: string | null
           position: number
+          scheduled_live_id: string | null
           scope: string
           title: string
           updated_at: string
@@ -509,6 +510,7 @@ export type Database = {
           live_code?: string | null
           notified_at?: string | null
           position?: number
+          scheduled_live_id?: string | null
           scope?: string
           title: string
           updated_at?: string
@@ -524,6 +526,7 @@ export type Database = {
           live_code?: string | null
           notified_at?: string | null
           position?: number
+          scheduled_live_id?: string | null
           scope?: string
           title?: string
           updated_at?: string
@@ -534,31 +537,37 @@ export type Database = {
       live_ambassador_visits: {
         Row: {
           ambassador_id: string
+          attended_at: string | null
           business_user_id: string
           created_at: string
           id: string
           live_code: string
           referrer: string | null
+          scheduled_live_id: string | null
           user_agent: string | null
           visitor_hash: string
         }
         Insert: {
           ambassador_id: string
+          attended_at?: string | null
           business_user_id: string
           created_at?: string
           id?: string
           live_code?: string
           referrer?: string | null
+          scheduled_live_id?: string | null
           user_agent?: string | null
           visitor_hash: string
         }
         Update: {
           ambassador_id?: string
+          attended_at?: string | null
           business_user_id?: string
           created_at?: string
           id?: string
           live_code?: string
           referrer?: string | null
+          scheduled_live_id?: string | null
           user_agent?: string | null
           visitor_hash?: string
         }
@@ -1175,6 +1184,60 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_lives: {
+        Row: {
+          business_user_id: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          external_platform: string | null
+          external_url: string | null
+          id: string
+          live_code: string | null
+          scheduled_at: string
+          slug: string
+          source_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          business_user_id: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          external_platform?: string | null
+          external_url?: string | null
+          id?: string
+          live_code?: string | null
+          scheduled_at: string
+          slug: string
+          source_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          business_user_id?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          external_platform?: string | null
+          external_url?: string | null
+          id?: string
+          live_code?: string | null
+          scheduled_at?: string
+          slug?: string
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_participations: {
         Row: {
           actions_completed: Json | null
@@ -1468,6 +1531,7 @@ export type Database = {
       award_ambassador_prize:
         | { Args: { p_prize_id: string }; Returns: Json }
         | { Args: { p_mode?: string; p_prize_id: string }; Returns: Json }
+      confirm_live_attendance: { Args: { p_visit_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1486,6 +1550,20 @@ export type Database = {
         Returns: {
           ambassador_id: string
           business_user_id: string
+          display_name: string
+          ref_code: string
+          user_id: string
+          visits: number
+        }[]
+      }
+      get_scheduled_live_ranking: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_scheduled_live_id: string
+        }
+        Returns: {
+          ambassador_id: string
           display_name: string
           ref_code: string
           user_id: string

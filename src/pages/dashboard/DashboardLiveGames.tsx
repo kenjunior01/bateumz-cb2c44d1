@@ -46,10 +46,20 @@ const DashboardLiveGames = () => {
   const [wheel, setWheel] = useState<WheelPrize[]>(() => readArr("liveWheelPrizes", DEFAULT_WHEEL_PRIZES));
   const [emojis, setEmojis] = useState<EmojiOpt[]>(() => readArr("liveEmojiOptions", DEFAULT_EMOJI));
   const [keyword, setKeyword] = useState<KeywordCfg>(() => readJSON("liveKeywordConfig", DEFAULT_KEYWORD));
+  const [activeGame, setActiveGame] = useState<string>(() => {
+    try { return localStorage.getItem("liveActiveGame") || "wheel"; } catch { return "wheel"; }
+  });
 
   const totalWeight = useMemo(() => wheel.reduce((s, p) => s + Math.max(0, p.weight || 0), 0), [wheel]);
 
   const persist = (k: string, v: any) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  const setAndBroadcastActive = (id: string) => {
+    setActiveGame(id);
+    try { localStorage.setItem("liveActiveGame", id); } catch {}
+    publish({ type: "activeGame", payload: id });
+    toast({ title: "Jogo ativo aplicado", description: `O Live Hub vai mudar para ${GAME_OPTIONS.find(g => g.id === id)?.label}.` });
+  };
 
   const saveAll = () => {
     persist("liveGameConfig", config);

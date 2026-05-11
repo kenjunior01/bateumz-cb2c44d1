@@ -37,20 +37,43 @@ export type LiveAnnouncement = {
   created_at: string;
 };
 
+export type ChecklistPhase = "pre" | "during" | "post";
+
 export type ChecklistItem = {
   key: string;
   label: string;
   done: boolean;
+  phase: ChecklistPhase;
 };
 
-export const DEFAULT_CHECKLIST: { key: string; label: string }[] = [
-  { key: "title_ok", label: "Título e descrição prontos" },
-  { key: "platforms_ok", label: "Links das plataformas adicionados" },
-  { key: "prizes_ok", label: "Prémios definidos" },
-  { key: "ambassadors_ok", label: "Embaixadores ativados" },
-  { key: "promo_post_ok", label: "Post de aviso publicado" },
-  { key: "overlay_ok", label: "Overlay testado no streaming" },
-];
+export const CHECKLIST_BY_PHASE: Record<ChecklistPhase, { key: string; label: string }[]> = {
+  pre: [
+    { key: "pre_title_ok", label: "Título e descrição prontos" },
+    { key: "pre_platforms_ok", label: "Links das plataformas adicionados" },
+    { key: "pre_prizes_ok", label: "Prémios definidos" },
+    { key: "pre_ambassadors_ok", label: "Embaixadores ativados" },
+    { key: "pre_promo_post_ok", label: "Post de aviso publicado" },
+    { key: "pre_overlay_ok", label: "Overlay testado no streaming" },
+  ],
+  during: [
+    { key: "during_camera_ok", label: "Câmara e microfone testados" },
+    { key: "during_overlay_on", label: "Overlay visível na transmissão" },
+    { key: "during_welcome_ok", label: "Boas-vindas feitas ao público" },
+    { key: "during_first_poll", label: "Primeira sondagem lançada" },
+    { key: "during_first_prize", label: "Primeiro prémio entregue" },
+    { key: "during_engagement_ok", label: "Pediu likes e partilhas" },
+  ],
+  post: [
+    { key: "post_winners_notified", label: "Vencedores notificados" },
+    { key: "post_thank_you", label: "Mensagem de agradecimento publicada" },
+    { key: "post_csv_export", label: "Exportei o CSV do ranking" },
+    { key: "post_recap_post", label: "Post de recap nas redes sociais" },
+    { key: "post_archive_ok", label: "Vídeo guardado/arquivado" },
+  ],
+};
+
+export const DEFAULT_CHECKLIST = CHECKLIST_BY_PHASE.pre;
+
 
 // ===== Links =====
 export const listLiveLinks = async (id: string): Promise<LiveLink[]> => {

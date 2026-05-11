@@ -116,3 +116,7 @@ export const buildShareLink = (channel: ShareChannel, url: string, message: stri
     default: return url;
   }
 };
+
+/** Build the public per-live ranking URL. */
+export const buildLiveRankingUrl = (liveCode: string): string =>
+  `${getPublicBaseUrl()}/lives/${encodeURIComponent(liveCode)}/ranking`;

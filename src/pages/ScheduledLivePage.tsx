@@ -108,11 +108,22 @@ const ScheduledLivePage = () => {
 
   const enterLive = async () => {
     if (!live) return;
-    // Confirm attendance for inviter (if any)
+    // Confirm attendance for inviter (anti-fraud: 1× per device per live)
     const visitId = consumePendingAttendance(live.id);
     if (visitId) {
-      const ok = await confirmAttendance(visitId);
-      if (ok) toast.success("Entrada confirmada — o teu convite conta!");
+      const r = await confirmAttendance(visitId);
+      if (r.ok && r.counted) {
+        toast.success("Entrada confirmada — o teu convite conta no ranking!");
+      } else if (r.ok && r.already) {
+        toast.info("Já tinhas sido contado nesta live.");
+      } else if (r.reason === "too_early") {
+        toast.warning("A live ainda não começou — entra mais perto da hora.");
+      } else if (r.reason === "too_late") {
+        toast.warning("Janela de confirmação encerrada.");
+      } else if (r.reason === "self_referral") {
+        toast.error("Não podes usar o teu próprio link de embaixador.");
+      }
+      clearPendingAttendance();
     }
     if (live.source_type === "external" && live.external_url) {
       window.open(live.external_url, "_blank", "noopener,noreferrer");

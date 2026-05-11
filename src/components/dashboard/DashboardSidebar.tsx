@@ -45,6 +45,7 @@ const mainItems = [
   { title: "Jogos de Live", url: "/dashboard/live-games", icon: Radio },
   { title: "Histórico de Lives", url: "/dashboard/live-history", icon: Trophy },
   { title: "Embaixadores", url: "/dashboard/ambassadors", icon: Sparkles },
+  { title: "Lives Agendadas", url: "/dashboard/scheduled-lives", icon: Radio },
 ];
 
 const secondaryItems = [

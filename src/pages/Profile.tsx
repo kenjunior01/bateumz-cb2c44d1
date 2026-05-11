@@ -240,9 +240,9 @@ const Profile = () => {
         {/* Participation History */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="all">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground">Histórico de Participações</h2>
-              <TabsList className="glass border border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">Histórico de Participações</h2>
+              <TabsList className="glass border border-border self-start sm:self-auto">
                 <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
                 <TabsTrigger value="confirmed" className="text-xs">Confirmados</TabsTrigger>
                 <TabsTrigger value="pending" className="text-xs">Pendentes</TabsTrigger>

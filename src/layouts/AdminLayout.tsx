@@ -107,10 +107,11 @@ export default function AdminLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center justify-between border-b border-border px-4 glass-strong">
-            <div className="flex items-center gap-3">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 flex items-center justify-between border-b border-border px-3 sm:px-4 glass-strong">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <span className="text-sm font-medium text-foreground sm:hidden truncate">Admin</span>
               <span className="text-sm text-muted-foreground hidden sm:inline">Painel de Administração</span>
             </div>
             <div className="flex items-center gap-3">
@@ -119,7 +120,7 @@ export default function AdminLayout() {
               </button>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto p-3 sm:p-6 pb-24 lg:pb-6">
             <Outlet />
           </main>
         </div>

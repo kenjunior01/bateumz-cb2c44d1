@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // Resolve ambassador
     const { data: amb, error: ambErr } = await supa
       .from("live_ambassadors")
-      .select("id, business_user_id, total_visits")
+      .select("id, business_user_id, user_id, total_visits")
       .eq("ref_code", refCode)
       .eq("is_active", true)
       .maybeSingle();
@@ -49,48 +49,77 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build a stable per-day visitor hash from IP + UA + visitorId fallback.
+    // Build visitor hash. For scheduled lives we deliberately drop the day
+    // so the same device cannot be counted again across days within the same event.
+    // For ad-hoc links we keep the day to allow legitimate re-engagement counting.
     const ip =
       req.headers.get("cf-connecting-ip") ||
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       "0.0.0.0";
-    const day = new Date().toISOString().slice(0, 10);
-    const visitorHash = await sha256(`${ip}|${userAgent}|${visitorId}|${day}`);
+    const scope = scheduledLiveId
+      ? `sl:${scheduledLiveId}`
+      : `day:${new Date().toISOString().slice(0, 10)}`;
+    const visitorHash = await sha256(`${ip}|${userAgent}|${visitorId}|${scope}`);
 
-    const { data: insRow, error: insErr } = await supa
-      .from("live_ambassador_visits")
-      .insert({
-        ambassador_id: amb.id,
-        business_user_id: amb.business_user_id,
-        live_code: liveCode || "",
-        scheduled_live_id: scheduledLiveId,
-        visitor_hash: visitorHash,
-        user_agent: userAgent.slice(0, 500),
-        referrer: referrer.slice(0, 500),
-      })
-      .select("id")
-      .maybeSingle();
-
-    let counted = true;
-    let visitId: string | null = insRow?.id || null;
-    if (insErr) {
-      counted = false;
-      // Try to recover the existing visit id for attendance confirmation.
-      const { data: existing } = await supa
-        .from("live_ambassador_visits")
-        .select("id")
-        .eq("visitor_hash", visitorHash)
-        .eq("ambassador_id", amb.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      visitId = existing?.id || null;
-    } else {
-      await supa
-        .from("live_ambassadors")
-        .update({ total_visits: (amb.total_visits || 0) + 1 })
-        .eq("id", amb.id);
+    // Anti self-referral at tracking time is best-effort; the strong check
+    // happens at confirm_live_attendance via auth.uid(). Here we only block
+    // the obvious case where the request is authenticated as the ambassador.
+    const authHeader = req.headers.get("authorization") || "";
+    let isSelf = false;
+    if (authHeader.startsWith("Bearer ")) {
+      const { data: u } = await supa.auth.getUser(authHeader.slice(7));
+      if (u?.user?.id && u.user.id === amb.user_id) isSelf = true;
     }
+
+    let visitId: string | null = null;
+    let counted = false;
+
+    if (!isSelf) {
+      const { data: insRow, error: insErr } = await supa
+        .from("live_ambassador_visits")
+        .insert({
+          ambassador_id: amb.id,
+          business_user_id: amb.business_user_id,
+          live_code: liveCode || "",
+          scheduled_live_id: scheduledLiveId,
+          visitor_hash: visitorHash,
+          user_agent: userAgent.slice(0, 500),
+          referrer: referrer.slice(0, 500),
+        })
+        .select("id")
+        .maybeSingle();
+
+      visitId = insRow?.id || null;
+      if (!insErr) {
+        counted = true;
+        await supa
+          .from("live_ambassadors")
+          .update({ total_visits: (amb.total_visits || 0) + 1 })
+          .eq("id", amb.id);
+      } else {
+        // Likely unique-violation → recover existing visit id so attendance can still happen
+        const q = supa
+          .from("live_ambassador_visits")
+          .select("id")
+          .eq("visitor_hash", visitorHash)
+          .eq("ambassador_id", amb.id);
+        if (scheduledLiveId) q.eq("scheduled_live_id", scheduledLiveId);
+        const { data: existing } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+        visitId = existing?.id || null;
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        counted,
+        visitId,
+        selfReferral: isSelf || false,
+        businessUserId: amb.business_user_id,
+        ambassadorId: amb.id,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
 
     return new Response(
       JSON.stringify({

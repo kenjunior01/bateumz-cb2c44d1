@@ -156,8 +156,8 @@ const Profile = () => {
         >
           <Card className="glass border-primary/10 overflow-hidden">
             <div className="h-24 bg-gradient-to-r from-primary/30 via-primary/10 to-accent/20" />
-            <CardContent className="relative px-6 pb-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-10">
+            <CardContent className="relative px-4 sm:px-6 pb-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10 text-center sm:text-left">
                 <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">

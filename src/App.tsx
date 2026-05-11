@@ -115,6 +115,7 @@ function AnimatedRoutes() {
           <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />
           <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
           <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
+          <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
           <Route
             path="/profile"
             element={

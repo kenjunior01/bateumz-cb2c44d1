@@ -73,6 +73,7 @@ const DashboardLiveGames = () => {
 
   return (
     <div className="space-y-6">
+  useEffect(() => { document.title = "Jogos da Live · Dashboard | Bateu"; }, []);
 
       {/* Header */}
       <header className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/5 p-5 md:p-7">

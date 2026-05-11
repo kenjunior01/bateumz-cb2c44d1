@@ -1,5 +1,9 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DashboardMobileTopbar } from "@/components/dashboard/DashboardMobileTopbar";
+import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
+import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy,
@@ -103,15 +107,15 @@ function AdminSidebar() {
 }
 
 export default function AdminLayout() {
+  const [drawer, setDrawer] = useState(false);
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AdminSidebar />
+        <div className="hidden lg:block"><AdminSidebar /></div>
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center justify-between border-b border-border px-3 sm:px-4 glass-strong">
+          <header className="hidden lg:flex h-14 items-center justify-between border-b border-border px-3 sm:px-4 glass-strong">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <span className="text-sm font-medium text-foreground sm:hidden truncate">Admin</span>
               <span className="text-sm text-muted-foreground hidden sm:inline">Painel de Administração</span>
             </div>
             <div className="flex items-center gap-3">
@@ -120,11 +124,14 @@ export default function AdminLayout() {
               </button>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-3 sm:p-6 pb-24 lg:pb-6">
+          <DashboardMobileTopbar onOpenDrawer={() => setDrawer(true)} variant="admin" />
+          <main className="flex-1 overflow-auto p-3 sm:p-6 pb-28 lg:pb-6">
             <Outlet />
           </main>
         </div>
       </div>
+      <DashboardBottomNav onMore={() => setDrawer(true)} variant="admin" />
+      <DashboardMoreDrawer open={drawer} onOpenChange={setDrawer} variant="admin" />
     </SidebarProvider>
   );
 }

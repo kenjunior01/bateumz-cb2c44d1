@@ -1,89 +1,96 @@
+# Mobile Panels Redesign + Social Live Studio
 
-# Lives Agendadas + Embaixadores com Ranking
+## 1. Mobile Dashboard Shell (Empresa & Admin)
 
-Permite que empresas agendem uma live (interna no LiveHub ou link externo: YouTube, IG, TikTok, FB) e que qualquer utilizador autenticado gere um link único para partilhar nas redes. Quem mais convidados levar à live (visita + entrada efetiva confirmada) sobe no ranking e ganha os prémios definidos pela empresa.
+**DashboardLayout / AdminLayout** ganham:
+- **Bottom nav próprio do dashboard** (visível só em mobile, sob `lg:hidden`): 5 tabs — Painel, Sorteios, Lives, Participantes, Mais. Substitui o `BottomTabBar` global no `/dashboard*` e `/admin*`.
+- **Drawer secundário** (Sheet) acionado pelo botão "Mais", com pesquisa global, perfil, todas as secções (analytics sociais, prémios, white-label, embaixadores, prestações, notificações, configurações, sair).
+- **Topbar mobile**: logo compacto + barra de pesquisa global (filtra rotas, sorteios e lives por título) + sino de notificações com dropdown (lista as últimas 5 e link para ver todas).
+- **FAB "Nova Ação"** (canto inferior direito, acima do bottom nav): expande em arco com 4 atalhos — Novo Sorteio, Agendar Live, Ir Live Agora, Novo Prémio.
 
-## 1. Base de dados
+## 2. Painel Geral mobile redesenhado
 
-Nova tabela `scheduled_lives`:
-- `business_user_id`, `title`, `description`, `cover_url`
-- `source_type`: `internal` | `external`
-- `live_code` (FK lógico para o LiveHub) **OU** `external_url` + `external_platform` (youtube/instagram/tiktok/facebook/other)
-- `scheduled_at` (timestamptz), `ends_at` (opcional)
-- `status`: `draft` | `scheduled` | `live` | `ended` | `cancelled`
-- `slug` único para URL pública amigável
-- `count_rule`: fixo `visit_and_attendance` (visita + entrada confirmada)
+- Strip horizontal de **KPI cards** (scroll-snap): Sorteios Ativos, Receita 7d, Bilhetes Vendidos, Lives Agendadas, Visitas de Embaixadores hoje, Pendentes de Aprovação.
+- Mini sparkline (svg simples, sem libs novas) em cada KPI quando houver série temporal.
+- Banner de **alertas inteligentes**: pagamentos pendentes, lives a começar nas próximas 2h, sorteios sem prémio, etc. Clicáveis.
+- Lista compacta de **próximas lives** com botão direto "Abrir Studio".
 
-Estender `live_ambassador_visits` com:
-- `scheduled_live_id` (FK opcional)
-- `attended_at` (timestamptz, null até confirmação) — só conta para ranking quando preenchido
+## 3. Live Studio (gestão de lives nas redes sociais)
 
-Estender `live_ambassador_prizes` com:
-- `scheduled_live_id` (FK opcional) — reaproveita estrutura de prémios existente
+Nova página `/dashboard/live-studio/:id` com 3 tabs:
 
-Função RPC `get_scheduled_live_ranking(p_scheduled_live_id, p_limit, p_offset)` — `SECURITY DEFINER`, paginada, conta apenas visitas com `attended_at IS NOT NULL`.
+### Pré-Live
+- Checklist editável (título OK, prémios definidos, links das plataformas, embaixadores ativados, post de aviso publicado).
+- Editor de **links multiplataforma** (Instagram, TikTok, Facebook, YouTube, X, Outro): cada link guardado em `scheduled_live_links`. Mostra preview do botão público.
+- **Geração de assets**: QR code do convite, imagem 9:16 partilhável (canvas), texto pronto para copiar.
+- Atribuição de **prémios da live** (reaproveita `live_ambassador_prizes` com `scheduled_live_id`).
 
-Função RPC `confirm_live_attendance(p_visit_token)` — marca `attended_at = now()` quando o convidado abre a página da live no horário (`scheduled_at - 30min` até `ends_at + 2h`).
+### Durante (modo Studio ao vivo)
+- Botões grandes: **Ir Live** (status `live`), **Pausar**, **Encerrar**.
+- Painel ao vivo com 3 colunas no desktop / abas no mobile:
+  - **Ranking ao vivo** dos embaixadores (poll a cada 10s usando RPC já existente).
+  - **Sondagens rápidas** (`live_polls`): criar com 2-4 opções, abrir/fechar, ver resultados em tempo real (Realtime).
+  - **Anúncios** (`live_announcements`): empresa publica mensagens (ex: "Próximo prémio em 5 min"), aparecem no overlay público e no `ScheduledLivePage`.
+- **Moderação de comentários** da comunidade da live (reusa `community_messages` filtrados por `raffle_id`/`scheduled_live_id` — adicionar coluna `scheduled_live_id`): aprovar/ocultar/banir.
+- **Botão sortear prémio agora**: chama `award_ambassador_prize` e dispara anúncio + notificação automática.
 
-Cron leve (a cada 5 min) que muda `status` para `live` ou `ended` conforme o tempo, e dispara `award_ambassador_prize` para todos os prémios da live ao terminar.
+### Pós-Live
+- Resumo: visitas únicas, attendance confirmada, novos seguidores estimados, top 10 embaixadores, prémios atribuídos.
+- Exportar CSV do ranking.
+- Botão "Duplicar como nova live agendada".
 
-## 2. Frontend — Empresa
+## 4. Overlays públicos para OBS / partilhar no streaming
 
-Nova página `src/pages/dashboard/DashboardScheduledLives.tsx`:
-- Lista das lives agendadas (próximas/passadas)
-- Botão "Agendar live" → wizard 3 passos: origem (interna/externa) → detalhes (título, capa, data/hora) → prémios de embaixador (1º, 2º, 3º…)
-- Para cada live: copiar URL pública, ver ranking, editar prémios, cancelar
+Nova rota pública `/overlay/live/:id?view=ranking|prizes|countdown|announcement` com tema transparente, otimizado 1920x1080 e 1080x1920. URL única gerada no Studio, copiável, para usar como Browser Source no OBS/StreamYard ou abrir em telemóvel para mostrar à câmara.
 
-Adicionar item "Lives agendadas" em `DashboardSidebar.tsx`.
+- **ranking**: top 5 embaixadores em tempo real (Realtime).
+- **prizes**: lista dos prémios desta live (ainda por atribuir vs já entregues).
+- **countdown**: contagem decrescente para o início ou para o próximo sorteio.
+- **announcement**: último anúncio em destaque (full screen, animação).
 
-## 3. Frontend — Público
+## 5. Engajamento ao vivo (público)
 
-Nova página `src/pages/ScheduledLivePage.tsx` em `/live-evento/:slug`:
-- Hero com capa + countdown grande até `scheduled_at` (ou "AO VIVO AGORA" / "Terminou")
-- Botão "Entrar na live" — abre `external_url` em nova aba ou redirecciona para `/lives?code=...`. Ao clicar, dispara `confirm_live_attendance` se o visitante chegou via link de embaixador (token em sessionStorage)
-- CTA "Convidar amigos e ganhar prémios" → ativa embaixador e mostra link único + botões de partilha (reaproveita `AmbassadorPanel`)
-- Ranking ao vivo (top 10 + posição do utilizador) com auto-refresh
-- Lista de prémios definidos
-- Estado pós-live: vencedores destacados
+`ScheduledLivePage` ganha:
+- Tab de **sondagens ativas** (votar uma vez por user/dispositivo).
+- Banner de **anúncios** em destaque animado.
+- Lista de **prémios desta live** com posição atual no ranking.
 
-Atualizar `AmbassadorRedirect.tsx` (`/e/:businessId/:refCode?live=...`):
-- Quando vier com `?sl=<scheduled_live_id>`, guarda visit token em sessionStorage para confirmar attendance ao clicar "Entrar na live"
-- Redireciona para a `ScheduledLivePage` em vez do hub directamente
+## 6. Banco de dados (migration)
 
-## 4. Biblioteca
+Novas tabelas:
+- `scheduled_live_links` (id, scheduled_live_id, platform, url, label, is_primary). RLS: dono da live e admin gerem; público lê.
+- `live_polls` (id, scheduled_live_id, question, options jsonb, is_open, created_at). RLS: dono cria/fecha; público lê abertos.
+- `live_poll_votes` (poll_id, voter_hash, option_index, user_id?). UNIQUE (poll_id, voter_hash). Público insere via RPC anti-fraude.
+- `live_announcements` (id, scheduled_live_id, message, kind, created_at). RLS: dono insere; público lê.
+- `live_studio_checklist` (scheduled_live_id, item_key, done, updated_at). RLS: dono.
 
-`src/lib/scheduledLives.ts` com helpers: `createScheduledLive`, `listScheduledLives`, `fetchScheduledLive(slug)`, `fetchScheduledLiveRanking`, `buildScheduledLiveUrl(slug)`, `buildScheduledAmbassadorUrl(businessId, refCode, scheduledLiveId)`, `confirmAttendance`.
+Alterações:
+- `community_messages.scheduled_live_id` (nullable) + índice.
+- `live_ambassador_prizes` já tem `scheduled_live_id` — apenas garantir uso.
 
-Estender `ambassador.ts` para suportar `scheduledLiveId` no fluxo de partilha.
+RPCs:
+- `cast_live_poll_vote(p_poll_id, p_voter_hash)` — anti-duplicação.
+- `get_live_studio_summary(p_id)` — agrega visits, attendance, polls, prizes.
 
-## 5. Notificações & integração
+## 7. Detalhes técnicos
 
-- Notificação ao vencedor (já existe via `award_ambassador_prize`) — passar contexto da live
-- Em `LiveHub.tsx` (host), se a live atual pertencer a uma `scheduled_live`, mostrar painel com ranking dos embaixadores dessa live agendada (reutiliza `AmbassadorPanel` com novo prop `scheduledLiveId`)
+- Sem libs novas. Usar `framer-motion` e `recharts` (já presentes) para sparklines/KPIs. Realtime via Supabase channels existentes.
+- Bottom nav e FAB respeitam `safe-area-inset-bottom`.
+- Drawer usa `Sheet` shadcn.
+- Pesquisa global é client-side: combina rotas estáticas + fetch leve de raffles/lives do user.
+- Overlay público sem auth, RLS já permite leitura pública das tabelas envolvidas.
+- Ficheiros novos:
+  - `src/components/dashboard/DashboardBottomNav.tsx`
+  - `src/components/dashboard/DashboardMobileTopbar.tsx`
+  - `src/components/dashboard/DashboardFab.tsx`
+  - `src/components/dashboard/DashboardMoreDrawer.tsx`
+  - `src/pages/dashboard/LiveStudio.tsx` (+ subcomponentes em `src/components/dashboard/live-studio/`)
+  - `src/pages/OverlayLive.tsx`
+  - `src/lib/liveStudio.ts`
+  - migration SQL.
 
-## 6. Segurança
+## 8. Fora do escopo (para confirmar depois)
 
-- `scheduled_lives` RLS: SELECT público para `status IN ('scheduled','live','ended')`; INSERT/UPDATE/DELETE só pelo `business_user_id` ou admin
-- `confirm_live_attendance` valida janela temporal e que o visit token pertence ao IP/UA atual
-- Manter REVOKE PUBLIC + GRANT a anon/authenticated nas RPCs `SECURITY DEFINER`
-- Atualizar memória de segurança com a nova superfície pública
-
-## Diagrama do fluxo
-
-```text
-Empresa agenda live ──> /live-evento/:slug (público, countdown)
-       │                       │
-       │                       ├─ Utilizador X clica "Convidar"
-       │                       │     └─> gera /e/:biz/:ref?sl=<id>
-       │                       │
-       │                       └─ Convidado clica link partilhado
-       │                             ├─ regista visita (dedup IP+UA+dia)
-       │                             ├─ guarda token em sessionStorage
-       │                             └─ aterra na ScheduledLivePage
-       │                                  └─ clica "Entrar na live"
-       │                                        └─ confirm_attendance()
-       │                                              └─ visita conta no ranking
-       ▼
-Cron termina live ──> award_ambassador_prize() para cada posição
-                            └─ notifica vencedores em tempo real
-```
+- Integração real com APIs do Instagram/TikTok/YouTube (apenas guardamos os links e abrimos).
+- Streaming pela própria plataforma (continua a ser feito nas redes sociais).
+- Versão admin do Live Studio (admins acompanham via `/admin/raffles` + view-only).

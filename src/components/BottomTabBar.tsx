@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Home, Search, User, Trophy, Plus, Ticket, Sparkles, Building2,
   MessageCircle, History, ShieldCheck, Calendar, BookOpen, HelpCircle,
-  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap,
+  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap, Radio,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";

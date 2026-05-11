@@ -22,7 +22,16 @@ const DEFAULTS: Option[] = [
 ];
 
 const EmojiBattle = ({ onScore, onWinner }: Props) => {
-  const [options, setOptions] = useState<Option[]>(DEFAULTS);
+  const [options, setOptions] = useState<Option[]>(() => {
+    try {
+      const s = localStorage.getItem("liveEmojiOptions");
+      if (s) {
+        const arr = JSON.parse(s) as Array<{ id: string; emoji: string; label: string }>;
+        if (Array.isArray(arr) && arr.length) return arr.map((o) => ({ ...o, votes: 0 }));
+      }
+    } catch { /* noop */ }
+    return DEFAULTS;
+  });
   const [duration, setDuration] = useState(15); // seconds
   const [running, setRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);

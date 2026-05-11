@@ -36,6 +36,7 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 const LiveHub = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [active, setActive] = useState<GameId>(() => {
     try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
   });

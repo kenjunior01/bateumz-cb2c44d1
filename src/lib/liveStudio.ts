@@ -138,10 +138,13 @@ export const postAnnouncement = async (liveId: string, message: string, kind: st
 };
 
 // ===== Checklist =====
-export const listChecklist = async (liveId: string): Promise<ChecklistItem[]> => {
+export const listChecklist = async (liveId: string, phase?: ChecklistPhase): Promise<ChecklistItem[]> => {
   const { data } = await supabase.from("live_studio_checklist" as any).select("item_key, done").eq("scheduled_live_id", liveId);
   const map = new Map<string, boolean>((data || []).map((d: any) => [d.item_key, d.done]));
-  return DEFAULT_CHECKLIST.map((c) => ({ key: c.key, label: c.label, done: !!map.get(c.key) }));
+  const phases: ChecklistPhase[] = phase ? [phase] : ["pre", "during", "post"];
+  return phases.flatMap((ph) =>
+    CHECKLIST_BY_PHASE[ph].map((c) => ({ key: c.key, label: c.label, done: !!map.get(c.key), phase: ph }))
+  );
 };
 export const setChecklistItem = async (liveId: string, key: string, done: boolean) => {
   await supabase.from("live_studio_checklist" as any).upsert({

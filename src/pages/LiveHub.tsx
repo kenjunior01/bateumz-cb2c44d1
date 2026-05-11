@@ -191,6 +191,7 @@ const LiveHub = () => {
               {active === "keyword" && (
                 <motion.div key="keyword" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <KeywordHunt
+                    liveCode={liveCode}
                     onScore={recordScore("Caça à Palavra")}
                     onWinner={(name, kw) => broadcastWinner(name, `Caça à Palavra · "${kw}"`)}
                   />

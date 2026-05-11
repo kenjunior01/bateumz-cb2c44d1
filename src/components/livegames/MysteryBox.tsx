@@ -1,39 +1,77 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gift } from "lucide-react";
 import confetti from "canvas-confetti";
 
-const PRIZES = [
-  { emoji: "💎", label: "200 Luck Points", value: "high" },
-  { emoji: "🎫", label: "Bilhete Grátis", value: "high" },
-  { emoji: "⭐", label: "50 Luck Points", value: "low" },
-  { emoji: "😅", label: "Tente outra vez", value: "none" },
-];
+interface Props {
+  highChance?: number;
+  lowChance?: number;
+  noneChance?: number;
+  onScore?: (name: string, score: number) => void;
+}
 
-const MysteryBox = () => {
+const buildBoxes = (high: number, low: number, none: number) => {
+  // Normalize
+  const total = high + low + none || 1;
+  const h = high / total;
+  const l = low / total;
+  const n = none / total;
+
+  // Build 4 boxes weighted by probabilities (using cumulative pick)
+  const pool: { emoji: string; label: string; value: "high" | "low" | "none" }[] = [];
+  const pick = () => {
+    const r = Math.random();
+    if (r < h) return { emoji: "💎", label: "200 Luck Points", value: "high" as const };
+    if (r < h + l) return { emoji: "⭐", label: "50 Luck Points", value: "low" as const };
+    return { emoji: "😅", label: "Tente outra vez", value: "none" as const };
+  };
+  // Ensure at least one of each common types if probs > 0
+  for (let i = 0; i < 4; i++) pool.push(pick());
+  return pool.sort(() => Math.random() - 0.5);
+};
+
+const MysteryBox = ({ highChance = 0.25, lowChance = 0.4, noneChance = 0.35, onScore }: Props) => {
   const [picked, setPicked] = useState<number | null>(null);
-  const [boxes, setBoxes] = useState(() => [...PRIZES].sort(() => Math.random() - 0.5));
+  const [name, setName] = useState("");
+  const [boxes, setBoxes] = useState(() => buildBoxes(highChance, lowChance, noneChance));
+
+  // Rebuild when chances change and game is idle
+  useMemo(() => {
+    if (picked === null) setBoxes(buildBoxes(highChance, lowChance, noneChance));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highChance, lowChance, noneChance]);
 
   const pick = (i: number) => {
     if (picked !== null) return;
     setPicked(i);
-    if (boxes[i].value !== "none") {
+    const box = boxes[i];
+    if (box.value !== "none") {
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
+      const score = box.value === "high" ? 200 : 50;
+      if (name.trim()) onScore?.(name.trim(), score);
     }
   };
 
   const reset = () => {
-    setBoxes([...PRIZES].sort(() => Math.random() - 0.5));
+    setBoxes(buildBoxes(highChance, lowChance, noneChance));
     setPicked(null);
   };
 
   return (
     <div className="max-w-sm mx-auto">
-      <div className="text-center mb-5">
+      <div className="text-center mb-4">
         <Gift className="h-8 w-8 text-primary mx-auto mb-1" />
         <h3 className="font-display text-base font-bold text-foreground">Caixa Misteriosa</h3>
-        <p className="text-xs text-muted-foreground">Escolhe 1 das 4 caixas. Apenas 1 tem o melhor prémio!</p>
+        <p className="text-xs text-muted-foreground">Escolhe 1 das 4 caixas</p>
       </div>
+
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="O teu nome (para o leaderboard)"
+        className="w-full mb-3 px-3 py-2 rounded-xl bg-card border border-border text-sm"
+        disabled={picked !== null}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         {boxes.map((box, i) => {

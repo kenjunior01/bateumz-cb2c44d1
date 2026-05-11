@@ -184,11 +184,11 @@ const Profile = () => {
                     </div>
                   ) : (
                     <>
-                      <h1 className="text-2xl font-bold text-foreground truncate">
+                      <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                         {profile?.display_name || "Utilizador"}
                       </h1>
-                      <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{user?.email}</span>
+                      <div className="flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1 max-w-full truncate"><Mail className="h-3.5 w-3.5 shrink-0" />{user?.email}</span>
                         {profile?.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{profile.phone}</span>}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />

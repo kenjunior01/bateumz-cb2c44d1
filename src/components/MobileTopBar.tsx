@@ -35,7 +35,14 @@ const MobileTopBar = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => load()
+        (payload: any) => {
+          load();
+          if (payload.eventType === "INSERT" && payload.new) {
+            const n = payload.new;
+            const fn = n.type === "success" ? toast.success : n.type === "error" ? toast.error : toast;
+            (fn as any)(n.title || "Nova notificação", { description: n.message });
+          }
+        }
       )
       .subscribe();
     return () => {

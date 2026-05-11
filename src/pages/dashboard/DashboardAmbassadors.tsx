@@ -16,6 +16,8 @@ type Prize = {
   description: string | null;
   winner_user_id: string | null;
   awarded_at: string | null;
+  award_mode: "auto" | "manual" | null;
+  notified_at: string | null;
 };
 
 const DashboardAmbassadors = () => {

@@ -28,13 +28,16 @@ const VIEWED_KEY = "bateu_stories_viewed";
 
 const StoriesCarousel = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeStory, setActiveStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [progress, setProgress] = useState(0);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(Date.now());
+  const [createOpen, setCreateOpen] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     // Load viewed stories from localStorage

@@ -177,10 +177,32 @@ const LiveHub = () => {
                   />
                 </motion.div>
               )}
+              {active === "keyword" && (
+                <motion.div key="keyword" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <KeywordHunt
+                    onScore={recordScore("Caça à Palavra")}
+                    onWinner={(name, kw) => broadcastWinner(name, `Caça à Palavra · "${kw}"`)}
+                  />
+                </motion.div>
+              )}
+              {active === "emoji" && (
+                <motion.div key="emoji" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <EmojiBattle
+                    onScore={recordScore("Batalha de Emojis")}
+                    onWinner={(label, votes) => broadcastWinner(label, `Batalha de Emojis · ${votes} votos`)}
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
 
           <aside className="space-y-4">
+            <LiveControlPanel
+              liveCode={liveCode}
+              entries={leaderboard}
+              onClear={() => setLeaderboard([])}
+              onResetConfig={resetConfig}
+            />
             <LiveLeaderboard entries={leaderboard} onClear={() => setLeaderboard([])} />
 
             <div className="rounded-2xl border border-border bg-card p-4">

@@ -151,9 +151,60 @@ const StoriesCarousel = () => {
       });
     }
 
-    // Filter only stories younger than 24h
-    const fresh = baseStories.filter((s) => Date.now() - s.createdAt < STORY_TTL_MS);
+    // User-published stories
+    const { data: userStories } = await supabase
+      .from("user_stories")
+      .select("id, user_id, content, image_url, background, created_at, expires_at")
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    let profilesById: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
+    if (userStories && userStories.length > 0) {
+      const ids = Array.from(new Set(userStories.map((s) => s.user_id)));
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", ids);
+      (profs || []).forEach((p: any) => { profilesById[p.user_id] = p; });
+
+      userStories.forEach((s: any) => {
+        const prof = profilesById[s.user_id];
+        baseStories.push({
+          id: `user-${s.id}`,
+          type: "user",
+          title: prof?.display_name || "Utilizador",
+          subtitle: s.content || "",
+          image: s.image_url || prof?.avatar_url || undefined,
+          gradient: s.background || "from-primary to-emerald-400",
+          icon: UserIcon,
+          createdAt: new Date(s.created_at).getTime(),
+          authorId: s.user_id,
+          authorName: prof?.display_name || "Utilizador",
+          authorAvatar: prof?.avatar_url || undefined,
+        });
+      });
+    }
+
+    // Filter only stories younger than 24h, then sort: user stories first then by recency
+    const fresh = baseStories
+      .filter((s) => Date.now() - s.createdAt < STORY_TTL_MS)
+      .sort((a, b) => {
+        if (a.type === "user" && b.type !== "user") return -1;
+        if (b.type === "user" && a.type !== "user") return 1;
+        return b.createdAt - a.createdAt;
+      });
     setStories(fresh);
+  };
+
+  const deleteStory = async (id: string) => {
+    if (!confirm("Apagar este status?")) return;
+    const realId = id.replace(/^user-/, "");
+    const { error } = await supabase.from("user_stories").delete().eq("id", realId);
+    if (error) { toast.error("Erro ao apagar"); return; }
+    toast.success("Status removido");
+    setActiveStory(null);
+    loadStories();
   };
 
   const markViewed = (id: string) => {

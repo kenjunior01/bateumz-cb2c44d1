@@ -18,6 +18,8 @@ import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/l
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
+import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
 

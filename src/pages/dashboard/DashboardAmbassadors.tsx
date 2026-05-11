@@ -192,18 +192,41 @@ const DashboardAmbassadors = () => {
         ) : (
           <ul className="divide-y divide-border">
             {prizes.map((p) => (
-              <li key={p.id} className="p-4 flex items-center gap-3">
+              <li key={p.id} className="p-4 flex items-center gap-3 flex-wrap">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/15 text-amber-600 font-bold">
                   {p.position}º
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{p.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold truncate">{p.title}</p>
+                    {p.winner_user_id ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-bold">
+                        <CheckCircle2 className="h-3 w-3" /> Atribuído
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 font-bold">
+                        <Clock className="h-3 w-3" /> A aguardar
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-muted-foreground">
-                    {p.scope === "live" ? `Live ${p.live_code}` : "Acumulado"}
+                    {p.scope === "live" ? `Live ${p.live_code}` : "Acumulado (sempre)"}
                     {p.description ? ` · ${p.description}` : ""}
-                    {p.winner_user_id ? ` · Atribuído ${p.awarded_at ? new Date(p.awarded_at).toLocaleDateString() : ""}` : ""}
+                    {p.winner_user_id && p.awarded_at ? ` · ${new Date(p.awarded_at).toLocaleString("pt-PT")}` : ""}
                   </p>
                 </div>
+                {p.scope === "live" && p.live_code && (
+                  <>
+                    <button onClick={() => copyLiveLink(p.live_code!)}
+                      className="text-[11px] px-2 py-1.5 rounded-full bg-secondary inline-flex items-center gap-1">
+                      <Copy className="h-3 w-3" /> Link
+                    </button>
+                    <Link to={`/lives/${p.live_code}/ranking`} target="_blank"
+                      className="text-[11px] px-2 py-1.5 rounded-full bg-secondary inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> Ver
+                    </Link>
+                  </>
+                )}
                 {!p.winner_user_id && (
                   <button onClick={() => awardPrize(p)} className="text-[11px] px-3 py-1.5 rounded-full bg-emerald-500 text-white font-bold">
                     Atribuir ao #{p.position}

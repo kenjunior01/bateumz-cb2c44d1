@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Radio, Sparkles } from "lucide-react";
+import { Trophy, Radio, Sparkles, Clock, Gamepad2 } from "lucide-react";
 import { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
-import { subscribe, readLatest } from "@/lib/liveBus";
+import { subscribe, readLatest, RoundState } from "@/lib/liveBus";
 
 /**
  * Transparent overlay for OBS / Streamlabs Browser Source.
@@ -16,9 +16,10 @@ const LiveOverlay = () => {
   const [code, setCode] = useState(codeFromUrl || "LIVE");
   const [entries, setEntries] = useState<LeaderEntry[]>(() => readLatest<LeaderEntry[]>("leaderboard") || []);
   const [winner, setWinner] = useState<{ name: string; meta?: string } | null>(null);
+  const [round, setRound] = useState<RoundState | null>(() => readLatest<RoundState>("roundState"));
+  const [ended, setEnded] = useState(false);
 
   useEffect(() => {
-    // Hydrate live code from bus if not in URL
     if (!codeFromUrl) {
       const c = readLatest<string>("liveCode");
       if (c) setCode(c);
@@ -32,12 +33,23 @@ const LiveOverlay = () => {
         case "winner": {
           const w = evt.payload;
           setWinner({ name: w.name, meta: w.meta });
-          // Auto-dismiss after 6s
           window.setTimeout(() => setWinner(null), 6000);
           break;
         }
         case "liveCode":
-          if (!codeFromUrl) setCode(evt.payload as string);
+          if (!codeFromUrl) setCode((evt.payload as string) || "LIVE");
+          break;
+        case "roundState":
+          setRound(evt.payload as RoundState);
+          if ((evt.payload as RoundState).phase === "running") setEnded(false);
+          break;
+        case "liveStarted":
+          setEnded(false);
+          setEntries([]);
+          break;
+        case "liveEnded":
+          setEnded(true);
+          setRound((r) => r ? { ...r, phase: "ended" } : r);
           break;
       }
     });

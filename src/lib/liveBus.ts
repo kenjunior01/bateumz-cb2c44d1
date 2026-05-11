@@ -5,12 +5,26 @@
  * loaded on the same origin).
  */
 
+export type RoundState = {
+  game: string;          // active game id
+  phase: "idle" | "running" | "ended"; // round phase
+  timeLeft: number;      // seconds remaining (0 if not timed)
+  totalTime?: number;    // total seconds of the round
+  score?: number;        // current player score (or aggregate)
+  meta?: Record<string, any>;
+  at: number;
+};
+
 export type LiveBusEvent =
   | { type: "leaderboard"; payload: Array<{ id: string; name: string; score: number; game: string; at: number }> }
   | { type: "winner"; payload: { name: string; meta?: string; at: number } }
   | { type: "config"; payload: any }
   | { type: "wheelPrizes"; payload: any }
-  | { type: "liveCode"; payload: string };
+  | { type: "liveCode"; payload: string }
+  | { type: "activeGame"; payload: string }
+  | { type: "roundState"; payload: RoundState }
+  | { type: "liveStarted"; payload: { code: string; at: number } }
+  | { type: "liveEnded"; payload: { code: string; at: number } };
 
 const CHANNEL_NAME = "bateu-live-hub";
 const STORAGE_PREFIX = "liveBus:";

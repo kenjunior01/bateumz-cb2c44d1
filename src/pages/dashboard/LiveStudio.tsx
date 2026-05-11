@@ -5,7 +5,7 @@ import { Loader2, Radio, Calendar, Trophy, Megaphone, BarChart3, Copy, ExternalL
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchScheduledLiveById, updateScheduledLive, fetchScheduledLiveRanking, buildScheduledLiveUrl, type ScheduledLive } from "@/lib/scheduledLives";
-import { listLiveLinks, addLiveLink, removeLiveLink, listPolls, createPoll, closePoll, listPollVotes, listAnnouncements, postAnnouncement, listChecklist, setChecklistItem, getStudioSummary, buildOverlayUrl, PLATFORM_META, type LiveLink, type LivePoll, type LiveAnnouncement, type ChecklistItem, type LivePlatform, type StudioSummary } from "@/lib/liveStudio";
+import { listLiveLinks, addLiveLink, removeLiveLink, listPolls, createPoll, closePoll, listPollVotes, listAnnouncements, postAnnouncement, listChecklist, setChecklistItem, getStudioSummary, buildOverlayUrl, PLATFORM_META, type LiveLink, type LivePoll, type LiveAnnouncement, type ChecklistItem, type LivePlatform, type StudioSummary, type ChecklistPhase } from "@/lib/liveStudio";
 import { toast } from "sonner";
 
 const tabs = ["pre", "during", "post"] as const;

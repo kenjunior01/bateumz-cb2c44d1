@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Trophy, Download, FileText, Trash2, Radio, Calendar, Users } from "lucide-react";
+import { Trophy, Download, FileText, Trash2, Radio, Calendar, Users, Gamepad2, ListOrdered } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
   readHistory, clearHistory, exportSessionsCSV, downloadCSV, printSessionsPDF, LiveSession,
+  aggregateByGame, exportGameAggregateCSV, printGameAggregatePDF,
 } from "@/lib/liveHistory";
 
 const DashboardLiveHistory = () => {

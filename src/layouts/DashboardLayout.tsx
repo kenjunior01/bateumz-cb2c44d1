@@ -42,9 +42,10 @@ export default function DashboardLayout() {
       <div className="min-h-screen flex w-full">
         <DashboardSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center justify-between border-b border-border px-4 glass-strong">
-            <div className="flex items-center gap-3">
+          <header className="h-14 flex items-center justify-between border-b border-border px-3 sm:px-4 glass-strong">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <span className="text-sm font-medium text-foreground sm:hidden truncate">Painel</span>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Painel Empresarial
               </span>

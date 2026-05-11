@@ -1,12 +1,15 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star } from "lucide-react";
+import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star, Zap, Brain, Package } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
 import { useAuth } from "@/contexts/AuthContext";
 import confetti from "canvas-confetti";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import TapBattle from "@/components/livegames/TapBattle";
+import QuizBattle from "@/components/livegames/QuizBattle";
+import MysteryBox from "@/components/livegames/MysteryBox";
 
 // --- Scratch Card ---
 const SCRATCH_PRIZES = [

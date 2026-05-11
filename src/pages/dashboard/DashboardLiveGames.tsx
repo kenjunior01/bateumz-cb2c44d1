@@ -10,6 +10,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
 import { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
+import { publish } from "@/lib/liveBus";
+
+const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
+  { id: "wheel", label: "Roda de Prémios", emoji: "🎰" },
+  { id: "keyword", label: "Caça à Palavra", emoji: "🔎" },
+  { id: "emoji", label: "Batalha de Emojis", emoji: "💥" },
+  { id: "tap", label: "Tap Battle", emoji: "⚡" },
+  { id: "quiz", label: "Quiz Battle", emoji: "🧠" },
+  { id: "mystery", label: "Caixa Misteriosa", emoji: "🎁" },
+];
 
 type EmojiOpt = { id: string; emoji: string; label: string };
 type KeywordCfg = { keyword: string; clue: string; points: number };

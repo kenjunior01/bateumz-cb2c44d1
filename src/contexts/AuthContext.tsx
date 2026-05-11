@@ -107,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let bootstrapped = false;
 
     const finishUserLoad = async (nextSession: Session | null) => {
       setSession(nextSession);
@@ -127,13 +128,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
         setTimeout(() => {
+          if (!bootstrapped) return;
           finishUserLoad(nextSession);
         }, 0);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      finishUserLoad(initialSession);
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      await finishUserLoad(initialSession);
+      bootstrapped = true;
     });
 
     return () => {

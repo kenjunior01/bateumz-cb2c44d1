@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Home, Search, User, Trophy, Plus, Ticket, Sparkles, Building2,
   MessageCircle, History, ShieldCheck, Calendar, BookOpen, HelpCircle,
-  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap,
+  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap, Radio,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -27,6 +27,7 @@ const ACTION_GROUPS: { titleKey: string; items: ActionItem[] }[] = [
       { icon: Store, labelKey: "menu.marketplace", href: "/marketplace", grad: "from-primary to-accent", descKey: "menu.marketplace.desc" },
       { icon: Trophy, labelKey: "menu.contests", href: "/concursos", grad: "from-amber-500 to-orange-500", descKey: "menu.contests.desc" },
       { icon: Sparkles, labelKey: "menu.instantWin", href: "/instant-win", grad: "from-violet-500 to-fuchsia-500", descKey: "menu.instantWin.desc" },
+      { icon: Radio, labelKey: "menu.liveHub", href: "/lives", grad: "from-red-500 to-pink-500", badgeKey: "menu.badge.new" },
       { icon: Ticket, labelKey: "menu.myTickets", href: "/my-tickets", grad: "from-emerald-500 to-teal-500" },
     ],
   },

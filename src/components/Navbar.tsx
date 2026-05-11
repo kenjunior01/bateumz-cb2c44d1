@@ -127,7 +127,7 @@ const Navbar = () => {
                 <Star className="h-4 w-4 text-accent" /> {t("nav.points")}
               </Link>
               <Link to={role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile"} className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                {role === "user" ? t("nav.profile") : t("nav.dashboard")}
+                {role === "business" || role === "admin" ? t("nav.dashboard") : t("nav.profile")}
               </Link>
               {role === "admin" && (
                 <Link to="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">

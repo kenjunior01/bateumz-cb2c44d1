@@ -54,7 +54,7 @@ const DashboardAmbassadors = () => {
         }
         const candidate = r[p.position - 1];
         if (candidate?.user_id) {
-          const { data: res, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: p.id });
+          const { data: res, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: p.id, p_mode: "auto" });
           if (!error && res && (res as any).winner_user_id) {
             toast.success(`Prémio "${p.title}" atribuído automaticamente`);
           }
@@ -93,7 +93,7 @@ const DashboardAmbassadors = () => {
   };
 
   const awardPrize = async (prize: Prize) => {
-    const { data, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: prize.id });
+    const { data, error } = await supabase.rpc("award_ambassador_prize", { p_prize_id: prize.id, p_mode: "manual" });
     if (error) return toast.error(error.message);
     const res = data as any;
     if (res?.no_winner) return toast.error("Ainda não há embaixador na posição " + prize.position);

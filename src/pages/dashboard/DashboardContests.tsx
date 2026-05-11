@@ -582,7 +582,8 @@ export default function DashboardContests() {
             </Card>
           ) : (
             <div className="rounded-md border overflow-auto">
-              <Table>
+              <div data-mobile-wrapped className="overflow-x-auto">
+<Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Participante</TableHead>
@@ -648,6 +649,7 @@ export default function DashboardContests() {
                   ))}
                 </TableBody>
               </Table>
+</div>
             </div>
           )}
         </TabsContent>

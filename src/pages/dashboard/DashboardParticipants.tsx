@@ -200,7 +200,8 @@ export default function DashboardParticipants() {
           {loading ? (
             <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : (
-            <Table>
+            <div data-mobile-wrapped className="overflow-x-auto">
+<Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="w-10">
@@ -273,6 +274,7 @@ export default function DashboardParticipants() {
                 })}
               </TableBody>
             </Table>
+</div>
           )}
           {!loading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">

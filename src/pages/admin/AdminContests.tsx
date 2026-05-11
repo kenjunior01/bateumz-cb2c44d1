@@ -244,7 +244,8 @@ export default function AdminContests() {
             <p className="text-center text-muted-foreground py-12">Nenhuma submissão neste concurso.</p>
           ) : (
             <div className="rounded-md border overflow-auto">
-              <Table>
+              <div data-mobile-wrapped className="overflow-x-auto">
+<Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Participante</TableHead>
@@ -290,6 +291,7 @@ export default function AdminContests() {
                   ))}
                 </TableBody>
               </Table>
+</div>
             </div>
           )}
         </TabsContent>

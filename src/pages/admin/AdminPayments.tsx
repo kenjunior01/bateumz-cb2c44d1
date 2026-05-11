@@ -167,7 +167,8 @@ export default function AdminPayments() {
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
           ) : (
-            <Table>
+            <div data-mobile-wrapped className="overflow-x-auto">
+<Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Participante</TableHead>
@@ -250,6 +251,7 @@ export default function AdminPayments() {
                 )}
               </TableBody>
             </Table>
+</div>
           )}
         </CardContent>
       </Card>

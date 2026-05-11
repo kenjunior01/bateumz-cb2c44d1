@@ -144,7 +144,8 @@ export default function AdminRevenue() {
         <Card className="glass">
           <CardHeader><CardTitle>Últimas Transações</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <div data-mobile-wrapped className="overflow-x-auto">
+<Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Sorteio</TableHead>
@@ -183,6 +184,7 @@ export default function AdminRevenue() {
                 )}
               </TableBody>
             </Table>
+</div>
           </CardContent>
         </Card>
       </motion.div>

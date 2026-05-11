@@ -170,6 +170,7 @@ export type Database = {
           message_type: string
           parent_id: string | null
           raffle_id: string | null
+          scheduled_live_id: string | null
           user_id: string
         }
         Insert: {
@@ -180,6 +181,7 @@ export type Database = {
           message_type?: string
           parent_id?: string | null
           raffle_id?: string | null
+          scheduled_live_id?: string | null
           user_id: string
         }
         Update: {
@@ -190,6 +192,7 @@ export type Database = {
           message_type?: string
           parent_id?: string | null
           raffle_id?: string | null
+          scheduled_live_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -205,6 +208,13 @@ export type Database = {
             columns: ["raffle_id"]
             isOneToOne: false
             referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_messages_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
             referencedColumns: ["id"]
           },
         ]
@@ -616,6 +626,143 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      live_announcements: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          scheduled_live_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          message: string
+          scheduled_live_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          scheduled_live_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_announcements_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          user_id: string | null
+          voter_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          user_id?: string | null
+          voter_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string | null
+          voter_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "live_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_polls: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          id: string
+          is_open: boolean
+          options: Json
+          question: string
+          scheduled_live_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          options?: Json
+          question: string
+          scheduled_live_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          options?: Json
+          question?: string
+          scheduled_live_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_polls_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_studio_checklist: {
+        Row: {
+          done: boolean
+          id: string
+          item_key: string
+          scheduled_live_id: string
+          updated_at: string
+        }
+        Insert: {
+          done?: boolean
+          id?: string
+          item_key: string
+          scheduled_live_id: string
+          updated_at?: string
+        }
+        Update: {
+          done?: boolean
+          id?: string
+          item_key?: string
+          scheduled_live_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_studio_checklist_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       luck_points: {
         Row: {
@@ -1219,6 +1366,44 @@ export type Database = {
           },
         ]
       }
+      scheduled_live_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          label: string | null
+          platform: string
+          scheduled_live_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          platform: string
+          scheduled_live_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          platform?: string
+          scheduled_live_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_live_links_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_lives: {
         Row: {
           business_user_id: string
@@ -1566,6 +1751,14 @@ export type Database = {
       award_ambassador_prize:
         | { Args: { p_prize_id: string }; Returns: Json }
         | { Args: { p_mode?: string; p_prize_id: string }; Returns: Json }
+      cast_live_poll_vote: {
+        Args: {
+          p_option_index: number
+          p_poll_id: string
+          p_voter_hash: string
+        }
+        Returns: Json
+      }
       confirm_live_attendance: { Args: { p_visit_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -1590,6 +1783,10 @@ export type Database = {
           user_id: string
           visits: number
         }[]
+      }
+      get_live_studio_summary: {
+        Args: { p_scheduled_live_id: string }
+        Returns: Json
       }
       get_scheduled_live_ranking: {
         Args: {

@@ -1184,6 +1184,41 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_live_attendance: {
+        Row: {
+          ambassador_id: string
+          confirmed_at: string
+          id: string
+          scheduled_live_id: string
+          user_id: string | null
+          visitor_hash: string
+        }
+        Insert: {
+          ambassador_id: string
+          confirmed_at?: string
+          id?: string
+          scheduled_live_id: string
+          user_id?: string | null
+          visitor_hash: string
+        }
+        Update: {
+          ambassador_id?: string
+          confirmed_at?: string
+          id?: string
+          scheduled_live_id?: string
+          user_id?: string | null
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_live_attendance_scheduled_live_id_fkey"
+            columns: ["scheduled_live_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_lives: {
         Row: {
           business_user_id: string

@@ -489,6 +489,8 @@ const StoriesCarousel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CreateStoryDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={loadStories} />
     </>
   );
 };

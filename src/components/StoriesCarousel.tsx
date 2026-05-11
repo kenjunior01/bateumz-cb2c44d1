@@ -259,13 +259,14 @@ const StoriesCarousel = () => {
     scrollRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
   };
 
-  if (stories.length === 0) return null;
+  if (stories.length === 0 && !user) return null;
 
   const typeRing: Record<string, string> = {
     hot: "from-orange-400 via-red-500 to-pink-500",
     winner: "from-yellow-400 via-amber-500 to-orange-500",
     announcement: "from-primary via-emerald-400 to-teal-400",
     new: "from-violet-500 via-purple-500 to-fuchsia-500",
+    user: "from-sky-400 via-primary to-emerald-400",
   };
 
   const formatRemaining = (createdAt: number) => {

@@ -67,6 +67,7 @@ import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";
 import PrestacoesProduto from "./pages/PrestacoesProduto.tsx";
 import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
 import DashboardLiveGames from "./pages/dashboard/DashboardLiveGames.tsx";
+import DashboardLiveHistory from "./pages/dashboard/DashboardLiveHistory.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";

@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
     const refCode = String(body?.refCode || "").trim();
     const liveCode = String(body?.liveCode || "").trim();
     const visitorId = String(body?.visitorId || "").trim();
+    const scheduledLiveId = (body?.scheduledLiveId ? String(body.scheduledLiveId).trim() : null) || null;
     const userAgent = req.headers.get("user-agent") || "";
     const referrer = String(body?.referrer || "");
 
@@ -56,21 +57,34 @@ Deno.serve(async (req) => {
     const day = new Date().toISOString().slice(0, 10);
     const visitorHash = await sha256(`${ip}|${userAgent}|${visitorId}|${day}`);
 
-    const { error: insErr } = await supa
+    const { data: insRow, error: insErr } = await supa
       .from("live_ambassador_visits")
       .insert({
         ambassador_id: amb.id,
         business_user_id: amb.business_user_id,
         live_code: liveCode || "",
+        scheduled_live_id: scheduledLiveId,
         visitor_hash: visitorHash,
         user_agent: userAgent.slice(0, 500),
         referrer: referrer.slice(0, 500),
-      });
+      })
+      .select("id")
+      .maybeSingle();
 
     let counted = true;
+    let visitId: string | null = insRow?.id || null;
     if (insErr) {
-      // Duplicate (already counted) → don't increment but return success.
       counted = false;
+      // Try to recover the existing visit id for attendance confirmation.
+      const { data: existing } = await supa
+        .from("live_ambassador_visits")
+        .select("id")
+        .eq("visitor_hash", visitorHash)
+        .eq("ambassador_id", amb.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      visitId = existing?.id || null;
     } else {
       await supa
         .from("live_ambassadors")
@@ -82,6 +96,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         counted,
+        visitId,
         businessUserId: amb.business_user_id,
         ambassadorId: amb.id,
       }),

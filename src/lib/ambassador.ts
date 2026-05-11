@@ -51,11 +51,16 @@ export const ensureAmbassador = async (
 };
 
 /** Record a visit (called by the redirect page). Safe to call repeatedly. */
-export const recordAmbassadorVisit = async (refCode: string, liveCode?: string) => {
+export const recordAmbassadorVisit = async (
+  refCode: string,
+  liveCode?: string,
+  scheduledLiveId?: string,
+) => {
   return await supabase.functions.invoke("track-ambassador-visit", {
     body: {
       refCode,
       liveCode: liveCode || "",
+      scheduledLiveId: scheduledLiveId || null,
       visitorId: getVisitorId(),
       referrer: typeof document !== "undefined" ? document.referrer : "",
     },

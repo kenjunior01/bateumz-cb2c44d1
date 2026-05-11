@@ -11,6 +11,7 @@ const DashboardLiveHistory = () => {
   const { toast } = useToast();
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [filter, setFilter] = useState("");
+  const [view, setView] = useState<"sessions" | "games">("sessions");
 
   useEffect(() => { document.title = "Histórico de Lives · Dashboard | Bateu"; setSessions(readHistory()); }, []);
 

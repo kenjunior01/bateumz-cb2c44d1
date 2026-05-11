@@ -211,21 +211,6 @@ const LiveStudio = () => {
 
       {tab === "pre" && (
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Checklist */}
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <h2 className="font-display font-bold mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Checklist</h2>
-            <ul className="space-y-1.5">
-              {checklist.map((c) => (
-                <li key={c.key}>
-                  <button onClick={async () => { await setChecklistItem(live.id, c.key, !c.done); reload(live.id); }} className="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg hover:bg-secondary">
-                    {c.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
-                    <span className={`text-sm ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           {/* Multi-platform links */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><LinkIcon className="h-4 w-4 text-blue-500" />Links das plataformas</h2>

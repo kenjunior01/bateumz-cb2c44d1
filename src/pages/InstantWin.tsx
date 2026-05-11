@@ -245,7 +245,7 @@ const SpinWheel = () => {
 // --- Main Page ---
 const InstantWin = () => {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"scratch" | "wheel">("scratch");
+  const [tab, setTab] = useState<"scratch" | "wheel" | "tap" | "quiz" | "mystery">("scratch");
   const [scratchKey, setScratchKey] = useState(0);
 
   return (

@@ -271,9 +271,6 @@ const LiveHub = () => {
           </div>
         </div>
       )}
-          </motion.div>
-        </div>
-      </section>
 
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
         {/* Mobile chips */}

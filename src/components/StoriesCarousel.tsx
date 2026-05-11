@@ -406,47 +406,59 @@ const StoriesCarousel = () => {
                 if (activeStory.link) navigate(activeStory.link);
               }}
             >
-              {/* Static decorative blobs (no parallax loop = stable) */}
+              {/* Background image for user stories with picture */}
+              {activeStory.type === "user" && activeStory.image && (
+                <img src={activeStory.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              )}
+
+              {/* Static decorative blobs */}
               <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-black/30 blur-3xl pointer-events-none" />
 
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
 
               <div className="relative z-10">
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", delay: 0.2 }}
-                >
-                  <activeStory.icon className="h-16 w-16 text-white mx-auto mb-6 drop-shadow-lg" />
-                </motion.div>
-                <motion.h2
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-3xl font-display font-bold text-white mb-3 drop-shadow"
-                >
-                  {activeStory.title}
-                </motion.h2>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-lg text-white/95 leading-relaxed drop-shadow"
-                >
-                  {activeStory.subtitle}
-                </motion.p>
-                {activeStory.link && (
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-8 inline-flex items-center gap-2 px-6 py-2.5 bg-white/20 backdrop-blur rounded-full text-white text-sm font-medium border border-white/30"
-                  >
-                    Toque para ver →
-                  </motion.div>
+                {activeStory.type === "user" ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      {activeStory.authorAvatar ? (
+                        <img src={activeStory.authorAvatar} alt="" className="h-10 w-10 rounded-full ring-2 ring-white/50 object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-white" />
+                        </div>
+                      )}
+                      <span className="text-white font-semibold drop-shadow">{activeStory.authorName}</span>
+                    </div>
+                    {activeStory.subtitle && (
+                      <p className="text-2xl font-display font-bold text-white whitespace-pre-wrap drop-shadow leading-snug">
+                        {activeStory.subtitle}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", delay: 0.2 }}
+                    >
+                      <activeStory.icon className="h-16 w-16 text-white mx-auto mb-6 drop-shadow-lg" />
+                    </motion.div>
+                    <h2 className="text-3xl font-display font-bold text-white mb-3 drop-shadow">
+                      {activeStory.title}
+                    </h2>
+                    <p className="text-lg text-white/95 leading-relaxed drop-shadow">
+                      {activeStory.subtitle}
+                    </p>
+                    {activeStory.link && (
+                      <div className="mt-8 inline-flex items-center gap-2 px-6 py-2.5 bg-white/20 backdrop-blur rounded-full text-white text-sm font-medium border border-white/30">
+                        Toque para ver →
+                      </div>
+                    )}
+                  </>
                 )}
-                <div className="mt-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/30 backdrop-blur text-white/80 text-xs">
+                <div className="mt-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur text-white/90 text-xs">
                   <Clock className="h-3 w-3" />
                   Expira em {formatRemaining(activeStory.createdAt)}
                 </div>

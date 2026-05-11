@@ -139,6 +139,40 @@ const DashboardLiveGames = () => {
         ))}
       </section>
 
+      {/* Jogo ativo no momento — aplica imediatamente no Live Hub */}
+      <section className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-card p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider mb-1">
+              <Radio className="h-3 w-3 animate-pulse" /> Ao vivo agora
+            </div>
+            <h3 className="font-display text-lg font-bold">Jogo ativo no momento</h3>
+            <p className="text-xs text-muted-foreground">
+              O Live Hub e o overlay vão mudar automaticamente para este jogo. Resumo visível para o anfitrião.
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold whitespace-nowrap">
+            {GAME_OPTIONS.find(g => g.id === activeGame)?.emoji} {GAME_OPTIONS.find(g => g.id === activeGame)?.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {GAME_OPTIONS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setAndBroadcastActive(g.id)}
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
+                activeGame === g.id
+                  ? "border-primary bg-primary/10 shadow-md"
+                  : "border-border bg-card hover:border-primary/40"
+              }`}
+            >
+              <div className="text-2xl mb-1">{g.emoji}</div>
+              <p className="text-[10px] font-bold leading-tight">{g.label}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {/* Tabs per game */}
       <Tabs defaultValue="wheel" className="w-full">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1 bg-secondary">

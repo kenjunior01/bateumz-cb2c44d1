@@ -202,19 +202,31 @@ const DashboardAmbassadors = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-bold truncate">{p.title}</p>
                     {p.winner_user_id ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-bold">
-                        <CheckCircle2 className="h-3 w-3" /> Atribuído
-                      </span>
+                      <>
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-bold">
+                          <CheckCircle2 className="h-3 w-3" /> Atribuído
+                        </span>
+                        {p.notified_at && (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-700 font-bold">
+                            🔔 Notificado
+                          </span>
+                        )}
+                        {p.award_mode && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.award_mode === "auto" ? "bg-purple-500/15 text-purple-700" : "bg-slate-500/15 text-slate-700"}`}>
+                            {p.award_mode === "auto" ? "Automático" : "Manual"}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 font-bold">
-                        <Clock className="h-3 w-3" /> A aguardar
+                        <Clock className="h-3 w-3" /> Pendente
                       </span>
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
                     {p.scope === "live" ? `Live ${p.live_code}` : "Acumulado (sempre)"}
                     {p.description ? ` · ${p.description}` : ""}
-                    {p.winner_user_id && p.awarded_at ? ` · ${new Date(p.awarded_at).toLocaleString("pt-PT")}` : ""}
+                    {p.winner_user_id && p.awarded_at ? ` · Atribuído em ${new Date(p.awarded_at).toLocaleString("pt-PT")}` : ""}
                   </p>
                 </div>
                 {p.scope === "live" && p.live_code && (

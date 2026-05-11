@@ -211,13 +211,33 @@ const LiveHub = () => {
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2">
-                <span className="text-[11px] text-muted-foreground">Código da Live:</span>
-                <span className="font-mono text-sm font-bold text-primary">{liveCode}</span>
-                <button onClick={copyCode} className="p-1 rounded hover:bg-secondary" aria-label="Copiar">
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-              </div>
+              {isLive ? (
+                <>
+                  <div className="flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">AO VIVO · {fmtTime(elapsed)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2">
+                    <span className="text-[11px] text-muted-foreground">Código:</span>
+                    <span className="font-mono text-sm font-bold text-primary">{liveCode}</span>
+                    <button onClick={copyCode} className="p-1 rounded hover:bg-secondary" aria-label="Copiar">
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                  <button onClick={endLive} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90">
+                    <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
+                    <Play className="h-4 w-4 fill-current" /> Iniciar Live
+                  </button>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-muted/50 text-muted-foreground text-[11px] font-medium">
+                    <Lock className="h-3 w-3" /> Sem código ativo
+                  </div>
+                </>
+              )}
               <LiveGameSettings config={config} onChange={setConfig} />
               <Link
                 to="/dashboard/raffles/create"
@@ -226,6 +246,31 @@ const LiveHub = () => {
                 <Plus className="h-3.5 w-3.5" /> Criar Sorteio Vinculado
               </Link>
             </div>
+
+            {/* Host summary banner — what dashboard set as active */}
+            {activeMeta && (
+              <div className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-2.5">
+                <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
+                <div className="text-left">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Jogo ativo no painel</p>
+                  <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                  {isLive ? "transmitindo" : "em espera"}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </section>
+
+      {!isLive && (
+        <div className="container mx-auto px-3 sm:px-4 pt-3">
+          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+            🔒 Pontuações e vencedores só são contabilizados depois de <strong>iniciar a live</strong>. Configure os jogos no painel da empresa.
+          </div>
+        </div>
+      )}
           </motion.div>
         </div>
       </section>

@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Trophy, Flame, Star, Megaphone, X, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trophy, Flame, Star, Megaphone, X, Clock, Plus, User as UserIcon, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import CreateStoryDialog from "@/components/CreateStoryDialog";
+import { toast } from "sonner";
 
 interface Story {
   id: string;
-  type: "hot" | "winner" | "announcement" | "new";
+  type: "hot" | "winner" | "announcement" | "new" | "user";
   title: string;
   subtitle: string;
   image?: string;
@@ -14,20 +17,27 @@ interface Story {
   icon: typeof Trophy;
   link?: string;
   createdAt: number; // timestamp ms
+  authorId?: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 
 const STORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const VIEWED_KEY = "bateu_stories_viewed";
 
+
 const StoriesCarousel = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeStory, setActiveStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [progress, setProgress] = useState(0);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(Date.now());
+  const [createOpen, setCreateOpen] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     // Load viewed stories from localStorage
@@ -141,9 +151,60 @@ const StoriesCarousel = () => {
       });
     }
 
-    // Filter only stories younger than 24h
-    const fresh = baseStories.filter((s) => Date.now() - s.createdAt < STORY_TTL_MS);
+    // User-published stories
+    const { data: userStories } = await supabase
+      .from("user_stories")
+      .select("id, user_id, content, image_url, background, created_at, expires_at")
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    let profilesById: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
+    if (userStories && userStories.length > 0) {
+      const ids = Array.from(new Set(userStories.map((s) => s.user_id)));
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", ids);
+      (profs || []).forEach((p: any) => { profilesById[p.user_id] = p; });
+
+      userStories.forEach((s: any) => {
+        const prof = profilesById[s.user_id];
+        baseStories.push({
+          id: `user-${s.id}`,
+          type: "user",
+          title: prof?.display_name || "Utilizador",
+          subtitle: s.content || "",
+          image: s.image_url || prof?.avatar_url || undefined,
+          gradient: s.background || "from-primary to-emerald-400",
+          icon: UserIcon,
+          createdAt: new Date(s.created_at).getTime(),
+          authorId: s.user_id,
+          authorName: prof?.display_name || "Utilizador",
+          authorAvatar: prof?.avatar_url || undefined,
+        });
+      });
+    }
+
+    // Filter only stories younger than 24h, then sort: user stories first then by recency
+    const fresh = baseStories
+      .filter((s) => Date.now() - s.createdAt < STORY_TTL_MS)
+      .sort((a, b) => {
+        if (a.type === "user" && b.type !== "user") return -1;
+        if (b.type === "user" && a.type !== "user") return 1;
+        return b.createdAt - a.createdAt;
+      });
     setStories(fresh);
+  };
+
+  const deleteStory = async (id: string) => {
+    if (!confirm("Apagar este status?")) return;
+    const realId = id.replace(/^user-/, "");
+    const { error } = await supabase.from("user_stories").delete().eq("id", realId);
+    if (error) { toast.error("Erro ao apagar"); return; }
+    toast.success("Status removido");
+    setActiveStory(null);
+    loadStories();
   };
 
   const markViewed = (id: string) => {
@@ -198,13 +259,14 @@ const StoriesCarousel = () => {
     scrollRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
   };
 
-  if (stories.length === 0) return null;
+  if (stories.length === 0 && !user) return null;
 
   const typeRing: Record<string, string> = {
     hot: "from-orange-400 via-red-500 to-pink-500",
     winner: "from-yellow-400 via-amber-500 to-orange-500",
     announcement: "from-primary via-emerald-400 to-teal-400",
     new: "from-violet-500 via-purple-500 to-fuchsia-500",
+    user: "from-sky-400 via-primary to-emerald-400",
   };
 
   const formatRemaining = (createdAt: number) => {
@@ -225,6 +287,20 @@ const StoriesCarousel = () => {
           </button>
 
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1" style={{ scrollbarWidth: "none" }}>
+            <button
+              onClick={() => user ? setCreateOpen(true) : navigate("/login")}
+              className="flex flex-col items-center gap-1.5 shrink-0 snap-start group"
+              aria-label="Publicar status"
+            >
+              <div className="relative h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full p-[3px] bg-gradient-to-tr from-primary to-accent">
+                <div className="relative h-full w-full rounded-full bg-card ring-2 ring-background flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-primary" strokeWidth={2.5} />
+                </div>
+              </div>
+              <span className="text-[10px] font-medium text-foreground max-w-[68px] truncate">
+                Seu Status
+              </span>
+            </button>
             {stories.map((story, idx) => {
               const viewed = viewedIds.has(story.id);
               return (
@@ -308,6 +384,16 @@ const StoriesCarousel = () => {
               <X className="h-6 w-6" />
             </button>
 
+            {activeStory.type === "user" && user && activeStory.authorId === user.id && (
+              <button
+                className="absolute top-10 right-14 z-10 text-white/80 hover:text-red-400 p-1"
+                onClick={(e) => { e.stopPropagation(); deleteStory(activeStory.id); }}
+                aria-label="Apagar status"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
+
             <motion.div
               key={activeStory.id}
               initial={{ scale: 0.9, opacity: 0, rotateY: -15 }}
@@ -320,47 +406,59 @@ const StoriesCarousel = () => {
                 if (activeStory.link) navigate(activeStory.link);
               }}
             >
-              {/* Static decorative blobs (no parallax loop = stable) */}
+              {/* Background image for user stories with picture */}
+              {activeStory.type === "user" && activeStory.image && (
+                <img src={activeStory.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              )}
+
+              {/* Static decorative blobs */}
               <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-black/30 blur-3xl pointer-events-none" />
 
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
 
               <div className="relative z-10">
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", delay: 0.2 }}
-                >
-                  <activeStory.icon className="h-16 w-16 text-white mx-auto mb-6 drop-shadow-lg" />
-                </motion.div>
-                <motion.h2
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-3xl font-display font-bold text-white mb-3 drop-shadow"
-                >
-                  {activeStory.title}
-                </motion.h2>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-lg text-white/95 leading-relaxed drop-shadow"
-                >
-                  {activeStory.subtitle}
-                </motion.p>
-                {activeStory.link && (
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-8 inline-flex items-center gap-2 px-6 py-2.5 bg-white/20 backdrop-blur rounded-full text-white text-sm font-medium border border-white/30"
-                  >
-                    Toque para ver →
-                  </motion.div>
+                {activeStory.type === "user" ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      {activeStory.authorAvatar ? (
+                        <img src={activeStory.authorAvatar} alt="" className="h-10 w-10 rounded-full ring-2 ring-white/50 object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-white" />
+                        </div>
+                      )}
+                      <span className="text-white font-semibold drop-shadow">{activeStory.authorName}</span>
+                    </div>
+                    {activeStory.subtitle && (
+                      <p className="text-2xl font-display font-bold text-white whitespace-pre-wrap drop-shadow leading-snug">
+                        {activeStory.subtitle}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", delay: 0.2 }}
+                    >
+                      <activeStory.icon className="h-16 w-16 text-white mx-auto mb-6 drop-shadow-lg" />
+                    </motion.div>
+                    <h2 className="text-3xl font-display font-bold text-white mb-3 drop-shadow">
+                      {activeStory.title}
+                    </h2>
+                    <p className="text-lg text-white/95 leading-relaxed drop-shadow">
+                      {activeStory.subtitle}
+                    </p>
+                    {activeStory.link && (
+                      <div className="mt-8 inline-flex items-center gap-2 px-6 py-2.5 bg-white/20 backdrop-blur rounded-full text-white text-sm font-medium border border-white/30">
+                        Toque para ver →
+                      </div>
+                    )}
+                  </>
                 )}
-                <div className="mt-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/30 backdrop-blur text-white/80 text-xs">
+                <div className="mt-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur text-white/90 text-xs">
                   <Clock className="h-3 w-3" />
                   Expira em {formatRemaining(activeStory.createdAt)}
                 </div>
@@ -391,6 +489,8 @@ const StoriesCarousel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CreateStoryDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={loadStories} />
     </>
   );
 };

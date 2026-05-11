@@ -384,6 +384,16 @@ const StoriesCarousel = () => {
               <X className="h-6 w-6" />
             </button>
 
+            {activeStory.type === "user" && user && activeStory.authorId === user.id && (
+              <button
+                className="absolute top-10 right-14 z-10 text-white/80 hover:text-red-400 p-1"
+                onClick={(e) => { e.stopPropagation(); deleteStory(activeStory.id); }}
+                aria-label="Apagar status"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
+
             <motion.div
               key={activeStory.id}
               initial={{ scale: 0.9, opacity: 0, rotateY: -15 }}

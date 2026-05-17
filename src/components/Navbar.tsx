@@ -119,7 +119,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <LanguageSwitcher />
+          {/* LanguageSwitcher disabled: EN-only platform */}
           <ThemeToggle />
           {user ? (
             <>
@@ -152,7 +152,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
-          <LanguageSwitcher />
+          {/* LanguageSwitcher disabled: EN-only platform */}
           <ThemeToggle />
           <button className="text-foreground" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

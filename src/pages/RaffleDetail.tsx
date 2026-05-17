@@ -59,30 +59,13 @@ type PaymentMethod =
   | "pix" | "boleto" | "cardBR"
   | "paypal";
 
-const paymentMethods: { id: PaymentMethod; labelKey: string; descKey: string; emoji: string; group: "MZ" | "AO" | "BR" | "INT" }[] = [
-  // 🇲🇿 Moçambique
-  { id: "mpesa",         labelKey: "pay.method.mpesa",         descKey: "pay.method.mpesa.desc",         emoji: "📱", group: "MZ" },
-  { id: "emola",         labelKey: "pay.method.emola",         descKey: "pay.method.emola.desc",         emoji: "💳", group: "MZ" },
-  { id: "card",          labelKey: "pay.method.card",          descKey: "pay.method.card.desc",          emoji: "💎", group: "MZ" },
-  // 🇦🇴 Angola
-  { id: "multicaixa",    labelKey: "pay.method.multicaixa",    descKey: "pay.method.multicaixa.desc",    emoji: "🅼", group: "AO" },
-  { id: "unitelMoney",   labelKey: "pay.method.unitelMoney",   descKey: "pay.method.unitelMoney.desc",   emoji: "📲", group: "AO" },
-  { id: "africellMoney", labelKey: "pay.method.africellMoney", descKey: "pay.method.africellMoney.desc", emoji: "💜", group: "AO" },
-  { id: "baiTransfer",   labelKey: "pay.method.baiTransfer",   descKey: "pay.method.baiTransfer.desc",   emoji: "🏦", group: "AO" },
-  { id: "bfaTransfer",   labelKey: "pay.method.bfaTransfer",   descKey: "pay.method.bfaTransfer.desc",   emoji: "🏛️", group: "AO" },
-  // 🇧🇷 Brasil
-  { id: "pix",           labelKey: "pay.method.pix",           descKey: "pay.method.pix.desc",           emoji: "⚡", group: "BR" },
-  { id: "boleto",        labelKey: "pay.method.boleto",        descKey: "pay.method.boleto.desc",        emoji: "🧾", group: "BR" },
-  { id: "cardBR",        labelKey: "pay.method.cardBR",        descKey: "pay.method.cardBR.desc",        emoji: "💳", group: "BR" },
-  // 🌍 Internacional
-  { id: "paypal",        labelKey: "pay.method.paypal",        descKey: "pay.method.paypal.desc",        emoji: "🅿️", group: "INT" },
+const paymentMethods: { id: PaymentMethod; labelKey: string; descKey: string; emoji: string; group: "NA" }[] = [
+  // 🇺🇸🇨🇦 North America — PayPal only (cards processed via PayPal)
+  { id: "paypal", labelKey: "pay.method.paypal", descKey: "pay.method.paypal.desc", emoji: "🅿️", group: "NA" },
 ];
 
-const groupLabels: Record<"MZ" | "AO" | "BR" | "INT", string> = {
-  MZ: "🇲🇿 Moçambique",
-  AO: "🇦🇴 Angola",
-  BR: "🇧🇷 Brasil",
-  INT: "🌍 Internacional",
+const groupLabels: Record<"NA", string> = {
+  NA: "🇺🇸🇨🇦 Pay with PayPal",
 };
 
 const slideVariants = {

@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const StatsBar = () => {
   const [stats, setStats] = useState([
-    { value: "0", suffix: " MZN", label: "Já entregues em prémios" },
-    { value: "0", suffix: "", label: "Participantes activos" },
-    { value: "100%", suffix: "", label: "Dos resultados são verificáveis" },
-    { value: "0", suffix: "", label: "Sorteios realizados" },
+    { value: "0", suffix: "", label: "Awarded in prizes" },
+    { value: "0", suffix: "", label: "Active participants" },
+    { value: "100%", suffix: "", label: "Verifiable results" },
+    { value: "0", suffix: "", label: "Raffles completed" },
   ]);
 
   useEffect(() => {

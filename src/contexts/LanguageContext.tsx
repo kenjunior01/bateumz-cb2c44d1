@@ -384,22 +384,17 @@ function format(template: string, vars?: Record<string, string>) {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "pt";
-    const saved = localStorage.getItem("bateu_lang") as Lang | null;
-    if (saved === "pt" || saved === "en") return saved;
-    const browser = navigator.language?.toLowerCase() || "";
-    return browser.startsWith("en") ? "en" : "pt";
-  });
+  // North American pivot: English is the only supported language now.
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    localStorage.setItem("bateu_lang", lang);
-    document.documentElement.lang = lang;
+    localStorage.setItem("bateu_lang", "en");
+    document.documentElement.lang = "en";
   }, [lang]);
 
-  const setLang = (l: Lang) => setLangState(l);
+  const setLang = (_l: Lang) => setLangState("en");
   const t = (key: string, vars?: Record<string, string>) =>
-    format(translations[lang][key] ?? translations.pt[key] ?? key, vars);
+    format(translations.en[key] ?? translations.pt[key] ?? key, vars);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>

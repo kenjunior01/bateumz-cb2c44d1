@@ -69,7 +69,7 @@ const MobileTopBar = () => {
               <Star className="h-3.5 w-3.5 fill-accent" /> {t("menu.points")}
             </button>
           )}
-          <LanguageSwitcher />
+          {/* LanguageSwitcher disabled: EN-only platform */}
           <ThemeToggle />
           <button
             onClick={() => navigate(user ? "/dashboard/notifications" : "/login")}

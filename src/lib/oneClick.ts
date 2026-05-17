@@ -1,17 +1,12 @@
-// Stores user payment preferences locally for "1-Click Buy" flow.
-// Nothing sensitive — only the chosen method label and phone hint.
+// Stored payment preferences for fast checkout. North American market = PayPal default.
 
-export type StoredMethod =
-  | "mpesa" | "emola" | "card"
-  | "multicaixa" | "unitelMoney" | "africellMoney" | "baiTransfer" | "bfaTransfer"
-  | "pix" | "boleto" | "cardBR"
-  | "paypal";
+export type StoredMethod = "paypal" | "card";
 
 const KEY = "bateu_oneclick_v1";
 
 export interface OneClickPrefs {
   method: StoredMethod;
-  phone?: string;
+  email?: string;
   updatedAt: string;
 }
 
@@ -26,15 +21,10 @@ export const getOneClick = (): OneClickPrefs | null => {
 
 export const saveOneClick = (prefs: Omit<OneClickPrefs, "updatedAt">) => {
   try {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({ ...prefs, updatedAt: new Date().toISOString() })
-    );
+    localStorage.setItem(KEY, JSON.stringify({ ...prefs, updatedAt: new Date().toISOString() }));
   } catch {}
 };
 
 export const clearOneClick = () => {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {}
+  try { localStorage.removeItem(KEY); } catch {}
 };

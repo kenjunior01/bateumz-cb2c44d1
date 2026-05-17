@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const StatsBar = () => {
   const [stats, setStats] = useState([
-    { value: "0", suffix: " MZN", label: "Já entregues em prémios" },
-    { value: "0", suffix: "", label: "Participantes activos" },
-    { value: "100%", suffix: "", label: "Dos resultados são verificáveis" },
-    { value: "0", suffix: "", label: "Sorteios realizados" },
+    { value: "0", suffix: "", label: "Awarded in prizes" },
+    { value: "0", suffix: "", label: "Active participants" },
+    { value: "100%", suffix: "", label: "Verifiable results" },
+    { value: "0", suffix: "", label: "Raffles completed" },
   ]);
 
   useEffect(() => {
@@ -30,10 +30,10 @@ const StatsBar = () => {
       };
 
       setStats([
-        { value: formatNum(totalPrizes), suffix: " MZN", label: "Já entregues em prémios" },
-        { value: formatNum(participantCount), suffix: "", label: "Participantes activos" },
-        { value: "100%", suffix: "", label: "Dos resultados são verificáveis" },
-        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Sorteios realizados" },
+        { value: "$" + formatNum(totalPrizes), suffix: "", label: "Awarded in prizes" },
+        { value: formatNum(participantCount), suffix: "", label: "Active participants" },
+        { value: "100%", suffix: "", label: "Verifiable results" },
+        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Raffles completed" },
       ]);
     };
     fetchStats();
@@ -59,7 +59,7 @@ const StatsBar = () => {
             >
               <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
                 {isZero ? (
-                  <span className="text-xl md:text-2xl text-muted-foreground">Em breve</span>
+                  <span className="text-xl md:text-2xl text-muted-foreground">Coming soon</span>
                 ) : (
                   <>{s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span></>
                 )}

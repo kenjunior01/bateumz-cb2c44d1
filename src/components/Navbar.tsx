@@ -71,9 +71,9 @@ const Navbar = () => {
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
+          <img src={bateuLogo} alt="Jackpot Drop" className="h-8 w-8" />
           <span className="font-display text-xl font-bold text-foreground">
-            Bateu
+            Jackpot Drop
           </span>
         </Link>
 
@@ -119,7 +119,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <LanguageSwitcher />
+          {/* LanguageSwitcher disabled: EN-only platform */}
           <ThemeToggle />
           {user ? (
             <>
@@ -152,7 +152,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
-          <LanguageSwitcher />
+          {/* LanguageSwitcher disabled: EN-only platform */}
           <ThemeToggle />
           <button className="text-foreground" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

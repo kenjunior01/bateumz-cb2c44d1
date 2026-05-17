@@ -34,8 +34,8 @@ const LiveTicker = () => {
         kind: p.status === "winner" ? "win" : "buy",
         text:
           p.status === "winner"
-            ? `🏆 Bilhete #${p.ticket_number} ganhou em "${map.get(p.raffle_id) ?? "sorteio"}"`
-            : `🎟️ Alguém comprou bilhete #${p.ticket_number} em "${map.get(p.raffle_id) ?? "sorteio"}"`,
+            ? `🏆 Ticket #${p.ticket_number} won in "${map.get(p.raffle_id) ?? "raffle"}"`
+            : `🎟️ Someone bought ticket #${p.ticket_number} in "${map.get(p.raffle_id) ?? "raffle"}"`,
       }));
       setItems(mapped);
     };

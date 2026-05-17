@@ -10,8 +10,8 @@ const Footer = () => {
       <div className="container mx-auto px-6">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-4 flex items-center justify-center gap-2">
-            <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
-            <span className="font-display text-xl font-bold text-foreground">Bateu</span>
+            <img src={bateuLogo} alt="Jackpot Drop" className="h-8 w-8" />
+            <span className="font-display text-xl font-bold text-foreground">Jackpot Drop</span>
           </div>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
             {t("footer.tagline")}
@@ -56,7 +56,7 @@ const Footer = () => {
             <Link to="/faq" className="hover:text-foreground transition-colors">{t("footer.faq")}</Link>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2026 Bateu. {t("footer.rights")}
+            © 2026 Jackpot Drop. {t("footer.rights")}
           </p>
         </div>
       </div>

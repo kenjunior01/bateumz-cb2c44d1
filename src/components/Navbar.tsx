@@ -71,7 +71,7 @@ const Navbar = () => {
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
+          <img src={bateuLogo} alt="Jackpot Drop" className="h-8 w-8" />
           <span className="font-display text-xl font-bold text-foreground">
             Bateu
           </span>

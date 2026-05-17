@@ -59,7 +59,7 @@ const StatsBar = () => {
             >
               <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
                 {isZero ? (
-                  <span className="text-xl md:text-2xl text-muted-foreground">Em breve</span>
+                  <span className="text-xl md:text-2xl text-muted-foreground">Coming soon</span>
                 ) : (
                   <>{s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span></>
                 )}

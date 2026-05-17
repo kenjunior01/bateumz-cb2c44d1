@@ -878,9 +878,12 @@ export type Database = {
       participants: {
         Row: {
           created_at: string
+          currency: string
           id: string
           payment_method: string | null
           payment_status: string
+          paypal_capture_id: string | null
+          paypal_order_id: string | null
           raffle_id: string
           receipt_url: string | null
           status: string
@@ -889,9 +892,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string
           id?: string
           payment_method?: string | null
           payment_status?: string
+          paypal_capture_id?: string | null
+          paypal_order_id?: string | null
           raffle_id: string
           receipt_url?: string | null
           status?: string
@@ -900,9 +906,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string
           id?: string
           payment_method?: string | null
           payment_status?: string
+          paypal_capture_id?: string | null
+          paypal_order_id?: string | null
           raffle_id?: string
           receipt_url?: string | null
           status?: string
@@ -1013,6 +1022,7 @@ export type Database = {
           category: string
           city: string | null
           created_at: string
+          currency: string
           description: string | null
           featured: boolean
           id: string
@@ -1037,6 +1047,7 @@ export type Database = {
           category?: string
           city?: string | null
           created_at?: string
+          currency?: string
           description?: string | null
           featured?: boolean
           id?: string
@@ -1061,6 +1072,7 @@ export type Database = {
           category?: string
           city?: string | null
           created_at?: string
+          currency?: string
           description?: string | null
           featured?: boolean
           id?: string
@@ -1137,7 +1149,9 @@ export type Database = {
           business_user_id: string
           category: string | null
           city: string | null
+          country: string
           created_at: string
+          currency: string
           description: string | null
           draw_mode: string
           end_date: string | null
@@ -1171,7 +1185,9 @@ export type Database = {
           business_user_id: string
           category?: string | null
           city?: string | null
+          country?: string
           created_at?: string
+          currency?: string
           description?: string | null
           draw_mode?: string
           end_date?: string | null
@@ -1205,7 +1221,9 @@ export type Database = {
           business_user_id?: string
           category?: string | null
           city?: string | null
+          country?: string
           created_at?: string
+          currency?: string
           description?: string | null
           draw_mode?: string
           end_date?: string | null

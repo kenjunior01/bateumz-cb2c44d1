@@ -202,6 +202,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
     <LanguageProvider>
+    <CurrencyProvider>
+    <PayPalProvider>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -216,6 +218,8 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
+    </PayPalProvider>
+    </CurrencyProvider>
     </LanguageProvider>
     </ThemeProvider>
   </QueryClientProvider>

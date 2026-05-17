@@ -407,9 +407,9 @@ export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) {
     return {
-      lang: "pt" as Lang,
+      lang: "en" as Lang,
       setLang: () => {},
-      t: (k: string, vars?: Record<string, string>) => format(translations.pt[k] ?? k, vars),
+      t: (k: string, vars?: Record<string, string>) => format(translations.en[k] ?? k, vars),
     };
   }
   return ctx;

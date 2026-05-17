@@ -88,10 +88,7 @@ const RaffleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutStep, setCheckoutStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
-    const saved = getOneClick();
-    return (saved?.method ?? "mpesa") as PaymentMethod;
-  });
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paypal" as PaymentMethod);
   const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);

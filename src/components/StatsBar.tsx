@@ -30,10 +30,10 @@ const StatsBar = () => {
       };
 
       setStats([
-        { value: formatNum(totalPrizes), suffix: " MZN", label: "Já entregues em prémios" },
-        { value: formatNum(participantCount), suffix: "", label: "Participantes activos" },
-        { value: "100%", suffix: "", label: "Dos resultados são verificáveis" },
-        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Sorteios realizados" },
+        { value: "$" + formatNum(totalPrizes), suffix: "", label: "Awarded in prizes" },
+        { value: formatNum(participantCount), suffix: "", label: "Active participants" },
+        { value: "100%", suffix: "", label: "Verifiable results" },
+        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Raffles completed" },
       ]);
     };
     fetchStats();

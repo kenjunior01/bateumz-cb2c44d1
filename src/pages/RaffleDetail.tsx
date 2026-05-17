@@ -206,7 +206,7 @@ const RaffleDetail = () => {
     await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
 
     // Remember this method for next time → enables 1-click flow
-    saveOneClick({ method: paymentMethod });
+    saveOneClick({ method: "paypal" });
 
     if (raffle.draw_mode === "auto_sold_out") {
       try {

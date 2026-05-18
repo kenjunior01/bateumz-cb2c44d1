@@ -393,53 +393,30 @@ const RaffleDetail = () => {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="w-full max-w-md md:rounded-2xl rounded-t-3xl bg-card border border-border shadow-2xl overflow-hidden max-h-[85vh] md:max-h-[80vh] flex flex-col"
             >
-              {/* Header with step indicator */}
+              {/* Header */}
               {checkoutStep < 4 && (
                 <div className="px-5 pt-5 pb-3 border-b border-border shrink-0">
-                  {/* Drag handle on mobile */}
                   <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4 md:hidden" />
-
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-lg font-bold text-foreground">Finalizar Compra</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-display text-lg font-bold text-foreground">Secure Checkout</h3>
                     <button onClick={() => goToStep(0)} className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition">
                       <X className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
-
-                  {/* Step dots */}
-                  <div className="flex items-center gap-1">
-                    {(needsReceipt ? stepLabels : [stepLabels[0], stepLabels[2]]).map((label, i) => {
-                      const stepNum = needsReceipt ? i + 1 : (i === 0 ? 1 : 3);
-                      const isActive = checkoutStep >= stepNum;
-                      const isCurrent = checkoutStep === stepNum;
-                      return (
-                        <div key={label} className="flex items-center gap-1 flex-1">
-                          <motion.div
-                            animate={{ scale: isCurrent ? 1.1 : 1 }}
-                            className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
-                              isActive ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                            }`}
-                          >
-                            {isActive && checkoutStep > stepNum ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                          </motion.div>
-                          <span className="text-[10px] text-muted-foreground hidden sm:block">{label}</span>
-                          {i < (needsReceipt ? 2 : 1) && (
-                            <div className={`flex-1 h-0.5 rounded-full transition-colors ${isActive && checkoutStep > stepNum ? "bg-primary" : "bg-secondary"}`} />
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                    <span>PayPal Buyer Protection · 256-bit encryption</span>
                   </div>
                 </div>
               )}
 
-              {/* Content area with slide transitions */}
+              {/* Content */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 <AnimatePresence mode="wait" custom={slideDirection}>
-                  {/* Step 1: Payment Method */}
+                  {/* Step 1: Review + PayPal */}
                   {checkoutStep === 1 && (
                     <motion.div
-                      key="step1"
+                      key="review"
                       custom={slideDirection}
                       variants={slideVariants}
                       initial="enter"
@@ -447,123 +424,63 @@ const RaffleDetail = () => {
                       exit="exit"
                       transition={{ duration: 0.25, ease: "easeOut" }}
                     >
-                      <p className="text-sm text-muted-foreground mb-4">Como deseja pagar?</p>
-                      <div className="space-y-2">
-                        {paymentMethods.map((m) => (
-                          <motion.button
-                            key={m.id}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setPaymentMethod(m.id)}
-                            className={`w-full flex items-center gap-3 rounded-xl p-3.5 transition-all border ${
-                              paymentMethod === m.id
-                                ? "border-primary bg-primary/10 shadow-sm"
-                                : "border-border bg-secondary/30 hover:border-primary/30"
-                            }`}
-                          >
-                            <span className="text-xl">{m.emoji}</span>
-                            <div className="text-left flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-foreground">{t(m.labelKey)}</p>
-                              <p className="text-[11px] text-muted-foreground">{t(m.descKey)}</p>
-                            </div>
-                            {paymentMethod === m.id && (
-                              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                <Check className="h-3 w-3 text-primary-foreground" />
-                              </motion.div>
-                            )}
-                          </motion.button>
-                        ))}
-                      </div>
-
-                      {/* Summary mini */}
-                      <div className="mt-4 rounded-xl bg-secondary/50 p-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-[11px] text-muted-foreground">{selectedNumbers.length} bilhete(s)</p>
-                          <p className="text-xs text-muted-foreground">Números: {selectedNumbers.sort((a, b) => a - b).join(", ")}</p>
-                        </div>
-                        <p className="font-display text-lg font-bold text-foreground">{formatMZN(totalPrice)}</p>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 2: Payment Instructions + Receipt (only for mobile money) */}
-                  {checkoutStep === 2 && (
-                    <motion.div
-                      key="step2"
-                      custom={slideDirection}
-                      variants={slideVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                    >
-                      <PaymentInstructions
-                        method={paymentMethod as "mpesa" | "emola"}
-                        number={paymentMethod === "mpesa" ? (whiteLabelConfig?.mpesa_number ?? null) : (whiteLabelConfig?.emola_number ?? null)}
-                        totalAmount={totalPrice}
-                        brandName={whiteLabelConfig?.brand_name}
-                      />
-
-                      <div className="mt-4 rounded-xl border border-border bg-secondary/20 p-4">
-                        <label className="text-xs font-semibold text-foreground mb-2 block">📎 Comprovativo de Pagamento</label>
-                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-border bg-card p-3 hover:border-primary/50 transition">
-                          <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            {receiptFile ? (
-                              <p className="text-sm font-medium text-foreground truncate">{receiptFile.name}</p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">Toque para enviar comprovativo</p>
-                            )}
-                          </div>
-                          {receiptFile && <Image className="h-4 w-4 text-primary" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => setReceiptFile(e.target.files?.[0] || null)} />
-                        </label>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 3: Confirmation */}
-                  {checkoutStep === 3 && (
-                    <motion.div
-                      key="step3"
-                      custom={slideDirection}
-                      variants={slideVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                    >
-                      <div className="rounded-xl bg-secondary/30 p-4 space-y-3">
+                      <div className="rounded-xl bg-secondary/30 p-4 space-y-3 mb-4">
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Sorteio</span>
+                          <span className="text-muted-foreground">Raffle</span>
                           <span className="text-foreground font-medium text-right max-w-[60%] truncate">{raffle.title}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Bilhetes</span>
+                          <span className="text-muted-foreground">Tickets</span>
                           <span className="text-foreground font-medium">{selectedNumbers.sort((a, b) => a - b).join(", ")}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Pagamento</span>
-                          <span className="text-foreground">{(() => { const m = paymentMethods.find(m => m.id === paymentMethod); return m ? t(m.labelKey) : ""; })()}</span>
+                          <span className="text-muted-foreground">Unit price</span>
+                          <span className="text-foreground">{fmt(raffle.ticket_price)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Preço unitário</span>
-                          <span className="text-foreground">{formatMZN(raffle.ticket_price)}</span>
-                        </div>
-                        {receiptFile && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Comprovativo</span>
-                            <span className="text-primary text-xs">✓ Anexado</span>
-                          </div>
-                        )}
                         <div className="border-t border-border pt-3 flex justify-between items-center">
                           <span className="font-semibold text-foreground">Total</span>
-                          <span className="font-display text-2xl font-bold text-primary">{formatMZN(totalPrice)}</span>
+                          <span className="font-display text-2xl font-bold text-primary">{fmt(totalPrice)}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-accent">
                           <Star className="h-3.5 w-3.5" />
-                          +{selectedNumbers.length * 10} Luck Points
+                          +{selectedNumbers.length * 10} Luck Points after payment
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <ShieldCheck className="h-4 w-4 text-primary mx-auto mb-1" />
+                          <p className="text-[10px] text-muted-foreground">100% Secure</p>
+                        </div>
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <Zap className="h-4 w-4 text-accent mx-auto mb-1" />
+                          <p className="text-[10px] text-muted-foreground">Instant Tickets</p>
+                        </div>
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <Trophy className="h-4 w-4 text-primary mx-auto mb-1" />
+                          <p className="text-[10px] text-muted-foreground">Verified Draws</p>
+                        </div>
+                      </div>
+
+                      {!user ? (
+                        <Button className="w-full h-12" onClick={() => navigate("/login")}>
+                          Sign in to pay with PayPal
+                        </Button>
+                      ) : (
+                        <PayPalProvider currency={currency}>
+                          <PayPalCheckout
+                            raffleId={raffle.id}
+                            quantity={selectedNumbers.length}
+                            ticketNumbers={selectedNumbers}
+                            onSuccess={onPayPalSuccess}
+                            disabled={paid}
+                          />
+                        </PayPalProvider>
+                      )}
+
+                      <p className="text-[10px] text-muted-foreground text-center mt-3">
+                        Pay with PayPal balance, credit / debit card, or bank — no PayPal account required.
+                      </p>
                     </motion.div>
                   )}
 
@@ -583,13 +500,10 @@ const RaffleDetail = () => {
                       >
                         <PartyPopper className="h-10 w-10 text-primary" />
                       </motion.div>
-                      <h3 className="font-display text-2xl font-bold text-foreground mb-2">Bateu! 🎉</h3>
-                      <p className="text-muted-foreground mb-1">
-                        {paymentMethod === "card" ? "Pagamento confirmado!" : "Aguardando confirmação do pagamento"}
-                      </p>
-                      <p className="text-accent text-sm font-medium">+{selectedNumbers.length * 10} Luck Points ganhos</p>
+                      <h3 className="font-display text-2xl font-bold text-foreground mb-2">You're in! 🎉</h3>
+                      <p className="text-muted-foreground mb-1">Payment confirmed — tickets locked in.</p>
+                      <p className="text-accent text-sm font-medium">+{selectedNumbers.length * 10} Luck Points earned</p>
 
-                      {/* Confetti-like dots */}
                       {[...Array(12)].map((_, i) => (
                         <motion.div
                           key={i}
@@ -609,42 +523,12 @@ const RaffleDetail = () => {
                 </AnimatePresence>
               </div>
 
-              {/* Footer buttons */}
-              {checkoutStep > 0 && checkoutStep < 4 && (
+              {/* Footer */}
+              {checkoutStep === 1 && (
                 <div className="px-5 pb-5 pt-2 border-t border-border shrink-0">
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        if (checkoutStep === 1) goToStep(0);
-                        else if (checkoutStep === 2) goToStep(1);
-                        else if (checkoutStep === 3) goToStep(needsReceipt ? 2 : 1);
-                      }}
-                    >
-                      {checkoutStep === 1 ? "Cancelar" : "Voltar"}
-                    </Button>
-                    {checkoutStep === 3 ? (
-                      <Button className="flex-1 gap-2 glow-primary" onClick={handlePurchase} disabled={purchasing}>
-                        {purchasing ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                        ) : (
-                          <ShoppingCart className="h-4 w-4" />
-                        )}
-                        Pagar {formatMZN(totalPrice)}
-                      </Button>
-                    ) : (
-                      <Button
-                        className="flex-1 gap-2"
-                        onClick={() => {
-                          if (checkoutStep === 1) goToStep(needsReceipt ? 2 : 3);
-                          else if (checkoutStep === 2) goToStep(3);
-                        }}
-                      >
-                        Continuar <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => goToStep(0)}>
+                    Cancel
+                  </Button>
                 </div>
               )}
             </motion.div>

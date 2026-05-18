@@ -14,7 +14,7 @@ import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import BlockchainVerification from "@/components/BlockchainVerification";
 import BolaoModal from "@/components/BolaoModal";
-import /* removed PaymentInstructions */ from "@/components//* removed PaymentInstructions */";
+// PaymentInstructions removed — PayPal-only checkout
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -125,80 +125,22 @@ const RaffleDetail = () => {
     setCheckoutStep(step);
   };
 
-  const handlePurchase = async () => {
-    if (!user) { navigate("/login"); return; }
-    if (!raffle || selectedNumbers.length === 0) return;
-    setPurchasing(true);
-
-    let receiptUrl: string | null = null;
-    if (receiptFile) {
-      setUploadingReceipt(true);
-      const filePath = `${user.id}/${raffle.id}-${Date.now()}.${receiptFile.name.split('.').pop()}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-receipts")
-        .upload(filePath, receiptFile);
-      if (uploadError) {
-        toast.error("Erro ao enviar comprovativo. Tente novamente.");
-        setPurchasing(false);
-        setUploadingReceipt(false);
-        return;
-      }
-      receiptUrl = filePath;
-      setUploadingReceipt(false);
-    }
-
-    const inserts = selectedNumbers.map((num) => ({
-      raffle_id: raffle.id,
-      user_id: user.id,
-      ticket_number: num,
-      status: "active" as const,
-      payment_status: (paymentMethod === "card" ? "completed" : "pending") as string,
-      payment_method: paymentMethod,
-      receipt_url: receiptUrl,
-    }));
-    const { error } = await supabase.from("participants").insert(inserts as any);
-    if (error) {
-      toast.error("Erro ao comprar bilhetes. Tente novamente.");
-      setPurchasing(false);
-      return;
-    }
-    await supabase.from("luck_points").insert({
-      user_id: user.id,
-      points: selectedNumbers.length * 10,
-      action: "purchase",
-      description: `Comprou ${selectedNumbers.length} bilhete(s) - ${raffle.title}`,
-      raffle_id: raffle.id,
-    });
-
+  const onPayPalSuccess = async (captureId: string) => {
+    if (!user || !raffle) return;
+    setPaid(true);
     const newSoldCount = raffle.sold_tickets + selectedNumbers.length;
-    await supabase.from("raffles").update({ sold_tickets: newSoldCount }).eq("id", raffle.id);
-
-    // Remember this method for next time → enables 1-click flow
     saveOneClick({ method: "paypal" });
-
     if (raffle.draw_mode === "auto_sold_out") {
       try {
         await supabase.functions.invoke("check-ticket-threshold", { body: { raffle_id: raffle.id } });
       } catch (e) { console.error("Threshold check error:", e); }
     }
-
-    if (receiptUrl && (paymentMethod === "mpesa" || paymentMethod === "emola")) {
-      try {
-        await supabase.functions.invoke("notify-payment-receipt", {
-          body: { raffle_id: raffle.id, participant_name: user.email, ticket_numbers: selectedNumbers.join(", "), payment_method: paymentMethod },
-        });
-      } catch (e) { console.error("Notification error:", e); }
-    }
-
-    setPurchasing(false);
-    goToStep(4); // success step
-    toast.success(paymentMethod === "card"
-      ? "Bilhetes comprados com sucesso!"
-      : "Bilhetes reservados! Envie o pagamento e aguarde confirmação.");
+    goToStep(4);
+    toast.success("Payment confirmed — tickets are yours! 🎉");
     setTimeout(() => {
       setCheckoutStep(0);
+      setPaid(false);
       setSelectedNumbers([]);
-      setReceiptFile(null);
       setSoldNumbers((prev) => [...prev, ...selectedNumbers]);
       setRaffle((prev) => prev ? { ...prev, sold_tickets: newSoldCount } : prev);
     }, 3500);
@@ -213,7 +155,6 @@ const RaffleDetail = () => {
   }
 
   const soldPercent = (raffle.sold_tickets / raffle.total_tickets) * 100;
-  const needsReceipt = paymentMethod === "mpesa" || paymentMethod === "emola";
 
   return (
     <div className="min-h-screen bg-background" style={whiteLabelConfig ? {

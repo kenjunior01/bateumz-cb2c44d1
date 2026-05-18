@@ -14,7 +14,7 @@ import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import BlockchainVerification from "@/components/BlockchainVerification";
 import BolaoModal from "@/components/BolaoModal";
-import PaymentInstructions from "@/components/PaymentInstructions";
+import /* removed PaymentInstructions */ from "@/components//* removed PaymentInstructions */";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -264,7 +264,7 @@ const RaffleDetail = () => {
                   <p className="font-semibold text-foreground">⚡ Auto-Draw Scheduled</p>
                 </div>
                 <CountdownTimer targetDate={new Date(raffle.auto_draw_scheduled_at)} />
-                <p className="text-xs text-muted-foreground mt-3">O vencedor será selecionado automaticamente</p>
+                <p className="text-xs text-muted-foreground mt-3">Winner will be drawn automatically</p>
               </CardContent></Card>
             )}
 
@@ -275,7 +275,7 @@ const RaffleDetail = () => {
                   <p className="font-semibold text-foreground">Auto-Draw</p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  O sorteio será realizado <strong className="text-foreground">{raffle.auto_draw_days} dia(s)</strong> após a venda de{" "}
+                  Draw runs <strong className="text-foreground">{raffle.auto_draw_days} day(s)</strong> after selling{" "}
                   <strong className="text-foreground">{raffle.tickets_threshold || raffle.total_tickets}</strong> bilhetes.
                   Only <strong className="text-accent">{(raffle.tickets_threshold || raffle.total_tickets) - raffle.sold_tickets}</strong> tickets left.
                 </p>
@@ -353,7 +353,7 @@ const RaffleDetail = () => {
                         ))}
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">{selectedNumbers.length} bilhete(s)</span>
+                        <span className="text-muted-foreground">{selectedNumbers.length} ticket(s)</span>
                         <span className="font-display text-2xl font-bold text-foreground">{fmt(totalPrice)}</span>
                       </div>
                     </div>

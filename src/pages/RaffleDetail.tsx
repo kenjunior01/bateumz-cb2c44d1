@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Smartphone, CreditCard, Wallet, Upload, Image, Sparkles, X, ChevronRight, PartyPopper } from "lucide-react";
+import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Sparkles, X, ChevronRight, PartyPopper, ShieldCheck, Zap, Trophy } from "lucide-react";
 import SocialRaffleEntry from "@/components/SocialRaffleEntry";
-import { formatMZN } from "@/lib/currency";
+import PayPalProvider from "@/components/payments/PayPalProvider";
+import PayPalCheckout from "@/components/payments/PayPalCheckout";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatMoney } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";

@@ -175,11 +175,11 @@ const RaffleDetail = () => {
               )}
               <div>
                 <span className="font-display font-bold text-sm">{whiteLabelConfig.brand_name}</span>
-                <span className="text-white/70 text-xs ml-2">apresenta</span>
+                <span className="text-white/70 text-xs ml-2">presents</span>
               </div>
             </div>
             <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur-sm">
-              ✨ Sorteio Exclusivo
+              ✨ Exclusive Drop
             </Badge>
           </div>
         </div>
@@ -187,7 +187,7 @@ const RaffleDetail = () => {
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
-          <ArrowLeft className="h-4 w-4" /> Voltar
+          <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
         <div className="grid gap-8 lg:grid-cols-5">
@@ -207,7 +207,7 @@ const RaffleDetail = () => {
               </div>
               <div className="absolute bottom-4 left-4 flex gap-2 items-center">
                 <Badge className="font-bold text-lg px-4 py-1" style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
-                  {(raffle as any).hide_prize_value ? "🎁 Valor Surpresa" : formatMZN(raffle.prize_value)}
+                  {(raffle as any).hide_prize_value ? "🎁 Surprise Prize" : fmt(raffle.prize_value)}
                 </Badge>
                 {businessName && (
                   <Badge variant="outline" className="glass text-foreground border-accent/30 bg-accent/10">
@@ -234,34 +234,34 @@ const RaffleDetail = () => {
               <Card className="glass"><CardContent className="p-4 text-center">
                 <Users className="h-5 w-5 text-primary mx-auto mb-1" />
                 <p className="font-display text-xl font-bold text-foreground">{raffle.sold_tickets}</p>
-                <p className="text-xs text-muted-foreground">Participantes</p>
+                <p className="text-xs text-muted-foreground">Players</p>
               </CardContent></Card>
               <Card className="glass"><CardContent className="p-4 text-center">
                 <Ticket className="h-5 w-5 text-accent mx-auto mb-1" />
                 <p className="font-display text-xl font-bold text-foreground">{raffle.total_tickets - raffle.sold_tickets}</p>
-                <p className="text-xs text-muted-foreground">Disponíveis</p>
+                <p className="text-xs text-muted-foreground">Available</p>
               </CardContent></Card>
               <Card className="glass"><CardContent className="p-4 text-center">
                 <Star className="h-5 w-5 text-primary mx-auto mb-1" />
                 <p className="font-display text-xl font-bold text-foreground">10</p>
-                <p className="text-xs text-muted-foreground">Pts/bilhete</p>
+                <p className="text-xs text-muted-foreground">Pts / ticket</p>
               </CardContent></Card>
             </div>
 
             <Card className="glass"><CardContent className="p-6">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Progresso</span>
+                <span className="text-muted-foreground">Progress</span>
                 <span className="font-semibold text-foreground">{soldPercent.toFixed(0)}%</span>
               </div>
               <Progress value={soldPercent} className="h-3" />
-              <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} de {raffle.total_tickets} bilhetes vendidos</p>
+              <p className="text-xs text-muted-foreground mt-2">{raffle.sold_tickets} of {raffle.total_tickets} tickets sold</p>
             </CardContent></Card>
 
             {raffle.draw_mode === "auto_sold_out" && raffle.auto_draw_scheduled_at && (
               <Card className="glass border-accent/30"><CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="h-5 w-5 text-accent" />
-                  <p className="font-semibold text-foreground">⚡ Sorteio Automático Agendado</p>
+                  <p className="font-semibold text-foreground">⚡ Auto-Draw Scheduled</p>
                 </div>
                 <CountdownTimer targetDate={new Date(raffle.auto_draw_scheduled_at)} />
                 <p className="text-xs text-muted-foreground mt-3">O vencedor será selecionado automaticamente</p>
@@ -272,12 +272,12 @@ const RaffleDetail = () => {
               <Card className="glass border-primary/20"><CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-5 w-5 text-primary" />
-                  <p className="font-semibold text-foreground">Sorteio Automático</p>
+                  <p className="font-semibold text-foreground">Auto-Draw</p>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   O sorteio será realizado <strong className="text-foreground">{raffle.auto_draw_days} dia(s)</strong> após a venda de{" "}
                   <strong className="text-foreground">{raffle.tickets_threshold || raffle.total_tickets}</strong> bilhetes.
-                  Faltam <strong className="text-accent">{(raffle.tickets_threshold || raffle.total_tickets) - raffle.sold_tickets}</strong> bilhetes.
+                  Only <strong className="text-accent">{(raffle.tickets_threshold || raffle.total_tickets) - raffle.sold_tickets}</strong> tickets left.
                 </p>
               </CardContent></Card>
             )}
@@ -286,7 +286,7 @@ const RaffleDetail = () => {
               <Card className="glass border-primary/20"><CardContent className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="h-5 w-5 text-primary" />
-                  <p className="font-semibold text-foreground">Tempo Restante</p>
+                  <p className="font-semibold text-foreground">Time Remaining</p>
                 </div>
                 <CountdownTimer targetDate={new Date(raffle.end_date)} />
               </CardContent></Card>
@@ -305,8 +305,8 @@ const RaffleDetail = () => {
               />
             ) : (
             <Card className="glass sticky top-28"><CardContent className="p-6">
-              <h2 className="font-display text-xl font-bold text-foreground mb-1">Escolha seus números</h2>
-              <p className="text-sm text-muted-foreground mb-3">Selecione até 10 números • {formatMZN(raffle.ticket_price)}/bilhete</p>
+              <h2 className="font-display text-xl font-bold text-foreground mb-1">Pick your numbers</h2>
+              <p className="text-sm text-muted-foreground mb-3">Select up to 10 numbers • {fmt(raffle.ticket_price)}/ticket</p>
 
               <button
                 onClick={() => {
@@ -322,7 +322,7 @@ const RaffleDetail = () => {
                 className="w-full mb-4 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent"
               >
                 <Sparkles className="h-4 w-4" />
-                🎲 Surpresinha — Número aleatório
+                🎲 Lucky Dip — random number
               </button>
 
               <div className="grid grid-cols-10 gap-1.5 mb-6 max-h-[320px] overflow-y-auto pr-1">
@@ -354,12 +354,12 @@ const RaffleDetail = () => {
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">{selectedNumbers.length} bilhete(s)</span>
-                        <span className="font-display text-2xl font-bold text-foreground">{formatMZN(totalPrice)}</span>
+                        <span className="font-display text-2xl font-bold text-foreground">{fmt(totalPrice)}</span>
                       </div>
                     </div>
                     <Button onClick={() => goToStep(1)} className="w-full gap-2 h-12 text-base glow-primary"
                       style={whiteLabelConfig ? { backgroundColor: whiteLabelConfig.primary_color, color: '#fff' } : undefined}>
-                      <ShoppingCart className="h-5 w-5" /> Comprar Bilhetes
+                      <ShoppingCart className="h-5 w-5" /> Buy Tickets
                     </Button>
                   </motion.div>
                 )}

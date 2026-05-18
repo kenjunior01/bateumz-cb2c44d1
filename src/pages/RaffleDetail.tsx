@@ -6,7 +6,7 @@ import SocialRaffleEntry from "@/components/SocialRaffleEntry";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import PayPalCheckout from "@/components/payments/PayPalCheckout";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";

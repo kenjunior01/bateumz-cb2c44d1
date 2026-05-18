@@ -56,20 +56,7 @@ interface WhiteLabelConfig {
   emola_number: string | null;
 }
 
-type PaymentMethod =
-  | "mpesa" | "emola" | "card"
-  | "multicaixa" | "unitelMoney" | "africellMoney" | "baiTransfer" | "bfaTransfer"
-  | "pix" | "boleto" | "cardBR"
-  | "paypal";
-
-const paymentMethods: { id: PaymentMethod; labelKey: string; descKey: string; emoji: string; group: "NA" }[] = [
-  // 🇺🇸🇨🇦 North America — PayPal only (cards processed via PayPal)
-  { id: "paypal", labelKey: "pay.method.paypal", descKey: "pay.method.paypal.desc", emoji: "🅿️", group: "NA" },
-];
-
-const groupLabels: Record<"NA", string> = {
-  NA: "🇺🇸🇨🇦 Pay with PayPal",
-};
+type PaymentMethod = "paypal";
 
 const slideVariants = {
   enter: (direction: number) => ({ x: direction > 0 ? 120 : -120, opacity: 0, scale: 0.95 }),
@@ -82,7 +69,8 @@ const RaffleDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const stepLabels = [t("checkout.step.method") || "Método", t("checkout.step.receipt") || "Comprovativo", t("checkout.step.confirm") || "Confirmar"];
+  const { currency } = useCurrency();
+  const fmt = (v: number) => formatMoney(v, currency);
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [whiteLabelConfig, setWhiteLabelConfig] = useState<WhiteLabelConfig | null>(null);
@@ -91,11 +79,8 @@ const RaffleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutStep, setCheckoutStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paypal" as PaymentMethod);
-  const [purchasing, setPurchasing] = useState(false);
   const [bolaoOpen, setBolaoOpen] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [paid, setPaid] = useState(false);
 
   useEffect(() => {
     if (!slug) return;

@@ -106,7 +106,7 @@ const LoadingScreen = () => {
           transition={{ delay: 0.5 }}
           className="mt-1 text-sm text-muted-foreground"
         >
-          Sorteios que inspiram
+          Real prizes. Verified winners.
         </motion.p>
 
         <motion.div

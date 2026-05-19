@@ -25,38 +25,38 @@ const Navbar = () => {
 
   const groups: MenuGroup[] = [
     {
-      label: "Sorteios",
+      label: "Raffles",
       items: [
-        { label: "Marketplace", href: "/marketplace", icon: Store, desc: "Todos os sorteios ativos" },
-        { label: "Concursos", href: "/concursos", icon: Trophy, desc: "Fotos, vídeos, talentos" },
-        { label: "Instant Win", href: "/instant-win", icon: Sparkles, desc: "Raspadinhas e roda da sorte" },
-        { label: "Meus Bilhetes", href: "/my-tickets", icon: Ticket, desc: "Acompanhar participações" },
+        { label: "Marketplace", href: "/marketplace", icon: Store, desc: "All active raffles" },
+        { label: "Contests", href: "/concursos", icon: Trophy, desc: "Photo, video and talent" },
+        { label: "Instant Win", href: "/instant-win", icon: Sparkles, desc: "Scratch cards & spin wheel" },
+        { label: "My Tickets", href: "/my-tickets", icon: Ticket, desc: "Track your entries" },
       ],
     },
     {
-      label: "Empresas",
+      label: "Business",
       items: [
-        { label: "Diretório", href: "/empresas", icon: Building2, desc: "Empresas parceiras verificadas" },
-        { label: "Catálogo a Prestações", href: "/prestacoes/catalogo", icon: Calendar, desc: "Viaturas, imóveis e mais", badge: "Novo" },
-        { label: "Sobre Prestações", href: "/prestacoes", icon: Calendar, desc: "Como funciona o pagamento parcelado" },
-        { label: "Criar Sorteio", href: "/dashboard/raffles/create", icon: Gift, desc: "Para o seu negócio" },
+        { label: "Directory", href: "/empresas", icon: Building2, desc: "Verified partner brands" },
+        { label: "Installments Catalog", href: "/prestacoes/catalogo", icon: Calendar, desc: "Vehicles, real estate & more", badge: "New" },
+        { label: "About Installments", href: "/prestacoes", icon: Calendar, desc: "How financed payments work" },
+        { label: "Create Raffle", href: "/dashboard/raffles/create", icon: Gift, desc: "Launch your own raffle" },
       ],
     },
     {
-      label: "Comunidade",
+      label: "Community",
       items: [
-        { label: "Hub", href: "/community", icon: MessageCircle, desc: "Chat e enquetes em tempo real" },
-        { label: "Histórico de Vencedores", href: "/historico", icon: History, desc: "Sorteios finalizados" },
-        { label: "Transparência", href: "/transparencia", icon: ShieldCheck, desc: "Verificação blockchain" },
-        { label: "Live Draw", href: "/marketplace", icon: Radio, desc: "Sorteios ao vivo" },
+        { label: "Hub", href: "/community", icon: MessageCircle, desc: "Live chat and polls" },
+        { label: "Winners History", href: "/historico", icon: History, desc: "Completed raffles" },
+        { label: "Transparency", href: "/transparencia", icon: ShieldCheck, desc: "Blockchain verification" },
+        { label: "Live Draw", href: "/marketplace", icon: Radio, desc: "Live draws happening now" },
       ],
     },
     {
-      label: "Mais",
+      label: "More",
       items: [
-        { label: "Como Funciona", href: "/como-funciona", icon: BookOpen, desc: "Guia rápido da plataforma" },
-        { label: "Programa de Referência", href: "/referral", icon: Users, desc: "Convide e ganhe pontos" },
-        { label: "FAQ", href: "/faq", icon: HelpCircle, desc: "Perguntas frequentes" },
+        { label: "How It Works", href: "/como-funciona", icon: BookOpen, desc: "Quick platform guide" },
+        { label: "Refer & Earn", href: "/referral", icon: Users, desc: "Invite friends, earn Luck Points" },
+        { label: "FAQ", href: "/faq", icon: HelpCircle, desc: "Common questions" },
       ],
     },
   ];
@@ -71,9 +71,12 @@ const Navbar = () => {
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src={bateuLogo} alt="Jackpot Drop" className="h-8 w-8" />
+          <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
           <span className="font-display text-xl font-bold text-foreground">
-            Jackpot Drop
+            Bateu
+          </span>
+          <span className="hidden xl:inline text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            US · CA
           </span>
         </Link>
 

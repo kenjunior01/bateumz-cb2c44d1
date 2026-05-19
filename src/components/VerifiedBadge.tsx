@@ -12,11 +12,11 @@ export default function VerifiedBadge({ size = "sm" }: VerifiedBadgeProps) {
       <TooltipTrigger asChild>
         <span className="inline-flex items-center gap-1 text-primary cursor-help">
           <ShieldCheck className={iconSize} />
-          {size === "md" && <span className="text-[10px] font-semibold">Verificada</span>}
+          {size === "md" && <span className="text-[10px] font-semibold">Verified</span>}
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        <p className="text-xs">Empresa verificada — entregou prémios com sucesso</p>
+        <p className="text-xs">Verified business — has delivered prizes successfully</p>
       </TooltipContent>
     </Tooltip>
   );

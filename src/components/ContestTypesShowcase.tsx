@@ -29,90 +29,90 @@ interface ContestType {
 const contestTypes: ContestType[] = [
   {
     icon: ChefHat,
-    title: "Culinária",
-    description: "Receitas, pratos típicos e criações gastronómicas",
-    example: "Ex: Melhor caldo de Benny",
+    title: "Cooking",
+    description: "Recipes, signature dishes and gastronomic creations",
+    example: "Ex: Best smash burger",
     evaluation: "votes",
     gradient: "from-orange-500/20 to-red-500/20",
     iconColor: "text-orange-500",
   },
   {
     icon: Music,
-    title: "Música & Dança",
-    description: "Performances musicais, coreografias e talentos",
-    example: "Ex: Melhor afro-beat moçambicano",
+    title: "Music & Dance",
+    description: "Live performances, choreographies and pure talent",
+    example: "Ex: Best original track",
     evaluation: "views",
     gradient: "from-purple-500/20 to-pink-500/20",
     iconColor: "text-purple-500",
   },
   {
     icon: Camera,
-    title: "Fotografia",
-    description: "Capture momentos, paisagens e a beleza de Moçambique",
-    example: "Ex: Melhor pôr do sol em Maputo",
+    title: "Photography",
+    description: "Capture moments, landscapes and the beauty of the US & Canada",
+    example: "Ex: Best Rocky Mountains sunset",
     evaluation: "votes",
     gradient: "from-blue-500/20 to-cyan-500/20",
     iconColor: "text-blue-500",
   },
   {
     icon: Video,
-    title: "Vídeo Viral",
-    description: "Vídeos curtos, criativos e cheios de humor",
-    example: "Ex: TikTok mais engraçado",
+    title: "Viral Video",
+    description: "Short, creative and laugh-out-loud videos",
+    example: "Ex: Funniest TikTok of the week",
     evaluation: "views",
     gradient: "from-pink-500/20 to-rose-500/20",
     iconColor: "text-pink-500",
   },
   {
     icon: Palette,
-    title: "Arte & Design",
-    description: "Pinturas, ilustrações, design gráfico e artesanato",
-    example: "Ex: Melhor logo de marca local",
+    title: "Art & Design",
+    description: "Paintings, illustrations, graphic design and crafts",
+    example: "Ex: Best local brand logo",
     evaluation: "votes",
     gradient: "from-emerald-500/20 to-teal-500/20",
     iconColor: "text-emerald-500",
   },
   {
     icon: Mic,
-    title: "Comédia & Stand-up",
-    description: "Faça rir Moçambique com o seu talento",
-    example: "Ex: Melhor piada em changana",
+    title: "Comedy & Stand-up",
+    description: "Make North America laugh with your talent",
+    example: "Ex: Best 60-second bit",
     evaluation: "views",
     gradient: "from-yellow-500/20 to-amber-500/20",
     iconColor: "text-yellow-500",
   },
   {
     icon: Shirt,
-    title: "Moda & Estilo",
-    description: "Looks, capulanas modernas e tendências",
-    example: "Ex: Melhor look com capulana",
+    title: "Fashion & Style",
+    description: "Outfits, streetwear and trending looks",
+    example: "Ex: Best fall street style",
     evaluation: "votes",
     gradient: "from-fuchsia-500/20 to-purple-500/20",
     iconColor: "text-fuchsia-500",
   },
   {
     icon: Dumbbell,
-    title: "Desporto & Fitness",
-    description: "Desafios físicos, jogadas e habilidades",
-    example: "Ex: Melhor golo amador",
+    title: "Sports & Fitness",
+    description: "Physical challenges, plays and skills",
+    example: "Ex: Best amateur trick shot",
     evaluation: "views",
     gradient: "from-green-500/20 to-lime-500/20",
     iconColor: "text-green-500",
   },
   {
     icon: Lightbulb,
-    title: "Inovação & Negócios",
-    description: "Ideias empreendedoras e projectos sociais",
-    example: "Ex: Melhor pitch de startup",
+    title: "Innovation & Business",
+    description: "Entrepreneurial ideas and community projects",
+    example: "Ex: Best startup pitch",
     evaluation: "votes",
     gradient: "from-indigo-500/20 to-blue-500/20",
     iconColor: "text-indigo-500",
   },
   {
     icon: Smile,
-    title: "Crianças & Família",
-    description: "Talentos infantis, desenhos e momentos em família",
-    example: "Ex: Desenho mais criativo",
+    title: "Kids & Family",
+    description: "Kids' talents, drawings and family moments",
+    example: "Ex: Most creative drawing",
     evaluation: "votes",
     gradient: "from-cyan-500/20 to-sky-500/20",
     iconColor: "text-cyan-500",
@@ -138,17 +138,17 @@ const ContestTypesShowcase = () => {
           </motion.div>
           <div>
             <h2 className="font-display text-lg sm:text-xl font-bold text-foreground leading-tight">
-              Tipos de Concursos
+              Contest Types
             </h2>
             <p className="text-xs text-muted-foreground">
-              Mostre o seu talento e ganhe prémios
+              Show your talent and win prizes
             </p>
           </div>
           <Link
             to="/concursos"
             className="ml-auto text-xs text-primary font-medium hover:underline flex items-center gap-1"
           >
-            Ver todos <ArrowRight className="h-3 w-3" />
+            See all <ArrowRight className="h-3 w-3" />
           </Link>
         </motion.div>
 
@@ -218,7 +218,7 @@ const ContestTypesShowcase = () => {
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"
           >
             <Sparkles className="h-3 w-3" />
-            Tem uma ideia de concurso? Sugira à comunidade
+            Got a contest idea? Suggest it to the community
             <ArrowRight className="h-3 w-3" />
           </Link>
         </motion.div>

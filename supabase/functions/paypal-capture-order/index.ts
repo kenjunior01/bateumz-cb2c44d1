@@ -77,6 +77,50 @@ Deno.serve(async (req) => {
 
     await admin.from('raffles').update({ sold_tickets: (raffle?.sold_tickets ?? 0) + rows.length }).eq('id', raffle_id);
 
+    // === Referral first-purchase bonus campaign ===
+    // If this is the buyer's first ever paid participant AND they were referred,
+    // award the referrer extra Luck Points (one-time per referred user).
+    try {
+      const FIRST_PURCHASE_BONUS = 100;
+      const { count: priorPaid } = await admin
+        .from('participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('payment_status', 'paid')
+        .neq('paypal_capture_id', captureId);
+
+      if ((priorPaid ?? 0) === 0) {
+        const { data: ref } = await admin
+          .from('referrals')
+          .select('id, referrer_id, first_purchase_bonus_at')
+          .eq('referred_id', userId)
+          .maybeSingle();
+
+        if (ref && !ref.first_purchase_bonus_at) {
+          await admin.from('luck_points').insert({
+            user_id: ref.referrer_id,
+            points: FIRST_PURCHASE_BONUS,
+            action: 'referral_first_purchase',
+            description: 'Bonus: a friend you referred made their first PayPal purchase 🎉',
+          });
+          await admin.from('referrals').update({
+            first_purchase_bonus_at: new Date().toISOString(),
+            first_purchase_bonus_points: FIRST_PURCHASE_BONUS,
+          }).eq('id', ref.id);
+          await admin.from('notifications').insert({
+            user_id: ref.referrer_id,
+            type: 'success',
+            title: `+${FIRST_PURCHASE_BONUS} Luck Points unlocked! 🎁`,
+            message: 'A friend you referred just made their first PayPal purchase. Keep inviting to stack more bonuses!',
+            metadata: { campaign: 'referral_first_purchase', points: FIRST_PURCHASE_BONUS },
+          });
+        }
+      }
+    } catch (bonusErr) {
+      // Non-fatal: bonus failure must never break checkout
+      console.error('Referral bonus error:', bonusErr);
+    }
+
     return new Response(JSON.stringify({ ok: true, capture_id: captureId, count: rows.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

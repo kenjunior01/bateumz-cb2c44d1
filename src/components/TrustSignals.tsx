@@ -3,38 +3,38 @@ import { Shield, Lock, CheckCircle2, Play, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const securityBadges = [
-  { icon: Lock, label: "SSL 256-bit", desc: "Encriptação total" },
-  { icon: Shield, label: "Blockchain", desc: "Sorteios verificados" },
-  { icon: CheckCircle2, label: "RNG Certificado", desc: "Aleatoriedade auditável" },
+  { icon: Lock, label: "SSL 256-bit", desc: "End-to-end encryption" },
+  { icon: Shield, label: "Blockchain", desc: "On-chain verified draws" },
+  { icon: CheckCircle2, label: "Certified RNG", desc: "Auditable randomness" },
 ];
 
 const paymentLogos = [
-  { name: "M-Pesa", color: "bg-red-500/10 text-red-600" },
-  { name: "e-Mola", color: "bg-blue-500/10 text-blue-600" },
+  { name: "PayPal", color: "bg-[#003087]/10 text-[#003087]" },
   { name: "Visa", color: "bg-indigo-500/10 text-indigo-600" },
   { name: "Mastercard", color: "bg-orange-500/10 text-orange-600" },
+  { name: "Amex", color: "bg-sky-500/10 text-sky-600" },
 ];
 
 const testimonials = [
   {
     name: "Carlos M.",
-    province: "Maputo",
+    province: "Austin, TX",
     prize: "iPhone 15 Pro",
-    quote: "Nunca pensei ganhar! O processo foi 100% transparente.",
+    quote: "I never thought I'd win! The whole process was 100% transparent.",
     videoPlaceholder: true,
   },
   {
     name: "Ana S.",
-    province: "Sofala",
-    prize: "Viagem a Bazaruto",
-    quote: "Recebi o prémio em menos de 48h. Incrível!",
+    province: "Toronto, ON",
+    prize: "Bahamas trip for 2",
+    quote: "Got the prize in under 48h. Incredible!",
     videoPlaceholder: true,
   },
   {
     name: "Pedro R.",
-    province: "Nampula",
+    province: "Miami, FL",
     prize: "MacBook Air",
-    quote: "A verificação blockchain dá muita confiança.",
+    quote: "On-chain verification gives me real peace of mind.",
     videoPlaceholder: true,
   },
 ];
@@ -46,9 +46,9 @@ const TrustSignals = () => {
         {/* Security Badges */}
         <div className="text-center mb-8">
           <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground mb-2">
-            🛡️ Segurança & Transparência
+            🛡️ Security &amp; Transparency
           </h2>
-          <p className="text-sm text-muted-foreground">A sua confiança é a nossa prioridade</p>
+          <p className="text-sm text-muted-foreground">Your trust is our top priority</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-8 max-w-lg mx-auto">
@@ -71,8 +71,8 @@ const TrustSignals = () => {
         </div>
 
         {/* Payment Methods */}
-        <div className="flex items-center justify-center gap-3 mb-10">
-          <span className="text-xs text-muted-foreground font-medium">Pagamentos seguros:</span>
+        <div className="flex items-center justify-center gap-3 mb-10 flex-wrap">
+          <span className="text-xs text-muted-foreground font-medium">Secure checkout via PayPal:</span>
           {paymentLogos.map((p) => (
             <span key={p.name} className={`text-[10px] font-bold px-3 py-1 rounded-full ${p.color}`}>
               {p.name}
@@ -83,9 +83,9 @@ const TrustSignals = () => {
         {/* Video Testimonials */}
         <div className="text-center mb-6">
           <h3 className="font-display text-lg font-bold text-foreground mb-1">
-            🎥 Vencedores Reais
+            🎥 Real Winners
           </h3>
-          <p className="text-xs text-muted-foreground">Histórias reais dos nossos ganhadores</p>
+          <p className="text-xs text-muted-foreground">Real stories from our winners</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-w-3xl mx-auto mb-6">
@@ -129,7 +129,7 @@ const TrustSignals = () => {
             to="/transparencia"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
-            Saiba mais sobre a nossa transparência <ExternalLink className="h-3.5 w-3.5" />
+            Learn more about our transparency <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>

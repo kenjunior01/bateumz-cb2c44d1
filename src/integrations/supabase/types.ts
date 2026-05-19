@@ -831,6 +831,30 @@ export type Database = {
           },
         ]
       }
+      newsletter_signups: {
+        Row: {
+          country: string | null
+          created_at: string
+          email: string
+          id: string
+          source: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1289,6 +1313,8 @@ export type Database = {
       referrals: {
         Row: {
           created_at: string
+          first_purchase_bonus_at: string | null
+          first_purchase_bonus_points: number
           id: string
           points_awarded: number
           referral_code: string
@@ -1298,6 +1324,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          first_purchase_bonus_at?: string | null
+          first_purchase_bonus_points?: number
           id?: string
           points_awarded?: number
           referral_code: string
@@ -1307,6 +1335,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          first_purchase_bonus_at?: string | null
+          first_purchase_bonus_points?: number
           id?: string
           points_awarded?: number
           referral_code?: string

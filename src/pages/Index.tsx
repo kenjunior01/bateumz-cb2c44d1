@@ -22,6 +22,7 @@ import StoriesCarousel from "@/components/StoriesCarousel";
 import AIRecommendations from "@/components/AIRecommendations";
 import TrustSignals from "@/components/TrustSignals";
 import LiveTicker from "@/components/LiveTicker";
+import StayInLoop from "@/components/StayInLoop";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -79,6 +80,7 @@ const Index = () => {
         </div>
       </div>
 
+      <StayInLoop />
       <CTASection />
       <Footer />
     </div>

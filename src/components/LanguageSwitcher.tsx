@@ -8,8 +8,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const LANGS: { code: Lang; label: string; flag: string }[] = [
-  { code: "pt", label: "Português", flag: "🇲🇿" },
-  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "en", label: "English", flag: "🇺🇸" },
+  { code: "pt", label: "Português (PT)", flag: "🇵🇹" },
+  { code: "pt-BR", label: "Português (BR)", flag: "🇧🇷" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
 ];
 
 export default function LanguageSwitcher() {
@@ -26,7 +29,7 @@ export default function LanguageSwitcher() {
         <span className="text-base leading-none">{current.flag}</span>
         <span className="hidden sm:inline text-xs uppercase">{current.code}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[160px]">
+      <DropdownMenuContent align="end" className="min-w-[180px]">
         {LANGS.map((l) => (
           <DropdownMenuItem
             key={l.code}

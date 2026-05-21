@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-export type Lang = "pt" | "en";
+export type Lang = "en" | "pt" | "pt-BR" | "es" | "fr";
 
 type Dict = Record<string, string>;
 
-const translations: Record<Lang, Dict> = {
+// Translations are maintained for `pt` and `en`. Other locales fall back to `en`
+// per-key (see the `t()` resolver below). Add localized keys as they are produced.
+const translations: Partial<Record<Lang, Dict>> = {
   pt: {
     // ===== Navbar / Top =====
     "nav.raffles": "Sorteios",
@@ -383,18 +385,31 @@ function format(template: string, vars?: Record<string, string>) {
   return template.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
 }
 
+const SUPPORTED: Lang[] = ["en", "pt", "pt-BR", "es", "fr"];
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  // North American pivot: English is the only supported language now.
-  const [lang, setLangState] = useState<Lang>("en");
+  // English is the default. Other languages are opt-in via the switcher.
+  const [lang, setLangState] = useState<Lang>(() => {
+    if (typeof window === "undefined") return "en";
+    const stored = localStorage.getItem("bateu_lang") as Lang | null;
+    if (stored && SUPPORTED.includes(stored)) return stored;
+    return "en";
+  });
 
   useEffect(() => {
-    localStorage.setItem("bateu_lang", "en");
-    document.documentElement.lang = "en";
+    localStorage.setItem("bateu_lang", lang);
+    document.documentElement.lang = lang;
   }, [lang]);
 
-  const setLang = (_l: Lang) => setLangState("en");
-  const t = (key: string, vars?: Record<string, string>) =>
-    format(translations.en[key] ?? translations.pt[key] ?? key, vars);
+  const setLang = (l: Lang) => {
+    if (SUPPORTED.includes(l)) setLangState(l);
+  };
+
+  const t = (key: string, vars?: Record<string, string>) => {
+    const dict = translations[lang] ?? translations.en!;
+    const value = dict[key] ?? translations.en![key] ?? translations.pt![key] ?? key;
+    return format(value, vars);
+  };
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
@@ -409,7 +424,8 @@ export function useLanguage() {
     return {
       lang: "en" as Lang,
       setLang: () => {},
-      t: (k: string, vars?: Record<string, string>) => format(translations.en[k] ?? k, vars),
+      t: (k: string, vars?: Record<string, string>) =>
+        format(translations.en?.[k] ?? k, vars),
     };
   }
   return ctx;

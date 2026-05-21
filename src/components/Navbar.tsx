@@ -75,9 +75,6 @@ const Navbar = () => {
           <span className="font-display text-xl font-bold text-foreground">
             Bateu
           </span>
-          <span className="hidden xl:inline text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            US · CA
-          </span>
         </Link>
 
         <div className="hidden lg:flex">
@@ -122,7 +119,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          {/* LanguageSwitcher disabled: EN-only platform */}
+          <LanguageSwitcher />
           <ThemeToggle />
           {user ? (
             <>
@@ -155,7 +152,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
-          {/* LanguageSwitcher disabled: EN-only platform */}
+          <LanguageSwitcher />
           <ThemeToggle />
           <button className="text-foreground" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

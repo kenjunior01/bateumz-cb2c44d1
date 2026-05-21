@@ -18,10 +18,10 @@ export default function CountryRegionFilter({ country, region, onCountry, onRegi
       <Select value={country || "all"} onValueChange={(v) => { onCountry(v === "all" ? "" : v); onRegion(""); }}>
         <SelectTrigger className={`${compact ? "h-9 w-[150px]" : "h-10 min-w-[170px]"} glass border-border`}>
           <Globe className="h-4 w-4 mr-1 text-primary" />
-          <SelectValue placeholder="País" />
+          <SelectValue placeholder="Country" />
         </SelectTrigger>
         <SelectContent className="bg-popover z-50">
-          <SelectItem value="all">🌍 Todos países</SelectItem>
+          <SelectItem value="all">🌍 All countries</SelectItem>
           {COUNTRIES.map((c) => (
             <SelectItem key={c.code} value={c.code}>
               {c.flag} {c.label}
@@ -34,10 +34,10 @@ export default function CountryRegionFilter({ country, region, onCountry, onRegi
         <Select value={region || "all"} onValueChange={(v) => onRegion(v === "all" ? "" : v)}>
           <SelectTrigger className={`${compact ? "h-9 w-[160px]" : "h-10 min-w-[180px]"} glass border-border`}>
             <MapPin className="h-4 w-4 mr-1 text-primary" />
-            <SelectValue placeholder="Região" />
+            <SelectValue placeholder="Region" />
           </SelectTrigger>
           <SelectContent className="bg-popover z-50 max-h-[300px]">
-            <SelectItem value="all">📍 Todas regiões</SelectItem>
+            <SelectItem value="all">📍 All regions</SelectItem>
             {regions.map((r) => (
               <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
             ))}

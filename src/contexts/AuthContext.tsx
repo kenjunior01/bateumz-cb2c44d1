@@ -45,9 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
-    // Prioritize admin > business > user
+    // Prioritize superadmin > admin > business > user
     const roles = roleData?.map((r: any) => r.role) || [];
-    if (roles.includes("admin")) setRole("admin");
+    if (roles.includes("superadmin")) setRole("superadmin");
+    else if (roles.includes("admin")) setRole("admin");
     else if (roles.includes("business")) setRole("business");
     else setRole(roles[0] ?? "user");
 

@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_regions: {
+        Row: {
+          assigned_by: string | null
+          country_code: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          country_code: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_regions_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["country_code"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1346,6 +1381,80 @@ export type Database = {
         }
         Relationships: []
       }
+      regional_commissions: {
+        Row: {
+          commission_percentage: number
+          country_code: string
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          commission_percentage?: number
+          country_code: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          commission_percentage?: number
+          country_code?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regional_commissions_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["country_code"]
+          },
+        ]
+      }
+      regions: {
+        Row: {
+          country_code: string
+          created_at: string
+          currency: string
+          flag: string | null
+          id: string
+          is_active: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          currency?: string
+          flag?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          currency?: string
+          flag?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rewards: {
         Row: {
           created_at: string
@@ -1796,9 +1905,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_country: { Args: { _user_id: string }; Returns: string }
       award_ambassador_prize:
         | { Args: { p_prize_id: string }; Returns: Json }
         | { Args: { p_mode?: string; p_prize_id: string }; Returns: Json }
+      can_admin_country: {
+        Args: { _country: string; _user_id: string }
+        Returns: boolean
+      }
       cast_live_poll_vote: {
         Args: {
           p_option_index: number
@@ -1861,6 +1975,7 @@ export type Database = {
         Args: { _product_id: string }
         Returns: undefined
       }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1880,7 +1995,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "business" | "user"
+      app_role: "admin" | "business" | "user" | "superadmin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2008,7 +2123,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "business", "user"],
+      app_role: ["admin", "business", "user", "superadmin"],
     },
   },
 } as const

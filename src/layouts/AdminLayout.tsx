@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -16,15 +16,19 @@ import {
 import { NavLink } from "@/components/NavLink";
 
 const items = [
-  { title: "Visão Geral", url: "/admin", icon: LayoutDashboard },
-  { title: "Utilizadores", url: "/admin/users", icon: Users },
-  { title: "Sorteios", url: "/admin/raffles", icon: Ticket },
-  { title: "Concursos", url: "/admin/contests", icon: Trophy },
-  { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
-  { title: "Receitas", url: "/admin/revenue", icon: DollarSign },
-  { title: "Auditoria", url: "/admin/audit", icon: ScrollText },
-  { title: "Tarefas Agendadas", url: "/admin/cron", icon: Clock },
-  { title: "Configurações", url: "/admin/settings", icon: Settings },
+  { title: "Overview", url: "/admin", icon: LayoutDashboard },
+  { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Raffles", url: "/admin/raffles", icon: Ticket },
+  { title: "Contests", url: "/admin/contests", icon: Trophy },
+  { title: "Payments", url: "/admin/payments", icon: CreditCard },
+  { title: "Revenue", url: "/admin/revenue", icon: DollarSign },
+  { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
+  { title: "Cron Jobs", url: "/admin/cron", icon: Clock },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
+];
+
+const superadminItems = [
+  { title: "Co-founders", url: "/admin/co-founders", icon: Crown },
 ];
 
 function AdminSidebar() {
@@ -32,7 +36,7 @@ function AdminSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, role, signOut } = useAuth();
 
   const isActive = (path: string) =>
     path === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(path);
@@ -67,6 +71,26 @@ function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {role === "superadmin" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Co-founder</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superadminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} className="hover:bg-muted/50" activeClassName="bg-primary/10 text-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupContent>

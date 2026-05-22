@@ -36,7 +36,7 @@ function AdminSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, role, signOut } = useAuth();
 
   const isActive = (path: string) =>
     path === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(path);
@@ -71,6 +71,26 @@ function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {role === "superadmin" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Co-founder</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superadminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} className="hover:bg-muted/50" activeClassName="bg-primary/10 text-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupContent>

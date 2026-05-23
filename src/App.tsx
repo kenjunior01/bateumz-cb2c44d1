@@ -40,6 +40,7 @@ import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs.tsx";
 import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
 import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
+import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -192,6 +193,7 @@ function AnimatedRoutes() {
             <Route path="settings" element={<AdminSettings />} />
             <Route path="contests" element={<AdminContests />} />
             <Route path="co-founders" element={<AdminCoFounders />} />
+            <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

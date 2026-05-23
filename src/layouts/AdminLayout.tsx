@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -29,6 +29,7 @@ const items = [
 
 const superadminItems = [
   { title: "Co-founders", url: "/admin/co-founders", icon: Crown },
+  { title: "Regional Revenue", url: "/admin/regional-revenue", icon: Globe },
 ];
 
 function AdminSidebar() {

@@ -29,6 +29,7 @@ const items = [
 
 const superadminItems = [
   { title: "Co-founders", url: "/admin/co-founders", icon: Crown },
+  { title: "Regional Revenue", url: "/admin/regional-revenue", icon: Globe },
 ];
 
 function AdminSidebar() {

@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children, requiredRole, blockRoles = []
     return <Navigate to={role === "admin" ? "/admin" : "/dashboard"} replace />;
   }
 
-  if (requiredRole === "admin" && role !== "admin") {
+  if (requiredRole === "admin" && role !== "admin" && role !== "superadmin") {
     return <Navigate to={role === "business" ? "/dashboard" : "/profile"} replace />;
   }
 

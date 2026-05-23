@@ -142,7 +142,7 @@ export default function AdminRegionalRevenue() {
                       <TableCell><div className="flex items-center gap-2"><span>{r.flag}</span><span className="font-medium">{r.label}</span><Badge variant="outline" className="text-xs">{r.currency}</Badge></div></TableCell>
                       <TableCell>{r.raffles}</TableCell>
                       <TableCell>{r.tickets}</TableCell>
-                      <TableCell className="font-medium">{formatMoney(r.revenue, r.currency)}</TableCell>
+                      <TableCell className="font-medium">{formatMoney(r.revenue, r.currency as any)}</TableCell>
                       <TableCell>
                         {r.admins.length === 0 ? <span className="text-xs text-muted-foreground">Unassigned</span> : (
                           <div className="space-y-0.5">
@@ -155,8 +155,8 @@ export default function AdminRegionalRevenue() {
                         )}
                       </TableCell>
                       <TableCell>{r.totalCommissionPct}%</TableCell>
-                      <TableCell className="text-amber-500">{formatMoney(r.commissionAmount, r.currency)}</TableCell>
-                      <TableCell className="font-medium text-primary">{formatMoney(r.platformNet, r.currency)}</TableCell>
+                      <TableCell className="text-amber-500">{formatMoney(r.commissionAmount, r.currency as any)}</TableCell>
+                      <TableCell className="font-medium text-primary">{formatMoney(r.platformNet, r.currency as any)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

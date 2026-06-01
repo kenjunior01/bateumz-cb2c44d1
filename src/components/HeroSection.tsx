@@ -23,7 +23,7 @@ const HeroSection = () => {
     const load = async () => {
       const [{ count }, { data: settings }] = await Promise.all([
         supabase.from("participants").select("id", { count: "exact", head: true }),
-        supabase.from("platform_settings").select("key, value").eq("key", "featured").maybeSingle(),
+        (supabase as any).from("platform_settings_public").select("key, value").eq("key", "featured").maybeSingle(),
       ]);
 
       setParticipantCount(count || 0);

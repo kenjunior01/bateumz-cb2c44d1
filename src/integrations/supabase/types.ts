@@ -1071,6 +1071,13 @@ export type Database = {
             referencedRelation: "prestacao_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "prestacao_product_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "prestacao_products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       prestacao_products: {
@@ -1831,6 +1838,99 @@ export type Database = {
       }
     }
     Views: {
+      platform_settings_public: {
+        Row: {
+          key: string | null
+          updated_at: string | null
+          value: Json | null
+        }
+        Insert: {
+          key?: string | null
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Update: {
+          key?: string | null
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      prestacao_products_public: {
+        Row: {
+          annual_rate: number | null
+          brand: string | null
+          business_user_id: string | null
+          category: string | null
+          city: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          featured: boolean | null
+          id: string | null
+          images: Json | null
+          max_months: number | null
+          min_down_payment: number | null
+          model: string | null
+          province: string | null
+          status: string | null
+          stock: number | null
+          title: string | null
+          total_price: number | null
+          updated_at: string | null
+          views_count: number | null
+          year: number | null
+        }
+        Insert: {
+          annual_rate?: number | null
+          brand?: string | null
+          business_user_id?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          featured?: boolean | null
+          id?: string | null
+          images?: Json | null
+          max_months?: number | null
+          min_down_payment?: number | null
+          model?: string | null
+          province?: string | null
+          status?: string | null
+          stock?: number | null
+          title?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+          views_count?: number | null
+          year?: number | null
+        }
+        Update: {
+          annual_rate?: number | null
+          brand?: string | null
+          business_user_id?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          featured?: boolean | null
+          id?: string | null
+          images?: Json | null
+          max_months?: number | null
+          min_down_payment?: number | null
+          model?: string | null
+          province?: string | null
+          status?: string | null
+          stock?: number | null
+          title?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+          views_count?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
       profiles_public: {
         Row: {
           avatar_url: string | null
@@ -1949,6 +2049,10 @@ export type Database = {
       get_live_studio_summary: {
         Args: { p_scheduled_live_id: string }
         Returns: Json
+      }
+      get_prestacao_whatsapp: {
+        Args: { p_product_id: string }
+        Returns: string
       }
       get_scheduled_live_ranking: {
         Args: {

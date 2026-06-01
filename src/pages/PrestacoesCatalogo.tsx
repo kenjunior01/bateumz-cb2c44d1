@@ -91,8 +91,8 @@ export default function PrestacoesCatalogo() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      let query = supabase
-        .from("prestacao_products")
+      let query = (supabase as any)
+        .from("prestacao_products_public")
         .select(
           "id,title,category,description,total_price,min_down_payment,max_months,annual_rate,images,province,city,brand,model,featured,views_count,stock",
         )

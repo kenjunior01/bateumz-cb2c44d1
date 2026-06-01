@@ -52,7 +52,7 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
   useEffect(() => {
     (async () => {
       const { data } = await (supabase as any)
-        .from("platform_settings")
+        .from("platform_settings_public")
         .select("value")
         .eq("key", "payments")
         .maybeSingle();

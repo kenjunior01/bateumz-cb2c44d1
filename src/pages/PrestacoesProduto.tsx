@@ -72,8 +72,8 @@ export default function PrestacoesProduto() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("prestacao_products")
+      const { data } = await (supabase as any)
+        .from("prestacao_products_public")
         .select("*")
         .eq("id", id)
         .maybeSingle();

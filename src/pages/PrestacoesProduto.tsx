@@ -140,15 +140,30 @@ export default function PrestacoesProduto() {
       months: clamped.months,
       monthly,
     });
-    const num = product.whatsapp.replace(/\D/g, "");
+
+    // Require sign-in to fetch the seller's WhatsApp number (privacy hardening)
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?next=${next}`;
+      return;
+    }
+
+    const { data: phone, error } = await (supabase as any).rpc("get_prestacao_whatsapp", {
+      p_product_id: product.id,
+    });
+    if (error || !phone) {
+      window.alert("Could not load seller contact. Please try again.");
+      return;
+    }
+    const num = String(phone).replace(/\D/g, "");
 
     // Log lead (best-effort, never block the user)
     try {
-      const { data: auth } = await supabase.auth.getUser();
       await supabase.from("prestacao_product_leads").insert({
         product_id: product.id,
         business_user_id: product.business_user_id,
-        visitor_user_id: auth.user?.id ?? null,
+        visitor_user_id: auth.user.id,
         total_price: Number(product.total_price),
         down_payment: clamped.downPayment,
         months: clamped.months,

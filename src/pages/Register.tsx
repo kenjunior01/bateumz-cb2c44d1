@@ -413,16 +413,23 @@ export default function Register() {
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Senha</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required
+                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 8 caracteres, com letras e números" required
                         className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
                     </div>
                     {password.length > 0 && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-1 mt-2">
-                        {[1, 2, 3, 4].map(i => (
-                          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
-                            password.length >= i * 3 ? (password.length >= 12 ? "bg-primary" : password.length >= 8 ? "bg-accent" : "bg-destructive") : "bg-secondary"
-                          }`} />
-                        ))}
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 space-y-1">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
+                              password.length >= i * 3 ? (passwordStrong(password) && password.length >= 12 ? "bg-primary" : passwordStrong(password) ? "bg-accent" : "bg-destructive") : "bg-secondary"
+                            }`} />
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {passwordStrong(password)
+                            ? "Boa! Evita senhas óbvias como nome+ano ou \"password123\"."
+                            : "Adiciona letras + números e pelo menos 8 caracteres. Evita senhas comuns (são rejeitadas por segurança)."}
+                        </p>
                       </motion.div>
                     )}
                   </div>

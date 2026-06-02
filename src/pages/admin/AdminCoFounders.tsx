@@ -64,6 +64,18 @@ export default function AdminCoFounders() {
   const saveRow = async (row: AdminRow, country: string, pct: number) => {
     setSaving(true);
     try {
+      // Ensure user has admin role (auto-promote regional CEO if needed)
+      const { data: existingRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", row.user_id);
+      const roles = (existingRoles ?? []).map((r: any) => r.role);
+      if (!roles.includes("admin") && !roles.includes("superadmin")) {
+        const { error: roleErr } = await supabase
+          .from("user_roles")
+          .insert({ user_id: row.user_id, role: "admin" } as any);
+        if (roleErr) throw roleErr;
+      }
       const upsertAR = await supabase.from("admin_regions").upsert(
         { user_id: row.user_id, country_code: country },
         { onConflict: "user_id" }
@@ -74,7 +86,7 @@ export default function AdminCoFounders() {
         { onConflict: "user_id" }
       );
       if (upsertRC.error) throw upsertRC.error;
-      toast({ title: "Saved", description: "Regional assignment and commission updated." });
+      toast({ title: "Saved", description: "Regional CEO promoted and commission updated." });
       load();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });

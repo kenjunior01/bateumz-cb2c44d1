@@ -453,6 +453,44 @@ export default function PrestacoesProduto() {
       </main>
       <Footer />
       <BottomTabBar />
+
+      <Dialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Entrar para contactar o vendedor</DialogTitle>
+            <DialogDescription>
+              Para proteger os vendedores, o número de WhatsApp só é revelado a
+              utilizadores autenticados. A tua simulação será preservada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
+            <div className="flex justify-between"><span className="text-muted-foreground">Produto</span><span className="font-medium truncate ml-2">{product.title}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Entrada</span><span className="font-medium">{formatMZN(clamped.downPayment)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Prazo</span><span className="font-medium">{clamped.months} meses</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Mensalidade</span><span className="font-semibold text-primary">{formatMZN(monthly)}</span></div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setLoginPromptOpen(false)}>
+              Continuar a navegar
+            </Button>
+            <Link
+              to={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+              className="inline-flex"
+            >
+              <Button className="w-full">Entrar e contactar</Button>
+            </Link>
+          </DialogFooter>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Ainda não tens conta?{" "}
+            <Link
+              to={`/register?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+              className="text-primary hover:underline"
+            >
+              Criar conta gratuita
+            </Link>
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

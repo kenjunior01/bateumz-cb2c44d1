@@ -74,6 +74,7 @@ export default function PrestacoesProduto() {
   const [activeImage, setActiveImage] = useState(0);
   const [downPayment, setDownPayment] = useState(0);
   const [months, setMonths] = useState(12);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;

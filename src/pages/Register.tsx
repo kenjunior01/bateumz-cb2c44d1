@@ -92,18 +92,41 @@ export default function Register() {
     playPopSound();
   };
 
+  const passwordStrong = (pw: string) =>
+    pw.length >= 8 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+
   const canProceed = () => {
     if (step === 0) return accountType !== null;
-    if (step === 1) return name.length >= 2 && email.includes("@") && password.length >= 6;
+    if (step === 1)
+      return (
+        name.length >= 2 &&
+        email.includes("@") &&
+        passwordStrong(password) &&
+        (accountType !== "business" || companyName.trim().length >= 2)
+      );
     if (step === 2) return true; // optional data
     if (step === 3) return true; // interests are optional
     return true;
   };
 
+  const friendlyAuthError = (raw: string) => {
+    const m = (raw || "").toLowerCase();
+    if (m.includes("weak") || m.includes("pwned") || m.includes("known to be"))
+      return "Essa senha é demasiado comum ou já foi exposta em fugas de dados. Usa uma combinação única de letras, números e símbolos (mínimo 8 caracteres).";
+    if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already"))
+      return "Já existe uma conta com este email. Tenta entrar ou usa outro email.";
+    if (m.includes("invalid email")) return "Email inválido. Verifica o endereço.";
+    if (m.includes("rate limit")) return "Demasiadas tentativas. Aguarda alguns segundos e tenta novamente.";
+    if (m.includes("password should be at least")) return "A senha deve ter no mínimo 8 caracteres.";
+    return raw || "Não foi possível criar a conta. Tenta novamente.";
+  };
+
   const handleSubmit = async () => {
     setError("");
-    if (password.length < 6) {
-      setError("A senha deve ter no mínimo 6 caracteres");
+    if (!passwordStrong(password)) {
+      setError("A senha precisa de pelo menos 8 caracteres, com letras e números.");
+      setDirection(-1);
+      setStep(1);
       return;
     }
     setLoading(true);
@@ -114,9 +137,8 @@ export default function Register() {
     });
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
     } else {
-      // Process referral if ref code exists
       if (refCode) {
         try {
           const { data: referrerProfile } = await supabase
@@ -129,11 +151,16 @@ export default function Register() {
           }
         } catch {}
       }
-      // Update profile with extra data after signup
-      // This will be done after email confirmation via the profile page
-      if (phone || province || city || interests.length > 0) {
-        localStorage.setItem("bateu_signup_extra", JSON.stringify({ phone, province, city, interests }));
-      }
+      localStorage.setItem(
+        "bateu_signup_extra",
+        JSON.stringify({
+          phone,
+          province,
+          city,
+          interests,
+          company_name: accountType === "business" ? companyName : undefined,
+        })
+      );
       setSuccess(true);
       playPopSound();
     }

@@ -127,19 +127,35 @@ export default function AdminCoFounders() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-4 w-4" /> Assign new regional admin</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-4 w-4" /> Assign new regional CEO</CardTitle>
+          <p className="text-xs text-muted-foreground">Pick any user — they will be promoted to admin and linked to the selected country.</p>
+        </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[1fr_180px_120px_auto]">
-          <Input placeholder="User ID (uuid of an admin)" value={newUserId} onChange={(e) => setNewUserId(e.target.value)} />
+          <Select value={newUserId} onValueChange={setNewUserId}>
+            <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {allProfiles.map((p) => (
+                <SelectItem key={p.user_id} value={p.user_id}>
+                  {p.display_name || p.company_name || "Unnamed"} · {p.user_id.slice(0, 8)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={newCountry} onValueChange={setNewCountry}>
             <SelectTrigger><Globe className="h-4 w-4 mr-1" /><SelectValue placeholder="Country" /></SelectTrigger>
             <SelectContent>{regions.map(r => (
               <SelectItem key={r.country_code} value={r.country_code}>{r.flag} {r.label}</SelectItem>
             ))}</SelectContent>
           </Select>
-          <Input type="number" min={0} max={100} step={0.5} value={newPct} onChange={(e) => setNewPct(e.target.value)} />
-          <Button onClick={addNew} disabled={saving}>Assign</Button>
+          <div className="relative">
+            <Input type="number" min={0} max={100} step={0.5} value={newPct} onChange={(e) => setNewPct(e.target.value)} className="pr-8" />
+            <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <Button onClick={addNew} disabled={saving || !newUserId || !newCountry}>Promote</Button>
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader><CardTitle className="text-base">Regional admins</CardTitle></CardHeader>

@@ -150,11 +150,11 @@ export default function PrestacoesProduto() {
       monthly,
     });
 
-    // Require sign-in to fetch the seller's WhatsApp number (privacy hardening)
+    // Require sign-in to fetch the seller's WhatsApp number (privacy hardening).
+    // Instead of redirecting abruptly, show a friendly login prompt that preserves the action.
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
-      const next = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?next=${next}`;
+      setLoginPromptOpen(true);
       return;
     }
 

@@ -20,6 +20,14 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -66,6 +74,7 @@ export default function PrestacoesProduto() {
   const [activeImage, setActiveImage] = useState(0);
   const [downPayment, setDownPayment] = useState(0);
   const [months, setMonths] = useState(12);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -141,11 +150,11 @@ export default function PrestacoesProduto() {
       monthly,
     });
 
-    // Require sign-in to fetch the seller's WhatsApp number (privacy hardening)
+    // Require sign-in to fetch the seller's WhatsApp number (privacy hardening).
+    // Instead of redirecting abruptly, show a friendly login prompt that preserves the action.
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
-      const next = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?next=${next}`;
+      setLoginPromptOpen(true);
       return;
     }
 
@@ -444,6 +453,44 @@ export default function PrestacoesProduto() {
       </main>
       <Footer />
       <BottomTabBar />
+
+      <Dialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Entrar para contactar o vendedor</DialogTitle>
+            <DialogDescription>
+              Para proteger os vendedores, o número de WhatsApp só é revelado a
+              utilizadores autenticados. A tua simulação será preservada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
+            <div className="flex justify-between"><span className="text-muted-foreground">Produto</span><span className="font-medium truncate ml-2">{product.title}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Entrada</span><span className="font-medium">{formatMZN(clamped.downPayment)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Prazo</span><span className="font-medium">{clamped.months} meses</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Mensalidade</span><span className="font-semibold text-primary">{formatMZN(monthly)}</span></div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setLoginPromptOpen(false)}>
+              Continuar a navegar
+            </Button>
+            <Link
+              to={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+              className="inline-flex"
+            >
+              <Button className="w-full">Entrar e contactar</Button>
+            </Link>
+          </DialogFooter>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Ainda não tens conta?{" "}
+            <Link
+              to={`/register?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+              className="text-primary hover:underline"
+            >
+              Criar conta gratuita
+            </Link>
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

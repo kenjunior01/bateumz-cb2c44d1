@@ -31,6 +31,13 @@ function FloatingEmoji({ emoji, delay, x, y }: { emoji: string; delay: number; x
 export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const nextPath = (() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("next");
+      if (p && p.startsWith("/") && !p.startsWith("//")) return p;
+    } catch {}
+    return null;
+  })();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +55,11 @@ export default function Login() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/login");
+      return;
+    }
+
+    if (nextPath) {
+      navigate(nextPath);
       return;
     }
 

@@ -24,6 +24,7 @@ export default function AdminCoFounders() {
   const [loading, setLoading] = useState(true);
   const [regions, setRegions] = useState<Region[]>([]);
   const [admins, setAdmins] = useState<AdminRow[]>([]);
+  const [allProfiles, setAllProfiles] = useState<{ user_id: string; display_name: string | null; company_name: string | null }[]>([]);
   const [newUserId, setNewUserId] = useState("");
   const [newCountry, setNewCountry] = useState("");
   const [newPct, setNewPct] = useState("10");
@@ -31,21 +32,20 @@ export default function AdminCoFounders() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: regs }, { data: roles }, { data: ar }, { data: rc }] = await Promise.all([
+    const [{ data: regs }, { data: roles }, { data: ar }, { data: rc }, { data: profsAll }] = await Promise.all([
       supabase.from("regions").select("*").order("label"),
-      supabase.from("user_roles").select("user_id").eq("role", "admin"),
+      supabase.from("user_roles").select("user_id").in("role", ["admin", "superadmin"]),
       supabase.from("admin_regions").select("user_id, country_code"),
       supabase.from("regional_commissions").select("user_id, commission_percentage"),
+      supabase.from("profiles").select("user_id, display_name, company_name").order("created_at", { ascending: false }).limit(500),
     ]);
     const adminIds = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
-    const { data: profs } = adminIds.length
-      ? await supabase.from("profiles").select("user_id, display_name").in("user_id", adminIds)
-      : { data: [] as any[] };
+    const profMap = new Map((profsAll ?? []).map((p: any) => [p.user_id, p.display_name]));
 
     const arMap = new Map((ar ?? []).map((r: any) => [r.user_id, r.country_code]));
     const rcMap = new Map((rc ?? []).map((r: any) => [r.user_id, Number(r.commission_percentage)]));
-    const profMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name]));
 
+    setAllProfiles((profsAll ?? []) as any);
     setRegions((regs ?? []) as Region[]);
     setAdmins(adminIds.map((uid) => ({
       user_id: uid,

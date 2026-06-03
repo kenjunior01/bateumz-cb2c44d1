@@ -227,6 +227,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
     </PayPalProvider>
+    </RegionalThemeProvider>
     </CurrencyProvider>
     </LanguageProvider>
     </ThemeProvider>

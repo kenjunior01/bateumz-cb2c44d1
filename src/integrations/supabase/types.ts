@@ -1431,33 +1431,60 @@ export type Database = {
       }
       regions: {
         Row: {
+          accent_color: string | null
+          banner_url: string | null
           country_code: string
           created_at: string
           currency: string
+          custom_css: string | null
+          default_language: string | null
           flag: string | null
           id: string
           is_active: boolean
           label: string
+          logo_url: string | null
+          name: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          tagline: string | null
           updated_at: string
         }
         Insert: {
+          accent_color?: string | null
+          banner_url?: string | null
           country_code: string
           created_at?: string
           currency?: string
+          custom_css?: string | null
+          default_language?: string | null
           flag?: string | null
           id?: string
           is_active?: boolean
           label: string
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Update: {
+          accent_color?: string | null
+          banner_url?: string | null
           country_code?: string
           created_at?: string
           currency?: string
+          custom_css?: string | null
+          default_language?: string | null
           flag?: string | null
           id?: string
           is_active?: boolean
           label?: string
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1739,6 +1766,44 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      translations: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          language_code: string
+          region_id: string | null
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          language_code: string
+          region_id?: string | null
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          language_code?: string
+          region_id?: string | null
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translations_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

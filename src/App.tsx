@@ -10,6 +10,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
+import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
@@ -194,6 +196,7 @@ function AnimatedRoutes() {
             <Route path="contests" element={<AdminContests />} />
             <Route path="co-founders" element={<AdminCoFounders />} />
             <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
+            <Route path="regional-branding" element={<AdminRegionalBranding />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -207,6 +210,7 @@ const App = () => (
     <ThemeProvider>
     <LanguageProvider>
     <CurrencyProvider>
+    <RegionalThemeProvider>
     <PayPalProvider>
     <AuthProvider>
       <TooltipProvider>
@@ -223,6 +227,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
     </PayPalProvider>
+    </RegionalThemeProvider>
     </CurrencyProvider>
     </LanguageProvider>
     </ThemeProvider>

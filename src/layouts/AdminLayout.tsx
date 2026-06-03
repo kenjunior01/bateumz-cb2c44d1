@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -25,6 +25,7 @@ const items = [
   { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
   { title: "Cron Jobs", url: "/admin/cron", icon: Clock },
   { title: "Settings", url: "/admin/settings", icon: Settings },
+  { title: "Regional Branding", url: "/admin/regional-branding", icon: Palette },
 ];
 
 const superadminItems = [

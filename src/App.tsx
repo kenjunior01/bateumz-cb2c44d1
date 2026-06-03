@@ -196,6 +196,7 @@ function AnimatedRoutes() {
             <Route path="contests" element={<AdminContests />} />
             <Route path="co-founders" element={<AdminCoFounders />} />
             <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
+            <Route path="regional-branding" element={<AdminRegionalBranding />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

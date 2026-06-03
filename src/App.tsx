@@ -210,6 +210,7 @@ const App = () => (
     <ThemeProvider>
     <LanguageProvider>
     <CurrencyProvider>
+    <RegionalThemeProvider>
     <PayPalProvider>
     <AuthProvider>
       <TooltipProvider>

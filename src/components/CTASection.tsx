@@ -30,7 +30,7 @@ const CTASection = () => (
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             to="/marketplace"
-            className="group inline-flex items-center gap-2 rounded-xl bg-primary px-10 py-4 text-lg font-semibold text-primary-foreground transition-all glow-primary hover:opacity-90"
+            className="region-cta group inline-flex items-center gap-2 rounded-xl px-10 py-4 text-lg font-semibold transition-all glow-primary hover:opacity-90"
           >
             See open raffles
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />

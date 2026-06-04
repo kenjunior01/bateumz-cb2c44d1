@@ -75,7 +75,10 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
-          <span className="font-display text-xl font-bold text-foreground">
+          <span
+            className="font-display text-xl font-bold"
+            style={{ color: "var(--region-primary, hsl(var(--foreground)))" }}
+          >
             Bateu
           </span>
         </Link>
@@ -122,6 +125,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <RegionCountrySwitcher compact />
           <LanguageSwitcher />
           <ThemeToggle />
           {user ? (
@@ -146,7 +150,11 @@ const Navbar = () => {
               <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 {t("nav.signin")}
               </Link>
-              <Link to="/register" className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary">
+              <Link
+                to="/register"
+                style={{ background: "var(--region-primary, hsl(var(--primary)))" }}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary"
+              >
                 <Zap className="h-4 w-4" />
                 {t("nav.signup")}
               </Link>

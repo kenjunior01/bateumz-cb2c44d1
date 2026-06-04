@@ -388,11 +388,18 @@ function format(template: string, vars?: Record<string, string>) {
 const SUPPORTED: Lang[] = ["en", "pt", "pt-BR", "es", "fr"];
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  // English is the default. Other languages are opt-in via the switcher.
+  // English is the universal default. Only honor an explicit non-English pick
+  // made via the in-app switcher (tracked with `bateu_lang_explicit`). Legacy
+  // PT defaults from previous releases are reset to English automatically.
   const [lang, setLangState] = useState<Lang>(() => {
     if (typeof window === "undefined") return "en";
+    const explicit = localStorage.getItem("bateu_lang_explicit") === "1";
     const stored = localStorage.getItem("bateu_lang") as Lang | null;
-    if (stored && SUPPORTED.includes(stored)) return stored;
+    if (explicit && stored && SUPPORTED.includes(stored)) return stored;
+    // One-time migration: any older stored value is wiped in favor of English.
+    if (stored && stored !== "en") {
+      localStorage.setItem("bateu_lang", "en");
+    }
     return "en";
   });
 
@@ -402,12 +409,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   const setLang = (l: Lang) => {
-    if (SUPPORTED.includes(l)) setLangState(l);
+    if (!SUPPORTED.includes(l)) return;
+    setLangState(l);
+    if (typeof window !== "undefined") localStorage.setItem("bateu_lang_explicit", "1");
   };
 
   const t = (key: string, vars?: Record<string, string>) => {
-    const dict = translations[lang] ?? translations.en!;
-    const value = dict[key] ?? translations.en![key] ?? translations.pt![key] ?? key;
+    // English-first resolver: always prefer the English copy, then fall back
+    // to the active language and finally to PT for any legacy-only keys.
+    const en = translations.en!;
+    const dict = translations[lang] ?? en;
+    const value = en[key] ?? dict[key] ?? translations.pt?.[key] ?? key;
     return format(value, vars);
   };
 

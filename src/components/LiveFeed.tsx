@@ -71,8 +71,8 @@ const LiveFeed = () => {
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Ticket className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">Os primeiros sorteios estão a começar!</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">A atividade aparecerá aqui em tempo real.</p>
+          <p className="text-sm text-muted-foreground">The first raffles are about to start!</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Activity will appear here in real time.</p>
         </div>
       </div>
     );

@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 const MobileTopBar = () => {
@@ -70,6 +71,7 @@ const MobileTopBar = () => {
             </button>
           )}
           {/* LanguageSwitcher disabled: EN-only platform */}
+          <RegionCountrySwitcher compact />
           <ThemeToggle />
           <button
             onClick={() => navigate(user ? "/dashboard/notifications" : "/login")}

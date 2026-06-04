@@ -4,6 +4,7 @@ import { ArrowRight, Shield, Users, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import CountdownTimer from "./CountdownTimer";
 
 interface FeaturedRaffle {
@@ -15,6 +16,7 @@ interface FeaturedRaffle {
 
 const HeroSection = () => {
   const { t } = useLanguage();
+  const { rt } = useRegionalTheme();
   const [participantCount, setParticipantCount] = useState(0);
   const [featuredRaffle, setFeaturedRaffle] = useState<FeaturedRaffle | null>(null);
   const [countdownEnabled, setCountdownEnabled] = useState(false);

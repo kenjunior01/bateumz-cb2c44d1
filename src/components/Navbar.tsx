@@ -13,6 +13,8 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
+import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string };
@@ -22,6 +24,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, role, signOut } = useAuth();
   const { t } = useLanguage();
+  const { rt } = useRegionalTheme();
 
   const groups: MenuGroup[] = [
     {

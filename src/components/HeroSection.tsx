@@ -4,6 +4,7 @@ import { ArrowRight, Shield, Users, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import CountdownTimer from "./CountdownTimer";
 
 interface FeaturedRaffle {
@@ -15,6 +16,7 @@ interface FeaturedRaffle {
 
 const HeroSection = () => {
   const { t } = useLanguage();
+  const { rt } = useRegionalTheme();
   const [participantCount, setParticipantCount] = useState(0);
   const [featuredRaffle, setFeaturedRaffle] = useState<FeaturedRaffle | null>(null);
   const [countdownEnabled, setCountdownEnabled] = useState(false);
@@ -50,9 +52,18 @@ const HeroSection = () => {
 
   return (
     <section className="relative overflow-hidden pt-20 pb-4 md:pt-24 md:pb-8">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-      <div className="absolute left-1/4 top-1/3 h-48 w-48 rounded-full bg-primary/8 blur-[100px]" />
-      <div className="absolute right-1/4 top-1/4 h-36 w-36 rounded-full bg-accent/8 blur-[80px]" />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to bottom, color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 8%, transparent), transparent)" }}
+      />
+      <div
+        className="absolute left-1/4 top-1/3 h-48 w-48 rounded-full blur-[100px]"
+        style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 12%, transparent)" }}
+      />
+      <div
+        className="absolute right-1/4 top-1/4 h-36 w-36 rounded-full blur-[80px]"
+        style={{ background: "color-mix(in srgb, var(--region-secondary, hsl(var(--accent))) 12%, transparent)" }}
+      />
 
       <div className="container relative z-10 mx-auto px-4 text-center">
         <motion.div
@@ -62,11 +73,22 @@ const HeroSection = () => {
           className="max-w-3xl mx-auto"
         >
           <h1 className="mb-3 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight md:text-5xl">
-            {t("hero.title.prefix")} <span className="text-gradient-primary">{t("hero.title.highlight")}</span>
+            {rt("hero.title.prefix", t("hero.title.prefix"))}{" "}
+            <span
+              className="text-gradient-primary"
+              style={{
+                backgroundImage: "linear-gradient(135deg, var(--region-primary, hsl(var(--primary))), var(--region-secondary, hsl(var(--accent))))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              {rt("hero.title.highlight", t("hero.title.highlight"))}
+            </span>
           </h1>
 
           <p className="mx-auto mb-5 max-w-xl text-xs md:text-base text-muted-foreground">
-            {t("hero.subtitle")}
+            {rt("hero.subtitle", t("hero.subtitle"))}
           </p>
 
           {/* Countdown — only when admin enables it */}
@@ -95,9 +117,10 @@ const HeroSection = () => {
           <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:justify-center">
             <Link
               to="/marketplace"
-              className="group flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 md:px-7 md:py-3 text-sm md:text-base font-semibold text-primary-foreground transition-all glow-primary hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--region-primary, hsl(var(--primary))), var(--region-secondary, hsl(var(--primary-glow))))" }}
+              className="group flex items-center gap-2 rounded-xl px-5 py-2.5 md:px-7 md:py-3 text-sm md:text-base font-semibold text-primary-foreground transition-all glow-primary hover:opacity-90"
             >
-              {t("hero.cta")}
+              {rt("hero.cta", t("hero.cta"))}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>

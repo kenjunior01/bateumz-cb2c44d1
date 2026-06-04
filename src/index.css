@@ -212,6 +212,42 @@
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
+/* === Regional theme helpers ===
+   When a country sets --region-primary / --region-secondary via
+   RegionalThemeContext, these utilities pick them up automatically while
+   keeping the original primary/accent as a fallback. */
+.region-link {
+  color: hsl(var(--muted-foreground));
+  transition: color 180ms ease;
+}
+.region-link:hover {
+  color: var(--region-primary, hsl(var(--foreground)));
+}
+.region-cta {
+  background: linear-gradient(135deg,
+    var(--region-primary, hsl(var(--primary))),
+    var(--region-secondary, hsl(var(--primary-glow))));
+  color: hsl(var(--primary-foreground));
+}
+.region-border:hover {
+  border-color: color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 35%, transparent);
+}
+.region-ring:focus-visible,
+input.region-ring:focus,
+textarea.region-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--region-primary, hsl(var(--ring))) 60%, transparent);
+  border-color: var(--region-primary, hsl(var(--ring)));
+}
+
+/* Apply a soft regional tint to default cards and inputs on the public site
+   without breaking existing variant overrides. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: var(--region-primary, hsl(var(--ring)));
+}
+
 /* Respect user OS preference: kill heavy infinite animations & parallax for stability */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -85,7 +85,7 @@ const StayInLoop = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all glow-primary hover:opacity-90 disabled:opacity-60"
+                className="region-cta rounded-xl px-6 py-3 text-sm font-semibold transition-all glow-primary hover:opacity-90 disabled:opacity-60"
               >
                 {loading ? "Joining…" : "Notify me"}
               </button>

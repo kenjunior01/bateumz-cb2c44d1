@@ -12,6 +12,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
+import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
@@ -223,6 +224,7 @@ const App = () => (
           <MascotBuddy />
           <SupportChatbot />
           <BottomTabBar />
+          <RegionalPreviewBar />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

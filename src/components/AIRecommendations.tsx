@@ -85,7 +85,7 @@ const AIRecommendations = () => {
           <Sparkles className="h-4 w-4 text-primary" />
         </div>
         <h3 className="font-display text-sm font-bold text-foreground">
-          {user ? "Recomendados para Si" : "Sorteios em Destaque"}
+          {user ? "Recommended for You" : "Featured Raffles"}
         </h3>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium ml-1">IA</span>
       </div>

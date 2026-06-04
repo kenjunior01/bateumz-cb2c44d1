@@ -123,7 +123,7 @@ const PopularLeaderboard = () => {
             >
               <div className="mb-4 flex items-center gap-2">
                 <Flame className="h-4 w-4 text-accent" />
-                <h3 className="font-display font-bold text-foreground">Sorteios em Alta</h3>
+                <h3 className="font-display font-bold text-foreground">Trending Raffles</h3>
                 <Badge variant="secondary" className="ml-auto text-[10px]">
                   {raffles.length}
                 </Badge>
@@ -186,7 +186,7 @@ const PopularLeaderboard = () => {
             >
               <div className="mb-4 flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-primary" />
-                <h3 className="font-display font-bold text-foreground">Concursos em Destaque</h3>
+                <h3 className="font-display font-bold text-foreground">Featured Contests</h3>
                 <Badge variant="secondary" className="ml-auto text-[10px]">
                   {contests.length}
                 </Badge>
@@ -223,7 +223,7 @@ const PopularLeaderboard = () => {
                             )}
                             {c.score}
                           </span>
-                          <span>{c.participants} participações</span>
+                          <span>{c.participants} entries</span>
                         </div>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground/50 shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />

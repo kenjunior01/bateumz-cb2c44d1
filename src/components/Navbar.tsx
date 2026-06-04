@@ -28,38 +28,38 @@ const Navbar = () => {
 
   const groups: MenuGroup[] = [
     {
-      label: "Raffles",
+      label: rt("nav.group.raffles", "Raffles"),
       items: [
-        { label: "Marketplace", href: "/marketplace", icon: Store, desc: "All active raffles" },
-        { label: "Contests", href: "/concursos", icon: Trophy, desc: "Photo, video and talent" },
-        { label: "Instant Win", href: "/instant-win", icon: Sparkles, desc: "Scratch cards & spin wheel" },
-        { label: "My Tickets", href: "/my-tickets", icon: Ticket, desc: "Track your entries" },
+        { label: rt("nav.marketplace", "Marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc", "All active raffles") },
+        { label: rt("nav.contests", "Contests"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc", "Photo, video and talent") },
+        { label: rt("nav.instantwin", "Instant Win"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc", "Scratch cards & spin wheel") },
+        { label: rt("nav.mytickets", "My Tickets"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc", "Track your entries") },
       ],
     },
     {
-      label: "Business",
+      label: rt("nav.group.business", "Business"),
       items: [
-        { label: "Directory", href: "/empresas", icon: Building2, desc: "Verified partner brands" },
-        { label: "Installments Catalog", href: "/prestacoes/catalogo", icon: Calendar, desc: "Vehicles, real estate & more", badge: "New" },
-        { label: "About Installments", href: "/prestacoes", icon: Calendar, desc: "How financed payments work" },
-        { label: "Create Raffle", href: "/dashboard/raffles/create", icon: Gift, desc: "Launch your own raffle" },
+        { label: rt("nav.directory", "Directory"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc", "Verified partner brands") },
+        { label: rt("nav.installments.catalog", "Installments Catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc", "Vehicles, real estate & more"), badge: rt("nav.badge.new", "New") },
+        { label: rt("nav.installments.about", "About Installments"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc", "How financed payments work") },
+        { label: rt("nav.createraffle", "Create Raffle"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc", "Launch your own raffle") },
       ],
     },
     {
-      label: "Community",
+      label: rt("nav.group.community", "Community"),
       items: [
-        { label: "Hub", href: "/community", icon: MessageCircle, desc: "Live chat and polls" },
-        { label: "Winners History", href: "/historico", icon: History, desc: "Completed raffles" },
-        { label: "Transparency", href: "/transparencia", icon: ShieldCheck, desc: "Blockchain verification" },
-        { label: "Live Draw", href: "/marketplace", icon: Radio, desc: "Live draws happening now" },
+        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Live chat and polls") },
+        { label: rt("nav.winners", "Winners History"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Completed raffles") },
+        { label: rt("nav.transparency", "Transparency"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Blockchain verification") },
+        { label: rt("nav.livedraw", "Live Draw"), href: "/marketplace", icon: Radio, desc: rt("nav.livedraw.desc", "Live draws happening now") },
       ],
     },
     {
-      label: "More",
+      label: rt("nav.group.more", "More"),
       items: [
-        { label: "How It Works", href: "/como-funciona", icon: BookOpen, desc: "Quick platform guide" },
-        { label: "Refer & Earn", href: "/referral", icon: Users, desc: "Invite friends, earn Luck Points" },
-        { label: "FAQ", href: "/faq", icon: HelpCircle, desc: "Common questions" },
+        { label: rt("nav.how", "How It Works"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Quick platform guide") },
+        { label: rt("nav.referral", "Refer & Earn"), href: "/referral", icon: Users, desc: rt("nav.referral.desc", "Invite friends, earn Luck Points") },
+        { label: rt("nav.faq", "FAQ"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc", "Common questions") },
       ],
     },
   ];

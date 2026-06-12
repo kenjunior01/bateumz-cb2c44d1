@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ interface Player {
 
 export default function FantasyFootball() {
   const { user, loading: authLoading } = useAuth();
+  const { region } = useRegionalTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fantasyTeams, setFantasyTeams] = useState<FantasyTeam[]>([]);
@@ -132,7 +134,7 @@ export default function FantasyFootball() {
         .from("fantasy_teams")
         .insert({
           user_id: user.id,
-          region_id: "default-region-id", // Should come from context
+          region_id: region?.id || "default-region-id",
           team_name: newTeamName,
           description: newTeamDescription,
           league_type: "public",

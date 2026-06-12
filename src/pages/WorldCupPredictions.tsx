@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ interface LeagueRanking {
 
 export default function WorldCupPredictions() {
   const { user, loading: authLoading } = useAuth();
+  const { region } = useRegionalTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -190,7 +192,7 @@ export default function WorldCupPredictions() {
           toInsert.push({
             user_id: user.id,
             match_id: matchId,
-            region_id: "default-region-id", // Should come from context
+            region_id: region?.id || "default-region-id",
             predicted_team_a_goals: pred.predicted_team_a_goals,
             predicted_team_b_goals: pred.predicted_team_b_goals,
           });

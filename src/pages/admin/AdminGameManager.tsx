@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Palette, Gamepad2, Settings2, Plus, Trash2, Save, Image as ImageIcon } from "lucide-react";
+import { Palette, Gamepad2, Settings2, Plus, Trash2, Save, Image as ImageIcon, Trophy } from "lucide-react";
 
 export default function AdminGameManager() {
   const { region } = useRegionalTheme();

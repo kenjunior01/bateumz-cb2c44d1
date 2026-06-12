@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ const CATEGORIES = [
 
 export default function WorldCupForum() {
   const { user, loading: authLoading } = useAuth();
+  const { region } = useRegionalTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [topics, setTopics] = useState<ForumTopic[]>([]);
@@ -133,7 +135,7 @@ export default function WorldCupForum() {
           description: newTopicDescription,
           category: newTopicCategory,
           created_by: user.id,
-          region_id: "default-region-id",
+          region_id: region?.id || "default-region-id",
         })
         .select()
         .single();

@@ -1,24 +1,46 @@
 /**
- * Money formatting for North American markets (USD/CAD).
- * Legacy `formatMZN` is kept as an alias to `formatUSD` so old imports keep working.
+ * Currency formatting utilities for Bateu.
+ * Supports MZN (Mozambique), EUR (Portugal), BRL (Brazil), AOA (Angola), USD and CAD.
  */
 
-export type SupportedCurrency = "USD" | "CAD";
+export type SupportedCurrency = "USD" | "CAD" | "MZN" | "EUR" | "BRL" | "AOA";
 
-export function formatMoney(value: number, currency: SupportedCurrency = "USD"): string {
-  const locale = currency === "CAD" ? "en-CA" : "en-US";
-  return value.toLocaleString(locale, { style: "currency", currency });
+export function formatMoney(amount: number, currency: SupportedCurrency = "MZN"): string {
+  const locales: Record<SupportedCurrency, string> = {
+    USD: "en-US",
+    CAD: "en-CA",
+    MZN: "pt-MZ",
+    EUR: "pt-PT",
+    BRL: "pt-BR",
+    AOA: "pt-AO",
+  };
+
+  return new Intl.NumberFormat(locales[currency] || "pt-MZ", {
+    style: "currency",
+    currency: currency,
+  }).format(amount);
 }
 
-export function formatUSD(value: number): string {
-  return formatMoney(value, "USD");
+export function formatMZN(amount: number): string {
+  return formatMoney(amount, "MZN");
 }
 
-export function formatCAD(value: number): string {
-  return formatMoney(value, "CAD");
+export function formatEUR(amount: number): string {
+  return formatMoney(amount, "EUR");
 }
 
-/** @deprecated Use formatMoney / formatUSD. Kept for backwards compatibility. */
-export function formatMZN(value: number): string {
-  return formatUSD(value);
+export function formatBRL(amount: number): string {
+  return formatMoney(amount, "BRL");
+}
+
+export function formatAOA(amount: number): string {
+  return formatMoney(amount, "AOA");
+}
+
+export function formatUSD(amount: number): string {
+  return formatMoney(amount, "USD");
+}
+
+export function formatCAD(amount: number): string {
+  return formatMoney(amount, "CAD");
 }

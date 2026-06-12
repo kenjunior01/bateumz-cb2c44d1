@@ -68,11 +68,11 @@ const RaffleCard = ({ raffle, index }: { raffle: Raffle; index: number }) => {
             <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
             {isHot && (
               <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-destructive/20 text-destructive px-2 py-0.5 text-[10px] font-semibold">
-                <Flame className="h-2.5 w-2.5" /> Selling fast
+                <Flame className="h-2.5 w-2.5" /> A esgotar
               </span>
             )}
             <span className="absolute right-2 top-2 rounded-full bg-card/80 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-foreground">
-              {raffle.raffle_type === "free" ? "Free" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : formatMZN(raffle.ticket_price)}
+              {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : formatMZN(raffle.ticket_price)}
             </span>
           </div>
           <div className="p-3">
@@ -219,18 +219,18 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
       ) : (
         <>
           <RaffleSection
-            title="🔥 Featured"
+            title="🔥 Destaques"
             icon={<Flame className="h-5 w-5 text-destructive" />}
             raffles={featured}
           />
           <RaffleSection
-            title="✨ Recent"
+            title="✨ Recentes"
             icon={<Sparkles className="h-5 w-5 text-primary" />}
             raffles={recent}
           />
           {featured.length === 0 && recent.length === 0 && (
             <RaffleSection
-              title="Raffles"
+              title="Sorteios"
               icon={<Ticket className="h-5 w-5 text-primary" />}
               raffles={raffles}
             />

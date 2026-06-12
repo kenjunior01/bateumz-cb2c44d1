@@ -50,14 +50,14 @@ const WinnersSection = () => {
         const mapped = winnerParticipants.map((w) => {
           const profile = profileMap.get(w.user_id);
           const raffle = raffleMap.get(w.raffle_id);
-          const rawName = profile?.display_name || `Winner #${w.ticket_number}`;
+          const rawName = profile?.display_name || `Vencedor #${w.ticket_number}`;
           const name = mask(rawName);
           const initials = rawName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
           const country = raffle?.country || "US";
-          const city = raffle?.city || (country === "CA" ? "Canada" : "United States");
+          const city = raffle?.city || (country === "CA" ? "Moçambique" : "Moçambique");
           return {
             name,
-            prize: raffle?.prize_title || "Prize",
+            prize: raffle?.prize_title || "Prémio",
             city: `${city}, ${country}`,
             initials,
             raffleId: w.raffle_id,
@@ -76,13 +76,13 @@ const WinnersSection = () => {
       <div className="container mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-4 text-center">
           <span className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-primary">
-            <ShieldCheck className="h-4 w-4" /> Verified Winners
+            <ShieldCheck className="h-4 w-4" /> Vencedores Verificados
           </span>
-          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">They played. They won.</h2>
+          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">Jogaram. Ganharam.</h2>
         </motion.div>
         <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
           className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
-          Real people, real prizes, real proof. Every draw is publicly verified on-chain — tap any winner to see the verification.
+          Pessoas reais, prémios reais, prova real. Cada sorteio é verificado publicamente — clica em qualquer vencedor para ver a verificação.
         </motion.p>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -108,12 +108,12 @@ const WinnersSection = () => {
                         <Star className="h-4 w-4 text-accent" />
                         {w.verified && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                            <ShieldCheck className="h-3 w-3" /> Verified
+                            <ShieldCheck className="h-3 w-3" /> Verificado
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        Won <span className="font-medium text-primary">{w.prize}</span> — {w.city}
+                        Ganhou <span className="font-medium text-primary">{w.prize}</span> — {w.city}
                       </p>
                     </div>
                     <ExternalLink className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -125,9 +125,9 @@ const WinnersSection = () => {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">The first winners are on the way!</h3>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">Os primeiros vencedores estão a caminho!</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  As soon as the first draws complete, verified winners will show up here. Enter now and be one of the first.
+                  Assim que os primeiros sorteios terminarem, os vencedores aparecerão aqui. Participa já e sê um dos primeiros.
                 </p>
               </motion.div>
             )}
@@ -135,7 +135,7 @@ const WinnersSection = () => {
             {winners.length > 0 && (
               <div className="text-center pt-2">
                 <Link to="/historico" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                  See full winners history <Trophy className="h-3.5 w-3.5" />
+                  Ver histórico completo de vencedores <Trophy className="h-3.5 w-3.5" />
                 </Link>
               </div>
             )}

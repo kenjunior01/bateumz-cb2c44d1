@@ -12,6 +12,13 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
+import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
+import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
+import WorldCupCentral from "./pages/WorldCupCentral.tsx";
+import WorldCupPredictions from "./pages/WorldCupPredictions.tsx";
+import FantasyFootball from "./pages/FantasyFootball.tsx";
+import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
+import WorldCupForum from "./pages/WorldCupForum.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -112,6 +119,11 @@ function AnimatedRoutes() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />
           <Route path="/concursos" element={<Contests />} />
+          <Route path="/mundial" element={<WorldCupCentral />} />
+          <Route path="/bolao" element={<WorldCupPredictions />} />
+          <Route path="/fantasy" element={<FantasyFootball />} />
+          <Route path="/pontos" element={<EngagementLeaderboard />} />
+          <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
@@ -198,6 +210,8 @@ function AnimatedRoutes() {
             <Route path="co-founders" element={<AdminCoFounders />} />
             <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
             <Route path="regional-branding" element={<AdminRegionalBranding />} />
+            <Route path="regional-dashboard" element={<AdminRegionalDashboard />} />
+            <Route path="super-dashboard" element={<AdminSuperDashboard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

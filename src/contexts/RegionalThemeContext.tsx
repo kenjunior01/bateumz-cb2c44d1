@@ -7,9 +7,7 @@ export interface RegionalTheme {
   name?: string | null;
   label: string;
   flag?: string | null;
-  primary_color?: string | null;
-  secondary_color?: string | null;
-  accent_color?: string | null;
+  theme_colors?: any | null;
   logo_url?: string | null;
   banner_url?: string | null;
   custom_css?: string | null;
@@ -55,9 +53,10 @@ function applyCssVars(theme: RegionalTheme | null) {
     root.style.removeProperty("--region-accent");
     return;
   }
-  if (theme.primary_color) root.style.setProperty("--region-primary", theme.primary_color);
-  if (theme.secondary_color) root.style.setProperty("--region-secondary", theme.secondary_color);
-  if (theme.accent_color) root.style.setProperty("--region-accent", theme.accent_color);
+  const colors = theme.theme_colors as any;
+  if (colors?.primary) root.style.setProperty("--region-primary", colors.primary);
+  if (colors?.secondary) root.style.setProperty("--region-secondary", colors.secondary);
+  if (colors?.accent) root.style.setProperty("--region-accent", colors.accent);
   if (theme.custom_css && theme.custom_css.trim()) {
     const style = document.createElement("style");
     style.id = "bateu-region-custom-css";

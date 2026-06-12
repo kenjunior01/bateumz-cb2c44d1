@@ -14,7 +14,54 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { toast } from "@/hooks/use-toast";
 
+import { Palette } from "lucide-react";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
+
 export default function AdminSettings() {
+  const { rt, region, reload } = useRegionalTheme();
+  const [themeConfig, setThemeConfig] = useState({
+    primary: "#9b87f5",
+    secondary: "#7E69AB",
+    accent: "#F2FCE2",
+    tagline: "",
+    logo_url: ""
+  });
+
+  useEffect(() => {
+    if (region) {
+      setThemeConfig({
+        primary: (region.theme_colors as any)?.primary || "#9b87f5",
+        secondary: (region.theme_colors as any)?.secondary || "#7E69AB",
+        accent: (region.theme_colors as any)?.accent || "#F2FCE2",
+        tagline: region.tagline || "",
+        logo_url: region.logo_url || ""
+      });
+    }
+  }, [region]);
+
+  const handleSaveTheme = async () => {
+    try {
+      const { error } = await supabase
+        .from("regions")
+        .update({
+          theme_colors: {
+            primary: themeConfig.primary,
+            secondary: themeConfig.secondary,
+            accent: themeConfig.accent
+          },
+          tagline: themeConfig.tagline,
+          logo_url: themeConfig.logo_url
+        })
+        .eq("id", region?.id);
+
+      if (error) throw error;
+      toast({ title: "Identidade visual atualizada!" });
+      reload();
+    } catch (err: any) {
+      toast({ title: "Erro ao guardar", description: err.message, variant: "destructive" });
+    }
+  };
+
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [featuredRaffleId, setFeaturedRaffleId] = useState("");
@@ -165,7 +212,76 @@ export default function AdminSettings() {
 
         {/* GENERAL TAB */}
         <TabsContent value="general" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="glass border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  Identidade Visual Regional
+                </CardTitle>
+                <CardDescription>Personalize as cores e a marca para a sua região</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4 border rounded-xl p-4">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">Cores da Marca</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Primária</label>
+                        <input 
+                          type="color" 
+                          value={themeConfig.primary} 
+                          onChange={(e) => setThemeConfig({...themeConfig, primary: e.target.value})}
+                          className="w-full h-10 rounded cursor-pointer border-none bg-transparent"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Secundária</label>
+                        <input 
+                          type="color" 
+                          value={themeConfig.secondary} 
+                          onChange={(e) => setThemeConfig({...themeConfig, secondary: e.target.value})}
+                          className="w-full h-10 rounded cursor-pointer border-none bg-transparent"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Acento</label>
+                        <input 
+                          type="color" 
+                          value={themeConfig.accent} 
+                          onChange={(e) => setThemeConfig({...themeConfig, accent: e.target.value})}
+                          className="w-full h-10 rounded cursor-pointer border-none bg-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border rounded-xl p-4">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">Marca e Slogan</h3>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Slogan Regional</Label>
+                        <Input 
+                          value={themeConfig.tagline} 
+                          onChange={(e) => setThemeConfig({...themeConfig, tagline: e.target.value})}
+                          placeholder="Ex: Os melhores sorteios de Moçambique"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">URL do Logótipo</Label>
+                        <Input 
+                          value={themeConfig.logo_url} 
+                          onChange={(e) => setThemeConfig({...themeConfig, logo_url: e.target.value})}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <Button onClick={handleSaveTheme} className="w-full md:w-auto">Guardar Identidade Visual</Button>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2">
             {/* Featured Raffle */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="glass border-primary/20">

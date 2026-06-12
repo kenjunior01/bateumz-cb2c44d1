@@ -366,4 +366,93 @@ export default function MillionaireGame() {
                       disabled={!gameState.selectedAnswer}
                       className="flex-1 h-12 text-lg font-bold"
                       style={{ backgroundColor: game.primary_color, color: "#000" }}
-                    >\n                      Confirmar Resposta\n                    </Button>\n                  ) : (\n                    <Button\n                      onClick={handleContinue}\n                      className=\"flex-1 h-12 text-lg font-bold bg-green-500 hover:bg-green-600\"\n                    >\n                      {gameState.isCorrect ? \"Próxima Pergunta\" : \"Tentar Novamente\"}\n                    </Button>\n                  )}\n                </div>\n              </CardContent>\n            </Card>\n          </div>\n\n          {/* Sidebar - Prize Pyramid */}\n          <div className=\"space-y-4\">\n            {/* Lifelines */}\n            <Card className=\"bg-white/95 backdrop-blur\">\n              <CardHeader>\n                <CardTitle className=\"text-sm\">Ajudas</CardTitle>\n              </CardHeader>\n              <CardContent className=\"space-y-2\">\n                {gameState.lifelines[\"50_50\"] && (\n                  <Button\n                    onClick={() => usedLifeline(\"50_50\")}\n                    variant=\"outline\"\n                    className=\"w-full justify-start\"\n                  >\n                    <Lightbulb className=\"h-4 w-4 mr-2\" />\n                    50/50\n                  </Button>\n                )}\n                {gameState.lifelines[\"ask_audience\"] && (\n                  <Button\n                    onClick={() => usedLifeline(\"ask_audience\")}\n                    variant=\"outline\"\n                    className=\"w-full justify-start\"\n                  >\n                    <Users className=\"h-4 w-4 mr-2\" />\n                    Público\n                  </Button>\n                )}\n                {gameState.lifelines[\"phone_a_friend\"] && (\n                  <Button\n                    onClick={() => usedLifeline(\"phone_a_friend\")}\n                    variant=\"outline\"\n                    className=\"w-full justify-start\"\n                  >\n                    <Phone className=\"h-4 w-4 mr-2\" />\n                    Telefonar\n                  </Button>\n                )}\n              </CardContent>\n            </Card>\n\n            {/* Prize Pyramid */}\n            <Card className=\"bg-white/95 backdrop-blur\">\n              <CardHeader>\n                <CardTitle className=\"text-sm\">Prêmios</CardTitle>\n              </CardHeader>\n              <CardContent>\n                <div className=\"space-y-2 max-h-96 overflow-y-auto\">\n                  {game.prize_structure.map((prize, index) => (\n                    <div\n                      key={index}\n                      className={`p-2 rounded text-sm font-semibold transition-all ${\n                        index + 1 === gameState.currentLevel\n                          ? \"bg-yellow-300 text-black scale-105\"\n                          : index + 1 < gameState.currentLevel\n                          ? \"bg-green-200 text-green-900\"\n                          : \"bg-gray-200 text-gray-600\"\n                      }`}\n                    >\n                      <div className=\"flex justify-between\">\n                        <span>Nível {prize.level}</span>\n                        <span>{prize.currency} {prize.amount.toLocaleString()}</span>\n                      </div>\n                    </div>\n                  ))}\n                </div>\n              </CardContent>\n            </Card>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}\n
+                    >
+                      Confirmar Resposta
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleContinue}
+                      className="flex-1 h-12 text-lg font-bold bg-green-500 hover:bg-green-600"
+                    >
+                      {gameState.isCorrect ? "Próxima Pergunta" : "Tentar Novamente"}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar - Prize Pyramid */}
+          <div className="space-y-4">
+            {/* Lifelines */}
+            <Card className="bg-white/95 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-sm">Ajudas</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {gameState.lifelines["50_50"] && (
+                  <Button
+                    onClick={() => usedLifeline("50_50")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    50/50
+                  </Button>
+                )}
+                {gameState.lifelines["ask_audience"] && (
+                  <Button
+                    onClick={() => usedLifeline("ask_audience")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Público
+                  </Button>
+                )}
+                {gameState.lifelines["phone_a_friend"] && (
+                  <Button
+                    onClick={() => usedLifeline("phone_a_friend")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Telefonar
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Prize Pyramid */}
+            <Card className="bg-white/95 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-sm">Prêmios</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {game.prize_structure.map((prize, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded text-sm font-semibold transition-all ${
+                        index + 1 === gameState.currentLevel
+                          ? "bg-yellow-300 text-black scale-105"
+                          : index + 1 < gameState.currentLevel
+                          ? "bg-green-200 text-green-900"
+                          : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      <div className="flex justify-between">
+                        <span>Nível {prize.level}</span>
+                        <span>{prize.currency} {prize.amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

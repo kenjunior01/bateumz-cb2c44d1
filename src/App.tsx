@@ -19,6 +19,10 @@ import WorldCupPredictions from "./pages/WorldCupPredictions.tsx";
 import FantasyFootball from "./pages/FantasyFootball.tsx";
 import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
 import WorldCupForum from "./pages/WorldCupForum.tsx";
+import MillionaireGame from "./pages/games/MillionaireGame.tsx";
+import SpinWheelGame from "./pages/games/SpinWheelGame.tsx";
+import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
+import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -124,6 +128,8 @@ function AnimatedRoutes() {
           <Route path="/fantasy" element={<FantasyFootball />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/forum-mundial" element={<WorldCupForum />} />
+          <Route path="/games/millionaire/:gameId" element={<MillionaireGame />} />
+          <Route path="/games/spin-wheel/:gameId" element={<SpinWheelGame />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
@@ -212,6 +218,8 @@ function AnimatedRoutes() {
             <Route path="regional-branding" element={<AdminRegionalBranding />} />
             <Route path="regional-dashboard" element={<AdminRegionalDashboard />} />
             <Route path="super-dashboard" element={<AdminSuperDashboard />} />
+            <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
+            <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

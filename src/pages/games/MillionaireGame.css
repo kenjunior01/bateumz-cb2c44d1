@@ -1,0 +1,158 @@
+.millionaire-game {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+.millionaire-game::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 107, 0.1));
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Question Card Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.millionaire-game > div > div {
+  animation: slideIn 0.5s ease-out;
+}
+
+/* Button Hover Effects */
+.millionaire-game button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.millionaire-game button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.millionaire-game button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Correct Answer Animation */
+@keyframes correctPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.millionaire-game button.bg-green-500 {
+  animation: correctPulse 0.6s ease-in-out;
+}
+
+/* Wrong Answer Animation */
+@keyframes wrongShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.millionaire-game button.bg-red-500 {
+  animation: wrongShake 0.4s ease-in-out;
+}
+
+/* Timer Animation */
+@keyframes timerWarning {
+  0%, 100% {
+    color: #ef4444;
+  }
+  50% {
+    color: #fca5a5;
+  }
+}
+
+.millionaire-game span:has(+ s) {
+  font-weight: 700;
+}
+
+/* Prize Pyramid Highlight */
+@keyframes pyramidGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+}
+
+.millionaire-game .bg-yellow-300 {
+  animation: pyramidGlow 1.5s ease-in-out infinite;
+}
+
+/* Lifeline Button Effects */
+.millionaire-game button[variant="outline"] {
+  position: relative;
+  overflow: hidden;
+}
+
+.millionaire-game button[variant="outline"]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.millionaire-game button[variant="outline"]:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .millionaire-game {
+    padding: 1rem;
+  }
+
+  .millionaire-game h1 {
+    font-size: 1.875rem;
+  }
+
+  .millionaire-game button {
+    font-size: 0.875rem;
+    padding: 0.75rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .millionaire-game {
+    filter: brightness(0.9);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .millionaire-game * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

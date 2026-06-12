@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, Building2, User, ShieldCheck, Crown, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Users, Search, Shield, Building2, User, ShieldCheck, Crown, ArrowUpCircle, ArrowDownCircle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/export";
 
 interface UserProfile {
   user_id: string;
@@ -29,6 +30,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const fetchUsers = async () => {
+    setLoading(true);
     const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     if (profiles && roles) {
@@ -64,6 +66,20 @@ export default function AdminUsers() {
     fetchUsers();
   };
 
+  const handleExport = () => {
+    const exportData = filtered.map(u => ({
+      ID: u.user_id,
+      Nome: u.display_name || "N/A",
+      Empresa: u.company_name || "N/A",
+      Telefone: u.phone || "N/A",
+      Role: u.role,
+      Verificado: u.is_verified ? "Sim" : "Não",
+      Data_Adesao: new Date(u.created_at).toLocaleDateString()
+    }));
+    exportToCSV(exportData, "utilizadores_bateu");
+    toast.success("Relatório de utilizadores exportado");
+  };
+
   const filtered = users.filter((u) => {
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
     if (search) {
@@ -89,16 +105,21 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">User Management</h1>
-        <p className="text-sm text-muted-foreground">Manage all users across the platform{isSuper ? " · Superadmin tools enabled" : ""}</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Gestão de Utilizadores</h1>
+          <p className="text-sm text-muted-foreground">Gerir todos os utilizadores da plataforma{isSuper ? " · Ferramentas Superadmin ativas" : ""}</p>
+        </div>
+        <Button onClick={handleExport} variant="outline" size="sm" className="gap-2">
+          <Download className="h-4 w-4" /> Exportar CSV
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
         {[
           { label: "Total", value: stats.total, icon: Users, color: "text-foreground" },
-          { label: "Businesses", value: stats.business, icon: Building2, color: "text-primary" },
-          { label: "Participants", value: stats.regular, icon: User, color: "text-accent" },
+          { label: "Empresas", value: stats.business, icon: Building2, color: "text-primary" },
+          { label: "Participantes", value: stats.regular, icon: User, color: "text-accent" },
           { label: "Admins", value: stats.admin, icon: Shield, color: "text-destructive" },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
@@ -120,12 +141,12 @@ export default function AdminUsers() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search users..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder="Pesquisar utilizadores..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <div className="flex gap-2 flex-wrap -mx-1 px-1 overflow-x-auto sm:overflow-visible">
           {["all", "user", "business", "admin", "superadmin"].map((r) => (
             <Button key={r} variant={roleFilter === r ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => setRoleFilter(r)}>
-              {r === "all" ? "All" : roleConfig[r]?.label || r}
+              {r === "all" ? "Todos" : roleConfig[r]?.label || r}
             </Button>
           ))}
         </div>
@@ -140,11 +161,11 @@ export default function AdminUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
+                  <TableHead>Utilizador</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead>Adesão</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,7 +180,7 @@ export default function AdminUsers() {
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-medium text-foreground">{u.display_name || "Unnamed"}</p>
+                              <p className="font-medium text-foreground">{u.display_name || "Sem nome"}</p>
                               {u.is_verified && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
                             </div>
                             {u.company_name && <p className="text-xs text-muted-foreground">{u.company_name}</p>}
@@ -183,25 +204,25 @@ export default function AdminUsers() {
                             <Button variant={u.is_verified ? "default" : "outline"} size="sm" className="gap-1.5 text-xs"
                               onClick={() => toggleVerified(u.user_id, u.is_verified)}>
                               <ShieldCheck className="h-3.5 w-3.5" />
-                              {u.is_verified ? "Verified" : "Verify"}
+                              {u.is_verified ? "Verificado" : "Verificar"}
                             </Button>
                           )}
                           {isSuper && u.role !== "admin" && u.role !== "superadmin" && (
                             <Button size="sm" variant="outline" className="gap-1 text-xs"
                               onClick={() => setUserRole(u.user_id, "admin")}>
-                              <ArrowUpCircle className="h-3.5 w-3.5" /> Make Admin
+                              <ArrowUpCircle className="h-3.5 w-3.5" /> Tornar Admin
                             </Button>
                           )}
                           {isSuper && u.role === "admin" && (
                             <Button size="sm" className="gap-1 text-xs bg-amber-500 hover:bg-amber-600 text-white"
                               onClick={() => setUserRole(u.user_id, "superadmin")}>
-                              <Crown className="h-3.5 w-3.5" /> Promote Superadmin
+                              <Crown className="h-3.5 w-3.5" /> Promover Superadmin
                             </Button>
                           )}
                           {isSuper && (u.role === "admin" || u.role === "superadmin") && (
                             <Button size="sm" variant="ghost" className="gap-1 text-xs text-destructive"
                               onClick={() => setUserRole(u.user_id, "user")}>
-                              <ArrowDownCircle className="h-3.5 w-3.5" /> Demote
+                              <ArrowDownCircle className="h-3.5 w-3.5" /> Despromover
                             </Button>
                           )}
                         </div>
@@ -212,7 +233,7 @@ export default function AdminUsers() {
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No users found
+                      Nenhum utilizador encontrado
                     </TableCell>
                   </TableRow>
                 )}

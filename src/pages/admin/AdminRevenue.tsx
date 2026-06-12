@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Ticket, ArrowUpRight, CreditCard, Smartphone, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, Ticket, ArrowUpRight, CreditCard, Download, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { exportToCSV } from "@/lib/export";
+import { toast } from "sonner";
 
 export default function AdminRevenue() {
   const [raffles, setRaffles] = useState<any[]>([]);
@@ -15,9 +18,10 @@ export default function AdminRevenue() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const [rafflesRes, participantsRes] = await Promise.all([
         supabase.from("raffles").select("*").order("created_at", { ascending: false }),
-        supabase.from("participants").select("*, raffles(title, ticket_price)").order("created_at", { ascending: false }).limit(50),
+        supabase.from("participants").select("*, raffles(title, ticket_price)").order("created_at", { ascending: false }).limit(100),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data);
       if (participantsRes.data) setParticipants(participantsRes.data);
@@ -31,7 +35,34 @@ export default function AdminRevenue() {
   const totalTickets = raffles.reduce((s, r) => s + r.sold_tickets, 0);
   const avgTicketPrice = totalTickets > 0 ? totalRevenue / totalTickets : 0;
 
-  // Revenue by raffle for chart
+  const handleExportTransactions = () => {
+    const exportData = participants.map(p => ({
+      ID: p.id,
+      Sorteio: (p.raffles as any)?.title || "N/A",
+      Bilhete: `#${p.ticket_number}`,
+      Status: p.payment_status === "completed" ? "Pago" : "Pendente",
+      Valor: Number((p.raffles as any)?.ticket_price || 0),
+      Data: new Date(p.created_at).toLocaleDateString("pt-MZ")
+    }));
+    exportToCSV(exportData, "transacoes_bateu");
+    toast.success("Relatório de transações exportado");
+  };
+
+  const handleExportRaffles = () => {
+    const exportData = raffles.map(r => ({
+      ID: r.id,
+      Titulo: r.title,
+      Status: r.status,
+      Bilhetes_Vendidos: r.sold_tickets,
+      Total_Bilhetes: r.total_tickets,
+      Preco_Bilhete: r.ticket_price,
+      Receita_Total: r.sold_tickets * Number(r.ticket_price),
+      Comissao_Plataforma: r.sold_tickets * Number(r.ticket_price) * 0.05
+    }));
+    exportToCSV(exportData, "receita_sorteios_bateu");
+    toast.success("Relatório de sorteios exportado");
+  };
+
   const chartData = raffles
     .filter((r) => r.sold_tickets > 0)
     .slice(0, 8)
@@ -49,9 +80,19 @@ export default function AdminRevenue() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">Receitas da Plataforma</h1>
-        <p className="text-sm text-muted-foreground">Visão financeira completa da SORTEX</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Receitas da Plataforma</h1>
+          <p className="text-sm text-muted-foreground">Visão financeira completa da Bateu</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleExportRaffles} variant="outline" size="sm" className="gap-2">
+            <Download className="h-4 w-4" /> Exportar Sorteios
+          </Button>
+          <Button onClick={handleExportTransactions} variant="outline" size="sm" className="gap-2 text-accent border-accent/20 hover:bg-accent/10">
+            <Calendar className="h-4 w-4" /> Exportar Transações
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
@@ -85,7 +126,9 @@ export default function AdminRevenue() {
           <Card className="glass">
             <CardHeader><CardTitle>Receita por Sorteio</CardTitle></CardHeader>
             <CardContent>
-              {chartData.length > 0 ? (
+              {loading ? (
+                <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin" /></div>
+              ) : chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -110,7 +153,9 @@ export default function AdminRevenue() {
           <Card className="glass">
             <CardHeader><CardTitle>Distribuição de Sorteios</CardTitle></CardHeader>
             <CardContent>
-              {statusData.length > 0 ? (
+              {loading ? (
+                <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin" /></div>
+              ) : statusData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
@@ -144,8 +189,8 @@ export default function AdminRevenue() {
         <Card className="glass">
           <CardHeader><CardTitle>Últimas Transações</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <div data-mobile-wrapped className="overflow-x-auto">
-<Table>
+            <div className="overflow-x-auto">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Sorteio</TableHead>
@@ -184,7 +229,7 @@ export default function AdminRevenue() {
                 )}
               </TableBody>
             </Table>
-</div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

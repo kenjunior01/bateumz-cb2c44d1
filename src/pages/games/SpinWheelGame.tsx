@@ -1,12 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Volume2, VolumeX, Trophy } from "lucide-react";
+import { Loader2, Volume2, VolumeX, Trophy, Share2, Info } from "lucide-react";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import "./SpinWheelGame.css";
 
 interface Segment {
@@ -20,7 +22,6 @@ interface Segment {
   reward_value: string;
   reward_image_url: string;
   weight: number;
-  probability_percentage: number;
 }
 
 interface Game {
@@ -31,10 +32,8 @@ interface Game {
   background_color: string;
   wheel_background_color: string;
   wheel_border_color: string;
-  segment_count: number;
   rotation_duration: number;
   spin_cost: number;
-  animation_style: string;
   sound_enabled: boolean;
   particle_effects: boolean;
 }
@@ -42,6 +41,7 @@ interface Game {
 export default function SpinWheelGame() {
   const { gameId } = useParams();
   const { user } = useAuth();
+  const { region } = useRegionalTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
@@ -49,21 +49,10 @@ export default function SpinWheelGame() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [lastReward, setLastReward] = useState<Segment | null>(null);
-  const [totalSpins, setTotalSpins] = useState(0);
   const [wheelRotation, setWheelRotation] = useState(0);
 
-  useEffect(() => {
-    if (!gameId || !user) return;
-    loadGame();
-  }, [gameId, user]);
-
-  useEffect(() => {
-    if (game && segments.length > 0) {
-      drawWheel();
-    }
-  }, [game, segments, wheelRotation]);
-
-  const loadGame = async () => {
+  const loadGame = useCallback(async () => {
+    if (!gameId) return;
     setLoading(true);
     try {
       const { data: gameData, error: gameError } = await supabase
@@ -85,332 +74,297 @@ export default function SpinWheelGame() {
       setSegments(segmentsData || []);
     } catch (error) {
       console.error("Error loading game:", error);
-      toast.error("Erro ao carregar jogo");
+      toast.error("Erro ao carregar o jogo da roda");
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId]);
 
-  const drawWheel = () => {
+  useEffect(() => {
+    loadGame();
+  }, [loadGame]);
+
+  const drawWheel = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !game) return;
+    if (!canvas || !game || segments.length === 0) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 20;
+    const radius = Math.min(centerX, centerY) - 15;
+    const arc = (2 * Math.PI) / segments.length;
 
-    // Clear canvas
-    ctx.fillStyle = game.wheel_background_color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw segments
-    const segmentAngle = (360 / segments.length) * (Math.PI / 180);
+    // Draw Outer Shadow/Glow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
 
-    segments.forEach((segment, index) => {
-      const startAngle = (index * 360) / segments.length + wheelRotation;
-      const endAngle = startAngle + 360 / segments.length;
-
-      // Draw segment
+    segments.forEach((segment, i) => {
+      const angle = i * arc;
+      
+      // Draw Segment
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(
-        centerX,
-        centerY,
-        radius,
-        (startAngle * Math.PI) / 180,
-        (endAngle * Math.PI) / 180
-      );
-      ctx.closePath();
       ctx.fillStyle = segment.background_color;
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, angle, angle + arc, false);
+      ctx.lineTo(centerX, centerY);
       ctx.fill();
 
-      // Draw border
-      ctx.strokeStyle = game.wheel_border_color;
-      ctx.lineWidth = 3;
+      // Draw Inner Border
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Draw text
+      // Draw Text
       ctx.save();
+      ctx.fillStyle = segment.text_color || "#FFFFFF";
       ctx.translate(centerX, centerY);
-      ctx.rotate(
-        ((startAngle + endAngle) / 2 * Math.PI) / 180
-      );
+      ctx.rotate(angle + arc / 2);
       ctx.textAlign = "right";
-      ctx.fillStyle = segment.text_color;
-      ctx.font = "bold 14px Arial";
-      ctx.fillText(segment.label, radius - 30, 5);
+      ctx.font = "bold 16px Inter, sans-serif";
+      ctx.shadowBlur = 2;
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.fillText(segment.label, radius - 40, 6);
       ctx.restore();
     });
 
-    // Draw center circle
+    // Draw Outer Ring
+    ctx.shadowBlur = 0;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
-    ctx.fillStyle = game.wheel_border_color;
-    ctx.fill();
-    ctx.strokeStyle = game.wheel_background_color;
-    ctx.lineWidth = 2;
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = game.wheel_border_color || "#FFD700";
+    ctx.lineWidth = 10;
     ctx.stroke();
 
-    // Draw pointer
+    // Draw Center Cap
     ctx.beginPath();
-    ctx.moveTo(centerX, 20);
-    ctx.lineTo(centerX - 15, 50);
-    ctx.lineTo(centerX + 15, 50);
-    ctx.closePath();
-    ctx.fillStyle = game.wheel_border_color;
+    ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
+    ctx.fillStyle = game.wheel_border_color || "#FFD700";
     ctx.fill();
-  };
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Center Logo Placeholder or Icon
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "center";
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText("BATEU", centerX, centerY + 5);
+
+  }, [game, segments]);
+
+  useEffect(() => {
+    drawWheel();
+  }, [drawWheel, wheelRotation]);
 
   const spin = async () => {
-    if (isSpinning) return;
-    if (game && game.spin_cost > 0) {
-      toast.info(`Custa ${game.spin_cost} pontos para girar`);
-    }
+    if (isSpinning || !game || segments.length === 0) return;
 
     setIsSpinning(true);
-    playSound("spin");
+    setLastReward(null);
 
-    // Calculate random rotation
-    const spinDegrees = Math.random() * 360;
-    const totalRotation = wheelRotation + 360 * 5 + spinDegrees;
+    // Calculate winning segment based on weights
+    const totalWeight = segments.reduce((acc, s) => acc + (s.weight || 1), 0);
+    let random = Math.random() * totalWeight;
+    let winningIndex = 0;
+    for (let i = 0; i < segments.length; i++) {
+      random -= (segments[i].weight || 1);
+      if (random <= 0) {
+        winningIndex = i;
+        break;
+      }
+    }
 
-    // Animate rotation
-    const startTime = Date.now();
-    const duration = (game?.rotation_duration || 5) * 1000;
+    const sectorAngle = 360 / segments.length;
+    const targetRotation = 360 * 8 + (360 - (winningIndex * sectorAngle + sectorAngle / 2));
+    
+    const duration = (game.rotation_duration || 5) * 1000;
+    const start = Date.now();
 
     const animate = () => {
-      const elapsed = Date.now() - startTime;
+      const now = Date.now();
+      const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-
-      // Easing function (ease-out)
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      const currentRotation = wheelRotation + (totalRotation - wheelRotation) * easeProgress;
-
-      setWheelRotation(currentRotation % 360);
+      
+      // Custom Bezier-like easing for a "natural" spin
+      const ease = 1 - Math.pow(1 - progress, 4);
+      const currentRotation = targetRotation * ease;
+      
+      setWheelRotation(currentRotation);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         setIsSpinning(false);
-        handleSpinComplete(spinDegrees);
+        const winner = segments[winningIndex];
+        setLastReward(winner);
+        
+        if (game.particle_effects) {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: [game.wheel_border_color || "#FFD700", "#FFFFFF"]
+          });
+        }
+
+        saveSession(winner, currentRotation);
       }
     };
 
     requestAnimationFrame(animate);
   };
 
-  const handleSpinComplete = async (finalDegree: number) => {
-    const segmentIndex = Math.floor(
-      ((360 - finalDegree) % 360) / (360 / segments.length)
-    );
-    const winningSegment = segments[segmentIndex];
-
-    setLastReward(winningSegment);
-    setTotalSpins((prev) => prev + 1);
-    playSound("win");
-
-    // Save spin session
+  const saveSession = async (winner: Segment, finalAngle: number) => {
+    if (!user || !region) return;
     try {
       const { error } = await supabase.from("spin_wheel_sessions").insert({
         wheel_id: gameId,
-        user_id: user!.id,
-        region_id: "default-region",
-        segment_id: winningSegment.id,
-        reward_type: winningSegment.reward_type,
-        reward_value: winningSegment.reward_value,
-        spin_angle: finalDegree,
-        rotation_duration: game?.rotation_duration || 5,
+        user_id: user.id,
+        region_id: region.id,
+        segment_id: winner.id,
+        reward_type: winner.reward_type,
+        reward_value: winner.reward_value,
+        spin_angle: finalAngle % 360,
+        status: 'completed'
       });
-
       if (error) throw error;
-      toast.success(`Você ganhou: ${winningSegment.reward_value}!`);
-    } catch (error) {
-      console.error("Error saving spin:", error);
+      toast.success(`Parabéns! Ganhou: ${winner.reward_value}`);
+    } catch (err) {
+      console.error("Error saving spin session:", err);
     }
   };
 
-  const playSound = (type: string) => {
-    if (!soundEnabled || !game?.sound_enabled) return;
-    // Implement sound effects
-  };
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-[#0f172a]">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!game) {
-    return <Navigate to="/games" replace />;
-  }
+  if (!game) return <Navigate to="/" replace />;
 
   return (
-    <div
-      className="min-h-screen spin-wheel-game"
-      style={{
-        backgroundImage: game.background_image_url
-          ? `url(${game.background_image_url})`
-          : undefined,
-        backgroundColor: game.background_color,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+    <div 
+      className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center font-sans"
+      style={{ 
+        backgroundColor: game.background_color || "#0f172a",
+        backgroundImage: game.background_image_url ? `url(${game.background_image_url})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/30"></div>
+      {/* Dynamic Background Overlay for Branding */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 h-screen flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-4xl font-bold text-white mb-2">
-              {game.name}
-            </h1>
-            {game.description && (
-              <p className="text-white/80">{game.description}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="text-white hover:bg-white/20"
-            >
-              {soundEnabled ? (
-                <Volume2 className="h-5 w-5" />
-              ) : (
-                <VolumeX className="h-5 w-5" />
-              )}
-            </Button>
+      <div className="relative z-10 w-full max-w-6xl px-4 py-8 flex flex-col md:flex-row items-center gap-12">
+        
+        {/* Left Side: Game Info & History */}
+        <div className="flex-1 space-y-6 text-white text-center md:text-left">
+          <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1">
+            Giro da Sorte Premium
+          </Badge>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic">
+            {game.name}
+          </h1>
+          <p className="text-xl text-white/70 max-w-md mx-auto md:mx-0">
+            {game.description || "Tenta a tua sorte e ganha prémios incríveis instantaneamente!"}
+          </p>
+          
+          <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
+            <Card className="bg-white/10 border-white/10 backdrop-blur-md text-white p-4 min-w-[140px]">
+              <p className="text-xs uppercase opacity-60 font-bold">Custo</p>
+              <p className="text-2xl font-black">{game.spin_cost > 0 ? `${game.spin_cost} MZN` : 'GRÁTIS'}</p>
+            </Card>
+            <Card className="bg-white/10 border-white/10 backdrop-blur-md text-white p-4 min-w-[140px]">
+              <p className="text-xs uppercase opacity-60 font-bold">Prêmios</p>
+              <p className="text-2xl font-black">{segments.length}</p>
+            </Card>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center gap-8">
-          {/* Wheel */}
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative">
-              {/* Pointer */}
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-20">
-                <div className="w-0 h-0 border-l-8 border-r-8 border-t-12 border-l-transparent border-r-transparent border-t-yellow-400"></div>
-              </div>
-
-              {/* Canvas Wheel */}
-              <canvas
-                ref={canvasRef}
-                width={400}
-                height={400}
-                className={`rounded-full shadow-2xl transition-transform ${
-                  isSpinning ? "" : ""
-                }`}
-                style={{
-                  transform: `rotate(${wheelRotation}deg)`,
-                  transition: isSpinning ? "none" : "transform 0.3s ease-out",
-                }}
-              />
+        {/* Center: The Wheel */}
+        <div className="relative group">
+          {/* Modern Pointer */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 drop-shadow-xl">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-inner">
+              <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary mt-8"></div>
             </div>
+          </div>
 
-            {/* Spin Button */}
-            <Button
+          {/* Wheel Container */}
+          <div className="relative p-4 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            <canvas
+              ref={canvasRef}
+              width={500}
+              height={500}
+              className="max-w-[320px] sm:max-w-[450px] md:max-w-[500px] h-auto rounded-full"
+              style={{
+                transform: `rotate(${wheelRotation}deg)`,
+                transition: isSpinning ? 'none' : 'transform 0.5s cubic-bezier(0.1, 0, 0.3, 1)'
+              }}
+            />
+            
+            {/* Center Button */}
+            <button
               onClick={spin}
               disabled={isSpinning}
-              className="mt-8 px-12 py-6 text-xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black disabled:opacity-50"
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full 
+                flex flex-col items-center justify-center font-black text-sm transition-all duration-300 z-20
+                ${isSpinning ? 'bg-gray-500 scale-95 opacity-50' : 'bg-white hover:scale-110 shadow-2xl active:scale-90'}
+              `}
+              style={{ color: game.background_color }}
             >
-              {isSpinning ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Girando...
-                </>
-              ) : (
-                "GIRAR A RODA"
-              )}
-            </Button>
-          </div>
-
-          {/* Sidebar */}
-          <div className="w-80 space-y-4">
-            {/* Stats */}
-            <Card className="bg-white/95 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Estatísticas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600">Total de Giros</p>
-                  <p className="text-3xl font-bold">{totalSpins}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Last Reward */}
-            {lastReward && (
-              <Card className="bg-white/95 backdrop-blur border-2 border-yellow-400">
-                <CardHeader>
-                  <CardTitle className="text-sm">Último Prêmio</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {lastReward.reward_image_url && (
-                    <img
-                      src={lastReward.reward_image_url}
-                      alt={lastReward.label}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                  )}
-                  <div>
-                    <p className="font-bold text-lg">{lastReward.label}</p>
-                    <p className="text-sm text-gray-600">{lastReward.description}</p>
-                  </div>
-                  <Badge className="w-full justify-center py-2 text-base">
-                    {lastReward.reward_value}
-                  </Badge>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Segments List */}
-            <Card className="bg-white/95 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-sm">Prêmios Disponíveis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {segments.map((segment) => (
-                    <div
-                      key={segment.id}
-                      className="p-2 rounded text-sm border-2"
-                      style={{
-                        borderColor: segment.background_color,
-                        backgroundColor: segment.background_color + "20",
-                      }}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">{segment.label}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {segment.reward_value}
-                        </Badge>
-                      </div>
-                      {segment.description && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          {segment.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              {isSpinning ? '...' : 'GIRAR'}
+            </button>
           </div>
         </div>
+
+        {/* Right Side: Last Winner & Rewards */}
+        <div className="w-full md:w-80 space-y-4">
+          {lastReward && (
+            <Card className="bg-primary border-none text-white animate-in zoom-in duration-500">
+              <CardContent className="p-6 text-center space-y-2">
+                <Trophy className="w-12 h-12 mx-auto mb-2 text-yellow-300" />
+                <h3 className="text-2xl font-black">GANHOU!</h3>
+                <p className="text-4xl font-black tracking-tight">{lastReward.reward_value}</p>
+                <p className="opacity-80 text-sm">{lastReward.label}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="bg-black/20 border-white/10 backdrop-blur-xl text-white overflow-hidden">
+            <CardHeader className="border-b border-white/10 pb-3">
+              <CardTitle className="text-sm uppercase tracking-widest opacity-70">Prêmios em Jogo</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 max-h-[300px] overflow-y-auto custom-scrollbar">
+              {segments.map((s, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.background_color }}></div>
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">{s.label}</p>
+                    <p className="text-xs opacity-50">{s.reward_value}</p>
+                  </div>
+                  {s.reward_image_url && (
+                    <img src={s.reward_image_url} alt="" className="w-8 h-8 rounded object-cover" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Floating Controls */}
+      <div className="fixed bottom-8 right-8 flex gap-3 z-50">
+        <Button size="icon" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white" onClick={() => setSoundEnabled(!soundEnabled)}>
+          {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+        </Button>
+        <Button size="icon" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white">
+          <Share2 className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

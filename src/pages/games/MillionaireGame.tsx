@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Volume2, VolumeX, Lightbulb, Users, Phone, RotateCcw } from "lucide-react";
+import { Loader2, Volume2, VolumeX, Lightbulb, Users, Phone, CheckCircle2, XCircle, Trophy, Timer } from "lucide-react";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import "./MillionaireGame.css";
 
 interface Game {
@@ -16,74 +18,42 @@ interface Game {
   background_image_url: string;
   background_color: string;
   primary_color: string;
-  secondary_color: string;
-  accent_color: string;
   total_questions: number;
   time_per_question: number;
-  prize_structure: any[];
-  lifelines: any;
+  prize_structure: { level: number; amount: number; currency: string; is_safe_haven?: boolean }[];
+  lifelines: Record<string, boolean>;
 }
 
 interface Question {
   id: string;
   question_number: number;
   question_text: string;
-  question_image_url: string;
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
   correct_answer: string;
-  explanation: string;
-}
-
-interface GameState {
-  currentLevel: number;
-  selectedAnswer: string | null;
-  answered: boolean;
-  isCorrect: boolean | null;
-  timeLeft: number;
-  lifelines: Record<string, boolean>;
-  prizeWon: number;
+  explanation?: string;
 }
 
 export default function MillionaireGame() {
   const { gameId } = useParams();
   const { user } = useAuth();
+  const { region } = useRegionalTheme();
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [gameState, setGameState] = useState<GameState>({
-    currentLevel: 1,
-    selectedAnswer: null,
-    answered: false,
-    isCorrect: null,
-    timeLeft: 30,
-    lifelines: {},
-    prizeWon: 0,
-  });
+  const [currentLevel, setCurrentLevel] = useState(1);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [answered, setAnswered] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [lifelinesUsed, setLifelinesUsed] = useState<Record<string, boolean>>({});
+  const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!gameId || !user) return;
-    loadGame();
-  }, [gameId, user]);
-
-  useEffect(() => {
-    if (!gameState.answered || gameState.timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setGameState((prev) => ({
-        ...prev,
-        timeLeft: Math.max(0, prev.timeLeft - 1),
-      }));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameState.answered, gameState.timeLeft]);
-
-  const loadGame = async () => {
+  const loadGame = useCallback(async () => {
+    if (!gameId) return;
     setLoading(true);
     try {
       const { data: gameData, error: gameError } = await supabase
@@ -94,365 +64,280 @@ export default function MillionaireGame() {
 
       if (gameError) throw gameError;
       setGame(gameData);
+      setTimeLeft(gameData.time_per_question || 30);
 
-      const { data: questionsData, error: questionsError } = await supabase
+      const { data: qData, error: qError } = await supabase
         .from("millionaire_questions")
         .select("*")
         .eq("game_id", gameId)
-        .order("question_number");
+        .order("question_number", { ascending: true });
 
-      if (questionsError) throw questionsError;
-      setQuestions(questionsData || []);
-
-      setGameState((prev) => ({
-        ...prev,
-        lifelines: gameData.lifelines,
-        timeLeft: gameData.time_per_question,
-      }));
-    } catch (error) {
-      console.error("Error loading game:", error);
-      toast.error("Erro ao carregar jogo");
+      if (qError) throw qError;
+      setQuestions(qData || []);
+    } catch (err) {
+      console.error("Error loading millionaire game:", err);
+      toast.error("Erro ao carregar o jogo");
     } finally {
       setLoading(false);
     }
+  }, [gameId]);
+
+  useEffect(() => { loadGame(); }, [loadGame]);
+
+  // Timer logic
+  useEffect(() => {
+    if (status !== 'playing' || answered || timeLeft <= 0) return;
+    const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearInterval(timer);
+  }, [status, answered, timeLeft]);
+
+  // Auto-fail on timeout
+  useEffect(() => {
+    if (timeLeft === 0 && !answered && status === 'playing') {
+      setStatus('lost');
+      toast.error("Tempo esgotado!");
+    }
+  }, [timeLeft, answered, status]);
+
+  const currentQuestion = useMemo(() => questions[currentLevel - 1], [questions, currentLevel]);
+  const currentPrize = useMemo(() => game?.prize_structure[currentLevel - 1], [game, currentLevel]);
+
+  const handleAnswer = async (choice: string) => {
+    if (answered || status !== 'playing') return;
+    setSelectedAnswer(choice);
+    setAnswered(true);
+
+    const isCorrect = choice === currentQuestion.correct_answer;
+    
+    setTimeout(async () => {
+      if (isCorrect) {
+        if (currentLevel === game?.total_questions) {
+          setStatus('won');
+          confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+          saveSession('completed', currentPrize?.amount || 0);
+        } else {
+          toast.success("Resposta Correta!");
+          // Advance after delay
+          setTimeout(() => {
+            setCurrentLevel(prev => prev + 1);
+            setAnswered(false);
+            setSelectedAnswer(null);
+            setDisabledOptions([]);
+            setTimeLeft(game?.time_per_question || 30);
+          }, 1500);
+        }
+      } else {
+        setStatus('lost');
+        const safePrize = calculateSafePrize();
+        saveSession('abandoned', safePrize);
+      }
+    }, 2000); // Dramatic pause
   };
 
-  const currentQuestion = questions[gameState.currentLevel - 1];
-  const currentPrize = game?.prize_structure[gameState.currentLevel - 1];
-
-  const handleAnswerSelect = (answer: string) => {
-    if (gameState.answered) return;
-    setGameState((prev) => ({ ...prev, selectedAnswer: answer }));
+  const calculateSafePrize = () => {
+    const prizes = game?.prize_structure || [];
+    let safeAmount = 0;
+    for (let i = 0; i < currentLevel - 1; i++) {
+      if (prizes[i].is_safe_haven) safeAmount = prizes[i].amount;
+    }
+    return safeAmount;
   };
 
-  const handleSubmitAnswer = async () => {
-    if (!gameState.selectedAnswer || !currentQuestion) return;
-
-    const isCorrect = gameState.selectedAnswer === currentQuestion.correct_answer;
-    setGameState((prev) => ({
-      ...prev,
-      answered: true,
-      isCorrect,
-    }));
-
-    playSound(isCorrect ? "correct" : "wrong");
-
-    if (isCorrect) {
-      setShowExplanation(true);
+  const useLifeline = (type: string) => {
+    if (lifelinesUsed[type] || answered) return;
+    setLifelinesUsed(prev => ({ ...prev, [type]: true }));
+    
+    if (type === '50_50') {
+      const wrongAnswers = ['A', 'B', 'C', 'D'].filter(l => l !== currentQuestion.correct_answer);
+      const toDisable = wrongAnswers.sort(() => 0.5 - Math.random()).slice(0, 2);
+      setDisabledOptions(toDisable);
+      toast.info("50/50 Ativado: Duas respostas erradas removidas.");
     }
   };
 
-  const handleContinue = async () => {
-    if (!gameState.isCorrect) {
-      // Game Over
-      await saveGameSession();
-      return;
-    }
-
-    if (gameState.currentLevel >= (game?.total_questions || 15)) {
-      // Won!
-      await saveGameSession(true);
-      return;
-    }
-
-    // Next question
-    setGameState((prev) => ({
-      ...prev,
-      currentLevel: prev.currentLevel + 1,
-      selectedAnswer: null,
-      answered: false,
-      isCorrect: null,
-      timeLeft: game?.time_per_question || 30,
-      prizeWon: currentPrize?.amount || 0,
-    }));
-    setShowExplanation(false);
-  };
-
-  const usedLifeline = async (lifelineType: string) => {
-    if (!gameState.lifelines[lifelineType]) {
-      toast.info("Você já usou essa ajuda!");
-      return;
-    }
-
-    setGameState((prev) => ({
-      ...prev,
-      lifelines: { ...prev.lifelines, [lifelineType]: false },
-    }));
-
-    playSound("lifeline");
-
-    // Implement lifeline logic
-    if (lifelineType === "50_50") {
-      // Remove 2 wrong answers
-    } else if (lifelineType === "ask_audience") {
-      // Show audience poll
-    } else if (lifelineType === "phone_a_friend") {
-      // Show phone interface
-    }
-  };
-
-  const saveGameSession = async (won = false) => {
+  const saveSession = async (finalStatus: string, prize: number) => {
+    if (!user || !region) return;
     try {
-      const { error } = await supabase.from("millionaire_sessions").insert({
+      await supabase.from("millionaire_sessions").insert({
         game_id: gameId,
-        user_id: user!.id,
-        region_id: "default-region", // Should come from context
-        current_level: gameState.currentLevel,
-        prize_won: gameState.prizeWon,
-        status: won ? "completed" : "abandoned",
-        answers: {}, // Store answers
-        duration_seconds: 0,
+        user_id: user.id,
+        region_id: region.id,
+        current_level: currentLevel,
+        prize_won: prize,
+        status: finalStatus
       });
-
-      if (error) throw error;
-      toast.success(won ? "Parabéns! Você ganhou!" : "Fim de jogo");
-    } catch (error) {
-      console.error("Error saving session:", error);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  const playSound = (type: string) => {
-    if (!soundEnabled) return;
-    // Implement sound effects
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!game || !currentQuestion) {
-    return <Navigate to="/games" replace />;
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center bg-[#0a0e17]"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
+  if (!game || !currentQuestion) return <Navigate to="/" replace />;
 
   return (
-    <div
-      className="min-h-screen millionaire-game"
-      style={{
-        backgroundImage: game.background_image_url
-          ? `url(${game.background_image_url})`
-          : undefined,
-        backgroundColor: game.background_color,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+    <div 
+      className="min-h-screen relative flex flex-col bg-[#0a0e17] text-white overflow-hidden"
+      style={{ 
+        backgroundImage: game.background_image_url ? `url(${game.background_image_url})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e17]/80 via-[#0a0e17]/60 to-[#0a0e17]/95"></div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-4xl font-bold text-white mb-2">
-              {game.name}
-            </h1>
-            <p className="text-white/80">Pergunta {gameState.currentLevel} de {game.total_questions}</p>
+      {/* Top Header */}
+      <div className="relative z-10 p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.5)]">
+            <Trophy className="text-black w-6 h-6" />
           </div>
-
-          <div className="flex items-center gap-4">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="text-white hover:bg-white/20"
-            >
-              {soundEnabled ? (
-                <Volume2 className="h-5 w-5" />
-              ) : (
-                <VolumeX className="h-5 w-5" />
-              )}
-            </Button>
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-widest">{game.name}</h1>
+            <p className="text-xs text-white/50 uppercase">Nível {currentLevel} • {currentPrize?.amount} {currentPrize?.currency}</p>
           </div>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-[1fr_300px]">
-          {/* Main Game Area */}
-          <div className="space-y-6">
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-white">
-                <span>Progresso</span>
-                <span>{gameState.currentLevel}/{game.total_questions}</span>
-              </div>
-              <Progress
-                value={(gameState.currentLevel / game.total_questions) * 100}
-                className="h-2"
-              />
-            </div>
-
-            {/* Question Card */}
-            <Card className="bg-white/95 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-2xl">{currentQuestion.question_text}</CardTitle>
-                {currentQuestion.question_image_url && (
-                  <img
-                    src={currentQuestion.question_image_url}
-                    alt="Question"
-                    className="mt-4 rounded-lg max-h-64 object-cover w-full"
-                  />
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Timer */}
-                {!gameState.answered && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 transition-all"
-                        style={{
-                          width: `${(gameState.timeLeft / (game.time_per_question || 30)) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <span className="font-bold text-lg">{gameState.timeLeft}s</span>
-                  </div>
-                )}
-
-                {/* Answer Options */}
-                <div className="grid gap-3 mt-6">
-                  {["A", "B", "C", "D"].map((letter) => {
-                    const optionKey = `option_${letter.toLowerCase()}`;
-                    const optionText = currentQuestion[optionKey as keyof Question];
-                    const isSelected = gameState.selectedAnswer === letter;
-                    const isCorrectAnswer = letter === currentQuestion.correct_answer;
-                    const showCorrect =
-                      gameState.answered && isCorrectAnswer;
-                    const showWrong =
-                      gameState.answered && isSelected && !isCorrectAnswer;
-
-                    return (
-                      <Button
-                        key={letter}
-                        onClick={() => handleAnswerSelect(letter)}
-                        disabled={gameState.answered}
-                        className={`h-auto py-4 px-6 text-left justify-start text-lg font-semibold transition-all ${
-                          isSelected
-                            ? "ring-2 ring-offset-2"
-                            : ""
-                        } ${
-                          showCorrect
-                            ? "bg-green-500 hover:bg-green-600 text-white"
-                            : showWrong
-                            ? "bg-red-500 hover:bg-red-600 text-white"
-                            : isSelected
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-100 hover:bg-gray-200"
-                        }`}
-                      >
-                        <span className="font-bold mr-4 text-xl">{letter}.</span>
-                        <span>{optionText}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                {/* Explanation */}
-                {showExplanation && currentQuestion.explanation && (
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="font-semibold text-blue-900 mb-2">Explicação:</p>
-                    <p className="text-blue-800">{currentQuestion.explanation}</p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-8">
-                  {!gameState.answered ? (
-                    <Button
-                      onClick={handleSubmitAnswer}
-                      disabled={!gameState.selectedAnswer}
-                      className="flex-1 h-12 text-lg font-bold"
-                      style={{ backgroundColor: game.primary_color, color: "#000" }}
-                    >
-                      Confirmar Resposta
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleContinue}
-                      className="flex-1 h-12 text-lg font-bold bg-green-500 hover:bg-green-600"
-                    >
-                      {gameState.isCorrect ? "Próxima Pergunta" : "Tentar Novamente"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/10">
+            <Timer className={`w-5 h-5 ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-primary'}`} />
+            <span className="text-xl font-mono font-bold">{timeLeft}s</span>
           </div>
-
-          {/* Sidebar - Prize Pyramid */}
-          <div className="space-y-4">
-            {/* Lifelines */}
-            <Card className="bg-white/95 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-sm">Ajudas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {gameState.lifelines["50_50"] && (
-                  <Button
-                    onClick={() => usedLifeline("50_50")}
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Lightbulb className="h-4 w-4 mr-2" />
-                    50/50
-                  </Button>
-                )}
-                {gameState.lifelines["ask_audience"] && (
-                  <Button
-                    onClick={() => usedLifeline("ask_audience")}
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Público
-                  </Button>
-                )}
-                {gameState.lifelines["phone_a_friend"] && (
-                  <Button
-                    onClick={() => usedLifeline("phone_a_friend")}
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Telefonar
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Prize Pyramid */}
-            <Card className="bg-white/95 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-sm">Prêmios</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {game.prize_structure.map((prize, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 rounded text-sm font-semibold transition-all ${
-                        index + 1 === gameState.currentLevel
-                          ? "bg-yellow-300 text-black scale-105"
-                          : index + 1 < gameState.currentLevel
-                          ? "bg-green-200 text-green-900"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      <div className="flex justify-between">
-                        <span>Nível {prize.level}</span>
-                        <span>{prize.currency} {prize.amount.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(!soundEnabled)}>
+            {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          </Button>
         </div>
       </div>
+
+      <div className="relative z-10 flex-1 container mx-auto px-4 py-8 grid lg:grid-cols-[1fr_320px] gap-8">
+        
+        {/* Main Game Area */}
+        <div className="flex flex-col justify-center space-y-12">
+          
+          {/* Question Box */}
+          <div className="relative">
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
+            <div className="bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+              <h2 className="text-2xl md:text-4xl font-bold leading-tight">
+                {currentQuestion.question_text}
+              </h2>
+            </div>
+          </div>
+
+          {/* Options Grid */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {['A', 'B', 'C', 'D'].map((letter) => {
+              const optionKey = `option_${letter.toLowerCase()}` as keyof Question;
+              const text = currentQuestion[optionKey] as string;
+              const isSelected = selectedAnswer === letter;
+              const isCorrect = letter === currentQuestion.correct_answer;
+              const isDisabled = disabledOptions.includes(letter);
+
+              let stateClass = "border-white/20 bg-white/5 hover:bg-white/10";
+              if (isSelected) stateClass = "border-primary bg-primary/20 text-primary shadow-[0_0_20px_rgba(var(--primary),0.3)]";
+              if (answered && isCorrect) stateClass = "border-green-500 bg-green-500/20 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] animate-pulse";
+              if (answered && isSelected && !isCorrect) stateClass = "border-red-500 bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]";
+              if (isDisabled) stateClass = "opacity-20 pointer-events-none grayscale";
+
+              return (
+                <button
+                  key={letter}
+                  onClick={() => handleAnswer(letter)}
+                  disabled={answered || isDisabled || status !== 'playing'}
+                  className={`relative group flex items-center p-1 rounded-full border-2 transition-all duration-300 ${stateClass}`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black text-primary group-hover:bg-primary group-hover:text-black transition-colors">
+                    {letter}
+                  </div>
+                  <span className="flex-1 px-6 font-semibold text-lg text-left">{text}</span>
+                  <div className="w-12 h-[2px] bg-white/10 absolute -right-4 top-1/2 -translate-y-1/2 group-hover:bg-primary transition-colors hidden md:block"></div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sidebar: Pyramid & Lifelines */}
+        <div className="space-y-6">
+          {/* Lifelines */}
+          <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
+            <CardContent className="p-6">
+              <h3 className="text-xs font-black uppercase tracking-widest opacity-50 mb-4">Ajudas Disponíveis</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <button 
+                  onClick={() => useLifeline('50_50')}
+                  disabled={lifelinesUsed['50_50'] || answered}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${lifelinesUsed['50_50'] ? 'opacity-30 grayscale border-white/10' : 'border-primary/30 bg-primary/5 hover:bg-primary/20'}`}
+                >
+                  <Lightbulb className="w-6 h-6 text-primary" />
+                  <span className="text-[10px] font-bold">50:50</span>
+                </button>
+                <button disabled className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 opacity-30 grayscale">
+                  <Users className="w-6 h-6" />
+                  <span className="text-[10px] font-bold">PÚBLICO</span>
+                </button>
+                <button disabled className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 opacity-30 grayscale">
+                  <Phone className="w-6 h-6" />
+                  <span className="text-[10px] font-bold">LIGAR</span>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Prize Pyramid */}
+          <Card className="bg-black/40 border-white/10 backdrop-blur-xl overflow-hidden">
+            <CardContent className="p-0">
+              <div className="bg-white/5 p-4 border-b border-white/10 flex justify-between items-center">
+                <h3 className="text-xs font-black uppercase tracking-widest opacity-50">Pirâmide de Prémios</h3>
+                <Badge variant="outline" className="border-primary text-primary">{game.total_questions} Níveis</Badge>
+              </div>
+              <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto custom-scrollbar flex flex-col-reverse">
+                {game.prize_structure.map((p, i) => {
+                  const isCurrent = currentLevel === p.level;
+                  const isPast = currentLevel > p.level;
+                  return (
+                    <div 
+                      key={i} 
+                      className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all ${isCurrent ? 'bg-primary text-black font-black scale-105 shadow-lg' : isPast ? 'opacity-40' : 'hover:bg-white/5'}`}
+                    >
+                      <span className={`text-xs w-6 ${isCurrent ? 'text-black/60' : 'text-primary'}`}>{p.level}</span>
+                      <span className="flex-1 text-sm">{p.amount.toLocaleString()} {p.currency}</span>
+                      {p.is_safe_haven && <CheckCircle2 className={`w-4 h-4 ${isCurrent ? 'text-black' : 'text-primary'}`} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Status Overlays */}
+      {status !== 'playing' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="text-center space-y-8 p-12 rounded-[3rem] border-2 border-white/10 bg-white/5">
+            {status === 'won' ? (
+              <>
+                <div className="w-24 h-24 bg-yellow-400 rounded-full mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)]">
+                  <Trophy className="w-12 h-12 text-black" />
+                </div>
+                <h2 className="text-6xl font-black italic uppercase tracking-tighter">MILIONÁRIO!</h2>
+                <p className="text-2xl text-white/70">Ganhou o prémio máximo de <br/><span className="text-primary text-4xl font-black">{currentPrize?.amount} {currentPrize?.currency}</span></p>
+              </>
+            ) : (
+              <>
+                <div className="w-24 h-24 bg-red-500 rounded-full mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.5)]">
+                  <XCircle className="w-12 h-12 text-white" />
+                </div>
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter">FIM DE JOGO</h2>
+                <p className="text-xl text-white/70">Leva para casa: <br/><span className="text-primary text-3xl font-black">{calculateSafePrize()} {game.prize_structure[0].currency}</span></p>
+              </>
+            )}
+            <div className="flex gap-4 justify-center pt-4">
+              <Button size="lg" className="px-12 py-8 text-xl font-black rounded-full" onClick={() => window.location.reload()}>TENTAR NOVAMENTE</Button>
+              <Button size="lg" variant="outline" className="px-12 py-8 text-xl font-black rounded-full border-white/20" onClick={() => window.location.href = '/'}>SAIR</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

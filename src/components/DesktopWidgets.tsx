@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, Trophy, Flame, Timer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import LiveFeed from "./LiveFeed";
+import BlogNewsWidget from "./BlogNewsWidget";
 
 interface TopRaffle {
   id: string;
@@ -64,6 +65,11 @@ const DesktopWidgets = () => {
             <p className="text-xs text-muted-foreground text-center py-2">Nenhum sorteio ativo</p>
           )}
         </div>
+      </motion.div>
+
+      {/* Blog News Widget */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <BlogNewsWidget />
       </motion.div>
 
       {/* Quick Stats Widget */}

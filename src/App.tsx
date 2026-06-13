@@ -71,8 +71,8 @@ import RaffleHistory from "./pages/RaffleHistory.tsx";
 import MyTickets from "./pages/MyTickets.tsx";
 import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
-import Contests from "./pages/Contests.tsx";
-import ContestDetail from "./pages/ContestDetail.tsx";
+import Blog from "./pages/Blog.tsx";
+import BlogPostDetail from "./pages/BlogPostDetail.tsx";
 import AdminContests from "./pages/admin/AdminContests.tsx";
 import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
 import BusinessProfile from "./pages/BusinessProfile.tsx";
@@ -124,6 +124,8 @@ function AnimatedRoutes() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />
           <Route path="/concursos" element={<Contests />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/mundial" element={<WorldCupCentral />} />
           <Route path="/bolao" element={<WorldCupPredictions />} />
           <Route path="/fantasy" element={<FantasyFootball />} />

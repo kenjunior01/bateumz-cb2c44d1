@@ -156,22 +156,34 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
 
   useEffect(() => {
     const fetch = async () => {
-      let query = supabase
-        .from("raffles")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+      try {
+        let query = supabase
+          .from("raffles")
+          .select("*")
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
 
-      if (categoryFilter && categoryFilter !== "todos") {
-        query = query.eq("category", categoryFilter);
+        if (categoryFilter && categoryFilter !== "todos") {
+          query = query.eq("category", categoryFilter);
+        }
+
+        // Server-side region filtering
+        if (region) {
+          query = query.eq("province", region);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        if (data) setRaffles(data as unknown as Raffle[]);
+      } catch (err) {
+        console.error("Error fetching raffles:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query;
-      if (data) setRaffles(data as unknown as Raffle[]);
-      setLoading(false);
     };
     fetch();
-  }, [categoryFilter]);
+  }, [categoryFilter, region]);
 
   if (loading) {
     return (

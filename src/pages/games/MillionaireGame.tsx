@@ -137,8 +137,12 @@ export default function MillionaireGame() {
   const calculateSafePrize = () => {
     const prizes = game?.prize_structure || [];
     let safeAmount = 0;
+    // Níveis de segurança padrão: 5 e 10
+    const defaultSafeLevels = [5, 10];
     for (let i = 0; i < currentLevel - 1; i++) {
-      if (prizes[i].is_safe_haven) safeAmount = prizes[i].amount;
+      if (prizes[i].is_safe_haven || defaultSafeLevels.includes(prizes[i].level)) {
+        safeAmount = prizes[i].amount;
+      }
     }
     return safeAmount;
   };

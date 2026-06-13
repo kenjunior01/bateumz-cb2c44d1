@@ -50,7 +50,7 @@ export default function AdminGameManager() {
           <h1 className="text-3xl font-black tracking-tight uppercase">Gestão de Jogos & Gamificação</h1>
           <p className="text-muted-foreground">Personalize a experiência de jogo para a sua região e empresas parceiras.</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => toast.info("Funcionalidade de criação em desenvolvimento. Use o Gerenciador de Jogos específico.")}>
           <Plus className="w-4 h-4" /> Novo Jogo
         </Button>
       </div>
@@ -150,7 +150,17 @@ export default function AdminGameManager() {
                     </div>
 
                     <div className="flex gap-2 pt-4">
-                      <Button variant="outline" className="flex-1 gap-2 text-xs">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 gap-2 text-xs"
+                        onClick={() => {
+                          if (activeTab === 'millionaire') {
+                            window.location.href = '/admin/millionaire-manager';
+                          } else {
+                            toast.info("Editor de conteúdo para Roda da Sorte em desenvolvimento.");
+                          }
+                        }}
+                      >
                         <Settings2 className="w-3 h-3" /> Editar Conteúdo
                       </Button>
                       <Button variant="destructive" size="icon" className="shrink-0">

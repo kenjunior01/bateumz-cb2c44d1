@@ -54,14 +54,17 @@ const AIRecommendations = () => {
     }
 
     // Fetch active raffles
-    const { data: raffles } = await supabase
+    const { data: raffles, error: rafflesError } = await supabase
       .from("raffles")
       .select("id, title, slug, image_url, ticket_price, category, sold_tickets, total_tickets")
       .eq("status", "active")
       .order("sold_tickets", { ascending: false })
       .limit(20);
 
-    if (!raffles) return;
+    if (rafflesError || !raffles) {
+      console.error("Error loading recommendations:", rafflesError);
+      return;
+    }
 
     // Score & sort by relevance
     const scored = raffles.map((r) => {

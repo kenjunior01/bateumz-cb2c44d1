@@ -32,6 +32,14 @@ const ACTION_GROUPS: { titleKey: string; items: ActionItem[] }[] = [
     ],
   },
   {
+    titleKey: "fab.group.games",
+    items: [
+      { icon: Zap, labelKey: "menu.games", href: "/marketplace", grad: "from-amber-400 to-yellow-600", badgeKey: "menu.badge.new" },
+      { icon: Trophy, labelKey: "menu.millionaire", href: "/marketplace?tab=games", grad: "from-blue-600 to-indigo-800" },
+      { icon: Sparkles, labelKey: "menu.spinWheel", href: "/marketplace?tab=games", grad: "from-purple-500 to-pink-600" },
+    ],
+  },
+  {
     titleKey: "fab.group.business",
     items: [
       { icon: Building2, labelKey: "menu.directory", href: "/empresas", grad: "from-blue-500 to-cyan-500" },

@@ -50,6 +50,8 @@ export default function AdminSpinWheelManager() {
   const [wheelBackgroundColor, setWheelBackgroundColor] = useState("#2d2d2d");
   const [wheelBorderColor, setWheelBorderColor] = useState("#FFD700");
   const [spinCost, setSpinCost] = useState(0);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
+  const [backgroundColor, setBackgroundColor] = useState("#0f172a");
 
   // Segment form
   const [segmentLabel, setSegmentLabel] = useState("");
@@ -115,12 +117,14 @@ export default function AdminSpinWheelManager() {
           description: gameDescription,
           segment_count: segmentCount,
           rotation_duration: rotationDuration,
-          wheel_background_color: wheelBackgroundColor,
-          wheel_border_color: wheelBorderColor,
-          spin_cost: spinCost,
-          created_by: user!.id,
-          region_id: "default-region",
-        })
+	          wheel_background_color: wheelBackgroundColor,
+	          wheel_border_color: wheelBorderColor,
+	          spin_cost: spinCost,
+	          background_image_url: backgroundImageUrl,
+	          background_color: backgroundColor,
+	          created_by: user!.id,
+	          region_id: "default-region",
+	        })
         .select()
         .single();
 
@@ -304,9 +308,20 @@ export default function AdminSpinWheelManager() {
           <Card>
             <CardHeader><CardTitle>Criar Nova Roda</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <Input placeholder="Nome do Jogo" value={gameName} onChange={(e) => setGameName(e.target.value)} />
-              <Textarea placeholder="Descrição" value={gameDescription} onChange={(e) => setGameDescription(e.target.value)} />
-              <Button onClick={createGame} disabled={saving} className="w-full">
+	              <Input placeholder="Nome do Jogo" value={gameName} onChange={(e) => setGameName(e.target.value)} />
+	              <Textarea placeholder="Descrição" value={gameDescription} onChange={(e) => setGameDescription(e.target.value)} />
+	              <div className="grid grid-cols-2 gap-4">
+	                <div className="space-y-2">
+	                  <Label>Cor de Fundo (Hex)</Label>
+	                  <Input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} />
+	                </div>
+	                <div className="space-y-2">
+	                  <Label>Cor da Roda (Hex)</Label>
+	                  <Input type="color" value={wheelBackgroundColor} onChange={(e) => setWheelBackgroundColor(e.target.value)} />
+	                </div>
+	              </div>
+	              <Input placeholder="URL da Imagem de Fundo (Marca)" value={backgroundImageUrl} onChange={(e) => setBackgroundImageUrl(e.target.value)} />
+	              <Button onClick={createGame} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} Criar Roda
               </Button>
             </CardContent>

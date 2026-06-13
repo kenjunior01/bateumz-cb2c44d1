@@ -25,6 +25,7 @@ const items = [
   { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
   { title: "Cron Jobs", url: "/admin/cron", icon: Clock },
   { title: "Settings", url: "/admin/settings", icon: Settings },
+  { title: "Gamification", url: "/admin/games", icon: Zap },
   { title: "Regional Branding", url: "/admin/regional-branding", icon: Palette },
 ];
 

@@ -50,6 +50,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "fab.admin": "Admin",
     "fab.logout": "Sair",
     "fab.group.raffles": "🎟️ Sorteios & Concursos",
+    "fab.group.games": "🎮 Jogos & Gamificação",
     "fab.group.business": "🏢 Empresas",
     "fab.group.community": "👥 Comunidade",
     "fab.group.more": "ℹ️ Mais",
@@ -72,6 +73,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.faq": "FAQ",
     "menu.points": "Pontos",
     "menu.badge.new": "Novo",
+    "menu.games": "Jogos & Diversão",
+    "menu.games.desc": "Ganha prémios a jogar",
+    "menu.millionaire": "Milionário",
+    "menu.spinWheel": "Roda da Sorte",
 
     // ===== Search =====
     "search.location": "Localização",
@@ -235,6 +240,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "fab.admin": "Admin",
     "fab.logout": "Sign out",
     "fab.group.raffles": "🎟️ Raffles & Contests",
+    "fab.group.games": "🎮 Games & Gamification",
     "fab.group.business": "🏢 Business",
     "fab.group.community": "👥 Community",
     "fab.group.more": "ℹ️ More",
@@ -257,6 +263,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.faq": "FAQ",
     "menu.points": "Points",
     "menu.badge.new": "New",
+    "menu.games": "Games & Fun",
+    "menu.games.desc": "Win prizes playing",
+    "menu.millionaire": "Millionaire",
+    "menu.spinWheel": "Spin Wheel",
 
     // Search
     "search.location": "Location",

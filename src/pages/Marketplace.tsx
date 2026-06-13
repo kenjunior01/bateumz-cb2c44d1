@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video, X, SlidersHorizontal } from "lucide-react";
+import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video, X, SlidersHorizontal, Gamepad2, Zap } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,11 +49,12 @@ interface Contest {
   created_at: string;
 }
 
-type ContentType = "all" | "raffles" | "contests";
+type ContentType = "all" | "raffles" | "contests" | "games";
 
 const Marketplace = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
+  const [games, setGames] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"newest" | "ending" | "popular">("newest");
@@ -66,12 +67,20 @@ const Marketplace = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [rafflesRes, contestsRes] = await Promise.all([
+      const [rafflesRes, contestsRes, spinRes, millRes] = await Promise.all([
         supabase.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
         supabase.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
+        supabase.from("spin_wheel_games").select("*").eq("is_published", true),
+        supabase.from("millionaire_games").select("*").eq("is_published", true),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data as Raffle[]);
       if (contestsRes.data) setContests(contestsRes.data as Contest[]);
+      
+      const allGames = [
+        ...(spinRes.data || []).map(g => ({ ...g, type: 'spin' })),
+        ...(millRes.data || []).map(g => ({ ...g, type: 'millionaire' }))
+      ];
+      setGames(allGames);
       setLoading(false);
     };
     fetchData();
@@ -114,6 +123,7 @@ const Marketplace = () => {
 
   const showRaffles = contentType === "all" || contentType === "raffles";
   const showContests = contentType === "all" || contentType === "contests";
+  const showGames = contentType === "all" || contentType === "games";
 
   const contestStatusMap: Record<string, { label: string; color: string }> = {
     active: { label: "Aberto", color: "bg-primary text-primary-foreground" },
@@ -141,6 +151,7 @@ const Marketplace = () => {
             { value: "all" as ContentType, label: "🔥 Tudo" },
             { value: "raffles" as ContentType, label: "🎟️ Sorteios" },
             { value: "contests" as ContentType, label: "🏆 Concursos" },
+            { value: "games" as ContentType, label: "🎮 Jogos" },
           ]).map((t) => (
             <Button key={t.value} variant={contentType === t.value ? "default" : "outline"} size="sm" onClick={() => setContentType(t.value)}>
               {t.label}
@@ -178,9 +189,10 @@ const Marketplace = () => {
   );
 
   const chipCategories = [
-    { id: "all", label: "Tudo", icon: "🔥", count: raffles.length + contests.length },
+    { id: "all", label: "Tudo", icon: "🔥", count: raffles.length + contests.length + games.length },
     { id: "raffles", label: "Sorteios", icon: "🎟️", count: raffles.length },
     { id: "contests", label: "Concursos", icon: "🏆", count: contests.length },
+    { id: "games", label: "Jogos", icon: "🎮", count: games.length },
     { id: "paid", label: "Pagos", icon: "💎" },
     { id: "free", label: "Grátis", icon: "🎁" },
     { id: "points", label: "Pontos", icon: "⭐" },
@@ -190,7 +202,7 @@ const Marketplace = () => {
 
   const handleChipChange = (id: string) => {
     if (id === "all") { setContentType("all"); setTypeFilter("all"); setSortBy("newest"); return; }
-    if (id === "raffles" || id === "contests") { setContentType(id); return; }
+    if (id === "raffles" || id === "contests" || id === "games") { setContentType(id); return; }
     if (id === "paid" || id === "free" || id === "points") { setTypeFilter(id); setContentType("raffles"); return; }
     if (id === "ending") { setSortBy("ending"); return; }
     if (id === "popular") { setSortBy("popular"); return; }
@@ -297,6 +309,49 @@ const Marketplace = () => {
           </div>
         ) : (
           <div className="space-y-10">
+            {/* Games Section */}
+            {showGames && games.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-bold text-foreground">Jogos & Diversão</h2>
+                  <Badge variant="secondary">{games.length}</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+                  {games.map((game, i) => (
+                    <Link key={game.id} to={`/games/${game.type === 'spin' ? 'spin-wheel' : 'millionaire'}/${game.id}`}>
+                      <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full">
+                        <div className="relative aspect-video bg-secondary overflow-hidden">
+                          {game.background_image_url ? (
+                            <img src={game.background_image_url} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                              <Gamepad2 className="h-12 w-12 text-primary/40" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-black/60 backdrop-blur-md border-none">
+                              {game.type === 'spin' ? 'Roda' : 'Milionário'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardContent className="p-3">
+                          <h3 className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">{game.name}</h3>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{game.description}</p>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-[10px] font-bold text-primary">
+                              {game.spin_cost > 0 ? `${game.spin_cost} MZN` : 'GRÁTIS'}
+                            </span>
+                            <Button size="xs" className="h-6 text-[10px]">Jogar</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Contests Section */}
             {showContests && filteredContests.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

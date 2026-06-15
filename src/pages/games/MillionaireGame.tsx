@@ -18,6 +18,8 @@ interface Game {
   background_image_url: string;
   background_color: string;
   primary_color: string;
+  company_logo_url?: string;
+  company_slogan?: string;
   total_questions: number;
   time_per_question: number;
   prize_structure: { level: number; amount: number; currency: string; is_safe_haven?: boolean }[];
@@ -215,14 +217,27 @@ export default function MillionaireGame() {
         {/* Main Game Area */}
         <div className="flex flex-col justify-center space-y-12">
           
-          {/* Question Box */}
-          <div className="relative">
-            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
-            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
-            <div className="bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-              <h2 className="text-2xl md:text-4xl font-bold leading-tight">
-                {currentQuestion.question_text}
-              </h2>
+          {/* Question Box with Branding */}
+          <div className="relative space-y-6">
+            {(game.company_logo_url || game.company_slogan) && (
+              <div className="flex flex-col items-center animate-in fade-in slide-in-from-top duration-1000">
+                {game.company_logo_url && (
+                  <img src={game.company_logo_url} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                )}
+                {game.company_slogan && (
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-primary/80">{game.company_slogan}</p>
+                )}
+              </div>
+            )}
+            
+            <div className="relative">
+              <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
+              <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
+              <div className="bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+                <h2 className="text-2xl md:text-4xl font-bold leading-tight">
+                  {currentQuestion.question_text}
+                </h2>
+              </div>
             </div>
           </div>
 

@@ -120,17 +120,36 @@ export default function AdminGameManager() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs">URL da Imagem de Fundo (Empresa/Marca)</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="https://exemplo.com/banner.jpg" 
-                          defaultValue={game.background_image_url}
-                          onBlur={(e) => handleUpdateVisuals(game.id, { background_image_url: e.target.value })}
-                        />
+                      <div className="space-y-2">
+                        <Label className="text-xs">URL da Imagem de Fundo (Empresa/Marca)</Label>
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="https://exemplo.com/banner.jpg" 
+                            defaultValue={game.background_image_url}
+                            onBlur={(e) => handleUpdateVisuals(game.id, { background_image_url: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs">URL do Logótipo da Empresa</Label>
+                          <Input 
+                            placeholder="https://exemplo.com/logo.png" 
+                            defaultValue={game.company_logo_url}
+                            onBlur={(e) => handleUpdateVisuals(game.id, { company_logo_url: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Slogan da Empresa (Branding)</Label>
+                          <Input 
+                            placeholder="A sua sorte começa aqui!" 
+                            defaultValue={game.company_slogan}
+                            onBlur={(e) => handleUpdateVisuals(game.id, { company_slogan: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
                   <div className="space-y-4 border-l border-border pl-8">
                     <div className="flex items-center gap-2 mb-2">

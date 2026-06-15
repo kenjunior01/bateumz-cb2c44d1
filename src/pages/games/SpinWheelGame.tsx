@@ -6,10 +6,9 @@ import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Volume2, VolumeX, Trophy, Share2, Info } from "lucide-react";
+import { Loader2, Volume2, VolumeX, Trophy, Share2, Zap, Sparkles, Coins } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import "./SpinWheelGame.css";
 
 interface Segment {
   id: string;
@@ -32,6 +31,8 @@ interface Game {
   background_color: string;
   wheel_background_color: string;
   wheel_border_color: string;
+  company_logo_url?: string;
+  company_slogan?: string;
   rotation_duration: number;
   spin_cost: number;
   sound_enabled: boolean;
@@ -257,12 +258,23 @@ export default function SpinWheelGame() {
       }}
     >
       {/* Dynamic Background Overlay for Branding */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
 
       <div className="relative z-10 w-full max-w-6xl px-4 py-8 flex flex-col md:flex-row items-center gap-12">
         
-        {/* Left Side: Game Info & History */}
+        {/* Left Side: Game Info & Branding */}
         <div className="flex-1 space-y-6 text-white text-center md:text-left">
+          {(game.company_logo_url || game.company_slogan) && (
+            <div className="flex flex-col items-center md:items-start animate-in fade-in slide-in-from-top duration-1000 mb-6">
+              {game.company_logo_url && (
+                <img src={game.company_logo_url} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+              )}
+              {game.company_slogan && (
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-primary/80">{game.company_slogan}</p>
+              )}
+            </div>
+          )}
+          
           <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1">
             Giro da Sorte Premium
           </Badge>

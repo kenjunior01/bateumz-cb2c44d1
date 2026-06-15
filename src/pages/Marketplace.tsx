@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video, X, SlidersHorizontal, Gamepad2, Zap } from "lucide-react";
 import { formatMZN } from "@/lib/currency";
@@ -61,9 +62,17 @@ const Marketplace = () => {
   const [typeFilter, setTypeFilter] = useState<"all" | "paid" | "free" | "points">("all");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
-  const [contentType, setContentType] = useState<ContentType>("all");
+  const [searchParams] = useSearchParams();
+  const [contentType, setContentType] = useState<ContentType>((searchParams.get("tab") as ContentType) || "all");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const tab = searchParams.get("tab") as ContentType;
+    if (tab && (tab === "all" || tab === "raffles" || tab === "contests" || tab === "games")) {
+      setContentType(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchData = async () => {

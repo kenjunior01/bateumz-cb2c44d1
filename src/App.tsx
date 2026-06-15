@@ -53,6 +53,8 @@ import AdminPayments from "./pages/admin/AdminPayments.tsx";
 import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import AdminGameManager from "./pages/admin/AdminGameManager.tsx";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs.tsx";
+import Contests from "./pages/Contests.tsx";
+import ContestDetail from "./pages/ContestDetail.tsx";
 import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
 import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
 import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";

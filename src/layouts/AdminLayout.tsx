@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette,
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {

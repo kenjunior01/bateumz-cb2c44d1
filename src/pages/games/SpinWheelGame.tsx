@@ -168,21 +168,37 @@ export default function SpinWheelGame() {
   }, [drawWheel, wheelRotation]);
 
   const spin = async () => {
-    if (isSpinning || !game || segments.length === 0) return;
+    if (isSpinning || !game || segments.length === 0 || !user || !region) return;
 
     setIsSpinning(true);
     setLastReward(null);
 
     // Calculate winning segment based on weights
-    const totalWeight = segments.reduce((acc, s) => acc + (s.weight || 1), 0);
-    let random = Math.random() * totalWeight;
-    let winningIndex = 0;
-    for (let i = 0; i < segments.length; i++) {
-      random -= (segments[i].weight || 1);
-      if (random <= 0) {
-        winningIndex = i;
-        break;
+    const { data: spinResult, error: spinError } = await supabase.functions.invoke(
+      "spin-wheel-spin",
+      {
+        body: JSON.stringify({ wheel_id: gameId, user_id: user.id, region_id: region.id }),
       }
+    );
+
+    if (spinError) {
+      toast.error("Erro ao girar a roda: " + spinError.message);
+      setIsSpinning(false);
+      return;
+    }
+
+    const winner = spinResult.data.winner;
+    if (!winner) {
+      toast.error("Nenhum prêmio disponível para ganhar.");
+      setIsSpinning(false);
+      return;
+    }
+
+    const winningIndex = segments.findIndex(s => s.id === winner.id);
+    if (winningIndex === -1) {
+      toast.error("Erro: Segmento vencedor não encontrado no frontend.");
+      setIsSpinning(false);
+      return;
     }
 
     const sectorAngle = 360 / segments.length;
@@ -215,7 +231,6 @@ export default function SpinWheelGame() {
         requestAnimationFrame(animate);
       } else {
         setIsSpinning(false);
-        const winner = segments[winningIndex];
         setLastReward(winner);
         
         if (game.particle_effects) {
@@ -227,32 +242,15 @@ export default function SpinWheelGame() {
           });
         }
 
-        saveSession(winner, currentRotation);
+        // saveSession(winner, currentRotation); // Session is now saved by the Edge Function
+        toast.success(`Parabéns! Ganhou: ${winner.reward_value}`);
       }
     };
 
     requestAnimationFrame(animate);
   };
 
-  const saveSession = async (winner: Segment, finalAngle: number) => {
-    if (!user || !region) return;
-    try {
-      const { error } = await supabase.from("spin_wheel_sessions").insert({
-        wheel_id: gameId,
-        user_id: user.id,
-        region_id: region.id,
-        segment_id: winner.id,
-        reward_type: winner.reward_type,
-        reward_value: winner.reward_value,
-        spin_angle: finalAngle % 360,
-        status: 'completed'
-      });
-      if (error) throw error;
-      toast.success(`Parabéns! Ganhou: ${winner.reward_value}`);
-    } catch (err) {
-      console.error("Error saving spin session:", err);
-    }
-  };
+
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center bg-[#0f172a]">

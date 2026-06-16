@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Radio, ExternalLink, Save, RotateCcw, Plus, Trash2, Sparkles, Trophy, Users, Eye, Sliders, Search, Vote, Zap, Brain, Package } from "lucide-react";
+import { Radio, ExternalLink, Save, RotateCcw, Plus, Trash2, Sparkles, Trophy, Users, Eye, Sliders, Search, Vote, Zap, Brain, Package, Loader2, Gamepad2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
 import { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
 import { publish } from "@/lib/liveBus";
+import { supabase } from "@/integrations/supabase/client";
 
 const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: "wheel", label: "Roda de Prémios", emoji: "🎰" },
@@ -23,6 +24,20 @@ const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
 
 type EmojiOpt = { id: string; emoji: string; label: string };
 type KeywordCfg = { keyword: string; clue: string; points: number };
+
+interface MillionaireGame {
+  id: string;
+  name: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+interface SpinWheelGame {
+  id: string;
+  name: string;
+  is_published: boolean;
+  created_at: string;
+}
 
 const DEFAULT_EMOJI: EmojiOpt[] = [
   { id: "a", emoji: "🔥", label: "Opção A" },
@@ -49,6 +64,9 @@ const DashboardLiveGames = () => {
   const [activeGame, setActiveGame] = useState<string>(() => {
     try { return localStorage.getItem("liveActiveGame") || "wheel"; } catch { return "wheel"; }
   });
+  const [millionaireGames, setMillionaireGames] = useState<MillionaireGame[]>([]);
+  const [spinWheelGames, setSpinWheelGames] = useState<SpinWheelGame[]>([]);
+  const [loadingDbGames, setLoadingDbGames] = useState(false);
 
   const totalWeight = useMemo(() => wheel.reduce((s, p) => s + Math.max(0, p.weight || 0), 0), [wheel]);
 
@@ -125,7 +143,7 @@ const DashboardLiveGames = () => {
       {/* Quick stats — feels like a contest dashboard */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: Trophy, label: "Jogos disponíveis", value: 6, hint: "Configuráveis" },
+          { icon: Trophy, label: "Jogos disponíveis", value: 6 + millionaireGames.length + spinWheelGames.length, hint: `6 locais + ${millionaireGames.length} Millionaire + ${spinWheelGames.length} Roda` },
           { icon: Sparkles, label: "Prémios na roda", value: wheel.length, hint: `${totalWeight} pts peso total` },
           { icon: Vote, label: "Opções de emoji", value: emojis.length, hint: "Máx. 6" },
           { icon: Users, label: "Modo multi-jogador", value: "✓", hint: "Tap & Quiz" },
@@ -170,6 +188,96 @@ const DashboardLiveGames = () => {
               <p className="text-[10px] font-bold leading-tight">{g.label}</p>
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* DB-Backed Games Section */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[10px] font-bold text-accent uppercase tracking-wider mb-1">
+              <Gamepad2 className="h-3 w-3" /> Jogos de Base de Dados
+            </div>
+            <h3 className="font-display text-lg font-bold">Jogos Publicados</h3>
+            <p className="text-xs text-muted-foreground">
+              Acesse os jogos criados no painel de administracao. Clique para jogar.
+            </p>
+          </div>
+        </div>
+
+        {loadingDbGames ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Millionaire Games */}
+            <div className="rounded-xl border border-border/50 bg-background/50 p-4">
+              <h4 className="font-display font-bold text-sm mb-3 flex items-center gap-2">
+                <span className="text-lg">🤑</span> Millionaire ({millionaireGames.length})
+              </h4>
+              {millionaireGames.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum jogo publicado</p>
+              ) : (
+                <div className="space-y-2">
+                  {millionaireGames.map((game) => (
+                    <Link
+                      key={game.id}
+                      to={`/games/millionaire/${game.id}`}
+                      target="_blank"
+                      className="block p-3 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors text-sm font-medium text-foreground"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">{game.name}</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-2 text-primary" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Spin Wheel Games */}
+            <div className="rounded-xl border border-border/50 bg-background/50 p-4">
+              <h4 className="font-display font-bold text-sm mb-3 flex items-center gap-2">
+                <span className="text-lg">🎡</span> Roda da Sorte ({spinWheelGames.length})
+              </h4>
+              {spinWheelGames.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum jogo publicado</p>
+              ) : (
+                <div className="space-y-2">
+                  {spinWheelGames.map((game) => (
+                    <Link
+                      key={game.id}
+                      to={`/games/spin-wheel/${game.id}`}
+                      target="_blank"
+                      className="block p-3 rounded-lg bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-colors text-sm font-medium text-foreground"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">{game.name}</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-2 text-accent" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-start gap-2">
+          <Eye className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Apenas jogos <strong>publicados</strong> aparecem aqui. Gerencie-os no{" "}
+            <Link to="/admin/millionaire-manager" className="text-primary hover:underline">
+              Painel Millionaire
+            </Link>
+            {" "}ou{" "}
+            <Link to="/admin/spin-wheel-manager" className="text-primary hover:underline">
+              Painel Roda
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
@@ -344,3 +452,34 @@ const DashboardLiveGames = () => {
 };
 
 export default DashboardLiveGames;
+
+  // Load DB-backed games
+  useEffect(() => {
+    const loadDbGames = async () => {
+      setLoadingDbGames(true);
+      try {
+        const [millRes, spinRes] = await Promise.all([
+          supabase
+            .from("millionaire_games")
+            .select("id, name, is_published, created_at")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("spin_wheel_games")
+            .select("id, name, is_published, created_at")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        setMillionaireGames(millRes.data || []);
+        setSpinWheelGames(spinRes.data || []);
+      } catch (error) {
+        console.error("Error loading DB games:", error);
+        toast({ title: "Erro ao carregar jogos", description: "Nao foi possivel carregar os jogos de base de dados.", variant: "destructive" });
+      } finally {
+        setLoadingDbGames(false);
+      }
+    };
+
+    loadDbGames();
+  }, [toast]);

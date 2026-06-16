@@ -104,7 +104,7 @@ export default function SpinWheelGame() {
     ctx.shadowColor = "rgba(0,0,0,0.5)";
 
     segments.forEach((segment, i) => {
-      const angle = i * arc;
+      const angle = i * arc - (Math.PI / 2);  // Apply -90° offset to align with pointer at top
       
       // Draw Segment
       ctx.beginPath();

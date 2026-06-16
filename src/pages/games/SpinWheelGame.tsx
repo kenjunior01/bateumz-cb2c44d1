@@ -186,7 +186,9 @@ export default function SpinWheelGame() {
     }
 
     const sectorAngle = 360 / segments.length;
-    const targetRotation = 360 * 8 + (360 - (winningIndex * sectorAngle + sectorAngle / 2));
+    // Ajuste de 90 graus para alinhar com o ponteiro no topo (12h)
+    // A rotação do canvas é no sentido horário, então o índice vencedor deve ser subtraído
+    const targetRotation = 360 * 10 + (360 - (winningIndex * sectorAngle)) - 90;
     
     const duration = (game.rotation_duration || 5) * 1000;
     const start = Date.now();

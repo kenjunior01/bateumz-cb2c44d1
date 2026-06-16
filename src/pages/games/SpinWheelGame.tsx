@@ -132,27 +132,33 @@ export default function SpinWheelGame() {
       ctx.restore();
     });
 
-    // Draw Outer Ring
-    ctx.shadowBlur = 0;
+    // Draw Outer Ring with Glow
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = game.wheel_border_color || "#FFD700";
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     ctx.strokeStyle = game.wheel_border_color || "#FFD700";
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 12;
     ctx.stroke();
 
-    // Draw Center Cap
+    // Draw Center Cap (Modern Glass Effect)
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
-    ctx.fillStyle = game.wheel_border_color || "#FFD700";
+    ctx.arc(centerX, centerY, 40, 0, 2 * Math.PI);
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40);
+    gradient.addColorStop(0, "#FFFFFF");
+    gradient.addColorStop(1, game.wheel_border_color || "#FFD700");
+    ctx.fillStyle = gradient;
     ctx.fill();
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 4;
     ctx.stroke();
 
-    // Center Logo Placeholder or Icon
+    // Center Logo
+    ctx.shadowBlur = 0;
     ctx.fillStyle = "#000000";
     ctx.textAlign = "center";
-    ctx.font = "bold 12px sans-serif";
+    ctx.font = "900 14px Inter, sans-serif";
     ctx.fillText("BATEU", centerX, centerY + 5);
 
   }, [game, segments]);
@@ -190,11 +196,18 @@ export default function SpinWheelGame() {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Custom Bezier-like easing for a "natural" spin
-      const ease = 1 - Math.pow(1 - progress, 4);
+      // Easing mais dramático e fluido (quintic out)
+      const ease = 1 - Math.pow(1 - progress, 5);
       const currentRotation = targetRotation * ease;
       
       setWheelRotation(currentRotation);
+
+      // Efeito sonoro de "tick" baseado na rotação
+      if (soundEnabled && Math.floor(currentRotation / (360 / segments.length)) !== Math.floor((targetRotation * (1 - Math.pow(1 - (progress - 0.01), 5))) / (360 / segments.length))) {
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3");
+        audio.volume = 0.1;
+        audio.play().catch(() => {});
+      }
 
       if (progress < 1) {
         requestAnimationFrame(animate);

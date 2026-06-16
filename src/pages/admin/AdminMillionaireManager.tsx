@@ -107,6 +107,15 @@ export default function AdminMillionaireManager() {
 
     setSaving(true);
     try {
+      const { data: regions } = await supabase.from("regions").select("id").limit(1);
+      const regionId = regions?.[0]?.id;
+
+      if (!regionId) {
+        toast.error("Erro: Nenhuma região encontrada.");
+        setSaving(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("millionaire_games")
         .insert({
@@ -117,7 +126,7 @@ export default function AdminMillionaireManager() {
           primary_color: primaryColor,
           background_image_url: backgroundImage,
           created_by: user!.id,
-          region_id: "default-region",
+          region_id: regionId,
         })
         .select()
         .single();

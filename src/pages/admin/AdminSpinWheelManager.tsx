@@ -109,21 +109,30 @@ export default function AdminSpinWheelManager() {
     }
 
     setSaving(true);
-    try {
-      const { data, error } = await supabase
-        .from("spin_wheel_games")
-        .insert({
-          name: gameName,
-          description: gameDescription,
-          segment_count: segmentCount,
-          rotation_duration: rotationDuration,
+	    try {
+	      const { data: regions } = await supabase.from("regions").select("id").limit(1);
+	      const regionId = regions?.[0]?.id;
+	
+	      if (!regionId) {
+	        toast.error("Erro: Nenhuma região encontrada.");
+	        setSaving(false);
+	        return;
+	      }
+	
+	      const { data, error } = await supabase
+	        .from("spin_wheel_games")
+	        .insert({
+	          name: gameName,
+	          description: gameDescription,
+	          segment_count: segmentCount,
+	          rotation_duration: rotationDuration,
 	          wheel_background_color: wheelBackgroundColor,
 	          wheel_border_color: wheelBorderColor,
 	          spin_cost: spinCost,
 	          background_image_url: backgroundImageUrl,
 	          background_color: backgroundColor,
 	          created_by: user!.id,
-	          region_id: "default-region",
+	          region_id: regionId,
 	        })
         .select()
         .single();

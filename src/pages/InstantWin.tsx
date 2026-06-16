@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star, Zap, Brain, Package } from "lucide-react";
+import { Sparkles, RotateCcw, Trophy, Gift, Ticket, Star, Zap, Brain, Package, Coins } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -12,6 +12,10 @@ import QuizBattle from "@/components/livegames/QuizBattle";
 import MysteryBox from "@/components/livegames/MysteryBox";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
+import DynamicSpinWheel from "@/components/DynamicSpinWheel";
+import MillionaireGame from "@/pages/games/MillionaireGame";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 // --- Scratch Card ---
 const SCRATCH_PRIZES = [
@@ -247,8 +251,32 @@ const SpinWheel = () => {
 // --- Main Page ---
 const InstantWin = () => {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"scratch" | "wheel" | "tap" | "quiz" | "mystery">("scratch");
+  const [tab, setTab] = useState<"scratch" | "wheel" | "millionaire" | "tap" | "quiz" | "mystery">("scratch");
   const [scratchKey, setScratchKey] = useState(0);
+  const [activeWheelId, setActiveWheelId] = useState<string | null>(null);
+  const [activeMillionaireId, setActiveMillionaireId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchActiveGames = async () => {
+      const { data: wheels } = await supabase
+        .from("spin_wheel_games")
+        .select("id")
+        .eq("is_published", true)
+        .limit(1);
+      
+      if (wheels && wheels.length > 0) setActiveWheelId(wheels[0].id);
+
+      const { data: millionaire } = await supabase
+        .from("millionaire_games")
+        .select("id")
+        .eq("is_published", true)
+        .limit(1);
+      
+      if (millionaire && millionaire.length > 0) setActiveMillionaireId(millionaire[0].id);
+    };
+
+    fetchActiveGames();
+  }, []);
   const [config, setConfig] = useState<LiveGameConfig>(() => {
     try {
       const stored = localStorage.getItem("liveGameConfig");
@@ -284,6 +312,7 @@ const InstantWin = () => {
           categories={[
             { id: "scratch", label: "Raspadinha", icon: "🎫" },
             { id: "wheel", label: "Roda", icon: "🎰" },
+            { id: "millionaire", label: "Milionário", icon: "💰" },
             { id: "tap", label: "Tap Battle", icon: "⚡" },
             { id: "quiz", label: "Quiz", icon: "🧠" },
             { id: "mystery", label: "Caixa", icon: "🎁" },
@@ -311,6 +340,7 @@ const InstantWin = () => {
           {[
             { id: "scratch", label: "Raspadinha", Icon: Ticket },
             { id: "wheel", label: "Roda da Sorte", Icon: RotateCcw },
+            { id: "millionaire", label: "Milionário", Icon: Coins },
             { id: "tap", label: "Tap Battle", Icon: Zap },
             { id: "quiz", label: "Quiz Battle", Icon: Brain },
             { id: "mystery", label: "Caixa Misteriosa", Icon: Package },
@@ -356,7 +386,25 @@ const InstantWin = () => {
           )}
           {tab === "wheel" && (
             <motion.div key="wheel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <SpinWheel />
+              {activeWheelId ? (
+                <DynamicSpinWheel gameId={activeWheelId} />
+              ) : (
+                <SpinWheel />
+              )}
+            </motion.div>
+          )}
+          {tab === "millionaire" && (
+            <motion.div key="millionaire" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              {activeMillionaireId ? (
+                <div className="max-w-4xl mx-auto">
+                  <MillionaireGame />
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-card rounded-2xl border border-dashed border-border">
+                  <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <p className="text-muted-foreground font-medium">Nenhum jogo do Milionário ativo no momento.</p>
+                </div>
+              )}
             </motion.div>
           )}
           {tab === "tap" && (

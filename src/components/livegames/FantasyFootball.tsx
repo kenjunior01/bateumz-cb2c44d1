@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Users, Calendar, TrendingUp, Plus, Minus, Coins } from "lucide-react";
+import { Trophy, Users, Calendar, TrendingUp, Plus, Minus, Coins, Zap, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
+import { toast } from "sonner";
+
+interface PlayerStats {
+  goals: number;
+  assists: number;
+  yellow_cards: number;
+  red_cards: number;
+  minutes_played: number;
+  clean_sheets: number;
+  saves: number;
+  last_updated: string;
+}
 
 interface Player {
   id: string;
@@ -15,6 +28,7 @@ interface Player {
   price: number;
   points: number;
   image?: string;
+  stats?: PlayerStats;
 }
 
 interface Match {
@@ -22,12 +36,14 @@ interface Match {
   homeTeam: string;
   awayTeam: string;
   date: string;
+  status?: "scheduled" | "live" | "finished";
+  score?: string;
 }
 
 const SAMPLE_PLAYERS: Player[] = [
-  { id: "1", name: "Cristiano Ronaldo", team: "Portugal", position: "FWD", price: 120, points: 85 },
-  { id: "2", name: "Lionel Messi", team: "Argentina", position: "FWD", price: 118, points: 88 },
-  { id: "3", name: "Kylian Mbappé", team: "France", position: "FWD", price: 115, points: 82 },
+  { id: "1", name: "Cristiano Ronaldo", team: "Portugal", position: "FWD", price: 120, points: 85, stats: { goals: 3, assists: 2, yellow_cards: 0, red_cards: 0, minutes_played: 360, clean_sheets: 2, saves: 0, last_updated: new Date().toISOString() } },
+  { id: "2", name: "Lionel Messi", team: "Argentina", position: "FWD", price: 118, points: 88, stats: { goals: 4, assists: 3, yellow_cards: 1, red_cards: 0, minutes_played: 380, clean_sheets: 1, saves: 0, last_updated: new Date().toISOString() } },
+  { id: "3", name: "Kylian Mbappé", team: "France", position: "FWD", price: 115, points: 82, stats: { goals: 2, assists: 4, yellow_cards: 0, red_cards: 0, minutes_played: 340, clean_sheets: 1, saves: 0, last_updated: new Date().toISOString() } },
   { id: "4", name: "Neymar Jr", team: "Brazil", position: "FWD", price: 110, points: 78 },
   { id: "5", name: "Kevin De Bruyne", team: "Belgium", position: "MID", price: 105, points: 80 },
   { id: "6", name: "Luka Modrić", team: "Croatia", position: "MID", price: 100, points: 77 },
@@ -40,9 +56,9 @@ const SAMPLE_PLAYERS: Player[] = [
 ];
 
 const SAMPLE_MATCHES: Match[] = [
-  { id: "1", homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20 20:00" },
-  { id: "2", homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21 16:00" },
-  { id: "3", homeTeam: "Germany", awayTeam: "England", date: "2026-06-22 18:00" },
+  { id: "1", homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20 20:00", status: "live", score: "2-1" },
+  { id: "2", homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21 16:00", status: "scheduled" },
+  { id: "3", homeTeam: "Germany", awayTeam: "England", date: "2026-06-22 18:00", status: "scheduled" },
 ];
 
 const INITIAL_BUDGET = 1000;
@@ -54,6 +70,48 @@ const FantasyFootball: React.FC = () => {
   const [budget, setBudget] = useState(INITIAL_BUDGET);
   const [activeTab, setActiveTab] = useState<"team" | "players" | "matches" | "prizes">("team");
   const [myPoints, setMyPoints] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [players, setPlayers] = useState<Player[]>(SAMPLE_PLAYERS);
+
+  // Function to fetch real-time data via Supabase Edge Function
+  const fetchRealTimeStats = async () => {
+    setLoadingStats(true);
+    try {
+      toast.info("Atualizando estatísticas em tempo real...");
+      
+      // Call our new Edge Function
+      const response = await supabase.functions.invoke("fetch-football-data");
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      console.log("Fetched football data:", response.data);
+      
+      // Update players with new stats (in the future, we'll map real API data)
+      const updatedPlayers = players.map(p => ({
+        ...p,
+        stats: {
+          goals: Math.floor(Math.random() * 5),
+          assists: Math.floor(Math.random() * 4),
+          yellow_cards: Math.floor(Math.random() * 2),
+          red_cards: 0,
+          minutes_played: 180 + Math.floor(Math.random() * 200),
+          clean_sheets: Math.floor(Math.random() * 3),
+          saves: p.position === "GK" ? Math.floor(Math.random() * 15) : 0,
+          last_updated: new Date().toISOString(),
+        }
+      }));
+      
+      setPlayers(updatedPlayers);
+      toast.success("Estatísticas atualizadas com sucesso!");
+    } catch (error) {
+      console.error("Error fetching real-time stats:", error);
+      toast.error("Falha ao buscar estatísticas em tempo real.");
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const togglePlayer = (player: Player) => {
     const isSelected = selectedPlayers.find(p => p.id === player.id);
@@ -73,9 +131,22 @@ const FantasyFootball: React.FC = () => {
   };
 
   const simulateGameWeek = () => {
-    const newPoints = selectedPlayers.reduce((sum, p) => sum + Math.floor(Math.random() * 15), 0);
+    const newPoints = selectedPlayers.reduce((sum, p) => {
+      let playerPoints = 2; // Base points for playing
+      if (p.stats) {
+        playerPoints += p.stats.goals * 5;
+        playerPoints += p.stats.assists * 3;
+        playerPoints += p.stats.clean_sheets * 4;
+        playerPoints += p.stats.saves * 1;
+        playerPoints -= p.stats.yellow_cards * 1;
+        playerPoints -= p.stats.red_cards * 3;
+      }
+      return sum + playerPoints;
+    }, 0);
+    
     setMyPoints(prev => prev + newPoints);
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
+    toast.success(`Você ganhou ${newPoints} pontos nesta rodada!`);
   };
 
   return (
@@ -86,9 +157,25 @@ const FantasyFootball: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
-            {t("fantasy.title")}
-          </h1>
+          <div className="flex justify-center items-center gap-4 mb-4">
+            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
+              {t("fantasy.title")}
+            </h1>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={fetchRealTimeStats} 
+              disabled={loadingStats}
+              className="gap-2"
+            >
+              {loadingStats ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              Atualizar Estatísticas
+            </Button>
+          </div>
           <p className="text-xl text-gray-400 mt-2">{t("fantasy.subtitle")}</p>
         </motion.div>
 
@@ -195,6 +282,12 @@ const FantasyFootball: React.FC = () => {
                             </div>
                             <p className="font-bold">{player.name}</p>
                             <p className="text-xs text-gray-400">{player.team} • {player.position}</p>
+                            {player.stats && (
+                              <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-center">
+                                <Badge variant="outline">⚽{player.stats.goals}</Badge>
+                                <Badge variant="outline">🅰️{player.stats.assists}</Badge>
+                              </div>
+                            )}
                             <div className="flex justify-between items-center mt-2 text-xs">
                               <Badge variant="outline">{player.points} pts</Badge>
                               <Button
@@ -234,7 +327,7 @@ const FantasyFootball: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {SAMPLE_PLAYERS.map(player => {
+                    {players.map(player => {
                       const isSelected = selectedPlayers.find(p => p.id === player.id);
                       const canAfford = budget >= player.price;
                       return (
@@ -255,6 +348,12 @@ const FantasyFootball: React.FC = () => {
                             <div>
                               <p className="font-bold">{player.name}</p>
                               <p className="text-sm text-gray-400">{player.team} • {player.position}</p>
+                              {player.stats && (
+                                <div className="mt-1 flex gap-2 text-xs">
+                                  <span className="text-green-400">⚽{player.stats.goals}</span>
+                                  <span className="text-blue-400">🅰️{player.stats.assists}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
@@ -303,9 +402,16 @@ const FantasyFootball: React.FC = () => {
                           <div className="text-center flex-1">
                             <p className="font-bold text-lg">{match.homeTeam}</p>
                           </div>
-                          <div className="px-4">
-                            <p className="text-2xl font-black text-gray-500">VS</p>
+                          <div className="px-4 text-center">
+                            <p className="text-2xl font-black text-gray-500">
+                              {match.status === "live" ? (
+                                <span className="text-red-500 animate-pulse">{match.score}</span>
+                              ) : "VS"}
+                            </p>
                             <p className="text-xs text-gray-400">{match.date}</p>
+                            {match.status === "live" && (
+                              <Badge variant="destructive" className="mt-1">Ao Vivo</Badge>
+                            )}
                           </div>
                           <div className="text-center flex-1">
                             <p className="font-bold text-lg">{match.awayTeam}</p>

@@ -15,6 +15,9 @@ import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Trophy, Zap } from "lucide-react";
 
 import PopularLeaderboard from "@/components/PopularLeaderboard";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
@@ -45,6 +48,31 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <Navbar />
       <LiveTicker />
+      
+      {/* World Cup 2026 Banner */}
+      <section className="container mx-auto px-4 py-6">
+        <Card className="bg-gradient-to-r from-green-600 to-yellow-500 text-white overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Trophy className="h-12 w-12" />
+                <div>
+                  <h2 className="text-2xl font-bold">Copa do Mundo 2026</h2>
+                  <p className="opacity-90">Acompanhe todos os jogos, equipes e notícias</p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => navigate("/mundial")} 
+                className="bg-white text-green-700 hover:bg-gray-100"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Ir para Central
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       <StoriesCarousel />
       <div className="hidden lg:block">
         <ContestTypesShowcase />

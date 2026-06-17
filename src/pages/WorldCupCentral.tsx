@@ -277,7 +277,7 @@ export default function WorldCupCentral() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="matches" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span className="hidden sm:inline">Jogos</span>
@@ -285,6 +285,10 @@ export default function WorldCupCentral() {
             <TabsTrigger value="teams" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Equipes</span>
+            </TabsTrigger>
+            <TabsTrigger value="api" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              <span className="hidden sm:inline">API</span>
             </TabsTrigger>
             <TabsTrigger value="news" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -390,6 +394,126 @@ export default function WorldCupCentral() {
                   </Card>
                 ))
               )}
+            </div>
+          </TabsContent>
+
+          {/* API Tab */}
+          <TabsContent value="api" className="space-y-4">
+            <div className="grid gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                    Partidas da TheStatsApi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {apiMatches.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <p>Nenhuma partida encontrada na API</p>
+                      <p className="text-sm mt-2">Usando dados de exemplo:</p>
+                      <div className="mt-4 grid gap-4">
+                        {[
+                          { homeTeam: "Portugal", awayTeam: "França", kickoff_time: "2026-06-20T18:00:00Z", status: "completed", home_score: 2, away_score: 1 },
+                          { homeTeam: "Brasil", awayTeam: "Argentina", kickoff_time: "2026-06-21T20:00:00Z", status: "live", home_score: 1, away_score: 2 },
+                          { homeTeam: "Alemanha", awayTeam: "Espanha", kickoff_time: "2026-06-22T17:00:00Z", status: "scheduled" }
+                        ].map((match, index) => (
+                          <Card key={index} className="hover:shadow-lg transition-shadow">
+                            <CardContent className="py-6">
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex-1 text-center">
+                                  <div className="flex items-center justify-center gap-4">
+                                    <div className="text-center">
+                                      <p className="text-2xl font-bold">🇵🇹</p>
+                                      <p className="text-sm font-medium">{match.homeTeam}</p>
+                                    </div>
+                                    <div className="text-center">
+                                      {match.status === "completed" ? (
+                                        <div className="text-2xl font-bold">
+                                          {match.home_score} - {match.away_score}
+                                        </div>
+                                      ) : match.status === "live" ? (
+                                        <Badge className="bg-red-100 text-red-800 animate-pulse">
+                                          Ao Vivo
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-blue-100 text-blue-800">
+                                          Agendado
+                                        </Badge>
+                                      )}
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {new Date(match.kickoff_time).toLocaleDateString("pt-BR", {
+                                          month: "short",
+                                          day: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="text-2xl font-bold">🇫🇷</p>
+                                      <p className="text-sm font-medium">{match.awayTeam}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    apiMatches.map((match) => (
+                      <Card key={match.id} className="hover:shadow-lg transition-shadow">
+                        <CardContent className="py-6">
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex-1 text-center">
+                              <div className="flex items-center justify-center gap-4">
+                                <div className="text-center">
+                                  <p className="text-2xl font-bold">{match.home_team.logo ? <img src={match.home_team.logo} alt={match.home_team.name} className="w-12 h-12 object-contain" /> : "🏴"}</p>
+                                  <p className="text-sm font-medium">{match.home_team.name}</p>
+                                </div>
+                                <div className="text-center">
+                                  {match.status === "completed" ? (
+                                    <div className="text-2xl font-bold">
+                                      {match.home_score} - {match.away_score}
+                                    </div>
+                                  ) : match.status === "live" ? (
+                                    <Badge className="bg-red-100 text-red-800 animate-pulse">
+                                      Ao Vivo
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-blue-100 text-blue-800">
+                                      Agendado
+                                    </Badge>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(match.kickoff_time).toLocaleDateString("pt-BR", {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-2xl font-bold">{match.away_team.logo ? <img src={match.away_team.logo} alt={match.away_team.name} className="w-12 h-12 object-contain" /> : "🏴"}</p>
+                                  <p className="text-sm font-medium">{match.away_team.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                            {match.venue && (
+                              <p className="text-xs text-muted-foreground">
+                                {match.venue}
+                              </p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

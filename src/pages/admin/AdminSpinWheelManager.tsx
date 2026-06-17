@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,7 @@ const DEFAULT_SEGMENTS: Segment[] = [
 
 export default function AdminSpinWheelManager() {
   const { user, role } = useAuth();
+  const { region } = useRegionalTheme();
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
@@ -100,18 +102,19 @@ export default function AdminSpinWheelManager() {
   const [segmentEffectType, setSegmentEffectType] = useState("confetti");
 
   useEffect(() => {
-    if (!user || (role !== "admin" && role !== "superadmin")) return;
+    if (!user) return;
+    if (role !== "admin" && role !== "superadmin" && role !== "business") return;
     loadGames();
   }, [user, role]);
 
   const loadGames = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("spin_wheel_games")
-        .select("*")
-        .eq("created_by", user!.id)
-        .order("created_at", { ascending: false });
+      let query = supabase.from("spin_wheel_games").select("*").order("created_at", { ascending: false });
+      if (role !== "superadmin") {
+        query = query.eq("created_by", user!.id);
+      }
+      const { data, error } = await query;
 
       if (error) throw error;
       setGames(data || []);
@@ -167,8 +170,7 @@ export default function AdminSpinWheelManager() {
 
     setSaving(true);
     try {
-      const { data: regions } = await supabase.from("regions").select("id").limit(1);
-      const regionId = regions?.[0]?.id;
+      const regionId = region?.id || (await supabase.from("regions").select("id").limit(1).single()).data?.id;
 
       if (!regionId) {
         toast.error("Erro: Nenhuma região encontrada.");
@@ -365,7 +367,7 @@ export default function AdminSpinWheelManager() {
   };
 
   if (role !== "admin" && role !== "superadmin" && role !== "business") {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   if (loading) {
@@ -439,6 +441,12 @@ export default function AdminSpinWheelManager() {
                             Publicar
                           </Button>
                         )}
+                        <Button size="sm" variant="secondary" asChild onClick={(e) => e.stopPropagation()}>
+                          <a href={`/games/spin-wheel/${game.id}`} target="_blank" rel="noreferrer">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Pré-visualizar
+                          </a>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

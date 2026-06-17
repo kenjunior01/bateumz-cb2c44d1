@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useToast } from "@/hooks/use-toast";
+import { computeFinalRotation, findPrizeIndex, isNoWinLabel } from "@/lib/wheel-math";
 import { AlertTriangle, Trophy, Gift, Sparkles, Zap, Star, PartyPopper } from "lucide-react";
 
 interface Segment {
@@ -16,6 +18,7 @@ interface Segment {
   reward_value: string;
   weight?: number;
   effect_type?: "confetti" | "fireworks" | "stars" | "poppers" | "zap";
+  segment_number?: number;
 }
 
 interface SpinWheelProps {
@@ -120,6 +123,7 @@ const fireConfetti = (type: string = "confetti") => {
 
 const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
   const { user } = useAuth();
+  const { region } = useRegionalTheme();
   const { t } = useLanguage();
   const { toast } = useToast();
   const [spinning, setSpinning] = useState(false);
@@ -222,7 +226,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
   const spin = async () => {
     if (spinning || segments.length === 0) return;
     if (!user) {
-      toast({ title: t("loginRequired", "Login necessário"), description: t("loginToPlay", "Por favor, entre na sua conta para jogar."), variant: "destructive" });
+      toast({ title: t("loginRequired"), description: t("loginToPlay"), variant: "destructive" });
       return;
     }
 
@@ -230,47 +234,48 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
     setResult(null);
 
     try {
-      // First, decide winner
-      const winnerIndex = pickWinnerIndex(segments);
-      const winner = segments[winnerIndex];
+      let winnerIndex: number;
+      let winner: Segment;
 
-      const segmentAngleDeg = 360 / segments.length;
-      const fullSpins = 5 + Math.floor(Math.random() * 3);
-      const targetWinningAngle = winnerIndex * segmentAngleDeg + segmentAngleDeg / 2;
-      const finalRotation = rotation + (fullSpins * 360) + (360 - targetWinningAngle);
+      if (region?.id) {
+        const { data: spinResult, error: spinError } = await supabase.functions.invoke("spin-wheel-spin", {
+          body: { wheel_id: gameId, region_id: region.id },
+        });
+        if (spinError) throw spinError;
+        const raw = spinResult?.data?.winner || spinResult?.winner;
+        winnerIndex = findPrizeIndex(segments, raw);
+        if (winnerIndex < 0) winnerIndex = pickWinnerIndex(segments);
+        winner = { ...segments[winnerIndex], label: raw?.label ?? segments[winnerIndex].label };
+      } else {
+        winnerIndex = pickWinnerIndex(segments);
+        winner = segments[winnerIndex];
+      }
 
+      const finalRotation = computeFinalRotation(rotation, winnerIndex, segments.length);
       setRotation(finalRotation);
 
       const duration = wheelConfig?.rotation_duration || 4;
-      setTimeout(async () => {
+      setTimeout(() => {
         setResult(winner);
         setSpinning(false);
 
-        if (winner.reward_type !== "nothing") {
-          const effectType = winner.effect_type || wheelConfig?.default_effect || "confetti";
-          fireConfetti(effectType);
-          
-          toast({ title: t("wheel.win", "Parabéns!"), description: `${t("youWon", "Ganhaste")}: ${winner.reward_value || winner.label}` });
-          
-          await supabase.from("spin_wheel_sessions").insert({
-            wheel_id: gameId,
-            user_id: user.id,
-            segment_id: winner.id,
-            reward_type: winner.reward_type,
-            reward_value: winner.reward_value,
-            status: "completed"
+        if (winner.reward_type !== "nothing" && winner.reward_type !== "none" && !isNoWinLabel(winner.label)) {
+          fireConfetti(winner.effect_type || wheelConfig?.default_effect || "confetti");
+          toast({
+            title: t("wheel.win"),
+            description: `${t("youWon")}: ${winner.reward_value || winner.label}`,
           });
         }
       }, duration * 1000);
     } catch (e) {
       console.error("Error spinning wheel:", e);
       setSpinning(false);
-      toast({ title: t("error", "Erro"), description: t("tryAgain", "Tente novamente."), variant: "destructive" });
+      toast({ title: t("error"), description: t("wheel.errorSpin"), variant: "destructive" });
     }
   };
 
-  if (loading) return <div className="text-center py-8">Carregando roda...</div>;
-  if (segments.length === 0) return <div className="text-center py-8 text-muted-foreground">Esta roda não tem segmentos configurados.</div>;
+  if (loading) return <div className="text-center py-8">{t("wheel.loading")}</div>;
+  if (segments.length === 0) return <div className="text-center py-8 text-muted-foreground">{t("wheel.noSegments")}</div>;
 
   const bgStyle = wheelConfig?.background_image_url
     ? { backgroundImage: `url(${wheelConfig.background_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -292,7 +297,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
       {segments.length < 4 && (
         <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200">
           <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-400" />
-          <p className="text-sm">{t("wheel.minSegmentsWarning", "⚠️ Para resultados precisos, recomendamos pelo menos 4-6 segmentos na roda!")}</p>
+          <p className="text-sm">{t("wheel.minSegmentsWarning")}</p>
         </div>
       )}
 
@@ -341,12 +346,12 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
           {spinning ? (
             <>
               <Sparkles className="w-6 h-6 animate-spin" />
-              {t("wheel.spinning", "A girar...")}
+              {t("wheel.spinning")}
             </>
           ) : (
             <>
               <PartyPopper className="w-6 h-6" />
-              {t("wheel.spin", "Girar a Roda")}! 🎰
+              {t("wheel.spin")}
             </>
           )}
         </span>
@@ -360,12 +365,12 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
             exit={{ opacity: 0, scale: 0.5, y: -30 }}
             transition={{ type: "spring", bounce: 0.5 }}
             className={`text-center px-10 py-8 rounded-3xl shadow-2xl backdrop-blur-xl ${
-              result.reward_type === "nothing" || result.label.toLowerCase().includes("nada") || result.label.toLowerCase().includes("tenta")
+              result.reward_type === "nothing" || result.reward_type === "none" || isNoWinLabel(result.label)
                 ? "bg-secondary/80 text-muted-foreground border border-white/10"
                 : "bg-gradient-to-br from-primary/30 to-primary/10 text-primary border border-primary/30"
             }`}
           >
-            {result.reward_type !== "nothing" && !result.label.toLowerCase().includes("nada") && !result.label.toLowerCase().includes("tenta") ? (
+            {result.reward_type !== "nothing" && result.reward_type !== "none" && !isNoWinLabel(result.label) ? (
               <div className="flex flex-col items-center gap-3">
                 <motion.div
                   animate={{
@@ -382,7 +387,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
                   animate={{ y: 0 }}
                   className="font-black text-2xl"
                 >
-                  {t("wheel.win", "Parabéns!")}
+                  {t("wheel.win")}
                 </motion.p>
                 <motion.p
                   initial={{ scale: 0 }}
@@ -395,7 +400,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
               </div>
             ) : (
               <p className="font-bold text-2xl flex items-center gap-2 justify-center">
-                😅 {t("tryAgain", "Tente de novo!")}
+                😅 {t("tryAgain")}
               </p>
             )}
           </motion.div>

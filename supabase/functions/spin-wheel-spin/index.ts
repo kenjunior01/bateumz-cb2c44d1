@@ -111,7 +111,19 @@ Deno.serve(async (req) => {
       .update({ current_wins_total: (winningSegment.current_wins_total || 0) + 1 })
       .eq("id", winningSegment.id);
 
-    return new Response(JSON.stringify({ success: true, winner: winningSegment, data: { winner: winningSegment } }), {
+    return new Response(JSON.stringify({
+      success: true,
+      winner: {
+        ...winningSegment,
+        segment_number: winningSegment.segment_number,
+      },
+      data: {
+        winner: {
+          ...winningSegment,
+          segment_number: winningSegment.segment_number,
+        },
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

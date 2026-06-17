@@ -13,6 +13,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CompanyBranding } from './LiveGameSettings';
 import { PRESET_THEMES, type WheelTheme } from "@/lib/themes";
+import {
+  computeFinalRotation,
+  findPrizeIndex,
+  getSegmentAngle,
+  getSegmentAtPointer,
+  isNoWinLabel,
+} from "@/lib/wheel-math";
 
 export type WheelPrize = {
   id: string;
@@ -29,6 +36,7 @@ export type WheelPrize = {
   currentWinsToday?: number;
   currentWinsTotal?: number;
   effectType?: "confetti" | "fireworks" | "stars" | "poppers" | "zap";
+  segment_number?: number;
 };
 
 export const DEFAULT_WHEEL_PRIZES: WheelPrize[] = [
@@ -223,9 +231,12 @@ const PrizeWheel = ({
         
         if (segmentsData && segmentsData.length > 0) {
           setPrizes(segmentsData.map((s: any) => ({
-            ...s,
+            id: s.id,
+            label: s.label,
             color: s.background_color,
             textColor: s.text_color,
+            weight: s.weight ?? 1,
+            description: s.description,
             rewardType: s.reward_type,
             rewardValue: s.reward_value,
             rewardImageUrl: s.reward_image_url,
@@ -233,7 +244,8 @@ const PrizeWheel = ({
             maxWinsTotal: s.max_wins_total,
             currentWinsToday: s.current_wins_today,
             currentWinsTotal: s.current_wins_total,
-            effectType: s.effect_type
+            effectType: s.effect_type,
+            segment_number: s.segment_number,
           })));
         }
       } catch (error) {
@@ -324,6 +336,16 @@ const PrizeWheel = ({
 
   const spin = async () => {
     if (spinning || prizes.length < 2) return;
+
+    if (gameId && !user) {
+      toast.error(t("wheel.loginToSpin"));
+      return;
+    }
+    if (gameId && user && !region?.id) {
+      toast.error(t("error"));
+      return;
+    }
+
     setSpinning(true);
     setResult(null);
     setLoading(true);
@@ -332,60 +354,49 @@ const PrizeWheel = ({
       let winner: WheelPrize;
       let winningIndex: number;
 
-      // 1. DEFINIR O RESULTADO PRIMEIRO!
       if (gameId && user && region) {
         const { data: spinResult, error: spinError } = await supabase.functions.invoke(
           "spin-wheel-spin",
-          {
-            body: { wheel_id: gameId, region_id: region.id },
-          }
+          { body: { wheel_id: gameId, region_id: region.id } },
         );
-
         if (spinError) throw spinError;
 
-        winner = spinResult?.data?.winner || spinResult?.winner;
-        winningIndex = prizes.findIndex(p => p.id === winner.id);
-        if (winningIndex === -1) {
+        const rawWinner = spinResult?.data?.winner || spinResult?.winner;
+        if (!rawWinner) throw new Error("Invalid spin response");
+
+        winningIndex = findPrizeIndex(prizes, rawWinner);
+        if (winningIndex < 0) {
           winningIndex = pickWeighted(prizes);
-          winner = prizes[winningIndex];
         }
+        winner = {
+          ...prizes[winningIndex],
+          label: rawWinner.label ?? prizes[winningIndex].label,
+          rewardValue: rawWinner.reward_value ?? prizes[winningIndex].rewardValue,
+          rewardType: rawWinner.reward_type ?? prizes[winningIndex].rewardType,
+          effectType: rawWinner.effect_type ?? prizes[winningIndex].effectType,
+        };
       } else {
         winningIndex = pickWeighted(prizes);
         winner = prizes[winningIndex];
       }
 
-      // 2. CALCULAR O ÂNGULO ALVO COM PRECISÃO ABSOLUTA!
-      const segmentAngleDeg = 360 / prizes.length;
-      const fullSpins = 5 + Math.floor(Math.random() * 3); // 5-7 voltas completas para efeito dramático
-
-      // CÁLCULO EXATO: 
-      // A roda começa com o segmento 0 no topo (ponteiro). 
-      // Para que o segmento X fique no topo, precisamos de girar a roda (X * segmentAngle) graus no sentido oposto!
-      const targetWinningAngle = winningIndex * segmentAngleDeg + segmentAngleDeg / 2;
-      const finalRotation = rotation + (fullSpins * 360) + targetWinningAngle;
-
+      const finalRotation = computeFinalRotation(rotation, winningIndex, prizes.length);
       const startTime = Date.now();
       const durationMs = (wheelConfig?.rotation_duration || rotationDuration) * 1000;
       const initialRotation = rotation;
+      const segmentAngleDeg = getSegmentAngle(prizes.length);
       let lastSegment = -1;
 
-      // Função para calcular o segmento atual a partir do ângulo
-      const getCurrentSegment = (angle: number) => {
-        const normalized = ((angle % 360) + 360) % 360;
-        return Math.floor(normalized / segmentAngleDeg);
-      };
+      const getCurrentSegment = (angle: number) => getSegmentAtPointer(angle, prizes.length);
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / durationMs, 1);
-        
-        // Easing out for smooth deceleration!
-        const t = 1 - Math.pow(1 - progress, 4);
-        const currentRot = initialRotation + (finalRotation - initialRotation) * t;
+        const ease = 1 - Math.pow(1 - progress, 4);
+        const currentRot = initialRotation + (finalRotation - initialRotation) * ease;
 
         setRotation(currentRot);
 
-        // Play click sound when passing segments
         if (soundEnabled) {
           const currentSeg = getCurrentSegment(currentRot);
           if (currentSeg !== lastSegment && lastSegment !== -1) {
@@ -401,16 +412,16 @@ const PrizeWheel = ({
         } else {
           setRotation(finalRotation);
           setSpinning(false);
-          
-          // VERIFICAÇÃO FINAL: Garantir que o resultado corresponde ao segmento no ponteiro!
-          const finalSegmentIndex = getCurrentSegment(finalRotation);
-          const actualWinner = prizes[finalSegmentIndex] || winner;
-          setResult(actualWinner);
-          onWin?.(actualWinner);
-          
-          if (particleEffects && !/tenta|nada|outra|perde/i.test(actualWinner.label.toLowerCase())) {
-            const effectType = actualWinner.effectType || defaultEffect || "confetti";
-            fireConfetti(effectType);
+          setResult(winner);
+          onWin?.(winner);
+
+          const landed = getSegmentAtPointer(finalRotation, prizes.length);
+          if (landed !== winningIndex) {
+            console.warn("Wheel alignment check:", { landed, winningIndex, segmentAngleDeg });
+          }
+
+          if (particleEffects && !isNoWinLabel(winner.label) && winner.rewardType !== "none") {
+            fireConfetti(winner.effectType || defaultEffect || "confetti");
           }
         }
       };
@@ -419,7 +430,7 @@ const PrizeWheel = ({
     } catch (error) {
       console.error("Erro ao girar roda:", error);
       setSpinning(false);
-      toast.error("Erro ao girar a roda, tente novamente.");
+      toast.error(t("wheel.errorSpin"));
     } finally {
       setLoading(false);
     }
@@ -458,7 +469,7 @@ const PrizeWheel = ({
               onClick={() => setMode(mode === "horizontal" ? "vertical" : "horizontal")}
             >
               {mode === "horizontal" ? <Smartphone className="h-4 w-4 mr-2" /> : <Monitor className="h-4 w-4 mr-2" />}
-              {mode === "horizontal" ? "Vertical" : "Horizontal"}
+              {mode === "horizontal" ? t("wheel.modeVertical") : t("wheel.modeHorizontal")}
             </Button>
             <div className="flex gap-1">
               {Object.entries(PRESET_THEMES).map(([key, theme]) => (
@@ -479,7 +490,7 @@ const PrizeWheel = ({
           <div className="flex-1 space-y-6 text-center md:text-left" style={{ color: currentTheme.textColor }}>
             {/* Webcam Placeholder */}
             <div className="w-48 h-48 rounded-2xl bg-black/30 border-2 border-white/20 flex items-center justify-center">
-              <p className="text-white/50 text-sm">Webcam</p>
+              <p className="text-white/50 text-sm">{t("wheel.webcam")}</p>
             </div>
             {(branding?.companyLogoUrl || branding?.companySlogan) && (
               <motion.div
@@ -497,15 +508,15 @@ const PrizeWheel = ({
             )}
             
             <div className="inline-block px-4 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 mb-2">
-              <span className="text-xs font-bold">Giro da Sorte Premium</span>
+              <span className="text-xs font-bold">{t("wheel.premiumBadge")}</span>
             </div>
             
             <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic">{gameName}</h1>
-            <p className="text-xl text-white/70 max-w-md mx-auto md:mx-0">Gira e ganha prémios incríveis!</p>
+            <p className="text-xl text-white/70 max-w-md mx-auto md:mx-0">{t("wheel.subtitle")}</p>
             
             {spinCost > 0 && (
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/10 backdrop-blur-md text-white">
-                <span className="text-xs uppercase opacity-60 font-bold">Custo</span>
+                <span className="text-xs uppercase opacity-60 font-bold">{t("wheel.cost")}</span>
                 <span className="text-2xl font-black">{spinCost} MZN</span>
               </div>
             )}
@@ -516,7 +527,7 @@ const PrizeWheel = ({
         {mode === "vertical" && (
           <div className="w-full max-w-md space-y-4 text-center">
             <div className="w-full h-40 rounded-2xl bg-black/30 border-2 border-white/20 flex items-center justify-center">
-              <p className="text-white/50 text-sm">Webcam</p>
+              <p className="text-white/50 text-sm">{t("wheel.webcam")}</p>
             </div>
             {(branding?.companyLogoUrl || branding?.companySlogan) && (
               <div className="flex flex-col items-center gap-2">
@@ -589,13 +600,22 @@ const PrizeWheel = ({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.3, y: -100 }}
                 transition={{ type: "spring", bounce: 0.6, duration: 0.8 }}
-                className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl ${
-                  result.rewardType === "none" || result.label.toLowerCase().includes("tenta") || result.label.toLowerCase().includes("nada")
-                    ? "bg-secondary/90 text-muted-foreground border-2 border-white/20"
-                    : `bg-gradient-to-br from-${currentTheme.primaryColor}/40 to-${currentTheme.primaryColor}/15 text-primary border-2 border-${currentTheme.primaryColor}/40`
+                className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl border-2 ${
+                  result.rewardType === "none" || isNoWinLabel(result.label)
+                    ? "bg-secondary/90 text-muted-foreground border-white/20"
+                    : "border-white/20"
                 }`}
+                style={
+                  result.rewardType !== "none" && !isNoWinLabel(result.label)
+                    ? {
+                        background: `linear-gradient(135deg, ${currentTheme.primaryColor}66, ${currentTheme.primaryColor}22)`,
+                        borderColor: `${currentTheme.primaryColor}66`,
+                        color: currentTheme.textColor,
+                      }
+                    : undefined
+                }
               >
-                {result.rewardType !== "none" && !result.label.toLowerCase().includes("tenta") && !result.label.toLowerCase().includes("nada") ? (
+                {result.rewardType !== "none" && !isNoWinLabel(result.label) ? (
                   <div className="flex flex-col items-center gap-4">
                     <motion.div
                       animate={{
@@ -636,7 +656,7 @@ const PrizeWheel = ({
                   </div>
                 ) : (
                   <p className="font-bold text-3xl flex items-center gap-3 justify-center">
-                    😅 {t("tryAgain", "Tenta de novo!")}
+                    😅 {t("tryAgain")}
                   </p>
                 )}
               </motion.div>
@@ -662,7 +682,7 @@ const PrizeWheel = ({
                     </button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
-                    <SheetHeader className="mb-4"><SheetTitle>Configure Your Spin Wheel</SheetTitle></SheetHeader>
+                    <SheetHeader className="mb-4"><SheetTitle>{t("wheel.configureTitle")}</SheetTitle></SheetHeader>
                     <div className="space-y-4 pb-6">
                       {prizes.map((p) => {
                         const pct = ((Math.max(0, p.weight) / totalWeight) * 100).toFixed(1);
@@ -678,7 +698,7 @@ const PrizeWheel = ({
                               <Input
                                 value={p.label}
                                 onChange={(e) => patchPrize(p.id, { label: e.target.value })}
-                                placeholder="Prize Name"
+                                placeholder={t("wheel.prizeName")}
                                 className="flex-1"
                               />
                               <button
@@ -691,7 +711,7 @@ const PrizeWheel = ({
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
-                                <Label className="text-[11px] text-muted-foreground">Prize Value</Label>
+                                <Label className="text-[11px] text-muted-foreground">{t("wheel.prizeValue")}</Label>
                                 <Input
                                   value={p.rewardValue || ""}
                                   onChange={(e) => patchPrize(p.id, { rewardValue: e.target.value })}
@@ -700,7 +720,7 @@ const PrizeWheel = ({
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[11px] text-muted-foreground">Weight ({pct}%)</Label>
+                                <Label className="text-[11px] text-muted-foreground">{t("wheel.weight")} ({pct}%)</Label>
                                 <Input
                                   type="number"
                                   min={0}
@@ -712,7 +732,7 @@ const PrizeWheel = ({
                               </div>
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-[11px] text-muted-foreground">Effect Type</Label>
+                              <Label className="text-[11px] text-muted-foreground">{t("wheel.effectType")}</Label>
                               <select
                                 value={p.effectType || "confetti"}
                                 onChange={(e) => patchPrize(p.id, { effectType: e.target.value as any })}
@@ -735,7 +755,7 @@ const PrizeWheel = ({
                         <Plus className="h-4 w-4" /> {t("wheel.addPrize")}
                       </button>
                       <p className="text-[11px] text-muted-foreground text-center">
-                        Percentages are calculated from relative weights.
+                        {t("wheel.weightHint")}
                       </p>
                     </div>
                   </SheetContent>

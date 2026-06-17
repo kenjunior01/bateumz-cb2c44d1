@@ -16,6 +16,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: string | null;
+  adminCountries: string[];
   loading: boolean;
   signUp: (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [adminCountries, setAdminCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -51,6 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else if (roles.includes("admin")) setRole("admin");
     else if (roles.includes("business")) setRole("business");
     else setRole(roles[0] ?? "user");
+
+    // Fetch admin countries
+    const { data: adminRegions } = await supabase
+      .from("admin_regions")
+      .select("country_code")
+      .eq("user_id", userId);
+    setAdminCountries(adminRegions?.map((r: any) => r.country_code) || []);
 
     // Save extra signup data (phone, province, city, interests) if pending
     const extraRaw = localStorage.getItem("bateu_signup_extra");
@@ -175,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, role, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, role, adminCountries, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

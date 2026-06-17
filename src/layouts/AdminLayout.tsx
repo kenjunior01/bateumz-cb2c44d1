@@ -21,6 +21,7 @@ const items = [
   { title: "Raffles", url: "/admin/raffles", icon: Ticket },
   { title: "Contests", url: "/admin/contests", icon: Trophy },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
+  { title: "Plans", url: "/admin/plans", icon: DollarSign },
   { title: "Revenue", url: "/admin/revenue", icon: DollarSign },
   { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
   { title: "Cron Jobs", url: "/admin/cron", icon: Clock },

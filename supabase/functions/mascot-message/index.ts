@@ -19,13 +19,40 @@ const MOOD_INSTRUCTIONS_EN: Record<string, string> = {
   winner: "Celebration mode! Talk about wins, prizes and blockchain!",
 };
 
+// Verify JWT and get user ID
+async function getUserIdFromRequest(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.slice(7);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Use Supabase's auth API to verify the token
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return null;
+  }
+  
+  return user.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userName, context, mood, lang, userId } = await req.json();
+    const { userName, context, mood, lang } = await req.json();
     const language = lang === "en" ? "en" : "pt";
     const moodInstruction = (language === "en" ? MOOD_INSTRUCTIONS_EN : MOOD_INSTRUCTIONS_PT)[mood] ||
       (language === "en" ? MOOD_INSTRUCTIONS_EN.happy : MOOD_INSTRUCTIONS_PT.happy);
@@ -41,6 +68,9 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get authenticated user ID from JWT
+    const userId = await getUserIdFromRequest(req);
 
     // Optional personal touch
     let personalHint = "";

@@ -1,8 +1,134 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-interface PointsRequest {\n  userId: string;\n  regionId: string;\n  reason: \"raffle_participation\" | \"prediction_made\" | \"friend_invite\" | \"social_share\" | \"contest_entry\" | \"daily_login\" | \"achievement\";\n  relatedId?: string;\n}\n\nconst POINTS_MAP: Record<string, number> = {\n  raffle_participation: 10,\n  prediction_made: 5,\n  prediction_correct: 25,\n  friend_invite: 50,\n  social_share: 15,\n  contest_entry: 20,\n  daily_login: 2,\n  achievement: 100,\n};\n\nserve(async (req) => {\n  try {\n    if (req.method !== \"POST\") {\n      return new Response(\"Method not allowed\", { status: 405 });\n    }\n\n    const { userId, regionId, reason, relatedId }: PointsRequest = await req.json();\n\n    if (!userId || !regionId || !reason) {\n      return new Response(\"Missing required fields\", { status: 400 });\n    }\n\n    const pointsToAdd = POINTS_MAP[reason];\n    if (!pointsToAdd) {\n      return new Response(\"Invalid reason\", { status: 400 });\n    }\n\n    // Get current engagement points\n    const { data: currentData, error: currentError } = await supabase\n      .from(\"engagement_points\")\n      .select(\"points, total_lifetime_points\")\n      .eq(\"user_id\", userId)\n      .eq(\"region_id\", regionId)\n      .single();\n\n    if (currentError && currentError.code !== \"PGRST116\") {\n      throw currentError;\n    }\n\n    const currentPoints = currentData?.points || 0;\n    const totalLifetimePoints = currentData?.total_lifetime_points || 0;\n\n    // Upsert engagement points\n    const { error: upsertError } = await supabase\n      .from(\"engagement_points\")\n      .upsert(\n        {\n          user_id: userId,\n          region_id: regionId,\n          points: currentPoints + pointsToAdd,\n          total_lifetime_points: totalLifetimePoints + pointsToAdd,\n        },\n        { onConflict: \"user_id,region_id\" }\n      );\n\n    if (upsertError) throw upsertError;\n\n    // Log the points change\n    const { error: logError } = await supabase\n      .from(\"engagement_points_log\")\n      .insert({\n        user_id: userId,\n        region_id: regionId,\n        points_change: pointsToAdd,\n        reason,\n        related_id: relatedId,\n      });\n\n    if (logError) throw logError;\n\n    return new Response(\n      JSON.stringify({\n        success: true,\n        message: `${pointsToAdd} points awarded for ${reason}`,\n        newPoints: currentPoints + pointsToAdd,\n        totalLifetimePoints: totalLifetimePoints + pointsToAdd,\n      }),\n      { headers: { \"Content-Type\": \"application/json\" } }\n    );\n  } catch (error) {\n    console.error(\"Error:\", error);\n    return new Response(\n      JSON.stringify({\n        error: error.message,\n      }),\n      { status: 500, headers: { \"Content-Type\": \"application/json\" } }\n    );\n  }\n});\n
+interface PointsRequest {
+  regionId: string;
+  reason: "raffle_participation" | "prediction_made" | "friend_invite" | "social_share" | "contest_entry" | "daily_login" | "achievement";
+  relatedId?: string;
+}
+
+const POINTS_MAP: Record<string, number> = {
+  raffle_participation: 10,
+  prediction_made: 5,
+  prediction_correct: 25,
+  friend_invite: 50,
+  social_share: 15,
+  contest_entry: 20,
+  daily_login: 2,
+  achievement: 100,
+};
+
+// Verify JWT and get user ID
+async function getUserIdFromRequest(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.slice(7);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return null;
+  }
+  
+  return user.id;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    if (req.method !== "POST") {
+      return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    }
+
+    // Authenticate user
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
+    const { regionId, reason, relatedId }: PointsRequest = await req.json();
+
+    if (!regionId || !reason) {
+      return new Response("Missing required fields", { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const pointsToAdd = POINTS_MAP[reason];
+    if (!pointsToAdd) {
+      return new Response("Invalid reason", { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get current engagement points
+    const { data: currentData, error: currentError } = await supabase
+      .from("engagement_points")
+      .select("points, total_lifetime_points")
+      .eq("user_id", userId)
+      .eq("region_id", regionId)
+      .single();
+
+    if (currentError && currentError.code !== "PGRST116") {
+      throw currentError;
+    }
+
+    const currentPoints = currentData?.points || 0;
+    const totalLifetimePoints = currentData?.total_lifetime_points || 0;
+
+    // Upsert engagement points
+    const { error: upsertError } = await supabase
+      .from("engagement_points")
+      .upsert(
+        {
+          user_id: userId,
+          region_id: regionId,
+          points: currentPoints + pointsToAdd,
+          total_lifetime_points: totalLifetimePoints + pointsToAdd,
+        },
+        { onConflict: "user_id,region_id" }
+      );
+
+    if (upsertError) throw upsertError;
+
+    // Log the points change
+    const { error: logError } = await supabase
+      .from("points_log")
+      .insert({
+        user_id: userId,
+        region_id: regionId,
+        reason: reason,
+        points: pointsToAdd,
+        related_id: relatedId,
+        created_at: new Date().toISOString(),
+      });
+
+    if (logError) throw logError;
+
+    return new Response(JSON.stringify({ success: true, pointsAwarded: pointsToAdd }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

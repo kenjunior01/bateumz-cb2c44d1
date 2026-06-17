@@ -6,12 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 import LiveFeed from "./LiveFeed";
 
 interface Winner {
+  id: string;
   name: string;
   prize: string;
-  city: string;
+  city?: string;
   initials: string;
-  raffleId: string;
+  raffleId?: string;
+  gameType?: string;
+  photoUrl?: string;
+  winnerPhotoUrl?: string;
   verified: boolean;
+  type: "raffle" | "game";
 }
 
 const WinnersSection = () => {
@@ -20,12 +25,24 @@ const WinnersSection = () => {
 
   useEffect(() => {
     const fetchWinners = async () => {
+      // Fetch raffle winners
       const { data: winnerParticipants } = await supabase
         .from("participants")
         .select("user_id, raffle_id, ticket_number, created_at")
         .eq("status", "winner")
         .order("created_at", { ascending: false })
         .limit(6);
+
+      // Fetch game winners
+      const { data: gameWinners } = await supabase
+        .from("game_winners")
+        .select("*")
+        .eq("is_verified", true)
+        .eq("is_public", true)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      const allWinners: Winner[] = [];
 
       if (winnerParticipants && winnerParticipants.length > 0) {
         const userIds = [...new Set(winnerParticipants.map((w) => w.user_id))];
@@ -47,7 +64,7 @@ const WinnersSection = () => {
           return `${parts[0]} ${parts[parts.length - 1][0]}.`;
         };
 
-        const mapped = winnerParticipants.map((w) => {
+        const mappedRaffleWinners = winnerParticipants.map((w) => {
           const profile = profileMap.get(w.user_id);
           const raffle = raffleMap.get(w.raffle_id);
           const rawName = profile?.display_name || `Vencedor #${w.ticket_number}`;
@@ -56,16 +73,39 @@ const WinnersSection = () => {
           const country = raffle?.country || "US";
           const city = raffle?.city || (country === "CA" ? "Moçambique" : "Moçambique");
           return {
+            id: `raffle-${w.ticket_number}`,
             name,
             prize: raffle?.prize_title || "Prémio",
             city: `${city}, ${country}`,
             initials,
             raffleId: w.raffle_id,
             verified: verifiedSet.has(w.raffle_id),
+            type: "raffle" as const,
           };
         });
-        setWinners(mapped);
+        allWinners.push(...mappedRaffleWinners);
       }
+
+      if (gameWinners && gameWinners.length > 0) {
+        const mappedGameWinners = gameWinners.map((w) => {
+          const initials = w.winner_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+          return {
+            id: `game-${w.id}`,
+            name: w.winner_name,
+            prize: w.prize,
+            initials,
+            gameType: w.game_type,
+            photoUrl: w.photo_url,
+            winnerPhotoUrl: w.winner_photo_url,
+            verified: w.is_verified,
+            type: "game" as const,
+          };
+        });
+        allWinners.push(...mappedGameWinners);
+      }
+
+      // Sort all winners by date (newest first)
+      setWinners(allWinners.sort(() => Math.random() - 0.5));
       setLoading(false);
     };
     fetchWinners();
@@ -93,31 +133,73 @@ const WinnersSection = () => {
               </div>
             ) : winners.length > 0 ? (
               winners.map((w, i) => (
-                <motion.div key={`${w.name}-${i}`} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                <motion.div key={w.id} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}>
-                  <Link
-                    to={`/transparencia?raffle=${w.raffleId}`}
-                    className="glass group flex items-center gap-5 rounded-2xl p-5 transition-all hover:border-primary/30"
-                  >
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent font-display text-lg font-bold text-primary-foreground">
-                      {w.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-display font-semibold text-foreground">{w.name}</h4>
-                        <Star className="h-4 w-4 text-accent" />
-                        {w.verified && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                            <ShieldCheck className="h-3 w-3" /> Verificado
-                          </span>
-                        )}
+                  {w.type === "raffle" ? (
+                    <Link
+                      to={`/transparencia?raffle=${w.raffleId}`}
+                      className="glass group flex items-center gap-5 rounded-2xl p-5 transition-all hover:border-primary/30"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent font-display text-lg font-bold text-primary-foreground">
+                        {w.initials}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        Ganhou <span className="font-medium text-primary">{w.prize}</span> — {w.city}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display font-semibold text-foreground">{w.name}</h4>
+                          <Star className="h-4 w-4 text-accent" />
+                          {w.verified && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                              <ShieldCheck className="h-3 w-3" /> Verificado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          Ganhou <span className="font-medium text-primary">{w.prize}</span> — {w.city}
+                        </p>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  ) : (
+                    <div className="glass group rounded-2xl p-5 transition-all hover:border-primary/30 overflow-hidden">
+                      <div className="flex items-center gap-5">
+                        {w.winnerPhotoUrl ? (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-border">
+                            <img src={w.winnerPhotoUrl} alt={w.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent font-display text-lg font-bold text-primary-foreground">
+                            {w.initials}
+                          </div>
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-display font-semibold text-foreground">{w.name}</h4>
+                            <Star className="h-4 w-4 text-accent" />
+                            {w.gameType && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                                {w.gameType}
+                              </span>
+                            )}
+                            {w.verified && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                <ShieldCheck className="h-3 w-3" /> Verificado
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            Ganhou <span className="font-medium text-primary">{w.prize}</span>
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {w.photoUrl && (
+                        <div className="mt-3 rounded-xl overflow-hidden border border-border">
+                          <img src={w.photoUrl} alt={w.prize} className="w-full h-48 object-cover" />
+                        </div>
+                      )}
                     </div>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  </Link>
+                  )}
                 </motion.div>
               ))
             ) : (

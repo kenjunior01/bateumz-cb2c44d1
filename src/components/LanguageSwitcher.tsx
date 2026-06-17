@@ -13,6 +13,7 @@ const LANGS: { code: Lang; label: string; flag: string }[] = [
   { code: "pt-BR", label: "Português (BR)", flag: "🇧🇷" },
   { code: "es", label: "Español", flag: "🇪🇸" },
   { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "hi", label: "हिंदी", flag: "🇮🇳" },
 ];
 
 export default function LanguageSwitcher() {

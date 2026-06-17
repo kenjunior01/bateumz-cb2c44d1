@@ -11,15 +11,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+
+interface PrizeLevel {
+  level: number;
+  amount: number;
+  currency: string;
+  is_safe_haven?: boolean;
+}
 
 interface Game {
   id: string;
   name: string;
-  description: string;
+  description?: string;
+  background_image_url?: string;
+  background_color?: string;
+  primary_color?: string;
+  company_logo_url?: string;
+  company_slogan?: string;
   total_questions: number;
-  is_active: boolean;
-  is_published: boolean;
+  time_per_question: number;
+  prize_structure?: PrizeLevel[];
+  lifelines?: Record<string, boolean>;
+  is_active?: boolean;
+  is_published?: boolean;
   created_at: string;
+  created_by?: string;
+  region_id?: string;
 }
 
 interface Question {
@@ -34,6 +52,24 @@ interface Question {
   explanation?: string;
 }
 
+const DEFAULT_PRIZE_STRUCTURE: PrizeLevel[] = [
+  { level: 1, amount: 100, currency: "MZN" },
+  { level: 2, amount: 200, currency: "MZN" },
+  { level: 3, amount: 300, currency: "MZN" },
+  { level: 4, amount: 500, currency: "MZN" },
+  { level: 5, amount: 1000, currency: "MZN", is_safe_haven: true },
+  { level: 6, amount: 2000, currency: "MZN" },
+  { level: 7, amount: 4000, currency: "MZN" },
+  { level: 8, amount: 8000, currency: "MZN" },
+  { level: 9, amount: 16000, currency: "MZN" },
+  { level: 10, amount: 32000, currency: "MZN", is_safe_haven: true },
+  { level: 11, amount: 64000, currency: "MZN" },
+  { level: 12, amount: 125000, currency: "MZN" },
+  { level: 13, amount: 250000, currency: "MZN" },
+  { level: 14, amount: 500000, currency: "MZN" },
+  { level: 15, amount: 1000000, currency: "MZN" },
+];
+
 export default function AdminMillionaireManager() {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -47,8 +83,14 @@ export default function AdminMillionaireManager() {
   const [gameDescription, setGameDescription] = useState("");
   const [totalQuestions, setTotalQuestions] = useState(15);
   const [timePerQuestion, setTimePerQuestion] = useState(30);
-  const [primaryColor, setPrimaryColor] = useState("#FFD700");
+  const [primaryColor, setPrimaryColor] = useState("#fbbf24");
+  const [backgroundColor, setBackgroundColor] = useState("#0a0e17");
   const [backgroundImage, setBackgroundImage] = useState("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
+  const [companySlogan, setCompanySlogan] = useState("");
+  const [currency, setCurrency] = useState("MZN");
+  const [prizeStructure, setPrizeStructure] = useState<PrizeLevel[]>(DEFAULT_PRIZE_STRUCTURE);
+  const [lifelines, setLifelines] = useState({ fiftyFifty: true, askAudience: false, phoneFriend: false });
 
   // Question form
   const [questionText, setQuestionText] = useState("");
@@ -99,6 +141,22 @@ export default function AdminMillionaireManager() {
     }
   };
 
+  const selectGameForEdit = (game: Game) => {
+    setSelectedGame(game);
+    setGameName(game.name);
+    setGameDescription(game.description || "");
+    setTotalQuestions(game.total_questions);
+    setTimePerQuestion(game.time_per_question);
+    setPrimaryColor(game.primary_color || "#fbbf24");
+    setBackgroundColor(game.background_color || "#0a0e17");
+    setBackgroundImage(game.background_image_url || "");
+    setCompanyLogoUrl(game.company_logo_url || "");
+    setCompanySlogan(game.company_slogan || "");
+    setPrizeStructure(game.prize_structure || DEFAULT_PRIZE_STRUCTURE);
+    setLifelines(game.lifelines || { fiftyFifty: true, askAudience: false, phoneFriend: false });
+    loadQuestions(game.id);
+  };
+
   const createGame = async () => {
     if (!gameName.trim()) {
       toast.error("Nome do jogo é obrigatório");
@@ -116,6 +174,9 @@ export default function AdminMillionaireManager() {
         return;
       }
 
+      // Adjust prize structure to match total questions
+      const adjustedPrizeStructure = prizeStructure.slice(0, totalQuestions);
+      
       const { data, error } = await supabase
         .from("millionaire_games")
         .insert({
@@ -124,9 +185,20 @@ export default function AdminMillionaireManager() {
           total_questions: totalQuestions,
           time_per_question: timePerQuestion,
           primary_color: primaryColor,
+          background_color: backgroundColor,
           background_image_url: backgroundImage,
+          company_logo_url: companyLogoUrl,
+          company_slogan: companySlogan,
+          prize_structure: adjustedPrizeStructure,
+          lifelines: {
+            '50_50': lifelines.fiftyFifty,
+            'ask_audience': lifelines.askAudience,
+            'phone_friend': lifelines.phoneFriend
+          },
           created_by: user!.id,
           region_id: regionId,
+          is_active: true,
+          is_published: false
         })
         .select()
         .single();
@@ -140,6 +212,49 @@ export default function AdminMillionaireManager() {
     } catch (error) {
       console.error("Error creating game:", error);
       toast.error("Erro ao criar jogo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateGame = async () => {
+    if (!selectedGame || !gameName.trim()) {
+      toast.error("Nome do jogo é obrigatório");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const adjustedPrizeStructure = prizeStructure.slice(0, totalQuestions);
+      
+      const { error } = await supabase
+        .from("millionaire_games")
+        .update({
+          name: gameName,
+          description: gameDescription,
+          total_questions: totalQuestions,
+          time_per_question: timePerQuestion,
+          primary_color: primaryColor,
+          background_color: backgroundColor,
+          background_image_url: backgroundImage,
+          company_logo_url: companyLogoUrl,
+          company_slogan: companySlogan,
+          prize_structure: adjustedPrizeStructure,
+          lifelines: {
+            '50_50': lifelines.fiftyFifty,
+            'ask_audience': lifelines.askAudience,
+            'phone_friend': lifelines.phoneFriend
+          }
+        })
+        .eq("id", selectedGame.id);
+
+      if (error) throw error;
+
+      setGames(games.map(g => g.id === selectedGame.id ? { ...g, name: gameName } : g));
+      toast.success("Jogo atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating game:", error);
+      toast.error("Erro ao atualizar jogo");
     } finally {
       setSaving(false);
     }
@@ -227,8 +342,13 @@ export default function AdminMillionaireManager() {
     setGameDescription("");
     setTotalQuestions(15);
     setTimePerQuestion(30);
-    setPrimaryColor("#FFD700");
+    setPrimaryColor("#fbbf24");
+    setBackgroundColor("#0a0e17");
     setBackgroundImage("");
+    setCompanyLogoUrl("");
+    setCompanySlogan("");
+    setPrizeStructure(DEFAULT_PRIZE_STRUCTURE);
+    setLifelines({ fiftyFifty: true, askAudience: false, phoneFriend: false });
   };
 
   const resetQuestionForm = () => {
@@ -239,6 +359,12 @@ export default function AdminMillionaireManager() {
     setOptionD("");
     setCorrectAnswer("A");
     setExplanation("");
+  };
+
+  const updatePrizeLevel = (index: number, updates: Partial<PrizeLevel>) => {
+    setPrizeStructure(prev => prev.map((level, i) => 
+      i === index ? { ...level, ...updates } : level
+    ));
   };
 
   if (role !== "admin" && role !== "superadmin") {
@@ -260,7 +386,7 @@ export default function AdminMillionaireManager() {
       <Tabs defaultValue="games" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="games">Meus Jogos</TabsTrigger>
-          <TabsTrigger value="create">Criar Novo Jogo</TabsTrigger>
+          <TabsTrigger value="create">{selectedGame ? "Editar Jogo" : "Criar Novo Jogo"}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="games" className="space-y-4">
@@ -276,10 +402,7 @@ export default function AdminMillionaireManager() {
                 <Card
                   key={game.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => {
-                    setSelectedGame(game);
-                    loadQuestions(game.id);
-                  }}
+                  onClick={() => selectGameForEdit(game)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -302,7 +425,10 @@ export default function AdminMillionaireManager() {
                         {game.total_questions} perguntas
                       </p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={(e) => {
+                          e.stopPropagation();
+                          selectGameForEdit(game);
+                        }}>
                           <Edit2 className="h-4 w-4 mr-2" />
                           Editar
                         </Button>
@@ -330,7 +456,7 @@ export default function AdminMillionaireManager() {
         <TabsContent value="create" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Criar Novo Jogo</CardTitle>
+              <CardTitle>{selectedGame ? "Editar Jogo" : "Criar Novo Jogo"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -360,7 +486,7 @@ export default function AdminMillionaireManager() {
                     min="1"
                     max="50"
                     value={totalQuestions}
-                    onChange={(e) => setTotalQuestions(parseInt(e.target.value))}
+                    onChange={(e) => setTotalQuestions(parseInt(e.target.value) || 15)}
                   />
                 </div>
 
@@ -371,7 +497,7 @@ export default function AdminMillionaireManager() {
                     min="5"
                     max="300"
                     value={timePerQuestion}
-                    onChange={(e) => setTimePerQuestion(parseInt(e.target.value))}
+                    onChange={(e) => setTimePerQuestion(parseInt(e.target.value) || 30)}
                   />
                 </div>
               </div>
@@ -395,17 +521,111 @@ export default function AdminMillionaireManager() {
                 </div>
 
                 <div>
-                  <Label>Imagem de Fundo (URL)</Label>
+                  <Label>Cor de Fundo</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="w-12 h-10 rounded cursor-pointer"
+                    />
+                    <Input
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label>Imagem de Fundo (URL)</Label>
+                <Input
+                  placeholder="https://..."
+                  value={backgroundImage}
+                  onChange={(e) => setBackgroundImage(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Logo da Empresa (URL)</Label>
                   <Input
                     placeholder="https://..."
-                    value={backgroundImage}
-                    onChange={(e) => setBackgroundImage(e.target.value)}
+                    value={companyLogoUrl}
+                    onChange={(e) => setCompanyLogoUrl(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Slogan da Empresa</Label>
+                  <Input
+                    placeholder="Slogan..."
+                    value={companySlogan}
+                    onChange={(e) => setCompanySlogan(e.target.value)}
                   />
                 </div>
               </div>
 
+              <div>
+                <Label>Moeda</Label>
+                <Input
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  placeholder="MZN"
+                />
+              </div>
+
+              <div>
+                <Label>Pirâmide de Prémios</Label>
+                <div className="mt-2 max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
+                  {prizeStructure.slice(0, totalQuestions).map((prize, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <span className="w-8 text-sm font-bold">{prize.level}</span>
+                      <Input
+                        type="number"
+                        value={prize.amount}
+                        onChange={(e) => updatePrizeLevel(index, { amount: parseInt(e.target.value) || 0 })}
+                        className="flex-1"
+                      />
+                      <Switch
+                        checked={prize.is_safe_haven}
+                        onCheckedChange={(checked) => updatePrizeLevel(index, { is_safe_haven: checked })}
+                      />
+                      <span className="text-xs text-muted-foreground">Seguro</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Ajudas</Label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span>50/50</span>
+                    <Switch
+                      checked={lifelines.fiftyFifty}
+                      onCheckedChange={(checked) => setLifelines(prev => ({ ...prev, fiftyFifty: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Pedir ajuda ao público</span>
+                    <Switch
+                      checked={lifelines.askAudience}
+                      onCheckedChange={(checked) => setLifelines(prev => ({ ...prev, askAudience: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Ligar para um amigo</span>
+                    <Switch
+                      checked={lifelines.phoneFriend}
+                      onCheckedChange={(checked) => setLifelines(prev => ({ ...prev, phoneFriend: checked }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <Button
-                onClick={createGame}
+                onClick={selectedGame ? updateGame : createGame}
                 disabled={saving}
                 className="w-full"
               >
@@ -414,7 +634,7 @@ export default function AdminMillionaireManager() {
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
                 )}
-                Criar Jogo
+                {selectedGame ? "Atualizar Jogo" : "Criar Jogo"}
               </Button>
             </CardContent>
           </Card>

@@ -33,7 +33,8 @@ interface RegionData {
 export default function AdminRegionalDashboard() {
   const { user, role, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [region, setRegion] = useState<RegionData | null>(null);
+  const [regions, setRegions] = useState<RegionData[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [stats, setStats] = useState<RegionStats | null>(null);
   const [recentRaffles, setRecentRaffles] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
@@ -43,34 +44,64 @@ export default function AdminRegionalDashboard() {
     loadData();
   }, [user, role]);
 
+  useEffect(() => {
+    if (selectedRegion) {
+      loadRegionData(selectedRegion);
+    }
+  }, [selectedRegion]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Get user's assigned region
-      const { data: adminRegion, error: adminError } = await supabase
+      // Get all user's assigned regions
+      const { data: adminRegions, error: adminError } = await supabase
         .from("admin_regions")
         .select("country_code")
-        .eq("user_id", user!.id)
-        .single();
+        .eq("user_id", user!.id);
 
       if (adminError && role !== "superadmin") {
-        toast.error("Você não tem uma região atribuída");
+        toast.error("Você não tem regiões atribuídas");
         setLoading(false);
         return;
       }
 
-      const countryCode = adminRegion?.country_code || "US";
+      if (adminRegions && adminRegions.length > 0) {
+        // Load all assigned regions data
+        const countryCodes = adminRegions.map(r => r.country_code);
+        const { data: regionsData, error: regionsError } = await supabase
+          .from("regions")
+          .select("*")
+          .in("country_code", countryCodes);
 
-      // Load region data
-      const { data: regionData, error: regionError } = await supabase
-        .from("regions")
-        .select("*")
-        .eq("country_code", countryCode)
-        .single();
+        if (regionsError) throw regionsError;
+        setRegions(regionsData || []);
+        if (regionsData && regionsData.length > 0) {
+          setSelectedRegion(regionsData[0].country_code);
+        }
+      } else if (role === "superadmin") {
+        // Load all regions for superadmin
+        const { data: allRegions, error: allRegionsError } = await supabase
+          .from("regions")
+          .select("*")
+          .order("label");
+        if (allRegionsError) throw allRegionsError;
+        setRegions(allRegions || []);
+        if (allRegions && allRegions.length > 0) {
+          setSelectedRegion(allRegions[0].country_code);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading regional dashboard:", error);
+      toast.error("Erro ao carregar dados");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (regionError) throw regionError;
-      setRegion(regionData);
-
+  const loadRegionData = async (countryCode: string) => {
+    try {
+      const region = regions.find(r => r.country_code === countryCode);
+      
       // Load stats
       const { data: raffles, error: rafflesError } = await supabase
         .from("raffles")
@@ -110,10 +141,8 @@ export default function AdminRegionalDashboard() {
       if (topUsersError) throw topUsersError;
       setTopUsers(topUsersData || []);
     } catch (error) {
-      console.error("Error loading regional dashboard:", error);
-      toast.error("Erro ao carregar dados");
-    } finally {
-      setLoading(false);
+      console.error("Error loading region data:", error);
+      toast.error("Erro ao carregar dados da região");
     }
   };
 
@@ -121,196 +150,218 @@ export default function AdminRegionalDashboard() {
   if (role !== "admin" && role !== "superadmin") return <Navigate to="/admin" replace />;
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
+  const currentRegion = regions.find(r => r.country_code === selectedRegion);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Globe className="h-6 w-6 text-primary" />
         <h1 className="font-display text-2xl font-bold">
-          Painel Regional {region && `- ${region.flag} ${region.label}`}
+          Painel Regional
         </h1>
+        {regions.length > 1 && (
+          <select
+            value={selectedRegion}
+            onChange={(e) => setSelectedRegion(e.target.value)}
+            className="px-3 py-2 border rounded-md ml-4"
+          >
+            {regions.map(r => (
+              <option key={r.country_code} value={r.country_code}>
+                {r.flag} {r.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {currentRegion && regions.length === 1 && (
+          <span className="text-xl">
+            - {currentRegion.flag} {currentRegion.label}
+          </span>
+        )}
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Sorteios Totais</p>
-                <p className="text-3xl font-bold">{stats?.total_raffles || 0}</p>
+      {currentRegion && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Sorteios Totais</p>
+                  <p className="text-3xl font-bold">{stats?.total_raffles || 0}</p>
+                </div>
+                <Trophy className="h-8 w-8 text-primary opacity-50" />
               </div>
-              <Trophy className="h-8 w-8 text-primary opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ativos</p>
-                <p className="text-3xl font-bold">{stats?.active_raffles || 0}</p>
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Ativos</p>
+                  <p className="text-3xl font-bold">{stats?.active_raffles || 0}</p>
+                </div>
+                <Badge className="bg-green-500">Ativo</Badge>
               </div>
-              <Badge className="bg-green-500">Ativo</Badge>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Participantes</p>
-                <p className="text-3xl font-bold">{stats?.total_participants || 0}</p>
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Participantes</p>
+                  <p className="text-3xl font-bold">{stats?.total_participants || 0}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary opacity-50" />
               </div>
-              <Users className="h-8 w-8 text-primary opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Receita</p>
-                <p className="text-3xl font-bold">
-                  {region?.currency} {(stats?.total_revenue || 0).toFixed(2)}
-                </p>
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Receita</p>
+                  <p className="text-3xl font-bold">
+                    {currentRegion.currency} {(stats?.total_revenue || 0).toFixed(2)}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-primary opacity-50" />
               </div>
-              <DollarSign className="h-8 w-8 text-primary opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-3xl font-bold">{stats?.pending_payments || 0}</p>
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-3xl font-bold">{stats?.pending_payments || 0}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-primary opacity-50" />
               </div>
-              <TrendingUp className="h-8 w-8 text-primary opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabs */}
-      <Tabs defaultValue="raffles" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="raffles">Sorteios Recentes</TabsTrigger>
-          <TabsTrigger value="users">Usuários Ativos</TabsTrigger>
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
-        </TabsList>
+      {currentRegion && (
+        <Tabs defaultValue="raffles" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="raffles">Sorteios Recentes</TabsTrigger>
+            <TabsTrigger value="users">Usuários Ativos</TabsTrigger>
+            <TabsTrigger value="settings">Configurações</TabsTrigger>
+          </TabsList>
 
-        {/* Recent Raffles */}
-        <TabsContent value="raffles" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Últimos Sorteios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentRaffles.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  Nenhum sorteio criado ainda
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {recentRaffles.map((raffle) => (
-                    <div
-                      key={raffle.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
-                    >
-                      <div>
-                        <h3 className="font-bold">{raffle.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {raffle.sold_tickets}/{raffle.total_tickets} ingressos vendidos
-                        </p>
+          {/* Recent Raffles */}
+          <TabsContent value="raffles" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Últimos Sorteios - {currentRegion.flag} {currentRegion.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentRaffles.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">
+                    Nenhum sorteio criado ainda
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {recentRaffles.map((raffle) => (
+                      <div
+                        key={raffle.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                      >
+                        <div>
+                          <h3 className="font-bold">{raffle.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {raffle.sold_tickets}/{raffle.total_tickets} ingressos vendidos
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant={raffle.status === "active" ? "default" : "outline"}
+                          >
+                            {raffle.status}
+                          </Badge>
+                          <Button size="sm" variant="outline">
+                            Ver
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={raffle.status === "active" ? "default" : "outline"}
-                        >
-                          {raffle.status}
-                        </Badge>
-                        <Button size="sm" variant="outline">
-                          Ver
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Top Users */}
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Usuários Mais Ativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {topUsers.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  Nenhuma participação registrada
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {topUsers.map((user, index) => (
-                    <div
-                      key={user.user_id}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">#{index + 1}</Badge>
-                        <span className="font-medium">Usuário {user.user_id.slice(0, 8)}</span>
+          {/* Top Users */}
+          <TabsContent value="users" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Usuários Mais Ativos - {currentRegion.flag} {currentRegion.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topUsers.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">
+                    Nenhuma participação registrada
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {topUsers.map((user, index) => (
+                      <div
+                        key={user.user_id}
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline">#{index + 1}</Badge>
+                          <span className="font-medium">Usuário {user.user_id.slice(0, 8)}</span>
+                        </div>
+                        <span className="font-bold">{user.count} participações</span>
                       </div>
-                      <span className="font-bold">{user.count} participações</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Settings */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações da Região</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {region && (
+          {/* Settings */}
+          <TabsContent value="settings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações da Região - {currentRegion.flag} {currentRegion.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <>
                   <div>
                     <p className="text-sm font-medium">Nome da Região</p>
-                    <p className="text-muted-foreground">{region.name || region.label}</p>
+                    <p className="text-muted-foreground">{currentRegion.name || currentRegion.label}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Código do País</p>
-                    <p className="text-muted-foreground">{region.country_code}</p>
+                    <p className="text-muted-foreground">{currentRegion.country_code}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Moeda</p>
-                    <p className="text-muted-foreground">{region.currency}</p>
+                    <p className="text-muted-foreground">{currentRegion.currency}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Idioma Padrão</p>
-                    <p className="text-muted-foreground">{region.default_language}</p>
+                    <p className="text-muted-foreground">{currentRegion.default_language}</p>
                   </div>
                   <Button variant="outline" className="w-full">
                     Editar Configurações
                   </Button>
                 </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

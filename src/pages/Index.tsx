@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
@@ -27,9 +28,18 @@ import StayInLoop from "@/components/StayInLoop";
 const Index = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [categoryFilter, setCategoryFilter] = useState("todos");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
+
+  const handleCategorySelect = (category: string) => {
+    if (category === "gaming") {
+      navigate("/jogos");
+    } else {
+      setCategoryFilter(category);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
@@ -40,7 +50,7 @@ const Index = () => {
         <ContestTypesShowcase />
       </div>
       <SearchBar />
-      <CategoryNav selected={categoryFilter} onSelect={setCategoryFilter} />
+      <CategoryNav selected={categoryFilter} onSelect={handleCategorySelect} />
       <section className="container mx-auto px-4 -mt-2 mb-2">
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("cat.filterByRegion")}</span>

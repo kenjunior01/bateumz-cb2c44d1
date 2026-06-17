@@ -41,6 +41,37 @@ Deno.serve(async (req) => {
     }
 
     const token = await getAccessToken();
+    
+    // Get order details to verify amount before capturing
+    const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${order_id}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    const order = await orderRes.json();
+    
+    // Service-role client to insert participants regardless of RLS edge-cases
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // Get raffle details including ticket price
+    const { data: raffle } = await admin.from('raffles').select('id,currency,sold_tickets,price_per_ticket').eq('id', raffle_id).single();
+    if (!raffle) {
+      return new Response(JSON.stringify({ error: 'Raffle not found' }), { status: 404, headers: corsHeaders });
+    }
+    const currency = (raffle?.currency || 'USD').toUpperCase();
+    
+    // Verify the amount paid matches the number of tickets
+    const expectedAmount = (raffle.price_per_ticket || 0) * ticket_numbers.length;
+    const paidAmount = parseFloat(order?.purchase_units?.[0]?.amount?.value || '0');
+    const paidCurrency = order?.purchase_units?.[0]?.amount?.currency_code?.toUpperCase() || 'USD';
+    
+    if (paidCurrency !== currency || Math.abs(paidAmount - expectedAmount) > 0.01) {
+      return new Response(JSON.stringify({ error: 'Payment amount mismatch' }), { status: 400, headers: corsHeaders });
+    }
+
+    // Now capture the order
     const capRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${order_id}/capture`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -50,15 +81,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Capture failed', detail: cap }), { status: 400, headers: corsHeaders });
     }
     const captureId = cap?.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
-
-    // Service-role client to insert participants regardless of RLS edge-cases
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
-
-    const { data: raffle } = await admin.from('raffles').select('id,currency,sold_tickets').eq('id', raffle_id).single();
-    const currency = (raffle?.currency || 'USD').toUpperCase();
 
     const rows = ticket_numbers.map((n: number) => ({
       raffle_id,

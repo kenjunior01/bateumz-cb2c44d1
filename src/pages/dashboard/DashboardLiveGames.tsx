@@ -109,6 +109,37 @@ const DashboardLiveGames = () => {
   const updEmoji = (id: string, patch: Partial<EmojiOpt>) => setEmojis((p) => p.map((x) => x.id === id ? { ...x, ...patch } : x));
   const rmEmoji = (id: string) => setEmojis((p) => p.filter((x) => x.id !== id));
 
+  // Load DB-backed games
+  useEffect(() => {
+    const loadDbGames = async () => {
+      setLoadingDbGames(true);
+      try {
+        const [millRes, spinRes] = await Promise.all([
+          supabase
+            .from("millionaire_games")
+            .select("id, name, is_published, created_at")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("spin_wheel_games")
+            .select("id, name, is_published, created_at")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        setMillionaireGames(millRes.data || []);
+        setSpinWheelGames(spinRes.data || []);
+      } catch (error) {
+        console.error("Error loading DB games:", error);
+        toast({ title: "Erro ao carregar jogos", description: "Nao foi possivel carregar os jogos de base de dados.", variant: "destructive" });
+      } finally {
+        setLoadingDbGames(false);
+      }
+    };
+
+    loadDbGames();
+  }, [toast]);
+
   useEffect(() => { document.title = "Jogos da Live · Dashboard | Bateu"; }, []);
 
   return (
@@ -452,34 +483,3 @@ const DashboardLiveGames = () => {
 };
 
 export default DashboardLiveGames;
-
-  // Load DB-backed games
-  useEffect(() => {
-    const loadDbGames = async () => {
-      setLoadingDbGames(true);
-      try {
-        const [millRes, spinRes] = await Promise.all([
-          supabase
-            .from("millionaire_games")
-            .select("id, name, is_published, created_at")
-            .eq("is_published", true)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("spin_wheel_games")
-            .select("id, name, is_published, created_at")
-            .eq("is_published", true)
-            .order("created_at", { ascending: false }),
-        ]);
-
-        setMillionaireGames(millRes.data || []);
-        setSpinWheelGames(spinRes.data || []);
-      } catch (error) {
-        console.error("Error loading DB games:", error);
-        toast({ title: "Erro ao carregar jogos", description: "Nao foi possivel carregar os jogos de base de dados.", variant: "destructive" });
-      } finally {
-        setLoadingDbGames(false);
-      }
-    };
-
-    loadDbGames();
-  }, [toast]);

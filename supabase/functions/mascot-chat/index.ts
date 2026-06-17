@@ -5,15 +5,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Verify JWT and get user ID
+async function getUserIdFromRequest(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.slice(7);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Use Supabase's auth API to verify the token
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return null;
+  }
+  
+  return user.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, userName, context, lang, userId } = await req.json();
+    const { messages, userName, context, lang } = await req.json();
     const language = lang === "en" ? "en" : "pt";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    
+    // Get authenticated user ID from JWT
+    const userId = await getUserIdFromRequest(req);
 
     if (!LOVABLE_API_KEY) {
       return new Response(

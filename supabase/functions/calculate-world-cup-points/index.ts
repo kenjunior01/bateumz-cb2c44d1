@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface MatchResult {
@@ -12,16 +13,75 @@ interface MatchResult {
   status: string;
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Verify JWT and check if user is admin or superadmin
+async function isAuthorized(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return false;
+  }
+  
+  const token = authHeader.slice(7);
+  
+  // Verify token
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+  if (error || !user) {
+    return false;
+  }
+  
+  // Check if user is superadmin or admin using is_superadmin function
+  const { data: isSuperAdmin, error: funcError } = await supabase.rpc("is_superadmin", { user_id: user.id });
+  
+  if (funcError) {
+    return false;
+  }
+  
+  // Also check if user is an admin
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  
+  return isSuperAdmin || profile?.role === "admin" || profile?.role === "superadmin";
+}
+
 serve(async (req) => {
   try {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+
     if (req.method !== "POST") {
-      return new Response("Method not allowed", { status: 405 });
+      return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    // Check authorization first
+    const authorized = await isAuthorized(req);
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
     const { matchId, teamAGoals, teamBGoals } = await req.json();
 
     if (!matchId || teamAGoals === undefined || teamBGoals === undefined) {
-      return new Response("Missing required fields", { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing required fields" }), { 
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
     // Get all predictions for this match
@@ -120,15 +180,15 @@ serve(async (req) => {
         message: `Points calculated for ${updates.length} predictions`,
         updates,
       }),
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: error.message || "Internal server error",
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

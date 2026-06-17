@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, Calendar, Users, Zap, Globe } from "lucide-react";
+import { Loader2, Trophy, Calendar, Users, Zap, Globe, Users2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 interface Match {
@@ -152,14 +153,42 @@ export default function WorldCupCentral() {
             <h1 className="font-display text-4xl font-bold">Central do Mundial 2026</h1>
             <Trophy className="h-8 w-8 text-primary" />
           </div>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-6">
             Acompanhe todos os jogos, equipes e notícias do maior torneio de futebol do mundo
           </p>
+
+          {/* Quick Navigation */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <Link to="/bolao">
+              <Button variant="outline" className="w-full gap-2">
+                <Zap className="h-4 w-4" />
+                Bolão
+              </Button>
+            </Link>
+            <Link to="/fantasy">
+              <Button variant="outline" className="w-full gap-2">
+                <Users2 className="h-4 w-4" />
+                Fantasy
+              </Button>
+            </Link>
+            <Link to="/forum-mundial">
+              <Button variant="outline" className="w-full gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Fórum
+              </Button>
+            </Link>
+            <Link to="/pontos">
+              <Button variant="outline" className="w-full gap-2">
+                <Trophy className="h-4 w-4" />
+                Ranking
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="matches" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span className="hidden sm:inline">Jogos</span>
@@ -171,10 +200,6 @@ export default function WorldCupCentral() {
             <TabsTrigger value="news" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Notícias</span>
-            </TabsTrigger>
-            <TabsTrigger value="predictions" className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              <span className="hidden sm:inline">Bolão</span>
             </TabsTrigger>
           </TabsList>
 
@@ -319,28 +344,6 @@ export default function WorldCupCentral() {
                 ))
               )}
             </div>
-          </TabsContent>
-
-          {/* Predictions Tab */}
-          <TabsContent value="predictions" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Bolão do Mundial
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    Faça suas previsões dos jogos e acumule pontos!
-                  </p>
-                  <Button size="lg">
-                    Ir para o Bolão
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import confetti from "canvas-confetti";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import TapBattle from "@/components/livegames/TapBattle";
@@ -14,6 +15,9 @@ import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderb
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
 import DynamicSpinWheel from "@/components/DynamicSpinWheel";
 import MillionaireGame from "@/pages/games/MillionaireGame";
+import FantasyFootball from "@/components/livegames/FantasyFootball";
+import WorldCupPredictor from "@/components/livegames/WorldCupPredictor";
+import PenaltyShootout from "@/components/livegames/PenaltyShootout";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 
@@ -139,7 +143,12 @@ const WHEEL_SEGMENTS = [
   { label: "Nada", color: "#1e293b", textColor: "#94a3b8" },
 ];
 
+const pickWinnerIndex = (segments: any[]): number => {
+  return Math.floor(Math.random() * segments.length);
+};
+
 const SpinWheel = () => {
+  const { t } = useLanguage();
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<string | null>(null);
@@ -148,18 +157,18 @@ const SpinWheel = () => {
     if (spinning) return;
     setSpinning(true);
     setResult(null);
-    const extraSpins = 5 + Math.random() * 3;
-    const targetAngle = extraSpins * 360 + Math.random() * 360;
-    setRotation((prev) => prev + targetAngle);
+    const winnerIndex = pickWinnerIndex(WHEEL_SEGMENTS);
+    const winner = WHEEL_SEGMENTS[winnerIndex];
+    const segmentAngleDeg = 360 / WHEEL_SEGMENTS.length;
+    const fullSpins = 5 + Math.floor(Math.random() * 3);
+    const targetWinningAngle = winnerIndex * segmentAngleDeg + segmentAngleDeg / 2;
+    const finalRotation = rotation + (fullSpins * 360) + (360 - targetWinningAngle);
+    setRotation(finalRotation);
 
     setTimeout(() => {
-      const finalAngle = (rotation + targetAngle) % 360;
-      const segmentAngle = 360 / WHEEL_SEGMENTS.length;
-      const idx = Math.floor(((360 - finalAngle + segmentAngle / 2) % 360) / segmentAngle) % WHEEL_SEGMENTS.length;
-      const won = WHEEL_SEGMENTS[idx];
-      setResult(won.label);
+      setResult(winner.label);
       setSpinning(false);
-      if (won.label !== "Nada") {
+      if (winner.label !== "Nada") {
         confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
       }
     }, 4000);
@@ -251,7 +260,7 @@ const SpinWheel = () => {
 // --- Main Page ---
 const InstantWin = () => {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"scratch" | "wheel" | "millionaire" | "tap" | "quiz" | "mystery">("scratch");
+  const [tab, setTab] = useState<"scratch" | "wheel" | "millionaire" | "tap" | "quiz" | "mystery" | "fantasy" | "predictor" | "penalty">("scratch");
   const [scratchKey, setScratchKey] = useState(0);
   const [activeWheelId, setActiveWheelId] = useState<string | null>(null);
   const [activeMillionaireId, setActiveMillionaireId] = useState<string | null>(null);
@@ -313,6 +322,9 @@ const InstantWin = () => {
             { id: "scratch", label: "Raspadinha", icon: "🎫" },
             { id: "wheel", label: "Roda", icon: "🎰" },
             { id: "millionaire", label: "Milionário", icon: "💰" },
+            { id: "fantasy", label: "Fantasy", icon: "⚽" },
+            { id: "predictor", label: "Predictor", icon: "🏆" },
+            { id: "penalty", label: "Pênaltis", icon: "🥅" },
             { id: "tap", label: "Tap Battle", icon: "⚡" },
             { id: "quiz", label: "Quiz", icon: "🧠" },
             { id: "mystery", label: "Caixa", icon: "🎁" },
@@ -341,6 +353,9 @@ const InstantWin = () => {
             { id: "scratch", label: "Raspadinha", Icon: Ticket },
             { id: "wheel", label: "Roda da Sorte", Icon: RotateCcw },
             { id: "millionaire", label: "Milionário", Icon: Coins },
+            { id: "fantasy", label: "Fantasy Football", Icon: Trophy },
+            { id: "predictor", label: "Predictor", Icon: Trophy },
+            { id: "penalty", label: "Pênaltis", Icon: RotateCcw },
             { id: "tap", label: "Tap Battle", Icon: Zap },
             { id: "quiz", label: "Quiz Battle", Icon: Brain },
             { id: "mystery", label: "Caixa Misteriosa", Icon: Package },
@@ -405,6 +420,21 @@ const InstantWin = () => {
                   <p className="text-muted-foreground font-medium">Nenhum jogo do Milionário ativo no momento.</p>
                 </div>
               )}
+            </motion.div>
+          )}
+          {tab === "fantasy" && (
+            <motion.div key="fantasy" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              <FantasyFootball />
+            </motion.div>
+          )}
+          {tab === "predictor" && (
+            <motion.div key="predictor" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              <WorldCupPredictor />
+            </motion.div>
+          )}
+          {tab === "penalty" && (
+            <motion.div key="penalty" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              <PenaltyShootout />
             </motion.div>
           )}
           {tab === "tap" && (

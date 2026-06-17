@@ -11,28 +11,55 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
-
-interface Game {
-  id: string;
-  name: string;
-  description: string;
-  segment_count: number;
-  is_active: boolean;
-  is_published: boolean;
-  created_at: string;
-}
+import { Switch } from "@/components/ui/switch";
 
 interface Segment {
-  id: string;
-  segment_number: number;
+  id?: string;
+  segment_number?: number;
   label: string;
-  description: string;
+  description?: string;
   background_color: string;
   text_color: string;
   reward_type: string;
   reward_value: string;
+  reward_image_url?: string;
   weight: number;
+  max_wins_per_day?: number | null;
+  max_wins_total?: number | null;
+  effect_type?: string;
 }
+
+interface Game {
+  id: string;
+  name: string;
+  description?: string;
+  segment_count: number;
+  rotation_duration: number;
+  wheel_background_color?: string;
+  wheel_border_color?: string;
+  spin_cost?: number;
+  sound_enabled?: boolean;
+  particle_effects?: boolean;
+  background_image_url?: string;
+  background_color?: string;
+  company_logo_url?: string;
+  company_slogan?: string;
+  is_active?: boolean;
+  is_published?: boolean;
+  created_at: string;
+  created_by?: string;
+  region_id?: string;
+  default_effect?: string;
+}
+
+const DEFAULT_SEGMENTS: Segment[] = [
+  { label: "10% OFF", background_color: "#22c55e", text_color: "#fff", reward_type: "discount", reward_value: "10%", weight: 25, effect_type: "confetti" },
+  { label: "Tenta Outra", background_color: "#334155", text_color: "#fff", reward_type: "none", reward_value: "", weight: 35 },
+  { label: "Brinde", background_color: "#eab308", text_color: "#000", reward_type: "prize", reward_value: "Brinde", weight: 15, effect_type: "stars" },
+  { label: "Tenta Outra", background_color: "#1e293b", text_color: "#fff", reward_type: "none", reward_value: "", weight: 15 },
+  { label: "PRÉMIO!", background_color: "#8b5cf6", text_color: "#fff", reward_type: "grand_prize", reward_value: "Grande Prémio", weight: 5, effect_type: "fireworks" },
+  { label: "5% OFF", background_color: "#ef4444", text_color: "#fff", reward_type: "discount", reward_value: "5%", weight: 5, effect_type: "poppers" },
+];
 
 export default function AdminSpinWheelManager() {
   const { user, role } = useAuth();
@@ -42,25 +69,31 @@ export default function AdminSpinWheelManager() {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Game form
+  // Game form states
   const [gameName, setGameName] = useState("");
   const [gameDescription, setGameDescription] = useState("");
   const [segmentCount, setSegmentCount] = useState(8);
   const [rotationDuration, setRotationDuration] = useState(5);
-  const [wheelBackgroundColor, setWheelBackgroundColor] = useState("#2d2d2d");
-  const [wheelBorderColor, setWheelBorderColor] = useState("#FFD700");
+  const [wheelBackgroundColor, setWheelBackgroundColor] = useState("#334155");
+  const [wheelBorderColor, setWheelBorderColor] = useState("#fbbf24");
   const [spinCost, setSpinCost] = useState(0);
+  const [soundEnabled, setSoundEnabledGame] = useState(true);
+  const [particleEffects, setParticleEffects] = useState(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("#0f172a");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
+  const [companySlogan, setCompanySlogan] = useState("");
+  const [defaultEffect, setDefaultEffect] = useState("confetti");
 
   // Segment form
   const [segmentLabel, setSegmentLabel] = useState("");
   const [segmentDescription, setSegmentDescription] = useState("");
-  const [segmentColor, setSegmentColor] = useState("#FF6B6B");
-  const [segmentTextColor, setSegmentTextColor] = useState("#FFFFFF");
+  const [segmentColor, setSegmentColor] = useState("#ef4444");
+  const [segmentTextColor, setSegmentTextColor] = useState("#ffffff");
   const [rewardType, setRewardType] = useState("points");
   const [rewardValue, setRewardValue] = useState("");
   const [weight, setWeight] = useState(1);
+  const [segmentEffectType, setSegmentEffectType] = useState("confetti");
 
   useEffect(() => {
     if (!user || (role !== "admin" && role !== "superadmin")) return;
@@ -102,6 +135,25 @@ export default function AdminSpinWheelManager() {
     }
   };
 
+  const selectGameForEdit = (game: Game) => {
+    setSelectedGame(game);
+    setGameName(game.name);
+    setGameDescription(game.description || "");
+    setSegmentCount(game.segment_count);
+    setRotationDuration(game.rotation_duration);
+    setWheelBackgroundColor(game.wheel_background_color || "#334155");
+    setWheelBorderColor(game.wheel_border_color || "#fbbf24");
+    setSpinCost(game.spin_cost || 0);
+    setSoundEnabledGame(game.sound_enabled ?? true);
+    setParticleEffects(game.particle_effects ?? true);
+    setBackgroundImageUrl(game.background_image_url || "");
+    setBackgroundColor(game.background_color || "#0f172a");
+    setCompanyLogoUrl(game.company_logo_url || "");
+    setCompanySlogan(game.company_slogan || "");
+    setDefaultEffect(game.default_effect || "confetti");
+    loadSegments(game.id);
+  };
+
   const createGame = async () => {
     if (!gameName.trim()) {
       toast.error("Nome do jogo é obrigatório");
@@ -109,31 +161,38 @@ export default function AdminSpinWheelManager() {
     }
 
     setSaving(true);
-	    try {
-	      const { data: regions } = await supabase.from("regions").select("id").limit(1);
-	      const regionId = regions?.[0]?.id;
-	
-	      if (!regionId) {
-	        toast.error("Erro: Nenhuma região encontrada.");
-	        setSaving(false);
-	        return;
-	      }
-	
-	      const { data, error } = await supabase
-	        .from("spin_wheel_games")
-	        .insert({
-	          name: gameName,
-	          description: gameDescription,
-	          segment_count: segmentCount,
-	          rotation_duration: rotationDuration,
-	          wheel_background_color: wheelBackgroundColor,
-	          wheel_border_color: wheelBorderColor,
-	          spin_cost: spinCost,
-	          background_image_url: backgroundImageUrl,
-	          background_color: backgroundColor,
-	          created_by: user!.id,
-	          region_id: regionId,
-	        })
+    try {
+      const { data: regions } = await supabase.from("regions").select("id").limit(1);
+      const regionId = regions?.[0]?.id;
+
+      if (!regionId) {
+        toast.error("Erro: Nenhuma região encontrada.");
+        setSaving(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("spin_wheel_games")
+        .insert({
+          name: gameName,
+          description: gameDescription,
+          segment_count: segmentCount,
+          rotation_duration: rotationDuration,
+          wheel_background_color: wheelBackgroundColor,
+          wheel_border_color: wheelBorderColor,
+          spin_cost: spinCost,
+          sound_enabled: soundEnabled,
+          particle_effects: particleEffects,
+          background_image_url: backgroundImageUrl,
+          background_color: backgroundColor,
+          company_logo_url: companyLogoUrl,
+          company_slogan: companySlogan,
+          default_effect: defaultEffect,
+          created_by: user!.id,
+          region_id: regionId,
+          is_active: true,
+          is_published: false
+        })
         .select()
         .single();
 
@@ -146,6 +205,46 @@ export default function AdminSpinWheelManager() {
     } catch (error) {
       console.error("Error creating game:", error);
       toast.error("Erro ao criar jogo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateGame = async () => {
+    if (!selectedGame || !gameName.trim()) {
+      toast.error("Nome do jogo é obrigatório");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("spin_wheel_games")
+        .update({
+          name: gameName,
+          description: gameDescription,
+          segment_count: segmentCount,
+          rotation_duration: rotationDuration,
+          wheel_background_color: wheelBackgroundColor,
+          wheel_border_color: wheelBorderColor,
+          spin_cost: spinCost,
+          sound_enabled: soundEnabled,
+          particle_effects: particleEffects,
+          background_image_url: backgroundImageUrl,
+          background_color: backgroundColor,
+          company_logo_url: companyLogoUrl,
+          company_slogan: companySlogan,
+          default_effect: defaultEffect
+        })
+        .eq("id", selectedGame.id);
+
+      if (error) throw error;
+
+      setGames(games.map(g => g.id === selectedGame.id ? { ...g, name: gameName } : g));
+      toast.success("Jogo atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating game:", error);
+      toast.error("Erro ao atualizar jogo");
     } finally {
       setSaving(false);
     }
@@ -173,6 +272,7 @@ export default function AdminSpinWheelManager() {
           reward_type: rewardType,
           reward_value: rewardValue,
           weight: weight,
+          effect_type: segmentEffectType
         })
         .select()
         .single();
@@ -233,16 +333,22 @@ export default function AdminSpinWheelManager() {
     setGameDescription("");
     setSegmentCount(8);
     setRotationDuration(5);
-    setWheelBackgroundColor("#2d2d2d");
-    setWheelBorderColor("#FFD700");
+    setWheelBackgroundColor("#334155");
+    setWheelBorderColor("#fbbf24");
     setSpinCost(0);
+    setSoundEnabledGame(true);
+    setParticleEffects(true);
+    setBackgroundImageUrl("");
+    setBackgroundColor("#0f172a");
+    setCompanyLogoUrl("");
+    setCompanySlogan("");
   };
 
   const resetSegmentForm = () => {
     setSegmentLabel("");
     setSegmentDescription("");
-    setSegmentColor("#FF6B6B");
-    setSegmentTextColor("#FFFFFF");
+    setSegmentColor("#ef4444");
+    setSegmentTextColor("#ffffff");
     setRewardType("points");
     setRewardValue("");
     setWeight(1);
@@ -267,7 +373,7 @@ export default function AdminSpinWheelManager() {
       <Tabs defaultValue="games" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="games">Meus Jogos</TabsTrigger>
-          <TabsTrigger value="create">Criar Novo Jogo</TabsTrigger>
+          <TabsTrigger value="create">{selectedGame ? "Editar Jogo" : "Criar Novo Jogo"}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="games" className="space-y-4">
@@ -283,16 +389,15 @@ export default function AdminSpinWheelManager() {
                 <Card
                   key={game.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => {
-                    setSelectedGame(game);
-                    loadSegments(game.id);
-                  }}
+                  onClick={() => selectGameForEdit(game)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle>{game.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-2">{game.description}</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {game.description}
+                        </p>
                       </div>
                       <Badge variant={game.is_published ? "default" : "outline"}>
                         {game.is_published ? "Publicado" : "Rascunho"}
@@ -300,11 +405,31 @@ export default function AdminSpinWheelManager() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm text-muted-foreground">{game.segment_count} segmentos</p>
-                      <Button size="sm" onClick={(e) => { e.stopPropagation(); publishGame(game.id); }}>
-                        <Eye className="h-4 w-4 mr-2" /> Publicar
-                      </Button>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {game.segment_count} segmentos
+                      </p>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={(e) => {
+                          e.stopPropagation();
+                          selectGameForEdit(game);
+                        }}>
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        {!game.is_published && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              publishGame(game.id);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Publicar
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -315,23 +440,156 @@ export default function AdminSpinWheelManager() {
 
         <TabsContent value="create" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>Criar Nova Roda</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{selectedGame ? "Editar Jogo" : "Criar Nova Roda"}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-	              <Input placeholder="Nome do Jogo" value={gameName} onChange={(e) => setGameName(e.target.value)} />
-	              <Textarea placeholder="Descrição" value={gameDescription} onChange={(e) => setGameDescription(e.target.value)} />
-	              <div className="grid grid-cols-2 gap-4">
-	                <div className="space-y-2">
-	                  <Label>Cor de Fundo (Hex)</Label>
-	                  <Input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} />
-	                </div>
-	                <div className="space-y-2">
-	                  <Label>Cor da Roda (Hex)</Label>
-	                  <Input type="color" value={wheelBackgroundColor} onChange={(e) => setWheelBackgroundColor(e.target.value)} />
-	                </div>
-	              </div>
-	              <Input placeholder="URL da Imagem de Fundo (Marca)" value={backgroundImageUrl} onChange={(e) => setBackgroundImageUrl(e.target.value)} />
-	              <Button onClick={createGame} disabled={saving} className="w-full">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} Criar Roda
+              <div>
+                <Label>Nome do Jogo</Label>
+                <Input
+                  placeholder="Nome da roda da sorte"
+                  value={gameName}
+                  onChange={(e) => setGameName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Descrição</Label>
+                <Textarea
+                  placeholder="Descrição da roda"
+                  value={gameDescription}
+                  onChange={(e) => setGameDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Cor de Fundo (Hex)</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="w-12 h-10 rounded-md border border-border cursor-pointer"
+                    />
+                    <Input
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Cor da Roda (Hex)</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={wheelBackgroundColor}
+                      onChange={(e) => setWheelBackgroundColor(e.target.value)}
+                      className="w-12 h-10 rounded-md border border-border cursor-pointer"
+                    />
+                    <Input
+                      value={wheelBackgroundColor}
+                      onChange={(e) => setWheelBackgroundColor(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label>URL da Imagem de Fundo (Marca)</Label>
+                <Input
+                  placeholder="https://..."
+                  value={backgroundImageUrl}
+                  onChange={(e) => setBackgroundImageUrl(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Logo da Empresa (URL)</Label>
+                  <Input
+                    placeholder="https://..."
+                    value={companyLogoUrl}
+                    onChange={(e) => setCompanyLogoUrl(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Slogan da Empresa</Label>
+                  <Input
+                    placeholder="Slogan..."
+                    value={companySlogan}
+                    onChange={(e) => setCompanySlogan(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <Label>Duração da Rotação (segundos)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={rotationDuration}
+                    onChange={(e) => setRotationDuration(parseInt(e.target.value) || 5)}
+                  />
+                </div>
+                <div>
+                  <Label>Custo por Giro</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={spinCost}
+                    onChange={(e) => setSpinCost(parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <div>
+                  <Label>Número de Segmentos</Label>
+                  <Input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={segmentCount}
+                    onChange={(e) => setSegmentCount(parseInt(e.target.value) || 8)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="flex items-center justify-between">
+                  <Label>Ativar Efeitos Sonoros</Label>
+                  <Switch
+                    checked={soundEnabled}
+                    onCheckedChange={setSoundEnabledGame}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Ativar Efeitos de Partículas</Label>
+                  <Switch
+                    checked={particleEffects}
+                    onCheckedChange={setParticleEffects}
+                  />
+                </div>
+                <div>
+                  <Label>Efeito Padrão do Jogo</Label>
+                  <select
+                    value={defaultEffect}
+                    onChange={(e) => setDefaultEffect(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-card"
+                  >
+                    <option value="confetti">Confetti</option>
+                    <option value="fireworks">Fireworks</option>
+                    <option value="stars">Stars</option>
+                    <option value="poppers">Poppers</option>
+                    <option value="zap">Zap</option>
+                  </select>
+                </div>
+              </div>
+
+              <Button onClick={selectedGame ? updateGame : createGame} disabled={saving} className="w-full">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {selectedGame ? "Atualizar Jogo" : "Criar Roda"}
               </Button>
             </CardContent>
           </Card>
@@ -345,10 +603,60 @@ export default function AdminSpinWheelManager() {
             <div className="border-t pt-6">
               <h3 className="font-bold mb-4">Adicionar Segmento</h3>
               <div className="space-y-4">
-                <Input placeholder="Rótulo" value={segmentLabel} onChange={(e) => setSegmentLabel(e.target.value)} />
-                <Input placeholder="Valor do Prêmio" value={rewardValue} onChange={(e) => setRewardValue(e.target.value)} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Input placeholder="Rótulo do Segmento" value={segmentLabel} onChange={(e) => setSegmentLabel(e.target.value)} />
+                  <Input placeholder="Valor do Prémio" value={rewardValue} onChange={(e) => setRewardValue(e.target.value)} />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="flex items-center gap-2">
+                    <Label>Cor de Fundo:</Label>
+                    <input
+                      type="color"
+                      value={segmentColor}
+                      onChange={(e) => setSegmentColor(e.target.value)}
+                      className="w-10 h-10 rounded-md border border-border cursor-pointer"
+                    />
+                    <Input value={segmentColor} onChange={(e) => setSegmentColor(e.target.value)} className="flex-1" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label>Cor do Texto:</Label>
+                    <input
+                      type="color"
+                      value={segmentTextColor}
+                      onChange={(e) => setSegmentTextColor(e.target.value)}
+                      className="w-10 h-10 rounded-md border border-border cursor-pointer"
+                    />
+                    <Input value={segmentTextColor} onChange={(e) => setSegmentTextColor(e.target.value)} className="flex-1" />
+                  </div>
+                  <div>
+                    <Label>Peso</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={weight}
+                      onChange={(e) => setWeight(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Efeito do Segmento</Label>
+                    <select
+                      value={segmentEffectType}
+                      onChange={(e) => setSegmentEffectType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-border bg-card"
+                    >
+                      <option value="confetti">Confetti</option>
+                      <option value="fireworks">Fireworks</option>
+                      <option value="stars">Stars</option>
+                      <option value="poppers">Poppers</option>
+                      <option value="zap">Zap</option>
+                    </select>
+                  </div>
+                </div>
+
                 <Button onClick={addSegment} disabled={saving} className="w-full">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} Adicionar Segmento
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                  Adicionar Segmento
                 </Button>
               </div>
             </div>
@@ -357,10 +665,10 @@ export default function AdminSpinWheelManager() {
               {segments.map((segment) => (
                 <div key={segment.id} className="p-4 border rounded-lg flex justify-between items-center">
                   <div>
-                    <p className="font-semibold">{segment.label}</p>
+                    <p className="font-bold">{segment.label}</p>
                     <p className="text-sm text-muted-foreground">{segment.reward_value}</p>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => deleteSegment(segment.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => deleteSegment(segment.id!)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>

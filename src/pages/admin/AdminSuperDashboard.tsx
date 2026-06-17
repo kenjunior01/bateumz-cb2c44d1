@@ -23,12 +23,19 @@ interface Region {
   created_at: string;
 }
 
+interface Profile {
+  user_id: string;
+  email: string;
+  full_name?: string;
+}
+
 interface RegionalAdmin {
   id: string;
   user_id: string;
   country_code: string;
   assigned_by: string;
   created_at: string;
+  profile?: Profile;
 }
 
 interface GlobalStats {
@@ -75,7 +82,28 @@ export default function AdminSuperDashboard() {
         .order("created_at", { ascending: false });
 
       if (adminsError) throw adminsError;
-      setAdmins(adminsData || []);
+
+      // Fetch profiles for all admins
+      if (adminsData && adminsData.length > 0) {
+        const userIds = adminsData.map(a => a.user_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, email, full_name")
+          .in("user_id", userIds);
+
+        if (!profilesError && profilesData) {
+          // Join profiles with admins
+          const adminsWithProfiles = adminsData.map(admin => ({
+            ...admin,
+            profile: profilesData.find(p => p.user_id === admin.user_id)
+          }));
+          setAdmins(adminsWithProfiles);
+        } else {
+          setAdmins(adminsData);
+        }
+      } else {
+        setAdmins(adminsData || []);
+      }
 
       // Calculate global stats
       const { data: rafflesData, error: rafflesError } = await supabase
@@ -450,10 +478,10 @@ export default function AdminSuperDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Utilizador ID</TableHead>
+                      <TableHead>Utilizador</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>País/Região</TableHead>
-                      <TableHead>Atribuído por</TableHead>
-                      <TableHead>Data</TableHead>
+                      <TableHead>Atribuído em</TableHead>
                       <TableHead className="w-20"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -469,12 +497,19 @@ export default function AdminSuperDashboard() {
                         const region = regions.find((r) => r.country_code === admin.country_code);
                         return (
                           <TableRow key={admin.id}>
-                            <TableCell className="font-mono text-xs">{admin.user_id.slice(0, 8)}</TableCell>
+                            <TableCell>
+                              <div className="font-medium">
+                                {admin.profile?.full_name || "Utilizador"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                ID: {admin.user_id.slice(0, 8)}...
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {admin.profile?.email || "-"}
+                            </TableCell>
                             <TableCell>
                               {region && <span>{region.flag} {region.label}</span>}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {admin.assigned_by.slice(0, 8)}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {new Date(admin.created_at).toLocaleDateString("pt-BR")}

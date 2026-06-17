@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, TrendingUp, Users } from "lucide-react";
+import { Loader2, Trophy, TrendingUp, Users, Calendar, Globe, MessageSquare, Zap, ArrowLeft, Users2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Match {
@@ -247,15 +247,53 @@ export default function WorldCupPredictions() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8">
       <div className="container mx-auto px-4">
+        {/* Back Button */}
+        <div className="mb-4">
+          <Link to="/mundial">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar para Central do Mundial
+            </Button>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Trophy className="h-8 w-8 text-primary" />
             <h1 className="font-display text-3xl font-bold">Bolão do Mundial</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-6">
             Faça suas previsões e acumule pontos com seus amigos
           </p>
+
+          {/* Quick Navigation */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <Link to="/mundial">
+              <Button variant="outline" className="w-full gap-2">
+                <Calendar className="h-4 w-4" />
+                Jogos
+              </Button>
+            </Link>
+            <Link to="/fantasy">
+              <Button variant="outline" className="w-full gap-2">
+                <Users2 className="h-4 w-4" />
+                Fantasy
+              </Button>
+            </Link>
+            <Link to="/forum-mundial">
+              <Button variant="outline" className="w-full gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Fórum
+              </Button>
+            </Link>
+            <Link to="/pontos">
+              <Button variant="outline" className="w-full gap-2">
+                <Trophy className="h-4 w-4" />
+                Ranking
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}

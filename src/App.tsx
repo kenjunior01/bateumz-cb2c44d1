@@ -19,10 +19,12 @@ import WorldCupPredictions from "./pages/WorldCupPredictions.tsx";
 import FantasyFootball from "./pages/FantasyFootball.tsx";
 import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
 import WorldCupForum from "./pages/WorldCupForum.tsx";
-import MillionaireGame from "./pages/games/MillionaireGame.tsx";
-import SpinWheelGame from "./pages/games/SpinWheelGame.tsx";
+import MillionaireGame from "./components/livegames/MillionaireGame.tsx";
+import PrizeWheel from "./components/livegames/PrizeWheel.tsx";
+import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
 import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
 import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
+import GamesHub from "./pages/GamesHub.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -58,6 +60,7 @@ import ContestDetail from "./pages/ContestDetail.tsx";
 import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
 import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
 import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";
+import AdminPlans from "./pages/admin/AdminPlans.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -126,6 +129,7 @@ function AnimatedRoutes() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />
           <Route path="/concursos" element={<Contests />} />
+          <Route path="/jogos" element={<GamesHub />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/mundial" element={<WorldCupCentral />} />
@@ -134,7 +138,7 @@ function AnimatedRoutes() {
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/games/millionaire/:gameId" element={<MillionaireGame />} />
-          <Route path="/games/spin-wheel/:gameId" element={<SpinWheelGame />} />
+          <Route path="/games/spin-wheel/:gameId" element={<PrizeWheel prizes={DEFAULT_WHEEL_PRIZES} />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
@@ -226,6 +230,7 @@ function AnimatedRoutes() {
             <Route path="super-dashboard" element={<AdminSuperDashboard />} />
             <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
             <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
+            <Route path="plans" element={<AdminPlans />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

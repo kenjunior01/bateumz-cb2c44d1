@@ -5,12 +5,59 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Verify JWT and check if user is admin or superadmin
+async function isAuthorized(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return false;
+  }
+  
+  const token = authHeader.slice(7);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Verify token
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return false;
+  }
+  
+  // Check if user is superadmin or admin using is_superadmin function
+  const adminSupabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: isSuperAdmin, error: funcError } = await adminSupabase.rpc("is_superadmin", { user_id: user.id });
+  
+  if (funcError) {
+    return false;
+  }
+  
+  // Also check if user is an admin
+  const { data: profile } = await adminSupabase.from("profiles").select("role").eq("id", user.id).single();
+  
+  return isSuperAdmin || profile?.role === "admin" || profile?.role === "superadmin";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Check authorization first
+    const authorized = await isAuthorized(req);
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

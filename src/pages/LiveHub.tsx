@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,8 +20,28 @@ import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
 import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
+
+interface SavedWheelGame {
+  id: string;
+  name: string;
+  is_published?: boolean;
+  segment_count?: number;
+  rotation_duration?: number;
+  wheel_background_color?: string;
+  wheel_border_color?: string;
+  spin_cost?: number;
+  sound_enabled?: boolean;
+  particle_effects?: boolean;
+  background_image_url?: string;
+  background_color?: string;
+  company_logo_url?: string;
+  company_slogan?: string;
+  default_effect?: string;
+}
 
 const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string; grad: string }[] = [
   { id: "wheel", label: "Roda de Prémios", icon: RotateCcw, emoji: "🎰", desc: "Sorteie prémios reais com probabilidades configuráveis.", grad: "from-violet-500 to-fuchsia-500" },
@@ -35,7 +55,7 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 const LiveHub = () => {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const { user } = useAuth();
   const [active, setActive] = useState<GameId>(() => {
     try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
@@ -58,6 +78,36 @@ const LiveHub = () => {
       return s ? JSON.parse(s) : [];
     } catch { return []; }
   });
+  const [savedGames, setSavedGames] = useState<SavedWheelGame[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [loadingGames, setLoadingGames] = useState(false);
+
+  // Load saved games from database
+  useEffect(() => {
+    if (!user) return;
+
+    const loadSavedGames = async () => {
+      setLoadingGames(true);
+      try {
+        const { data, error } = await supabase
+          .from("spin_wheel_games")
+          .select("*")
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        setSavedGames(data || []);
+      } catch (error) {
+        console.error("Error loading saved games:", error);
+        toast.error("Erro ao carregar jogos salvos");
+      } finally {
+        setLoadingGames(false);
+      }
+    };
+
+    loadSavedGames();
+  }, [user]);
 
   // Live session lifecycle
   const [isLive, setIsLive] = useState<boolean>(() => {
@@ -336,7 +386,79 @@ const LiveHub = () => {
             <AnimatePresence mode="wait">
               {active === "wheel" && (
                 <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <PrizeWheel prizes={wheelPrizes} onChange={setWheelPrizes} />
+                  {/* Saved Games Selector */}
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        <Gamepad2 className="w-5 h-5" />
+                        {selectedGameId ? "Jogo Selecionado" : "Escolha um Jogo Salvo"}
+                      </h3>
+                      <Link
+                        to="/admin/spin-wheel-manager"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Criar/Editar Jogo
+                      </Link>
+                    </div>
+                    
+                    {loadingGames ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : savedGames.length === 0 ? (
+                      <div className="text-center py-8 bg-card border border-dashed border-border rounded-2xl">
+                        <p className="text-muted-foreground mb-4">Ainda não tens nenhum jogo salvo!</p>
+                        <Link
+                          to="/admin/spin-wheel-manager"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Criar Primeiro Jogo
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <button
+                          onClick={() => setSelectedGameId(null)}
+                          className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                            !selectedGameId ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
+                          }`}
+                        >
+                          <p className="font-bold">Modo Rápido</p>
+                          <p className="text-xs text-muted-foreground">Edita prêmios diretamente aqui</p>
+                        </button>
+
+                        {savedGames.map(game => (
+                          <button
+                            key={game.id}
+                            onClick={() => setSelectedGameId(game.id)}
+                            className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                              selectedGameId === game.id ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <p className="font-bold">{game.name}</p>
+                              {game.is_published ? (
+                                <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 text-xs font-bold">
+                                  Publicado
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-xs font-bold">
+                                  Rascunho
+                                </span>
+                              )}
+                            </div>
+                            {game.company_slogan && <p className="text-xs text-muted-foreground mt-1">{game.company_slogan}</p>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <PrizeWheel 
+                    prizes={wheelPrizes} 
+                    onChange={setWheelPrizes} 
+                    gameId={selectedGameId || undefined} 
+                  />
                 </motion.div>
               )}
               {active === "tap" && (

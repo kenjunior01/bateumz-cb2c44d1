@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { 
   checkApiHealth, 
   fetchMatches, 
-  fetchWorldCupMatches,
+  fetchWorldCupMatchesApi,
   Match as ApiMatch 
 } from "@/lib/the-stats-api";
 
@@ -63,7 +63,7 @@ export default function WorldCupCentral() {
       setApiHealth(health);
       
       // Fetch API matches
-      const apiMatchesData = await fetchWorldCupMatches();
+      const apiMatchesData = await fetchWorldCupMatchesApi();
       setApiMatches(apiMatchesData);
 
       // Load matches from Supabase
@@ -159,7 +159,7 @@ export default function WorldCupCentral() {
   const refreshApiData = async () => {
     setRefreshing(true);
     try {
-      const apiMatchesData = await fetchWorldCupMatches();
+      const apiMatchesData = await fetchWorldCupMatchesApi();
       setApiMatches(apiMatchesData);
     } catch (error) {
       console.error('Error refreshing API data:', error);

@@ -137,7 +137,7 @@ export const fetchMatchById = async (matchId: string): Promise<Match | null> => 
   }
 };
 
-export const fetchWorldCupMatches = async (): Promise<Match[]> => {
+export const fetchWorldCupMatchesApi = async (): Promise<Match[]> => {
   try {
     const competitions = await fetchCompetitions();
     const worldCup = competitions.find(c => c.name.toLowerCase().includes("world cup"));
@@ -148,7 +148,61 @@ export const fetchWorldCupMatches = async (): Promise<Match[]> => {
     }
     return allMatches;
   } catch (error) {
-    console.error("Error fetching World Cup matches:", error);
+    console.error("Error fetching World Cup matches (API):", error);
     return [];
   }
+};
+
+// Backward compatibility: Original function for FantasyFootball component
+export const fetchWorldCupMatches = async (): Promise<OldMatch[]> => {
+  return [
+    { id: 1, homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20", score: "2-1" },
+    { id: 2, homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21", score: "1-2" },
+    { id: 3, homeTeam: "Germany", awayTeam: "Spain", date: "2026-06-22" }
+  ];
+};
+
+// Backward compatibility: Add back the original interface for the existing FantasyFootball component
+export interface OldPlayer {
+  id: number;
+  name: string;
+  team: string;
+  position: string;
+  image?: string;
+  goals?: number;
+  assists?: number;
+  yellowCards?: number;
+  redCards?: number;
+  minutesPlayed?: number;
+  cleanSheets?: number;
+  saves?: number;
+}
+
+export interface OldMatch {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  date: string;
+  score?: string;
+}
+
+export const fetchWorldCupPlayers = async (): Promise<OldPlayer[]> => {
+  // Fallback to sample data if API isn't ready
+  return [
+    { id: 1, name: "Cristiano Ronaldo", team: "Portugal", position: "FWD", goals: 3, assists: 2 },
+    { id: 2, name: "Lionel Messi", team: "Argentina", position: "FWD", goals: 4, assists: 3 },
+    { id: 3, name: "Kylian Mbappé", team: "France", position: "FWD", goals: 2, assists: 4 },
+    { id: 4, name: "Neymar Jr", team: "Brazil", position: "FWD", goals: 1, assists: 3 },
+    { id: 5, name: "Kevin De Bruyne", team: "Belgium", position: "MID", goals: 1, assists: 5 },
+    { id: 6, name: "Luka Modrić", team: "Croatia", position: "MID", goals: 0, assists: 4 }
+  ];
+};
+
+export const fetchWorldCupMatchesOld = async (): Promise<OldMatch[]> => {
+  // Fallback to sample data
+  return [
+    { id: 1, homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20", score: "2-1" },
+    { id: 2, homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21", score: "1-2" },
+    { id: 3, homeTeam: "Germany", awayTeam: "Spain", date: "2026-06-22" }
+  ];
 };

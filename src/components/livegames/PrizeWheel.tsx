@@ -350,15 +350,20 @@ const PrizeWheel = ({
 
       // CÁLCULO EXATO: 
       // A roda começa com o segmento 0 no topo (ponteiro). 
-      // Para que o segmento X fique no topo, precisamos de girar a roda (360 - (X * segmentAngle)) graus!
-      // Vamos adicionar as voltas completas para o efeito de movimento!
+      // Para que o segmento X fique no topo, precisamos de girar a roda (X * segmentAngle) graus no sentido oposto!
       const targetWinningAngle = winningIndex * segmentAngleDeg + segmentAngleDeg / 2;
-      const finalRotation = rotation + (fullSpins * 360) + (360 - targetWinningAngle);
+      const finalRotation = rotation + (fullSpins * 360) + targetWinningAngle;
 
       const startTime = Date.now();
       const durationMs = (wheelConfig?.rotation_duration || rotationDuration) * 1000;
       const initialRotation = rotation;
       let lastSegment = -1;
+
+      // Função para calcular o segmento atual a partir do ângulo
+      const getCurrentSegment = (angle: number) => {
+        const normalized = ((angle % 360) + 360) % 360;
+        return Math.floor(normalized / segmentAngleDeg);
+      };
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
@@ -372,8 +377,7 @@ const PrizeWheel = ({
 
         // Play click sound when passing segments
         if (soundEnabled) {
-          const normalized = ((currentRot % 360) + 360) % 360;
-          const currentSeg = Math.floor(normalized / segmentAngleDeg);
+          const currentSeg = getCurrentSegment(currentRot);
           if (currentSeg !== lastSegment && lastSegment !== -1) {
             const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3");
             audio.volume = 0.1;
@@ -387,11 +391,15 @@ const PrizeWheel = ({
         } else {
           setRotation(finalRotation);
           setSpinning(false);
-          setResult(winner);
-          onWin?.(winner);
           
-          if (particleEffects && !/tenta|nada|outra|perde/i.test(winner.label.toLowerCase())) {
-            const effectType = winner.effectType || defaultEffect || "confetti";
+          // VERIFICAÇÃO FINAL: Garantir que o resultado corresponde ao segmento no ponteiro!
+          const finalSegmentIndex = getCurrentSegment(finalRotation);
+          const actualWinner = prizes[finalSegmentIndex] || winner;
+          setResult(actualWinner);
+          onWin?.(actualWinner);
+          
+          if (particleEffects && !/tenta|nada|outra|perde/i.test(actualWinner.label.toLowerCase())) {
+            const effectType = actualWinner.effectType || defaultEffect || "confetti";
             fireConfetti(effectType);
           }
         }

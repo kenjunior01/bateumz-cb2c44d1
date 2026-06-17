@@ -86,6 +86,7 @@ export default function AdminSpinWheelManager() {
   const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const [companySlogan, setCompanySlogan] = useState("");
   const [defaultEffect, setDefaultEffect] = useState("confetti");
+  const [rtpMode, setRtpMode] = useState<"normal" | "rain" | "hardcore">("normal");
 
   // Segment form
   const [segmentLabel, setSegmentLabel] = useState("");
@@ -154,6 +155,7 @@ export default function AdminSpinWheelManager() {
     setCompanyLogoUrl(game.company_logo_url || "");
     setCompanySlogan(game.company_slogan || "");
     setDefaultEffect(game.default_effect || "confetti");
+    setRtpMode((game as any).rtp_mode || "normal");
     loadSegments(game.id);
   };
 
@@ -191,10 +193,9 @@ export default function AdminSpinWheelManager() {
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
           default_effect: defaultEffect,
-          created_by: user!.id,
+          rtp_mode: rtpMode,
           region_id: regionId,
-          is_active: true,
-          is_published: false
+          created_by: user?.id
         })
         .select()
         .single();
@@ -237,7 +238,8 @@ export default function AdminSpinWheelManager() {
           background_color: backgroundColor,
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
-          default_effect: defaultEffect
+          default_effect: defaultEffect,
+          rtp_mode: rtpMode
         })
         .eq("id", selectedGame.id);
 
@@ -346,6 +348,8 @@ export default function AdminSpinWheelManager() {
     setBackgroundColor("#0f172a");
     setCompanyLogoUrl("");
     setCompanySlogan("");
+    setDefaultEffect("confetti");
+    setRtpMode("normal");
   };
 
   const resetSegmentForm = () => {
@@ -357,6 +361,7 @@ export default function AdminSpinWheelManager() {
     setRewardValue("");
     setRewardImageUrl("");
     setWeight(1);
+    setSegmentEffectType("confetti");
   };
 
   if (role !== "admin" && role !== "superadmin" && role !== "business") {
@@ -589,7 +594,7 @@ export default function AdminSpinWheelManager() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div className="flex items-center justify-between">
                   <Label>Ativar Efeitos Sonoros</Label>
                   <Switch
@@ -616,6 +621,18 @@ export default function AdminSpinWheelManager() {
                     <option value="stars">Stars</option>
                     <option value="poppers">Poppers</option>
                     <option value="zap">Zap</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Modo de Jogo</Label>
+                  <select
+                    value={rtpMode}
+                    onChange={(e) => setRtpMode(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-card"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="rain">Chuva de Prémios 💰</option>
+                    <option value="hardcore">Hardcore</option>
                   </select>
                 </div>
               </div>

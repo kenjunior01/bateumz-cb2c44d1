@@ -9,10 +9,14 @@ import { Loader2, Trophy, Calendar, Users, Zap, Globe, Users2, MessageSquare, Re
 import { toast } from "sonner";
 import { 
   fetchApiStatus, 
-  fetchFixtures, 
+  fetchFixtures,
+  fetchLiveScores,
+  findWorldCupLeagueId,
+  DEFAULT_SEASON,
+  isFootballApiConfigured,
   type ApiMatch,
-  type ApiStatusResponse
-} from "@/lib/api-football";
+  type ApiStatusResponse,
+} from "@/lib/football-api";
 
 interface Match {
   id: string;
@@ -61,10 +65,20 @@ export default function WorldCupCentral() {
       // Check API status
       const status = await fetchApiStatus();
       setApiStatus(status);
-      
-      // Fetch API fixtures (World Cup 2022 - available for free plan!)
-      const fixturesData = await fetchFixtures(1, 2022);
+
+      const leagueId = await findWorldCupLeagueId();
+      const fixturesData = await fetchFixtures(leagueId, DEFAULT_SEASON);
       setApiFixtures(fixturesData.response || []);
+
+      const live = await fetchLiveScores();
+      if (live.length > 0 && fixturesData.response?.length === 0) {
+        setApiFixtures(live.map((m, i) => ({
+          fixture: { id: Number(m.id) || i, date: m.date || new Date().toISOString(), status: { long: m.status, short: m.status }, venue: { name: "", city: "" } },
+          league: { id: leagueId, name: m.league || "Live", country: "", logo: "", flag: "", season: DEFAULT_SEASON, round: "" },
+          teams: { home: { id: i, name: m.homeTeam, logo: "", winner: null }, away: { id: i + 1, name: m.awayTeam, logo: "", winner: null } },
+          goals: { home: m.homeScore, away: m.awayScore },
+        })));
+      }
 
       // Load matches from Supabase
       const { data: matchesData, error: matchesError } = await supabase
@@ -128,7 +142,6 @@ export default function WorldCupCentral() {
           table: 'world_cup_matches'
         },
         (payload) => {
-          console.log('Real-time update:', payload);
           loadData();
         }
       )
@@ -159,10 +172,12 @@ export default function WorldCupCentral() {
   const refreshApiData = async () => {
     setRefreshing(true);
     try {
-      const fixturesData = await fetchFixtures(1, 2022);
+      const leagueId = await findWorldCupLeagueId();
+      const fixturesData = await fetchFixtures(leagueId, DEFAULT_SEASON);
       setApiFixtures(fixturesData.response || []);
     } catch (error) {
       console.error('Error refreshing API data:', error);
+      toast.error("Erro ao atualizar dados da API");
     } finally {
       setRefreshing(false);
     }
@@ -219,7 +234,7 @@ export default function WorldCupCentral() {
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-4 flex-wrap">
             <Trophy className="h-8 w-8 text-primary" />
-            <h1 className="font-display text-4xl font-bold">Central do Mundial (2022 - Demo)</h1>
+            <h1 className="font-display text-4xl font-bold">Central do Mundial 2026</h1>
             <Trophy className="h-8 w-8 text-primary" />
             <Button 
               variant="outline" 
@@ -233,8 +248,8 @@ export default function WorldCupCentral() {
             </Button>
           </div>
           <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
-            <Badge variant={apiStatus?.response.subscription.active ? 'default' : 'destructive'}>
-              API-Football: {apiStatus?.response.subscription.active ? 'Online' : 'Offline'}
+            <Badge variant={isFootballApiConfigured() && apiStatus?.response.subscription.active ? 'default' : 'destructive'}>
+              RapidAPI Football: {isFootballApiConfigured() && apiStatus?.response.subscription.active ? 'Online' : 'Offline'}
             </Badge>
             <Badge variant="outline">
               Plano: {apiStatus?.response.subscription.plan || 'Free'}
@@ -249,8 +264,10 @@ export default function WorldCupCentral() {
             )}
           </div>
           <div className="text-center mb-6 text-sm text-muted-foreground">
-            <p>Nota: O plano gratuito da API-Football só tem dados até a temporada 2024. Estamos usando a Copa do Mundo de 2022 como exemplo!</p>
-            <p>Para dados de 2026, você precisaria fazer upgrade para um plano pago na API-Football!</p>
+            <p>Dados em tempo real via RapidAPI Free Live Football Data. Jogos ao vivo, fixtures e classificações.</p>
+            {!isFootballApiConfigured() && (
+              <p className="text-destructive mt-1">Configure VITE_RAPIDAPI_KEY no .env para activar a API.</p>
+            )}
           </div>
           <p className="text-lg text-muted-foreground mb-6">
             Acompanhe todos os jogos, equipes e notícias do maior torneio de futebol do mundo

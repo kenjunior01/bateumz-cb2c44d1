@@ -15,6 +15,9 @@ import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
 import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
+import GoldenBootPredict from "./pages/GoldenBootPredict.tsx";
+import FootballLiveQuiz from "./pages/FootballLiveQuiz.tsx";
+import MatchScoreChallenge from "./pages/MatchScoreChallenge.tsx";
 import WorldCupCentral from "./pages/WorldCupCentral.tsx";
 import WorldCupPredictions from "./pages/WorldCupPredictions.tsx";
 import FantasyFootball from "./pages/FantasyFootball.tsx";
@@ -140,6 +143,9 @@ function AnimatedRoutes() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/mundial" element={<WorldCupCentral />} />
+          <Route path="/mundial/quiz" element={<FootballLiveQuiz />} />
+          <Route path="/mundial/score-challenge" element={<MatchScoreChallenge />} />
+          <Route path="/mundial/golden-boot" element={<GoldenBootPredict />} />
           <Route path="/bolao" element={<WorldCupPredictions />} />
           <Route path="/fantasy" element={<FantasyFootball />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />

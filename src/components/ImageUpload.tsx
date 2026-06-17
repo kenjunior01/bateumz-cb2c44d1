@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { validateImageFile, ACCEPT_IMAGES, DEFAULT_MAX_UPLOAD_MB } from '@/lib/upload-utils';
 
 interface ImageUploadProps {
   value?: string;
@@ -27,6 +28,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const err = validateImageFile(file, DEFAULT_MAX_UPLOAD_MB);
+    if (err) {
+      toast.error(err);
+      setIsUploading(false);
+      return;
+    }
 
     setIsUploading(true);
     
@@ -102,7 +110,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             {isUploading ? "Carregando..." : "Upload"}
             <input
               type="file"
-              accept="image/*"
+              accept={ACCEPT_IMAGES}
               className="absolute inset-0 opacity-0 cursor-pointer"
               onChange={handleFileUpload}
               disabled={isUploading}

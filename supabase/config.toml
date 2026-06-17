@@ -1,4 +1,63 @@
 project_id = "ngxrdpplyghlugoowjqj"
 
+# Edge Functions — JWT verification
+# Internal/cron calls use SUPABASE_SERVICE_ROLE_KEY in Authorization header
+
 [functions.process-email-queue]
 verify_jwt = true
+
+[functions.paypal-create-order]
+verify_jwt = true
+
+[functions.paypal-capture-order]
+verify_jwt = true
+
+[functions.spin-wheel-spin]
+verify_jwt = true
+
+[functions.award-engagement-points]
+verify_jwt = true
+
+[functions.auto-draw]
+verify_jwt = true
+
+[functions.notify-raffle-ending]
+verify_jwt = true
+
+[functions.admin-cron-jobs]
+verify_jwt = true
+
+[functions.draw-social-winner]
+verify_jwt = true
+
+[functions.create-admin]
+verify_jwt = true
+
+[functions.calculate-world-cup-points]
+verify_jwt = true
+
+# Public config — no user JWT required
+[functions.paypal-config]
+verify_jwt = false
+
+# Called post-purchase; uses service role internally when invoked from app with user session
+[functions.check-ticket-threshold]
+verify_jwt = false
+
+# Optional JWT for self-referral check
+[functions.track-ambassador-visit]
+verify_jwt = false
+
+# AI mascot — optional auth
+[functions.mascot-chat]
+verify_jwt = false
+
+[functions.mascot-message]
+verify_jwt = false
+
+# Cron/internal — auth via service role in function body
+[functions.fetch-football-data]
+verify_jwt = false
+
+[functions.notify-payment-receipt]
+verify_jwt = false

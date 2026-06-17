@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { validateImageFile, ACCEPT_IMAGES, DEFAULT_MAX_UPLOAD_MB } from "@/lib/upload-utils";
 
 const GRADIENTS = [
   "from-primary to-emerald-400",
@@ -46,12 +47,9 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
   const handleFile = (f: File | undefined) => {
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("Apenas imagens são permitidas");
-      return;
-    }
-    if (f.size > 5 * 1024 * 1024) {
-      toast.error("Imagem máxima de 5MB");
+    const err = validateImageFile(f, DEFAULT_MAX_UPLOAD_MB);
+    if (err) {
+      toast.error(err);
       return;
     }
     setImageFile(f);
@@ -165,7 +163,7 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={ACCEPT_IMAGES}
             className="hidden"
             onChange={(e) => handleFile(e.target.files?.[0])}
           />

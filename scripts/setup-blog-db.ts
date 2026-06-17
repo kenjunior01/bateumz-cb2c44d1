@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -7,12 +11,15 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SU
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function setup() {
-  const sql = fs.readFileSync("/home/ubuntu/bateumz/supabase/migrations/20260613_blog_system.sql", "utf8");
-  
-  // Como não temos um executor de SQL direto no client padrão sem RPC, 
-  // vamos assumir que as tabelas serão criadas pelo sistema de migração do Supabase/Lovable.
-  // Em um ambiente real, eu usaria a CLI do Supabase ou uma Edge Function.
-  console.log("Migration file created. In a production environment, this would be applied via Supabase dashboard or CLI.");
+  const migrationPath = path.join(__dirname, "..", "supabase", "migrations", "20260613_blog_system.sql");
+  if (!fs.existsSync(migrationPath)) {
+    console.error("Migration file not found:", migrationPath);
+    process.exit(1);
+  }
+  const sql = fs.readFileSync(migrationPath, "utf8");
+  console.log("Migration SQL loaded (" + sql.length + " chars).");
+  console.log("Apply via Supabase CLI: supabase db push");
+  console.log("Or paste into Supabase Dashboard → SQL Editor.");
 }
 
 setup();

@@ -1,5 +1,17 @@
-const API_KEY = "fapi_HfDFosDgHNoNMULNU3TlpB1DLaVAcHSG";
-const BASE_URL = "https://api.thestatsapi.com/api/football";
+/**
+ * Football stats — powered by RapidAPI Free Live Football Data.
+ * Replaces the old The Stats API integration.
+ */
+import {
+  fetchLeagueMatches,
+  fetchLiveScores,
+  fetchFixturesByDate,
+  fetchWorldCupPlayers as fetchPlayersFromApi,
+  fetchWorldCupMatchesForFantasy,
+  findWorldCupLeagueId,
+  DEFAULT_SEASON,
+  type LiveMatch,
+} from "./football-api";
 
 export interface Competition {
   id: string;
@@ -23,10 +35,8 @@ export interface Player {
   id: string;
   name: string;
   position?: string;
-  date_of_birth?: string;
   nationality?: string;
   current_team?: Team;
-  number?: number;
   image?: string;
 }
 
@@ -37,132 +47,19 @@ export interface Match {
   away_team: Team;
   status: "upcoming" | "live" | "completed";
   kickoff_time: string;
-  venue?: string;
   home_score?: number;
   away_score?: number;
-  has_xg?: boolean;
-  has_odds?: boolean;
 }
 
 export interface ApiResponse<T> {
   data: T[];
-  meta: {
-    page: number;
-    per_page: number;
-    total: number;
-    total_pages: number;
-  };
+  meta: { page: number; per_page: number; total: number; total_pages: number };
 }
 
 export interface ApiSingleResponse<T> {
   data: T;
 }
 
-export const checkApiHealth = async (): Promise<{ status: string; timestamp: string } | null> => {
-  try {
-    const response = await fetch("https://api.thestatsapi.com/api/health", {
-      method: "GET",
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error checking API health:", error);
-    return null;
-  }
-};
-
-export const fetchCompetitions = async (): Promise<Competition[]> => {
-  try {
-    const response = await fetch(`${BASE_URL}/competitions`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data: ApiResponse<Competition> = await response.json();
-    return data.data || [];
-  } catch (error) {
-    console.error("Error fetching competitions:", error);
-    return [];
-  }
-};
-
-export const fetchMatches = async (dateFrom?: string, dateTo?: string): Promise<Match[]> => {
-  try {
-    let url = `${BASE_URL}/matches`;
-    const params = new URLSearchParams();
-    if (dateFrom) params.append("date_from", dateFrom);
-    if (dateTo) params.append("date_to", dateTo);
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data: ApiResponse<Match> = await response.json();
-    return data.data || [];
-  } catch (error) {
-    console.error("Error fetching matches:", error);
-    return [];
-  }
-};
-
-export const fetchMatchById = async (matchId: string): Promise<Match | null> => {
-  try {
-    const response = await fetch(`${BASE_URL}/matches/${matchId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data: ApiSingleResponse<Match> = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error("Error fetching match:", error);
-    return null;
-  }
-};
-
-export const fetchWorldCupMatchesApi = async (): Promise<Match[]> => {
-  try {
-    const competitions = await fetchCompetitions();
-    const worldCup = competitions.find(c => c.name.toLowerCase().includes("world cup"));
-    
-    const allMatches = await fetchMatches();
-    if (worldCup) {
-      return allMatches.filter(m => m.competition_id === worldCup.id);
-    }
-    return allMatches;
-  } catch (error) {
-    console.error("Error fetching World Cup matches (API):", error);
-    return [];
-  }
-};
-
-// Backward compatibility: Original function for FantasyFootball component
-export const fetchWorldCupMatches = async (): Promise<OldMatch[]> => {
-  return [
-    { id: 1, homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20", score: "2-1" },
-    { id: 2, homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21", score: "1-2" },
-    { id: 3, homeTeam: "Germany", awayTeam: "Spain", date: "2026-06-22" }
-  ];
-};
-
-// Backward compatibility: Add back the original interface for the existing FantasyFootball component
 export interface OldPlayer {
   id: number;
   name: string;
@@ -179,30 +76,101 @@ export interface OldPlayer {
 }
 
 export interface OldMatch {
-  id: number;
+  id: number | string;
   homeTeam: string;
   awayTeam: string;
   date: string;
   score?: string;
 }
 
-export const fetchWorldCupPlayers = async (): Promise<OldPlayer[]> => {
-  // Fallback to sample data if API isn't ready
+function liveToMatch(m: LiveMatch): Match {
+  const isLive = m.status.toLowerCase().includes("live") || m.minute !== "";
+  return {
+    id: m.id,
+    home_team: { id: m.id + "-h", name: m.homeTeam, country: "" },
+    away_team: { id: m.id + "-a", name: m.awayTeam, country: "" },
+    status: isLive ? "live" : m.homeScore != null ? "completed" : "upcoming",
+    kickoff_time: m.date || new Date().toISOString(),
+    home_score: m.homeScore ?? undefined,
+    away_score: m.awayScore ?? undefined,
+  };
+}
+
+export const checkApiHealth = async () => {
+  const live = await fetchLiveScores();
+  return { status: live.length >= 0 ? "ok" : "degraded", timestamp: new Date().toISOString() };
+};
+
+export const fetchCompetitions = async (): Promise<Competition[]> => {
+  const leagueId = await findWorldCupLeagueId();
   return [
-    { id: 1, name: "Cristiano Ronaldo", team: "Portugal", position: "FWD", goals: 3, assists: 2 },
-    { id: 2, name: "Lionel Messi", team: "Argentina", position: "FWD", goals: 4, assists: 3 },
-    { id: 3, name: "Kylian Mbappé", team: "France", position: "FWD", goals: 2, assists: 4 },
-    { id: 4, name: "Neymar Jr", team: "Brazil", position: "FWD", goals: 1, assists: 3 },
-    { id: 5, name: "Kevin De Bruyne", team: "Belgium", position: "MID", goals: 1, assists: 5 },
-    { id: 6, name: "Luka Modrić", team: "Croatia", position: "MID", goals: 0, assists: 4 }
+    {
+      id: String(leagueId),
+      name: "FIFA World Cup",
+      country: "International",
+      country_code: "INT",
+      type: "cup",
+      has_team_stats: true,
+      has_player_stats: true,
+      xg_available: false,
+    },
   ];
 };
 
-export const fetchWorldCupMatchesOld = async (): Promise<OldMatch[]> => {
-  // Fallback to sample data
-  return [
-    { id: 1, homeTeam: "Portugal", awayTeam: "France", date: "2026-06-20", score: "2-1" },
-    { id: 2, homeTeam: "Brazil", awayTeam: "Argentina", date: "2026-06-21", score: "1-2" },
-    { id: 3, homeTeam: "Germany", awayTeam: "Spain", date: "2026-06-22" }
-  ];
+export const fetchMatches = async (): Promise<Match[]> => {
+  const live = await fetchLiveScores();
+  if (live.length > 0) return live.map(liveToMatch);
+  const today = await fetchFixturesByDate();
+  return today.map(liveToMatch);
 };
+
+export const fetchMatchById = async (matchId: string): Promise<Match | null> => {
+  const all = await fetchMatches();
+  return all.find((m) => m.id === matchId) || null;
+};
+
+export const fetchWorldCupMatchesApi = async (): Promise<Match[]> => {
+  const leagueId = await findWorldCupLeagueId();
+  const fixtures = await fetchLeagueMatches(leagueId, DEFAULT_SEASON);
+  if (fixtures.length === 0) return fetchMatches();
+  return fixtures.map((f) => ({
+    id: String(f.fixture.id),
+    home_team: { id: String(f.teams.home.id), name: f.teams.home.name, country: "" },
+    away_team: { id: String(f.teams.away.id), name: f.teams.away.name, country: "" },
+    status:
+      f.fixture.status.short === "FT"
+        ? "completed"
+        : ["1H", "2H", "HT", "LIVE"].includes(f.fixture.status.short)
+          ? "live"
+          : "upcoming",
+    kickoff_time: f.fixture.date,
+    home_score: f.goals.home ?? undefined,
+    away_score: f.goals.away ?? undefined,
+  }));
+};
+
+export const fetchWorldCupMatches = async (): Promise<OldMatch[]> => {
+  const data = await fetchWorldCupMatchesForFantasy();
+  return data.map((m, i) => ({
+    id: m.id || i + 1,
+    homeTeam: m.homeTeam,
+    awayTeam: m.awayTeam,
+    date: m.date,
+    score: m.score,
+  }));
+};
+
+export const fetchWorldCupPlayers = async (): Promise<OldPlayer[]> => {
+  const players = await fetchPlayersFromApi();
+  return players.map((p, i) => ({
+    id: Number(p.id) || i + 1,
+    name: p.name,
+    team: p.team,
+    position: p.position,
+    image: p.photo,
+    goals: p.goals,
+    assists: p.assists,
+  }));
+};
+
+export const fetchWorldCupMatchesOld = fetchWorldCupMatches;

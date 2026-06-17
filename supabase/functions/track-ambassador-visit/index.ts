@@ -120,17 +120,6 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        counted,
-        visitId,
-        businessUserId: amb.business_user_id,
-        ambassadorId: amb.id,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
   } catch (e) {
     console.error("track-ambassador-visit error", e);
     return new Response(JSON.stringify({ error: String((e as Error).message || e) }), {

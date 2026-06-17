@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, TrendingUp, Users, Calendar, Globe, MessageSquare, Zap, ArrowLeft, Users2 } from "lucide-react";
 import { toast } from "sonner";
+import { awardEngagementPoints } from "@/lib/awardEngagement";
 
 interface Match {
   id: string;
@@ -154,6 +155,7 @@ export default function WorldCupPredictions() {
       setUserRank(userRankEntry?.rank || null);
     } catch (error) {
       console.error("Error loading league ranking:", error);
+      toast.error("Erro ao carregar ranking da liga");
     }
   };
 
@@ -220,6 +222,14 @@ export default function WorldCupPredictions() {
       }
 
       toast.success("Previsões salvas com sucesso!");
+
+      if (region?.id && (toInsert.length > 0 || toUpdate.length > 0)) {
+        const pts = await awardEngagementPoints(region.id, "prediction_made");
+        if (pts.success && pts.pointsAwarded) {
+          toast.info(`+${pts.pointsAwarded} pontos de engagement!`);
+        }
+      }
+
       loadData();
     } catch (error) {
       console.error("Error saving predictions:", error);

@@ -1,81 +1,76 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const FOOTBALL_DATA_API_KEY = "00f91a01ba774a019ac9f61633838fa2";
-const FOOTBALL_DATA_BASE_URL = "https://api.football-data.org/v4";
+const RAPIDAPI_HOST = Deno.env.get("RAPIDAPI_FOOTBALL_HOST") || "free-api-live-football-data.p.rapidapi.com";
+const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY") || "";
+const BASE_URL = `https://${RAPIDAPI_HOST}`;
+const WORLD_CUP_LEAGUE_ID = Deno.env.get("WORLD_CUP_LEAGUE_ID") || "16";
 
-Deno.serve(async (req) => {
+async function fetchRapid(path: string, params?: Record<string, string>) {
+  const url = new URL(`${BASE_URL}${path}`);
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), {
+    headers: {
+      "X-RapidAPI-Key": RAPIDAPI_KEY,
+      "X-RapidAPI-Host": RAPIDAPI_HOST,
+    },
+  });
+  if (!res.ok) throw new Error(`RapidAPI ${path}: ${res.status}`);
+  return res.json();
+}
+
+Deno.serve(async (_req) => {
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   try {
-    // 1. Fetch competitions (World Cup 2026 - let's first check available)
-    const competitionsResponse = await fetch(`${FOOTBALL_DATA_BASE_URL}/competitions`, {
-      headers: { "X-Auth-Token": FOOTBALL_DATA_API_KEY }
+    if (!RAPIDAPI_KEY) {
+      throw new Error("RAPIDAPI_KEY secret not configured");
+    }
+
+    const [liveData, leagueData] = await Promise.all([
+      fetchRapid("/football-get-live-score").catch(() => null),
+      fetchRapid("/football-get-league-matches", {
+        leagueid: WORLD_CUP_LEAGUE_ID,
+        season: Deno.env.get("FOOTBALL_SEASON") || "2022",
+      }).catch(() => null),
+    ]);
+
+    const cachePayload = {
+      live: liveData,
+      world_cup_fixtures: leagueData,
+      league_id: WORLD_CUP_LEAGUE_ID,
+      fetched_at: new Date().toISOString(),
+    };
+
+    const { error: insertError } = await supabaseClient.from("football_api_cache").upsert({
+      id: crypto.randomUUID(),
+      competition: `WC-${WORLD_CUP_LEAGUE_ID}`,
+      raw_data: cachePayload,
+      fetched_at: new Date().toISOString(),
     });
-    
-    if (!competitionsResponse.ok) {
-      throw new Error(`Failed to fetch competitions: ${competitionsResponse.statusText}`);
-    }
-    
-    const competitionsData = await competitionsResponse.json();
-    console.log("Competitions loaded:", competitionsData);
-    
-    // 2. For now, let's fetch matches and player stats for a competition
-    // In the future, you can filter for World Cup 2026 specifically
-    const premierLeagueResponse = await fetch(`${FOOTBALL_DATA_BASE_URL}/competitions/PL/matches`, {
-      headers: { "X-Auth-Token": FOOTBALL_DATA_API_KEY }
-    });
-    
-    if (!premierLeagueResponse.ok) {
-      throw new Error(`Failed to fetch matches: ${premierLeagueResponse.statusText}`);
-    }
-    
-    const matchesData = await premierLeagueResponse.json();
-    console.log("Matches loaded:", matchesData);
 
-    // 3. Store raw data in our database
-    const { error: insertError } = await supabaseClient
-      .from("football_api_cache")
-      .upsert({
-        id: crypto.randomUUID(),
-        competition: "PL", // Change this to World Cup 2026 code when available
-        raw_data: matchesData,
-        fetched_at: new Date().toISOString(),
-      })
-      .select();
+    if (insertError) throw insertError;
 
-    if (insertError) {
-      throw insertError;
-    }
-
-    // 4. Update our fantasy players with real stats
-    // For now, log the data - we'll enhance this as we get more
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        competitions_count: competitionsData.count,
-        matches_count: matchesData.matches?.length || 0,
-        data: matchesData 
+      JSON.stringify({
+        success: true,
+        has_live: Boolean(liveData),
+        has_fixtures: Boolean(leagueData),
+        league_id: WORLD_CUP_LEAGUE_ID,
       }),
-      { 
-        headers: { "Content-Type": "application/json" },
-        status: 200 
-      }
+      { headers: { "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
     console.error("Error in fetch-football-data:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        headers: { "Content-Type": "application/json" },
-        status: 500 
-      }
+      { headers: { "Content-Type": "application/json" }, status: 500 },
     );
   }
 });

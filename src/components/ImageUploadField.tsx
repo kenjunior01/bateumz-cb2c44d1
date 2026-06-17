@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, Image as ImageIcon, Link2 } from "lucide-react";
+import { validateImageFile, ACCEPT_IMAGES, DEFAULT_MAX_UPLOAD_MB, formatUploadHint } from "@/lib/upload-utils";
 import { toast } from "sonner";
 
 interface Props {
@@ -30,19 +31,16 @@ export default function ImageUploadField({
   onChange,
   helper,
   allowUrl = true,
-  maxSizeMB = 5,
+  maxSizeMB = DEFAULT_MAX_UPLOAD_MB,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Selecione um ficheiro de imagem válido");
-      return;
-    }
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`Imagem demasiado grande (máx ${maxSizeMB}MB)`);
+    const err = validateImageFile(file, maxSizeMB);
+    if (err) {
+      toast.error(err);
       return;
     }
     setUploading(true);
@@ -118,7 +116,7 @@ export default function ImageUploadField({
               <p className="text-xs sm:text-sm">
                 Toque para escolher imagem <ImageIcon className="inline h-3 w-3 ml-1" />
               </p>
-              <p className="text-[10px]">PNG ou JPG até {maxSizeMB}MB</p>
+              <p className="text-[10px]">{formatUploadHint(maxSizeMB)}</p>
             </>
           )}
         </button>
@@ -128,7 +126,7 @@ export default function ImageUploadField({
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept={ACCEPT_IMAGES}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

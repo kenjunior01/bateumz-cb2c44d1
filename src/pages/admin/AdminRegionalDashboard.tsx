@@ -110,12 +110,23 @@ export default function AdminRegionalDashboard() {
 
       if (rafflesError) throw rafflesError;
 
+      const raffleIds = raffles?.map((r) => r.id) || [];
+      let pendingPayments = 0;
+      if (raffleIds.length > 0) {
+        const { count } = await supabase
+          .from("participants")
+          .select("id", { count: "exact", head: true })
+          .in("raffle_id", raffleIds)
+          .eq("payment_status", "pending");
+        pendingPayments = count || 0;
+      }
+
       const stats = {
         total_raffles: raffles?.length || 0,
         active_raffles: raffles?.filter((r) => r.status === "active").length || 0,
         total_participants: raffles?.reduce((sum, r) => sum + (r.sold_tickets || 0), 0) || 0,
         total_revenue: raffles?.reduce((sum, r) => sum + ((r.sold_tickets || 0) * (r.ticket_price || 0)), 0) || 0,
-        pending_payments: 0, // TODO: Calculate from payments table
+        pending_payments: pendingPayments,
       };
       setStats(stats);
 

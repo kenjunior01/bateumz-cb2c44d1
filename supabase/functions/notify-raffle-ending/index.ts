@@ -8,11 +8,15 @@ const corsHeaders = {
 // Verify JWT and check if user is admin or superadmin
 async function isAuthorized(req: Request): Promise<boolean> {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return false;
   }
-  
+
   const token = authHeader.slice(7);
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceKey && token === serviceKey) {
+    return true;
+  }
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   

@@ -337,13 +337,13 @@ const PrizeWheel = ({
         const { data: spinResult, error: spinError } = await supabase.functions.invoke(
           "spin-wheel-spin",
           {
-            body: JSON.stringify({ wheel_id: gameId, user_id: user.id, region_id: region.id }),
+            body: { wheel_id: gameId, region_id: region.id },
           }
         );
 
         if (spinError) throw spinError;
 
-        winner = spinResult.data.winner;
+        winner = spinResult?.data?.winner || spinResult?.winner;
         winningIndex = prizes.findIndex(p => p.id === winner.id);
         if (winningIndex === -1) {
           winningIndex = pickWeighted(prizes);

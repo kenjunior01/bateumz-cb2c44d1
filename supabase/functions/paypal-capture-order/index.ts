@@ -56,14 +56,14 @@ Deno.serve(async (req) => {
     );
 
     // Get raffle details including ticket price
-    const { data: raffle } = await admin.from('raffles').select('id,currency,sold_tickets,price_per_ticket').eq('id', raffle_id).single();
+    const { data: raffle } = await admin.from('raffles').select('id,currency,sold_tickets,ticket_price').eq('id', raffle_id).single();
     if (!raffle) {
       return new Response(JSON.stringify({ error: 'Raffle not found' }), { status: 404, headers: corsHeaders });
     }
     const currency = (raffle?.currency || 'USD').toUpperCase();
     
     // Verify the amount paid matches the number of tickets
-    const expectedAmount = (raffle.price_per_ticket || 0) * ticket_numbers.length;
+    const expectedAmount = (Number(raffle.ticket_price) || 0) * ticket_numbers.length;
     const paidAmount = parseFloat(order?.purchase_units?.[0]?.amount?.value || '0');
     const paidCurrency = order?.purchase_units?.[0]?.amount?.currency_code?.toUpperCase() || 'USD';
     

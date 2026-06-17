@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { fetchWorldCupPlayers, fetchWorldCupMatches } from "@/lib/the-stats-api";
+import { fetchPlayers } from "@/lib/football-api";
 
 interface PlayerStats {
   goals: number;

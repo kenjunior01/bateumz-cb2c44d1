@@ -75,6 +75,14 @@ Deno.serve(async (req) => {
             active: true,
             description: "Notifica utilizadores sobre sorteios prestes a terminar (a cada hora)",
           },
+          {
+            jobid: 2,
+            jobname: "auto-draw-check",
+            schedule: "*/5 * * * *",
+            command: "SELECT net.http_post(...auto-draw...)",
+            active: true,
+            description: "Executa sorteios automáticos agendados (a cada 5 minutos)",
+          },
         ];
 
         return new Response(JSON.stringify({ jobs: knownJobs }), {
@@ -111,7 +119,25 @@ Deno.serve(async (req) => {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: "{}",
+            }
+          );
+          const result = await resp.json();
+          return new Response(JSON.stringify({ success: true, result }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (jobname.includes("auto-draw")) {
+          const resp = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/auto-draw`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
               },
               body: "{}",
             }

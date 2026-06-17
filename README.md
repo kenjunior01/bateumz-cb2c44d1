@@ -1,73 +1,62 @@
-# Welcome to your Lovable project
+# Bateu — Sorteios Premium
 
-## Project info
+Plataforma de sorteios, jogos ao vivo, Mundial 2026, PayPal e dashboard empresarial.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Stack:** Vite + React + TypeScript + Supabase + Lovable
 
-## How can I edit this code?
+**Supabase project:** `ngxrdpplyghlugoowjqj`
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Sync com Lovable
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+1. Push deste repositório para o remote ligado ao Lovable
+2. Lovable importa as alterações automaticamente
+3. Publicar em **Share → Publish**
 
-Changes made via Lovable will be committed automatically to this repo.
+Configuração completa (env vars, secrets, cron, checklist): **[LOVABLE.md](./LOVABLE.md)**
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Setup local
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone <URL_DO_REPO>
+cd bateumz
+cp .env.example .env
+# Preencher .env (ver LOVABLE.md)
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Servidor: `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Scripts
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Desenvolvimento |
+| `npm run build` | Build produção |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest |
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Estrutura
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+src/                 Frontend React
+supabase/functions/  Edge Functions (API)
+supabase/migrations/ Schema PostgreSQL
+LOVABLE.md           Guia deploy Lovable + secrets
+.env.example         Template de variáveis (copiar para .env)
+```
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Documentação adicional
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- [LOVABLE.md](./LOVABLE.md) — deploy, secrets, checklist
+- [WORLD_CUP_FEATURES.md](./WORLD_CUP_FEATURES.md) — funcionalidades Mundial

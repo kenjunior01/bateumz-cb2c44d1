@@ -77,6 +77,7 @@ const RaffleDetail = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const [bolaoOpen, setBolaoOpen] = useState(false);
@@ -90,7 +91,13 @@ const RaffleDetail = () => {
         ? supabase.from("raffles").select("*").eq("id", slug).single()
         : supabase.from("raffles").select("*").eq("slug", slug).single();
 
-      const [raffleRes] = await Promise.all([query, Promise.resolve()]);
+      const raffleRes = await query;
+
+      if (raffleRes.error || !raffleRes.data) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
 
       if (raffleRes.data) {
         setRaffle(raffleRes.data as Raffle);
@@ -146,10 +153,20 @@ const RaffleDetail = () => {
     }, 3500);
   };
 
-  if (loading || !raffle) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (notFound || !raffle) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <h1 className="font-display text-2xl font-bold">Sorteio não encontrado</h1>
+        <p className="text-muted-foreground text-center">Este sorteio não existe ou foi removido.</p>
+        <Button onClick={() => navigate("/marketplace")}>Ver marketplace</Button>
       </div>
     );
   }

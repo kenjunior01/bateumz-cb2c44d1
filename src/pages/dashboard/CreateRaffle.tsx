@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { validateImageFile, DEFAULT_MAX_UPLOAD_MB } from "@/lib/upload-utils";
 import { toast } from "sonner";
 
 export default function CreateRaffle() {
@@ -49,8 +50,8 @@ export default function CreateRaffle() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("A imagem deve ter no máximo 5MB"); return; }
-    if (!file.type.startsWith("image/")) { toast.error("Selecione um ficheiro de imagem válido"); return; }
+    const err = validateImageFile(file, DEFAULT_MAX_UPLOAD_MB);
+    if (err) { toast.error(err); return; }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };

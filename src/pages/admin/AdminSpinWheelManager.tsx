@@ -13,6 +13,7 @@ import { Loader2, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/ImageUpload";
+import { PRESET_THEMES } from "@/lib/themes";
 
 interface Segment {
   id?: string;
@@ -463,6 +464,32 @@ export default function AdminSpinWheelManager() {
                   onChange={(e) => setGameDescription(e.target.value)}
                   rows={3}
                 />
+              </div>
+
+              <div>
+                <Label>Tema</Label>
+                <div className="grid grid-cols-5 gap-2 mt-2">
+                  {Object.entries(PRESET_THEMES).map(([key, theme]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setBackgroundColor(theme.backgroundColor);
+                        setWheelBackgroundColor(theme.wheelBackgroundColor);
+                        setWheelBorderColor(theme.primaryColor);
+                        setCompanyLogoUrl(theme.primaryColor);
+                      }}
+                      className="w-full aspect-square rounded-lg border-2 border-border hover:border-primary transition-all p-2 flex flex-col items-center justify-center gap-1"
+                      style={{ backgroundColor: theme.backgroundColor }}
+                      title={theme.name}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.primaryColor }}
+                      />
+                      <span className="text-xs text-white font-medium">{theme.name.substring(0, 3)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

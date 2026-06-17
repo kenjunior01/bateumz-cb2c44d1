@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { Plus, Trash2, Settings2, Volume2, VolumeX, Trophy, Share2, AlertTriangle, Gift, Sparkles, Zap, Star, PartyPopper } from "lucide-react";
+import { Plus, Trash2, Settings2, Volume2, VolumeX, Trophy, Share2, AlertTriangle, Gift, Sparkles, Zap, Star, PartyPopper, Monitor, Smartphone } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CompanyBranding } from './LiveGameSettings';
+import { PRESET_THEMES, type WheelTheme } from "@/lib/themes";
 
 export type WheelPrize = {
   id: string;
@@ -136,6 +138,8 @@ interface Props {
   soundEnabled?: boolean;
   particleEffects?: boolean;
   branding?: CompanyBranding;
+  mode?: "horizontal" | "vertical";
+  theme?: keyof typeof PRESET_THEMES | WheelTheme;
 }
 
 const pickWeighted = (prizes: WheelPrize[]) => {
@@ -167,6 +171,8 @@ const PrizeWheel = ({
   soundEnabled: initialSoundEnabled = true,
   particleEffects = true,
   branding,
+  mode: initialMode = "horizontal",
+  theme: initialTheme = "dark",
 }: Props) => {
   const { user } = useAuth();
   const { region } = useRegionalTheme();
@@ -181,6 +187,10 @@ const PrizeWheel = ({
   const [gameName, setGameName] = useState("Roda da Sorte");
   const [defaultEffect, setDefaultEffect] = useState<string>("confetti");
   const [wheelConfig, setWheelConfig] = useState<any>(null);
+  const [mode, setMode] = useState<"horizontal" | "vertical">(initialMode);
+  const [currentTheme, setCurrentTheme] = useState<WheelTheme>(
+    typeof initialTheme === "string" ? PRESET_THEMES[initialTheme] : initialTheme
+  );
 
   // Fetch game from Supabase if gameId is provided
   useEffect(() => {
@@ -430,66 +440,116 @@ const PrizeWheel = ({
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center font-sans"
          style={{ 
-           backgroundColor: branding?.backgroundColor || "#1a1a1a",
+           backgroundColor: currentTheme.backgroundColor,
            backgroundImage: branding?.backgroundImageUrl ? `url(${branding.backgroundImageUrl})` : 'none',
            backgroundSize: 'cover',
            backgroundPosition: 'center',
-           color: branding?.textColor
+           color: currentTheme.textColor
          }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       
-      <div className="relative z-10 w-full max-w-6xl px-4 py-8 flex flex-col md:flex-row items-center gap-12">
-        {/* Left Side: Game Info & Branding */}
-        <div className="flex-1 space-y-6 text-center md:text-left" style={{ color: branding?.textColor }}>
-          {(branding?.companyLogoUrl || branding?.companySlogan) && (
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="flex flex-col items-center md:items-start animate-in fade-in slide-in-from-top duration-1000 mb-6"
+      <div className={`relative z-10 w-full max-w-7xl px-4 py-8 flex ${mode === "horizontal" ? "flex-col md:flex-row" : "flex-col"} items-center gap-8`}>
+        {/* Mode Selector & Theme Selector (only when editable) */}
+        {editable && (
+          <div className="absolute top-4 left-4 z-50 flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setMode(mode === "horizontal" ? "vertical" : "horizontal")}
             >
-              {branding?.companyLogoUrl && (
-                <img src={branding.companyLogoUrl} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
-              )}
-              {branding?.companySlogan && (
-                <p className="text-xs font-black uppercase tracking-[0.3em]" style={{ color: `${branding.primaryColor}80` }}>{branding.companySlogan}</p>
-              )}
-            </motion.div>
-          )}
-          
-          <div className="inline-block px-4 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 mb-2">
-            <span className="text-xs font-bold">Giro da Sorte Premium</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic">{gameName}</h1>
-          <p className="text-xl text-white/70 max-w-md mx-auto md:mx-0">Gira e ganha prémios incríveis!</p>
-          
-          {spinCost > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/10 backdrop-blur-md text-white">
-              <span className="text-xs uppercase opacity-60 font-bold">Custo</span>
-              <span className="text-2xl font-black">{spinCost} MZN</span>
+              {mode === "horizontal" ? <Smartphone className="h-4 w-4 mr-2" /> : <Monitor className="h-4 w-4 mr-2" />}
+              {mode === "horizontal" ? "Vertical" : "Horizontal"}
+            </Button>
+            <div className="flex gap-1">
+              {Object.entries(PRESET_THEMES).map(([key, theme]) => (
+                <button
+                  key={key}
+                  onClick={() => setCurrentTheme(theme)}
+                  className="w-8 h-8 rounded-full border-2 border-white/50 hover:scale-110 transition-transform"
+                  style={{ backgroundColor: theme.primaryColor }}
+                  title={theme.name}
+                />
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Left Side: Webcam Placeholder (Horizontal Mode) or Top (Vertical Mode) */}
+        {mode === "horizontal" && (
+          <div className="flex-1 space-y-6 text-center md:text-left" style={{ color: currentTheme.textColor }}>
+            {/* Webcam Placeholder */}
+            <div className="w-48 h-48 rounded-2xl bg-black/30 border-2 border-white/20 flex items-center justify-center">
+              <p className="text-white/50 text-sm">Webcam</p>
+            </div>
+            {(branding?.companyLogoUrl || branding?.companySlogan) && (
+              <motion.div
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="flex flex-col items-center md:items-start animate-in fade-in slide-in-from-top duration-1000 mb-6"
+              >
+                {branding?.companyLogoUrl && (
+                  <img src={branding.companyLogoUrl} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                )}
+                {branding?.companySlogan && (
+                  <p className="text-xs font-black uppercase tracking-[0.3em]" style={{ color: `${currentTheme.primaryColor}80` }}>{branding.companySlogan}</p>
+                )}
+              </motion.div>
+            )}
+            
+            <div className="inline-block px-4 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 mb-2">
+              <span className="text-xs font-bold">Giro da Sorte Premium</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic">{gameName}</h1>
+            <p className="text-xl text-white/70 max-w-md mx-auto md:mx-0">Gira e ganha prémios incríveis!</p>
+            
+            {spinCost > 0 && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/10 backdrop-blur-md text-white">
+                <span className="text-xs uppercase opacity-60 font-bold">Custo</span>
+                <span className="text-2xl font-black">{spinCost} MZN</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Top: Webcam Placeholder (Vertical Mode) */}
+        {mode === "vertical" && (
+          <div className="w-full max-w-md space-y-4 text-center">
+            <div className="w-full h-40 rounded-2xl bg-black/30 border-2 border-white/20 flex items-center justify-center">
+              <p className="text-white/50 text-sm">Webcam</p>
+            </div>
+            {(branding?.companyLogoUrl || branding?.companySlogan) && (
+              <div className="flex flex-col items-center gap-2">
+                {branding?.companyLogoUrl && (
+                  <img src={branding.companyLogoUrl} alt="Logo" className="h-12 object-contain" />
+                )}
+                {branding?.companySlogan && (
+                  <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: `${currentTheme.primaryColor}80` }}>{branding.companySlogan}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Center: The Wheel */}
         <div className="relative group">
           {/* Modern Enhanced Pointer - More Precise */}
           <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20 drop-shadow-2xl">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-lg relative">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-lg relative" style={{ borderColor: currentTheme.primaryColor }}>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-                <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent border-t-primary" />
+                <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent" style={{ borderTopColor: currentTheme.primaryColor }} />
               </div>
-              <Sparkles className="w-6 h-6 text-primary" />
+              <Sparkles className="w-6 h-6" style={{ color: currentTheme.primaryColor }} />
             </div>
           </div>
 
           {/* Wheel Container */}
-          <div className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)]">
+          <div className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)]" style={{ borderColor: `${currentTheme.primaryColor}40` }}>
             <canvas
               ref={canvasRef}
               width="600"
               height="600"
-              className="max-w-[350px] sm:max-w-[500px] md:max-w-[600px] h-auto rounded-full"
+              className="max-w-[300px] sm:max-w-[400px] md:max-w-[600px] h-auto rounded-full"
               style={{
                 transform: `rotate(${rotation}deg)`,
                 transition: spinning ? 'none' : 'transform 0.5s cubic-bezier(0.1, 0, 0.3, 1)'
@@ -503,7 +563,7 @@ const PrizeWheel = ({
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full 
                 flex flex-col items-center justify-center font-black text-sm transition-all duration-300 z-20
                 ${spinning || loading ? 'bg-gray-500 scale-95 opacity-50 cursor-not-allowed' : 'bg-white hover:scale-110 shadow-2xl active:scale-90 cursor-pointer'}`}
-                style={{ color: wheelConfig?.wheel_background_color || branding?.primaryColor }}
+                style={{ color: wheelConfig?.wheel_background_color || currentTheme.primaryColor }}
               >
                 {loading || spinning ? (
                   <span className="flex items-center gap-2">
@@ -520,8 +580,8 @@ const PrizeWheel = ({
           </div>
         </div>
 
-        {/* Right Side: Last Winner & Rewards */}
-        <div className="w-full md:w-96 space-y-6">
+        {/* Right Side: Last Winner & Rewards (Horizontal Mode) or Bottom (Vertical Mode) */}
+        <div className={`${mode === "horizontal" ? "w-full md:w-96" : "w-full max-w-md"} space-y-6`}>
           <AnimatePresence>
             {result && (
               <motion.div
@@ -532,7 +592,7 @@ const PrizeWheel = ({
                 className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl ${
                   result.rewardType === "none" || result.label.toLowerCase().includes("tenta") || result.label.toLowerCase().includes("nada")
                     ? "bg-secondary/90 text-muted-foreground border-2 border-white/20"
-                    : "bg-gradient-to-br from-primary/40 to-primary/15 text-primary border-2 border-primary/40"
+                    : `bg-gradient-to-br from-${currentTheme.primaryColor}/40 to-${currentTheme.primaryColor}/15 text-primary border-2 border-${currentTheme.primaryColor}/40`
                 }`}
               >
                 {result.rewardType !== "none" && !result.label.toLowerCase().includes("tenta") && !result.label.toLowerCase().includes("nada") ? (

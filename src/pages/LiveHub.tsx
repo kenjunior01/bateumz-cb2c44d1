@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Soccer, Target, Globe } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -54,7 +54,7 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "tap", label: "Tap Battle", icon: Zap, emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot.", grad: "from-amber-500 to-orange-500" },
   { id: "quiz", label: "Quiz Battle", icon: Brain, emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado.", grad: "from-sky-500 to-blue-500" },
   { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500" },
-  { id: "football", label: "Fantasy Football", icon: Soccer, emoji: "⚽", desc: "Gerencie sua equipe, escolha jogadores, ganhe pontos!", grad: "from-green-500 to-emerald-500" },
+  { id: "football", label: "Fantasy Football", icon: Gamepad2, emoji: "⚽", desc: "Gerencie sua equipe, escolha jogadores, ganhe pontos!", grad: "from-green-500 to-emerald-500" },
   { id: "penalty", label: "Penalty Shootout", icon: Target, emoji: "🎯", desc: "Batalha de pênaltis - chute e defenda para ganhar!", grad: "from-yellow-500 to-orange-500" },
   { id: "worldcup", label: "World Cup Predictor", icon: Globe, emoji: "🌍", desc: "Adivinhe os resultados do Mundial e ganhe pontos!", grad: "from-blue-500 to-cyan-500" },
   { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500" },

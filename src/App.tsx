@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { DynamicThemeProvider } from "@/contexts/DynamicThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
@@ -242,6 +243,7 @@ function AnimatedRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
+    <DynamicThemeProvider>
     <LanguageProvider>
     <CurrencyProvider>
     <RegionalThemeProvider>
@@ -265,6 +267,7 @@ const App = () => (
     </RegionalThemeProvider>
     </CurrencyProvider>
     </LanguageProvider>
+    </DynamicThemeProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

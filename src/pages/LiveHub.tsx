@@ -14,7 +14,7 @@ import EmojiBattle from "@/components/livegames/EmojiBattle";
 import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
-import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameSettings";
+import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +66,12 @@ const LiveHub = () => {
       return s ? { ...DEFAULT_CONFIG, ...JSON.parse(s) } : DEFAULT_CONFIG;
     } catch { return DEFAULT_CONFIG; }
   });
+  const [branding, setBranding] = useState<CompanyBranding>(() => {
+    try {
+      const s = localStorage.getItem("liveBranding");
+      return s ? { ...DEFAULT_BRANDING, ...JSON.parse(s) } : DEFAULT_BRANDING;
+    } catch { return DEFAULT_BRANDING; }
+  });
   const [wheelPrizes, setWheelPrizes] = useState<WheelPrize[]>(() => {
     try {
       const s = localStorage.getItem("liveWheelPrizes");
@@ -81,6 +87,21 @@ const LiveHub = () => {
   const [savedGames, setSavedGames] = useState<SavedWheelGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [loadingGames, setLoadingGames] = useState(false);
+
+  // Persist branding to localStorage
+  useEffect(() => {
+    localStorage.setItem("liveBranding", JSON.stringify(branding));
+  }, [branding]);
+
+  // Apply branding to CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--theme-primary', branding.primaryColor);
+    root.style.setProperty('--theme-secondary', branding.secondaryColor);
+    root.style.setProperty('--theme-accent', branding.accentColor);
+    root.style.setProperty('--theme-background', branding.backgroundColor);
+    root.style.setProperty('--theme-text', branding.textColor);
+  }, [branding]);
 
   // Load saved games from database
   useEffect(() => {
@@ -312,7 +333,12 @@ const LiveHub = () => {
                   </div>
                 </>
               )}
-              <LiveGameSettings config={config} onChange={setConfig} />
+              <LiveGameSettings 
+                config={config} 
+                onChange={setConfig} 
+                branding={branding}
+                onBrandingChange={setBranding}
+              />
               <Link
                 to="/dashboard/raffles/create"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
@@ -457,7 +483,8 @@ const LiveHub = () => {
                   <PrizeWheel 
                     prizes={wheelPrizes} 
                     onChange={setWheelPrizes} 
-                    gameId={selectedGameId || undefined} 
+                    gameId={selectedGameId || undefined}
+                    branding={branding}
                   />
                 </motion.div>
               )}

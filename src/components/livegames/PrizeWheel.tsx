@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { CompanyBranding } from './LiveGameSettings';
 
 export type WheelPrize = {
   id: string;
@@ -134,10 +135,7 @@ interface Props {
   spinCost?: number;
   soundEnabled?: boolean;
   particleEffects?: boolean;
-  companyLogoUrl?: string;
-  companySlogan?: string;
-  backgroundImageUrl?: string;
-  backgroundColor?: string;
+  branding?: CompanyBranding;
 }
 
 const pickWeighted = (prizes: WheelPrize[]) => {
@@ -168,10 +166,7 @@ const PrizeWheel = ({
   spinCost = 0,
   soundEnabled: initialSoundEnabled = true,
   particleEffects = true,
-  companyLogoUrl: initialCompanyLogoUrl,
-  companySlogan: initialCompanySlogan,
-  backgroundImageUrl: initialBackgroundImageUrl,
-  backgroundColor: initialBackgroundColor,
+  branding,
 }: Props) => {
   const { user } = useAuth();
   const { region } = useRegionalTheme();
@@ -183,10 +178,6 @@ const PrizeWheel = ({
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
   const [loading, setLoading] = useState(false);
   const [prizes, setPrizes] = useState<WheelPrize[]>(initialPrizes);
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | undefined>(initialCompanyLogoUrl);
-  const [companySlogan, setCompanySlogan] = useState<string | undefined>(initialCompanySlogan);
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | undefined>(initialBackgroundImageUrl);
-  const [backgroundColor, setBackgroundColor] = useState<string | undefined>(initialBackgroundColor);
   const [gameName, setGameName] = useState("Roda da Sorte");
   const [defaultEffect, setDefaultEffect] = useState<string>("confetti");
   const [wheelConfig, setWheelConfig] = useState<any>(null);
@@ -209,10 +200,6 @@ const PrizeWheel = ({
         
         setWheelConfig(gameData);
         setGameName(gameData.name);
-        setCompanyLogoUrl(gameData.company_logo_url);
-        setCompanySlogan(gameData.company_slogan);
-        setBackgroundImageUrl(gameData.background_image_url);
-        setBackgroundColor(gameData.background_color);
         setDefaultEffect(gameData.default_effect || "confetti");
         
         // Fetch segments
@@ -295,10 +282,10 @@ const PrizeWheel = ({
     });
 
     ctx.shadowBlur = 20;
-    ctx.shadowColor = wheelConfig?.wheel_border_color || backgroundColor || "#FFD700";
+    ctx.shadowColor = wheelConfig?.wheel_border_color || branding?.primaryColor || "#FFD700";
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = wheelConfig?.wheel_border_color || backgroundColor || "#FFD700";
+    ctx.strokeStyle = wheelConfig?.wheel_border_color || branding?.primaryColor || "#FFD700";
     ctx.lineWidth = 12;
     ctx.stroke();
 
@@ -307,7 +294,7 @@ const PrizeWheel = ({
     ctx.arc(centerX, centerY, 40, 0, 2 * Math.PI);
     const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40);
     gradient.addColorStop(0, "#FFFFFF");
-    gradient.addColorStop(1, wheelConfig?.wheel_background_color || backgroundColor || "#FFD700");
+    gradient.addColorStop(1, wheelConfig?.wheel_background_color || branding?.primaryColor || "#FFD700");
     ctx.fillStyle = gradient;
     ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.8)";
@@ -319,7 +306,7 @@ const PrizeWheel = ({
     ctx.textAlign = "center";
     ctx.font = "900 14px Inter, sans-serif";
     ctx.fillText("BATEU", centerX, centerY + 5);
-  }, [prizes, backgroundColor, wheelConfig]);
+  }, [prizes, branding?.backgroundColor, wheelConfig]);
 
   useEffect(() => {
     drawWheel();
@@ -435,27 +422,28 @@ const PrizeWheel = ({
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center font-sans"
          style={{ 
-           backgroundColor: backgroundColor || "#1a1a1a",
-           backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : 'none',
+           backgroundColor: branding?.backgroundColor || "#1a1a1a",
+           backgroundImage: branding?.backgroundImageUrl ? `url(${branding.backgroundImageUrl})` : 'none',
            backgroundSize: 'cover',
-           backgroundPosition: 'center'
+           backgroundPosition: 'center',
+           color: branding?.textColor
          }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
       
       <div className="relative z-10 w-full max-w-6xl px-4 py-8 flex flex-col md:flex-row items-center gap-12">
         {/* Left Side: Game Info & Branding */}
-        <div className="flex-1 space-y-6 text-white text-center md:text-left">
-          {(companyLogoUrl || companySlogan) && (
+        <div className="flex-1 space-y-6 text-center md:text-left" style={{ color: branding?.textColor }}>
+          {(branding?.companyLogoUrl || branding?.companySlogan) && (
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               className="flex flex-col items-center md:items-start animate-in fade-in slide-in-from-top duration-1000 mb-6"
             >
-              {companyLogoUrl && (
-                <img src={companyLogoUrl} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+              {branding?.companyLogoUrl && (
+                <img src={branding.companyLogoUrl} alt="Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
               )}
-              {companySlogan && (
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-primary/80">{companySlogan}</p>
+              {branding?.companySlogan && (
+                <p className="text-xs font-black uppercase tracking-[0.3em]" style={{ color: `${branding.primaryColor}80` }}>{branding.companySlogan}</p>
               )}
             </motion.div>
           )}
@@ -504,7 +492,7 @@ const PrizeWheel = ({
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full 
                 flex flex-col items-center justify-center font-black text-sm transition-all duration-300 z-20
                 ${spinning || loading ? 'bg-gray-500 scale-95 opacity-50 cursor-not-allowed' : 'bg-white hover:scale-110 shadow-2xl active:scale-90 cursor-pointer'}`}
-                style={{ color: wheelConfig?.wheel_background_color || backgroundColor }}
+                style={{ color: wheelConfig?.wheel_background_color || branding?.primaryColor }}
               >
                 {loading || spinning ? (
                   <span className="flex items-center gap-2">

@@ -5,8 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, Calendar, Users, Zap, Globe, Users2, MessageSquare } from "lucide-react";
+import { Loader2, Trophy, Calendar, Users, Zap, Globe, Users2, MessageSquare, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  checkApiHealth, 
+  fetchMatches, 
+  fetchWorldCupMatches,
+  Match as ApiMatch 
+} from "@/lib/the-stats-api";
 
 interface Match {
   id: string;
@@ -45,59 +51,122 @@ export default function WorldCupCentral() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [activeTab, setActiveTab] = useState("matches");
+  const [apiHealth, setApiHealth] = useState<{ status: string; timestamp: string } | null>(null);
+  const [apiMatches, setApiMatches] = useState<ApiMatch[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Check API health
+      const health = await checkApiHealth();
+      setApiHealth(health);
+      
+      // Fetch API matches
+      const apiMatchesData = await fetchWorldCupMatches();
+      setApiMatches(apiMatchesData);
+
+      // Load matches from Supabase
+      const { data: matchesData, error: matchesError } = await supabase
+        .from("world_cup_matches")
+        .select(`
+          id,
+          match_date,
+          stage,
+          status,
+          team_a_goals,
+          team_b_goals,
+          winner_team_id,
+          team_a:world_cup_teams!team_a_id(id, team_name, flag_emoji),
+          team_b:world_cup_teams!team_b_id(id, team_name, flag_emoji)
+        `)
+        .order("match_date", { ascending: true });
+
+      if (matchesError) throw matchesError;
+      setMatches(matchesData || []);
+
+      // Load teams
+      const { data: teamsData, error: teamsError } = await supabase
+        .from("world_cup_teams")
+        .select("*")
+        .order("group_letter");
+
+      if (teamsError) throw teamsError;
+      setTeams(teamsData || []);
+
+      // Load news
+      const { data: newsData, error: newsError } = await supabase
+        .from("world_cup_news")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (newsError) throw newsError;
+      setNews(newsData || []);
+    } catch (error) {
+      console.error("Error loading World Cup data:", error);
+      toast.error("Erro ao carregar dados do Mundial");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load matches
-        const { data: matchesData, error: matchesError } = await supabase
-          .from("world_cup_matches")
-          .select(`
-            id,
-            match_date,
-            stage,
-            status,
-            team_a_goals,
-            team_b_goals,
-            winner_team_id,
-            team_a:world_cup_teams!team_a_id(id, team_name, flag_emoji),
-            team_b:world_cup_teams!team_b_id(id, team_name, flag_emoji)
-          `)
-          .order("match_date", { ascending: true });
-
-        if (matchesError) throw matchesError;
-        setMatches(matchesData || []);
-
-        // Load teams
-        const { data: teamsData, error: teamsError } = await supabase
-          .from("world_cup_teams")
-          .select("*")
-          .order("group_letter");
-
-        if (teamsError) throw teamsError;
-        setTeams(teamsData || []);
-
-        // Load news
-        const { data: newsData, error: newsError } = await supabase
-          .from("world_cup_news")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (newsError) throw newsError;
-        setNews(newsData || []);
-      } catch (error) {
-        console.error("Error loading World Cup data:", error);
-        toast.error("Erro ao carregar dados do Mundial");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, []);
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('world_cup_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'world_cup_matches'
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'world_cup_teams'
+        },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    // Refresh API data every 30 seconds for live updates
+    const interval = setInterval(() => {
+      refreshApiData();
+    }, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const refreshApiData = async () => {
+    setRefreshing(true);
+    try {
+      const apiMatchesData = await fetchWorldCupMatches();
+      setApiMatches(apiMatchesData);
+    } catch (error) {
+      console.error('Error refreshing API data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getStageLabel = (stage: string) => {
     const labels: Record<string, string> = {
@@ -148,10 +217,30 @@ export default function WorldCupCentral() {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="flex items-center justify-center gap-3 mb-4 flex-wrap">
             <Trophy className="h-8 w-8 text-primary" />
             <h1 className="font-display text-4xl font-bold">Central do Mundial 2026</h1>
             <Trophy className="h-8 w-8 text-primary" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadData}
+              disabled={loading || refreshing}
+              className="ml-auto"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Atualizando...' : 'Atualizar'}
+            </Button>
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Badge variant={apiHealth?.status === 'healthy' ? 'default' : 'destructive'}>
+              API: {apiHealth?.status === 'healthy' ? 'Online' : 'Offline'}
+            </Badge>
+            {apiMatches.length > 0 && (
+              <Badge variant="outline">
+                {apiMatches.length} jogos na API
+              </Badge>
+            )}
           </div>
           <p className="text-lg text-muted-foreground mb-6">
             Acompanhe todos os jogos, equipes e notícias do maior torneio de futebol do mundo

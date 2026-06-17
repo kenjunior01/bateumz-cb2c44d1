@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2 } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Soccer, Target, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,6 +12,10 @@ import MysteryBox from "@/components/livegames/MysteryBox";
 import KeywordHunt from "@/components/livegames/KeywordHunt";
 import EmojiBattle from "@/components/livegames/EmojiBattle";
 import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
+import FantasyFootball from "@/components/livegames/FantasyFootball";
+import PenaltyShootout from "@/components/livegames/PenaltyShootout";
+import WorldCupPredictor from "@/components/livegames/WorldCupPredictor";
+import EnhancedMillionaireGame from "@/components/livegames/EnhancedMillionaireGame";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -23,7 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "football" | "penalty" | "worldcup" | "millionaire";
 
 interface SavedWheelGame {
   id: string;
@@ -50,6 +54,10 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "tap", label: "Tap Battle", icon: Zap, emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot.", grad: "from-amber-500 to-orange-500" },
   { id: "quiz", label: "Quiz Battle", icon: Brain, emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado.", grad: "from-sky-500 to-blue-500" },
   { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500" },
+  { id: "football", label: "Fantasy Football", icon: Soccer, emoji: "⚽", desc: "Gerencie sua equipe, escolha jogadores, ganhe pontos!", grad: "from-green-500 to-emerald-500" },
+  { id: "penalty", label: "Penalty Shootout", icon: Target, emoji: "🎯", desc: "Batalha de pênaltis - chute e defenda para ganhar!", grad: "from-yellow-500 to-orange-500" },
+  { id: "worldcup", label: "World Cup Predictor", icon: Globe, emoji: "🌍", desc: "Adivinhe os resultados do Mundial e ganhe pontos!", grad: "from-blue-500 to-cyan-500" },
+  { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -523,6 +531,26 @@ const LiveHub = () => {
                     onScore={recordScore("Batalha de Emojis")}
                     onWinner={(label, votes) => broadcastWinner(label, `Batalha de Emojis · ${votes} votos`)}
                   />
+                </motion.div>
+              )}
+              {active === "football" && (
+                <motion.div key="football" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <FantasyFootball />
+                </motion.div>
+              )}
+              {active === "penalty" && (
+                <motion.div key="penalty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <PenaltyShootout onScore={recordScore("Penalty Shootout")} />
+                </motion.div>
+              )}
+              {active === "worldcup" && (
+                <motion.div key="worldcup" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <WorldCupPredictor onScore={recordScore("World Cup Predictor")} />
+                </motion.div>
+              )}
+              {active === "millionaire" && (
+                <motion.div key="millionaire" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <EnhancedMillionaireGame />
                 </motion.div>
               )}
             </AnimatePresence>

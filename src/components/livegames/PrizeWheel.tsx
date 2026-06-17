@@ -465,20 +465,23 @@ const PrizeWheel = ({
 
         {/* Center: The Wheel */}
         <div className="relative group">
-          {/* Modern Pointer */}
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10 drop-shadow-xl">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-inner">
-              <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary mt-8" />
+          {/* Modern Enhanced Pointer - More Precise */}
+          <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20 drop-shadow-2xl">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-lg relative">
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent border-t-primary" />
+              </div>
+              <Sparkles className="w-6 h-6 text-primary" />
             </div>
           </div>
 
           {/* Wheel Container */}
-          <div className="relative p-4 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+          <div className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)]">
             <canvas
               ref={canvasRef}
-              width="500"
-              height="500"
-              className="max-w-[320px] sm:max-w-[450px] md:max-w-[500px] h-auto rounded-full"
+              width="600"
+              height="600"
+              className="max-w-[350px] sm:max-w-[500px] md:max-w-[600px] h-auto rounded-full"
               style={{
                 transform: `rotate(${rotation}deg)`,
                 transition: spinning ? 'none' : 'transform 0.5s cubic-bezier(0.1, 0, 0.3, 1)'
@@ -510,51 +513,61 @@ const PrizeWheel = ({
         </div>
 
         {/* Right Side: Last Winner & Rewards */}
-        <div className="w-full md:w-80 space-y-4">
+        <div className="w-full md:w-96 space-y-6">
           <AnimatePresence>
             {result && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.5, y: 50 }}
+                initial={{ opacity: 0, scale: 0.3, y: 100 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.5, y: -30 }}
-                transition={{ type: "spring", bounce: 0.5 }}
-                className={`rounded-2xl p-6 text-center space-y-2 ${
+                exit={{ opacity: 0, scale: 0.3, y: -100 }}
+                transition={{ type: "spring", bounce: 0.6, duration: 0.8 }}
+                className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl ${
                   result.rewardType === "none" || result.label.toLowerCase().includes("tenta") || result.label.toLowerCase().includes("nada")
-                    ? "bg-secondary/80 text-muted-foreground border border-white/10"
-                    : "bg-gradient-to-br from-primary/30 to-primary/10 text-primary border border-primary/30"
+                    ? "bg-secondary/90 text-muted-foreground border-2 border-white/20"
+                    : "bg-gradient-to-br from-primary/40 to-primary/15 text-primary border-2 border-primary/40"
                 }`}
               >
                 {result.rewardType !== "none" && !result.label.toLowerCase().includes("tenta") && !result.label.toLowerCase().includes("nada") ? (
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-4">
                     <motion.div
                       animate={{
-                        rotate: [0, 10, -10, 0],
-                        scale: [1, 1.2, 1],
+                        rotate: [0, 15, -15, 0],
+                        scale: [1, 1.4, 1],
                       }}
-                      transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
-                      className="text-yellow-300"
+                      transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                      className="text-yellow-400"
                     >
                       {getResultIcon(result)}
                     </motion.div>
                     <motion.p
-                      initial={{ y: 20 }}
-                      animate={{ y: 0 }}
-                      className="font-black text-2xl"
+                      initial={{ y: 40, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="font-black text-3xl"
                     >
-                      {t("wheel.win")}
+                      🎉 {t("wheel.win")}! 🎉
                     </motion.p>
                     <motion.p
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ delay: 0.2, type: "spring" }}
-                      className="text-4xl font-black tracking-tight"
+                      transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                      className="text-6xl font-black tracking-tighter"
                     >
                       {result.rewardValue || result.label}
                     </motion.p>
-                    <p className="opacity-80 text-sm">{result.description}</p>
+                    {result.description && (
+                      <p className="opacity-90 text-lg">{result.description}</p>
+                    )}
+                    {result.rewardImageUrl && (
+                      <img 
+                        src={result.rewardImageUrl} 
+                        alt="Prémio" 
+                        className="w-32 h-32 object-cover rounded-2xl shadow-lg"
+                      />
+                    )}
                   </div>
                 ) : (
-                  <p className="font-bold text-2xl flex items-center gap-2 justify-center">
+                  <p className="font-bold text-3xl flex items-center gap-3 justify-center">
                     😅 {t("tryAgain", "Tenta de novo!")}
                   </p>
                 )}

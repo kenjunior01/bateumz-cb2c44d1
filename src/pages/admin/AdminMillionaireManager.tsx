@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { ImageUpload } from "@/components/ImageUpload";
 
 interface PrizeLevel {
   level: number;
@@ -539,21 +540,23 @@ export default function AdminMillionaireManager() {
               </div>
 
               <div>
-                <Label>Imagem de Fundo (URL)</Label>
-                <Input
-                  placeholder="https://..."
+                <ImageUpload
+                  label="Imagem de Fundo"
                   value={backgroundImage}
-                  onChange={(e) => setBackgroundImage(e.target.value)}
+                  onChange={setBackgroundImage}
+                  placeholder="URL da imagem de fundo"
+                  bucketName="game-images"
                 />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Logo da Empresa (URL)</Label>
-                  <Input
-                    placeholder="https://..."
+                  <ImageUpload
+                    label="Logo da Empresa"
                     value={companyLogoUrl}
-                    onChange={(e) => setCompanyLogoUrl(e.target.value)}
+                    onChange={setCompanyLogoUrl}
+                    placeholder="URL do logo"
+                    bucketName="game-images"
                   />
                 </div>
                 <div>

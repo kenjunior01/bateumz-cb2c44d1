@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { ImageUpload } from "@/components/ImageUpload";
 
 interface Segment {
   id?: string;
@@ -92,6 +93,7 @@ export default function AdminSpinWheelManager() {
   const [segmentTextColor, setSegmentTextColor] = useState("#ffffff");
   const [rewardType, setRewardType] = useState("points");
   const [rewardValue, setRewardValue] = useState("");
+  const [rewardImageUrl, setRewardImageUrl] = useState("");
   const [weight, setWeight] = useState(1);
   const [segmentEffectType, setSegmentEffectType] = useState("confetti");
 
@@ -271,6 +273,7 @@ export default function AdminSpinWheelManager() {
           text_color: segmentTextColor,
           reward_type: rewardType,
           reward_value: rewardValue,
+          reward_image_url: rewardImageUrl,
           weight: weight,
           effect_type: segmentEffectType
         })
@@ -351,6 +354,7 @@ export default function AdminSpinWheelManager() {
     setSegmentTextColor("#ffffff");
     setRewardType("points");
     setRewardValue("");
+    setRewardImageUrl("");
     setWeight(1);
   };
 
@@ -497,21 +501,23 @@ export default function AdminSpinWheelManager() {
               </div>
 
               <div>
-                <Label>URL da Imagem de Fundo (Marca)</Label>
-                <Input
-                  placeholder="https://..."
+                <ImageUpload
+                  label="Imagem de Fundo (Marca)"
                   value={backgroundImageUrl}
-                  onChange={(e) => setBackgroundImageUrl(e.target.value)}
+                  onChange={setBackgroundImageUrl}
+                  placeholder="URL da imagem de fundo"
+                  bucketName="game-images"
                 />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Logo da Empresa (URL)</Label>
-                  <Input
-                    placeholder="https://..."
+                  <ImageUpload
+                    label="Logo da Empresa"
                     value={companyLogoUrl}
-                    onChange={(e) => setCompanyLogoUrl(e.target.value)}
+                    onChange={setCompanyLogoUrl}
+                    placeholder="URL do logo"
+                    bucketName="game-images"
                   />
                 </div>
                 <div>
@@ -608,6 +614,16 @@ export default function AdminSpinWheelManager() {
                   <Input placeholder="Valor do Prémio" value={rewardValue} onChange={(e) => setRewardValue(e.target.value)} />
                 </div>
 
+                <div>
+                  <ImageUpload
+                    label="Imagem do Prémio (opcional)"
+                    value={rewardImageUrl}
+                    onChange={setRewardImageUrl}
+                    placeholder="URL da imagem do prémio"
+                    bucketName="game-images"
+                  />
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-4">
                   <div className="flex items-center gap-2">
                     <Label>Cor de Fundo:</Label>
@@ -663,10 +679,19 @@ export default function AdminSpinWheelManager() {
 
             <div className="grid gap-3 md:grid-cols-2">
               {segments.map((segment) => (
-                <div key={segment.id} className="p-4 border rounded-lg flex justify-between items-center">
-                  <div>
-                    <p className="font-bold">{segment.label}</p>
-                    <p className="text-sm text-muted-foreground">{segment.reward_value}</p>
+                <div key={segment.id} className="p-4 border rounded-lg flex justify-between items-start">
+                  <div className="flex gap-3 items-start">
+                    {segment.reward_image_url && (
+                      <img 
+                        src={segment.reward_image_url} 
+                        alt={segment.label} 
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                    )}
+                    <div>
+                      <p className="font-bold">{segment.label}</p>
+                      <p className="text-sm text-muted-foreground">{segment.reward_value}</p>
+                    </div>
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => deleteSegment(segment.id!)}>
                     <Trash2 className="h-4 w-4 text-destructive" />

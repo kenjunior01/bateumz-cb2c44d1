@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
+import { fetchPlayers, fetchFixtures, fetchPlayerStats, ApiPlayer, ApiMatch } from "@/lib/api-football";
 
 interface PlayerStats {
   goals: number;
@@ -68,42 +69,164 @@ const FantasyFootball: React.FC = () => {
   const { t } = useLanguage();
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [budget, setBudget] = useState(INITIAL_BUDGET);
-  const [activeTab, setActiveTab] = useState<"team" | "players" | "matches" | "prizes">("team");
+  const [activeTab, setActiveTab] = useState<"team" | "players" | "matches" | "prizes" | "battle">("team");
   const [myPoints, setMyPoints] = useState(0);
   const [loadingStats, setLoadingStats] = useState(false);
   const [players, setPlayers] = useState<Player[]>(SAMPLE_PLAYERS);
+  const [matches, setMatches] = useState<Match[]>(SAMPLE_MATCHES);
+  const [loadingInitialData, setLoadingInitialData] = useState(true);
+  const [opponentPlayers, setOpponentPlayers] = useState<Player[]>([]);
+  const [opponentPoints, setOpponentPoints] = useState(0);
+  const [battleActive, setBattleActive] = useState(false);
 
-  // Function to fetch real-time data via Supabase Edge Function
+  // Fetch initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Try to fetch real players from 2026 World Cup
+        const playersData = await fetchPlayers(1, 2026);
+        console.log("Players data:", playersData);
+        
+        // Try to fetch fixtures from 2026 World Cup
+        const fixturesData = await fetchFixtures(1, 2026);
+        console.log("Fixtures data:", fixturesData);
+
+        // If we got real data, transform it
+        if (playersData.response && playersData.response.length > 0) {
+          const transformedPlayers = playersData.response.slice(0, 20).map((playerData: any, index: number) => {
+            const player = playerData.player;
+            const team = playerData.statistics[0]?.team;
+            const stats = playerData.statistics[0];
+            
+            return {
+              id: player.id.toString(),
+              name: player.name,
+              team: team?.name || "Unknown",
+              position: mapPosition(player.position),
+              price: 50 + Math.floor(Math.random() * 100),
+              points: 50 + Math.floor(Math.random() * 50),
+              image: player.photo,
+              stats: {
+                goals: stats?.goals?.total || 0,
+                assists: stats?.goals?.assists || 0,
+                yellow_cards: stats?.cards?.yellow || 0,
+                red_cards: stats?.cards?.red || 0,
+                minutes_played: stats?.games?.minutes || 0,
+                clean_sheets: stats?.clean_sheets || 0,
+                saves: stats?.goals?.saves || 0,
+                last_updated: new Date().toISOString(),
+              }
+            };
+          });
+          setPlayers(transformedPlayers);
+        }
+
+        if (fixturesData.response && fixturesData.response.length > 0) {
+          const transformedFixtures = fixturesData.response.slice(0, 5).map((fixture: ApiMatch) => ({
+            id: fixture.fixture.id.toString(),
+            homeTeam: fixture.teams.home.name,
+            awayTeam: fixture.teams.away.name,
+            date: new Date(fixture.fixture.date).toLocaleString("pt-PT"),
+            status: mapStatus(fixture.fixture.status.short),
+            score: fixture.goals.home !== null && fixture.goals.away !== null 
+              ? `${fixture.goals.home}-${fixture.goals.away}` 
+              : undefined,
+          }));
+          setMatches(transformedFixtures);
+        }
+
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        toast.info("Usando dados de exemplo por enquanto.");
+      } finally {
+        setLoadingInitialData(false);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  const mapPosition = (pos: string): "GK" | "DEF" | "MID" | "FWD" => {
+    switch (pos) {
+      case "Goalkeeper": return "GK";
+      case "Defender": return "DEF";
+      case "Midfielder": return "MID";
+      case "Attacker": return "FWD";
+      default: return "MID";
+    }
+  };
+
+  const mapStatus = (status: string): "scheduled" | "live" | "finished" => {
+    switch (status) {
+      case "1H":
+      case "2H":
+      case "HT":
+      case "ET":
+      case "P":
+        return "live";
+      case "FT":
+      case "AET":
+      case "PEN":
+        return "finished";
+      default:
+        return "scheduled";
+    }
+  };
+
+  // Function to fetch real-time data via API-Football
   const fetchRealTimeStats = async () => {
     setLoadingStats(true);
     try {
       toast.info("Atualizando estatísticas em tempo real...");
       
-      // Call our new Edge Function
-      const response = await supabase.functions.invoke("fetch-football-data");
+      const playersData = await fetchPlayers(1, 2026);
+      console.log("Fetched updated football data:", playersData);
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (playersData.response && playersData.response.length > 0) {
+        const updatedPlayers = playersData.response.slice(0, players.length).map((playerData: any, index: number) => {
+          const player = playerData.player;
+          const team = playerData.statistics[0]?.team;
+          const stats = playerData.statistics[0];
+          
+          return {
+            id: player.id.toString(),
+            name: player.name,
+            team: team?.name || players[index]?.team || "Unknown",
+            position: mapPosition(player.position),
+            price: players[index]?.price || 80,
+            points: 50 + Math.floor(Math.random() * 50),
+            image: player.photo,
+            stats: {
+              goals: stats?.goals?.total || 0,
+              assists: stats?.goals?.assists || 0,
+              yellow_cards: stats?.cards?.yellow || 0,
+              red_cards: stats?.cards?.red || 0,
+              minutes_played: stats?.games?.minutes || 0,
+              clean_sheets: stats?.clean_sheets || 0,
+              saves: stats?.goals?.saves || 0,
+              last_updated: new Date().toISOString(),
+            }
+          };
+        });
+        setPlayers(updatedPlayers);
+      } else {
+        // Fallback to random stats
+        const updatedPlayers = players.map(p => ({
+          ...p,
+          stats: {
+            goals: Math.floor(Math.random() * 5),
+            assists: Math.floor(Math.random() * 4),
+            yellow_cards: Math.floor(Math.random() * 2),
+            red_cards: 0,
+            minutes_played: 180 + Math.floor(Math.random() * 200),
+            clean_sheets: Math.floor(Math.random() * 3),
+            saves: p.position === "GK" ? Math.floor(Math.random() * 15) : 0,
+            last_updated: new Date().toISOString(),
+          }
+        }));
+        setPlayers(updatedPlayers);
       }
       
-      console.log("Fetched football data:", response.data);
-      
-      // Update players with new stats (in the future, we'll map real API data)
-      const updatedPlayers = players.map(p => ({
-        ...p,
-        stats: {
-          goals: Math.floor(Math.random() * 5),
-          assists: Math.floor(Math.random() * 4),
-          yellow_cards: Math.floor(Math.random() * 2),
-          red_cards: 0,
-          minutes_played: 180 + Math.floor(Math.random() * 200),
-          clean_sheets: Math.floor(Math.random() * 3),
-          saves: p.position === "GK" ? Math.floor(Math.random() * 15) : 0,
-          last_updated: new Date().toISOString(),
-        }
-      }));
-      
-      setPlayers(updatedPlayers);
       toast.success("Estatísticas atualizadas com sucesso!");
     } catch (error) {
       console.error("Error fetching real-time stats:", error);
@@ -130,9 +253,27 @@ const FantasyFootball: React.FC = () => {
     }
   };
 
-  const simulateGameWeek = () => {
-    const newPoints = selectedPlayers.reduce((sum, p) => {
-      let playerPoints = 2; // Base points for playing
+  const createRandomOpponentTeam = () => {
+    const availablePlayers = players.filter(p => !selectedPlayers.find(sp => sp.id === p.id));
+    const shuffled = [...availablePlayers].sort(() => Math.random() - 0.5);
+    setOpponentPlayers(shuffled.slice(0, TEAM_SIZE));
+  };
+
+  const startBattle = () => {
+    if (selectedPlayers.length < TEAM_SIZE) {
+      toast.error(`Selecione ${TEAM_SIZE} jogadores para começar a batalha!`);
+      return;
+    }
+    if (opponentPlayers.length === 0) {
+      createRandomOpponentTeam();
+    }
+    setBattleActive(true);
+    toast.success("Batalha iniciada!");
+  };
+
+  const calculateTeamPoints = (team: Player[]) => {
+    return team.reduce((sum, p) => {
+      let playerPoints = 2; // Base points
       if (p.stats) {
         playerPoints += p.stats.goals * 5;
         playerPoints += p.stats.assists * 3;
@@ -143,14 +284,27 @@ const FantasyFootball: React.FC = () => {
       }
       return sum + playerPoints;
     }, 0);
+  };
+
+  const simulateBattle = () => {
+    const myBattlePoints = calculateTeamPoints(selectedPlayers);
+    const opponentBattlePoints = calculateTeamPoints(opponentPlayers);
     
-    setMyPoints(prev => prev + newPoints);
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
-    toast.success(`Você ganhou ${newPoints} pontos nesta rodada!`);
+    setMyPoints(prev => prev + myBattlePoints);
+    setOpponentPoints(prev => prev + opponentBattlePoints);
+    
+    if (myBattlePoints > opponentBattlePoints) {
+      confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 } });
+      toast.success(`Você venceu! ${myBattlePoints} vs ${opponentBattlePoints}!`);
+    } else if (myBattlePoints < opponentBattlePoints) {
+      toast.error(`Você perdeu! ${myBattlePoints} vs ${opponentBattlePoints}!`);
+    } else {
+      toast.info(`Empate! ${myBattlePoints} vs ${opponentBattlePoints}!`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white p-4 md:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: -20 }} 
@@ -176,54 +330,54 @@ const FantasyFootball: React.FC = () => {
               Atualizar Estatísticas
             </Button>
           </div>
-          <p className="text-xl text-gray-400 mt-2">{t("fantasy.subtitle")}</p>
+          <p className="text-xl text-muted-foreground mt-2">{t("fantasy.subtitle")}</p>
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-yellow-500/30">
+          <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">{t("fantasy.budget")}</p>
-                  <p className="text-3xl font-black text-yellow-400">{budget} <Coins className="inline w-6 h-6 ml-1" /></p>
+                  <p className="text-sm text-muted-foreground">{t("fantasy.budget")}</p>
+                  <p className="text-3xl font-black text-yellow-600 dark:text-yellow-400">{budget} <Coins className="inline w-6 h-6 ml-1" /></p>
                 </div>
-                <Coins className="w-12 h-12 text-yellow-500/50" />
+                <Coins className="w-12 h-12 text-yellow-500/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-blue-500/30">
+          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">{t("fantasy.myPoints")}</p>
-                  <p className="text-3xl font-black text-blue-400">{myPoints}</p>
+                  <p className="text-sm text-muted-foreground">{t("fantasy.myPoints")}</p>
+                  <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{myPoints}</p>
                 </div>
-                <TrendingUp className="w-12 h-12 text-blue-500/50" />
+                <TrendingUp className="w-12 h-12 text-blue-500/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/30">
+          <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">{t("fantasy.myTeam")}</p>
-                  <p className="text-3xl font-black text-green-400">{selectedPlayers.length}/{TEAM_SIZE}</p>
+                  <p className="text-sm text-muted-foreground">{t("fantasy.myTeam")}</p>
+                  <p className="text-3xl font-black text-green-600 dark:text-green-400">{selectedPlayers.length}/{TEAM_SIZE}</p>
                 </div>
-                <Users className="w-12 h-12 text-green-500/50" />
+                <Users className="w-12 h-12 text-green-500/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30">
+          <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Next Matchday</p>
-                  <p className="text-xl font-black text-purple-400">Matchday 1</p>
+                  <p className="text-sm text-muted-foreground">Next Matchday</p>
+                  <p className="text-xl font-black text-purple-600 dark:text-purple-400">Matchday 1</p>
                 </div>
-                <Calendar className="w-12 h-12 text-purple-500/50" />
+                <Calendar className="w-12 h-12 text-purple-500/30" />
               </div>
             </CardContent>
           </Card>
@@ -233,6 +387,7 @@ const FantasyFootball: React.FC = () => {
           {[
             { id: "team", label: t("fantasy.myTeam"), icon: <Users className="w-4 h-4" /> },
             { id: "players", label: t("fantasy.players"), icon: <TrendingUp className="w-4 h-4" /> },
+            { id: "battle", label: "Batalha", icon: <Zap className="w-4 h-4" /> },
             { id: "matches", label: t("fantasy.nextMatch"), icon: <Calendar className="w-4 h-4" /> },
             { id: "prizes", label: t("fantasy.prizes"), icon: <Trophy className="w-4 h-4" /> },
           ].map(tab => (
@@ -256,13 +411,13 @@ const FantasyFootball: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <Card className="bg-gray-800/50 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle>{t("fantasy.myTeam")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {selectedPlayers.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="text-center py-12 text-muted-foreground">
                       <p className="text-lg">No players selected yet</p>
                       <p className="text-sm">Go to the Players tab to build your team</p>
                     </div>
@@ -274,11 +429,14 @@ const FantasyFootball: React.FC = () => {
                           layout
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="bg-gray-700/50 rounded-xl p-4 border border-gray-600 hover:border-purple-500 transition-all"
-                        >
+                          className="bg-muted rounded-xl p-4 border border-muted-foreground/20 hover:border-primary transition-all">
                           <div className="text-center">
-                            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-2 flex items-center justify-center">
-                              <span className="text-2xl font-black">{player.name.charAt(0)}</span>
+                            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden">
+                              {player.image ? (
+                                <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-2xl font-black">{player.name.charAt(0)}</span>
+                              )}
                             </div>
                             <p className="font-bold">{player.name}</p>
                             <p className="text-xs text-gray-400">{player.team} • {player.position}</p>
@@ -304,10 +462,118 @@ const FantasyFootball: React.FC = () => {
                     </div>
                   )}
                   {selectedPlayers.length === TEAM_SIZE && (
-                    <Button className="w-full mt-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700" onClick={simulateGameWeek}>
-                      <Trophy className="w-4 h-4 mr-2" />
-                      Simulate Matchday
+                    <Button className="w-full mt-6 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700" onClick={() => setActiveTab("battle")}>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Ir para Batalha
                     </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {activeTab === "battle" && (
+            <motion.div
+              key="battle"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle>Batalha Jogador vs Jogador</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!battleActive ? (
+                    <div className="text-center py-12 space-y-4">
+                      <p className="text-lg">Prepare sua equipe e desafie um oponente!</p>
+                      <div className="flex gap-4 justify-center flex-wrap">
+                        <Button onClick={createRandomOpponentTeam} disabled={players.length < TEAM_SIZE * 2}>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Gerar Oponente Aleatório
+                        </Button>
+                        <Button onClick={startBattle} disabled={selectedPlayers.length < TEAM_SIZE} className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
+                          <Zap className="w-4 h-4 mr-2" />
+                          Iniciar Batalha
+                        </Button>
+                      </div>
+                      {opponentPlayers.length > 0 && (
+                        <div className="mt-8">
+                          <p className="font-bold mb-4">Equipe do Oponente:</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {opponentPlayers.map(player => (
+                              <div
+                                key={player.id}
+                                className="bg-muted rounded-xl p-4 border border-destructive/30">
+                                <div className="text-center">
+                                  <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden">
+                                    {player.image ? (
+                                      <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-xl font-black">{player.name.charAt(0)}</span>
+                                    )}
+                                  </div>
+                                  <p className="font-bold text-sm">{player.name}</p>
+                                  <p className="text-xs text-muted-foreground">{player.team}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid md:grid-cols-3 gap-4 text-center">
+                        <div className="p-6 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/30">
+                          <h3 className="font-bold text-lg mb-2">Sua Equipe</h3>
+                          <p className="text-4xl font-black text-blue-600 dark:text-blue-400">{myPoints}</p>
+                          <p className="text-sm text-muted-foreground mt-2">Total de Pontos</p>
+                        </div>
+
+                        <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/30 flex items-center justify-center">
+                          <div className="text-center">
+                            <p className="text-3xl font-black">VS</p>
+                          </div>
+                        </div>
+
+                        <div className="p-6 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/30">
+                          <h3 className="font-bold text-lg mb-2">Oponente</h3>
+                          <p className="text-4xl font-black text-red-600 dark:text-red-400">{opponentPoints}</p>
+                          <p className="text-sm text-muted-foreground mt-2">Total de Pontos</p>
+                        </div>
+                      </div>
+
+                      <Button onClick={simulateBattle} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700">
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        Simular Batalha!
+                      </Button>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-bold mb-4">Sua Equipe:</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {selectedPlayers.map(player => (
+                              <div key={player.id} className="bg-muted p-2 rounded-lg text-center">
+                                <p className="font-bold text-xs">{player.name}</p>
+                                <p className="text-xs text-muted-foreground">{player.team}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-bold mb-4">Equipe do Oponente:</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {opponentPlayers.map(player => (
+                              <div key={player.id} className="bg-muted p-2 rounded-lg text-center">
+                                <p className="font-bold text-xs">{player.name}</p>
+                                <p className="text-xs text-muted-foreground">{player.team}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -321,13 +587,18 @@ const FantasyFootball: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <Card className="bg-gray-800/50 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle>{t("fantasy.players")}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {players.map(player => {
+                  {loadingInitialData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {players.map(player => {
                       const isSelected = selectedPlayers.find(p => p.id === player.id);
                       const canAfford = budget >= player.price;
                       return (
@@ -335,15 +606,18 @@ const FantasyFootball: React.FC = () => {
                           key={player.id}
                           className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                             isSelected
-                              ? "bg-purple-500/20 border-purple-500"
+                              ? "bg-primary/10 border-primary"
                               : canAfford
-                              ? "bg-gray-700/30 border-gray-600 hover:border-blue-500"
-                              : "bg-gray-700/10 border-gray-700 opacity-50"
-                          }`}
-                        >
+                              ? "bg-muted border-muted-foreground/30 hover:border-primary"
+                              : "bg-muted/50 border-muted-foreground/10 opacity-50"
+                          }`}>
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-black text-lg">
-                              {player.name.charAt(0)}
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-black text-lg overflow-hidden">
+                              {player.image ? (
+                                <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{player.name.charAt(0)}</span>
+                              )}
                             </div>
                             <div>
                               <p className="font-bold">{player.name}</p>
@@ -377,7 +651,8 @@ const FantasyFootball: React.FC = () => {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -390,14 +665,18 @@ const FantasyFootball: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <Card className="bg-gray-800/50 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle>{t("fantasy.nextMatch")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {SAMPLE_MATCHES.map(match => (
-                      <div key={match.id} className="p-4 bg-gray-700/30 rounded-xl border border-gray-600">
+                    {loadingInitialData ? (
+                      <div className="flex items-center justify-center py-12">
+                        <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : matches.map(match => (
+                      <div key={match.id} className="p-4 bg-muted rounded-xl border border-muted-foreground/20">
                         <div className="flex items-center justify-between">
                           <div className="text-center flex-1">
                             <p className="font-bold text-lg">{match.homeTeam}</p>
@@ -432,7 +711,7 @@ const FantasyFootball: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <Card className="bg-gray-800/50 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle>{t("fantasy.prizes")}</CardTitle>
                 </CardHeader>

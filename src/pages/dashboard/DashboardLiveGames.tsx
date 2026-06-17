@@ -20,6 +20,10 @@ const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: "tap", label: "Tap Battle", emoji: "⚡" },
   { id: "quiz", label: "Quiz Battle", emoji: "🧠" },
   { id: "mystery", label: "Caixa Misteriosa", emoji: "🎁" },
+  { id: "football", label: "Fantasy Football", emoji: "⚽" },
+  { id: "penalty", label: "Penalty Shootout", emoji: "🎯" },
+  { id: "worldcup", label: "World Cup Predictor", emoji: "🌍" },
+  { id: "millionaire", label: "Quem Quer Ser Milionário", emoji: "🤑" },
 ];
 
 type EmojiOpt = { id: string; emoji: string; label: string };
@@ -180,7 +184,7 @@ const DashboardLiveGames = () => {
       {/* Quick stats — feels like a contest dashboard */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: Trophy, label: "Jogos disponíveis", value: 6 + millionaireGames.length + spinWheelGames.length, hint: `6 locais + ${millionaireGames.length} Millionaire + ${spinWheelGames.length} Roda` },
+          { icon: Trophy, label: "Jogos disponíveis", value: GAME_OPTIONS.length + millionaireGames.length + spinWheelGames.length, hint: `${GAME_OPTIONS.length} locais + ${millionaireGames.length} Millionaire + ${spinWheelGames.length} Roda` },
           { icon: Sparkles, label: "Prémios na roda", value: wheel.length, hint: `${totalWeight} pts peso total` },
           { icon: Vote, label: "Opções de emoji", value: emojis.length, hint: "Máx. 6" },
           { icon: Users, label: "Modo multi-jogador", value: "✓", hint: "Tap & Quiz" },
@@ -210,7 +214,7 @@ const DashboardLiveGames = () => {
             {GAME_OPTIONS.find(g => g.id === activeGame)?.emoji} {GAME_OPTIONS.find(g => g.id === activeGame)?.label}
           </span>
         </div>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
           {GAME_OPTIONS.map((g) => (
             <button
               key={g.id}

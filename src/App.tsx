@@ -20,7 +20,7 @@ import WorldCupPredictions from "./pages/WorldCupPredictions.tsx";
 import FantasyFootball from "./pages/FantasyFootball.tsx";
 import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
 import WorldCupForum from "./pages/WorldCupForum.tsx";
-import MillionaireGame from "./components/livegames/MillionaireGame.tsx";
+import EnhancedMillionaireGame from "./components/livegames/EnhancedMillionaireGame.tsx";
 import PrizeWheel from "./components/livegames/PrizeWheel.tsx";
 import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
 import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
@@ -105,7 +105,13 @@ import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
+import { useParams } from "react-router-dom";
 const queryClient = new QueryClient();
+
+function PrizeWheelWrapper() {
+  const { gameId } = useParams<{ gameId: string }>();
+  return <PrizeWheel prizes={DEFAULT_WHEEL_PRIZES} gameId={gameId} />;
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -138,8 +144,8 @@ function AnimatedRoutes() {
           <Route path="/fantasy" element={<FantasyFootball />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/forum-mundial" element={<WorldCupForum />} />
-          <Route path="/games/millionaire/:gameId" element={<MillionaireGame />} />
-          <Route path="/games/spin-wheel/:gameId" element={<PrizeWheel prizes={DEFAULT_WHEEL_PRIZES} />} />
+          <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
+          <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />

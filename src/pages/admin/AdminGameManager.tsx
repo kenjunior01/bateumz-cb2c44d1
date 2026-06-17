@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Palette, Gamepad2, Settings2, Plus, Trash2, Save, Image as ImageIcon, T
 
 export default function AdminGameManager() {
   const { region } = useRegionalTheme();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("spin");
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +52,14 @@ export default function AdminGameManager() {
           <h1 className="text-3xl font-black tracking-tight uppercase">Gestão de Jogos & Gamificação</h1>
           <p className="text-muted-foreground">Personalize a experiência de jogo para a sua região e empresas parceiras.</p>
         </div>
-        <Button className="gap-2" onClick={() => toast.info("Funcionalidade de criação em desenvolvimento. Use o Gerenciador de Jogos específico.")}>
-          <Plus className="w-4 h-4" /> Novo Jogo
-        </Button>
+        <div className="flex gap-2">
+          <Button className="gap-2" onClick={() => navigate("/admin/spin-wheel-manager")}>
+            <Plus className="w-4 h-4" /> Nova Roda
+          </Button>
+          <Button className="gap-2" onClick={() => navigate("/admin/millionaire-manager")}>
+            <Plus className="w-4 h-4" /> Novo Milionário
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -196,7 +203,10 @@ export default function AdminGameManager() {
             <div className="text-center py-20 border-2 border-dashed rounded-3xl opacity-50">
               <Gamepad2 className="w-12 h-12 mx-auto mb-4" />
               <p>Nenhum jogo configurado para esta região.</p>
-              <Button variant="link">Criar o primeiro jogo agora</Button>
+              <div className="flex justify-center gap-2 mt-4">
+                <Button variant="link" onClick={() => navigate("/admin/spin-wheel-manager")}>Criar primeira roda</Button>
+                <Button variant="link" onClick={() => navigate("/admin/millionaire-manager")}>Criar primeiro milionário</Button>
+              </div>
             </div>
           )}
         </div>

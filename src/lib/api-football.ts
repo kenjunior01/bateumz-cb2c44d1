@@ -16,7 +16,32 @@ export interface ApiMatch {
   goals: { home: number | null; away: number | null };
 }
 
-export const fetchPlayers = async (leagueId: number = 1, season: number = 2026) => {
+export interface ApiStatusResponse {
+  response: {
+    account: { firstname: string; lastname: string; email: string };
+    subscription: { plan: string; end: string; active: boolean };
+    requests: { current: number; limit_day: number };
+  };
+}
+
+export const fetchApiStatus = async (): Promise<ApiStatusResponse | null> => {
+  try {
+    const response = await fetch(`${BASE_URL}/status`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": API_KEY,
+        "x-rapidapi-host": "v3.football.api-sports.io",
+      },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching API status:", error);
+    return null;
+  }
+};
+
+export const fetchPlayers = async (leagueId: number = 1, season: number = 2022) => {
   try {
     const response = await fetch(`${BASE_URL}/players?league=${leagueId}&season=${season}`, {
       method: "GET",
@@ -38,7 +63,7 @@ export const fetchPlayers = async (leagueId: number = 1, season: number = 2026) 
   }
 };
 
-export const fetchFixtures = async (leagueId: number = 1, season: number = 2026) => {
+export const fetchFixtures = async (leagueId: number = 1, season: number = 2022) => {
   try {
     const response = await fetch(`${BASE_URL}/fixtures?league=${leagueId}&season=${season}`, {
       method: "GET",
@@ -60,7 +85,7 @@ export const fetchFixtures = async (leagueId: number = 1, season: number = 2026)
   }
 };
 
-export const fetchPlayerStats = async (playerId: number, leagueId: number = 1, season: number = 2026) => {
+export const fetchPlayerStats = async (playerId: number, leagueId: number = 1, season: number = 2022) => {
   try {
     const response = await fetch(`${BASE_URL}/players?season=${season}&id=${playerId}`, {
       method: "GET",

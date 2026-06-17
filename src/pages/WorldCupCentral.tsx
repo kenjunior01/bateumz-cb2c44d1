@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, Calendar, Users, Zap, Globe, Users2, MessageSquare, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { 
-  checkApiHealth, 
-  fetchMatches, 
-  fetchWorldCupMatchesApi,
-  Match as ApiMatch 
-} from "@/lib/the-stats-api";
+  fetchApiStatus, 
+  fetchFixtures, 
+  type ApiMatch,
+  type ApiStatusResponse
+} from "@/lib/api-football";
 
 interface Match {
   id: string;
@@ -51,20 +51,20 @@ export default function WorldCupCentral() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [activeTab, setActiveTab] = useState("matches");
-  const [apiHealth, setApiHealth] = useState<{ status: string; timestamp: string } | null>(null);
-  const [apiMatches, setApiMatches] = useState<ApiMatch[]>([]);
+  const [apiStatus, setApiStatus] = useState<ApiStatusResponse | null>(null);
+  const [apiFixtures, setApiFixtures] = useState<ApiMatch[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      // Check API health
-      const health = await checkApiHealth();
-      setApiHealth(health);
+      // Check API status
+      const status = await fetchApiStatus();
+      setApiStatus(status);
       
-      // Fetch API matches
-      const apiMatchesData = await fetchWorldCupMatchesApi();
-      setApiMatches(apiMatchesData);
+      // Fetch API fixtures (World Cup 2022 - available for free plan!)
+      const fixturesData = await fetchFixtures(1, 2022);
+      setApiFixtures(fixturesData.response || []);
 
       // Load matches from Supabase
       const { data: matchesData, error: matchesError } = await supabase
@@ -159,8 +159,8 @@ export default function WorldCupCentral() {
   const refreshApiData = async () => {
     setRefreshing(true);
     try {
-      const apiMatchesData = await fetchWorldCupMatchesApi();
-      setApiMatches(apiMatchesData);
+      const fixturesData = await fetchFixtures(1, 2022);
+      setApiFixtures(fixturesData.response || []);
     } catch (error) {
       console.error('Error refreshing API data:', error);
     } finally {
@@ -219,7 +219,7 @@ export default function WorldCupCentral() {
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-4 flex-wrap">
             <Trophy className="h-8 w-8 text-primary" />
-            <h1 className="font-display text-4xl font-bold">Central do Mundial 2026</h1>
+            <h1 className="font-display text-4xl font-bold">Central do Mundial (2022 - Demo)</h1>
             <Trophy className="h-8 w-8 text-primary" />
             <Button 
               variant="outline" 
@@ -232,15 +232,25 @@ export default function WorldCupCentral() {
               {refreshing ? 'Atualizando...' : 'Atualizar'}
             </Button>
           </div>
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Badge variant={apiHealth?.status === 'healthy' ? 'default' : 'destructive'}>
-              API: {apiHealth?.status === 'healthy' ? 'Online' : 'Offline'}
+          <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
+            <Badge variant={apiStatus?.response.subscription.active ? 'default' : 'destructive'}>
+              API-Football: {apiStatus?.response.subscription.active ? 'Online' : 'Offline'}
             </Badge>
-            {apiMatches.length > 0 && (
+            <Badge variant="outline">
+              Plano: {apiStatus?.response.subscription.plan || 'Free'}
+            </Badge>
+            <Badge variant="outline">
+              Requisições hoje: {apiStatus?.response.requests.current || 0}/{apiStatus?.response.requests.limit_day || 100}
+            </Badge>
+            {apiFixtures.length > 0 && (
               <Badge variant="outline">
-                {apiMatches.length} jogos na API
+                {apiFixtures.length} jogos na API
               </Badge>
             )}
+          </div>
+          <div className="text-center mb-6 text-sm text-muted-foreground">
+            <p>Nota: O plano gratuito da API-Football só tem dados até a temporada 2024. Estamos usando a Copa do Mundo de 2022 como exemplo!</p>
+            <p>Para dados de 2026, você precisaria fazer upgrade para um plano pago na API-Football!</p>
           </div>
           <p className="text-lg text-muted-foreground mb-6">
             Acompanhe todos os jogos, equipes e notícias do maior torneio de futebol do mundo
@@ -404,107 +414,74 @@ export default function WorldCupCentral() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Zap className="h-5 w-5 text-primary" />
-                    Partidas da TheStatsApi
+                    Partidas da Copa do Mundo 2022 (API-Football)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {apiMatches.length === 0 ? (
+                  {apiFixtures.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground">
                       <p>Nenhuma partida encontrada na API</p>
-                      <p className="text-sm mt-2">Usando dados de exemplo:</p>
-                      <div className="mt-4 grid gap-4">
-                        {[
-                          { homeTeam: "Portugal", awayTeam: "França", kickoff_time: "2026-06-20T18:00:00Z", status: "completed", home_score: 2, away_score: 1 },
-                          { homeTeam: "Brasil", awayTeam: "Argentina", kickoff_time: "2026-06-21T20:00:00Z", status: "live", home_score: 1, away_score: 2 },
-                          { homeTeam: "Alemanha", awayTeam: "Espanha", kickoff_time: "2026-06-22T17:00:00Z", status: "scheduled" }
-                        ].map((match, index) => (
-                          <Card key={index} className="hover:shadow-lg transition-shadow">
-                            <CardContent className="py-6">
-                              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                <div className="flex-1 text-center">
-                                  <div className="flex items-center justify-center gap-4">
-                                    <div className="text-center">
-                                      <p className="text-2xl font-bold">🇵🇹</p>
-                                      <p className="text-sm font-medium">{match.homeTeam}</p>
-                                    </div>
-                                    <div className="text-center">
-                                      {match.status === "completed" ? (
-                                        <div className="text-2xl font-bold">
-                                          {match.home_score} - {match.away_score}
-                                        </div>
-                                      ) : match.status === "live" ? (
-                                        <Badge className="bg-red-100 text-red-800 animate-pulse">
-                                          Ao Vivo
-                                        </Badge>
-                                      ) : (
-                                        <Badge className="bg-blue-100 text-blue-800">
-                                          Agendado
-                                        </Badge>
-                                      )}
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {new Date(match.kickoff_time).toLocaleDateString("pt-BR", {
-                                          month: "short",
-                                          day: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
-                                    </div>
-                                    <div className="text-center">
-                                      <p className="text-2xl font-bold">🇫🇷</p>
-                                      <p className="text-sm font-medium">{match.awayTeam}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
                     </div>
                   ) : (
-                    apiMatches.map((match) => (
-                      <Card key={match.id} className="hover:shadow-lg transition-shadow">
+                    apiFixtures.map((fixture) => (
+                      <Card key={fixture.fixture.id} className="hover:shadow-lg transition-shadow">
                         <CardContent className="py-6">
                           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex-1 text-center">
                               <div className="flex items-center justify-center gap-4">
                                 <div className="text-center">
-                                  <p className="text-2xl font-bold">{match.home_team.logo ? <img src={match.home_team.logo} alt={match.home_team.name} className="w-12 h-12 object-contain" /> : "🏴"}</p>
-                                  <p className="text-sm font-medium">{match.home_team.name}</p>
+                                  {fixture.teams.home.logo ? (
+                                    <img 
+                                      src={fixture.teams.home.logo} 
+                                      alt={fixture.teams.home.name} 
+                                      className="w-12 h-12 object-contain mx-auto" 
+                                    />
+                                  ) : (
+                                    <p className="text-2xl font-bold">🏴</p>
+                                  )}
+                                  <p className="text-sm font-medium">{fixture.teams.home.name}</p>
                                 </div>
                                 <div className="text-center">
-                                  {match.status === "completed" ? (
+                                  {fixture.goals.home !== null && fixture.goals.away !== null ? (
                                     <div className="text-2xl font-bold">
-                                      {match.home_score} - {match.away_score}
+                                      {fixture.goals.home} - {fixture.goals.away}
                                     </div>
-                                  ) : match.status === "live" ? (
-                                    <Badge className="bg-red-100 text-red-800 animate-pulse">
-                                      Ao Vivo
-                                    </Badge>
                                   ) : (
                                     <Badge className="bg-blue-100 text-blue-800">
-                                      Agendado
+                                      {fixture.fixture.status.short}
                                     </Badge>
                                   )}
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    {new Date(match.kickoff_time).toLocaleDateString("pt-BR", {
+                                    {new Date(fixture.fixture.date).toLocaleDateString("pt-BR", {
                                       month: "short",
                                       day: "numeric",
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })}
                                   </p>
+                                  {fixture.league.round && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {fixture.league.round}
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-2xl font-bold">{match.away_team.logo ? <img src={match.away_team.logo} alt={match.away_team.name} className="w-12 h-12 object-contain" /> : "🏴"}</p>
-                                  <p className="text-sm font-medium">{match.away_team.name}</p>
+                                  {fixture.teams.away.logo ? (
+                                    <img 
+                                      src={fixture.teams.away.logo} 
+                                      alt={fixture.teams.away.name} 
+                                      className="w-12 h-12 object-contain mx-auto" 
+                                    />
+                                  ) : (
+                                    <p className="text-2xl font-bold">🏴</p>
+                                  )}
+                                  <p className="text-sm font-medium">{fixture.teams.away.name}</p>
                                 </div>
                               </div>
                             </div>
-                            {match.venue && (
+                            {fixture.fixture.venue?.name && (
                               <p className="text-xs text-muted-foreground">
-                                {match.venue}
+                                {fixture.fixture.venue.name}, {fixture.fixture.venue.city}
                               </p>
                             )}
                           </div>

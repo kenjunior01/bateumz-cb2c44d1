@@ -8,7 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { fetchPlayers, fetchFixtures, fetchPlayerStats, ApiPlayer, ApiMatch } from "@/lib/api-football";
+import { fetchWorldCupPlayers, fetchWorldCupMatches } from "@/lib/the-stats-api";
 
 interface PlayerStats {
   goals: number;
@@ -83,37 +83,33 @@ const FantasyFootball: React.FC = () => {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        // Try to fetch real players from 2026 World Cup
-        const playersData = await fetchPlayers(1, 2026);
+        // Try to fetch real players from 2026 World Cup using the-stats-api
+        const playersData = await fetchWorldCupPlayers();
         console.log("Players data:", playersData);
         
-        // Try to fetch fixtures from 2026 World Cup
-        const fixturesData = await fetchFixtures(1, 2026);
-        console.log("Fixtures data:", fixturesData);
+        // Try to fetch matches from 2026 World Cup using the-stats-api
+        const matchesData = await fetchWorldCupMatches();
+        console.log("Matches data:", matchesData);
 
         // If we got real data, transform it
-        if (playersData.response && playersData.response.length > 0) {
-          const transformedPlayers = playersData.response.slice(0, 20).map((playerData: any, index: number) => {
-            const player = playerData.player;
-            const team = playerData.statistics[0]?.team;
-            const stats = playerData.statistics[0];
-            
+        if (playersData && playersData.length > 0) {
+          const transformedPlayers = playersData.slice(0, 20).map((playerData: any, index: number) => {
             return {
-              id: player.id.toString(),
-              name: player.name,
-              team: team?.name || "Unknown",
-              position: mapPosition(player.position),
+              id: playerData.id?.toString() || `player-${index}`,
+              name: playerData.name || "Unknown Player",
+              team: playerData.team || "Unknown",
+              position: mapPosition(playerData.position || "MID"),
               price: 50 + Math.floor(Math.random() * 100),
               points: 50 + Math.floor(Math.random() * 50),
-              image: player.photo,
+              image: playerData.image,
               stats: {
-                goals: stats?.goals?.total || 0,
-                assists: stats?.goals?.assists || 0,
-                yellow_cards: stats?.cards?.yellow || 0,
-                red_cards: stats?.cards?.red || 0,
-                minutes_played: stats?.games?.minutes || 0,
-                clean_sheets: stats?.clean_sheets || 0,
-                saves: stats?.goals?.saves || 0,
+                goals: playerData.goals || 0,
+                assists: playerData.assists || 0,
+                yellow_cards: playerData.yellowCards || 0,
+                red_cards: playerData.redCards || 0,
+                minutes_played: playerData.minutesPlayed || 0,
+                clean_sheets: playerData.cleanSheets || 0,
+                saves: playerData.saves || 0,
                 last_updated: new Date().toISOString(),
               }
             };
@@ -121,18 +117,16 @@ const FantasyFootball: React.FC = () => {
           setPlayers(transformedPlayers);
         }
 
-        if (fixturesData.response && fixturesData.response.length > 0) {
-          const transformedFixtures = fixturesData.response.slice(0, 5).map((fixture: ApiMatch) => ({
-            id: fixture.fixture.id.toString(),
-            homeTeam: fixture.teams.home.name,
-            awayTeam: fixture.teams.away.name,
-            date: new Date(fixture.fixture.date).toLocaleString("pt-PT"),
-            status: mapStatus(fixture.fixture.status.short),
-            score: fixture.goals.home !== null && fixture.goals.away !== null 
-              ? `${fixture.goals.home}-${fixture.goals.away}` 
-              : undefined,
+        if (matchesData && matchesData.length > 0) {
+          const transformedMatches = matchesData.slice(0, 5).map((match: any) => ({
+            id: match.id?.toString() || `match-${Math.random()}`,
+            homeTeam: match.homeTeam || "Unknown",
+            awayTeam: match.awayTeam || "Unknown",
+            date: match.date ? new Date(match.date).toLocaleString("pt-PT") : new Date().toLocaleString("pt-PT"),
+            status: "scheduled",
+            score: match.score,
           }));
-          setMatches(transformedFixtures);
+          setMatches(transformedMatches);
         }
 
       } catch (error) {

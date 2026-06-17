@@ -162,13 +162,13 @@ const DashboardLiveGames = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/admin/millionaire-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary">
-              <Plus className="h-4 w-4" /> Criar Jogo Milionário
+            <Link to="/admin/millionaire-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Gerenciar Milionário
             </Link>
-            <Link to="/admin/spin-wheel-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary">
-              <Plus className="h-4 w-4" /> Criar Jogo Roda
+            <Link to="/admin/spin-wheel-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Gerenciar Roda
             </Link>
-            <button onClick={saveAll} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
+            <button onClick={saveAll} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary">
               <Save className="h-4 w-4" /> Guardar tudo
             </button>
             <button onClick={resetAll} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary text-foreground text-sm font-medium">

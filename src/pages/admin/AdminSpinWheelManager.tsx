@@ -354,7 +354,7 @@ export default function AdminSpinWheelManager() {
     setWeight(1);
   };
 
-  if (role !== "admin" && role !== "superadmin") {
+  if (role !== "admin" && role !== "superadmin" && role !== "business") {
     return <Navigate to="/admin" replace />;
   }
 

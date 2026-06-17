@@ -367,7 +367,7 @@ export default function AdminMillionaireManager() {
     ));
   };
 
-  if (role !== "admin" && role !== "superadmin") {
+  if (role !== "admin" && role !== "superadmin" && role !== "business") {
     return <Navigate to="/admin" replace />;
   }
 

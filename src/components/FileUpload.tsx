@@ -24,6 +24,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   bucketName = "game-assets"
 }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(value || null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +52,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         .getPublicUrl(fileName);
 
       const url = data.publicUrl;
+      setPreview(url);
       onChange(url);
       toast.success("Arquivo carregado com sucesso!");
     } catch (error) {
@@ -71,8 +73,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     setPreview(null);
     onChange("");
   };
-
-  const [preview, setPreview] = useState<string | null>(value || null);
 
   return (
     <div className="space-y-3">

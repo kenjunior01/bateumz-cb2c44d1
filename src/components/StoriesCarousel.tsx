@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import CreateStoryDialog from "@/components/CreateStoryDialog";
+import OptimizedImage from "@/components/OptimizedImage";
 import { toast } from "sonner";
 
 interface Story {
@@ -324,7 +325,7 @@ const StoriesCarousel = () => {
                     <div className="relative h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full p-[3px]">
                       <div className={`relative h-full w-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center overflow-hidden ring-2 ring-background`}>
                         {story.image ? (
-                          <img src={story.image} alt="" className="h-full w-full object-cover rounded-full transition-transform duration-300 group-hover:scale-110" />
+                          <OptimizedImage src={story.image} alt="" optimizeWidth={160} className="h-full w-full object-cover rounded-full transition-transform duration-300 group-hover:scale-110" />
                         ) : (
                           <story.icon className="h-6 w-6 text-white drop-shadow" />
                         )}
@@ -408,7 +409,7 @@ const StoriesCarousel = () => {
             >
               {/* Background image for user stories with picture */}
               {activeStory.type === "user" && activeStory.image && (
-                <img src={activeStory.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <OptimizedImage src={activeStory.image} alt="" optimizeWidth={720} priority className="absolute inset-0 w-full h-full object-cover" />
               )}
 
               {/* Static decorative blobs */}
@@ -422,7 +423,7 @@ const StoriesCarousel = () => {
                   <>
                     <div className="flex items-center justify-center gap-2 mb-4">
                       {activeStory.authorAvatar ? (
-                        <img src={activeStory.authorAvatar} alt="" className="h-10 w-10 rounded-full ring-2 ring-white/50 object-cover" />
+                        <OptimizedImage src={activeStory.authorAvatar} alt="" optimizeWidth={80} className="h-10 w-10 rounded-full ring-2 ring-white/50 object-cover" />
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
                           <UserIcon className="h-5 w-5 text-white" />

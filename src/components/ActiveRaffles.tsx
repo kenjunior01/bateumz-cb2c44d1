@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { getRegions } from "@/lib/regions";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface Raffle {
   id: string;
@@ -59,7 +60,12 @@ const RaffleCard = ({ raffle, index }: { raffle: Raffle; index: number }) => {
         <div className="rounded-2xl border border-border bg-card transition-all hover:border-primary/40 overflow-hidden">
           <div className="relative aspect-[4/3] overflow-hidden">
             {raffle.image_url ? (
-              <img src={raffle.image_url} alt={raffle.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <OptimizedImage
+                src={raffle.image_url}
+                alt={raffle.title}
+                optimizeWidth={640}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
             ) : (
               <div className="h-full w-full flex items-center justify-center bg-secondary">
                 <Ticket className="h-10 w-10 text-muted-foreground/20" />

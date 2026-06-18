@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { getStoredCountry, resolveLangFromCountry } from "@/lib/country-language";
 
 export type Lang = "en" | "pt" | "pt-BR" | "es" | "fr" | "hi";
 
@@ -170,6 +171,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.emptyTitle": "First winners coming soon!",
     "winners.emptyDesc": "Once the first raffles finish, winners will appear here. Join now and be among the first.",
     "winners.viewHistory": "View full winner history",
+    "winners.prizePhoto": "Prize / delivery photo",
 
     // World Cup banner
     "worldcup.title": "World Cup 2026",
@@ -496,6 +498,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.emptyTitle": "Os primeiros vencedores estão a caminho!",
     "winners.emptyDesc": "Assim que os primeiros sorteios terminarem, os vencedores aparecerão aqui. Participa já e sê um dos primeiros.",
     "winners.viewHistory": "Ver histórico completo de vencedores",
+    "winners.prizePhoto": "Foto do prémio / entrega",
 
     "worldcup.title": "Copa do Mundo 2026",
     "worldcup.subtitle": "Acompanhe jogos, equipas, previsões e jogos ao vivo",
@@ -717,7 +720,7 @@ const translations: Partial<Record<Lang, Dict>> = {
 
 interface LanguageContextValue {
   lang: Lang;
-  setLang: (l: Lang) => void;
+  setLang: (l: Lang, options?: { explicit?: boolean }) => void;
   t: (key: string, vars?: Record<string, string>) => string;
 }
 
@@ -739,11 +742,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const explicit = localStorage.getItem("bateu_lang_explicit") === "1";
     const stored = localStorage.getItem("bateu_lang") as Lang | null;
     if (explicit && stored && SUPPORTED.includes(stored)) return stored;
-    // One-time migration: any older stored value is wiped in favor of English.
-    if (stored && stored !== "en") {
-      localStorage.setItem("bateu_lang", "en");
-    }
-    return "en";
+    return resolveLangFromCountry(getStoredCountry());
   });
 
   useEffect(() => {
@@ -751,10 +750,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  const setLang = (l: Lang) => {
+  const setLang = (l: Lang, options?: { explicit?: boolean }) => {
     if (!SUPPORTED.includes(l)) return;
     setLangState(l);
-    if (typeof window !== "undefined") localStorage.setItem("bateu_lang_explicit", "1");
+    if (typeof window !== "undefined" && options?.explicit !== false) {
+      localStorage.setItem("bateu_lang_explicit", "1");
+    }
   };
 
   const t = (key: string, vars?: Record<string, string>) => {

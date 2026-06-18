@@ -20,6 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
 import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
+import OptimizedImage from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Raffle {
@@ -372,7 +373,12 @@ const Marketplace = () => {
                       <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full">
                         <div className="relative aspect-video bg-secondary overflow-hidden">
                           {game.background_image_url ? (
-                            <img src={game.background_image_url} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <OptimizedImage
+                              src={game.background_image_url}
+                              alt={game.name}
+                              optimizeWidth={480}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/10">
                               <Gamepad2 className="h-12 w-12 text-primary/40" />
@@ -424,7 +430,12 @@ const Marketplace = () => {
                         <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full">
                           <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
                             {contest.image_url ? (
-                              <img src={contest.image_url} alt={contest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <OptimizedImage
+                                src={contest.image_url}
+                                alt={contest.title}
+                                optimizeWidth={640}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
                                 <Trophy className="h-12 w-12 text-primary/30" />
@@ -504,7 +515,12 @@ const Marketplace = () => {
                             <Card className="glass group hover:border-primary/30 transition-all overflow-hidden">
                               <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
                                 {raffle.image_url ? (
-                                  <img src={raffle.image_url} alt={raffle.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                  <OptimizedImage
+                                    src={raffle.image_url}
+                                    alt={raffle.title}
+                                    optimizeWidth={640}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
                                     <Ticket className="h-12 w-12 text-muted-foreground/20" />

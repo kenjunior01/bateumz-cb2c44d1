@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
+import CountryLanguageSync from "@/components/CountryLanguageSync";
 import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
@@ -262,6 +263,7 @@ const App = () => (
     <LanguageProvider>
     <CurrencyProvider>
     <RegionalThemeProvider>
+    <CountryLanguageSync />
     <PayPalProvider>
     <AuthProvider>
       <TooltipProvider>

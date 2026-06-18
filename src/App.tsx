@@ -212,6 +212,7 @@ function AnimatedRoutes() {
             <Route path="prestacoes" element={<DashboardPrestacoes />} />
             <Route path="live-games" element={<DashboardLiveGames />} />
             <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
+            <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
             <Route path="live-history" element={<DashboardLiveHistory />} />
             <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />

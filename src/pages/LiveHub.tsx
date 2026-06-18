@@ -24,6 +24,7 @@ import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
 import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -64,7 +65,8 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 const LiveHub = () => {
   const { toast: uiToast } = useToast();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [active, setActive] = useState<GameId>(() => {
     try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
   });
@@ -428,7 +430,7 @@ const LiveHub = () => {
                         {selectedGameId ? "Jogo Selecionado" : "Escolha um Jogo Salvo"}
                       </h3>
                       <Link
-                        to="/admin/spin-wheel-manager"
+                        to={spinWheelManagerPath}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
                       >
                         <Plus className="h-3.5 w-3.5" /> Criar/Editar Jogo
@@ -443,7 +445,7 @@ const LiveHub = () => {
                       <div className="text-center py-8 bg-card border border-dashed border-border rounded-2xl">
                         <p className="text-muted-foreground mb-4">Ainda não tens nenhum jogo salvo!</p>
                         <Link
-                          to="/admin/spin-wheel-manager"
+                          to={spinWheelManagerPath}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
                         >
                           <Plus className="h-3.5 w-3.5" /> Criar Primeiro Jogo

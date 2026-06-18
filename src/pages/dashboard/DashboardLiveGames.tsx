@@ -12,6 +12,7 @@ import { DEFAULT_CONFIG, LiveGameConfig } from "@/components/livegames/LiveGameS
 import { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
 import { publish } from "@/lib/liveBus";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: "wheel", label: "Roda de Prémios", emoji: "🎰" },
@@ -61,6 +62,7 @@ const readArr = <T,>(key: string, fallback: T[]): T[] => {
 
 const DashboardLiveGames = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [config, setConfig] = useState<LiveGameConfig>(() => readJSON("liveGameConfig", DEFAULT_CONFIG));
   const [wheel, setWheel] = useState<WheelPrize[]>(() => readArr("liveWheelPrizes", DEFAULT_WHEEL_PRIZES));
   const [emojis, setEmojis] = useState<EmojiOpt[]>(() => readArr("liveEmojiOptions", DEFAULT_EMOJI));
@@ -118,31 +120,37 @@ const DashboardLiveGames = () => {
     const loadDbGames = async () => {
       setLoadingDbGames(true);
       try {
-        const [millRes, spinRes] = await Promise.all([
-          supabase
-            .from("millionaire_games")
-            .select("id, name, is_published, created_at")
-            .eq("is_published", true)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("spin_wheel_games")
-            .select("id, name, is_published, created_at")
-            .eq("is_published", true)
-            .order("created_at", { ascending: false }),
-        ]);
+        let millQuery = supabase
+          .from("millionaire_games")
+          .select("id, name, is_published, created_at")
+          .order("created_at", { ascending: false });
+        let spinQuery = supabase
+          .from("spin_wheel_games")
+          .select("id, name, is_published, created_at")
+          .order("created_at", { ascending: false });
+
+        if (user?.id) {
+          millQuery = millQuery.eq("created_by", user.id);
+          spinQuery = spinQuery.eq("created_by", user.id);
+        } else {
+          millQuery = millQuery.eq("is_published", true);
+          spinQuery = spinQuery.eq("is_published", true);
+        }
+
+        const [millRes, spinRes] = await Promise.all([millQuery, spinQuery]);
 
         setMillionaireGames(millRes.data || []);
         setSpinWheelGames(spinRes.data || []);
       } catch (error) {
         console.error("Error loading DB games:", error);
-        toast({ title: "Erro ao carregar jogos", description: "Nao foi possivel carregar os jogos de base de dados.", variant: "destructive" });
+        toast({ title: "Erro ao carregar jogos", description: "Não foi possível carregar os jogos de base de dados.", variant: "destructive" });
       } finally {
         setLoadingDbGames(false);
       }
     };
 
     loadDbGames();
-  }, [toast]);
+  }, [toast, user?.id]);
 
   useEffect(() => { document.title = "Jogos da Live · Dashboard | Bateu"; }, []);
 
@@ -162,8 +170,8 @@ const DashboardLiveGames = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/admin/millionaire-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
-              <Plus className="h-4 w-4" /> Gerenciar Milionário
+            <Link to="/dashboard/millionaire-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Gerir Milionário
             </Link>
             <Link to="/dashboard/spin-wheel-manager" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90">
               <Plus className="h-4 w-4" /> Gerir Roda da Sorte
@@ -184,7 +192,7 @@ const DashboardLiveGames = () => {
       {/* Quick stats — feels like a contest dashboard */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: Trophy, label: "Jogos disponíveis", value: GAME_OPTIONS.length + millionaireGames.length + spinWheelGames.length, hint: `${GAME_OPTIONS.length} locais + ${millionaireGames.length} Millionaire + ${spinWheelGames.length} Roda` },
+          { icon: Trophy, label: "Jogos disponíveis", value: GAME_OPTIONS.length + millionaireGames.length + spinWheelGames.length, hint: `${GAME_OPTIONS.length} locais + ${millionaireGames.length} Milionário + ${spinWheelGames.length} Roda` },
           { icon: Sparkles, label: "Prémios na roda", value: wheel.length, hint: `${totalWeight} pts peso total` },
           { icon: Vote, label: "Opções de emoji", value: emojis.length, hint: "Máx. 6" },
           { icon: Users, label: "Modo multi-jogador", value: "✓", hint: "Tap & Quiz" },
@@ -241,7 +249,7 @@ const DashboardLiveGames = () => {
             </div>
             <h3 className="font-display text-lg font-bold">Jogos Publicados</h3>
             <p className="text-xs text-muted-foreground">
-              Acesse os jogos criados no painel de administracao. Clique para jogar.
+              Os seus jogos criados no painel. Clique para jogar ou pré-visualizar.
             </p>
           </div>
         </div>
@@ -255,10 +263,10 @@ const DashboardLiveGames = () => {
             {/* Millionaire Games */}
             <div className="rounded-xl border border-border/50 bg-background/50 p-4">
               <h4 className="font-display font-bold text-sm mb-3 flex items-center gap-2">
-                <span className="text-lg">🤑</span> Millionaire ({millionaireGames.length})
+                <span className="text-lg">🤑</span> Milionário ({millionaireGames.length})
               </h4>
               {millionaireGames.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhum jogo publicado</p>
+                <p className="text-xs text-muted-foreground">Nenhum jogo criado ainda</p>
               ) : (
                 <div className="space-y-2">
                   {millionaireGames.map((game) => (
@@ -268,9 +276,14 @@ const DashboardLiveGames = () => {
                       target="_blank"
                       className="block p-3 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors text-sm font-medium text-foreground"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="truncate">{game.name}</span>
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-2 text-primary" />
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${game.is_published ? "bg-green-500/20 text-green-600" : "bg-muted text-muted-foreground"}`}>
+                            {game.is_published ? "Publicado" : "Rascunho"}
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 text-primary" />
+                        </div>
                       </div>
                     </Link>
                   ))}
@@ -284,7 +297,7 @@ const DashboardLiveGames = () => {
                 <span className="text-lg">🎡</span> Roda da Sorte ({spinWheelGames.length})
               </h4>
               {spinWheelGames.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhum jogo publicado</p>
+                <p className="text-xs text-muted-foreground">Nenhum jogo criado ainda</p>
               ) : (
                 <div className="space-y-2">
                   {spinWheelGames.map((game) => (
@@ -294,9 +307,14 @@ const DashboardLiveGames = () => {
                       target="_blank"
                       className="block p-3 rounded-lg bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-colors text-sm font-medium text-foreground"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="truncate">{game.name}</span>
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-2 text-accent" />
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${game.is_published ? "bg-green-500/20 text-green-600" : "bg-muted text-muted-foreground"}`}>
+                            {game.is_published ? "Publicado" : "Rascunho"}
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 text-accent" />
+                        </div>
                       </div>
                     </Link>
                   ))}
@@ -309,13 +327,13 @@ const DashboardLiveGames = () => {
         <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-start gap-2">
           <Eye className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Apenas jogos <strong>publicados</strong> aparecem aqui. Gerencie-os no{" "}
-            <Link to="/admin/millionaire-manager" className="text-primary hover:underline">
-              Painel Millionaire
+            Gerencie os seus jogos no{" "}
+            <Link to="/dashboard/millionaire-manager" className="text-primary hover:underline">
+              Painel Milionário
             </Link>
             {" "}ou{" "}
-            <Link to="/admin/spin-wheel-manager" className="text-primary hover:underline">
-              Painel Roda
+            <Link to="/dashboard/spin-wheel-manager" className="text-primary hover:underline">
+              Painel Roda da Sorte
             </Link>
             .
           </p>

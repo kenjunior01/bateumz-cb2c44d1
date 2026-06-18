@@ -19,6 +19,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
+import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Raffle {
   id: string;
@@ -53,6 +55,7 @@ interface Contest {
 type ContentType = "all" | "raffles" | "contests" | "games";
 
 const Marketplace = () => {
+  const { t } = useLanguage();
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
   const [games, setGames] = useState<any[]>([]);
@@ -71,6 +74,30 @@ const Marketplace = () => {
     const tab = searchParams.get("tab") as ContentType;
     if (tab && (tab === "all" || tab === "raffles" || tab === "contests" || tab === "games")) {
       setContentType(tab);
+    }
+    const q = searchParams.get("q");
+    if (q) setSearch(q);
+    const filter = searchParams.get("filter");
+    if (filter) {
+      switch (filter) {
+        case "trending":
+          setSortBy("popular");
+          break;
+        case "new":
+          setSortBy("newest");
+          break;
+        case "ending":
+          setSortBy("ending");
+          break;
+        case "cheap":
+          setTypeFilter("free");
+          setContentType("raffles");
+          break;
+        case "premium":
+          setSortBy("popular");
+          setContentType("raffles");
+          break;
+      }
     }
   }, [searchParams]);
 
@@ -223,6 +250,12 @@ const Marketplace = () => {
     contentType !== "all" ? contentType :
     "all";
 
+  const isCatalogEmpty = !loading && raffles.length === 0 && contests.length === 0 && games.length === 0;
+  const hasFilteredResults =
+    (showRaffles && filteredRaffles.length > 0) ||
+    (showContests && filteredContests.length > 0) ||
+    (showGames && games.length > 0);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop navbar */}
@@ -233,10 +266,10 @@ const Marketplace = () => {
       <div className="container mx-auto px-4 md:pt-28 pb-20">
         {/* Mobile sticky header (Meituan) */}
         <MobileDiscoveryHeader
-          title="Marketplace"
+          title={t("marketplace.title")}
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder="Pesquisar sorteios, concursos..."
+          searchPlaceholder={t("marketplace.searchPlaceholder")}
           categories={chipCategories}
           activeCategory={activeChip}
           onCategoryChange={handleChipChange}
@@ -245,8 +278,8 @@ const Marketplace = () => {
 
         {/* Desktop title */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 hidden md:block">
-          <h1 className="font-display text-4xl font-bold text-foreground mb-2">Marketplace</h1>
-          <p className="text-muted-foreground text-lg">Descubra sorteios e concursos incríveis.</p>
+          <h1 className="font-display text-4xl font-bold text-foreground mb-2">{t("marketplace.title")}</h1>
+          <p className="text-muted-foreground text-lg">{t("marketplace.subtitle")}</p>
         </motion.div>
 
         {/* Desktop search + filter */}
@@ -315,6 +348,13 @@ const Marketplace = () => {
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : isCatalogEmpty ? (
+          <MarketplaceEmptyState />
+        ) : !hasFilteredResults ? (
+          <div className="text-center py-20">
+            <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-xl text-muted-foreground">{t("marketplace.noResults")}</p>
           </div>
         ) : (
           <div className="space-y-10">
@@ -438,17 +478,17 @@ const Marketplace = () => {
                     <Badge variant="secondary">{filteredRaffles.length}</Badge>
                   </div>
                 )}
-                {filteredRaffles.length === 0 && filteredContests.length === 0 ? (
+                {filteredRaffles.length === 0 && filteredContests.length === 0 && contentType !== "all" ? (
                   <div className="text-center py-20">
                     <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-xl text-muted-foreground">Nenhum resultado encontrado</p>
+                    <p className="text-xl text-muted-foreground">{t("marketplace.noRaffles")}</p>
                   </div>
-                ) : filteredRaffles.length === 0 && contentType !== "all" ? (
+                ) : filteredRaffles.length === 0 && contentType === "raffles" ? (
                   <div className="text-center py-20">
                     <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-xl text-muted-foreground">Nenhum sorteio encontrado</p>
+                    <p className="text-xl text-muted-foreground">{t("marketplace.noRaffles")}</p>
                   </div>
-                ) : (
+                ) : filteredRaffles.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
                     {filteredRaffles.map((raffle, i) => {
                       const pct = (raffle.sold_tickets / raffle.total_tickets) * 100;
@@ -506,7 +546,7 @@ const Marketplace = () => {
                       );
                     })}
                   </div>
-                )}
+                ) : null}
               </motion.div>
             )}
 

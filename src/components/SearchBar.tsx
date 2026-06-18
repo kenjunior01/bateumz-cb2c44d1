@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, MapPin, TrendingUp, Sparkles, Mic, ScanLine } from "lucide-react";
+import { Search, X, MapPin, TrendingUp, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
+import { COUNTRIES } from "@/lib/regions";
 
 const TRENDING = ["iPhone 15", "Toyota", "Viagem Dubai", "PlayStation 5", "Apartamento", "Moto"];
 
@@ -22,6 +24,8 @@ const SearchBar = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { t } = useLanguage();
+  const { country } = useRegionalTheme();
+  const countryLabel = COUNTRIES.find((c) => c.code === country)?.label || country;
 
   useEffect(() => {
     // Slow rotation, paused if user prefers reduced motion
@@ -53,7 +57,7 @@ const SearchBar = () => {
               aria-label={t("search.location")}
             >
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span className="max-w-[60px] truncate">Maputo</span>
+              <span className="max-w-[72px] truncate">{countryLabel}</span>
             </button>
           )}
 
@@ -105,26 +109,7 @@ const SearchBar = () => {
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-            ) : (
-              <div className="flex items-center gap-0.5 mr-1">
-                <button
-                  type="button"
-                  className="rounded-full p-1.5 text-muted-foreground hover:text-primary"
-                  aria-label={t("search.voice")}
-                  onClick={() => navigate("/marketplace")}
-                >
-                  <Mic className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full p-1.5 text-muted-foreground hover:text-primary"
-                  aria-label={t("search.scan")}
-                  onClick={() => navigate("/marketplace")}
-                >
-                  <ScanLine className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
+            ) : null}
             <button
               type="submit"
               className="mr-1 rounded-full bg-gradient-to-r from-primary to-accent px-3.5 py-1.5 text-[11px] font-bold text-primary-foreground shadow-sm hover:opacity-95 transition-opacity"

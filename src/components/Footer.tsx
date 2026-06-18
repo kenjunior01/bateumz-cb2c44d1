@@ -3,7 +3,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Shield, Lock, CheckCircle2 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 
-const regionLinkStyle = { color: "var(--region-primary, hsl(var(--muted-foreground)))" } as const;
 const regionIconStyle = { color: "var(--region-primary, hsl(var(--primary)))" } as const;
 
 const Footer = () => {
@@ -23,36 +22,32 @@ const Footer = () => {
             >
               Bateu
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">US · CA</span>
           </div>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
-            Premium raffles with public verification. Every draw is publicly auditable — transparency isn't a promise, it's proof.
+            {t("footer.tagline")}
           </p>
         </div>
 
-        {/* Security Seals */}
         <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Lock className="h-3.5 w-3.5" style={regionIconStyle} />
-            <span className="font-medium">SSL 256-bit</span>
+            <span className="font-medium">{t("footer.ssl")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Shield className="h-3.5 w-3.5" style={regionIconStyle} />
-            <span className="font-medium">Blockchain Verified</span>
+            <span className="font-medium">{t("footer.blockchain")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <CheckCircle2 className="h-3.5 w-3.5" style={regionIconStyle} />
-            <span className="font-medium">Certified RNG</span>
+            <span className="font-medium">{t("footer.rng")}</span>
           </div>
         </div>
 
-        {/* Payment Logos — PayPal only */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#003087] text-white">PayPal</span>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Visa</span>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Mastercard</span>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Amex</span>
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Bank</span>
         </div>
 
         <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
@@ -60,9 +55,9 @@ const Footer = () => {
             <Link to="/marketplace" className="region-link hover:opacity-80 transition-opacity">{t("footer.raffles")}</Link>
             <Link to="/historico" className="region-link hover:opacity-80 transition-opacity">{t("footer.winners")}</Link>
             <Link to="/como-funciona" className="region-link hover:opacity-80 transition-opacity">{t("footer.howItWorks")}</Link>
-            <Link to="/transparencia" className="region-link hover:opacity-80 transition-opacity">Transparency</Link>
-            <Link to="/instant-win" className="region-link hover:opacity-80 transition-opacity">Instant Win</Link>
-            <Link to="/referral" className="region-link hover:opacity-80 transition-opacity">Refer &amp; Earn</Link>
+            <Link to="/transparencia" className="region-link hover:opacity-80 transition-opacity">{t("footer.transparency")}</Link>
+            <Link to="/instant-win" className="region-link hover:opacity-80 transition-opacity">{t("footer.instantWin")}</Link>
+            <Link to="/referral" className="region-link hover:opacity-80 transition-opacity">{t("footer.referral")}</Link>
             <Link to="/termos" className="region-link hover:opacity-80 transition-opacity">{t("footer.terms")}</Link>
             <Link to="/privacidade" className="region-link hover:opacity-80 transition-opacity">{t("footer.privacy")}</Link>
             <Link to="/community" className="region-link hover:opacity-80 transition-opacity">{t("footer.community")}</Link>
@@ -78,4 +73,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

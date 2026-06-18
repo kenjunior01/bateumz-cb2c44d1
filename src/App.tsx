@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -135,6 +135,7 @@ function AnimatedRoutes() {
           <Route path="/community" element={<Community />} />
           <Route path="/termos" element={<Terms />} />
           <Route path="/privacidade" element={<Privacy />} />
+          <Route path="/privacy" element={<Navigate to="/privacidade" replace />} />
           <Route path="/como-funciona" element={<HowItWorks />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />

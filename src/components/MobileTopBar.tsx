@@ -70,7 +70,7 @@ const MobileTopBar = () => {
               <Star className="h-3.5 w-3.5 fill-accent" /> {t("menu.points")}
             </button>
           )}
-          {/* LanguageSwitcher disabled: EN-only platform */}
+          <LanguageSwitcher />
           <RegionCountrySwitcher compact />
           <ThemeToggle />
           <button

@@ -17,7 +17,7 @@ import DesktopWidgets from "@/components/DesktopWidgets";
 import LiveFeed from "@/components/LiveFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Zap } from "lucide-react";
+import { Trophy, Zap, X } from "lucide-react";
 
 import PopularLeaderboard from "@/components/PopularLeaderboard";
 import ContestTypesShowcase from "@/components/ContestTypesShowcase";
@@ -35,6 +35,14 @@ const Index = () => {
   const [categoryFilter, setCategoryFilter] = useState("todos");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
+  const [wcBannerDismissed, setWcBannerDismissed] = useState(() => {
+    try { return localStorage.getItem("bateu_wc_banner_dismissed") === "1"; } catch { return false; }
+  });
+
+  const dismissWcBanner = () => {
+    setWcBannerDismissed(true);
+    try { localStorage.setItem("bateu_wc_banner_dismissed", "1"); } catch {}
+  };
 
   const handleCategorySelect = (category: string) => {
     if (category === "gaming") {
@@ -49,29 +57,50 @@ const Index = () => {
       <Navbar />
       <LiveTicker />
       
-      {/* World Cup 2026 Banner */}
-      <section className="container mx-auto px-4 py-6">
-        <Card className="bg-gradient-to-r from-green-600 to-yellow-500 text-white overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Trophy className="h-12 w-12" />
-                <div>
-                  <h2 className="text-2xl font-bold">Copa do Mundo 2026</h2>
-                  <p className="opacity-90">Acompanhe todos os jogos, equipes e notícias</p>
+      {/* World Cup 2026 — compact, dismissible; links to functional /mundial hub */}
+      {!wcBannerDismissed && (
+        <section className="container mx-auto px-4 py-3">
+          <Card className="bg-gradient-to-r from-green-600/90 to-yellow-500/90 text-white overflow-hidden border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Trophy className="h-8 w-8 shrink-0" />
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-bold truncate">{t("worldcup.title")}</h2>
+                    <p className="text-xs sm:text-sm opacity-90 line-clamp-1">{t("worldcup.subtitle")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    onClick={() => navigate("/mundial")}
+                    size="sm"
+                    className="bg-white text-green-700 hover:bg-gray-100 hidden sm:inline-flex"
+                  >
+                    <Zap className="h-3.5 w-3.5 mr-1.5" />
+                    {t("worldcup.cta")}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={dismissWcBanner}
+                    className="rounded-full p-1.5 hover:bg-white/20 transition-colors"
+                    aria-label={t("worldcup.dismiss")}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-              <Button 
-                onClick={() => navigate("/mundial")} 
-                className="bg-white text-green-700 hover:bg-gray-100"
+              <Button
+                onClick={() => navigate("/mundial")}
+                size="sm"
+                className="mt-3 w-full sm:hidden bg-white text-green-700 hover:bg-gray-100"
               >
-                <Zap className="h-4 w-4 mr-2" />
-                Ir para Central
+                <Zap className="h-3.5 w-3.5 mr-1.5" />
+                {t("worldcup.cta")}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <StoriesCarousel />
       <div className="hidden lg:block">

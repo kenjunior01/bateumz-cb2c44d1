@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Star, Trophy, Sparkles, ShieldCheck, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import LiveFeed from "./LiveFeed";
 
 interface Winner {
@@ -20,6 +21,7 @@ interface Winner {
 }
 
 const WinnersSection = () => {
+  const { t } = useLanguage();
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,16 +73,17 @@ const WinnersSection = () => {
           const name = mask(rawName);
           const initials = rawName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
           const country = raffle?.country || "US";
-          const city = raffle?.city || (country === "CA" ? "Moçambique" : "Moçambique");
+          const city = raffle?.city || country;
           return {
-            id: `raffle-${w.ticket_number}`,
+            id: `raffle-${w.raffle_id}-${w.ticket_number}`,
             name,
-            prize: raffle?.prize_title || "Prémio",
+            prize: raffle?.prize_title || "Prize",
             city: `${city}, ${country}`,
             initials,
             raffleId: w.raffle_id,
             verified: verifiedSet.has(w.raffle_id),
             type: "raffle" as const,
+            sortDate: w.created_at,
           };
         });
         allWinners.push(...mappedRaffleWinners);
@@ -99,13 +102,19 @@ const WinnersSection = () => {
             winnerPhotoUrl: w.winner_photo_url,
             verified: w.is_verified,
             type: "game" as const,
+            sortDate: w.created_at,
           };
         });
         allWinners.push(...mappedGameWinners);
       }
 
-      // Sort all winners by date (newest first)
-      setWinners(allWinners.sort(() => Math.random() - 0.5));
+      setWinners(
+        allWinners.sort((a, b) =>
+          String((b as { sortDate?: string }).sortDate || "").localeCompare(
+            String((a as { sortDate?: string }).sortDate || ""),
+          ),
+        ),
+      );
       setLoading(false);
     };
     fetchWinners();
@@ -116,13 +125,13 @@ const WinnersSection = () => {
       <div className="container mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-4 text-center">
           <span className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-primary">
-            <ShieldCheck className="h-4 w-4" /> Vencedores Verificados
+            <ShieldCheck className="h-4 w-4" /> {t("winners.badge")}
           </span>
-          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">Jogaram. Ganharam.</h2>
+          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">{t("winners.title")}</h2>
         </motion.div>
         <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
           className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
-          Pessoas reais, prémios reais, prova real. Cada sorteio é verificado publicamente — clica em qualquer vencedor para ver a verificação.
+          {t("winners.subtitle")}
         </motion.p>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -149,12 +158,12 @@ const WinnersSection = () => {
                           <Star className="h-4 w-4 text-accent" />
                           {w.verified && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                              <ShieldCheck className="h-3 w-3" /> Verificado
+                              <ShieldCheck className="h-3 w-3" /> {t("winners.verified")}
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
-                          Ganhou <span className="font-medium text-primary">{w.prize}</span> — {w.city}
+                          {t("winners.won")} <span className="font-medium text-primary">{w.prize}</span> — {w.city}
                         </p>
                       </div>
                       <ExternalLink className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -183,12 +192,12 @@ const WinnersSection = () => {
                             )}
                             {w.verified && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                                <ShieldCheck className="h-3 w-3" /> Verificado
+                                <ShieldCheck className="h-3 w-3" /> {t("winners.verified")}
                               </span>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
-                            Ganhou <span className="font-medium text-primary">{w.prize}</span>
+                            {t("winners.won")} <span className="font-medium text-primary">{w.prize}</span>
                           </p>
                         </div>
                       </div>
@@ -207,9 +216,9 @@ const WinnersSection = () => {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">Os primeiros vencedores estão a caminho!</h3>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">{t("winners.emptyTitle")}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Assim que os primeiros sorteios terminarem, os vencedores aparecerão aqui. Participa já e sê um dos primeiros.
+                  {t("winners.emptyDesc")}
                 </p>
               </motion.div>
             )}
@@ -217,7 +226,7 @@ const WinnersSection = () => {
             {winners.length > 0 && (
               <div className="text-center pt-2">
                 <Link to="/historico" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                  Ver histórico completo de vencedores <Trophy className="h-3.5 w-3.5" />
+                  {t("winners.viewHistory")} <Trophy className="h-3.5 w-3.5" />
                 </Link>
               </div>
             )}

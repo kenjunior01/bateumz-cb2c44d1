@@ -13,7 +13,7 @@ import { DynamicThemeProvider } from "@/contexts/DynamicThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
-import { RegionalConfigProvider } from "@/hooks/useRegionalConfig.tsx";
+import { RegionalConfigProvider, useRegionalContext } from "@/hooks/useRegionalConfig.tsx";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
 import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
@@ -42,7 +42,7 @@ import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
-import SocialAnalytics from "./pages/dashboard/SocialAnalytics.tsx";
+import SocialAnalytics from "./pages/social/SocialAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
 import DashboardSettings from "./pages/dashboard/DashboardSettings.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
@@ -98,12 +98,17 @@ import ScheduledLivePage from "./pages/ScheduledLivePage.tsx";
 import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.tsx";
 import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
 import OverlayLive from "./pages/OverlayLive.tsx";
+import LoadingScreen from "./components/LoadingScreen.tsx";
+import FootballLiveQuiz from "./pages/FootballLiveQuiz.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
 import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+
 const queryClient = new QueryClient();
 
 function PrizeWheelWrapper() {
@@ -138,7 +143,6 @@ function AnimatedRoutes() {
           <Route path="/concursos" element={<Contests />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
-          <Route path="/mundial" element={<WorldCupCentral />} />
           <Route path="/mundial/quiz" element={<FootballLiveQuiz />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/forum-mundial" element={<WorldCupForum />} />
@@ -245,37 +249,63 @@ function AnimatedRoutes() {
   );
 }
 
+const AppContent = () => {
+  const [showLoading, setShowLoading] = useState(true);
+  const { loading: themeLoading } = useTheme();
+  const { loading: configLoading } = useRegionalContext();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoading(false);
+    }, 3000);
+
+    if (!themeLoading && !configLoading) {
+      setShowLoading(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, [themeLoading, configLoading]);
+
+  if (showLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BackgroundDecorations />
+      <BrowserRouter>
+        <MobileTopBar />
+        <AnimatedRoutes />
+        <MascotBuddy />
+        <SupportChatbot />
+        <BottomTabBar />
+        <RegionalPreviewBar />
+      </BrowserRouter>
+    </TooltipProvider>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <RegionalConfigProvider>
-    <ThemeProvider>
-    <DynamicThemeProvider>
-    <LanguageProvider>
-    <CurrencyProvider>
-    <RegionalThemeProvider>
-    <CountryLanguageSync />
-    <PayPalProvider>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BackgroundDecorations />
-        <BrowserRouter>
-          <MobileTopBar />
-          <AnimatedRoutes />
-          <MascotBuddy />
-          <SupportChatbot />
-          <BottomTabBar />
-          <RegionalPreviewBar />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-    </PayPalProvider>
-    </RegionalThemeProvider>
-    </CurrencyProvider>
-    </LanguageProvider>
-    </DynamicThemeProvider>
-    </ThemeProvider>
+      <ThemeProvider>
+        <DynamicThemeProvider>
+          <LanguageProvider>
+            <CurrencyProvider>
+              <RegionalThemeProvider>
+                <CountryLanguageSync />
+                <PayPalProvider>
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
+                </PayPalProvider>
+              </RegionalThemeProvider>
+            </CurrencyProvider>
+          </LanguageProvider>
+        </DynamicThemeProvider>
+      </ThemeProvider>
     </RegionalConfigProvider>
   </QueryClientProvider>
 );

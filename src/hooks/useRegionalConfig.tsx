@@ -2,8 +2,8 @@ import { useEffect, useState, useContext, createContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RegionalBranding {
-  id: string;
-  region_id: string;
+  id?: string;
+  region_id?: string;
   primary_color: string;
   secondary_color: string;
   accent_color: string;
@@ -18,8 +18,8 @@ export interface RegionalBranding {
 }
 
 export interface RegionalSettings {
-  id: string;
-  region_id: string;
+  id?: string;
+  region_id?: string;
   enable_spin_wheel: boolean;
   enable_millionaire_game: boolean;
   enable_world_cup_challenges: boolean;
@@ -29,7 +29,7 @@ export interface RegionalSettings {
 }
 
 export interface RegionalConfig {
-  region_id: string;
+  region_id?: string;
   country_code: string;
   country_name: string;
   language_code: string;
@@ -38,6 +38,25 @@ export interface RegionalConfig {
   branding: RegionalBranding;
   settings: RegionalSettings;
 }
+
+const DEFAULT_BRANDING: RegionalBranding = {
+  primary_color: '#0A1F44',
+  secondary_color: '#F1F5F9',
+  accent_color: '#D7263D',
+  background_color: '#FFFFFF',
+  text_color: '#0A1F44',
+  font_family: 'Inter, sans-serif',
+  theme_name: 'Default',
+};
+
+const DEFAULT_SETTINGS: RegionalSettings = {
+  enable_spin_wheel: true,
+  enable_millionaire_game: true,
+  enable_world_cup_challenges: true,
+  enable_predictions: true,
+  enable_live_games: true,
+  maintenance_mode: false,
+};
 
 interface RegionalContextType {
   config: RegionalConfig | null;
@@ -108,45 +127,56 @@ export const fetchRegionalConfig = async (countryCode: string): Promise<Regional
       .from('regions')
       .select('*')
       .eq('country_code', countryCode)
-      .single();
+      .maybeSingle();
 
     if (regionError || !region) {
-      console.error('Region not found:', countryCode);
-      return null;
+      console.warn('Region not found in DB, using default config:', countryCode);
+      return {
+        country_code: countryCode,
+        country_name: countryCode,
+        language_code: 'en',
+        currency_code: 'USD',
+        timezone: 'UTC',
+        branding: DEFAULT_BRANDING,
+        settings: DEFAULT_SETTINGS,
+      };
     }
 
     // Fetch branding
-    const { data: branding, error: brandingError } = await supabase
+    const { data: branding } = await supabase
       .from('regional_branding')
       .select('*')
       .eq('region_id', region.id)
-      .single();
+      .maybeSingle();
 
     // Fetch settings
-    const { data: settings, error: settingsError } = await supabase
+    const { data: settings } = await supabase
       .from('regional_settings')
       .select('*')
       .eq('region_id', region.id)
-      .single();
-
-    if (brandingError || settingsError) {
-      console.error('Error fetching branding or settings:', { brandingError, settingsError });
-      return null;
-    }
+      .maybeSingle();
 
     return {
       region_id: region.id,
       country_code: region.country_code,
-      country_name: region.country_name,
-      language_code: region.language_code,
-      currency_code: region.currency_code,
-      timezone: region.timezone,
-      branding: branding || {},
-      settings: settings || {},
+      country_name: region.country_name || region.label || region.country_code,
+      language_code: region.language_code || region.default_language || 'en',
+      currency_code: region.currency_code || region.currency || 'USD',
+      timezone: region.timezone || 'UTC',
+      branding: branding || DEFAULT_BRANDING,
+      settings: settings || DEFAULT_SETTINGS,
     };
   } catch (err) {
     console.error('Error fetching regional config:', err);
-    return null;
+    return {
+      country_code: countryCode,
+      country_name: countryCode,
+      language_code: 'en',
+      currency_code: 'USD',
+      timezone: 'UTC',
+      branding: DEFAULT_BRANDING,
+      settings: DEFAULT_SETTINGS,
+    };
   }
 };
 
@@ -154,14 +184,15 @@ export const fetchRegionalConfig = async (countryCode: string): Promise<Regional
  * Apply regional branding to the DOM
  */
 export const applyRegionalBranding = (branding: RegionalBranding) => {
+  if (typeof document === 'undefined') return;
   const root = document.documentElement;
 
-  // Set CSS variables
-  root.style.setProperty('--primary-color', branding.primary_color);
-  root.style.setProperty('--secondary-color', branding.secondary_color);
-  root.style.setProperty('--accent-color', branding.accent_color);
-  root.style.setProperty('--background-color', branding.background_color);
-  root.style.setProperty('--text-color', branding.text_color);
+  // Set CSS variables with safety checks
+  if (branding.primary_color) root.style.setProperty('--primary-color', branding.primary_color);
+  if (branding.secondary_color) root.style.setProperty('--secondary-color', branding.secondary_color);
+  if (branding.accent_color) root.style.setProperty('--accent-color', branding.accent_color);
+  if (branding.background_color) root.style.setProperty('--background-color', branding.background_color);
+  if (branding.text_color) root.style.setProperty('--text-color', branding.text_color);
 
   // Set font
   if (branding.font_family) {

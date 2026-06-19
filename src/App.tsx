@@ -24,7 +24,6 @@ import PrizeWheel from "./components/livegames/PrizeWheel.tsx";
 import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
 import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
 import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
-import GamesHub from "./pages/GamesHub.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -82,8 +81,6 @@ import AdminContests from "./pages/admin/AdminContests.tsx";
 import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
 import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
-import InstantWin from "./pages/InstantWin.tsx";
-import LiveHub from "./pages/LiveHub.tsx";
 import LiveOverlay from "./pages/LiveOverlay.tsx";
 import Transparency from "./pages/Transparency.tsx";
 import Prestacoes from "./pages/Prestacoes.tsx";
@@ -137,7 +134,6 @@ function AnimatedRoutes() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />
           <Route path="/concursos" element={<Contests />} />
-          <Route path="/jogos" element={<GamesHub />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/mundial" element={<WorldCupCentral />} />
@@ -149,8 +145,6 @@ function AnimatedRoutes() {
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
-          <Route path="/instant-win" element={<InstantWin />} />
-          <Route path="/lives" element={<LiveHub />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
           <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
           <Route path="/transparencia" element={<Transparency />} />

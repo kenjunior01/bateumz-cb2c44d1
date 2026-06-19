@@ -42,7 +42,7 @@ import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
-import SocialAnalytics from "./pages/social/SocialAnalytics.tsx";
+import SocialAnalytics from "./pages/dashboard/SocialAnalytics.tsx";
 import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
 import DashboardSettings from "./pages/dashboard/DashboardSettings.tsx";
 import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
@@ -99,7 +99,6 @@ import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.t
 import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
 import OverlayLive from "./pages/OverlayLive.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
-import FootballLiveQuiz from "./pages/FootballLiveQuiz.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -143,7 +142,6 @@ function AnimatedRoutes() {
           <Route path="/concursos" element={<Contests />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
-          <Route path="/mundial/quiz" element={<FootballLiveQuiz />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />

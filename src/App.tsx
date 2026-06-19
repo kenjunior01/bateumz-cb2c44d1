@@ -13,6 +13,7 @@ import { DynamicThemeProvider } from "@/contexts/DynamicThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
+import { RegionalConfigProvider } from "@/hooks/useRegionalConfig";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
 import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
@@ -25,6 +26,7 @@ import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
 import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
 import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
+import RegionalCEODashboard from "@/components/RegionalCEODashboard";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
@@ -234,6 +236,7 @@ function AnimatedRoutes() {
             <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
             <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
             <Route path="plans" element={<AdminPlans />} />
+            <Route path="regional-config" element={<RegionalCEODashboard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -244,6 +247,7 @@ function AnimatedRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <RegionalConfigProvider>
     <ThemeProvider>
     <DynamicThemeProvider>
     <LanguageProvider>
@@ -272,6 +276,7 @@ const App = () => (
     </LanguageProvider>
     </DynamicThemeProvider>
     </ThemeProvider>
+    </RegionalConfigProvider>
   </QueryClientProvider>
 );
 

@@ -13,7 +13,7 @@ import { DynamicThemeProvider } from "@/contexts/DynamicThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
-import { RegionalConfigProvider } from "@/hooks/useRegionalConfig";
+import { RegionalConfigProvider } from "@/hooks/useRegionalConfig.tsx";
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
 import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";

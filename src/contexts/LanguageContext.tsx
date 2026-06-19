@@ -78,7 +78,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.games.desc": "Win prizes playing",
     "menu.millionaire": "Millionaire",
     "menu.spinWheel": "Spin Wheel",
-    "menu.fantasy": "Fantasy Football",
 
     // Search
     "search.location": "Location",
@@ -281,7 +280,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "gamesHub.subtitle": "Play and win amazing prizes!",
     "gamesHub.wheel": "Spin Wheel",
     "gamesHub.millionaire": "Millionaire",
-    "gamesHub.fantasy": "Fantasy Football",
 
     // Millionaire Game
     "millionaire.title": "Millionaire",
@@ -301,8 +299,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "millionaire.audience": "Audience",
     "millionaire.phone": "Phone a friend",
 
-    // Fantasy Football
-    "fantasy.title": "Fantasy Football",
     "fantasy.subtitle": "Pick your team and win prizes!",
     "fantasy.myTeam": "My Team",
     "fantasy.transfers": "Transfers",

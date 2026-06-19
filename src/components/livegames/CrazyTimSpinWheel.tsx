@@ -1,243 +1,506 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { PrizeWheel as Wheel } from 'spin-wheel';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Settings2, Plus, Trash2, Trophy, Sparkles, 
+  PartyPopper, Star, Zap, Gift, Image as ImageIcon,
+  Palette, Type, Layout, Save, Upload
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, Plus, Settings2 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { ImageUpload } from '@/components/ImageUpload';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { playWinSound, playTickSound } from '@/lib/sounds';
 import confetti from 'canvas-confetti';
-import { toast } from 'sonner';
 
 interface Prize {
   id: string;
   label: string;
   color: string;
-  textColor?: string;
   weight: number;
-  rewardType?: string;
-  rewardValue?: string;
+  reward_type?: string;
+  reward_value?: string;
 }
 
-interface Props {
-  prizes?: Prize[];
+interface WheelCustomization {
+  backgroundColor: string;
+  title: string;
+  titleColor: string;
+  companyLogoUrl: string;
+  backgroundImageUrl: string;
+  pointerColor: string;
+  centerButtonColor: string;
+  centerButtonTextColor: string;
+  spinDuration: number;
+}
+
+interface CrazyTimSpinWheelProps {
+  initialPrizes?: Prize[];
+  initialCustomization?: Partial<WheelCustomization>;
   onWin?: (prize: Prize) => void;
   editable?: boolean;
-  companyLogoUrl?: string;
-  backgroundColor?: string;
-  overlayColor?: string;
+  onSave?: (prizes: Prize[], customization: WheelCustomization) => void;
 }
 
 const DEFAULT_PRIZES: Prize[] = [
-  { id: '1', label: 'Prêmio 1', color: '#22c55e', weight: 30 },
-  { id: '2', label: 'Prêmio 2', color: '#eab308', weight: 25 },
-  { id: '3', label: 'Tente de novo', color: '#334155', textColor: '#fff', weight: 30 },
-  { id: '4', label: 'Grande Prêmio', color: '#8b5cf6', weight: 15 },
+  { id: '1', label: '100 MZN', color: '#FFD700', weight: 10 },
+  { id: '2', label: 'Tente de Novo', color: '#333333', weight: 30 },
+  { id: '3', label: '500 MZN', color: '#C0C0C0', weight: 5 },
+  { id: '4', label: 'Bónus 2x', color: '#CD7F32', weight: 15 },
+  { id: '5', label: 'Grátis', color: '#1a1a1a', weight: 20 },
+  { id: '6', label: 'Jackpot', color: '#E52E2E', weight: 2 },
 ];
 
-export default function CrazyTimSpinWheel({ 
-  prizes: initialPrizes = DEFAULT_PRIZES, 
-  onWin, 
+const DEFAULT_CUSTOMIZATION: WheelCustomization = {
+  backgroundColor: '#0a0a0f',
+  title: 'RODA DA SORTE PREMIUM',
+  titleColor: '#ffffff',
+  companyLogoUrl: '',
+  backgroundImageUrl: '',
+  pointerColor: '#FFD700',
+  centerButtonColor: '#FFD700',
+  centerButtonTextColor: '#000000',
+  spinDuration: 5,
+};
+
+const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
+  initialPrizes = DEFAULT_PRIZES,
+  initialCustomization = {},
+  onWin,
   editable = true,
-  companyLogoUrl,
-  backgroundColor,
-  overlayColor
-}: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wheelRef = useRef<Wheel | null>(null);
+  onSave
+}) => {
+  const { t } = useLanguage();
   const [prizes, setPrizes] = useState<Prize[]>(initialPrizes);
+  const [custom, setCustom] = useState<WheelCustomization>({
+    ...DEFAULT_CUSTOMIZATION,
+    ...initialCustomization
+  });
   const [isSpinning, setIsSpinning] = useState(false);
+  const [winner, setWinner] = useState<Prize | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [rotation, setRotation] = useState(0);
 
-  // Initialize the wheel
-  useEffect(() => {
-    if (!canvasRef.current) return;
+  const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
 
-    const wheel = new Wheel(canvasRef.current, {
-      items: prizes.map(p => ({
-        label: p.label,
-        background: p.color,
-        color: p.textColor || '#000',
-        weight: p.weight
-      })),
-      itemLabelRadius: 0.75,
-      itemLabelAlign: 'center',
-      itemLabelBaselineOffset: -0.05,
-      itemLabelFont: '16px Inter, sans-serif',
-      itemLabelColor: '#fff',
-      radius: 0.9,
-      lineWidth: 4,
-      lineColor: backgroundColor || '#fff',
-      isInteractive: !isSpinning,
-      onSpinEnd: (index) => {
-        setIsSpinning(false);
-        const wonPrize = prizes[index];
-        if (wonPrize) {
-          toast.success(`Ganhou: ${wonPrize.rewardValue || wonPrize.label}!`);
-          confetti({ particleCount: 100, spread: 70 });
-          onWin?.(wonPrize);
-        }
-      }
+  const drawWheel = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let startAngle = 0;
+    prizes.forEach((prize) => {
+      const sliceAngle = (prize.weight / totalWeight) * 2 * Math.PI;
+      
+      // Draw slice
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+      ctx.closePath();
+      ctx.fillStyle = prize.color;
+      ctx.fill();
+      
+      // Draw border
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw text
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(startAngle + sliceAngle / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.fillText(prize.label, radius - 30, 5);
+      ctx.restore();
+
+      startAngle += sliceAngle;
     });
 
-    wheelRef.current = wheel;
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = custom.pointerColor;
+    ctx.lineWidth = 8;
+    ctx.stroke();
 
-    return () => {
-      wheel.destroy();
-    };
-  }, [prizes, isSpinning]);
+    // Inner ring
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 40, 0, 2 * Math.PI);
+    ctx.fillStyle = custom.centerButtonColor;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
 
-  const spinWheel = useCallback(() => {
-    if (!wheelRef.current || isSpinning) return;
+  }, [prizes, totalWeight, custom]);
+
+  useEffect(() => {
+    drawWheel();
+  }, [drawWheel]);
+
+  const spinWheel = () => {
+    if (isSpinning) return;
+
     setIsSpinning(true);
+    setWinner(null);
+    
+    const extraSpins = 5 + Math.random() * 5;
+    const newRotation = rotation + extraSpins * 360;
+    setRotation(newRotation);
 
-    // Spin to a random prize (can be server-determined)
-    const randomIndex = Math.floor(Math.random() * prizes.length);
-    wheelRef.current.spinToItem(randomIndex, 5, true);
-  }, [isSpinning, prizes]);
+    playTickSound();
 
-  const addPrize = () => {
-    const newId = Date.now().toString();
-    const newColor = `#${Math.floor(Math.random()*16777215).toString(16)}`;
-    setPrizes([
-      ...prizes,
-      { id: newId, label: 'Novo Prêmio', color: newColor, weight: 10 }
-    ]);
-  };
+    setTimeout(() => {
+      setIsSpinning(false);
+      
+      // Calculate winner
+      const actualRotation = newRotation % 360;
+      const pointerAngle = (360 - actualRotation + 270) % 360;
+      let currentAngle = 0;
+      let foundWinner = prizes[0];
 
-  const removePrize = (id: string) => {
-    if (prizes.length <= 2) return;
-    setPrizes(prizes.filter(p => p.id !== id));
+      for (const prize of prizes) {
+        const sliceAngle = (prize.weight / totalWeight) * 360;
+        if (pointerAngle >= currentAngle && pointerAngle < currentAngle + sliceAngle) {
+          foundWinner = prize;
+          break;
+        }
+        currentAngle += sliceAngle;
+      }
+
+      setWinner(foundWinner);
+      playWinSound();
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: [custom.centerButtonColor, '#ffffff', '#ffd700']
+      });
+
+      if (onWin) onWin(foundWinner);
+    }, custom.spinDuration * 1000);
   };
 
   const updatePrize = (id: string, updates: Partial<Prize>) => {
-    setPrizes(prizes.map(p => p.id === id ? { ...p, ...updates } : p));
+    setPrizes(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
-  const totalWeight = prizes.reduce((sum, p) => sum + Math.max(0, p.weight), 0) || 1;
+  const addPrize = () => {
+    const newId = Math.random().toString(36).substr(2, 9);
+    setPrizes([...prizes, { id: newId, label: 'Novo Prémio', color: '#555555', weight: 10 }]);
+  };
+
+  const removePrize = (id: string) => {
+    if (prizes.length > 2) {
+      setPrizes(prizes.filter(p => p.id !== id));
+    }
+  };
+
+  const handleSave = () => {
+    if (onSave) onSave(prizes, custom);
+  };
 
   return (
     <div 
-      className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4"
-      style={{ backgroundColor }}
+      className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden"
+      style={{ 
+        backgroundColor: custom.backgroundColor,
+        backgroundImage: custom.backgroundImageUrl ? `url(${custom.backgroundImageUrl})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
     >
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-black text-white mb-2">Roda da Sorte</h1>
-        {companyLogoUrl && (
-          <img 
-            src={companyLogoUrl} 
+      {/* Background Overlay for better contrast */}
+      <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+
+      <div className="relative z-10 text-center mb-12">
+        <motion.h1 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-5xl md:text-7xl font-black mb-4 tracking-tighter italic"
+          style={{ color: custom.titleColor, textShadow: '0 0 20px rgba(0,0,0,0.5)' }}
+        >
+          {custom.title}
+        </motion.h1>
+        
+        {custom.companyLogoUrl && (
+          <motion.img 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            src={custom.companyLogoUrl} 
             alt="Logo" 
-            className="h-16 mx-auto rounded-full border-2 border-yellow-500" 
+            className="h-20 mx-auto rounded-full border-4 border-white/20 shadow-2xl mb-4" 
           />
         )}
       </div>
 
-      <div className="relative mb-8">
-        <canvas 
-          ref={canvasRef} 
-          width="500" 
-          height="500" 
-          className="w-full max-w-md" 
-        />
-        
-        <button
-          onClick={spinWheel}
-          disabled={isSpinning}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                   w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 
-                   hover:from-yellow-500 hover:to-orange-700 text-white font-bold text-lg 
-                   shadow-lg transform transition-transform hover:scale-105 active:scale-95
-                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-        >
-          {isSpinning ? 'Girando...' : 'Girar!'}
-        </button>
-        
+      <div className="relative z-10 mb-12">
         {/* Pointer */}
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-0 h-0 
-                      border-l-[15px] border-l-transparent 
-                      border-r-[15px] border-r-transparent 
-                      border-t-[25px] border-t-yellow-500" />
+        <div 
+          className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 w-0 h-0 
+                    border-l-[20px] border-l-transparent 
+                    border-r-[20px] border-r-transparent 
+                    border-t-[35px] drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+          style={{ borderTopColor: custom.pointerColor }}
+        />
+
+        <motion.div
+          animate={{ rotate: rotation }}
+          transition={{
+            duration: custom.spinDuration,
+            ease: [0.15, 0, 0.15, 1],
+          }}
+          className="relative"
+        >
+          <canvas 
+            ref={canvasRef} 
+            width="600" 
+            height="600" 
+            className="w-full max-w-lg drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]" 
+          />
+          
+          {/* Center Button */}
+          <button
+            onClick={spinWheel}
+            disabled={isSpinning}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+                     w-28 h-28 rounded-full shadow-[0_0_30px_rgba(0,0,0,0.5)]
+                     flex items-center justify-center z-20 transition-transform 
+                     hover:scale-110 active:scale-95 disabled:opacity-80 group"
+            style={{ 
+              backgroundColor: custom.centerButtonColor,
+              color: custom.centerButtonTextColor,
+              transform: 'translate(-50%, -50%) rotate(' + (-rotation) + 'deg)'
+            }}
+          >
+            <div className="text-center">
+              <Sparkles className="w-8 h-8 mx-auto mb-1 animate-pulse" />
+              <span className="font-black text-lg tracking-tighter uppercase">
+                {isSpinning ? '...' : 'GIRAR'}
+              </span>
+            </div>
+          </button>
+        </motion.div>
       </div>
 
-      {/* Controls */}
-      {editable && (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="default" className="mb-4 flex items-center gap-2">
-              <Settings2 className="w-4 h-4" />
-              Configurar Prêmios
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-full max-w-lg">
-            <SheetHeader className="mb-6">
-              <SheetTitle>Configurar Prêmios</SheetTitle>
-            </SheetHeader>
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                {prizes.map((prize, index) => {
-                  const percentage = ((prize.weight / totalWeight) * 100).toFixed(1);
-                  return (
-                    <div key={prize.id} className="flex gap-3 items-center">
-                      <input
-                        type="color"
-                        value={prize.color}
-                        onChange={(e) => updatePrize(prize.id, { color: e.target.value })}
-                        className="w-10 h-10 rounded cursor-pointer"
-                      />
-                      <div className="flex-1 space-y-2">
-                        <Input
-                          value={prize.label}
-                          onChange={(e) => updatePrize(prize.id, { label: e.target.value })}
-                          placeholder="Nome do prêmio"
-                          className="text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <Input
-                            type="number"
-                            value={prize.weight}
-                            onChange={(e) => updatePrize(prize.id, { weight: Number(e.target.value) })}
-                            className="text-xs flex-1"
-                            placeholder="Peso"
-                          />
-                          <span className="text-xs text-gray-400 py-2">{percentage}%</span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => removePrize(prize.id)}
-                        disabled={prizes.length <= 2}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
+      {/* Winner Modal */}
+      <AnimatePresence>
+        {winner && !isSpinning && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <Card className="w-full max-w-md bg-gradient-to-br from-gray-900 to-black border-white/10 overflow-hidden rounded-[2rem]">
+              <CardContent className="p-12 text-center">
+                <div className="w-24 h-24 bg-yellow-400 rounded-full mx-auto flex items-center justify-center mb-8 shadow-[0_0_50px_rgba(250,204,21,0.5)]">
+                  <Trophy className="w-12 h-12 text-black" />
+                </div>
+                <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">PARABÉNS!</h2>
+                <p className="text-gray-400 mb-6">Você ganhou:</p>
+                <div 
+                  className="text-5xl font-black mb-8 p-6 rounded-2xl border-2 border-white/10"
+                  style={{ color: winner.color }}
+                >
+                  {winner.label}
+                </div>
+                <Button 
+                  size="lg" 
+                  className="w-full rounded-full h-14 font-bold text-lg"
+                  onClick={() => setWinner(null)}
+                >
+                  FECHAR
+                </Button>
               </CardContent>
             </Card>
-            <Button
-              className="w-full mt-4 flex items-center justify-center gap-2"
-              onClick={addPrize}
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Prêmio
-            </Button>
-          </SheetContent>
-        </Sheet>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Show current prizes */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-4xl w-full">
-        {prizes.map((prize) => (
-          <div 
-            key={prize.id}
-            className="flex items-center gap-2 p-3 rounded-lg border border-gray-700"
-            style={{ backgroundColor: prize.color + '20' }}
-          >
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: prize.color }} />
-            <span className="text-white text-sm">{prize.label}</span>
-          </div>
-        ))}
-      </div>
+      {/* Customization Panel */}
+      {editable && (
+        <div className="fixed bottom-8 right-8 z-40">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="lg" className="rounded-full h-16 w-16 shadow-2xl hover:scale-110 transition-transform">
+                <Settings2 className="w-8 h-8" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto bg-background/95 backdrop-blur-xl">
+              <SheetHeader className="mb-8">
+                <SheetTitle className="text-2xl font-black italic">ESTÚDIO DE PERSONALIZAÇÃO</SheetTitle>
+              </SheetHeader>
+
+              <Tabs defaultValue="prizes" className="space-y-6">
+                <TabsList className="grid grid-cols-3 rounded-full bg-secondary">
+                  <TabsTrigger value="prizes" className="rounded-full"><Gift className="w-4 h-4 mr-2"/> Prêmios</TabsTrigger>
+                  <TabsTrigger value="visual" className="rounded-full"><Palette className="w-4 h-4 mr-2"/> Visual</TabsTrigger>
+                  <TabsTrigger value="layout" className="rounded-full"><Layout className="w-4 h-4 mr-2"/> Layout</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="prizes" className="space-y-4">
+                  <div className="grid gap-4">
+                    {prizes.map((prize) => (
+                      <Card key={prize.id} className="border-white/5 bg-white/5">
+                        <CardContent className="p-4 flex gap-4 items-center">
+                          <input
+                            type="color"
+                            value={prize.color}
+                            onChange={(e) => updatePrize(prize.id, { color: e.target.value })}
+                            className="w-12 h-12 rounded-lg cursor-pointer border-none"
+                          />
+                          <div className="flex-1 space-y-2">
+                            <Input
+                              value={prize.label}
+                              onChange={(e) => updatePrize(prize.id, { label: e.target.value })}
+                              placeholder="Nome do prêmio"
+                              className="font-bold"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Label className="text-[10px] uppercase opacity-50">Peso:</Label>
+                              <Slider
+                                value={[prize.weight]}
+                                max={100}
+                                step={1}
+                                onValueChange={([val]) => updatePrize(prize.id, { weight: val })}
+                                className="flex-1"
+                              />
+                              <span className="text-xs font-mono w-8">{prize.weight}</span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => removePrize(prize.id)}
+                            disabled={prizes.length <= 2}
+                            className="rounded-full"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    <Button onClick={addPrize} variant="outline" className="w-full border-dashed rounded-xl h-12">
+                      <Plus className="w-4 h-4 mr-2" /> Adicionar Novo Segmento
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="visual" className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label>Título da Roda</Label>
+                      <Input 
+                        value={custom.title} 
+                        onChange={(e) => setCustom({...custom, title: e.target.value})} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Cor do Fundo</Label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color" 
+                            value={custom.backgroundColor} 
+                            onChange={(e) => setCustom({...custom, backgroundColor: e.target.value})}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input value={custom.backgroundColor} onChange={(e) => setCustom({...custom, backgroundColor: e.target.value})} />
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Cor do Título</Label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color" 
+                            value={custom.titleColor} 
+                            onChange={(e) => setCustom({...custom, titleColor: e.target.value})}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input value={custom.titleColor} onChange={(e) => setCustom({...custom, titleColor: e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <ImageUpload 
+                      label="Logo da Empresa"
+                      value={custom.companyLogoUrl}
+                      onChange={(url) => setCustom({...custom, companyLogoUrl: url})}
+                      bucketName="game-images"
+                    />
+
+                    <ImageUpload 
+                      label="Imagem de Fundo"
+                      value={custom.backgroundImageUrl}
+                      onChange={(url) => setCustom({...custom, backgroundImageUrl: url})}
+                      bucketName="game-images"
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="layout" className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label>Duração do Giro (segundos): {custom.spinDuration}s</Label>
+                      <Slider
+                        value={[custom.spinDuration]}
+                        min={2}
+                        max={15}
+                        step={1}
+                        onValueChange={([val]) => setCustom({...custom, spinDuration: val})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Cor do Ponteiro</Label>
+                        <input 
+                          type="color" 
+                          value={custom.pointerColor} 
+                          onChange={(e) => setCustom({...custom, pointerColor: e.target.value})}
+                          className="w-full h-10 rounded cursor-pointer"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Botão Central</Label>
+                        <input 
+                          type="color" 
+                          value={custom.centerButtonColor} 
+                          onChange={(e) => setCustom({...custom, centerButtonColor: e.target.value})}
+                          className="w-full h-10 rounded cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="mt-12 pt-6 border-t border-white/10">
+                <Button onClick={handleSave} className="w-full h-14 rounded-full font-black text-lg gap-2">
+                  <Save className="w-5 h-5" /> SALVAR CONFIGURAÇÕES
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default CrazyTimSpinWheel;

@@ -866,6 +866,118 @@ export type Database = {
           },
         ]
       }
+      millionaire_games: {
+        Row: {
+          background_image_url: string | null
+          company_logo_url: string | null
+          company_slogan: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_published: boolean | null
+          lifelines: Json | null
+          name: string
+          primary_color: string | null
+          prize_structure: Json | null
+          region_id: string
+          time_per_question: number | null
+          total_questions: number | null
+        }
+        Insert: {
+          background_image_url?: string | null
+          company_logo_url?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          lifelines?: Json | null
+          name: string
+          primary_color?: string | null
+          prize_structure?: Json | null
+          region_id: string
+          time_per_question?: number | null
+          total_questions?: number | null
+        }
+        Update: {
+          background_image_url?: string | null
+          company_logo_url?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          lifelines?: Json | null
+          name?: string
+          primary_color?: string | null
+          prize_structure?: Json | null
+          region_id?: string
+          time_per_question?: number | null
+          total_questions?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "millionaire_games_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      millionaire_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string | null
+          explanation: string | null
+          game_id: string | null
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_number: number
+          question_text: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string | null
+          explanation?: string | null
+          game_id?: string | null
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_number: number
+          question_text: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string | null
+          explanation?: string | null
+          game_id?: string | null
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question_number?: number
+          question_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "millionaire_questions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "millionaire_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_signups: {
         Row: {
           country: string | null
@@ -1743,6 +1855,109 @@ export type Database = {
           },
         ]
       }
+      spin_wheel_games: {
+        Row: {
+          company_logo_url: string | null
+          company_slogan: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_published: boolean | null
+          name: string
+          region_id: string
+          rotation_duration: number | null
+          segment_count: number | null
+          spin_cost: number | null
+          wheel_background_color: string | null
+          wheel_border_color: string | null
+        }
+        Insert: {
+          company_logo_url?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          name: string
+          region_id: string
+          rotation_duration?: number | null
+          segment_count?: number | null
+          spin_cost?: number | null
+          wheel_background_color?: string | null
+          wheel_border_color?: string | null
+        }
+        Update: {
+          company_logo_url?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          name?: string
+          region_id?: string
+          rotation_duration?: number | null
+          segment_count?: number | null
+          spin_cost?: number | null
+          wheel_background_color?: string | null
+          wheel_border_color?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_wheel_games_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spin_wheel_segments: {
+        Row: {
+          background_color: string
+          created_at: string | null
+          id: string
+          label: string
+          reward_type: string | null
+          reward_value: string
+          segment_number: number
+          weight: number | null
+          wheel_id: string | null
+        }
+        Insert: {
+          background_color: string
+          created_at?: string | null
+          id?: string
+          label: string
+          reward_type?: string | null
+          reward_value: string
+          segment_number: number
+          weight?: number | null
+          wheel_id?: string | null
+        }
+        Update: {
+          background_color?: string
+          created_at?: string | null
+          id?: string
+          label?: string
+          reward_type?: string | null
+          reward_value?: string
+          segment_number?: number
+          weight?: number | null
+          wheel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_wheel_segments_wheel_id_fkey"
+            columns: ["wheel_id"]
+            isOneToOne: false
+            referencedRelation: "spin_wheel_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1898,6 +2113,116 @@ export type Database = {
           primary_color?: string
           secondary_color?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      world_cup_matches: {
+        Row: {
+          away_score: number | null
+          away_team_id: string | null
+          home_score: number | null
+          home_team_id: string | null
+          id: string
+          match_date: string
+          stadium: string | null
+          status: string | null
+        }
+        Insert: {
+          away_score?: number | null
+          away_team_id?: string | null
+          home_score?: number | null
+          home_team_id?: string | null
+          id?: string
+          match_date: string
+          stadium?: string | null
+          status?: string | null
+        }
+        Update: {
+          away_score?: number | null
+          away_team_id?: string | null
+          home_score?: number | null
+          home_team_id?: string | null
+          id?: string
+          match_date?: string
+          stadium?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_cup_matches_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_cup_matches_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_cup_predictions: {
+        Row: {
+          away_score: number
+          created_at: string | null
+          home_score: number
+          id: string
+          match_id: string | null
+          points_earned: number | null
+          user_id: string | null
+        }
+        Insert: {
+          away_score: number
+          created_at?: string | null
+          home_score: number
+          id?: string
+          match_id?: string | null
+          points_earned?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          away_score?: number
+          created_at?: string | null
+          home_score?: number
+          id?: string
+          match_id?: string | null
+          points_earned?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_cup_predictions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_cup_teams: {
+        Row: {
+          code: string
+          flag_url: string | null
+          group_name: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          flag_url?: string | null
+          group_name?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          flag_url?: string | null
+          group_name?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }

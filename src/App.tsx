@@ -264,7 +264,7 @@ const AppContent = () => {
 
 
     return () => clearTimeout(timer);
-  }, [themeLoading, configLoading]);
+  }, [configLoading]);
 
   if (showLoading) {
     return <LoadingScreen />;

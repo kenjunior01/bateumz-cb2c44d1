@@ -32,7 +32,7 @@ export const useRegionalTranslations = (languageCode?: string) => {
         setError(null);
 
         // Fetch translations from database
-        const { data, error: fetchError } = await supabase
+        const { data, error: fetchError } = await (supabase as any)
           .from('regional_translations')
           .select('translation_key, translation_value')
           .eq('region_id', regionId)
@@ -72,7 +72,7 @@ export const useRegionalTranslations = (languageCode?: string) => {
     if (!regionId) return false;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('regional_translations')
         .upsert({
           region_id: regionId,
@@ -114,7 +114,7 @@ export const useRegionalTranslations = (languageCode?: string) => {
         is_custom: true,
       }));
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('regional_translations')
         .upsert(records, {
           onConflict: 'region_id,language_code,translation_key',
@@ -151,7 +151,7 @@ export const useRegionalTranslations = (languageCode?: string) => {
  */
 export const fetchAvailableLanguages = async (regionId: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('regional_translations')
       .select('language_code')
       .eq('region_id', regionId)
@@ -171,7 +171,7 @@ export const fetchAvailableLanguages = async (regionId: string) => {
  */
 export const exportTranslations = async (regionId: string, languageCode: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('regional_translations')
       .select('*')
       .eq('region_id', regionId)
@@ -203,7 +203,7 @@ export const importTranslations = async (
       is_custom: true,
     }));
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('regional_translations')
       .upsert(records, {
         onConflict: 'region_id,language_code,translation_key',

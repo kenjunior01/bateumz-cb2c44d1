@@ -143,14 +143,14 @@ export const fetchRegionalConfig = async (countryCode: string): Promise<Regional
     }
 
     // Fetch branding
-    const { data: branding } = await supabase
+    const { data: branding } = await (supabase as any)
       .from('regional_branding')
       .select('*')
       .eq('region_id', region.id)
       .maybeSingle();
 
     // Fetch settings
-    const { data: settings } = await supabase
+    const { data: settings } = await (supabase as any)
       .from('regional_settings')
       .select('*')
       .eq('region_id', region.id)

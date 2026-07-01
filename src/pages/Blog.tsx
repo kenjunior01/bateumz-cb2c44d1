@@ -31,7 +31,7 @@ export default function Blog() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from("blog_posts")
         .select(`
           id, title, slug, summary, image_url, published_at,

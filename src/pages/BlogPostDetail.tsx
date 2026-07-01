@@ -30,7 +30,7 @@ export default function BlogPostDetail() {
   const loadPost = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("blog_posts")
         .select(`
           id, title, content, summary, image_url, published_at, seo_keywords,

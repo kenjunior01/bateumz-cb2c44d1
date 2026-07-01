@@ -1,99 +1,58 @@
-# North American Platform Pivot
 
-Major rebrand from Mozambique-focused (PT/MZN) to US/Canada (EN/USD-CAD) with native PayPal and full mock removal.
+# Plano de correções e melhorias
 
-## 1. Brand & Identity
-- Rename `Bateu` → **`Jackpot Drop`** (or keep `Bateu` — confirm if you want a new name; default proposal: `Jackpot Drop`).
-- Update `index.html` title, meta, OG tags, JSON-LD to English.
-- New tagline: *"America's Premium Raffle Platform"*.
-- Replace emerald/gold "Mozambique premium" tokens with a US/Canada-leaning palette: deep navy (#0A1F44), patriotic red (#D7263D), crisp white, with gold accent retained for prizes. Tailwind tokens in `index.css` updated; HSL only.
-- Typography: keep display font but ensure English-first ligatures; default copy to English.
-- Replace favicon/brand SVGs with new mark.
+O pedido cobre 5 frentes distintas. Proponho executar por fases para poder validar cada uma antes de avançar. Confirme se quer tudo de uma vez ou fase a fase.
 
-## 2. Language (EN-US only)
-- Set `LanguageContext` default to `en` and **remove PT/ES/FR strings** (keep keys, English values only).
-- Translate all hardcoded PT strings in pages/components to EN-US. Hide language switcher.
-- Update auth flow, dashboards (user, business, admin), Live Studio, Profile, FAQ, Terms, Privacy, HowItWorks to EN-US copy.
+## Fase 1 — Erros de segurança
+- Correr `security--run_security_scan` e o linter da BD.
+- Corrigir findings críticos: políticas RLS em falta, `GRANT`s em falta em tabelas públicas, funções sem `search_path`, views sem `security_invoker`.
+- Adicionar validação `zod` nas edge functions que hoje aceitam input sem schema (`spin-wheel-spin`, `check-ticket-threshold`, `auto-draw`, `admin-cron-jobs`).
+- Ativar "Leaked Password Protection" (HIBP) na auth.
 
-## 3. Regions & Geography
-- `regions.ts`: keep only **US** + **CA** as countries; expand US to all 50 states + DC, Canada to all 13 provinces/territories.
-- Remove `provinces.ts` (Mozambique) and `CountryRegionFilter` references to MZ/AO/etc. Replace with `StateProvinceFilter`.
-- Default country detection via browser locale → US fallback.
-- Update `Register.tsx` geo step, business profile, raffle geo restrictions.
+## Fase 2 — Roda da Sorte: personalização por empresa
+Problema: o admin não consegue guardar personalização por empresa (logo, cores, slogan, imagem de fundo, som, segmentos personalizados) — hoje há campos no ecrã mas gravação/edição falha.
 
-## 4. Currency (USD + CAD auto)
-- `currency.ts`: add `formatUSD`, `formatCAD`, and `formatMoney(value, currency)`.
-- New `CurrencyContext`: detects user country (US→USD, CA→CAD), allows manual override, persists in `localStorage`.
-- Replace every `formatMZN` import across the codebase with `formatMoney` using context currency.
-- Store raffle prices in cents (smallest unit) with `currency` column. Add migration:
-  - `raffles.currency text default 'USD'`
-  - `payments.currency text default 'USD'`
-  - `prestacao_products.currency text default 'USD'`
+- Verificar colunas em `spin_wheel_games` (`company_logo_url`, `company_slogan`, `wheel_background_color`, `wheel_border_color`, `background_image_url`, `background_color`, `sound_enabled`, `particle_effects`, `default_effect`) e criar migração para as que faltarem.
+- Adicionar `owner_user_id` / `business_user_id` em `spin_wheel_games` para associar uma roda à empresa (multi-tenant).
+- Corrigir RLS: cada empresa vê/edita as suas rodas; superadmin vê todas; visitantes só rodas `is_published=true`.
+- Corrigir o formulário `AdminSpinWheelManager.tsx`:
+  - Upload de logo e background para bucket `game-images`.
+  - Guardar/editar segmentos (label, cor, peso, prémio, imagem, limites) sem perder dados ao re-abrir.
+  - Pré-visualização em tempo real.
+- Espelhar tudo no dashboard do parceiro B2B (não só admin), para que cada empresa personalize a sua própria roda.
 
-## 5. PayPal Integration (native SDK)
-- Install `@paypal/react-paypal-js`.
-- Wrap app in `<PayPalScriptProvider>` with client ID from `VITE_PAYPAL_CLIENT_ID` (publishable, OK in code).
-- New `PayPalCheckout` component renders Smart Buttons on the ticket purchase page (`RaffleDetail`, checkout wizard).
-- Server-side capture via new edge function `paypal-capture-order`:
-  - Validates JWT
-  - Calls PayPal REST `/v2/checkout/orders/{id}/capture` using `PAYPAL_CLIENT_ID` + `PAYPAL_SECRET` (added via secrets tool, sandbox or live URL per `PAYPAL_ENV`)
-  - On success: inserts ticket + payment row with status `confirmed`
-- New edge function `paypal-create-order` for server-authoritative pricing (prevents tampering).
-- Remove M-Pesa, e-Mola, Multicaixa, Unitel Money, Africell Money, BAI/BFA Transfer, PIX, Boleto from `oneClick.ts`, payment UI, and admin payment moderation.
-- Keep manual receipt upload only as a fallback (optional — confirm).
+## Fase 3 — Roda da Sorte: experiência (visual + suspense + som)
+- Nova animação de rotação com easing `cubic-bezier(0.17, 0.67, 0.12, 0.99)`, 6–8 segundos, ponteiro que oscila em cada segmento (tick-tack).
+- Segmentos com gradientes, contorno dourado, luzes a piscar (framer-motion).
+- Som procedural: tick por segmento durante o giro, fanfarra ao vencer, som "aww" ao perder (Web Audio API já existe em `src/lib/sounds.ts`).
+- Fase de suspense: desaceleração dramática nos últimos 800 ms, flash e revelação animada do prémio com confetti/fireworks/stars conforme `effect_type` do segmento.
+- Feedback: contador de giros restantes, últimos prémios ganhos, botão partilhar.
 
-## 6. Remove All Mock-ups / Seed Data
-- Delete seed edge functions: `seed-contests`, `seed-data`, `seed-demo-users`.
-- Remove demo content from `HeroSection`, `StatsBar`, `LiveTicker`, `LiveFeed`, `PopularLeaderboard`, `WinnersSection`, `ContestTypesShowcase`, `AIRecommendations`, `TrustSignals`, `StoriesCarousel`, `DesktopWidgets` — wire each to real Supabase queries and show empty-states ("No active raffles yet") instead of fake names/numbers.
-- Remove hardcoded demo raffles, fake user activity, fake winner cards, mock chat in Community.
-- Purge any `mock*` / `fake*` / `demo*` constants in `src/lib/`.
-- Truncate demo rows from DB: I'll run a data migration to delete rows tagged `is_demo = true` (where the column exists) and rows inserted by seed functions.
+## Fase 4 — OBS / Overlay
+- Diagnosticar `LiveOverlay.tsx` / `OverlayLive.tsx`: identificar por que o overlay do OBS não está a funcionar (rota, permissões, canal realtime, CSP de iframe).
+- Garantir URL pública sem auth, transparente, com parâmetros `?live=<code>` e reconexão automática.
+- Testar com `browser` headless para confirmar renderização.
 
-## 7. Cleanup
-- Remove unused pages tied to Mozambique-specific flows (Prestações catálogo — confirm keep or remove; default keep but rebrand to "Installments").
-- Update memory files to reflect US/CA identity (replace MZ brand notes).
+## Fase 5 — Quem Quer Ser Milionário
+- Ajudas (lifelines) 100% funcionais: 50:50, telefone (dica IA via `mascot-chat`), plateia (gráfico de votos simulados ponderados pela dificuldade), trocar pergunta.
+- Cenário estilo TV: fundo escuro com holofotes animados, música de tensão em loop, sons de "final answer", "correct", "wrong".
+- Pirâmide de prémios interativa lateral (mobile: drawer): destaca nível atual, marca checkpoints (1k, 32k) como garantidos.
+- Animação da resposta: seleção → confirmação com suspense (1.5–3 s consoante nível) → verde a pulsar + confetti (correta) / vermelho com shake + som (errada).
+- Tudo em Português (PT-PT) via `LanguageContext`.
+- Corrigir bugs actuais do timer, do reset de ajudas entre partidas e do carregamento de perguntas por dificuldade.
 
-## Technical Section
+## Fase 6 — Tradução para Português
+- Auditar strings hard-coded em: jogos (roda, milionário, batalhas), páginas admin, dashboard.
+- Mover para chaves `LanguageContext` com fallback EN e traduzir para PT-PT.
+- Definir PT como default apenas se o utilizador confirmar (hoje default é EN).
 
-### Files to add
-- `src/contexts/CurrencyContext.tsx`
-- `src/components/payments/PayPalCheckout.tsx`
-- `src/components/StateProvinceFilter.tsx`
-- `supabase/functions/paypal-create-order/index.ts`
-- `supabase/functions/paypal-capture-order/index.ts`
+## Notas técnicas
+- Nenhum dado mock: usar dados reais existentes.
+- Sem alterações a `src/integrations/supabase/client.ts`, `types.ts`, `.env`.
+- Migrações com `GRANT` + `ENABLE RLS` + policies conforme regras do projeto.
 
-### Files to edit (high-level)
-- `index.html`, `src/main.tsx`, `src/App.tsx`
-- `src/contexts/LanguageContext.tsx` (EN-only)
-- `src/lib/{currency,regions,oneClick}.ts`
-- `src/index.css`, `tailwind.config.ts` (palette)
-- All `src/pages/**` and `src/components/**` that contain PT strings, MZN formatting, or mock arrays
-- `src/components/Navbar.tsx`, `Footer.tsx` (new brand)
-
-### Files to delete
-- `src/lib/provinces.ts`
-- `supabase/functions/seed-*`
-- Demo constants in components
-
-### DB migration
-- Add `currency` columns
-- Delete demo/seed rows (via insert tool — actually DELETE goes through insert tool per rules)
-
-### Secrets needed
-- `PAYPAL_CLIENT_ID` (also expose publishable as `VITE_PAYPAL_CLIENT_ID`)
-- `PAYPAL_SECRET`
-- `PAYPAL_ENV` (`sandbox` or `live`)
-
-## Execution Order
-1. Confirm new brand name (or keep Bateu).
-2. Run DB migration (currency columns + delete demo rows).
-3. Add PayPal secrets.
-4. Pivot core libs: `regions`, `currency`, `LanguageContext`, palette.
-5. Rewrite shell: `index.html`, `Navbar`, `Footer`, `HeroSection`.
-6. Wire PayPal checkout end-to-end (edge functions + component + RaffleDetail).
-7. Strip mocks page-by-page, replace with real queries + empty states.
-8. Translate remaining PT strings to EN-US.
-9. Update memory.
-
-## Scope Warning
-This is **~40–60 file edits + 2 edge functions + 1 migration**. It will take multiple turns and use significant credits. I'll execute in batches and check in after each major phase. Confirm the brand name and whether to keep the manual receipt fallback before I start.
+## Confirmações necessárias
+1. Executar em **todas as fases de uma vez** ou **fase a fase** com aprovação entre cada?
+2. PT-PT é o idioma padrão do site inteiro, ou continua EN default e só os jogos ficam PT?
+3. A personalização da roda deve estar disponível para **qualquer empresa B2B** (dashboard) ou apenas gerida pelo **superadmin**?
+4. Para o OBS, tem um erro específico (URL não carrega, ecrã preto, sem realtime)?

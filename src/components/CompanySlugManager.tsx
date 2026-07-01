@@ -62,7 +62,7 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('companies')
         .update({ slug })
         .eq('id', companyId);
@@ -78,6 +78,7 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
       setIsSaving(false);
     }
   };
+
 
   const handleCopy = () => {
     const url = `${window.location.origin}/business/${slug}`;

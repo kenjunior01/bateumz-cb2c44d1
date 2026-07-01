@@ -72,7 +72,7 @@ export const RegionalCEODashboard: React.FC = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('regional_branding')
         .update(branding)
         .eq('region_id', config.region_id);
@@ -104,7 +104,7 @@ export const RegionalCEODashboard: React.FC = () => {
         .from('white-label-logos')
         .getPublicUrl(fileName);
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('regional_branding')
         .update({ logo_url: data.publicUrl })
         .eq('region_id', config.region_id);
@@ -120,6 +120,7 @@ export const RegionalCEODashboard: React.FC = () => {
       setSaving(false);
     }
   };
+
 
   const handleTranslationChange = (index: number, field: 'key' | 'value', value: string) => {
     const newTranslations = [...translations];

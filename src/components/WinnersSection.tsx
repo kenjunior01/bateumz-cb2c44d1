@@ -70,13 +70,8 @@ const WinnersSection = () => {
         .order("created_at", { ascending: false })
         .limit(6);
 
-      const { data: gameWinners } = await supabase
-        .from("game_winners")
-        .select("*")
-        .eq("is_verified", true)
-        .eq("is_public", true)
-        .order("created_at", { ascending: false })
-        .limit(6);
+      // Game winners table not available yet; only raffle winners are shown.
+      const gameWinners: any[] = [];
 
       const allWinners: Winner[] = [];
 
@@ -123,22 +118,6 @@ const WinnersSection = () => {
         });
       }
 
-      if (gameWinners?.length) {
-        gameWinners.forEach((w) => {
-          allWinners.push({
-            id: `game-${w.id}`,
-            name: w.winner_name,
-            prize: w.prize,
-            initials: w.winner_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase(),
-            avatarUrl: w.winner_photo_url || undefined,
-            photoUrl: w.photo_url || undefined,
-            gameType: w.game_type,
-            verified: w.is_verified,
-            type: "game",
-            sortDate: w.created_at,
-          });
-        });
-      }
 
       setWinners(
         allWinners.sort((a, b) => (b.sortDate || "").localeCompare(a.sortDate || "")),

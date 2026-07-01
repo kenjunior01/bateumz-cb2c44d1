@@ -868,13 +868,16 @@ export type Database = {
       }
       millionaire_games: {
         Row: {
+          background_color: string | null
           background_image_url: string | null
+          business_user_id: string | null
           company_logo_url: string | null
           company_slogan: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_published: boolean | null
           lifelines: Json | null
           name: string
@@ -883,15 +886,19 @@ export type Database = {
           region_id: string
           time_per_question: number | null
           total_questions: number | null
+          updated_at: string | null
         }
         Insert: {
+          background_color?: string | null
           background_image_url?: string | null
+          business_user_id?: string | null
           company_logo_url?: string | null
           company_slogan?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_published?: boolean | null
           lifelines?: Json | null
           name: string
@@ -900,15 +907,19 @@ export type Database = {
           region_id: string
           time_per_question?: number | null
           total_questions?: number | null
+          updated_at?: string | null
         }
         Update: {
+          background_color?: string | null
           background_image_url?: string | null
+          business_user_id?: string | null
           company_logo_url?: string | null
           company_slogan?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_published?: boolean | null
           lifelines?: Json | null
           name?: string
@@ -917,6 +928,7 @@ export type Database = {
           region_id?: string
           time_per_question?: number | null
           total_questions?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -932,6 +944,7 @@ export type Database = {
         Row: {
           correct_answer: string
           created_at: string | null
+          difficulty: string | null
           explanation: string | null
           game_id: string | null
           id: string
@@ -939,12 +952,14 @@ export type Database = {
           option_b: string
           option_c: string
           option_d: string
+          points: number | null
           question_number: number
           question_text: string
         }
         Insert: {
           correct_answer: string
           created_at?: string | null
+          difficulty?: string | null
           explanation?: string | null
           game_id?: string | null
           id?: string
@@ -952,12 +967,14 @@ export type Database = {
           option_b: string
           option_c: string
           option_d: string
+          points?: number | null
           question_number: number
           question_text: string
         }
         Update: {
           correct_answer?: string
           created_at?: string | null
+          difficulty?: string | null
           explanation?: string | null
           game_id?: string | null
           id?: string
@@ -965,6 +982,7 @@ export type Database = {
           option_b?: string
           option_c?: string
           option_d?: string
+          points?: number | null
           question_number?: number
           question_text?: string
         }
@@ -974,6 +992,54 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "millionaire_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      millionaire_sessions: {
+        Row: {
+          created_at: string | null
+          current_level: number | null
+          game_id: string | null
+          id: string
+          prize_won: number | null
+          region_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number | null
+          game_id?: string | null
+          id?: string
+          prize_won?: number | null
+          region_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number | null
+          game_id?: string | null
+          id?: string
+          prize_won?: number | null
+          region_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "millionaire_sessions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "millionaire_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "millionaire_sessions_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
             referencedColumns: ["id"]
           },
         ]
@@ -1857,50 +1923,74 @@ export type Database = {
       }
       spin_wheel_games: {
         Row: {
+          background_color: string | null
+          background_image_url: string | null
+          business_user_id: string | null
           company_logo_url: string | null
           company_slogan: string | null
           created_at: string | null
           created_by: string | null
+          default_effect: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_published: boolean | null
           name: string
+          particle_effects: boolean | null
           region_id: string
           rotation_duration: number | null
           segment_count: number | null
+          sound_enabled: boolean | null
           spin_cost: number | null
+          updated_at: string | null
           wheel_background_color: string | null
           wheel_border_color: string | null
         }
         Insert: {
+          background_color?: string | null
+          background_image_url?: string | null
+          business_user_id?: string | null
           company_logo_url?: string | null
           company_slogan?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_effect?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_published?: boolean | null
           name: string
+          particle_effects?: boolean | null
           region_id: string
           rotation_duration?: number | null
           segment_count?: number | null
+          sound_enabled?: boolean | null
           spin_cost?: number | null
+          updated_at?: string | null
           wheel_background_color?: string | null
           wheel_border_color?: string | null
         }
         Update: {
+          background_color?: string | null
+          background_image_url?: string | null
+          business_user_id?: string | null
           company_logo_url?: string | null
           company_slogan?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_effect?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_published?: boolean | null
           name?: string
+          particle_effects?: boolean | null
           region_id?: string
           rotation_duration?: number | null
           segment_count?: number | null
+          sound_enabled?: boolean | null
           spin_cost?: number | null
+          updated_at?: string | null
           wheel_background_color?: string | null
           wheel_border_color?: string | null
         }
@@ -1918,39 +2008,121 @@ export type Database = {
         Row: {
           background_color: string
           created_at: string | null
+          current_wins_today: number | null
+          current_wins_total: number | null
+          description: string | null
+          effect_type: string | null
           id: string
           label: string
+          max_wins_per_day: number | null
+          max_wins_total: number | null
+          reward_image_url: string | null
           reward_type: string | null
           reward_value: string
           segment_number: number
+          text_color: string | null
           weight: number | null
           wheel_id: string | null
         }
         Insert: {
           background_color: string
           created_at?: string | null
+          current_wins_today?: number | null
+          current_wins_total?: number | null
+          description?: string | null
+          effect_type?: string | null
           id?: string
           label: string
+          max_wins_per_day?: number | null
+          max_wins_total?: number | null
+          reward_image_url?: string | null
           reward_type?: string | null
           reward_value: string
           segment_number: number
+          text_color?: string | null
           weight?: number | null
           wheel_id?: string | null
         }
         Update: {
           background_color?: string
           created_at?: string | null
+          current_wins_today?: number | null
+          current_wins_total?: number | null
+          description?: string | null
+          effect_type?: string | null
           id?: string
           label?: string
+          max_wins_per_day?: number | null
+          max_wins_total?: number | null
+          reward_image_url?: string | null
           reward_type?: string | null
           reward_value?: string
           segment_number?: number
+          text_color?: string | null
           weight?: number | null
           wheel_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "spin_wheel_segments_wheel_id_fkey"
+            columns: ["wheel_id"]
+            isOneToOne: false
+            referencedRelation: "spin_wheel_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spin_wheel_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          region_id: string | null
+          reward_type: string | null
+          reward_value: string | null
+          segment_id: string | null
+          status: string | null
+          user_id: string | null
+          wheel_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          region_id?: string | null
+          reward_type?: string | null
+          reward_value?: string | null
+          segment_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          wheel_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          region_id?: string | null
+          reward_type?: string | null
+          reward_value?: string | null
+          segment_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          wheel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_wheel_sessions_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spin_wheel_sessions_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "spin_wheel_segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spin_wheel_sessions_wheel_id_fkey"
             columns: ["wheel_id"]
             isOneToOne: false
             referencedRelation: "spin_wheel_games"

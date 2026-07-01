@@ -26,7 +26,7 @@ export const useCompanySlug = () => {
       }
 
       try {
-        const { data, error: queryError } = await supabase
+        const { data, error: queryError } = await (supabase as any)
           .from('companies')
           .select('id, name, slug, logo_url, description')
           .eq('slug', slug)
@@ -71,7 +71,7 @@ export const generateSlug = (name: string): string => {
  */
 export const checkSlugAvailability = async (slug: string, excludeId?: string): Promise<boolean> => {
   try {
-    let query = supabase
+    let query = (supabase as any)
       .from('companies')
       .select('id')
       .eq('slug', slug);

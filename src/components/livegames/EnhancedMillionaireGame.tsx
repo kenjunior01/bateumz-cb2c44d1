@@ -122,9 +122,10 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
           use_trivia_db: true,
         });
       } else {
-        setGame(gameData);
+        setGame(gameData as unknown as Game);
         setTimeLeft(gameData.time_per_question || 30);
       }
+
 
       // Check if we should use Open Trivia DB
       if (game?.use_trivia_db || true) { // Default to true for demo purposes

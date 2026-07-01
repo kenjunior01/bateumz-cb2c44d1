@@ -118,9 +118,10 @@ export default function MillionaireGame({ gameId: propGameId, onComplete }: Prop
           primary_color: "#fbbf24",
         });
       } else {
-        setGame(gameData);
+        setGame(gameData as unknown as Game);
         setTimeLeft(gameData.time_per_question || 30);
       }
+
 
       const { data: qData, error: qError } = await supabase
         .from("millionaire_questions")

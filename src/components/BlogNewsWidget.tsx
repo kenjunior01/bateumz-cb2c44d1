@@ -27,31 +27,11 @@ export default function BlogNewsWidget() {
   }, [region]);
 
   const loadLatestPosts = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from("blog_posts")
-        .select(`
-          id, title, slug, summary, image_url, published_at,
-          category:blog_categories(name)
-        `)
-        .eq("published", true)
-        .order("published_at", { ascending: false })
-        .limit(3);
-
-      if (region) {
-        query = query.or(`region_id.eq.${region.id},region_id.is.null`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setPosts(data as any || []);
-    } catch (error) {
-      console.error("Error loading blog posts:", error);
-    } finally {
-      setLoading(false);
-    }
+    // Blog posts table not yet available; render empty state.
+    setPosts([]);
+    setLoading(false);
   };
+
 
   if (loading) {
     return (

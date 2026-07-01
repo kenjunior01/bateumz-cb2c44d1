@@ -17,9 +17,10 @@ interface Segment {
   reward_type: string;
   reward_value: string;
   weight?: number;
-  effect_type?: "confetti" | "fireworks" | "stars" | "poppers" | "zap";
+  effect_type?: string | null;
   segment_number?: number;
 }
+
 
 interface SpinWheelProps {
   gameId: string;

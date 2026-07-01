@@ -71,7 +71,7 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
     if (!user) return;
     try {
       // First save game config
-      const { error: configError } = await supabase
+      const { error: configError } = await (supabase as any)
         .from('live_game_configs')
         .upsert({
           user_id: user.id,
@@ -89,7 +89,7 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
       if (configError) throw configError;
 
       // Then save branding
-      const { error: brandingError } = await supabase
+      const { error: brandingError } = await (supabase as any)
         .from('company_branding')
         .upsert({
           user_id: user.id,
@@ -119,7 +119,7 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
     if (!user) return;
     try {
       // Load game config
-      const { data: configData, error: configError } = await supabase
+      const { data: configData, error: configError } = await (supabase as any)
         .from('live_game_configs')
         .select('*')
         .eq('user_id', user.id)
@@ -137,7 +137,7 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
       }
 
       // Load branding
-      const { data: brandingData, error: brandingError } = await supabase
+      const { data: brandingData, error: brandingError } = await (supabase as any)
         .from('company_branding')
         .select('*')
         .eq('user_id', user.id)
@@ -161,6 +161,7 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
       toast({ title: "Erro ao carregar configurações", variant: "destructive" });
     }
   };
+
 
   return (
     <Sheet>

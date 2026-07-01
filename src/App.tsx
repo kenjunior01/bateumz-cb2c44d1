@@ -251,7 +251,6 @@ function AnimatedRoutes() {
 
 const AppContent = () => {
   const [showLoading, setShowLoading] = useState(true);
-  const { loading: themeLoading } = useTheme();
   const { loading: configLoading } = useRegionalContext();
 
   useEffect(() => {
@@ -259,9 +258,10 @@ const AppContent = () => {
       setShowLoading(false);
     }, 3000);
 
-    if (!themeLoading && !configLoading) {
+    if (!configLoading) {
       setShowLoading(false);
     }
+
 
     return () => clearTimeout(timer);
   }, [themeLoading, configLoading]);

@@ -129,10 +129,15 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [spinning, setSpinning] = useState(false);
+  const [suspense, setSuspense] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<Segment | null>(null);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
+  const [spinCount, setSpinCount] = useState(0);
+  const [history, setHistory] = useState<string[]>([]);
+  const tickTimerRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wheelConfig, setWheelConfig] = useState<{
     company_logo_url?: string;

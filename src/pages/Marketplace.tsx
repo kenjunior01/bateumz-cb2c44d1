@@ -397,7 +397,7 @@ const Marketplace = () => {
                             <span className="text-[10px] font-bold text-primary">
                               {game.spin_cost > 0 ? `${game.spin_cost} MZN` : 'GRÁTIS'}
                             </span>
-                            <Button size="xs" className="h-6 text-[10px]">Jogar</Button>
+                            <Button size="sm" className="h-6 text-[10px] px-2">Jogar</Button>
                           </div>
                         </CardContent>
                       </Card>

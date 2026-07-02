@@ -484,7 +484,7 @@ const RaffleDetail = () => {
                           Sign in to pay with PayPal
                         </Button>
                       ) : (
-                        <PayPalProvider currency={currency}>
+                        <PayPalProvider currency={(currency as any)}>
                           <PayPalCheckout
                             raffleId={raffle.id}
                             quantity={selectedNumbers.length}

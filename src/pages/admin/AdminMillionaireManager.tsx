@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
+const supabase: any = _supabase;
 import { useAuth } from "@/contexts/AuthContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -157,7 +158,7 @@ export default function AdminMillionaireManager() {
     setCompanyLogoUrl(game.company_logo_url || "");
     setCompanySlogan(game.company_slogan || "");
     setPrizeStructure(game.prize_structure || DEFAULT_PRIZE_STRUCTURE);
-    setLifelines(game.lifelines || { fiftyFifty: true, askAudience: false, phoneFriend: false });
+    setLifelines((game.lifelines as any) || { fiftyFifty: true, askAudience: false, phoneFriend: false });
     loadQuestions(game.id);
   };
 

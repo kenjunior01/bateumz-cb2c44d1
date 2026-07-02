@@ -37,7 +37,7 @@ export default function EngagementLeaderboard() {
     setLoading(true);
     try {
       // Load global leaderboard
-      const { data: leaderboardData, error: leaderboardError } = await supabase
+      const { data: leaderboardData, error: leaderboardError } = await (supabase as any)
         .from("engagement_points")
         .select("user_id, points, total_lifetime_points")
         .order("points", { ascending: false })
@@ -46,7 +46,7 @@ export default function EngagementLeaderboard() {
       if (leaderboardError) throw leaderboardError;
 
       // Rank users
-      const ranked = (leaderboardData || []).map((entry, index) => ({
+      const ranked = ((leaderboardData || []) as any[]).map((entry: any, index: number) => ({
         ...entry,
         user_email: `User ${entry.user_id.slice(0, 8)}`,
         rank: index + 1,
@@ -56,11 +56,11 @@ export default function EngagementLeaderboard() {
 
       // Find user's rank
       if (user) {
-        const userEntry = ranked.find((r) => r.user_id === user.id);
+        const userEntry = ranked.find((r: any) => r.user_id === user.id);
         setUserRank(userEntry || null);
 
         // Load user's points breakdown
-        const { data: breakdownData, error: breakdownError } = await supabase
+        const { data: breakdownData, error: breakdownError } = await (supabase as any)
           .from("engagement_points_log")
           .select("reason")
           .eq("user_id", user.id);

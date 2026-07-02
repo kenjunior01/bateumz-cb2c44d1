@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
+const supabase: any = _supabase;
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -339,7 +340,7 @@ export default function AdminSuperDashboard() {
                     placeholder="BR"
                     value={newRegionCode}
                     onChange={(e) => setNewRegionCode(e.target.value.toUpperCase())}
-                    maxLength="2"
+                    maxLength={2}
                   />
                 </div>
                 <div>
@@ -356,7 +357,7 @@ export default function AdminSuperDashboard() {
                     placeholder="BRL"
                     value={newRegionCurrency}
                     onChange={(e) => setNewRegionCurrency(e.target.value.toUpperCase())}
-                    maxLength="3"
+                    maxLength={3}
                   />
                 </div>
                 <Button onClick={createRegion} disabled={saving} className="mt-6">

@@ -7,7 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { computeFinalRotation, findPrizeIndex, isNoWinLabel } from "@/lib/wheel-math";
-import { AlertTriangle, Trophy, Gift, Sparkles, Zap, Star, PartyPopper } from "lucide-react";
+import { AlertTriangle, Trophy, Gift, Sparkles, Zap, Star, PartyPopper, Volume2, VolumeX } from "lucide-react";
+import { playTickSound, playWinSound, playVictoryFanfare, playDismissSound, playDrumRoll } from "@/lib/sounds";
 
 interface Segment {
   id: string;
@@ -128,10 +129,15 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [spinning, setSpinning] = useState(false);
+  const [suspense, setSuspense] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<Segment | null>(null);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
+  const [spinCount, setSpinCount] = useState(0);
+  const [history, setHistory] = useState<string[]>([]);
+  const tickTimerRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wheelConfig, setWheelConfig] = useState<{
     company_logo_url?: string;
@@ -233,6 +239,19 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
 
     setSpinning(true);
     setResult(null);
+    setSpinCount((c) => c + 1);
+
+    // Ticking sound during spin
+    const duration = wheelConfig?.rotation_duration || 4;
+    if (soundOn) {
+      let interval = 80;
+      const tick = () => {
+        playTickSound();
+        interval = Math.min(interval * 1.12, 400);
+        tickTimerRef.current = window.setTimeout(tick, interval);
+      };
+      tick();
+    }
 
     try {
       let winnerIndex: number;
@@ -255,22 +274,33 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
       const finalRotation = computeFinalRotation(rotation, winnerIndex, segments.length);
       setRotation(finalRotation);
 
-      const duration = wheelConfig?.rotation_duration || 4;
+      // Suspense phase ~600ms before final reveal
       setTimeout(() => {
+        setSuspense(true);
+        if (soundOn) playDrumRoll();
+      }, Math.max(0, duration * 1000 - 700));
+
+      setTimeout(() => {
+        if (tickTimerRef.current) { clearTimeout(tickTimerRef.current); tickTimerRef.current = null; }
+        setSuspense(false);
         setResult(winner);
         setSpinning(false);
+        setHistory((h) => [winner.label, ...h].slice(0, 5));
 
-        if (winner.reward_type !== "nothing" && winner.reward_type !== "none" && !isNoWinLabel(winner.label)) {
+        const isWin = winner.reward_type !== "nothing" && winner.reward_type !== "none" && !isNoWinLabel(winner.label);
+        if (isWin) {
           fireConfetti(winner.effect_type || wheelConfig?.default_effect || "confetti");
-          toast({
-            title: t("wheel.win"),
-            description: `${t("youWon")}: ${winner.reward_value || winner.label}`,
-          });
+          if (soundOn) playVictoryFanfare();
+          toast({ title: t("wheel.win"), description: `${t("youWon")}: ${winner.reward_value || winner.label}` });
+        } else if (soundOn) {
+          playDismissSound();
         }
       }, duration * 1000);
     } catch (e) {
       console.error("Error spinning wheel:", e);
+      if (tickTimerRef.current) { clearTimeout(tickTimerRef.current); tickTimerRef.current = null; }
       setSpinning(false);
+      setSuspense(false);
       toast({ title: t("error"), description: t("wheel.errorSpin"), variant: "destructive" });
     }
   };

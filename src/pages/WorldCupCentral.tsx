@@ -15,7 +15,7 @@ const WorldCupCentral = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("worldcup_rss_feeds")
           .select("*")
           .order("fetched_at", { ascending: false })

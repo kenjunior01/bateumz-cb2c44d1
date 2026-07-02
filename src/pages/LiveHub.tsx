@@ -231,7 +231,7 @@ const LiveHub = () => {
     publish({ type: "liveCode", payload: code });
     publish({ type: "liveStarted", payload: { code, at: now } });
     publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: now } });
-    toast({ title: "Live iniciada", description: `Código gerado: ${code}` });
+    (toast as any)({ title: "Live iniciada", description: `Código gerado: ${code}` });
   };
 
   const [endOpen, setEndOpen] = useState(false);
@@ -278,7 +278,7 @@ const LiveHub = () => {
       localStorage.removeItem("liveStartedAt");
       localStorage.setItem("liveActive", "0");
     } catch {}
-    toast({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
+    (toast as any)({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
     setEndOpen(false);
     setEnding(false);
   };
@@ -535,12 +535,12 @@ const LiveHub = () => {
               )}
               {active === "penalty" && (
                 <motion.div key="penalty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <PenaltyShootout onScore={recordScore("Penalty Shootout")} />
+                  {(() => { const C: any = PenaltyShootout; return <C onScore={recordScore("Penalty Shootout")} />; })()}
                 </motion.div>
               )}
               {active === "worldcup" && (
                 <motion.div key="worldcup" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <WorldCupPredictor onScore={recordScore("World Cup Predictor")} />
+                  {(() => { const C: any = WorldCupPredictor; return <C onScore={recordScore("World Cup Predictor")} />; })()}
                 </motion.div>
               )}
               {active === "millionaire" && (

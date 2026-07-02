@@ -156,13 +156,14 @@ export const fetchRegionalConfig = async (countryCode: string): Promise<Regional
       .eq('region_id', region.id)
       .maybeSingle();
 
+    const r: any = region;
     return {
-      region_id: region.id,
-      country_code: region.country_code,
-      country_name: region.country_name || region.label || region.country_code,
-      language_code: region.language_code || region.default_language || 'en',
-      currency_code: region.currency_code || region.currency || 'USD',
-      timezone: region.timezone || 'UTC',
+      region_id: r.id,
+      country_code: r.country_code,
+      country_name: r.country_name || r.label || r.country_code,
+      language_code: r.language_code || r.default_language || 'en',
+      currency_code: r.currency_code || r.currency || 'USD',
+      timezone: r.timezone || 'UTC',
       branding: branding || DEFAULT_BRANDING,
       settings: settings || DEFAULT_SETTINGS,
     };

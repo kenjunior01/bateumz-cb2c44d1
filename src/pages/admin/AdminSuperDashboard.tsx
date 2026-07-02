@@ -340,7 +340,7 @@ export default function AdminSuperDashboard() {
                     placeholder="BR"
                     value={newRegionCode}
                     onChange={(e) => setNewRegionCode(e.target.value.toUpperCase())}
-                    maxLength="2"
+                    maxLength={2}
                   />
                 </div>
                 <div>
@@ -357,7 +357,7 @@ export default function AdminSuperDashboard() {
                     placeholder="BRL"
                     value={newRegionCurrency}
                     onChange={(e) => setNewRegionCurrency(e.target.value.toUpperCase())}
-                    maxLength="3"
+                    maxLength={3}
                   />
                 </div>
                 <Button onClick={createRegion} disabled={saving} className="mt-6">

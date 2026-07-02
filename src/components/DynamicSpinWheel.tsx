@@ -7,7 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { computeFinalRotation, findPrizeIndex, isNoWinLabel } from "@/lib/wheel-math";
-import { AlertTriangle, Trophy, Gift, Sparkles, Zap, Star, PartyPopper } from "lucide-react";
+import { AlertTriangle, Trophy, Gift, Sparkles, Zap, Star, PartyPopper, Volume2, VolumeX } from "lucide-react";
+import { playTickSound, playWinSound, playVictoryFanfare, playDismissSound, playDrumRoll } from "@/lib/sounds";
 
 interface Segment {
   id: string;

@@ -158,7 +158,7 @@ export default function AdminMillionaireManager() {
     setCompanyLogoUrl(game.company_logo_url || "");
     setCompanySlogan(game.company_slogan || "");
     setPrizeStructure(game.prize_structure || DEFAULT_PRIZE_STRUCTURE);
-    setLifelines(game.lifelines || { fiftyFifty: true, askAudience: false, phoneFriend: false });
+    setLifelines((game.lifelines as any) || { fiftyFifty: true, askAudience: false, phoneFriend: false });
     loadQuestions(game.id);
   };
 

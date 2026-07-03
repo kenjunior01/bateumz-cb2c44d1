@@ -63,10 +63,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       const url = data.publicUrl;
       setPreview(url);
       onChange(url);
-      toast.success("Imagem carregada com sucesso!");
-    } catch (error) {
+      toast.success("Image uploaded successfully!");
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error("Erro ao carregar imagem. Tente novamente.");
+      toast.error(error?.message || "Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }

@@ -39,7 +39,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
         >
           🏁
         </motion.span>
-        <span className="font-display text-lg font-bold text-destructive">Sorteio Encerrado!</span>
+        <span className="font-display text-lg font-bold text-destructive">Raffle Closed!</span>
       </motion.div>
     );
   }

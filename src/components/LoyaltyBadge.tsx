@@ -14,10 +14,10 @@ interface LoyaltyLevel {
 }
 
 const LEVELS: LoyaltyLevel[] = [
-  { name: "Bronze", icon: Shield, minPoints: 0, color: "text-orange-700", gradient: "from-orange-600 to-orange-800", benefits: ["Acesso básico", "Acumule pontos"] },
-  { name: "Prata", icon: Star, minPoints: 500, color: "text-slate-400", gradient: "from-slate-400 to-slate-600", benefits: ["5% bónus de pontos", "Bilhete grátis mensal"] },
-  { name: "Ouro", icon: Crown, minPoints: 2000, color: "text-yellow-500", gradient: "from-yellow-400 to-amber-600", benefits: ["10% bónus de pontos", "Acesso antecipado", "2 bilhetes grátis/mês"] },
-  { name: "VIP", icon: Gem, minPoints: 5000, color: "text-violet-400", gradient: "from-violet-500 to-purple-700", benefits: ["20% bónus", "Multiplicador 2x", "Sorteios exclusivos", "Suporte prioritário"] },
+  { name: "Bronze", icon: Shield, minPoints: 0, color: "text-orange-700", gradient: "from-orange-600 to-orange-800", benefits: ["Basic access", "Earn points"] },
+  { name: "Silver", icon: Star, minPoints: 500, color: "text-slate-400", gradient: "from-slate-400 to-slate-600", benefits: ["5% points bonus", "Monthly free ticket"] },
+  { name: "Gold", icon: Crown, minPoints: 2000, color: "text-yellow-500", gradient: "from-yellow-400 to-amber-600", benefits: ["10% points bonus", "Early access", "2 free tickets/month"] },
+  { name: "VIP", icon: Gem, minPoints: 5000, color: "text-violet-400", gradient: "from-violet-500 to-purple-700", benefits: ["20% bonus", "2x multiplier", "Exclusive raffles", "Priority support"] },
 ];
 
 export const getLevelForPoints = (points: number): LoyaltyLevel => {

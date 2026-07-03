@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Radio, Sparkles, Clock, Gamepad2 } from "lucide-react";
 import { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
-import { subscribe, readLatest, RoundState } from "@/lib/liveBus";
+import { subscribe, readLatest, RoundState, bindLiveCode } from "@/lib/liveBus";
 
 /**
  * Transparent overlay for OBS / Streamlabs Browser Source.

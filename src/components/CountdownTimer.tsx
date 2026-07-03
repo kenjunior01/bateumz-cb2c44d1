@@ -19,10 +19,10 @@ const CountdownTimer = ({ targetDate }: Props) => {
   const isEnded = totalSecondsLeft <= 0;
 
   const units = [
-    { label: "Dias", value: time.days },
-    { label: "Horas", value: time.hours },
+    { label: "Days", value: time.days },
+    { label: "Hours", value: time.hours },
     { label: "Min", value: time.minutes },
-    { label: "Seg", value: time.seconds },
+    { label: "Sec", value: time.seconds },
   ];
 
   if (isEnded) {

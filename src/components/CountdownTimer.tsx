@@ -72,7 +72,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
               🔥
             </motion.span>
             <span className="text-sm font-bold text-destructive">
-              ÚLTIMOS MINUTOS! Corra!
+              FINAL MINUTES! Hurry!
             </span>
             <motion.span
               animate={{ scale: [1, 1.3, 1] }}

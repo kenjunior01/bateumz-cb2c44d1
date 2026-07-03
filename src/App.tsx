@@ -85,6 +85,7 @@ import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 import LiveHub from "./pages/LiveHub.tsx";
 import LiveOverlay from "./pages/LiveOverlay.tsx";
+import InstantWin from "./pages/InstantWin.tsx";
 import Transparency from "./pages/Transparency.tsx";
 import Prestacoes from "./pages/Prestacoes.tsx";
 import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";

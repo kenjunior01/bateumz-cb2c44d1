@@ -19,10 +19,10 @@ const CountdownTimer = ({ targetDate }: Props) => {
   const isEnded = totalSecondsLeft <= 0;
 
   const units = [
-    { label: "Dias", value: time.days },
-    { label: "Horas", value: time.hours },
+    { label: "Days", value: time.days },
+    { label: "Hours", value: time.hours },
     { label: "Min", value: time.minutes },
-    { label: "Seg", value: time.seconds },
+    { label: "Sec", value: time.seconds },
   ];
 
   if (isEnded) {
@@ -39,7 +39,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
         >
           🏁
         </motion.span>
-        <span className="font-display text-lg font-bold text-destructive">Sorteio Encerrado!</span>
+        <span className="font-display text-lg font-bold text-destructive">Raffle Closed!</span>
       </motion.div>
     );
   }
@@ -72,7 +72,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
               🔥
             </motion.span>
             <span className="text-sm font-bold text-destructive">
-              ÚLTIMOS MINUTOS! Corra!
+              FINAL MINUTES! Hurry!
             </span>
             <motion.span
               animate={{ scale: [1, 1.3, 1] }}
@@ -95,7 +95,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
-            ⏰ Última hora! Não perca esta oportunidade!
+            ⏰ Last hour! Don't miss this opportunity!
           </motion.span>
         </motion.div>
       )}

@@ -36,7 +36,7 @@ const LiveFeed = () => {
         const mapped = recentParticipants.map((p) => ({
           name: `Participante #${p.ticket_number}`,
           action: p.status === "winner" ? "ganhou" : "comprou bilhete",
-          prize: raffleMap.get(p.raffle_id) || "Sorteio",
+          prize: raffleMap.get(p.raffle_id) || "Raffle",
           isWinner: p.status === "winner",
         }));
         setRealData(mapped);

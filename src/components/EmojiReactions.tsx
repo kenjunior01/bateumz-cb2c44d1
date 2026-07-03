@@ -6,7 +6,7 @@ const REACTIONS = [
   { emoji: "❤️", label: "Amei" },
   { emoji: "😍", label: "Lindo" },
   { emoji: "👏", label: "Bravo" },
-  { emoji: "🏆", label: "Campeão" },
+  { emoji: "🏆", label: "Champion" },
 ];
 
 interface Props {

@@ -41,7 +41,7 @@ const MobileTopBar = () => {
           if (payload.eventType === "INSERT" && payload.new) {
             const n = payload.new;
             const fn = n.type === "success" ? toast.success : n.type === "error" ? toast.error : toast;
-            (fn as any)(n.title || "Nova notificação", { description: n.message });
+            (fn as any)(n.title || "New notification", { description: n.message });
           }
         }
       )

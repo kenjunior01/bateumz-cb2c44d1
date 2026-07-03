@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Radio, Sparkles, Clock, Gamepad2 } from "lucide-react";
 import { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
-import { subscribe, readLatest, RoundState } from "@/lib/liveBus";
+import { subscribe, readLatest, RoundState, bindLiveCode } from "@/lib/liveBus";
 
 /**
  * Transparent overlay for OBS / Streamlabs Browser Source.
@@ -43,9 +43,11 @@ const LiveOverlay = () => {
   }, [round?.at, round?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!codeFromUrl) {
+    if (codeFromUrl) {
+      bindLiveCode(codeFromUrl);
+    } else {
       const c = readLatest<string>("liveCode");
-      if (c) setCode(c);
+      if (c) { setCode(c); bindLiveCode(c); }
     }
 
     const unsub = subscribe((evt) => {

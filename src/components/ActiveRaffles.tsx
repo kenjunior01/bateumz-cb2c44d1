@@ -248,7 +248,7 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
           />
           {featured.length === 0 && recent.length === 0 && (
             <RaffleSection
-              title="Sorteios"
+              title="Raffles"
               icon={<Ticket className="h-5 w-5 text-primary" />}
               raffles={raffles}
             />

@@ -148,6 +148,7 @@ function AnimatedRoutes() {
           <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
+          <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />

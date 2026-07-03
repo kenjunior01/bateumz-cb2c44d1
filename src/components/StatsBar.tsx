@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 const StatsBar = () => {
+  const { format } = useCurrency();
   const [stats, setStats] = useState([
-    { value: "0", suffix: "", label: "Prémios entregues" },
-    { value: "0", suffix: "", label: "Participantes ativos" },
-    { value: "100%", suffix: "", label: "Resultados verificáveis" },
-    { value: "0", suffix: "", label: "Sorteios concluídos" },
+    { value: "0", suffix: "", label: "Prizes delivered" },
+    { value: "0", suffix: "", label: "Active participants" },
+    { value: "100%", suffix: "", label: "Verifiable results" },
+    { value: "0", suffix: "", label: "Completed raffles" },
   ]);
 
   useEffect(() => {
@@ -30,23 +32,19 @@ const StatsBar = () => {
       };
 
       setStats([
-        { value: formatNum(totalPrizes) + " MZN", suffix: "", label: "Prémios entregues" },
-        { value: formatNum(participantCount), suffix: "", label: "Participantes ativos" },
-        { value: "100%", suffix: "", label: "Resultados verificáveis" },
-        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Sorteios concluídos" },
+        { value: format(totalPrizes), suffix: "", label: "Prizes delivered" },
+        { value: formatNum(participantCount), suffix: "", label: "Active participants" },
+        { value: "100%", suffix: "", label: "Verifiable results" },
+        { value: totalCompleted.toLocaleString(), suffix: "+", label: "Completed raffles" },
       ]);
     };
     fetchStats();
-  }, []);
-
-  // Hide section if no real data yet (all numeric values are 0)
-  const hasData = stats.some((s) => s.value !== "0" && s.value !== "100%");
+  }, [format]);
 
   return (
     <section className="relative border-y border-border bg-card/50">
       <div className="container mx-auto grid grid-cols-2 gap-6 px-6 py-12 md:grid-cols-4">
         {stats.map((s, i) => {
-          // Skip zero counters to avoid credibility issues
           const isZero = s.value === "0";
           return (
             <motion.div
@@ -59,7 +57,7 @@ const StatsBar = () => {
             >
               <div className="font-display text-3xl font-bold text-gradient-primary md:text-4xl">
                 {isZero ? (
-                  <span className="text-xl md:text-2xl text-muted-foreground">Brevemente</span>
+                  <span className="text-xl md:text-2xl text-muted-foreground">Coming soon</span>
                 ) : (
                   <>{s.value}<span className="text-2xl md:text-3xl">{s.suffix}</span></>
                 )}
@@ -74,3 +72,4 @@ const StatsBar = () => {
 };
 
 export default StatsBar;
+

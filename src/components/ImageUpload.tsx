@@ -19,7 +19,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   value, 
   onChange, 
   label, 
-  placeholder = "URL da imagem",
+  placeholder = "Image URL",
   bucketName = "game-images"
 }) => {
   const [isUploading, setIsUploading] = useState(false);

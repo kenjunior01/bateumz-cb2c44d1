@@ -85,6 +85,7 @@ import BusinessProfile from "./pages/BusinessProfile.tsx";
 import BusinessDirectory from "./pages/BusinessDirectory.tsx";
 import LiveHub from "./pages/LiveHub.tsx";
 import LiveOverlay from "./pages/LiveOverlay.tsx";
+import InstantWin from "./pages/InstantWin.tsx";
 import Transparency from "./pages/Transparency.tsx";
 import Prestacoes from "./pages/Prestacoes.tsx";
 import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";
@@ -147,6 +148,7 @@ function AnimatedRoutes() {
           <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
+          <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />

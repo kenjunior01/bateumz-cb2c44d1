@@ -113,12 +113,14 @@ export default function AdminRegionalBranding() {
   async function uploadAsset(kind: "logo" | "banner", file: File) {
     if (!selected) return;
     const ext = file.name.split(".").pop() || "png";
-    const path = `${selected.country_code}/${kind}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("regional-assets").upload(path, file, { upsert: true });
+    // Use the public `game-images` bucket so the returned URL renders directly.
+    // The private `regional-assets` bucket returns URLs that require signing.
+    const path = `regions/${selected.country_code}/${kind}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("game-images").upload(path, file, { upsert: true, cacheControl: "3600" });
     if (upErr) { toast.error(upErr.message); return; }
-    const { data } = supabase.storage.from("regional-assets").getPublicUrl(path);
+    const { data } = supabase.storage.from("game-images").getPublicUrl(path);
     updateField(kind === "logo" ? "logo_url" : "banner_url", data.publicUrl);
-    toast.success(`${kind === "logo" ? "Logo" : "Banner"} carregado`);
+    toast.success(`${kind === "logo" ? "Logo" : "Banner"} uploaded`);
   }
 
   async function saveRegion() {

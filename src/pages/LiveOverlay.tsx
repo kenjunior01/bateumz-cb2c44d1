@@ -43,9 +43,11 @@ const LiveOverlay = () => {
   }, [round?.at, round?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!codeFromUrl) {
+    if (codeFromUrl) {
+      bindLiveCode(codeFromUrl);
+    } else {
       const c = readLatest<string>("liveCode");
-      if (c) setCode(c);
+      if (c) { setCode(c); bindLiveCode(c); }
     }
 
     const unsub = subscribe((evt) => {

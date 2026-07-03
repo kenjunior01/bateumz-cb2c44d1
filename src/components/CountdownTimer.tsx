@@ -95,7 +95,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
-            ⏰ Última hora! Não perca esta oportunidade!
+            ⏰ Last hour! Don't miss this opportunity!
           </motion.span>
         </motion.div>
       )}

@@ -19,7 +19,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   value, 
   onChange, 
   label, 
-  placeholder = "URL da imagem",
+  placeholder = "Image URL",
   bucketName = "game-images"
 }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -63,10 +63,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       const url = data.publicUrl;
       setPreview(url);
       onChange(url);
-      toast.success("Imagem carregada com sucesso!");
-    } catch (error) {
+      toast.success("Image uploaded successfully!");
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error("Erro ao carregar imagem. Tente novamente.");
+      toast.error(error?.message || "Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -107,7 +107,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             ) : (
               <Upload className="h-4 w-4 mr-2" />
             )}
-            {isUploading ? "Carregando..." : "Upload"}
+            {isUploading ? "Uploading..." : "Upload"}
             <input
               type="file"
               accept={ACCEPT_IMAGES}

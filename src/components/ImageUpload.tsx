@@ -107,7 +107,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             ) : (
               <Upload className="h-4 w-4 mr-2" />
             )}
-            {isUploading ? "Carregando..." : "Upload"}
+            {isUploading ? "Uploading..." : "Upload"}
             <input
               type="file"
               accept={ACCEPT_IMAGES}

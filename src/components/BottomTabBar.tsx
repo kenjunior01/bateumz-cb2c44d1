@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Home, Search, User, Trophy, Plus, Ticket, Sparkles, Building2,
   MessageCircle, History, ShieldCheck, Calendar, BookOpen, HelpCircle,
-  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap, Radio,
+  Users, Gift, Star, Bell, Settings, LogOut, Store, Zap, Radio, Wallet,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -37,6 +37,7 @@ const ACTION_GROUPS: { titleKey: string; items: ActionItem[] }[] = [
       { icon: Zap, labelKey: "menu.games", href: "/marketplace", grad: "from-amber-400 to-yellow-600", badgeKey: "menu.badge.new" },
       { icon: Trophy, labelKey: "menu.millionaire", href: "/marketplace?tab=games", grad: "from-blue-600 to-indigo-800" },
       { icon: Sparkles, labelKey: "menu.spinWheel", href: "/marketplace?tab=games", grad: "from-purple-500 to-pink-600" },
+      { icon: Trophy, labelKey: "tournament.title", href: "/tournaments", grad: "from-emerald-500 to-teal-600", badgeKey: "menu.badge.new" },
     ],
   },
   {
@@ -86,7 +87,11 @@ const BottomTabBar = () => {
     { icon: Search, labelKey: "tab.explore", href: "/marketplace" },
     null,
     { icon: Trophy, labelKey: "tab.contests", href: "#contests" },
-    { icon: User, labelKey: "tab.profile", href: !user ? "/login" : (role === "business" || role === "admin") ? "/dashboard" : "/profile" },
+    { icon: Wallet, labelKey: "tab.wallet", href: user ? "/wallet" : "/login" },
+  ];
+
+  const moreTabs = [
+    { icon: Trophy, labelKey: "tournament.title", href: "/tournaments" },
   ];
 
   const goOrAuth = (href: string, requiresAuth = false) => {

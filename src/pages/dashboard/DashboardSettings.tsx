@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import NotificationSettings from "@/components/notifications/NotificationSettings";
 
 export default function DashboardSettings() {
   const { profile, user } = useAuth();
@@ -129,6 +130,10 @@ export default function DashboardSettings() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <NotificationSettings />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Card className="glass">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

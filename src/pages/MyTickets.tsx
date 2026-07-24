@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Ticket, Trophy, Clock, CheckCircle2, XCircle, Eye, WifiOff } from "lucide-react";
+import { Ticket, Trophy, Clock, CheckCircle2, XCircle, Eye, WifiOff, QrCode } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import Footer from "@/components/Footer";
 import { useOnline } from "@/hooks/use-online";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
+import TicketQRCode from "@/components/tickets/TicketQRCode";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const statusMap: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary bg-primary/10", icon: CheckCircle2 },
@@ -32,10 +40,12 @@ export default function MyTickets() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const online = useOnline();
+  const { t } = useLanguage();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "winner">("all");
   const [fromCache, setFromCache] = useState(false);
+  const [qrTicket, setQrTicket] = useState<{ id: string; raffleName: string; raffleSlug: string; status: string; ticketNumber: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -236,14 +246,33 @@ export default function MyTickets() {
                             </p>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 shrink-0"
-                          onClick={() => navigate(`/raffle/${raffle?.slug || ticket.raffle_id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() =>
+                              setQrTicket({
+                                id: ticket.id,
+                                raffleName: raffle?.title || "Sorteio",
+                                raffleSlug: raffle?.slug || "",
+                                status: ticket.status,
+                                ticketNumber: ticket.ticket_number,
+                              })
+                            }
+                            title={t("qr.show")}
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => navigate(`/raffle/${raffle?.slug || ticket.raffle_id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -253,6 +282,25 @@ export default function MyTickets() {
           </div>
         )}
       </div>
+
+      {/* QR Code Dialog */}
+      <Dialog open={!!qrTicket} onOpenChange={(open) => !open && setQrTicket(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{qrTicket && t("qr.title")}</DialogTitle>
+          </DialogHeader>
+          {qrTicket && (
+            <TicketQRCode
+              ticketId={qrTicket.id}
+              raffleName={qrTicket.raffleName}
+              raffleSlug={qrTicket.raffleSlug}
+              status={qrTicket.status}
+              ticketNumber={qrTicket.ticketNumber}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );

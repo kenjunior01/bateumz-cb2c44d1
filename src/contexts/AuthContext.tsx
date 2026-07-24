@@ -35,12 +35,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminCountries, setAdminCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const ensureProfile = async (userId: string, user: User) => {
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
       .single();
+
+    if (!profileData) {
+      // OAuth user who skipped registration — auto-create a basic profile
+      const displayName =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "Utilizador";
+
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: userId,
+          display_name: displayName,
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+        } as any);
+
+      if (!insertError) {
+        const { data: newProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+        return newProfile;
+      }
+    }
+    return profileData;
+  };
+
+  const fetchProfile = async (userId: string, user?: User | null) => {
+    const profileData = await ensureProfile(userId, user!);
     setProfile(profileData);
 
     const { data: roleData } = await supabase
@@ -131,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setLoading(true);
-      await fetchProfile(nextSession.user.id);
+      await fetchProfile(nextSession.user.id, nextSession.user);
       if (active) setLoading(false);
     };
 

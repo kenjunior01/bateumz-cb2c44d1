@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap, UserCog, MapPin
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap, UserCog, MapPin, Tag
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -28,6 +28,7 @@ const items = [
   { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Gamification", url: "/admin/games", icon: Zap },
   { title: "Regional Branding", url: "/admin/regional-branding", icon: Palette },
+  { title: "Vouchers", url: "/admin/vouchers", icon: Tag },
   { title: "Regional Dashboard", url: "/admin/regional-dashboard", icon: Globe },
 ];
 

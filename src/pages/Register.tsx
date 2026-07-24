@@ -7,7 +7,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { COUNTRIES, getRegions } from "@/lib/regions";
@@ -74,6 +73,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get("ref") || "";
 
@@ -168,30 +168,26 @@ export default function Register() {
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/dashboard' },
     });
-    if (result.error) {
-      setError(result.error.message || "Erro ao conectar com Google");
+    if (error) {
+      setError("Erro ao conectar com Google. Tenta novamente.");
       setGoogleLoading(false);
     }
-    if (result.redirected) return;
-    setSuccess(true);
-    playPopSound();
   };
 
   const handleAppleSignUp = async () => {
-    setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
+    setAppleLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: window.location.origin + '/dashboard' },
     });
-    if (result.error) {
-      setError(result.error.message || "Erro ao conectar com Apple");
-      setGoogleLoading(false);
+    if (error) {
+      setError("Erro ao conectar com Apple. Tenta novamente.");
+      setAppleLoading(false);
     }
-    if (result.redirected) return;
-    setSuccess(true);
-    playPopSound();
   };
 
   const mascotForStep = step === 0 ? mascotHappy : step === 1 ? mascotExcited : step === 2 ? mascotHappy : mascotWinner;
@@ -351,7 +347,11 @@ export default function Register() {
 
                 {/* Social Sign Up */}
                 <div className="mt-5 space-y-2">
-                  <Button variant="outline" className="w-full h-10 gap-3 border-border hover:bg-secondary"
+                  <div className="text-center mb-2">
+                    <p className="text-sm font-semibold text-foreground">Regista-te rapidamente</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Usa a tua conta Google ou Apple</p>
+                  </div>
+                  <Button variant="outline" className="w-full h-10 gap-3 border-border hover:bg-secondary rounded-xl"
                     onClick={handleGoogleSignUp} disabled={googleLoading}>
                     <svg className="h-4 w-4" viewBox="0 0 24 24">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -361,12 +361,14 @@ export default function Register() {
                     </svg>
                     {googleLoading ? "A conectar..." : "Continuar com Google"}
                   </Button>
-                  <Button variant="outline" className="w-full h-10 gap-3 border-border hover:bg-secondary"
-                    onClick={handleAppleSignUp} disabled={googleLoading}>
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 gap-3 rounded-xl bg-black text-white border-black hover:bg-neutral-800 dark:bg-card dark:text-foreground dark:border-border dark:hover:bg-secondary"
+                    onClick={handleAppleSignUp} disabled={appleLoading}>
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                     </svg>
-                    {googleLoading ? "A conectar..." : "Continuar com Apple"}
+                    {appleLoading ? "A conectar..." : "Continuar com Apple"}
                   </Button>
                 </div>
               </motion.div>

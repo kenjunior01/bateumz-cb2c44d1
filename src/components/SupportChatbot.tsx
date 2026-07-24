@@ -1,48 +1,150 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Send, X, Sparkles } from "lucide-react";
+import { MessageCircle, Send, X, Sparkles, Ticket, Trophy, BookOpen, Mail, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  timestamp?: Date;
+  suggestions?: string[];
 }
 
-const QUICK = [
+const QUICK_QUESTIONS = [
   "Como compro um bilhete?",
   "Quais métodos de pagamento aceita?",
   "Como sei que o sorteio é justo?",
   "Como ganho Luck Points?",
 ];
 
+interface QuickAction {
+  icon: typeof Ticket;
+  label: string;
+  action: () => void;
+}
+
+const SUGGESTION_MAP: Record<string, string[]> = {
+  "Como compro um bilhete?": ["Ver sorteios ativos", "Métodos de pagamento", "Meus bilhetes"],
+  "Quais métodos de pagamento aceita?": ["Depositar na carteira", "PayPal", "Transferência bancária"],
+  "Como sei que o sorteio é justo?": ["Verificação blockchain", "Transparência", "Historial de ganhadores"],
+  "Como ganho Luck Points?": ["Participar em lives", "Referir amigos", "Tarefas diárias"],
+};
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+        <motion.span
+          className="h-2 w-2 rounded-full bg-primary/60"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+        />
+        <motion.span
+          className="h-2 w-2 rounded-full bg-primary/60"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
+        />
+        <motion.span
+          className="h-2 w-2 rounded-full bg-primary/60"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
+        />
+      </div>
+    </div>
+  );
+}
+
 const SupportChatbot = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
       content:
         "Olá! 👋 Sou o assistente do Bateu. Em que te posso ajudar hoje?",
+      timestamp: new Date(),
+      suggestions: ["Meus Bilhetes", "Sorteios Ativos", "Como Funciona"],
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
+  }, [messages, loading, open]);
+
+  const quickActions: QuickAction[] = [
+    {
+      icon: Ticket,
+      label: "Meus Bilhetes",
+      action: () => {
+        navigate("/my-tickets");
+        setOpen(false);
+      },
+    },
+    {
+      icon: Trophy,
+      label: "Sorteios Ativos",
+      action: () => {
+        navigate("/marketplace");
+        setOpen(false);
+      },
+    },
+    {
+      icon: BookOpen,
+      label: "Como Funciona",
+      action: () => {
+        navigate("/como-funciona");
+        setOpen(false);
+      },
+    },
+    {
+      icon: Mail,
+      label: "Suporte",
+      action: () => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "📧 Para suporte mais detalhado, entra em contacto conosco:\n\n**Email:** suporte@bateu.online\n**Resposta:** Até 24h úteis\n\nOu fala connosco nas redes sociais!",
+            timestamp: new Date(),
+          },
+        ]);
+        setShowQuickActions(false);
+      },
+    },
+  ];
 
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
-    const next = [...messages, { role: "user" as const, content: trimmed }];
+
+    const userMsg: Msg = {
+      role: "user",
+      content: trimmed,
+      timestamp: new Date(),
+    };
+    const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
     setLoading(true);
+    setShowQuickActions(false);
+
+    // Simulate typing delay
+    await new Promise((r) => setTimeout(r, 800 + Math.random() * 700));
+
     try {
       const { data, error } = await supabase.functions.invoke("mascot-chat", {
         body: {
@@ -54,9 +156,17 @@ const SupportChatbot = () => {
         },
       });
       if (error) throw error;
+
+      const suggestions = SUGGESTION_MAP[trimmed] ?? [];
+
       setMessages((p) => [
         ...p,
-        { role: "assistant", content: data?.message ?? "Hmm, tenta de novo 🤔" },
+        {
+          role: "assistant",
+          content: data?.message ?? "Hmm, tenta de novo 🤔",
+          timestamp: new Date(),
+          suggestions,
+        },
       ]);
     } catch {
       setMessages((p) => [
@@ -65,11 +175,38 @@ const SupportChatbot = () => {
           role: "assistant",
           content:
             "Estou com dificuldades agora 😅 Tenta daqui a pouco ou contacta suporte@bateu.online.",
+          timestamp: new Date(),
+          suggestions: ["Suporte", "Como Funciona"],
         },
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSuggestionClick = (text: string) => {
+    // Check if it's a navigation action
+    if (text === "Meus Bilhetes") {
+      navigate("/my-tickets");
+      setOpen(false);
+      return;
+    }
+    if (text === "Sorteios Ativos") {
+      navigate("/marketplace");
+      setOpen(false);
+      return;
+    }
+    if (text === "Como Funciona") {
+      navigate("/como-funciona");
+      setOpen(false);
+      return;
+    }
+    if (text === "Suporte") {
+      quickActions.find((a) => a.label === "Suporte")?.action();
+      return;
+    }
+    // Otherwise, send as a message
+    send(text);
   };
 
   return (
@@ -83,7 +220,7 @@ const SupportChatbot = () => {
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
         {!open && (
-          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-accent border-2 border-background" />
+          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-accent border-2 border-background animate-pulse" />
         )}
       </motion.button>
 
@@ -93,8 +230,10 @@ const SupportChatbot = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className="fixed bottom-36 right-4 lg:bottom-24 lg:right-6 z-40 w-[calc(100vw-2rem)] sm:w-96 max-h-[70vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
           >
+            {/* ── Header ── */}
             <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-accent/10 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -117,40 +256,104 @@ const SupportChatbot = () => {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {/* ── Quick Actions ── */}
+            {showQuickActions && messages.length <= 2 && (
+              <div className="px-3 py-2.5 border-b border-border bg-background/50">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Ações rápidas
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {quickActions.map((qa) => (
+                    <motion.button
+                      key={qa.label}
+                      whileTap={{ scale: 0.92 }}
+                      onClick={qa.action}
+                      className="flex flex-col items-center gap-1 rounded-xl bg-secondary/50 hover:bg-primary/10 active:bg-secondary p-2 transition-colors"
+                    >
+                      <qa.icon className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] font-medium text-center leading-tight">
+                        {qa.label}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Messages ── */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.map((m, i) => (
-                <div
+                <motion.div
                   key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div
-                    className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-snug ${
-                      m.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted text-foreground rounded-bl-sm"
-                    }`}
-                  >
-                    {m.content}
+                  <div className="max-w-[85%]">
+                    <div
+                      className={`px-3.5 py-2.5 text-sm leading-snug whitespace-pre-line ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
+                          : "bg-muted text-foreground rounded-2xl rounded-bl-sm"
+                      }`}
+                    >
+                      {m.content.split(/(\*\*[^*]+\*\*)/).map((part, pi) => {
+                        if (part.startsWith("**") && part.endsWith("**")) {
+                          return (
+                            <strong key={pi} className="font-semibold">
+                              {part.slice(2, -2)}
+                            </strong>
+                          );
+                        }
+                        return <span key={pi}>{part}</span>;
+                      })}
+                    </div>
+                    <div className={`flex items-center gap-1 mt-0.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                      {m.timestamp && (
+                        <span className="text-[9px] text-muted-foreground/60 flex items-center gap-0.5">
+                          <Clock className="h-2.5 w-2.5" />
+                          {formatTime(m.timestamp)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2 text-sm">
-                    <span className="inline-flex gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/50 animate-bounce" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/50 animate-bounce [animation-delay:0.15s]" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/50 animate-bounce [animation-delay:0.3s]" />
-                    </span>
-                  </div>
-                </div>
-              )}
+              {loading && <TypingIndicator />}
               <div ref={endRef} />
             </div>
 
+            {/* ── Suggestions ── */}
+            <AnimatePresence>
+              {messages.length > 0 &&
+                messages[messages.length - 1].role === "assistant" &&
+                messages[messages.length - 1].suggestions &&
+                messages[messages.length - 1].suggestions!.length > 0 &&
+                !loading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    className="px-3 pb-1.5 flex flex-wrap gap-1.5"
+                  >
+                    {messages[messages.length - 1].suggestions!.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => handleSuggestionClick(s)}
+                        className="text-[11px] px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary font-medium border border-primary/15 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Quick Questions ── */}
             {messages.length <= 2 && (
               <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                {QUICK.map((q) => (
+                {QUICK_QUESTIONS.map((q) => (
                   <button
                     key={q}
                     onClick={() => send(q)}
@@ -162,6 +365,7 @@ const SupportChatbot = () => {
               </div>
             )}
 
+            {/* ── Input ── */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();

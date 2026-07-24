@@ -61,6 +61,7 @@ import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
 import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";
 import AdminRegionalManagers from "./pages/admin/AdminRegionalManagers.tsx";
 import AdminPlans from "./pages/admin/AdminPlans.tsx";
+import AdminVouchers from "./pages/admin/AdminVouchers.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
@@ -104,11 +105,16 @@ import LoadingScreen from "./components/LoadingScreen.tsx";
 import NotificationBell from "./components/live/NotificationBell.tsx";
 import LivesAgora from "./pages/LivesAgora.tsx";
 import LiveParticipar from "./pages/LiveParticipar.tsx";
+import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
+import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
+import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
+import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
+import Wallet from "./pages/Wallet.tsx";
 
 // New live entertainment pages
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
@@ -169,6 +175,8 @@ function AnimatedRoutes() {
           <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
           <Route path="/lives-agora" element={<LivesAgora />} />
           <Route path="/participar" element={<LiveParticipar />} />
+          <Route path="/tournaments" element={<TournamentsList />} />
+          <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route
             path="/profile"
             element={
@@ -190,6 +198,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute>
+                <Wallet />
               </ProtectedRoute>
             }
           />
@@ -222,6 +238,7 @@ function AnimatedRoutes() {
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
             <Route path="live-studio/:id" element={<LiveStudio />} />
             <Route path="live-manager" element={<CompanyLiveManager />} />
+            <Route path="tournaments" element={<DashboardTournaments />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route path="/overlay/live/:id" element={<OverlayLive />} />
@@ -253,6 +270,7 @@ function AnimatedRoutes() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="regional-config" element={<RegionalCEODashboard />} />
             <Route path="regional-managers" element={<AdminRegionalManagers />} />
+            <Route path="vouchers" element={<AdminVouchers />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -264,6 +282,7 @@ function AnimatedRoutes() {
 const AppContent = () => {
   const [showLoading, setShowLoading] = useState(true);
   const { loading: configLoading } = useRegionalContext();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -288,6 +307,7 @@ const AppContent = () => {
       <Sonner />
       <BackgroundDecorations />
       <BrowserRouter>
+        {!authLoading && user && <PushNotificationBanner />}
         <MobileTopBar />
         <AnimatedRoutes />
         <MascotBuddy />

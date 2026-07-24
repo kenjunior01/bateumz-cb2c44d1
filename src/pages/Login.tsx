@@ -4,7 +4,6 @@ import { Mail, Lock, ArrowLeft, ChevronRight, Eye, EyeOff, Sparkles } from "luci
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { playPopSound } from "@/lib/sounds";
 
@@ -109,36 +108,27 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     playPopSound();
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/dashboard' },
     });
-    if (result.error) {
-      setError(result.error.message || "Erro ao conectar com Google");
+    if (error) {
+      setError("Erro ao conectar com Google. Tenta novamente.");
       setGoogleLoading(false);
     }
-    if (result.redirected) return;
-    // If tokens returned directly
-    setMascotMood("winner");
-    setSuccess(true);
-    playPopSound();
-    setTimeout(navigateAfterLogin, 1200);
   };
 
   const handleAppleLogin = async () => {
     setAppleLoading(true);
     playPopSound();
-    const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: window.location.origin + '/dashboard' },
     });
-    if (result.error) {
-      setError(result.error.message || "Erro ao conectar com Apple");
+    if (error) {
+      setError("Erro ao conectar com Apple. Tenta novamente.");
       setAppleLoading(false);
     }
-    if (result.redirected) return;
-    setMascotMood("winner");
-    setSuccess(true);
-    playPopSound();
-    setTimeout(navigateAfterLogin, 1200);
   };
 
   if (success) {
@@ -314,7 +304,7 @@ export default function Login() {
             </Button>
             <Button
               variant="outline"
-              className="w-full h-11 gap-3 border-border hover:bg-secondary rounded-xl"
+              className="w-full h-11 gap-3 rounded-xl bg-black text-white border-black hover:bg-neutral-800 dark:bg-card dark:text-foreground dark:border-border dark:hover:bg-secondary"
               onClick={handleAppleLogin}
               disabled={appleLoading}
             >
@@ -333,7 +323,7 @@ export default function Login() {
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-3 text-muted-foreground">ou entre com email</span>
+              <span className="bg-card px-3 text-muted-foreground">ou</span>
             </div>
           </motion.div>
 

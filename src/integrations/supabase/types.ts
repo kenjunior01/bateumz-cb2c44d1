@@ -2288,6 +2288,172 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_payments: {
+        Row: {
+          id: string
+          raffle_id: string
+          user_id: string
+          amount: number
+          currency: string
+          stripe_session_id: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          raffle_id: string
+          user_id: string
+          amount: number
+          currency: string
+          stripe_session_id?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          raffle_id?: string
+          user_id?: string
+          amount?: number
+          currency?: string
+          stripe_session_id?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vouchers: {
+        Row: {
+          id: string
+          code: string
+          type: string
+          value: number
+          min_purchase: number | null
+          max_uses: number | null
+          current_uses: number
+          valid_from: string
+          valid_until: string
+          is_active: boolean
+          created_by: string
+          raffle_id: string | null
+          region: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          type: string
+          value: number
+          min_purchase?: number | null
+          max_uses?: number | null
+          current_uses?: number
+          valid_from: string
+          valid_until: string
+          is_active?: boolean
+          created_by: string
+          raffle_id?: string | null
+          region?: string | null
+          created_at?: string
+        }
+        Update: {
+          code?: string
+          type?: string
+          value?: number
+          min_purchase?: number | null
+          max_uses?: number | null
+          current_uses?: number
+          valid_from?: string
+          valid_until?: string
+          is_active?: boolean
+          raffle_id?: string | null
+          region?: string | null
+        }
+        Relationships: []
+      }
+      voucher_redemptions: {
+        Row: {
+          id: string
+          voucher_id: string
+          user_id: string
+          raffle_id: string
+          discount_applied: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          voucher_id: string
+          user_id: string
+          raffle_id: string
+          discount_applied: number
+          created_at?: string
+        }
+        Update: {
+          voucher_id?: string
+          user_id?: string
+          raffle_id?: string
+          discount_applied?: number
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          id: string
+          user_id: string
+          balance: number
+          currency: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          balance?: number
+          currency: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          currency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          id: string
+          wallet_id: string
+          type: string
+          amount: number
+          description?: string
+          reference_type?: string
+          reference_id?: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          wallet_id: string
+          type: string
+          amount: number
+          description?: string
+          reference_type?: string
+          reference_id?: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          type?: string
+          amount?: number
+          description?: string
+          reference_type?: string
+          reference_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       platform_settings_public: {
@@ -2455,6 +2621,12 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: { id: string; user_id: string; endpoint: string; p256dh_key: string; auth_key: string; created_at: string; device_info?: string }
+        Insert: { id?: string; user_id: string; endpoint: string; p256dh_key: string; auth_key: string; created_at?: string; device_info?: string }
+        Update: { id?: string; user_id?: string; endpoint?: string; p256dh_key?: string; auth_key?: string; device_info?: string }
+        Relationships: []
+      }
     }
     Functions: {
       admin_country: { Args: { _user_id: string }; Returns: string }
@@ -2549,6 +2721,108 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      tournament_matches: {
+        Row: {
+          game_type: string
+          id: string
+          live_code: string
+          played_at: string
+          tournament_id: string
+        }
+        Insert: {
+          game_type: string
+          id?: string
+          live_code: string
+          played_at?: string
+          tournament_id: string
+        }
+        Update: {
+          game_type?: string
+          live_code?: string
+        }
+        Relationships: []
+      }
+      tournament_standings: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          games_played: number
+          id: string
+          rank: number | null
+          tournament_id: string
+          total_points: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          display_name?: string | null
+          games_played?: number
+          id?: string
+          rank?: number | null
+          tournament_id: string
+          total_points?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          display_name?: string | null
+          games_played?: number
+          rank?: number | null
+          total_points?: number
+          updated_at?: string
+          wins?: number
+        }
+        Relationships: []
+      }
+      tournaments: {
+        Row: {
+          business_id: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          end_date: string
+          id: string
+          max_participants: number | null
+          name: string
+          prize_description: string | null
+          prize_value: number | null
+          rules: string | null
+          start_date: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          max_participants?: number | null
+          name: string
+          prize_description?: string | null
+          prize_value?: number | null
+          rules?: string | null
+          start_date: string
+          status?: string
+        }
+        Update: {
+          currency?: string | null
+          description?: string | null
+          end_date?: string
+          max_participants?: number | null
+          name?: string
+          prize_description?: string | null
+          prize_value?: number | null
+          rules?: string | null
+          start_date?: string
+          status?: string
+        }
+        Relationships: []
       }
     }
     Enums: {

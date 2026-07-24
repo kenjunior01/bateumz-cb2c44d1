@@ -3,8 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Sparkles, X, ChevronRight, PartyPopper, ShieldCheck, Zap, Trophy } from "lucide-react";
 import SocialRaffleEntry from "@/components/SocialRaffleEntry";
-import PayPalProvider from "@/components/payments/PayPalProvider";
-import PayPalCheckout from "@/components/payments/PayPalCheckout";
+import PaymentGatewaySelector from "@/components/payments/PaymentGatewaySelector";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatMoney, formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
@@ -422,7 +421,7 @@ const RaffleDetail = () => {
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                    <span>PayPal Buyer Protection · 256-bit encryption</span>
+                    <span>Comprador protegido · Criptografia 256-bit</span>
                   </div>
                 </div>
               )}
@@ -481,23 +480,20 @@ const RaffleDetail = () => {
 
                       {!user ? (
                         <Button className="w-full h-12" onClick={() => navigate("/login")}>
-                          Sign in to pay with PayPal
+                          Sign in to pay
                         </Button>
                       ) : (
-                        <PayPalProvider currency={(currency as any)}>
-                          <PayPalCheckout
-                            raffleId={raffle.id}
-                            quantity={selectedNumbers.length}
-                            ticketNumbers={selectedNumbers}
-                            onSuccess={onPayPalSuccess}
-                            disabled={paid}
-                          />
-                        </PayPalProvider>
+                        <PaymentGatewaySelector
+                          raffleId={raffle.id}
+                          quantity={selectedNumbers.length}
+                          ticketNumbers={selectedNumbers}
+                          amount={totalPrice}
+                          currency={currency}
+                          description={`Raffle: ${raffle.title}`}
+                          onSuccess={onPayPalSuccess}
+                          disabled={paid}
+                        />
                       )}
-
-                      <p className="text-[10px] text-muted-foreground text-center mt-3">
-                        Pay with PayPal balance, credit / debit card, or bank — no PayPal account required.
-                      </p>
                     </motion.div>
                   )}
 

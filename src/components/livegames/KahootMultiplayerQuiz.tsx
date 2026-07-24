@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Clock, Trophy, Zap, Check, X, Users, Play, Crown, ArrowRight } from "lucide-react";
+import { Brain, Clock, Trophy, Zap, Check, X, Users, Play, Crown, ArrowRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import confetti from "canvas-confetti";
 import {
   createQuizGame, addQuizQuestion, setQuizStatus, submitQuizAnswer,
@@ -200,7 +201,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
             <span className="text-xs text-muted-foreground">{questions.length} perguntas</span>
           </div>
 
-          {/* Add question form */
           <Card>
             <CardContent className="space-y-3">
               <Input
@@ -236,7 +236,7 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
             </CardContent>
           </Card>
 
-          {/* Question list */}
+          
           {questions.length > 0 && (
             <div className="space-y-2">
               {questions.map((q, i) => (

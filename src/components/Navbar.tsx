@@ -51,7 +51,7 @@ const Navbar = () => {
         { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Live chat and polls") },
         { label: rt("nav.winners", "Winners History"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Completed raffles") },
         { label: rt("nav.transparency", "Transparency"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Blockchain verification") },
-        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives happening now") },,
+        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives happening now") },
       ],
     },
     {

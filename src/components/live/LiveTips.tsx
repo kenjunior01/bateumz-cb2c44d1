@@ -113,7 +113,7 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Amount selection */
+          {/* Amount selection */}
           <div>
             <Label className="text-xs text-muted-foreground mb-2 block">Escolha o valor</Label>
             <div className="grid grid-cols-3 gap-2">

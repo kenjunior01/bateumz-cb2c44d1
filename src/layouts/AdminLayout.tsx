@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap, UserCog, MapPin
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -28,11 +28,18 @@ const items = [
   { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Gamification", url: "/admin/games", icon: Zap },
   { title: "Regional Branding", url: "/admin/regional-branding", icon: Palette },
+  { title: "Regional Dashboard", url: "/admin/regional-dashboard", icon: Globe },
+];
+
+const regionalItems = [
+  { title: "Regional Managers", url: "/admin/regional-managers", icon: UserCog },
+  { title: "Regional Revenue", url: "/admin/regional-revenue", icon: DollarSign },
+  { title: "Regional Config", url: "/admin/regional-config", icon: MapPin },
 ];
 
 const superadminItems = [
   { title: "Co-founders", url: "/admin/co-founders", icon: Crown },
-  { title: "Regional Revenue", url: "/admin/regional-revenue", icon: Globe },
+  { title: "Super Dashboard", url: "/admin/super-dashboard", icon: Shield },
 ];
 
 function AdminSidebar() {
@@ -75,6 +82,26 @@ function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {(role === "admin" || role === "superadmin") && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Regional</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {regionalItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} className="hover:bg-muted/50" activeClassName="bg-primary/10 text-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {role === "superadmin" && (
           <SidebarGroup>

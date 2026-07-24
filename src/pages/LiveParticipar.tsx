@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Radio, Users, Trophy, Gamepad2, Zap, Heart, Gift,
   ChevronLeft, Send, Check, Clock, Star, X, ArrowRight,
-  Crown, Flame, Lock, LogIn, Volume2, VolumeX, Share2, Bell,
+  Crown, Flame, Lock, LogIn, Volume2, VolumeX, Share2, Bell, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,7 @@ const QUICK_GAMES = [
   { emoji: "\u26BD", label: "P\u00EAnaltis", id: "penalties" },
   { emoji: "\u{1F381}", label: "Caixa", id: "mystery" },
   { emoji: "\u{1F3AF}", label: "Quiz", id: "quiz" },
-  { emoji: "\u{1F0CF}", label: "Bingo", id: "bingo" },
+  { emoji: "\u{1F3B0}", label: "Bingo", id: "bingo" },
   { emoji: "\u{1F4AA}", label: "Tap", id: "tap" },
 ];
 
@@ -92,7 +92,7 @@ const SpectatorBingo = ({ scheduledLiveId, liveCode }: { scheduledLiveId?: strin
 
       {!card ? (
         <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-          <div className="text-4xl mb-3">\u{1F0CF}</div>
+          <div className="text-4xl mb-3">🃏</div>
           <p className="text-sm text-muted-foreground mb-4">
             {game
               ? "Gere sua cart\u00F3ria e jogue em tempo real!"
@@ -157,7 +157,7 @@ const SpectatorBingo = ({ scheduledLiveId, liveCode }: { scheduledLiveId?: strin
             onClick={handleBingo}
             className="w-full py-3 text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-xl"
           >
-            \u{1F0CF} GRITAR BINGO!
+            GRITAR BINGO!
           </Button>
         </div>
       )}
@@ -443,7 +443,7 @@ const LiveParticipar = () => {
             {/* CHAT PANEL */}
             {activePanel === "chat" && (
               <motion.div
-n                key="chat"
+                key="chat"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
@@ -478,7 +478,7 @@ n                key="chat"
                           <>
                             {msg.is_highlighted && msg.tip_amount > 0 && (
                               <Badge className="bg-amber-500 text-white text-[8px] border-0 mb-1 px-1.5 rounded-full">
-                                \u{1F4B0} ${msg.tip_amount.toFixed(2)}
+                                $${msg.tip_amount.toFixed(2)}
                               </Badge>
                             )}
                             <div className="flex items-start gap-2">

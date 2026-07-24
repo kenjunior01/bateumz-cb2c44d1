@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getNotifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount, type LiveNotification } from "@/lib/livePlatform";
+import { getNotifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount, subscribeNotifications, type LiveNotification } from "@/lib/livePlatform";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -39,7 +39,6 @@ const NotificationBell = () => {
   useEffect(() => { load(); }, [user]);
   useEffect(() => {
     if (!user) return () => {};
-    const { subscribeNotifications } = require("@/lib/livePlatform");
     const unsub = subscribeNotifications(() => load());
     return unsub;
   }, [user]);

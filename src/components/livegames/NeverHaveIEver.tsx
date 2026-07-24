@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Hand, ThumbsUp, ThumbsDown, Shuffle, Plus, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@//components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -27,11 +27,11 @@ const DEFAULT_STATEMENTS = [
   "Já tentou cantar uma música alta e errou feio",
   "Já postou algo no Story e arrependeu 1 minuto depois",
   "Já dormiu e perdeu a parada do ônibus",
-  "Já mandou "te amo" por acidente no grupo de trabalho",
+  'Já mandou "te amo" por acidente no grupo de trabalho',
   "Já foi a uma festa só pela comida",
   "Já chorou com um comercial de TV",
   "Já usou a mesma roupa 3 dias seguidos",
-  "Já falou que ia dormir e ficou no celular atés 4h",
+  "Já falou que ia dormir e ficou no celular até 4h",
   "Já deu uma desculpa ridícula para chegar atrasado",
   "Já esqueceu o nome de alguém no meio da conversa",
   "Já se perdeu num lugar que já tinha ido antes",

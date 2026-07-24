@@ -90,7 +90,7 @@ const ChallengeRoulette = () => {
       const startAngle = i * arc - Math.PI / 2;
       const endAngle = startAngle + arc;
 
-n      ctx.beginPath();
+        ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, r, startAngle, endAngle);
       ctx.closePath();
@@ -235,7 +235,7 @@ n      ctx.beginPath();
 
       {selectedId && (
         <div className="grid lg:grid-cols-2 gap-4">
-          {/* Wheel */}
+          
           <Card>
             <CardContent className="flex flex-col items-center py-6">
               <canvas ref={canvasRef} width={320} height={320} className="max-w-full" />
@@ -260,7 +260,7 @@ n                onClick={spin}
             </CardContent>
           </Card>
 
-          {/* Manage segments */}
+          
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold">Desafios ({segments.length})</h4>
@@ -269,7 +269,7 @@ n                onClick={spin}
               </Button>
             </div>
 
-            {/* Add challenge */
+            {/* Add challenge */}
             <div className="flex gap-1.5">
               <Input
                 value={newChallenge.text}
@@ -290,7 +290,7 @@ n                onClick={spin}
               </Button>
             </div>
 
-            {/* Segment list */}
+            
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {segments.map((seg) => (
                 <div key={seg.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border group">

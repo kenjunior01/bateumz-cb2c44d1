@@ -238,7 +238,7 @@ export default function MillionaireGame({ gameId: propGameId, onComplete }: Prop
     return safeAmount;
   };
 
-  const useLifeline = (type: string) => {
+  const handleLifeline = (type: string) => {
     if (lifelinesUsed[type] || answered) return;
     setLifelinesUsed(prev => ({ ...prev, [type]: true }));
     
@@ -399,7 +399,7 @@ export default function MillionaireGame({ gameId: propGameId, onComplete }: Prop
               <h3 className="text-xs font-black uppercase tracking-widest opacity-50 mb-4">Ajudas Disponíveis</h3>
               <div className="grid grid-cols-3 gap-3">
                 <button 
-                  onClick={() => useLifeline('50_50')}
+                  onClick={() => handleLifeline('50_50')}
                   disabled={lifelinesUsed['50_50'] || answered}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${lifelinesUsed['50_50'] ? 'opacity-30 grayscale border-white/10' : 'border-primary/30 bg-primary/5 hover:bg-primary/20'}`}
                 >

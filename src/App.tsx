@@ -61,6 +61,7 @@ import ContestDetail from "./pages/ContestDetail.tsx";
 import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
 import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
 import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";
+import AdminRegionalManagers from "./pages/admin/AdminRegionalManagers.tsx";
 import AdminPlans from "./pages/admin/AdminPlans.tsx";
 import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
@@ -109,11 +110,8 @@ import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
-import NotificationBell from "./components/live/NotificationBell.tsx";
 
 // New live entertainment pages
-import LivesAgora from "./pages/LivesAgora.tsx";
-import LiveParticipar from "./pages/LiveParticipar.tsx";
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
 import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
@@ -256,6 +254,7 @@ function AnimatedRoutes() {
             <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
             <Route path="plans" element={<AdminPlans />} />
             <Route path="regional-config" element={<RegionalCEODashboard />} />
+            <Route path="regional-managers" element={<AdminRegionalManagers />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

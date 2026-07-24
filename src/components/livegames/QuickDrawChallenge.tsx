@@ -65,8 +65,23 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
     return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
   };
 
-  const startDraw = (e: React.TouchEvent | React.MouseEvent) => { setDrawing(true); const p = getPos(e); ctxRef.current?.beginPath(); ctxRef.current?.moveTo(p.x, p.y); };
-  const draw = (e: React.TouchEvent | React.MouseEvent) => { if (!drawing) return; const p = getPos(e); ctxRef.current?.lineTo(p.x, p.y); ctxRef.current?.strokeStyle = color; ctxRef.current?.lineWidth = brushSize; ctxRef.current?.stroke(); };
+  const startDraw = (e: React.TouchEvent | React.MouseEvent) => {
+    setDrawing(true);
+    const p = getPos(e);
+    const ctx = ctxRef.current;
+    if (ctx) { ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+  };
+  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!drawing) return;
+    const p = getPos(e);
+    const ctx = ctxRef.current;
+    if (ctx) {
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.stroke();
+    }
+  };
   const stopDraw = () => setDrawing(false);
 
   const submitGuess = () => {

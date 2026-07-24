@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,6 +15,20 @@ import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/liveg
 import PenaltyShootout from "@/components/livegames/PenaltyShootout";
 import WorldCupPredictor from "@/components/livegames/WorldCupPredictor";
 import EnhancedMillionaireGame from "@/components/livegames/EnhancedMillionaireGame";
+import KahootMultiplayerQuiz from "@/components/livegames/KahootMultiplayerQuiz";
+import LiveBingo from "@/livegames/LiveBingo";
+import ChallengeRoulette from "@/livegames/ChallengeRoulette";
+import VSDuelArena from "@/components/livegames/VSDuelArena";
+import SpeedReaction from "@/components/livegames/SpeedReaction";
+import TruthOrDare from "@/components/livegames/TruthOrDare";
+import MemoryChallenge from "@/components/livegames/MemoryChallenge";
+import PunishmentWheel from "@/components/livegames/PunishmentWheel";
+import BattleOfKnowledge from "@/components/livegames/BattleOfKnowledge";
+import GuessTheEmoji from "@/components/livegames/GuessTheEmoji";
+import QuickDrawChallenge from "@/components/livegames/QuickDrawChallenge";
+import HotPotatoGame from "@/components/livegames/HotPotatoGame";
+import NumberGuessBattle from "@/components/livegames/NumberGuessBattle";
+import ChaosChallenge from "@/components/livegames/ChaosChallenge";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -27,7 +41,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "penalty" | "worldcup" | "millionaire";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "penalty" | "worldcup" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos";
 
 interface SavedWheelGame {
   id: string;
@@ -57,6 +71,20 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "penalty", label: "Penalty Shootout", icon: Target, emoji: "🎯", desc: "Batalha de pênaltis - chute e defenda para ganhar!", grad: "from-yellow-500 to-orange-500" },
   { id: "worldcup", label: "World Cup Predictor", icon: Globe, emoji: "🌍", desc: "Adivinhe os resultados do Mundial e ganhe pontos!", grad: "from-blue-500 to-cyan-500" },
   { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500" },
+  { id: "kahoot", label: "Quiz ao Vivo", icon: Brain, emoji: "🎯", desc: "Quiz multiplayer — a audiência joga em tempo real!", grad: "from-sky-500 to-indigo-600" },
+  { id: "bingo", label: "Bingo ao Vivo", icon: Trophy, emoji: "🎱", desc: "Cartão virtual com números sorteados em tempo real!", grad: "from-emerald-500 to-teal-600" },
+  { id: "challenge", label: "Roleta de Desafios", icon: RotateCcw, emoji: "🎭", desc: "Gire a roleta e cuma o desafio sorteado ao vivo!", grad: "from-fuchsia-500 to-pink-500" },
+  { id: "vsduel", label: "Arena de Duelo VS", icon: Swords, emoji: "⚔️", desc: "Duelo 1v1: reação, matemática e palavras ao vivo!", grad: "from-red-500 to-orange-600" },
+  { id: "speed", label: "Duelo de Velocidade", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido? Teste de reflexo 1v1!", grad: "from-cyan-500 to-blue-600" },
+  { id: "truthordare", label: "Verdade ou Desafio", icon: Heart, emoji: "🔥", desc: "Verdades picantes e desafios engraçados ao vivo!", grad: "from-rose-500 to-red-600" },
+  { id: "memory", label: "Jogo da Memória VS", icon: Brain, emoji: "🧠", desc: "Batalha de pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600" },
+  { id: "punishment", label: "Roleta de Castigos", icon: Skull, emoji: "💀", desc: "Gire a roleta e cumpra o castigo sorteado!", grad: "from-red-600 to-rose-700" },
+  { id: "boknowledge", label: "Batalha de Conhecimentos", icon: Brain, emoji: "📚", desc: "Trivia VS com bônus de streak — 10 perguntas!", grad: "from-cyan-500 to-purple-600" },
+  { id: "guessEmoji", label: "Adivinhe o Emoji", icon: SmilePlus, emoji: "😎", desc: "Decifre a frase a partir dos emojis!", grad: "from-yellow-500 to-amber-600" },
+  { id: "quickdraw", label: "Desenho Rápido", icon: Pencil, emoji: "🎨", desc: "Desenhe e deixe o público adivinhar a palavra!", grad: "from-emerald-500 to-teal-600" },
+  { id: "hotpotato", label: "Batata Quente", icon: Bomb, emoji: "💣", desc: "Passe a batata — quem tiver com ela quando explodir, sai!", grad: "from-orange-500 to-red-600" },
+  { id: "numguess", label: "Adivinha o Número VS", icon: Hash, emoji: "🔢", desc: "Duelo — quem adivinha o número secreto primeiro?", grad: "from-violet-500 to-fuchsia-600" },
+  { id: "chaos", label: "Desafio Caótico", icon: Shuffle, emoji: "🌪️", desc: "Desafios aleatórios contra o relógio: físico, mental, talento!", grad: "from-rose-500 to-pink-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -546,6 +574,76 @@ const LiveHub = () => {
               {active === "millionaire" && (
                 <motion.div key="millionaire" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <EnhancedMillionaireGame />
+                </motion.div>
+              )}
+              {active === "kahoot" && (
+                <motion.div key="kahoot" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <KahootMultiplayerQuiz scheduledLiveId={undefined} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "bingo" && (
+                <motion.div key="bingo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <LiveBingo liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "challenge" && (
+                <motion.div key="challenge" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ChallengeRoulette />
+                </motion.div>
+              )}
+              {active === "vsduel" && (
+                <motion.div key="vsduel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <VSDuelArena onScore={recordScore("Arena de Duelo VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "speed" && (
+                <motion.div key="speed" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <SpeedReaction onScore={recordScore("Duelo de Velocidade")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "truthordare" && (
+                <motion.div key="truthordare" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TruthOrDare onScore={recordScore("Verdade ou Desafio")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "memory" && (
+                <motion.div key="memory" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <MemoryChallenge onScore={recordScore("Jogo da Memória VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "punishment" && (
+                <motion.div key="punishment" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <PunishmentWheel />
+                </motion.div>
+              )}
+              {active === "boknowledge" && (
+                <motion.div key="boknowledge" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <BattleOfKnowledge onScore={recordScore("Batalha de Conhecimentos")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "guessEmoji" && (
+                <motion.div key="guessEmoji" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GuessTheEmoji onScore={recordScore("Adivinhe o Emoji")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "quickdraw" && (
+                <motion.div key="quickdraw" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <QuickDrawChallenge onScore={recordScore("Desenho Rápido")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "hotpotato" && (
+                <motion.div key="hotpotato" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <HotPotatoGame onScore={recordScore("Batata Quente")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "numguess" && (
+                <motion.div key="numguess" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <NumberGuessBattle onScore={recordScore("Adivinha o Número VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "chaos" && (
+                <motion.div key="chaos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ChaosChallenge onScore={recordScore("Desafio Caótico")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

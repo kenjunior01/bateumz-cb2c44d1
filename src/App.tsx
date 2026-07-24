@@ -101,11 +101,22 @@ import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.t
 import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
 import OverlayLive from "./pages/OverlayLive.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
+import NotificationBell from "./components/live/NotificationBell.tsx";
+import LivesAgora from "./pages/LivesAgora.tsx";
+import LiveParticipar from "./pages/LiveParticipar.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
+import NotificationBell from "./components/live/NotificationBell.tsx";
+
+// New live entertainment pages
+import LivesAgora from "./pages/LivesAgora.tsx";
+import LiveParticipar from "./pages/LiveParticipar.tsx";
+import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
+import LiveBingo from "./components/livegames/LiveBingo.tsx";
+import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -161,6 +172,8 @@ function AnimatedRoutes() {
           <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
           <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
           <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
+          <Route path="/lives-agora" element={<LivesAgora />} />
+          <Route path="/participar" element={<LiveParticipar />} />
           <Route
             path="/profile"
             element={
@@ -282,6 +295,7 @@ const AppContent = () => {
         <AnimatedRoutes />
         <MascotBuddy />
         <SupportChatbot />
+        <NotificationBell />
         <BottomTabBar />
         <RegionalPreviewBar />
       </BrowserRouter>

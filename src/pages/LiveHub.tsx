@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -29,6 +29,12 @@ import QuickDrawChallenge from "@/components/livegames/QuickDrawChallenge";
 import HotPotatoGame from "@/components/livegames/HotPotatoGame";
 import NumberGuessBattle from "@/components/livegames/NumberGuessBattle";
 import ChaosChallenge from "@/components/livegames/ChaosChallenge";
+import CheckersGame from "@/components/livegames/CheckersGame";
+import LudoGame from "@/components/livegames/LudoGame";
+import ConnectFourGame from "@/components/livegames/ConnectFourGame";
+import BattleshipGame from "@/components/livegames/BattleshipGame";
+import TicTacToeVS from "@/components/livegames/TicTacToeVS";
+import UnoCardGame from "@/components/livegames/UnoCardGame";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -41,7 +47,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "penalty" | "worldcup" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "penalty" | "worldcup" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno";
 
 interface SavedWheelGame {
   id: string;
@@ -85,6 +91,12 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "hotpotato", label: "Batata Quente", icon: Bomb, emoji: "💣", desc: "Passe a batata — quem tiver com ela quando explodir, sai!", grad: "from-orange-500 to-red-600" },
   { id: "numguess", label: "Adivinha o Número VS", icon: Hash, emoji: "🔢", desc: "Duelo — quem adivinha o número secreto primeiro?", grad: "from-violet-500 to-fuchsia-600" },
   { id: "chaos", label: "Desafio Caótico", icon: Shuffle, emoji: "🌪️", desc: "Desafios aleatórios contra o relógio: físico, mental, talento!", grad: "from-rose-500 to-pink-600" },
+  { id: "checkers", label: "Damas", icon: Grid3X3, emoji: "♟️", desc: "Jogo clássico de damas com capturas obrigatórias e promoção a rei!", grad: "from-amber-700 to-red-800" },
+  { id: "ludo", label: "Ludo", icon: Dices, emoji: "🎲", desc: "4 jogadores, dado, peças e muita estratégia para chegar a casa!", grad: "from-emerald-600 to-teal-700" },
+  { id: "connect4", label: "Ligar 4", icon: LayoutGrid, emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer o VS!", grad: "from-blue-500 to-yellow-500" },
+  { id: "battleship", label: "Batalha Naval", icon: Anchor, emoji: "🚢", desc: "Esconda os navios e afunde a frota inimiga!", grad: "from-slate-600 to-blue-900" },
+  { id: "tictactoe", label: "Galo VS", icon: CircleDot, emoji: "✕", desc: "Rápido, com apostas, streaks e modo velocidade!", grad: "from-violet-500 to-pink-500" },
+  { id: "uno", label: "UNO Cartas", icon: Sparkles, emoji: "🃏", desc: "Jogo de cartas clássico com cores, especiais e UNO!", grad: "from-indigo-500 to-purple-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -644,6 +656,36 @@ const LiveHub = () => {
               {active === "chaos" && (
                 <motion.div key="chaos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <ChaosChallenge onScore={recordScore("Desafio Caótico")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "checkers" && (
+                <motion.div key="checkers" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <CheckersGame onScore={recordScore("Damas")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "ludo" && (
+                <motion.div key="ludo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <LudoGame onScore={recordScore("Ludo")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "connect4" && (
+                <motion.div key="connect4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ConnectFourGame onScore={recordScore("Ligar 4")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "battleship" && (
+                <motion.div key="battleship" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <BattleshipGame onScore={recordScore("Batalha Naval")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "tictactoe" && (
+                <motion.div key="tictactoe" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TicTacToeVS onScore={recordScore("Galo VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "uno" && (
+                <motion.div key="uno" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <UnoCardGame onScore={recordScore("UNO Cartas")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

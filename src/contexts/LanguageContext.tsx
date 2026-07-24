@@ -172,11 +172,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.viewHistory": "View full winner history",
     "winners.prizePhoto": "Prize / delivery photo",
 
-    // World Cup banner
-    "worldcup.title": "World Cup 2026",
-    "worldcup.subtitle": "Follow matches, teams, predictions & live games",
-    "worldcup.cta": "Go to Hub",
-    "worldcup.dismiss": "Dismiss",
 
     // Marketplace
     "marketplace.title": "Marketplace",
@@ -331,21 +326,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error": "Error",
     "youWon": "You won",
 
-    // ===== World Cup 2026 =====
-    "worldcup.results": "Resultados",
-    "worldcup.standings": "Classificação",
-    "worldcup.news": "Notícias",
-    "worldcup.stats": "Estatísticas",
-    "worldcup.topScorers": "Melhores Marcadores",
-    "worldcup.assists": "Assistências",
-    "worldcup.matches": "Jogos",
-    "worldcup.groups": "Grupos",
-    "worldcup.teams": "Equipas",
-    "worldcup.schedule": "Calendário",
-    "worldcup.venue": "Estádio",
-    "worldcup.live": "AO VIVO",
-    "worldcup.finished": "Terminado",
-    "worldcup.scheduled": "Agendado",
 
     // ===== Spin Wheel Premium =====
     "wheel.customize": "Personalizar Roda",
@@ -356,7 +336,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "wheel.duration": "Duração do Giro",
     "wheel.save": "Salvar Configurações",
 
-    // ===== World Cup Challenges =====
     "challenge.title": "Desafios da Copa",
     "challenge.predictions": "Previsões",
     "challenge.trivia": "Trivia",
@@ -578,11 +557,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.emptyDesc": "Assim que os primeiros sorteios terminarem, os vencedores aparecerão aqui. Participa já e sê um dos primeiros.",
     "winners.viewHistory": "Ver histórico completo de vencedores",
     "winners.prizePhoto": "Foto do prémio / entrega",
-
-    "worldcup.title": "Copa do Mundo 2026",
-    "worldcup.subtitle": "Acompanhe jogos, equipas, previsões e jogos ao vivo",
-    "worldcup.cta": "Ir para Central",
-    "worldcup.dismiss": "Fechar",
 
     "marketplace.title": "Marketplace",
     "marketplace.subtitle": "Descubra sorteios e concursos incríveis.",
@@ -900,11 +874,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.viewHistory": "Ver histórico completo de vencedores",
     "winners.prizePhoto": "Foto do prêmio / entrega",
 
-    // ===== World Cup banner =====
-    "worldcup.title": "Copa do Mundo 2026",
-    "worldcup.subtitle": "Acompanhe jogos, equipes, previsões e jogos ao vivo",
-    "worldcup.cta": "Ir para a Central",
-    "worldcup.dismiss": "Fechar",
 
     // ===== Marketplace =====
     "marketplace.title": "Marketplace",
@@ -1063,21 +1032,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error": "Erro",
     "youWon": "Você ganhou",
 
-    // ===== World Cup 2026 =====
-    "worldcup.results": "Resultados",
-    "worldcup.standings": "Classificação",
-    "worldcup.news": "Notícias",
-    "worldcup.stats": "Estatísticas",
-    "worldcup.topScorers": "Artilheiros",
-    "worldcup.assists": "Assistências",
-    "worldcup.matches": "Jogos",
-    "worldcup.groups": "Grupos",
-    "worldcup.teams": "Equipes",
-    "worldcup.schedule": "Calendário",
-    "worldcup.venue": "Estádio",
-    "worldcup.live": "AO VIVO",
-    "worldcup.finished": "Encerrado",
-    "worldcup.scheduled": "Agendado",
 
     // ===== Spin Wheel Premium =====
     "wheel.customize": "Personalizar Roleta",
@@ -1088,7 +1042,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "wheel.duration": "Duração do Giro",
     "wheel.save": "Salvar Configurações",
 
-    // ===== World Cup Challenges =====
     "challenge.title": "Desafios da Copa",
     "challenge.predictions": "Previsões",
     "challenge.trivia": "Trivia",
@@ -1313,11 +1266,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.viewHistory": "Ver historial completo de ganadores",
     "winners.prizePhoto": "Foto del premio / entrega",
 
-    // ===== World Cup banner =====
-    "worldcup.title": "Mundial 2026",
-    "worldcup.subtitle": "Sigue partidos, equipos, predicciones y juegos en vivo",
-    "worldcup.cta": "Ir al Centro",
-    "worldcup.dismiss": "Cerrar",
 
     // ===== Marketplace =====
     "marketplace.title": "Marketplace",
@@ -1476,21 +1424,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error": "Error",
     "youWon": "Ganaste",
 
-    // ===== World Cup 2026 =====
-    "worldcup.results": "Resultados",
-    "worldcup.standings": "Clasificación",
-    "worldcup.news": "Noticias",
-    "worldcup.stats": "Estadísticas",
-    "worldcup.topScorers": "Goleadores",
-    "worldcup.assists": "Asistencias",
-    "worldcup.matches": "Partidos",
-    "worldcup.groups": "Grupos",
-    "worldcup.teams": "Equipos",
-    "worldcup.schedule": "Calendario",
-    "worldcup.venue": "Estadio",
-    "worldcup.live": "EN VIVO",
-    "worldcup.finished": "Finalizado",
-    "worldcup.scheduled": "Programado",
 
     // ===== Spin Wheel Premium =====
     "wheel.customize": "Personalizar Ruleta",
@@ -1501,8 +1434,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "wheel.duration": "Duración del Giro",
     "wheel.save": "Guardar Configuración",
 
-    // ===== World Cup Challenges =====
-    "challenge.title": "Desafíos del Mundial",
     "challenge.predictions": "Predicciones",
     "challenge.trivia": "Trivia",
     "challenge.statistics": "Estadísticas",
@@ -1726,11 +1657,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.viewHistory": "Voir l'historique complet des gagnants",
     "winners.prizePhoto": "Photo du prix / livraison",
 
-    // ===== World Cup banner =====
-    "worldcup.title": "Coupe du Monde 2026",
-    "worldcup.subtitle": "Suivez les matchs, les équipes, les pronostics et les jeux en direct",
-    "worldcup.cta": "Aller au Centre",
-    "worldcup.dismiss": "Fermer",
 
     // ===== Marketplace =====
     "marketplace.title": "Marketplace",
@@ -1889,21 +1815,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error": "Erreur",
     "youWon": "Vous avez gagné",
 
-    // ===== World Cup 2026 =====
-    "worldcup.results": "Résultats",
-    "worldcup.standings": "Classement",
-    "worldcup.news": "Actualités",
-    "worldcup.stats": "Statistiques",
-    "worldcup.topScorers": "Meilleurs Buteurs",
-    "worldcup.assists": "Passes décisives",
-    "worldcup.matches": "Matchs",
-    "worldcup.groups": "Groupes",
-    "worldcup.teams": "Équipes",
-    "worldcup.schedule": "Calendrier",
-    "worldcup.venue": "Stade",
-    "worldcup.live": "EN DIRECT",
-    "worldcup.finished": "Terminé",
-    "worldcup.scheduled": "Programmé",
 
     // ===== Spin Wheel Premium =====
     "wheel.customize": "Personnaliser la Roue",
@@ -1914,7 +1825,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "wheel.duration": "Durée du Tour",
     "wheel.save": "Enregistrer les Paramètres",
 
-    // ===== World Cup Challenges =====
     "challenge.title": "Défis de la Coupe du Monde",
     "challenge.predictions": "Prédictions",
     "challenge.trivia": "Quiz",
@@ -2139,11 +2049,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "winners.viewHistory": "विजेताओं का पूरा इतिहास देखें",
     "winners.prizePhoto": "पुरस्कार / डिलीवरी फ़ोटो",
 
-    // ===== World Cup banner =====
-    "worldcup.title": "विश्व कप 2026",
-    "worldcup.subtitle": "मैच, टीमें, भविष्यवाणियां और लाइव गेम्स फ़ॉलो करें",
-    "worldcup.cta": "हब पर जाएं",
-    "worldcup.dismiss": "बंद करें",
 
     // ===== Marketplace =====
     "marketplace.title": "मार्केटप्लेस",
@@ -2302,21 +2207,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error": "त्रुटि",
     "youWon": "आप जीत गए",
 
-    // ===== World Cup 2026 =====
-    "worldcup.results": "परिणाम",
-    "worldcup.standings": "रैंकिंग",
-    "worldcup.news": "समाचार",
-    "worldcup.stats": "आंकड़े",
-    "worldcup.topScorers": "शीर्ष गोलकर्ता",
-    "worldcup.assists": "असिस्ट",
-    "worldcup.matches": "मैच",
-    "worldcup.groups": "समूह",
-    "worldcup.teams": "टीमें",
-    "worldcup.schedule": "शेड्यूल",
-    "worldcup.venue": "स्टेडियम",
-    "worldcup.live": "लाइव",
-    "worldcup.finished": "समाप्त",
-    "worldcup.scheduled": "निर्धारित",
 
     // ===== Spin Wheel Premium =====
     "wheel.customize": "पहिया कस्टमाइज़ करें",
@@ -2327,7 +2217,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "wheel.duration": "घुमाव की अवधि",
     "wheel.save": "सेटिंग्स सहेजें",
 
-    // ===== World Cup Challenges =====
     "challenge.title": "विश्व कप चुनौतियां",
     "challenge.predictions": "भविष्यवाणियां",
     "challenge.trivia": "ट्रिविया",

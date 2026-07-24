@@ -22,7 +22,7 @@ export interface RegionalSettings {
   region_id?: string;
   enable_spin_wheel: boolean;
   enable_millionaire_game: boolean;
-  enable_world_cup_challenges: boolean;
+  enable_challenge_games: boolean;
   enable_predictions: boolean;
   enable_live_games: boolean;
   maintenance_mode: boolean;
@@ -52,7 +52,7 @@ const DEFAULT_BRANDING: RegionalBranding = {
 const DEFAULT_SETTINGS: RegionalSettings = {
   enable_spin_wheel: true,
   enable_millionaire_game: true,
-  enable_world_cup_challenges: true,
+  enable_challenge_games: true,
   enable_predictions: true,
   enable_live_games: true,
   maintenance_mode: false,

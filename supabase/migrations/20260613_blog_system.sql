@@ -51,7 +51,6 @@ CREATE TRIGGER update_blog_posts_updated_at BEFORE UPDATE ON public.blog_posts
 -- Seed some initial categories
 INSERT INTO public.blog_categories (name, slug, description) VALUES
 ('Sorteios & Prêmios', 'sorteios-premios', 'Notícias sobre os maiores sorteios e prêmios do mundo'),
-('Mundial 2026', 'mundial-2026', 'Tudo sobre a Copa do Mundo de 2026'),
 ('Tecnologia & Inovação', 'tecnologia-inovacao', 'As últimas novidades do mundo tech'),
 ('Dicas & Estratégias', 'dicas-estrategias', 'Como aumentar suas chances de ganhar')
 ON CONFLICT (slug) DO NOTHING;

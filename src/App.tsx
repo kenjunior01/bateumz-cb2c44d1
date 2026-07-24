@@ -17,9 +17,7 @@ import { RegionalConfigProvider, useRegionalContext } from "@/hooks/useRegionalC
 import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
 import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
 import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
-import WorldCupCentral from "./pages/WorldCupCentral.tsx";
 import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
-import WorldCupForum from "./pages/WorldCupForum.tsx";
 import EnhancedMillionaireGame from "./components/livegames/EnhancedMillionaireGame.tsx";
 import PrizeWheel from "./components/livegames/PrizeWheel.tsx";
 import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
@@ -101,6 +99,7 @@ import ScheduledLivePage from "./pages/ScheduledLivePage.tsx";
 import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.tsx";
 import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
 import OverlayLive from "./pages/OverlayLive.tsx";
+import CompanyLiveManager from "./pages/dashboard/CompanyLiveManager.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import NotificationBell from "./components/live/NotificationBell.tsx";
 import LivesAgora from "./pages/LivesAgora.tsx";
@@ -133,7 +132,6 @@ function AnimatedRoutes() {
       <PageTransition key={location.pathname}>
         <Routes location={location}>
           <Route path="/" element={<Index />} />
-          <Route path="/mundial" element={<WorldCupCentral />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -154,7 +152,6 @@ function AnimatedRoutes() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
-          <Route path="/forum-mundial" element={<WorldCupForum />} />
           <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
           <Route path="/instant-win" element={<InstantWin />} />
@@ -224,6 +221,7 @@ function AnimatedRoutes() {
             <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
             <Route path="live-studio/:id" element={<LiveStudio />} />
+            <Route path="live-manager" element={<CompanyLiveManager />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route path="/overlay/live/:id" element={<OverlayLive />} />

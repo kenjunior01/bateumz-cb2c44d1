@@ -33,10 +33,6 @@ verify_jwt = true
 [functions.create-admin]
 verify_jwt = true
 
-[functions.calculate-world-cup-points]
-verify_jwt = true
-
-# Public config — no user JWT required
 [functions.paypal-config]
 verify_jwt = false
 

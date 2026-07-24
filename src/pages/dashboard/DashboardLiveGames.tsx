@@ -22,7 +22,6 @@ const GAME_OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: "quiz", label: "Quiz Battle", emoji: "🧠" },
   { id: "mystery", label: "Caixa Misteriosa", emoji: "🎁" },
   { id: "penalty", label: "Penalty Shootout", emoji: "🎯" },
-  { id: "worldcup", label: "World Cup Predictor", emoji: "🌍" },
   { id: "millionaire", label: "Quem Quer Ser Milionário", emoji: "🤑" },
 ];
 

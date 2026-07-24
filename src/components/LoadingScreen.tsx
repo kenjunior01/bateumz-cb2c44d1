@@ -122,6 +122,11 @@ const LoadingScreen = () => {
             transition={{ duration: 0.15 }}
           />
         </motion.div>
+        <motion.div className="flex gap-1.5 mt-5 justify-center">
+          {[0, 1, 2].map((i) => (
+            <motion.div key={i} className="h-2 w-2 rounded-full bg-primary" animate={{ y: [0, -12, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }} />
+          ))}
+        </motion.div>
       </div>
     </motion.div>
   );

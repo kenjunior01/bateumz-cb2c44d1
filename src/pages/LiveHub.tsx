@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Target, Globe, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,8 +12,6 @@ import MysteryBox from "@/components/livegames/MysteryBox";
 import KeywordHunt from "@/components/livegames/KeywordHunt";
 import EmojiBattle from "@/components/livegames/EmojiBattle";
 import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
-import PenaltyShootout from "@/components/livegames/PenaltyShootout";
-import WorldCupPredictor from "@/components/livegames/WorldCupPredictor";
 import EnhancedMillionaireGame from "@/components/livegames/EnhancedMillionaireGame";
 import KahootMultiplayerQuiz from "@/components/livegames/KahootMultiplayerQuiz";
 import LiveBingo from "@/components/livegames/LiveBingo";
@@ -39,6 +37,7 @@ import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderb
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
+import { ParticleBackground } from "@/components/effects";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
 import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
@@ -47,7 +46,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "penalty" | "worldcup" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno";
 
 interface SavedWheelGame {
   id: string;
@@ -74,8 +73,6 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "tap", label: "Tap Battle", icon: Zap, emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot.", grad: "from-amber-500 to-orange-500" },
   { id: "quiz", label: "Quiz Battle", icon: Brain, emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado.", grad: "from-sky-500 to-blue-500" },
   { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500" },
-  { id: "penalty", label: "Penalty Shootout", icon: Target, emoji: "🎯", desc: "Batalha de pênaltis - chute e defenda para ganhar!", grad: "from-yellow-500 to-orange-500" },
-  { id: "worldcup", label: "World Cup Predictor", icon: Globe, emoji: "🌍", desc: "Adivinhe os resultados do Mundial e ganhe pontos!", grad: "from-blue-500 to-cyan-500" },
   { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500" },
   { id: "kahoot", label: "Quiz ao Vivo", icon: Brain, emoji: "🎯", desc: "Quiz multiplayer — a audiência joga em tempo real!", grad: "from-sky-500 to-indigo-600" },
   { id: "bingo", label: "Bingo ao Vivo", icon: Trophy, emoji: "🎱", desc: "Cartão virtual com números sorteados em tempo real!", grad: "from-emerald-500 to-teal-600" },
@@ -340,6 +337,7 @@ const LiveHub = () => {
       {/* Hero — live engagement only */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
+        <ParticleBackground preset="stars" count={25} className="absolute inset-0 pointer-events-none" />
         <div className="relative container mx-auto px-4 py-6 md:py-12">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-xs font-bold mb-3">
@@ -571,16 +569,6 @@ const LiveHub = () => {
                     onScore={recordScore("Batalha de Emojis")}
                     onWinner={(label, votes) => broadcastWinner(label, `Batalha de Emojis · ${votes} votos`)}
                   />
-                </motion.div>
-              )}
-              {active === "penalty" && (
-                <motion.div key="penalty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  {(() => { const C: any = PenaltyShootout; return <C onScore={recordScore("Penalty Shootout")} />; })()}
-                </motion.div>
-              )}
-              {active === "worldcup" && (
-                <motion.div key="worldcup" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  {(() => { const C: any = WorldCupPredictor; return <C onScore={recordScore("World Cup Predictor")} />; })()}
                 </motion.div>
               )}
               {active === "millionaire" && (

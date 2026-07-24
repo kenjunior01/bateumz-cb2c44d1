@@ -319,7 +319,7 @@ export const RegionalCEODashboard: React.FC = () => {
                       className="grid grid-cols-2 gap-2"
                     >
                       <Input
-                        placeholder="Chave (e.g., 'worldcup.title')"
+                        placeholder="Chave (e.g., 'live.title')"
                         value={translation.key}
                         onChange={(e) => handleTranslationChange(index, 'key', e.target.value)}
                       />

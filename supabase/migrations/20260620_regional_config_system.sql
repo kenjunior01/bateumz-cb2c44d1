@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.regional_translations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   region_id uuid NOT NULL REFERENCES public.regions(id) ON DELETE CASCADE,
   language_code varchar(5) NOT NULL, -- e.g., 'pt', 'pt-BR', 'en', 'es'
-  translation_key varchar(255) NOT NULL, -- e.g., 'worldcup.title'
+  translation_key varchar(255) NOT NULL, -- e.g., 'live.title'
   translation_value text NOT NULL,
   is_custom boolean DEFAULT false, -- true if CEO manually edited
   created_at timestamp DEFAULT now(),
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.regional_settings (
   region_id uuid NOT NULL UNIQUE REFERENCES public.regions(id) ON DELETE CASCADE,
   enable_spin_wheel boolean DEFAULT true,
   enable_millionaire_game boolean DEFAULT true,
-  enable_world_cup_challenges boolean DEFAULT true,
+  enable_challenge_games boolean DEFAULT true,
   enable_predictions boolean DEFAULT true,
   enable_live_games boolean DEFAULT true,
   max_concurrent_users integer DEFAULT 10000,

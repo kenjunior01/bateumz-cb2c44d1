@@ -109,6 +109,7 @@ import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
 import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
 import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
 
+import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
@@ -122,7 +123,6 @@ import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useTheme } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -307,7 +307,7 @@ const AppContent = () => {
       <Sonner />
       <BackgroundDecorations />
       <BrowserRouter>
-        {!authLoading && user && <PushNotificationBanner />}
+        <ErrorBoundary fallback={null}>{!authLoading && user && <PushNotificationBanner />}</ErrorBoundary>
         <MobileTopBar />
         <AnimatedRoutes />
         <MascotBuddy />
@@ -331,7 +331,9 @@ const App = () => (
                 <CountryLanguageSync />
                 <PayPalProvider>
                   <AuthProvider>
-                    <AppContent />
+                    <ErrorBoundary>
+                      <AppContent />
+                    </ErrorBoundary>
                   </AuthProvider>
                 </PayPalProvider>
               </RegionalThemeProvider>

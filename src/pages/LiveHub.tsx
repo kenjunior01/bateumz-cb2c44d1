@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -33,6 +33,31 @@ import ConnectFourGame from "@/components/livegames/ConnectFourGame";
 import BattleshipGame from "@/components/livegames/BattleshipGame";
 import TicTacToeVS from "@/components/livegames/TicTacToeVS";
 import UnoCardGame from "@/components/livegames/UnoCardGame";
+import SnakeBattle from "@/components/livegames/SnakeBattle";
+import RockPaperScissors from "@/components/livegames/RockPaperScissors";
+import ColorSequence from "@/components/livegames/ColorSequence";
+import SpaceShooter from "@/components/livegames/SpaceShooter";
+import BallBreaker from "@/components/livegames/BallBreaker";
+import ReactionRace from "@/components/livegames/ReactionRace";
+import QuickMath from "@/components/livegames/QuickMath";
+import MemoryCardsVS from "@/components/livegames/MemoryCardsVS";
+import WordScramble from "@/components/livegames/WordScramble";
+import TicTacToePro from "@/components/livegames/TicTacToePro";
+import GuessNumber100 from "@/components/livegames/GuessNumber100";
+import ColorMatch from "@/components/livegames/ColorMatch";
+import TargetTap from "@/components/livegames/TargetTap";
+import DiceDuel from "@/components/livegames/DiceDuel";
+import PatternMemory from "@/components/livegames/PatternMemory";
+import TriviaFlash from "@/components/livegames/TriviaFlash";
+import Dominoes from "@/components/livegames/Dominoes";
+import MazeRace from "@/components/livegames/MazeRace";
+import SlotsVS from "@/components/livegames/SlotsVS";
+import Match4Grid from "@/components/livegames/Match4Grid";
+import TowerStack from "@/components/livegames/TowerStack";
+import CannonBattle from "@/components/livegames/CannonBattle";
+import SpotDifference from "@/components/livegames/SpotDifference";
+import WordChain from "@/components/livegames/WordChain";
+import NumberTetris from "@/components/livegames/NumberTetris";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -46,7 +71,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris";
 
 interface SavedWheelGame {
   id: string;
@@ -94,6 +119,31 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "battleship", label: "Batalha Naval", icon: Anchor, emoji: "🚢", desc: "Esconda os navios e afunde a frota inimiga!", grad: "from-slate-600 to-blue-900" },
   { id: "tictactoe", label: "Galo VS", icon: CircleDot, emoji: "✕", desc: "Rápido, com apostas, streaks e modo velocidade!", grad: "from-violet-500 to-pink-500" },
   { id: "uno", label: "UNO Cartas", icon: Sparkles, emoji: "🃏", desc: "Jogo de cartas clássico com cores, especiais e UNO!", grad: "from-indigo-500 to-purple-600" },
+  { id: "snakebattle", label: "Batalha de Cobras", icon: Gamepad2, emoji: "🐍", desc: "Duas cobras, um tabuleiro — quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600" },
+  { id: "rps", label: "Pedra Papel Tesoura", icon: Swords, emoji: "✊", desc: "Clássico Jokenpô VS — melhor de 3, 5 ou 7 rounds!", grad: "from-amber-500 to-orange-600" },
+  { id: "colorsequence", label: "Sequência de Cores", icon: Sparkles, emoji: "🟢", desc: "Memorize a sequência de cores e repita — quem vai mais longe?", grad: "from-violet-500 to-fuchsia-600" },
+  { id: "spaceshooter", label: "Nave Espacial VS", icon: Zap, emoji: "🚀", desc: "Destrua naves inimigas — quem faz mais pontos!", grad: "from-slate-500 to-blue-700" },
+  { id: "ballbreaker", label: "Quebra-Bloco VS", icon: Gamepad2, emoji: "🧱", desc: "Destrua todos os blocos — lado a lado, quem limpa primeiro!", grad: "from-red-500 to-orange-600" },
+  { id: "reactionrace", label: "Corrida de Reação", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido ao sinal? Teste de reflexos puro!", grad: "from-yellow-500 to-red-600" },
+  { id: "quickmath", label: "Duelo de Matemática", icon: Brain, emoji: "🧮", desc: "Contas rápidas — quem resolve primeiro marca ponto!", grad: "from-cyan-500 to-blue-700" },
+  { id: "memorycards", label: "Memória VS Cartas", icon: Brain, emoji: "🃏", desc: "Encontre os pares no tabuleiro partilhado — turno a turno!", grad: "from-indigo-500 to-violet-600" },
+  { id: "wordscramble", label: "Palavras Embaralhadas", icon: Shuffle, emoji: "🔤", desc: "Descubra a palavra escondida nas letras misturadas!", grad: "from-rose-500 to-pink-600" },
+  { id: "tictactoepro", label: "Galo PRO", icon: Grid3X3, emoji: "✖", desc: "Galo Ultimate — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700" },
+  { id: "guessnumber100", label: "Adivinha 1 a 100", icon: Hash, emoji: "🔢", desc: "Quente/Frio — quem adivinha o número secreto primeiro?", grad: "from-teal-500 to-cyan-700" },
+  { id: "colormatch", label: "Cor versus Palavra", icon: Palette, emoji: "🎨", desc: "Teste Stroop — identifique a COR do texto, não a palavra!", grad: "from-pink-500 to-rose-700" },
+  { id: "targettap", label: "Alvo Rápido", icon: Target, emoji: "🎯", desc: "Toque nos alvos certos antes que desapareçam!", grad: "from-orange-500 to-red-600" },
+  { id: "diceluel", label: "Duelo de Dados", icon: Dices, emoji: "🎲", desc: "Banco ou Arriscar? Corrida a 100 ou melhor de rounds!", grad: "from-amber-600 to-yellow-600" },
+  { id: "patternmemory", label: "Memória de Padrões", icon: Grid3X3, emoji: "🧩", desc: "Memorize o padrão de células iluminadas e repita!", grad: "from-purple-500 to-violet-700" },
+  { id: "triviaflash", label: "Trivia Flash", icon: Brain, emoji: "❗", desc: "Verdadeiro ou Falso rápido — 20 perguntas, velocidade conta!", grad: "from-emerald-500 to-teal-700" },
+  { id: "dominoes", label: "Dominó", icon: LayoutGrid, emoji: "🎲", desc: "Dominó clássico — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700" },
+  { id: "mazerace", label: "Corrida no Labirinto", icon: Map, emoji: "🧩", desc: "Quem sai do labirinto primeiro? Labirintos aleatórios!", grad: "from-green-600 to-emerald-700" },
+  { id: "slotsvs", label: "Caça-Níqueis VS", icon: Sparkles, emoji: "🎰", desc: "Gire as máquinas — quem acumula mais moedas vence!", grad: "from-amber-500 to-yellow-500" },
+  { id: "match4", label: "Combina 4", icon: Sparkles, emoji: "✨", desc: "Combine 4+ peças iguais — cascatas e combos!", grad: "from-pink-500 to-rose-600" },
+  { id: "towerstack", label: "Torre VS", icon: Layers, emoji: "🏗️", desc: "Empilhe blocos com precisão — quem constrói mais alto!", grad: "from-sky-500 to-blue-600" },
+  { id: "cannonbattle", label: "Batalha de Canhões", icon: Crosshair, emoji: "💣", desc: "Ajuste ângulo e força — destrua o adversário!", grad: "from-red-600 to-orange-700" },
+  { id: "spotdifference", label: "Encontre Diferenças", icon: Search, emoji: "🔍", desc: "Encontre 5 diferenças entre cenas geradas!", grad: "from-amber-500 to-yellow-600" },
+  { id: "wordchain", label: "Corrente de Palavras", icon: Shuffle, emoji: "🔗", desc: "A última letra vira a primeira — não repita palavras!", grad: "from-teal-500 to-emerald-600" },
+  { id: "numbertetris", label: "Números Caindo", icon: LayoutGrid, emoji: "🔢", desc: "Números caem e combinam — estilo Tetris 2048!", grad: "from-orange-600 to-red-700" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -674,6 +724,131 @@ const LiveHub = () => {
               {active === "uno" && (
                 <motion.div key="uno" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <UnoCardGame onScore={recordScore("UNO Cartas")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "snakebattle" && (
+                <motion.div key="snakebattle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <SnakeBattle onScore={recordScore("Batalha de Cobras")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "rps" && (
+                <motion.div key="rps" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <RockPaperScissors onScore={recordScore("Pedra Papel Tesoura")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "colorsequence" && (
+                <motion.div key="colorsequence" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ColorSequence onScore={recordScore("Sequência de Cores")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "spaceshooter" && (
+                <motion.div key="spaceshooter" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <SpaceShooter onScore={recordScore("Nave Espacial VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "ballbreaker" && (
+                <motion.div key="ballbreaker" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <BallBreaker onScore={recordScore("Quebra-Bloco VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "reactionrace" && (
+                <motion.div key="reactionrace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ReactionRace onScore={recordScore("Corrida de Reação")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "quickmath" && (
+                <motion.div key="quickmath" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <QuickMath onScore={recordScore("Duelo de Matemática")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "memorycards" && (
+                <motion.div key="memorycards" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <MemoryCardsVS onScore={recordScore("Memória VS Cartas")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "wordscramble" && (
+                <motion.div key="wordscramble" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <WordScramble onScore={recordScore("Palavras Embaralhadas")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "tictactoepro" && (
+                <motion.div key="tictactoepro" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TicTacToePro onScore={recordScore("Galo PRO")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "guessnumber100" && (
+                <motion.div key="guessnumber100" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GuessNumber100 onScore={recordScore("Adivinha 1 a 100")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "colormatch" && (
+                <motion.div key="colormatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ColorMatch onScore={recordScore("Cor versus Palavra")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "targettap" && (
+                <motion.div key="targettap" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TargetTap onScore={recordScore("Alvo Rápido")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "diceluel" && (
+                <motion.div key="diceluel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <DiceDuel onScore={recordScore("Duelo de Dados")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "patternmemory" && (
+                <motion.div key="patternmemory" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <PatternMemory onScore={recordScore("Memória de Padrões")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "triviaflash" && (
+                <motion.div key="triviaflash" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TriviaFlash onScore={recordScore("Trivia Flash")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "dominoes" && (
+                <motion.div key="dominoes" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <Dominoes onScore={recordScore("Dominó")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "mazerace" && (
+                <motion.div key="mazerace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <MazeRace onScore={recordScore("Corrida no Labirinto")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "slotsvs" && (
+                <motion.div key="slotsvs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <SlotsVS onScore={recordScore("Caça-Níqueis VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "match4" && (
+                <motion.div key="match4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <Match4Grid onScore={recordScore("Combina 4")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "towerstack" && (
+                <motion.div key="towerstack" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <TowerStack onScore={recordScore("Torre VS")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "cannonbattle" && (
+                <motion.div key="cannonbattle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <CannonBattle onScore={recordScore("Batalha de Canhões")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "spotdifference" && (
+                <motion.div key="spotdifference" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <SpotDifference onScore={recordScore("Encontre Diferenças")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "wordchain" && (
+                <motion.div key="wordchain" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <WordChain onScore={recordScore("Corrente de Palavras")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "numbertetris" && (
+                <motion.div key="numbertetris" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <NumberTetris onScore={recordScore("Números Caindo")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

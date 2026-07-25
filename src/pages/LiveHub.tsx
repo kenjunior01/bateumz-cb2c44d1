@@ -149,6 +149,7 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "numbertetris", label: "Números Caindo", icon: LayoutGrid, emoji: "🔢", desc: "Números caem e combinam — estilo Tetris 2048!", grad: "from-orange-600 to-red-700" },
   { id: "pongvs", label: "Pong VS", icon: Gamepad2, emoji: "🏓", desc: "Clássico Pong arcade — 1v1 ou contra o bot, primeiro a 5!", grad: "from-blue-600 to-indigo-700" },
   { id: "whackamole", label: "Bate o Alvo", icon: Target, emoji: "🎯", desc: "Toque nas criaturas que aparecem — quem marca mais pontos em 30s!", grad: "from-emerald-500 to-green-600" },
+  { id: "colorcatch", label: "Pesca Cores", icon: Palette, emoji: "🎨", desc: "Clique nas cores certas o mais rápido possível!", grad: "from-pink-500 to-rose-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -864,6 +865,11 @@ const LiveHub = () => {
               {active === "whackamole" && (
                 <motion.div key="whackamole" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <WhackAMole onScore={recordScore("Bate o Alvo")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "colorcatch" && (
+                <motion.div key="colorcatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ColorCatch onScore={recordScore("Pesca Cores")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

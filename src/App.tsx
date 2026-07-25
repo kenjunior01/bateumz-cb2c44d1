@@ -108,6 +108,7 @@ import LiveParticipar from "./pages/LiveParticipar.tsx";
 import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
 import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
 import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
+import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -238,6 +239,7 @@ function AnimatedRoutes() {
             <Route path="live-studio/:id" element={<LiveStudio />} />
             <Route path="live-manager" element={<CompanyLiveManager />} />
             <Route path="tournaments" element={<DashboardTournaments />} />
+            <Route path="blog" element={<DashboardBlog />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route path="/overlay/live/:id" element={<OverlayLive />} />

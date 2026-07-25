@@ -108,6 +108,7 @@ import LiveParticipar from "./pages/LiveParticipar.tsx";
 import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
 import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
 import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
+import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import MascotBuddy from "./components/MascotBuddy.tsx";

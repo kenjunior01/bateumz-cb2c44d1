@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Timer, Calculator, Send } from "lucide-react";
+import { RotateCcw, Timer, Calculator, Send, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ interface Props {
 type GameState = "idle" | "countdown" | "playing" | "roundResult" | "gameOver";
 type Difficulty = "Fácil" | "Médio" | "Difícil";
 type WrongMode = "retry" | "lose";
+type GameMode = "player" | "bot";
 
 type MathProblem = {
   expression: string;
@@ -153,6 +154,8 @@ function ConfettiParticles({ color }: { color: string }) {
 
 export default function QuickMath({ onScore, liveCode }: Props) {
   const [gameState, setGameState] = useState<GameState>("idle");
+  const [mode, setMode] = useState<GameMode>("player");
+  const [botDifficulty, setBotDifficulty] = useState<Difficulty>("Médio");
   const [currentRound, setCurrentRound] = useState(1);
   const [problem, setProblem] = useState<MathProblem | null>(null);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -171,10 +174,21 @@ export default function QuickMath({ onScore, liveCode }: Props) {
   const [roundStartTime, setRoundStartTime] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiColor, setConfettiColor] = useState("cyan");
+  const [botThinking, setBotThinking] = useState(false);
   const p1Ref = useRef<HTMLInputElement>(null);
   const p2Ref = useRef<HTMLInputElement>(null);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const roundEnded = useRef(false);
+  const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const getP2Name = useCallback(() => (mode === "bot" ? "Computador" : "Jogador 2"), [mode]);
+
+  const clearBotTimeout = useCallback(() => {
+    if (botTimeoutRef.current) {
+      clearTimeout(botTimeoutRef.current);
+      botTimeoutRef.current = null;
+    }
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (timerInterval.current) {
@@ -198,6 +212,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             roundEnded.current = true;
             setRoundResult({ winner: null, winnerName: null, p1Time: null, p2Time: null, timedOut: true });
             setGameState("roundResult");
+            setBotThinking(false);
             toast.error("Tempo!");
           }
         }
@@ -207,6 +222,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
   );
 
   const startGame = useCallback(() => {
+    clearBotTimeout();
     const firstProblem = generateProblem(1);
     setP1Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
     setP2Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
@@ -220,9 +236,10 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setP2Wrong(false);
     setRoundResult(null);
     setCountdown(COUNTDOWN_SECONDS);
+    setBotThinking(false);
     roundEnded.current = false;
     setGameState("countdown");
-  }, []);
+  }, [clearBotTimeout]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -248,8 +265,9 @@ export default function QuickMath({ onScore, liveCode }: Props) {
       if (roundEnded.current) return;
       roundEnded.current = true;
       clearTimer();
+      clearBotTimeout();
       const elapsed = (Date.now() - roundStartTime) / 1000;
-      const name = player === 1 ? "Jogador 1" : "Jogador 2";
+      const name = player === 1 ? "Jogador 1" : getP2Name();
       const setStats = player === 1 ? setP1Stats : setP2Stats;
       const otherSetStats = player === 1 ? setP2Stats : setP1Stats;
 
@@ -278,14 +296,16 @@ export default function QuickMath({ onScore, liveCode }: Props) {
       setTimeout(() => setShowConfetti(false), 1500);
 
       setGameState("roundResult");
+      setBotThinking(false);
       toast.success(`${name} — Correto! (${elapsed.toFixed(1)}s)`);
     },
-    [clearTimer, roundStartTime]
+    [clearTimer, clearBotTimeout, roundStartTime, getP2Name]
   );
 
   const handleSubmit = useCallback(
     (player: 1 | 2) => {
       if (gameState !== "playing" || !problem || roundEnded.current) return;
+      if (mode === "bot" && player === 2) return;
       if (player === 1 && p1Locked) return;
       if (player === 2 && p2Locked) return;
 
@@ -327,8 +347,9 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             if (!roundEnded.current) {
               roundEnded.current = true;
               clearTimer();
+              clearBotTimeout();
               const otherPlayer = player === 1 ? 2 : 1;
-              const otherName = otherPlayer === 1 ? "Jogador 1" : "Jogador 2";
+              const otherName = otherPlayer === 1 ? "Jogador 1" : getP2Name();
               const elapsed = (Date.now() - roundStartTime) / 1000;
               const otherSetStats = otherPlayer === 1 ? setP1Stats : setP2Stats;
               const loserSetStats = player === 1 ? setP2Stats : setP1Stats;
@@ -354,21 +375,54 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               setTimeout(() => setShowConfetti(false), 1500);
 
               setGameState("roundResult");
+              setBotThinking(false);
               toast.success(`${otherName} — Correto! (${elapsed.toFixed(1)}s)`);
             }
           }
         }
       }
     },
-    [gameState, problem, p1Input, p2Input, p1Locked, p2Locked, wrongMode, handleWin, clearTimer, roundStartTime]
+    [gameState, problem, p1Input, p2Input, p1Locked, p2Locked, wrongMode, handleWin, clearTimer, clearBotTimeout, roundStartTime, mode, getP2Name]
   );
+
+  /* Bot AI effect */
+  useEffect(() => {
+    if (gameState !== "playing" || mode !== "bot" || !problem || roundEnded.current) return;
+
+    const botConfig: Record<Difficulty, { avgMs: number; wrongPct: number }> = {
+      "Fácil": { avgMs: 1200, wrongPct: 0.15 },
+      "Médio": { avgMs: 700, wrongPct: 0.05 },
+      "Difícil": { avgMs: 400, wrongPct: 0.01 },
+    };
+
+    const config = botConfig[botDifficulty];
+    const reactionMs = Math.max(200, config.avgMs + (Math.random() - 0.5) * config.avgMs * 0.8);
+    const isWrong = Math.random() < config.wrongPct;
+
+    setBotThinking(true);
+
+    botTimeoutRef.current = setTimeout(() => {
+      if (roundEnded.current) return;
+      setBotThinking(false);
+      if (isWrong) return;
+      handleWin(2);
+    }, reactionMs);
+
+    return () => {
+      if (botTimeoutRef.current) {
+        clearTimeout(botTimeoutRef.current);
+        botTimeoutRef.current = null;
+      }
+      setBotThinking(false);
+    };
+  }, [gameState, mode, botDifficulty, problem, handleWin]);
 
   const nextRound = useCallback(() => {
     if (currentRound >= TOTAL_ROUNDS) {
       const p1Score = p1Stats.correct * 10 + (p1Stats.correct > 0 ? Math.max(0, Math.round((timerDuration - p1Stats.totalTime / p1Stats.correct) * 2)) : 0);
       const p2Score = p2Stats.correct * 10 + (p2Stats.correct > 0 ? Math.max(0, Math.round((timerDuration - p2Stats.totalTime / p2Stats.correct) * 2)) : 0);
       onScore?.("Jogador 1", p1Score);
-      onScore?.("Jogador 2", p2Score);
+      onScore?.(getP2Name(), p2Score);
       setGameState("gameOver");
       return;
     }
@@ -383,14 +437,16 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setP1Wrong(false);
     setP2Wrong(false);
     setRoundResult(null);
+    setBotThinking(false);
     roundEnded.current = false;
     setGameState("playing");
     setRoundStartTime(Date.now());
     startTimer(timerDuration);
-  }, [currentRound, p1Stats, p2Stats, timerDuration, onScore, startTimer]);
+  }, [currentRound, p1Stats, p2Stats, timerDuration, onScore, startTimer, getP2Name]);
 
   const resetAll = useCallback(() => {
     clearTimer();
+    clearBotTimeout();
     roundEnded.current = false;
     setGameState("idle");
     setCurrentRound(1);
@@ -405,7 +461,8 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setP2Wrong(false);
     setRoundResult(null);
     setShowConfetti(false);
-  }, [clearTimer]);
+    setBotThinking(false);
+  }, [clearTimer, clearBotTimeout]);
 
   const timerPercent = gameState === "playing" ? (timeLeft / timerDuration) * 100 : 100;
   const timerBarColor = timeLeft > timerDuration * 0.5
@@ -451,7 +508,14 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         >
           <span className="text-pink-500/60 text-xs">✓</span>
           <span className="text-pink-400 text-lg sm:text-xl font-black">{p2Stats.correct}</span>
-          <span className="text-pink-400 font-bold text-sm sm:text-base">Jogador 2</span>
+          {mode === "bot" ? (
+            <span className="text-pink-400 font-bold text-sm sm:text-base flex items-center gap-1">
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:inline">Computador</span>
+            </span>
+          ) : (
+            <span className="text-pink-400 font-bold text-sm sm:text-base">Jogador 2</span>
+          )}
         </motion.div>
       </div>
 
@@ -507,6 +571,73 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               10 rodadas de problemas matemáticos. O primeiro a responder corretamente ganha o ponto!
               A dificuldade aumenta a cada rodada.
             </p>
+
+            {/* Mode Toggle */}
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-white/40 text-xs">Modo de Jogo</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMode("player")}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border",
+                    mode === "player"
+                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
+                      : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                  )}
+                >
+                  👤 vs Jogador
+                </button>
+                <button
+                  onClick={() => setMode("bot")}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border",
+                    mode === "bot"
+                      ? "bg-pink-500/20 text-pink-300 border-pink-500/50"
+                      : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                  )}
+                >
+                  <Bot className="w-4 h-4" />
+                  vs Computador
+                </button>
+              </div>
+            </div>
+
+            {/* Bot Difficulty */}
+            {mode === "bot" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-col items-center gap-2"
+              >
+                <span className="text-white/40 text-xs">Dificuldade do Computador</span>
+                <div className="flex items-center gap-2">
+                  {(["Fácil", "Médio", "Difícil"] as Difficulty[]).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setBotDifficulty(d)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-md text-xs font-semibold transition-all border",
+                        botDifficulty === d
+                          ? d === "Fácil"
+                            ? "bg-green-500/20 text-green-300 border-green-500/50"
+                            : d === "Médio"
+                            ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/50"
+                            : "bg-red-500/20 text-red-300 border-red-500/50"
+                          : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                      )}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-white/30 text-[10px] text-center max-w-xs">
+                  {botDifficulty === "Fácil" && "Reação lenta, 15% de chance de errar"}
+                  {botDifficulty === "Médio" && "Reação média, 5% de chance de errar"}
+                  {botDifficulty === "Difícil" && "Reação rápida, 1% de chance de errar"}
+                </p>
+              </motion.div>
+            )}
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <div className="flex items-center gap-2">
@@ -610,8 +741,8 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               </p>
             </motion.div>
 
-            {/* Player Inputs - Desktop: side by side, Mobile: stacked */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-2">
+            {/* Player Inputs */}
+            <div className={cn("grid gap-3 sm:gap-4 mt-2", mode === "bot" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
               {/* Player 1 */}
               <motion.div
                 className={cn(
@@ -664,66 +795,98 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 </div>
               </motion.div>
 
-              {/* Player 2 */}
-              <motion.div
-                className={cn(
-                  "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
-                  p2Locked
-                    ? "bg-green-500/10 border-green-500/30"
-                    : "bg-pink-950/20 border-pink-500/20"
-                )}
-                animate={p2Wrong ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
-                transition={{ duration: 0.4 }}
-              >
-                <label className="text-pink-400 font-bold text-sm flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-pink-400" />
-                  Jogador 2
-                  {p2Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    ref={p2Ref}
-                    type="number"
-                    value={p2Input}
-                    onChange={(e) => setP2Input(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSubmit(2)}
-                    disabled={p2Locked}
-                    placeholder="Resposta"
-                    className={cn(
-                      "flex-1 bg-white/5 border rounded-lg px-3 py-2 text-white text-lg font-bold",
-                      "placeholder:text-white/20 focus:outline-none focus:ring-2 transition-all",
-                      p2Wrong
-                        ? "border-red-500/50 focus:ring-red-500/30 bg-red-500/10"
-                        : p2Locked
-                        ? "border-green-500/50 bg-green-500/5 opacity-60 cursor-not-allowed"
-                        : "border-pink-500/30 focus:ring-pink-500/30 focus:border-pink-500/50"
+              {/* Player 2 / Bot */}
+              {mode === "bot" ? (
+                <motion.div
+                  className={cn(
+                    "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
+                    p2Locked
+                      ? "bg-green-500/10 border-green-500/30"
+                      : "bg-pink-950/20 border-pink-500/20"
+                  )}
+                  animate={botThinking ? { scale: [1, 1.02, 1] } : {}}
+                  transition={{ duration: 1, repeat: botThinking ? Infinity : 0 }}
+                >
+                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2">
+                    <Bot className="w-4 h-4" />
+                    Computador
+                    {p2Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
+                    {botThinking && !p2Locked && (
+                      <motion.span
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                        className="text-pink-300 text-xs ml-auto"
+                      >
+                        Pensando...
+                      </motion.span>
                     )}
-                  />
-                  <Button
-                    onClick={() => handleSubmit(2)}
-                    disabled={p2Locked || !p2Input}
-                    size="icon"
-                    className={cn(
-                      "shrink-0",
-                      p2Locked
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-pink-500/20 text-pink-300 hover:bg-pink-500/30"
-                    )}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </motion.div>
+                  </label>
+                  <div className="flex items-center justify-center py-2 text-white/20 text-sm">
+                    <Bot className="w-6 h-6 mr-2 text-pink-500/40" />
+                    IA jogando automaticamente
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  className={cn(
+                    "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
+                    p2Locked
+                      ? "bg-green-500/10 border-green-500/30"
+                      : "bg-pink-950/20 border-pink-500/20"
+                  )}
+                  animate={p2Wrong ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
+                  transition={{ duration: 0.4 }}
+                >
+                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-pink-400" />
+                    Jogador 2
+                    {p2Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      ref={p2Ref}
+                      type="number"
+                      value={p2Input}
+                      onChange={(e) => setP2Input(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSubmit(2)}
+                      disabled={p2Locked}
+                      placeholder="Resposta"
+                      className={cn(
+                        "flex-1 bg-white/5 border rounded-lg px-3 py-2 text-white text-lg font-bold",
+                        "placeholder:text-white/20 focus:outline-none focus:ring-2 transition-all",
+                        p2Wrong
+                          ? "border-red-500/50 focus:ring-red-500/30 bg-red-500/10"
+                          : p2Locked
+                          ? "border-green-500/50 bg-green-500/5 opacity-60 cursor-not-allowed"
+                          : "border-pink-500/30 focus:ring-pink-500/30 focus:border-pink-500/50"
+                      )}
+                    />
+                    <Button
+                      onClick={() => handleSubmit(2)}
+                      disabled={p2Locked || !p2Input}
+                      size="icon"
+                      className={cn(
+                        "shrink-0",
+                        p2Locked
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-pink-500/20 text-pink-300 hover:bg-pink-500/30"
+                      )}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-3 mt-1">
-              <div className="flex items-center gap-3 text-xs text-white/40 px-2">
+            <div className={cn("grid gap-3 mt-1 text-xs text-white/40 px-2", mode === "bot" ? "grid-cols-1" : "grid-cols-2")}>
+              <div className="flex items-center gap-3">
                 <span className="text-cyan-400/70">Média: {p1AvgTime}s</span>
                 <span>•</span>
                 <span className="text-cyan-400/70">Streak: {p1Stats.streak}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-white/40 px-2 justify-end">
+              <div className={cn("flex items-center gap-3", mode === "bot" ? "justify-start" : "justify-end")}>
                 <span className="text-pink-400/70">Média: {p2AvgTime}s</span>
                 <span>•</span>
                 <span className="text-pink-400/70">Streak: {p2Stats.streak}</span>
@@ -741,7 +904,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-5 py-6"
           >
-            {/* Show the problem with answer */}
             <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-center">
               <p className="text-2xl sm:text-3xl font-black text-white/60">
                 {problem?.expression} = {problem?.answer}
@@ -804,7 +966,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             <h3 className="text-3xl sm:text-4xl font-black text-white">Fim do Jogo!</h3>
 
             <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-              {/* P1 Final Stats */}
               <motion.div
                 className={cn(
                   "rounded-xl p-4 border text-center",
@@ -825,7 +986,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 </div>
               </motion.div>
 
-              {/* P2 Final Stats */}
               <motion.div
                 className={cn(
                   "rounded-xl p-4 border text-center",
@@ -837,7 +997,10 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <p className="text-pink-400 font-bold text-sm">Jogador 2</p>
+                <p className="text-pink-400 font-bold text-sm flex items-center justify-center gap-1">
+                  {mode === "bot" && <Bot className="w-4 h-4" />}
+                  {getP2Name()}
+                </p>
                 <p className="text-4xl font-black text-white mt-2">{p2Stats.correct}</p>
                 <p className="text-white/40 text-xs mt-1">acertos</p>
                 <div className="mt-3 space-y-1 text-xs text-white/50">
@@ -847,7 +1010,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               </motion.div>
             </div>
 
-            {/* Winner announcement */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -859,7 +1021,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 </p>
               ) : p2Stats.correct > p1Stats.correct ? (
                 <p className="text-2xl font-black text-pink-400">
-                  🏆 Jogador 2 Venceu!
+                  🏆 {getP2Name()} Venceu!
                 </p>
               ) : (
                 <p className="text-2xl font-black text-yellow-400">
@@ -880,7 +1042,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Bottom controls (visible during play) */}
+      {/* Bottom controls */}
       {(gameState === "playing" || gameState === "roundResult") && (
         <div className="flex items-center justify-center gap-3 mt-2">
           <Button

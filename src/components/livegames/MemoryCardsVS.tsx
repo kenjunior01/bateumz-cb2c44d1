@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Timer, Grid3X3 } from 'lucide-react';
+import { RotateCcw, Timer, Grid3X3, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ type GridSize = '4x4' | '4x5';
 type TimerOption = 0 | 60 | 90 | 120;
 type GameState = 'idle' | 'playing' | 'ended';
 type CardStatus = 'hidden' | 'flipping' | 'matched' | 'shaking';
+type GameMode = 'player' | 'bot';
+type BotDifficulty = 'Fácil' | 'Médio' | 'Difícil';
 
 interface CardData {
   id: number;
@@ -44,13 +46,13 @@ type ShapeName =
   | 'lightning';
 
 const SHAPE_DEFS: Record<ShapeName, { color: string; label: string }> = {
-  circle:    { color: '#06b6d4', label: 'C\u00edrculo' },
+  circle:    { color: '#06b6d4', label: 'Círculo' },
   star:      { color: '#eab308', label: 'Estrela' },
   diamond:   { color: '#ec4899', label: 'Diamante' },
-  heart:     { color: '#ef4444', label: 'Cora\u00e7\u00e3o' },
-  triangle:  { color: '#22c55e', label: 'Tri\u00e2ngulo' },
+  heart:     { color: '#ef4444', label: 'Coração' },
+  triangle:  { color: '#22c55e', label: 'Triângulo' },
   square:    { color: '#3b82f6', label: 'Quadrado' },
-  hexagon:   { color: '#a855f7', label: 'Hex\u00e1gono' },
+  hexagon:   { color: '#a855f7', label: 'Hexágono' },
   cross:     { color: '#f97316', label: 'Cruz' },
   moon:      { color: '#6366f1', label: 'Lua' },
   lightning: { color: '#f59e0b', label: 'Raio' },
@@ -332,6 +334,8 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
 export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
   /* ---- State ---- */
   const [gameState, setGameState] = useState<GameState>('idle');
+  const [mode, setMode] = useState<GameMode>('player');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('Médio');
   const [gridSize, setGridSize] = useState<GridSize>('4x4');
   const [timerOption, setTimerOption] = useState<TimerOption>(90);
   const [cards, setCards] = useState<CardData[]>([]);
@@ -342,14 +346,20 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
   const [canFlip, setCanFlip] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; color: string; id: number } | null>(null);
   const [winner, setWinner] = useState<1 | 2 | 'draw' | null>(null);
+  const [botThinking, setBotThinking] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const feedbackIdRef = useRef(0);
+  const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const botMemoryRef = useRef<Map<number, number>>(new Map()); // index -> pairId
+  const isProcessingRef = useRef(false);
 
   const config = GRID_CONFIG[gridSize];
   const totalPairs = config.pairs;
   const matchedCount = cards.filter(c => c.status === 'matched').length / 2;
   const pairsLeft = totalPairs - matchedCount;
+
+  const getP2Name = () => mode === 'bot' ? 'Computador' : 'Jogador 2';
 
   /* ---- Derived ---- */
   const activeGlow =
@@ -359,6 +369,8 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
 
   /* ---- Init game ---- */
   const initGame = useCallback(() => {
+    if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
+    botMemoryRef.current = new Map();
     const shapes = shuffle(ALL_SHAPES).slice(0, totalPairs);
     const deck: CardData[] = [];
     shapes.forEach((shape, pairIdx) => {
@@ -375,6 +387,8 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setFeedback(null);
     setWinner(null);
     setTimeRemaining(timerOption);
+    setBotThinking(false);
+    isProcessingRef.current = false;
     setGameState('playing');
   }, [totalPairs, timerOption]);
 
@@ -399,6 +413,8 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
   const endGame = useCallback(() => {
     setGameState('ended');
     setCanFlip(false);
+    setBotThinking(false);
+    if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
 
     const timeBonus = timerOption > 0 ? timeRemaining : 0;
@@ -408,11 +424,11 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
       onScore?.('Jogador 1', scores[0] * 10 + timeBonus);
     } else if (scores[1] > scores[0]) {
       setWinner(2);
-      onScore?.('Jogador 2', scores[1] * 10 + timeBonus);
+      onScore?.(getP2Name(), scores[1] * 10 + timeBonus);
     } else {
       setWinner('draw');
     }
-  }, [scores, timerOption, timeRemaining, onScore]);
+  }, [scores, timerOption, timeRemaining, onScore, mode]);
 
   useEffect(() => {
     if (gameState === 'playing' && timerOption > 0 && timeRemaining === 0) {
@@ -420,38 +436,267 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     }
   }, [timeRemaining, gameState, timerOption, endGame]);
 
-  /* ---- Keyboard support (keys 1-9 and 0 for 10) ---- */
+  /* ---- Show feedback toast ---- */
+  const showFeedback = useCallback((message: string, color: string) => {
+    const id = ++feedbackIdRef.current;
+    setFeedback({ message, color, id });
+    setTimeout(() => setFeedback(prev => (prev && prev.id === id ? null : prev)), 900);
+  }, []);
+
+  /* ---- Core card click handler (shared by player and bot) ---- */
+  const processFlip = useCallback((
+    index: number,
+    player: 1 | 2,
+    currentCards: CardData[],
+    currentFlipped: number[],
+    currentCanFlip: boolean,
+  ) => {
+    if (!currentCanFlip || gameState !== 'playing' || isProcessingRef.current) return false;
+    const card = currentCards[index];
+    if (card.status !== 'hidden') return false;
+    if (currentFlipped.includes(index)) return false;
+
+    isProcessingRef.current = true;
+    const newFlipped = [...currentFlipped, index];
+    const updated = currentCards.map((c, i) => (i === index ? { ...c, status: 'flipping' as CardStatus } : c));
+    setCards(updated);
+    setFlippedIndices(newFlipped);
+
+    // Remember revealed cards for bot
+    if (player === 1 || mode === 'bot') {
+      botMemoryRef.current.set(index, updated[index].pairId);
+    }
+
+    if (newFlipped.length === 2) {
+      setCanFlip(false);
+      const [a, b] = newFlipped;
+      if (updated[a].pairId === updated[b].pairId) {
+        setTimeout(() => {
+          setCards(prev =>
+            prev.map((c, i) => (i === a || i === b ? { ...c, status: 'matched' as CardStatus } : c)),
+          );
+          setScores(prev => {
+            const next = [...prev] as [number, number];
+            next[player - 1] += 1;
+            return next;
+          });
+          showFeedback('Par!', 'bg-green-600 text-white');
+          setFlippedIndices([]);
+          setCanFlip(true);
+          isProcessingRef.current = false;
+        }, 500);
+        return true;
+      } else {
+        showFeedback('Não é par', 'bg-red-600 text-white');
+        setTimeout(() => {
+          setCards(prev =>
+            prev.map((c, i) =>
+              i === a || i === b ? { ...c, status: 'shaking' as CardStatus } : c,
+            ),
+          );
+        }, 400);
+        setTimeout(() => {
+          setCards(prev =>
+            prev.map((c, i) =>
+              i === a || i === b ? { ...c, status: 'hidden' as CardStatus } : c,
+            ),
+          );
+          setFlippedIndices([]);
+          setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
+          setCanFlip(true);
+          isProcessingRef.current = false;
+        }, 1000);
+        return true;
+      }
+    }
+    isProcessingRef.current = false;
+    return true;
+  }, [gameState, mode, showFeedback]);
+
+  /* ---- Player card click ---- */
   const handleCardClick = useCallback(
     (index: number) => {
-      if (!canFlip || gameState !== 'playing') return;
-      const card = cards[index];
-      if (card.status !== 'hidden') return;
-      if (flippedIndices.includes(index)) return;
+      if (mode === 'bot' && currentPlayer === 2) return;
+      processFlip(index, 1, cards, flippedIndices, canFlip);
+    },
+    [mode, currentPlayer, cards, flippedIndices, canFlip, processFlip],
+  );
 
-      const newFlipped = [...flippedIndices, index];
-      const updated = cards.map((c, i) => (i === index ? { ...c, status: 'flipping' as CardStatus } : c));
+  /* ---- Keyboard support ---- */
+  useEffect(() => {
+    if (gameState !== 'playing' || !canFlip) return;
+    function handleKey(e: KeyboardEvent) {
+      if (mode === 'bot' && currentPlayer === 2) return;
+      let idx = -1;
+      if (e.key >= '1' && e.key <= '9') idx = parseInt(e.key) - 1;
+      else if (e.key === '0' && cards.length >= 10) idx = 9;
+      else return;
+      if (idx >= 0 && idx < cards.length) {
+        handleCardClick(idx);
+      }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [gameState, canFlip, cards, handleCardClick, mode, currentPlayer]);
+
+  /* ---- Check if all matched ---- */
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    if (matchedCount === totalPairs) {
+      endGame();
+    }
+  }, [matchedCount, totalPairs, gameState, endGame]);
+
+  /* ---- Bot AI effect ---- */
+  useEffect(() => {
+    if (gameState !== 'playing' || mode !== 'bot' || currentPlayer !== 2 || !canFlip) return;
+
+    setBotThinking(true);
+
+    const botMemoryPct: Record<BotDifficulty, number> = {
+      'Fácil': 0.3,
+      'Médio': 0.6,
+      'Difícil': 0.9,
+    };
+    const memoryChance = botMemoryPct[botDifficulty];
+    const memory = botMemoryRef.current;
+
+    const getAvailableCards = () => {
+      return cards
+        .map((c, i) => ({ index: i, pairId: c.pairId, status: c.status }))
+        .filter(c => c.status === 'hidden');
+    };
+
+    const doBotTurn = () => {
+      if (gameState !== 'playing' || currentPlayer !== 2 || !canFlip) {
+        setBotThinking(false);
+        return;
+      }
+
+      const available = getAvailableCards();
+      if (available.length < 2) {
+        setBotThinking(false);
+        return;
+      }
+
+      // First flip
+      let firstPick: number;
+      let secondPick: number | null = null;
+
+      // Check if bot remembers a matching pair
+      const rememberedPairs = new Map<number, number[]>();
+      for (const [idx, pairId] of memory) {
+        if (cards[idx]?.status === 'hidden') {
+          if (!rememberedPairs.has(pairId)) rememberedPairs.set(pairId, []);
+          rememberedPairs.get(pairId)!.push(idx);
+        }
+      }
+
+      let foundMatch = false;
+      for (const [, indices] of rememberedPairs) {
+        if (indices.length >= 2) {
+          if (Math.random() < memoryChance) {
+            firstPick = indices[0];
+            secondPick = indices[1];
+            foundMatch = true;
+            break;
+          }
+        }
+      }
+
+      // Check if bot remembers one card of a pair and another is available
+      if (!foundMatch) {
+        for (const [pairId, indices] of rememberedPairs) {
+          if (indices.length === 1 && Math.random() < memoryChance) {
+            firstPick = indices[0];
+            // Find the other card of this pair
+            const otherIdx = available.find(
+              c => c.pairId === pairId && c.index !== firstPick
+            );
+            if (otherIdx) {
+              secondPick = otherIdx.index;
+              foundMatch = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!foundMatch) {
+        firstPick = available[Math.floor(Math.random() * available.length)].index;
+      }
+
+      // Flip first card
+      const currentCards = cards;
+      const currentFlipped = flippedIndices;
+
+      if (currentCards[firstPick]?.status !== 'hidden') {
+        setBotThinking(false);
+        return;
+      }
+
+      const newFlipped = [...currentFlipped, firstPick];
+      const updated = currentCards.map((c, i) =>
+        i === firstPick ? { ...c, status: 'flipping' as CardStatus } : c
+      );
       setCards(updated);
       setFlippedIndices(newFlipped);
+      memory.set(firstPick, updated[firstPick].pairId);
 
-      if (newFlipped.length === 2) {
+      // After 800ms, flip second card
+      botTimeoutRef.current = setTimeout(() => {
+        if (gameState !== 'playing' || currentPlayer !== 2) {
+          setBotThinking(false);
+          return;
+        }
+
+        const freshCards = cards; // re-read latest
+        const freshAvailable = freshCards
+          .map((c, i) => ({ index: i, pairId: c.pairId, status: c.status }))
+          .filter(c => c.status === 'hidden');
+
+        let actualSecond: number;
+
+        if (secondPick !== null && freshCards[secondPick]?.status === 'hidden') {
+          actualSecond = secondPick;
+        } else {
+          // Try to find a match with the first card
+          const firstPairId = updated[firstPick].pairId;
+          const matchIdx = freshAvailable.find(c => c.pairId === firstPairId && c.index !== firstPick);
+          if (matchIdx && Math.random() < memoryChance) {
+            actualSecond = matchIdx.index;
+          } else {
+            actualSecond = freshAvailable[Math.floor(Math.random() * freshAvailable.length)].index;
+          }
+        }
+
+        const finalFlipped = [firstPick, actualSecond];
+        const finalUpdated = freshCards.map((c, i) =>
+          i === actualSecond ? { ...c, status: 'flipping' as CardStatus } : c
+        );
+        setCards(finalUpdated);
+        setFlippedIndices(finalFlipped);
+        memory.set(actualSecond, finalUpdated[actualSecond].pairId);
+
         setCanFlip(false);
-        const [a, b] = newFlipped;
-        if (updated[a].pairId === updated[b].pairId) {
+        const [a, b] = finalFlipped;
+        if (finalUpdated[a].pairId === finalUpdated[b].pairId) {
           setTimeout(() => {
             setCards(prev =>
               prev.map((c, i) => (i === a || i === b ? { ...c, status: 'matched' as CardStatus } : c)),
             );
             setScores(prev => {
               const next = [...prev] as [number, number];
-              next[currentPlayer - 1] += 1;
+              next[1] += 1;
               return next;
             });
             showFeedback('Par!', 'bg-green-600 text-white');
             setFlippedIndices([]);
             setCanFlip(true);
+            setBotThinking(false);
           }, 500);
         } else {
-          showFeedback('N\u00e3o \u00e9 par', 'bg-red-600 text-white');
+          showFeedback('Não é par', 'bg-red-600 text-white');
           setTimeout(() => {
             setCards(prev =>
               prev.map((c, i) =>
@@ -466,48 +711,30 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
               ),
             );
             setFlippedIndices([]);
-            setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
+            setCurrentPlayer(1);
             setCanFlip(true);
+            setBotThinking(false);
           }, 1000);
         }
+      }, 800);
+    };
+
+    // Bot thinks for 800ms before first flip
+    botTimeoutRef.current = setTimeout(doBotTurn, 800);
+
+    return () => {
+      if (botTimeoutRef.current) {
+        clearTimeout(botTimeoutRef.current);
+        botTimeoutRef.current = null;
       }
-    },
-    [canFlip, cards, flippedIndices, currentPlayer, gameState],
-  );
-
-  useEffect(() => {
-    if (gameState !== 'playing' || !canFlip) return;
-    function handleKey(e: KeyboardEvent) {
-      let idx = -1;
-      if (e.key >= '1' && e.key <= '9') idx = parseInt(e.key) - 1;
-      else if (e.key === '0' && cards.length >= 10) idx = 9;
-      else return;
-      if (idx >= 0 && idx < cards.length) {
-        handleCardClick(idx);
-      }
-    }
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [gameState, canFlip, cards, handleCardClick]);
-
-  /* ---- Check if all matched ---- */
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-    if (matchedCount === totalPairs) {
-      endGame();
-    }
-  }, [matchedCount, totalPairs, gameState, endGame]);
-
-  /* ---- Show feedback toast ---- */
-  const showFeedback = useCallback((message: string, color: string) => {
-    const id = ++feedbackIdRef.current;
-    setFeedback({ message, color, id });
-    setTimeout(() => setFeedback(prev => (prev && prev.id === id ? null : prev)), 900);
-  }, []);
+      setBotThinking(false);
+    };
+  }, [gameState, mode, currentPlayer, canFlip, cards, flippedIndices, botDifficulty, showFeedback]);
 
   /* ---- Reset to idle ---- */
   const resetAll = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
     setGameState('idle');
     setCards([]);
     setFlippedIndices([]);
@@ -517,6 +744,9 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setCanFlip(false);
     setFeedback(null);
     setWinner(null);
+    setBotThinking(false);
+    botMemoryRef.current = new Map();
+    isProcessingRef.current = false;
   };
 
   /* ---- Format timer ---- */
@@ -534,7 +764,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto select-none">
       {/* ---- Title ---- */}
       <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
-        MEM\u00d3RIA VS CARTAS
+        MEMÓRIA VS CARTAS
       </h2>
 
       {/* ---- Scoreboard ---- */}
@@ -577,7 +807,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
                     : 'text-pink-300 bg-pink-500/10',
                 )}
               >
-                Sua vez
+                {currentPlayer === 2 && mode === 'bot' && botThinking ? 'Computador pensando...' : 'Sua vez'}
               </motion.span>
             </AnimatePresence>
           )}
@@ -593,7 +823,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
                 winner === 1 ? 'text-cyan-300' : 'text-pink-300',
               )}
             >
-              Jogador {winner} Venceu!
+              {winner === 1 ? 'Jogador 1' : getP2Name()} Venceu!
             </motion.span>
           )}
           {gameState === 'ended' && winner === 'draw' && (
@@ -625,13 +855,72 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           >
             {scores[1]}
           </motion.span>
-          <span className="text-pink-300 font-semibold text-sm">Jogador 2</span>
+          {mode === 'bot' ? (
+            <span className="text-pink-300 font-semibold text-sm flex items-center gap-1">
+              <Bot className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Computador</span>
+            </span>
+          ) : (
+            <span className="text-pink-300 font-semibold text-sm">Jogador 2</span>
+          )}
           <div className="w-3 h-3 rounded-full bg-pink-400" />
         </div>
       </div>
 
       {/* ---- Controls row ---- */}
       <div className="w-full flex flex-wrap items-center justify-center gap-2">
+        {/* Mode toggle */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-slate-400 mr-1">Modo:</span>
+          <Button
+            size="sm"
+            variant={mode === 'player' ? 'default' : 'outline'}
+            className={cn(
+              'h-7 px-2.5 text-xs',
+              mode === 'player' && 'bg-slate-700 hover:bg-slate-600',
+            )}
+            disabled={gameState === 'playing'}
+            onClick={() => setMode('player')}
+          >
+            👤 Jogador
+          </Button>
+          <Button
+            size="sm"
+            variant={mode === 'bot' ? 'default' : 'outline'}
+            className={cn(
+              'h-7 px-2.5 text-xs gap-1',
+              mode === 'bot' && 'bg-slate-700 hover:bg-slate-600',
+            )}
+            disabled={gameState === 'playing'}
+            onClick={() => setMode('bot')}
+          >
+            <Bot className="w-3 h-3" />
+            Computador
+          </Button>
+        </div>
+
+        {/* Bot difficulty */}
+        {mode === 'bot' && (
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-slate-400 mr-1">IA:</span>
+            {(['Fácil', 'Médio', 'Difícil'] as BotDifficulty[]).map(d => (
+              <Button
+                key={d}
+                size="sm"
+                variant={botDifficulty === d ? 'default' : 'outline'}
+                className={cn(
+                  'h-7 px-2.5 text-xs',
+                  botDifficulty === d && 'bg-slate-700 hover:bg-slate-600',
+                )}
+                disabled={gameState === 'playing'}
+                onClick={() => setBotDifficulty(d)}
+              >
+                {d}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Grid size toggle */}
         <div className="flex items-center gap-1">
           <Grid3X3 className="w-3.5 h-3.5 text-slate-400" />
@@ -698,11 +987,11 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </motion.div>
       )}
 
-      {/* ---- Card grid ---- */}
+      {/* ---- Idle screen ---- */}
       {gameState === 'idle' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="text-slate-400 text-sm text-center max-w-xs">
-            Jogo de mem\u00f3ria competitivo. Dois jogadores revezam turnos no mesmo tabuleiro.
+            Jogo de memória competitivo. {mode === 'bot' ? 'Desafie o computador!' : 'Dois jogadores revezam turnos no mesmo tabuleiro.'}
             Encontre os pares para marcar pontos!
           </div>
           <Button
@@ -714,6 +1003,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       )}
 
+      {/* ---- Card grid ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div
           className={cn(
@@ -744,7 +1034,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
                 key={card.id}
                 card={card}
                 index={idx}
-                disabled={!canFlip}
+                disabled={!canFlip || (mode === 'bot' && currentPlayer === 2)}
                 onClick={handleCardClick}
               />
             ))}
@@ -752,7 +1042,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       )}
 
-      {/* ---- Footer: restart + pairs left ---- */}
+      {/* ---- Footer ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div className="flex items-center gap-4 mt-1">
           <Button

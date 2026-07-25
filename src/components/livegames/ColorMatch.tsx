@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Timer, Palette } from "lucide-react";
+import { RotateCcw, Timer, Palette, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,14 @@ interface RoundData {
   inkColor: ColorDef;
   choices: ColorDef[];
 }
+
+type BotDifficulty = "facil" | "medio" | "dificil";
+
+const BOT_CONFIG: Record<BotDifficulty, { reactionMs: number; wrongRate: number }> = {
+  facil:  { reactionMs: 800, wrongRate: 0.20 },
+  medio:  { reactionMs: 500, wrongRate: 0.08 },
+  dificil: { reactionMs: 250, wrongRate: 0.02 },
+};
 
 /* ------------------------------------------------------------------ */
 /*  Colour palette (Portuguese names)                                  */
@@ -124,6 +132,11 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
   const [p1Bounce, setP1Bounce] = useState(0);
   const [p2Bounce, setP2Bounce] = useState(0);
 
+  /* bot mode */
+  const [botMode, setBotMode]         = useState(false);
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("medio");
+  const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   /* refs */
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -133,6 +146,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     if (tickRef.current)  { clearInterval(tickRef.current);  tickRef.current = null; }
+    if (botTimerRef.current) { clearTimeout(botTimerRef.current); botTimerRef.current = null; }
     lockedRef.current = false;
   }, []);
 
@@ -192,6 +206,27 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
     return () => clearTimers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, round]);
+
+
+  /* ---- bot AI: trigger bot answer when playing ---- */
+  useEffect(() => {
+    if (phase !== "playing" || !botMode || !roundData) return;
+    const cfg = BOT_CONFIG[botDifficulty];
+    const jitter = (Math.random() - 0.5) * cfg.reactionMs * 0.4; // +-20% jitter
+    const delay = Math.max(150, cfg.reactionMs + jitter);
+    botTimerRef.current = setTimeout(() => {
+      const isWrong = Math.random() < cfg.wrongRate;
+      if (isWrong) {
+        const wrongChoices = roundData.choices.filter(c => c.id !== roundData.inkColor.id);
+        const pick = wrongChoices[Math.floor(Math.random() * wrongChoices.length)];
+        handleAnswer(2, pick.id);
+      } else {
+        handleAnswer(2, roundData.inkColor.id);
+      }
+    }, delay);
+    return () => { if (botTimerRef.current) { clearTimeout(botTimerRef.current); botTimerRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, roundData, botMode, botDifficulty]);
 
   /* ---- handle answer ---- */
   const handleAnswer = useCallback(
@@ -253,7 +288,8 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
     if (round >= TOTAL_ROUNDS) {
       setPhase("gameOver");
       if (p1Score !== p2Score) {
-        const winner = p1Score > p2Score ? "Jogador 1" : "Jogador 2";
+        const p2Name = botMode ? "Computador" : "Jogador 2";
+        const winner = p1Score > p2Score ? "Jogador 1" : p2Name;
         onScore?.(winner, Math.max(p1Score, p2Score));
       }
     } else {

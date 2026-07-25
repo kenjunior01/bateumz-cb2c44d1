@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { RotateCcw, ArrowUp, ArrowDown, Check } from "lucide-react";
+import { RotateCcw, ArrowUp, ArrowDown, Check, Bot } from "lucide-react";
 
 interface GuessEntry {
   player: number;
@@ -14,7 +14,9 @@ interface GuessEntry {
   round: number;
 }
 
-type GameState = "new-round" | "guessing" | "round-result" | "game-over";
+type GameState = "start" | "new-round" | "guessing" | "round-result" | "game-over";
+type BotDifficulty = "Fácil" | "Médio" | "Difícil";
+type GameMode = "player" | "bot";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -52,12 +54,10 @@ function NumberLine({
   return (
     <div className="w-full px-2">
       <div className="relative w-full h-10 rounded-full bg-slate-700/50 overflow-hidden border border-slate-600/30">
-        {/* Dimmed left zone */}
         <div
           className="absolute top-0 left-0 h-full bg-slate-700/70"
           style={{ width: `${leftPct}%` }}
         />
-        {/* Active range */}
         <motion.div
           className="absolute top-0 h-full"
           style={{
@@ -69,15 +69,12 @@ function NumberLine({
           animate={{ left: `${leftPct}%`, width: `${widthPct}%` }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          {/* Glow effect */}
           <div className="absolute inset-0 bg-emerald-400/10 blur-sm" />
         </motion.div>
-        {/* Dimmed right zone */}
         <div
           className="absolute top-0 right-0 h-full bg-slate-700/70"
           style={{ width: `${100 - rightPct}%` }}
         />
-        {/* Secret number marker (only on reveal) */}
         <AnimatePresence>
           {revealSecret && (
             <motion.div
@@ -91,7 +88,6 @@ function NumberLine({
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Tick marks */}
         {[1, 25, 50, 75, 100].map((tick) => {
           const pct = ((tick - MIN_NUMBER) / (MAX_NUMBER - MIN_NUMBER)) * 100;
           return (
@@ -103,7 +99,6 @@ function NumberLine({
           );
         })}
       </div>
-      {/* Labels */}
       <div className="flex justify-between mt-1 px-1">
         <span className="text-xs text-slate-500">{MIN_NUMBER}</span>
         <motion.span
@@ -129,7 +124,9 @@ function NumberLine({
 }
 
 export default function GuessNumber100({ onScore, liveCode }: Props) {
-  const [gameState, setGameState] = useState<GameState>("new-round");
+  const [gameState, setGameState] = useState<GameState>("start");
+  const [mode, setMode] = useState<GameMode>("player");
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("Médio");
   const [currentRound, setCurrentRound] = useState(1);
   const [currentPlayer, setCurrentPlayer] = useState(1);
   const [secretNumber, setSecretNumber] = useState<number>(0);
@@ -141,10 +138,32 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
   const [roundWinner, setRoundWinner] = useState<number | null>(null);
   const [lastHint, setLastHint] = useState<"higher" | "lower" | "correct" | null>(null);
   const [roundAttempts, setRoundAttempts] = useState(0);
+  const [botThinking, setBotThinking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const roundRef = useRef(currentRound);
   roundRef.current = currentRound;
   const [triggerScoreAnim, setTriggerScoreAnim] = useState<number | null>(null);
+  const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Bot binary search state (per round)
+  const botLowRef = useRef(MIN_NUMBER);
+  const botHighRef = useRef(MAX_NUMBER);
+  const botRangeMinRef = useRef(MIN_NUMBER);
+  const botRangeMaxRef = useRef(MAX_NUMBER);
+
+  const getP2Name = () => (mode === "bot" ? "Computador" : "Jogador 2");
+
+  const clearBotTimeout = useCallback(() => {
+    if (botTimeoutRef.current) {
+      clearTimeout(botTimeoutRef.current);
+      botTimeoutRef.current = null;
+    }
+  }, []);
+
+  const getPlayerColor = (player: number) => (player === 1 ? "text-cyan-400" : "text-pink-400");
+  const getPlayerBg = (player: number) => (player === 1 ? "bg-cyan-400/10 border-cyan-400/30" : "bg-pink-400/10 border-pink-400/30");
+  const getPlayerName = (player: number) =>
+    player === 1 ? "Jogador 1" : getP2Name();
 
   const startNewRound = useCallback(() => {
     const newSecret = generateSecretNumber();
@@ -157,25 +176,29 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
     setLastHint(null);
     setRoundAttempts(0);
     setCurrentPlayer(roundRef.current % 2 === 0 ? 2 : 1);
-    setGameState("guessing");
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setBotThinking(false);
+    setGameState("new-round");
+    // Reset bot binary search state
+    botLowRef.current = MIN_NUMBER;
+    botHighRef.current = MAX_NUMBER;
+    botRangeMinRef.current = MIN_NUMBER;
+    botRangeMaxRef.current = MAX_NUMBER;
+    setTimeout(() => {
+      setGameState("guessing");
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }, 800);
   }, []);
 
   const startGame = useCallback(() => {
+    clearBotTimeout();
     setCurrentRound(1);
     setScores([0, 0]);
-    setGameState("new-round");
-    setTimeout(() => startNewRound(), 800);
-  }, [startNewRound]);
+    startNewRound();
+  }, [startNewRound, clearBotTimeout]);
 
-  useEffect(() => {
-    startGame();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleGuess = () => {
-    const guess = parseInt(guessInput, 10);
-    if (isNaN(guess) || guess < MIN_NUMBER || guess > MAX_NUMBER) return;
+  const handleGuess = useCallback((guess: number) => {
+    if (guess < MIN_NUMBER || guess > MAX_NUMBER) return;
+    if (gameState !== "guessing") return;
 
     const attempts = roundAttempts + 1;
     setRoundAttempts(attempts);
@@ -209,6 +232,8 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         return newScores;
       });
       setTriggerScoreAnim(currentPlayer);
+      clearBotTimeout();
+      setBotThinking(false);
       setGameState("round-result");
     } else {
       // Update range
@@ -219,36 +244,142 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
       }
       // Switch player
       setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => {
+        if (currentPlayer === 1) inputRef.current?.focus();
+      }, 50);
     }
+  }, [gameState, roundAttempts, secretNumber, currentPlayer, currentRound, rangeMin, rangeMax, clearBotTimeout]);
+
+  const handlePlayerGuess = () => {
+    const guess = parseInt(guessInput, 10);
+    if (isNaN(guess)) return;
+    handleGuess(guess);
   };
+
+  /* Bot AI effect */
+  useEffect(() => {
+    if (gameState !== "guessing" || mode !== "bot" || currentPlayer !== 2 || roundWinner !== null) return;
+
+    setBotThinking(true);
+
+    const getThinkingDelay = () => {
+      switch (botDifficulty) {
+        case "Fácil": return 1500 + Math.random() * 1000;
+        case "Médio": return 1000 + Math.random() * 500;
+        case "Difícil": return 500 + Math.random() * 300;
+      }
+    };
+
+    botTimeoutRef.current = setTimeout(() => {
+ if (gameState !== "guessing" || currentPlayer !== 2) {
+        setBotThinking(false);
+        return;
+      }
+
+      // Binary search with difficulty offset
+      let low = botLowRef.current;
+      let high = botHighRef.current;
+      let guess: number;
+
+      if (low > high) {
+        // Fallback
+        guess = Math.floor((botRangeMinRef.current + botRangeMaxRef.current) / 2);
+      } else {
+        guess = Math.floor((low + high) / 2);
+      }
+
+      // Apply difficulty offset
+      switch (botDifficulty) {
+        case "Fácil": {
+          const offset = Math.floor(Math.random() * 21) - 10; // ±10
+          guess = guess + offset;
+          break;
+        }
+        case "Médio": {
+          const offset = Math.floor(Math.random() * 7) - 3; // ±3
+          guess = guess + offset;
+          break;
+        }
+        case "Difícil":
+          // Pure binary search, no offset
+          break;
+      }
+
+      // Clamp to valid range
+      guess = Math.max(MIN_NUMBER, Math.min(MAX_NUMBER, guess));
+
+      handleGuess(guess);
+    }, getThinkingDelay());
+
+    return () => {
+      if (botTimeoutRef.current) {
+        clearTimeout(botTimeoutRef.current);
+        botTimeoutRef.current = null;
+      }
+      setBotThinking(false);
+    };
+  }, [gameState, mode, currentPlayer, botDifficulty, handleGuess, roundWinner]);
+
+  // Update bot binary search range based on the latest guess
+  useEffect(() => {
+    if (mode !== "bot" || guesses.length === 0) return;
+    const latestGuess = guesses[guesses.length - 1];
+    if (latestGuess.player !== 2) return;
+    if (latestGuess.hint === "correct") return;
+
+    if (latestGuess.hint === "higher") {
+      if (latestGuess.value >= botLowRef.current) {
+        botLowRef.current = latestGuess.value + 1;
+      }
+    } else if (latestGuess.hint === "lower") {
+      if (latestGuess.value <= botHighRef.current) {
+        botHighRef.current = latestGuess.value - 1;
+      }
+    }
+  }, [guesses, mode]);
+
+  // Also update bot range when player 1 guesses (bot can use that info too)
+  useEffect(() => {
+    if (mode !== "bot" || guesses.length === 0) return;
+    const latestGuess = guesses[guesses.length - 1];
+    if (latestGuess.player !== 1) return;
+    if (latestGuess.hint === "correct") return;
+
+    if (latestGuess.hint === "higher") {
+      if (latestGuess.value >= botRangeMinRef.current) {
+        botRangeMinRef.current = latestGuess.value + 1;
+      }
+    } else if (latestGuess.hint === "lower") {
+      if (latestGuess.value <= botRangeMaxRef.current) {
+        botRangeMaxRef.current = latestGuess.value - 1;
+      }
+    }
+  }, [guesses, mode]);
 
   const handleNextRound = () => {
     if (currentRound >= TOTAL_ROUNDS) {
       setGameState("game-over");
-      const winnerName = scores[0] > scores[1] ? "Jogador 1" : scores[1] > scores[0] ? "Jogador 2" : "Empate";
-      const winnerScore = Math.max(scores[0], scores[1]);
       if (onScore) {
         if (scores[0] > scores[1]) {
           onScore("Jogador 1", scores[0]);
         } else if (scores[1] > scores[0]) {
-          onScore("Jogador 2", scores[1]);
+          onScore(getP2Name(), scores[1]);
         }
       }
     } else {
       setCurrentRound((r) => r + 1);
-      setGameState("new-round");
-      setTimeout(() => startNewRound(), 800);
+      startNewRound();
     }
   };
 
   const handleRestart = () => {
+    clearBotTimeout();
     startGame();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      handleGuess();
+      handlePlayerGuess();
     }
   };
 
@@ -257,11 +388,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
   const p1Bg = "bg-cyan-400/10 border-cyan-400/30";
   const p2Bg = "bg-pink-400/10 border-pink-400/30";
 
-  const getPlayerColor = (player: number) => (player === 1 ? p1Color : p2Color);
-  const getPlayerBg = (player: number) => (player === 1 ? p1Bg : p2Bg);
-  const getPlayerName = (player: number) =>
-    player === 1 ? "Jogador 1" : "Jogador 2";
-
   const roundGuesses = guesses.filter((g) => g.round === currentRound);
 
   return (
@@ -269,7 +395,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
       {/* Scoreboard */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4">
         <div className="flex items-center justify-between">
-          {/* Player 1 Score */}
           <div className="flex flex-col items-center gap-1 min-w-[80px]">
             <span className={cn("text-xs font-medium uppercase tracking-wider", p1Color)}>
               Jogador 1
@@ -285,7 +410,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             </motion.div>
           </div>
 
-          {/* Title */}
           <div className="text-center">
             <h2 className="text-lg font-bold text-white tracking-tight">
               🎯 Adivinha o Número
@@ -298,10 +422,16 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             </Badge>
           </div>
 
-          {/* Player 2 Score */}
           <div className="flex flex-col items-center gap-1 min-w-[80px]">
             <span className={cn("text-xs font-medium uppercase tracking-wider", p2Color)}>
-              Jogador 2
+              {mode === "bot" ? (
+                <span className="flex items-center gap-1">
+                  <Bot className="w-3.5 h-3.5" />
+                  Computador
+                </span>
+              ) : (
+                "Jogador 2"
+              )}
             </span>
             <motion.div
               key={`score-p2-${scores[1]}`}
@@ -316,36 +446,149 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Game Info Bar */}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-xs border",
-            currentPlayer === 1
-              ? "border-cyan-400/50 text-cyan-400"
-              : "border-pink-400/50 text-pink-400"
-          )}
+      {/* START SCREEN */}
+      {gameState === "start" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-6 py-8"
         >
-          Vez de: <span className="font-bold ml-1">{getPlayerName(currentPlayer)}</span>
-        </Badge>
-        <Badge variant="outline" className="text-xs border-emerald-400/50 text-emerald-400">
-          Intervalo: {rangeMin} - {rangeMax}
-        </Badge>
-        <Badge variant="outline" className="text-xs border-slate-500 text-slate-300">
-          Tentativas: {roundAttempts}
-        </Badge>
-      </div>
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            className="text-5xl"
+          >
+            🎲
+          </motion.div>
+
+          <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
+            Adivinha o Número
+          </h1>
+
+          <p className="text-slate-400 text-sm text-center max-w-sm">
+            Adivinhe o número secreto entre 1 e 100! Vence quem acertar primeiro.
+            Quanto menos tentativas, mais pontos!
+          </p>
+
+          {/* Mode Toggle */}
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-white/40 text-xs">Modo de Jogo</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMode("player")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border",
+                  mode === "player"
+                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
+                    : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                )}
+              >
+                👤 vs Jogador
+              </button>
+              <button
+                onClick={() => setMode("bot")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border",
+                  mode === "bot"
+                    ? "bg-pink-500/20 text-pink-300 border-pink-500/50"
+                    : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                )}
+              >
+                <Bot className="w-4 h-4" />
+                vs Computador
+              </button>
+            </div>
+          </div>
+
+          {/* Bot Difficulty */}
+          {mode === "bot" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex flex-col items-center gap-2"
+            >
+              <span className="text-white/40 text-xs">Dificuldade do Computador</span>
+              <div className="flex items-center gap-2">
+                {(["Fácil", "Médio", "Difícil"] as BotDifficulty[]).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setBotDifficulty(d)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-semibold transition-all border",
+                      botDifficulty === d
+                        ? d === "Fácil"
+                          ? "bg-green-500/20 text-green-300 border-green-500/50"
+                          : d === "Médio"
+                          ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/50"
+                          : "bg-red-500/20 text-red-300 border-red-500/50"
+                        : "bg-white/5 text-white/40 border-white/10 hover:bg-white/10"
+                    )}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+              <p className="text-white/30 text-[10px] text-center max-w-xs">
+                {botDifficulty === "Fácil" && "Busca binária com desvio de ±10"}
+                {botDifficulty === "Médio" && "Busca binária com desvio de ±3"}
+                {botDifficulty === "Difícil" && "Busca binária perfeita"}
+              </p>
+            </motion.div>
+          )}
+
+          <Button
+            onClick={startGame}
+            className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-3 font-semibold text-base"
+          >
+            Iniciar Jogo
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Game Info Bar */}
+      {gameState !== "start" && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-xs border",
+              currentPlayer === 1
+                ? "border-cyan-400/50 text-cyan-400"
+                : "border-pink-400/50 text-pink-400"
+            )}
+          >
+            Vez de: <span className="font-bold ml-1">{getPlayerName(currentPlayer)}</span>
+            {mode === "bot" && currentPlayer === 2 && botThinking && (
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="ml-2 text-pink-300"
+              >
+                Pensando...
+              </motion.span>
+            )}
+          </Badge>
+          <Badge variant="outline" className="text-xs border-emerald-400/50 text-emerald-400">
+            Intervalo: {rangeMin} - {rangeMax}
+          </Badge>
+          <Badge variant="outline" className="text-xs border-slate-500 text-slate-300">
+            Tentativas: {roundAttempts}
+          </Badge>
+        </div>
+      )}
 
       {/* Visual Number Line */}
-      <div className="py-2">
-        <NumberLine
-          rangeMin={rangeMin}
-          rangeMax={rangeMax}
-          secretNumber={secretNumber}
-          revealSecret={gameState === "round-result" || gameState === "game-over"}
-        />
-      </div>
+      {gameState !== "start" && (
+        <div className="py-2">
+          <NumberLine
+            rangeMin={rangeMin}
+            rangeMax={rangeMax}
+            secretNumber={secretNumber}
+            revealSecret={gameState === "round-result" || gameState === "game-over"}
+          />
+        </div>
+      )}
 
       {/* New Round Overlay */}
       <AnimatePresence>
@@ -396,53 +639,87 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                 currentPlayer === 1 ? p1Bg : p2Bg
               )}
             >
-              <div
-                className={cn(
-                  "w-3 h-3 rounded-full",
-                  currentPlayer === 1 ? "bg-cyan-400" : "bg-pink-400"
-                )}
-              />
-              <span className={cn("font-semibold", getPlayerColor(currentPlayer))}>
-                {getPlayerName(currentPlayer)}, é a sua vez!
-              </span>
+              {mode === "bot" && currentPlayer === 2 ? (
+                <>
+                  <Bot className={cn("w-4 h-4", "text-pink-400")} />
+                  <span className="text-pink-400 font-semibold flex items-center gap-2">
+                    Computador
+                    {botThinking && (
+                      <motion.span
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                        className="text-pink-300 text-sm"
+                      >
+                        pensando...
+                      </motion.span>
+                    )}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      currentPlayer === 1 ? "bg-cyan-400" : "bg-pink-400"
+                    )}
+                  />
+                  <span className={cn("font-semibold", getPlayerColor(currentPlayer))}>
+                    {getPlayerName(currentPlayer)}, é a sua vez!
+                  </span>
+                </>
+              )}
             </motion.div>
 
-            {/* Input + Button */}
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                type="number"
-                min={MIN_NUMBER}
-                max={MAX_NUMBER}
-                value={guessInput}
-                onChange={(e) => setGuessInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Digite um número (1-100)"
-                className={cn(
-                  "flex-1 bg-slate-800/80 border rounded-lg px-4 py-3 text-white text-lg text-center",
-                  "placeholder:text-slate-500 placeholder:text-sm focus:outline-none focus:ring-2 transition-all",
-                  currentPlayer === 1
-                    ? "border-cyan-500/30 focus:ring-cyan-500/50"
-                    : "border-pink-500/30 focus:ring-pink-500/50"
-                )}
-              />
-              <Button
-                onClick={handleGuess}
-                disabled={
-                  !guessInput ||
-                  parseInt(guessInput, 10) < MIN_NUMBER ||
-                  parseInt(guessInput, 10) > MAX_NUMBER
-                }
-                className={cn(
-                  "px-6 py-3 font-semibold text-base transition-all",
-                  currentPlayer === 1
-                    ? "bg-cyan-600 hover:bg-cyan-500 text-white"
-                    : "bg-pink-600 hover:bg-pink-500 text-white"
-                )}
+            {/* Input + Button (only for human player) */}
+            {!(mode === "bot" && currentPlayer === 2) && (
+              <div className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  type="number"
+                  min={MIN_NUMBER}
+                  max={MAX_NUMBER}
+                  value={guessInput}
+                  onChange={(e) => setGuessInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Digite um número (1-100)"
+                  className={cn(
+                    "flex-1 bg-slate-800/80 border rounded-lg px-4 py-3 text-white text-lg text-center",
+                    "placeholder:text-slate-500 placeholder:text-sm focus:outline-none focus:ring-2 transition-all",
+                    currentPlayer === 1
+                      ? "border-cyan-500/30 focus:ring-cyan-500/50"
+                      : "border-pink-500/30 focus:ring-pink-500/50"
+                  )}
+                />
+                <Button
+                  onClick={handlePlayerGuess}
+                  disabled={
+                    !guessInput ||
+                    parseInt(guessInput, 10) < MIN_NUMBER ||
+                    parseInt(guessInput, 10) > MAX_NUMBER
+                  }
+                  className={cn(
+                    "px-6 py-3 font-semibold text-base transition-all",
+                    currentPlayer === 1
+                      ? "bg-cyan-600 hover:bg-cyan-500 text-white"
+                      : "bg-pink-600 hover:bg-pink-500 text-white"
+                  )}
+                >
+                  Chutar
+                </Button>
+              </div>
+            )}
+
+            {/* Bot thinking display */}
+            {mode === "bot" && currentPlayer === 2 && (
+              <motion.div
+                className="flex items-center justify-center gap-3 py-4"
+                animate={botThinking ? { opacity: [0.5, 1, 0.5] } : {}}
+                transition={{ duration: 1.5, repeat: botThinking ? Infinity : 0 }}
               >
-                Chutar
-              </Button>
-            </div>
+                <Bot className="w-8 h-8 text-pink-500/60" />
+                <span className="text-pink-400/60 text-sm">Computador calculando...</span>
+              </motion.div>
+            )}
 
             {/* Last Hint Animation */}
             <AnimatePresence>
@@ -496,7 +773,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             exit={{ opacity: 0, scale: 0.8 }}
             className="flex flex-col items-center gap-4 py-6"
           >
-            {/* Celebration */}
             <motion.div
               animate={{
                 scale: [1, 1.2, 1],
@@ -542,7 +818,7 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               onClick={handleNextRound}
               className={cn(
                 "px-8 py-3 font-semibold text-base transition-all",
-                currentPlayer === 1
+                roundWinner === 1
                   ? "bg-cyan-600 hover:bg-cyan-500 text-white"
                   : "bg-pink-600 hover:bg-pink-500 text-white"
               )}
@@ -579,7 +855,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             </motion.h2>
 
             <div className="flex items-center gap-8 py-4">
-              {/* Final P1 Score */}
               <motion.div
                 initial={{ x: -30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -603,7 +878,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                 )}
               </motion.div>
 
-              {/* VS */}
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -613,7 +887,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                 VS
               </motion.span>
 
-              {/* Final P2 Score */}
               <motion.div
                 initial={{ x: 30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -624,7 +897,10 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                   scores[1] >= scores[0] && scores[0] !== scores[1] && "ring-2 ring-pink-400/50"
                 )}
               >
-                <span className={cn("text-sm font-medium", p2Color)}>Jogador 2</span>
+                <span className={cn("text-sm font-medium", p2Color, "flex items-center gap-1")}>
+                  {mode === "bot" && <Bot className="w-3.5 h-3.5" />}
+                  {getP2Name()}
+                </span>
                 <span className="text-3xl font-bold text-white">{scores[1]}</span>
                 {scores[1] >= scores[0] && scores[0] !== scores[1] && (
                   <motion.span
@@ -681,7 +957,14 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                     )}
                   >
                     <span className={cn("font-medium", getPlayerColor(entry.player))}>
-                      {getPlayerName(entry.player)}
+                      {entry.player === 2 && mode === "bot" ? (
+                        <span className="flex items-center gap-1">
+                          <Bot className="w-3 h-3" />
+                          Computador
+                        </span>
+                      ) : (
+                        getPlayerName(entry.player)
+                      )}
                     </span>
                     <span className="text-white font-mono font-bold">{entry.value}</span>
                     <div className="flex items-center gap-1">
@@ -719,7 +1002,7 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
       )}
 
       {/* Restart button (visible during game) */}
-      {gameState !== "game-over" && gameState !== "new-round" && (
+      {gameState !== "game-over" && gameState !== "new-round" && gameState !== "start" && (
         <div className="flex justify-center pt-2">
           <Button
             variant="ghost"

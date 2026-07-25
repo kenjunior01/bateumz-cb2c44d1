@@ -108,9 +108,7 @@ import LiveParticipar from "./pages/LiveParticipar.tsx";
 import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
 import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
 import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
-import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 
-import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
@@ -123,7 +121,7 @@ import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.
 import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
 
 const queryClient = new QueryClient();
 
@@ -308,7 +306,7 @@ const AppContent = () => {
       <Sonner />
       <BackgroundDecorations />
       <BrowserRouter>
-        <ErrorBoundary fallback={null}>{!authLoading && user && <PushNotificationBanner />}</ErrorBoundary>
+        {!authLoading && user && <PushNotificationBanner />}
         <MobileTopBar />
         <AnimatedRoutes />
         <MascotBuddy />
@@ -321,6 +319,25 @@ const AppContent = () => {
   );
 };
 
+class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean; error: Error | null}> {
+  constructor(props: {children: ReactNode}) { super(props); this.state = {hasError: false, error: null}; }
+  static getDerivedStateFromError(error: Error) { return {hasError: true, error}; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error('AppErrorBoundary:', error, info); }
+  render() {
+    if (this.state.hasError) return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-6xl">Something went wrong</div>
+          <h2 className="text-2xl font-bold">Algo correu mal</h2>
+          <p className="text-muted-foreground">Ocorreu um erro inesperado. Tente novamente.</p>
+          <Button onClick={() => window.location.reload()} className="gap-2">Recarregar Pagina</Button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <RegionalConfigProvider>
@@ -332,9 +349,9 @@ const App = () => (
                 <CountryLanguageSync />
                 <PayPalProvider>
                   <AuthProvider>
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <AppContent />
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   </AuthProvider>
                 </PayPalProvider>
               </RegionalThemeProvider>

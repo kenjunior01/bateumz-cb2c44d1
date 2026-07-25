@@ -27,9 +27,21 @@ export default function BlogNewsWidget() {
   }, [region]);
 
   const loadLatestPosts = async () => {
-    // Blog posts table not yet available; render empty state.
-    setPosts([]);
-    setLoading(false);
+    try {
+      let query = (supabase as any)
+        .from('blog_posts')
+        .select(`id, title, slug, summary, image_url, published_at, is_trending, view_count, category:blog_categories(name, slug, color)`)
+        .eq('published', true)
+        .order('published_at', { ascending: false })
+        .limit(5);
+
+      const { data, error } = await query;
+      if (!error && data) setPosts(data as BlogPost[]);
+    } catch (e) {
+      // Table may not exist yet, silently fail
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -83,10 +95,11 @@ export default function BlogNewsWidget() {
                   
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-none">
                         {post.category?.name || "Geral"}
                       </Badge>
+                      {(post as any).is_trending && <span className="text-xs">🔥</span>}
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {new Date(post.published_at).toLocaleDateString("pt-BR")}

@@ -433,6 +433,25 @@ export default function Blog() {
         />
       </Helmet>
 
+      {/* JSON-LD: CollectionPage */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: "Blog Bateu - Dicas, Novidades e Conteudo Viral",
+            description: "Descubra dicas, resultados e novidades sobre sorteios online, jogos e muito mais.",
+            url: `${window.location.origin}/blog`,
+            publisher: {
+              "@type": "Organization",
+              name: "Bateu",
+              url: window.location.origin,
+            },
+          }),
+        }}
+      />
+
       <div className="min-h-screen bg-background">
         {/* ============ HERO ============ */}
         <section className="relative overflow-hidden">

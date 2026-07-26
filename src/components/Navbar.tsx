@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,20 +46,28 @@ const Navbar = () => {
       ],
     },
     {
-      label: rt("nav.group.community", "Community"),
+      label: rt("nav.group.entertainment", "Entretenimento"),
       items: [
-        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Live chat and polls") },
-        { label: rt("nav.winners", "Winners History"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Completed raffles") },
-        { label: rt("nav.transparency", "Transparency"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Blockchain verification") },
-        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives happening now") },
+        { label: rt("nav.games", "Todos os Jogos"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc", "50+ jogos online gratis, jogue agora!"), badge: "Hot" },
+        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives a acontecer agora") },
+        { label: rt("nav.lives", "Jogos ao Vivo"), href: "/lives", icon: Radio, desc: rt("nav.lives.desc", "Engajamento ao vivo para empresas") },
+        { label: rt("nav.blog", "Blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc", "Dicas, novidades e conteudo viral"), badge: "Novo" },
       ],
     },
     {
-      label: rt("nav.group.more", "More"),
+      label: rt("nav.group.community", "Comunidade"),
       items: [
-        { label: rt("nav.how", "How It Works"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Quick platform guide") },
-        { label: rt("nav.referral", "Refer & Earn"), href: "/referral", icon: Users, desc: rt("nav.referral.desc", "Invite friends, earn Luck Points") },
-        { label: rt("nav.faq", "FAQ"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc", "Common questions") },
+        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Chat e votacoes em tempo real") },
+        { label: rt("nav.winners", "Historico de Vencedores"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Sorteios concluidos") },
+        { label: rt("nav.transparency", "Transparencia"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Verificacao blockchain") },
+        { label: rt("nav.how", "Como Funciona"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Guia rapido da plataforma") },
+      ],
+    },
+    {
+      label: rt("nav.group.more", "Mais"),
+      items: [
+        { label: rt("nav.referral", "Indique e Ganhe"), href: "/referral", icon: Users, desc: rt("nav.referral.desc", "Convide amigos, ganhe pontos") },
+        { label: rt("nav.faq", "FAQ"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc", "Perguntas frequentes") },
       ],
     },
   ];

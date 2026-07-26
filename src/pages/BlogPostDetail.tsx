@@ -437,6 +437,44 @@ export default function BlogPostDetail() {
         <meta name="twitter:image" content={postImage} />
       </Helmet>
 
+      {/* ══════ JSON-LD Structured Data ══════ */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: pageTitle,
+            description: pageDesc,
+            image: postImage || undefined,
+            url: pageUrl,
+            datePublished: post.published_at || undefined,
+            dateModified: post.updated_at || post.published_at || undefined,
+            author: {
+              "@type": "Organization",
+              name: "Equipe Bateu",
+              url: window.location.origin,
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "Bateu",
+              url: window.location.origin,
+              logo: {
+                "@type": "ImageObject",
+                url: `${window.location.origin}/favicon.ico`,
+              },
+            },
+            mainEntityOfPage: {
+              "@type": "WebPage",
+              "@id": pageUrl,
+            },
+            keywords: post.seo_keywords?.join(", ") || undefined,
+            wordCount: post.content?.replace(/<[^>]*>/g, "").split(/\s+/).length || undefined,
+            articleSection: post.category?.name || undefined,
+          }),
+        }}
+      />
+
       {/* ══════ Breadcrumbs ══════ */}
       <div className="container mx-auto px-4 pt-4 pb-2">
         <Breadcrumb>

@@ -79,6 +79,7 @@ import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
 import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
 import Blog from "./pages/Blog.tsx";
 import BlogPostDetail from "./pages/BlogPostDetail.tsx";
+import AllGames from "./pages/AllGames.tsx";
 import AdminContests from "./pages/admin/AdminContests.tsx";
 import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
 import BusinessProfile from "./pages/BusinessProfile.tsx";
@@ -157,6 +158,7 @@ function AnimatedRoutes() {
           <Route path="/concursos" element={<Contests />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
+          <Route path="/jogos" element={<AllGames />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />

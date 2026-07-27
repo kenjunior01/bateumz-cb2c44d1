@@ -510,29 +510,29 @@ const LiveHub = () => {
           onCategoryChange={(id) => setActive(id as GameId)}
         />
 
-        <div className="hidden md:block mb-6">
+        <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Flame className="h-5 w-5 text-[#FF6B35]" />
-              <h2 className="font-display text-lg font-bold">Jogos Moçambicanos</h2>
+              <h2 className="font-display text-base md:text-lg font-bold">Jogos Moçambicanos</h2>
               <span className="px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[10px] font-bold">NOVOS</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1">
               {mozGames.map((g) => (
                 <button
                   key={g.id}
                   onClick={() => handleSelectGame(g.id)}
-                  className="flex-shrink-0 w-40 rounded-2xl border-2 border-[#009140]/30 bg-gradient-to-br from-[#009140]/10 to-[#FFD700]/5 p-3 text-left hover:border-[#FFD700] hover:shadow-lg hover:shadow-[#009140]/10 transition-all group"
+                  className="flex-shrink-0 w-32 md:w-40 rounded-2xl border-2 border-[#009140]/30 bg-gradient-to-br from-[#009140]/10 to-[#FFD700]/5 p-2.5 md:p-3 text-left hover:border-[#FFD700] hover:shadow-lg hover:shadow-[#009140]/10 transition-all group active:scale-95"
                 >
-                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{g.emoji}</div>
-                  <p className="font-display text-xs font-bold text-foreground leading-tight">{g.label}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{g.desc}</p>
-                  <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[9px] font-bold">MOÇAMBIQUE</span>
+                  <div className="text-2xl md:text-3xl mb-1.5 group-hover:scale-110 transition-transform">{g.emoji}</div>
+                  <p className="font-display text-[11px] md:text-xs font-bold text-foreground leading-tight">{g.label}</p>
+                  <p className="text-[9px] md:text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{g.desc}</p>
+                  <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[8px] md:text-[9px] font-bold">MOÇAMBIQUE</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 mb-3 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
             <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             {CAT_LIST.map((cid) => (
               <button
@@ -545,23 +545,31 @@ const LiveHub = () => {
             ))}
           </div>
 
-          {/* Desktop game cards */}
-        <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-3 mb-8 mt-4">
+          {/* Game cards grid - visible on all screens */}
+        <div id="game-grid" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3 mb-8 mt-4">
           {filteredGames.map((g) => {
             const isActive = active === g.id;
             return (
               <button
                 key={g.id}
                 onClick={() => handleSelectGame(g.id)}
-                className={`text-left rounded-2xl border-2 p-4 transition-all ${
-                  isActive ? "border-primary bg-primary/5 shadow-lg shadow-primary/10" : g.moz ? "border-[#009140]/30 bg-gradient-to-br from-[#009140]/5 to-[#FFD700]/5 hover:border-[#009140]/60 hover:shadow-lg hover:shadow-[#009140]/10" : "border-border bg-card hover:border-primary/40 hover:shadow-md"
+                className={`text-left rounded-2xl border-2 p-3 md:p-4 transition-all duration-200 ${
+                  isActive
+                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.02]"
+                    : g.moz
+                      ? "border-[#009140]/30 bg-gradient-to-br from-[#009140]/5 to-[#FFD700]/5 hover:border-[#009140]/60 hover:shadow-lg hover:shadow-[#009140]/10 hover:scale-[1.01]"
+                      : "border-border bg-card hover:border-primary/40 hover:shadow-md hover:scale-[1.01]"
                 }`}
               >
-                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2 group-hover:scale-110 transition-transform`}>
-                  <g.icon className="h-5 w-5 text-white" />
+                <div className={`inline-flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2 transition-transform`}
+                  style={isActive ? { transform: "scale(1.1)" } : {}}>
+                  <g.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                 </div>
-                <div className="flex items-start justify-between gap-2"><p className="font-display text-sm font-bold leading-tight">{g.label}</p>{g.moz && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] font-bold flex-shrink-0">MZ</span>}</div>
-                <p className="text-[11px] text-muted-foreground line-clamp-2">{g.desc}</p>
+                <div className="flex items-start justify-between gap-1">
+                  <p className="font-display text-xs md:text-sm font-bold leading-tight">{g.label}</p>
+                  {g.moz && <span className="text-[8px] md:text-[9px] px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] font-bold flex-shrink-0">MZ</span>}
+                </div>
+                <p className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{g.desc}</p>
               </button>
             );
           })}
@@ -570,6 +578,27 @@ const LiveHub = () => {
         {/* Game area */}
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
+            {/* Active game header with back button */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => { const el = document.getElementById('game-grid'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Jogos
+              </button>
+              {activeMeta && (
+                <div className="flex items-center gap-2">
+                  <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-base`}>
+                    {activeMeta.emoji}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{activeMeta.desc}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <AnimatePresence mode="wait">
               {active === "wheel" && (
                 <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>

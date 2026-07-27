@@ -114,11 +114,9 @@ import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
-import Navbar from "./components/Navbar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
 import Wallet from "./pages/Wallet.tsx";
-import { Button } from "./components/ui/button";
 
 // New live entertainment pages
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
@@ -313,7 +311,6 @@ const AppContent = () => {
       <BackgroundDecorations />
       <BrowserRouter>
         {!authLoading && user && <PushNotificationBanner />}
-        <Navbar />
         <MobileTopBar />
         <AnimatedRoutes />
         <MascotBuddy />

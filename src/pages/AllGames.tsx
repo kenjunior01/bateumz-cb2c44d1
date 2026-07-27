@@ -74,10 +74,6 @@ const ALL_GAMES: GameDef[] = [
   { id: "kahoot", label: "Quiz ao Vivo", emoji: "🎯", desc: "Quiz multiplayer — a audiência joga em tempo real!", grad: "from-sky-500 to-indigo-600", category: "Quiz", players: "Multi", icon: Brain, hasBot: false },
   { id: "bingo", label: "Bingo ao Vivo", emoji: "🎱", desc: "Cartão virtual com números sorteados em tempo real!", grad: "from-emerald-500 to-teal-600", category: "Sorte", players: "Multi", icon: Trophy, hasBot: false },
   { id: "memory", label: "Jogo da Memória VS", emoji: "🧠", desc: "Batalha de pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: false },
-  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mao — jogo mocambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Moçambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
-  { id: "chigogo", label: "Chigogo", emoji: "🪨", desc: "Adivinha a Pedrinha — esconda e descubra!", grad: "from-yellow-700 to-amber-800", category: "Moçambicano", players: "1v1 / Bot", icon: Target, hasBot: true },
-  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala mocambicano — semeie, capture e venca!", grad: "from-green-700 to-amber-900", category: "Moçambicano", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
-  { id: "capulanaquiz", label: "Capulana Quiz", emoji: "👗", desc: "Quiz de cultura mocambicana!", grad: "from-yellow-500 to-green-700", category: "Moçambicano", players: "1v1 / Bot", icon: Brain, hasBot: true },
 ];
 
 const CATEGORIES = [
@@ -92,7 +88,6 @@ const CATEGORIES = [
   { id: "Palavras", label: "Palavras", emoji: "🔤" },
   { id: "Cartas", label: "Cartas", emoji: "🃏" },
   { id: "Variado", label: "Variado", emoji: "🎪" },
-  { id: "Moçambicano", label: "Moçambicano", emoji: "🇲🇿" },
 ];
 
 const AllGames = () => {

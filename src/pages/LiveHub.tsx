@@ -61,10 +61,6 @@ import NumberTetris from "@/components/livegames/NumberTetris";
 import PongVS from "@/components/livegames/PongVS";
 import WhackAMole from "@/components/livegames/WhackAMole";
 import ColorCatch from "@/components/livegames/ColorCatch";
-import MexericaGame from "@/components/livegames/MexericaGame";
-import ChigogoGame from "@/components/livegames/ChigogoGame";
-import UrusseGame from "@/components/livegames/UrusseGame";
-import CapulanaQuiz from "@/components/livegames/CapulanaQuiz";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -78,7 +74,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch";
 
 interface SavedWheelGame {
   id: string;
@@ -154,10 +150,6 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "pongvs", label: "Pong VS", icon: Gamepad2, emoji: "🏓", desc: "Clássico Pong arcade — 1v1 ou contra o bot, primeiro a 5!", grad: "from-blue-600 to-indigo-700" },
   { id: "whackamole", label: "Bate o Alvo", icon: Target, emoji: "🎯", desc: "Toque nas criaturas que aparecem — quem marca mais pontos em 30s!", grad: "from-emerald-500 to-green-600" },
   { id: "colorcatch", label: "Pesca Cores", icon: Palette, emoji: "🎨", desc: "Clique nas cores certas o mais rápido possível!", grad: "from-pink-500 to-rose-600" },
-  { id: "mexerica", label: "Mexerica", icon: Zap, emoji: "✋", desc: "Bate a Mao — jogo mocambicano de reflexos! Toque nas maos antes que sumam!", grad: "from-amber-600 to-red-700" },
-  { id: "chigogo", label: "Chigogo", icon: Target, emoji: "🪨", desc: "Adivinha a Pedrinha — esconda e adivinhe! Jogo tradicional mocambicano!", grad: "from-yellow-700 to-amber-800" },
-  { id: "urusse", label: "Urusse", icon: Gamepad2, emoji: "🟤", desc: "Mancala mocambicano — semeie, capture e venca! Jogo de tabuleiro classico!", grad: "from-green-700 to-amber-900" },
-  { id: "capulanaquiz", label: "Capulana Quiz", icon: Brain, emoji: "👗", desc: "Quiz de cultura mocambicana: geografia, gastronomia, historia e mais!", grad: "from-yellow-500 to-green-700" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -878,26 +870,6 @@ const LiveHub = () => {
               {active === "colorcatch" && (
                 <motion.div key="colorcatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <ColorCatch onScore={recordScore("Pesca Cores")} liveCode={liveCode} />
-                </motion.div>
-              )}
-              {active === "mexerica" && (
-                <motion.div key="mexerica" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <MexericaGame onScore={recordScore("Mexerica")} liveCode={liveCode} />
-                </motion.div>
-              )}
-              {active === "chigogo" && (
-                <motion.div key="chigogo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <ChigogoGame onScore={recordScore("Chigogo")} liveCode={liveCode} />
-                </motion.div>
-              )}
-              {active === "urusse" && (
-                <motion.div key="urusse" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <UrusseGame onScore={recordScore("Urusse")} liveCode={liveCode} />
-                </motion.div>
-              )}
-              {active === "capulanaquiz" && (
-                <motion.div key="capulanaquiz" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <CapulanaQuiz onScore={recordScore("Capulana Quiz")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

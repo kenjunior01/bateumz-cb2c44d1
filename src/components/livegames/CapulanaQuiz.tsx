@@ -248,7 +248,7 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
               <div className="text-xl font-bold self-center" style={{ color: "#FFD700" }}>vs</div>
               <div><p className="text-xs" style={{ color: "#FF6B35" }}>{p2Label}</p><p className="text-3xl font-black" style={{ color: "#FF6B35" }}>{scores.p2}</p></div>
             </div>
-            <button onClick={() => setPhase("menu")}" className="px-8 py-2.5 rounded-xl text-black font-bold"
+            <button onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold"
               style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
           </div>
         )}

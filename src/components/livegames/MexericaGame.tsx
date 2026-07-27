@@ -7,7 +7,8 @@ interface MexericaProps {
 }
 
 /* Capulana-inspired SVG pattern for background */
-const CapulanaPattern = () => (
+const CapulanaPattern: React.FC = () => {
+  return (
   <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <pattern id="capulana" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -23,12 +24,13 @@ const CapulanaPattern = () => (
     </defs>
     <rect width="100%" height="100%" fill="url(#capulana)" />
   </svg>
-);
+  );
+};
 
 /* Hand SVG with henna-style patterns */
-const HandSVG = ({ side, color = "#8B4513", hennaColor = "#CD853F" }: { side: "left" | "right"; color?: string; hennaColor?: string }) => (
+const HandSVG = ({ side, color = "#8B4513", hennaColor = "#CD853F" }: { side: "left" | "right"; color?: string; hennaColor?: string }) => {
+  return (
   <svg viewBox="0 0 100 120" className="w-full h-full">
-    {/* Palm */}
     <path
       d={side === "left"
         ? "M35,50 Q30,30 28,15 Q26,5 35,5 Q42,5 42,15 L42,45"
@@ -57,22 +59,22 @@ const HandSVG = ({ side, color = "#8B4513", hennaColor = "#CD853F" }: { side: "l
       }
       fill={color} stroke={hennaColor} strokeWidth="0.8"
     />
-    {/* Palm base */}
+
     <ellipse cx="50" cy="75" rx="28" ry="30" fill={color} stroke={hennaColor} strokeWidth="1" />
-    {/* Henna patterns on palm */
     <circle cx="50" cy="65" r="6" fill="none" stroke={hennaColor} strokeWidth="1" />
     <circle cx="50" cy="65" r="2" fill={hennaColor} />
     <circle cx="42" cy="78" r="4" fill="none" stroke={hennaColor} strokeWidth="0.8" />
     <circle cx="58" cy="78" r="4" fill="none" stroke={hennaColor} strokeWidth="0.8" />
     <path d="M44,85 Q50,90 56,85" fill="none" stroke={hennaColor} strokeWidth="0.8" />
-    {/* Wrist */}
+
     <rect x="35" y="100" width="30" height="20" rx="4" fill={color} stroke={hennaColor} strokeWidth="0.8" />
-    {/* Beaded bracelet */}
+
     {Array.from({ length: 6 }).map((_, i) => (
       <circle key={i} cx={37 + i * 5.2} cy="105" r="2.5" fill={i % 2 === 0 ? "#FFD700" : "#009140"} />
     ))}
   </svg>
-);
+  );
+};
 
 const MOZ_PHRASES = ["Eish!", "Ma-loko!", "Kupela!", "Boa!", "Aye!", "Tsé-tsé!", "Forte!"];
 const POSITIONS = [
@@ -87,6 +89,8 @@ const POSITIONS = [
 ];
 
 const BOT_REACTION = { Facil: 1200, Medio: 700, Dificil: 350 };
+const MODES = ["bot", "pvp"] as const;
+const DIFFS = ["Facil", "Medio", "Dificil"] as const;
 
 export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
   const [mode, setMode] = useState<"bot" | "pvp">("bot");
@@ -242,19 +246,19 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
             <p className="text-sm text-center" style={{ color: "#DEB887" }}>
               Toque nas maos que aparecem o mais rapido que puder! 30 segundos de pura agilidade.
             </p>
-            {/* Mode toggle */}
+
             <div className="flex justify-center gap-2">
-              {["bot", "pvp"] as const].map((m) => (
+              {MODES.map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === m ? "text-black" : "text-amber-200/60"}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
                 </button>
               ))}
             </div>
-            {/* Difficulty (bot only) */}
+
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {(["Facil", "Medio", "Dificil"] as const).map((d) => (
+                {DIFFS.map((d) => (
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${difficulty === d ? "text-black" : "text-amber-200/60"}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)" }}>
                     {d}
@@ -280,7 +284,7 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
 
         {phase === "playing" && (
           <>
-            {/* Score bar */}
+
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: "#009140" }} />
@@ -296,7 +300,7 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
                 <div className="w-3 h-3 rounded-full" style={{ background: "#FF6B35" }} />
               </div>
             </div>
-            {/* Game area */}
+
             <div className="relative rounded-xl overflow-hidden" style={{ height: 360, background: "radial-gradient(ellipse at center, rgba(139,69,19,0.15) 0%, transparent 70%)" }}>
               <CapulanaPattern />
               <AnimatePresence>

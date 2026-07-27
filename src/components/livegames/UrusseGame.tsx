@@ -285,7 +285,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
               Semeie as sementes nos buracos. Capture as do adversario quando a ultima semente cair num buraco vazio do seu lado!
             </p>
             <div className="flex justify-center gap-2">
-              {(["bot", "pvp"] as const).map((m) => (
+              {_ARR2.map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -294,7 +294,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {(["Facil", "Medio", "Dificil"] as const).map((d) => (
+                {_ARR1.map((d) => (
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}
@@ -376,7 +376,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                   <div><p className="text-xs" style={{ color: "#009140" }}>{p1Label}</p><p className="text-2xl font-black" style={{ color: "#009140" }}>{finalScores?.[0]}</p></div>
                   <div><p className="text-xs" style={{ color: "#FF6B35" }}>{p2Label}</p><p className="text-2xl font-black" style={{ color: "#FF6B35" }}>{finalScores?.[1]}</p></div>
                 </div>
-                <button onClick={() => setPhase("menu")}" className="px-6 py-2 rounded-xl text-black font-bold"
+                <button onClick={() => setPhase("menu")} className="px-6 py-2 rounded-xl text-black font-bold"
                   style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
               </div>
             )}

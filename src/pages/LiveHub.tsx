@@ -61,6 +61,14 @@ import NumberTetris from "@/components/livegames/NumberTetris";
 import PongVS from "@/components/livegames/PongVS";
 import WhackAMole from "@/components/livegames/WhackAMole";
 import ColorCatch from "@/components/livegames/ColorCatch";
+import MexericaGame from "@/components/livegames/MexericaGame";
+import UrusseGame from "@/components/livegames/UrusseGame";
+import CapulanaQuiz from "@/components/livegames/CapulanaQuiz";
+import ChigogoGame from "@/components/livegames/ChigogoGame";
+import NtchuvaGame from "@/components/livegames/NtchuvaGame";
+import DjikotaGame from "@/components/livegames/DjikotaGame";
+import UriGame from "@/components/livegames/UriGame";
+import BichoGame from "@/components/livegames/BichoGame";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -74,7 +82,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "urusse" | "capulanaquiz" | "chigogo" | "ntchuva" | "djikota" | "uri" | "bicho";
 
 interface SavedWheelGame {
   id: string;
@@ -150,6 +158,14 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "pongvs", label: "Pong VS", icon: Gamepad2, emoji: "🏓", desc: "Clássico Pong arcade — 1v1 ou contra o bot, primeiro a 5!", grad: "from-blue-600 to-indigo-700" },
   { id: "whackamole", label: "Bate o Alvo", icon: Target, emoji: "🎯", desc: "Toque nas criaturas que aparecem — quem marca mais pontos em 30s!", grad: "from-emerald-500 to-green-600" },
   { id: "colorcatch", label: "Pesca Cores", icon: Palette, emoji: "🎨", desc: "Clique nas cores certas o mais rápido possível!", grad: "from-pink-500 to-rose-600" },
+  { id: "mexerica", label: "Mexerica (Bate a Mão)", icon: Target, emoji: "✋", desc: "Jogo tradicional moçambicano — bata nas mãos que aparecem!", grad: "from-amber-600 to-yellow-600" },
+  { id: "urusse", label: "Urusse (Mancala)", icon: Gamepad2, emoji: "🫘", desc: "Jogo de sementes moçambicano — semee e capture!", grad: "from-green-700 to-emerald-600" },
+  { id: "capulanaquiz", label: "Quiz Capulana", icon: Brain, emoji: "🧠", desc: "Quiz sobre cultura, geografia e história de Moçambique!", grad: "from-red-600 to-amber-600" },
+  { id: "chigogo", label: "Chigogo (Pedras)", icon: Gamepad2, emoji: "🪨", desc: "Jogo tradicional de pedras com padrões capulana!", grad: "from-amber-700 to-orange-600" },
+  { id: "ntchuva", label: "Ntchuva (Amarelinha)", icon: Target, emoji: "🎯", desc: "Toque os números em sequência — não caia nas armadilhas!", grad: "from-green-600 to-yellow-600" },
+  { id: "djikota", label: "Djikota (Oware)", icon: Gamepad2, emoji: "🏺", desc: "Jogo de tabuleiro moçambicano — semeie e capture sementes!", grad: "from-amber-800 to-red-700" },
+  { id: "uri", label: "Uri (Adivinha)", icon: Brain, emoji: "🔢", desc: "Quente ou Frio? Adivinhe o número secreto antes do bot!", grad: "from-orange-500 to-red-600" },
+  { id: "bicho", label: "Jogo do Bicho", icon: Sparkles, emoji: "🦩", desc: "Aposte no animal sorteado — Moçambique style!", grad: "from-amber-500 to-yellow-500" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -870,6 +886,46 @@ const LiveHub = () => {
               {active === "colorcatch" && (
                 <motion.div key="colorcatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <ColorCatch onScore={recordScore("Pesca Cores")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "mexerica" && (
+                <motion.div key="mexerica" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <MexericaGame onScore={recordScore("Mexerica")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "urusse" && (
+                <motion.div key="urusse" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <UrusseGame onScore={recordScore("Urusse")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "capulanaquiz" && (
+                <motion.div key="capulanaquiz" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <CapulanaQuiz onScore={recordScore("Quiz Capulana")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "chigogo" && (
+                <motion.div key="chigogo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <ChigogoGame onScore={recordScore("Chigogo")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "ntchuva" && (
+                <motion.div key="ntchuva" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <NtchuvaGame onScore={recordScore("Ntchuva")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "djikota" && (
+                <motion.div key="djikota" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <DjikotaGame onScore={recordScore("Djikota")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "uri" && (
+                <motion.div key="uri" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <UriGame onScore={recordScore("Uri")} liveCode={liveCode} />
+                </motion.div>
+              )}
+              {active === "bicho" && (
+                <motion.div key="bicho" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <BichoGame onScore={recordScore("Jogo do Bicho")} liveCode={liveCode} />
                 </motion.div>
               )}
             </AnimatePresence>

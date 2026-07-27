@@ -124,6 +124,7 @@ import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
 import { useParams } from "react-router-dom";
 import { useState, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
+import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
 

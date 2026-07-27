@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
+const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
+const _BET_TYPES: ("animal" | "grupo" | "dezena" | "centena" | "milhar")[] = ["animal", "grupo", "dezena", "centena", "milhar"];
+
 interface BichoProps {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
@@ -293,7 +297,7 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
 
               <div className="space-y-3">
                 <div className="flex gap-2 justify-center">
-                  {ARR_1.map(m => (
+                  {_MODES.map(m => (
                     <button key={m} onClick={() => setMode(m)}
                       className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === m ? "bg-amber-600 text-white" : "bg-white/10 text-amber-300"}`}>
                       {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -302,7 +306,7 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
                 </div>
                 {mode === "bot" && (
                   <div className="flex gap-2 justify-center">
-                    {_ARR2.map(d => (
+                    {_DIFFS.map(d => (
                       <button key={d} onClick={() => setDifficulty(d)}
                         className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${difficulty === d ? "bg-amber-600 text-white" : "bg-white/10 text-amber-300"}`}>
                         {d}
@@ -355,7 +359,7 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
               ) : !showResult ? (
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-1.5 justify-center">
-                    {_ARR1.map(t => (
+                    {_BET_TYPES.map(t => (
                       <button key={t} onClick={() => setBetType(t)}
                         className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${betType === t ? "bg-amber-600 text-white" : "bg-white/10 text-amber-300"}`}>
                         {t === "animal" ? "🦩 Animal" : t === "grupo" ? "📈 Grupo" : t === "dezena" ? "🔢 Dezena" : t === "centena" ? "🔵 Centena" : "🏆 Milhar"}

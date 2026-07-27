@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
+const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
+const _PLAYERS: ("p1" | "p2")[] = ["p1", "p2"];
+
 interface NtchuvaProps {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
@@ -668,7 +672,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
 
             {/* Mode toggle */}
             <div className="flex justify-center gap-2">
-              {_ARR3.map((m) => (
+              {_MODES.map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
@@ -692,7 +696,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
             {/* Difficulty (bot only) */}
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {_ARR2.map((d) => (
+                {_DIFFS.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}
@@ -848,7 +852,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
                   className="flex items-center gap-1 p-0.5 rounded-xl"
                   style={{ background: "rgba(255,215,0,0.08)" }}
                 >
-                  {_ARR1.map((p) => (
+                  {_PLAYERS.map((p) => (
                     <button
                       key={p}
                       onClick={() => setActivePlayer(p)}

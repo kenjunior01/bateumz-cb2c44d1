@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
+const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
+
 interface UrusseProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
 
 /* Traditional Mancala / Bao board game */
@@ -285,7 +288,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
               Semeie as sementes nos buracos. Capture as do adversario quando a ultima semente cair num buraco vazio do seu lado!
             </p>
             <div className="flex justify-center gap-2">
-              {_ARR2.map((m) => (
+              {_MODES.map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -294,7 +297,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {_ARR1.map((d) => (
+                {_DIFFS.map((d) => (
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}

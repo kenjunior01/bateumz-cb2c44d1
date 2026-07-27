@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
+const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
+
 interface DjikotaProps {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
@@ -961,7 +964,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
 
             {/* Mode toggle */}
             <div className="flex justify-center gap-2">
-              {_ARR2.map((m) => (
+              {_MODES.map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
@@ -988,7 +991,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
             {/* Difficulty (bot only) */}
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {_ARR1.map((d) => (
+                {_DIFFS.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}

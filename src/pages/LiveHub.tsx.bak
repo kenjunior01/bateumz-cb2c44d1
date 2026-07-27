@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, ChevronLeft, Filter } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -84,10 +84,6 @@ import { toast } from "sonner";
 
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "urusse" | "capulanaquiz" | "chigogo" | "ntchuva" | "djikota" | "uri" | "bicho";
 
-type CatId = "todos" | "mocambicano" | "popular" | "tabuleiro" | "acao" | "puzzle" | "quiz" | "versus";
-const CAT_LABELS: Record<CatId, string> = { todos: "Todos", mocambicano: "Moçambicanos", popular: "Popular", tabuleiro: "Tabuleiro", acao: "Ação", puzzle: "Puzzle", quiz: "Quiz", versus: "Versus" };
-const CAT_LIST: CatId[] = ["todos", "mocambicano", "popular", "tabuleiro", "acao", "puzzle", "quiz", "versus"];
-
 interface SavedWheelGame {
   id: string;
   name: string;
@@ -106,70 +102,70 @@ interface SavedWheelGame {
   default_effect?: string;
 }
 
-const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string; grad: string; cat: CatId; moz: boolean }[] = [
-  { id: "wheel", label: "Roda de Prémios", icon: RotateCcw, emoji: "🎰", desc: "Sorteie prémios reais com probabilidades configuráveis.", grad: "from-violet-500 to-fuchsia-500", cat: "popular" as const, moz: false },
-  { id: "keyword", label: "Caça à Palavra", icon: Search, emoji: "🔎", desc: "Audiência adivinha a palavra-chave secreta.", grad: "from-amber-500 to-orange-500", cat: "popular" as const, moz: false },
-  { id: "emoji", label: "Batalha de Emojis", icon: Vote, emoji: "💥", desc: "Vote ao vivo, vencedores entram no sorteio.", grad: "from-pink-500 to-rose-500", cat: "popular" as const, moz: false },
-  { id: "tap", label: "Tap Battle", icon: Zap, emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot.", grad: "from-amber-500 to-orange-500", cat: "versus" as const, moz: false },
-  { id: "quiz", label: "Quiz Battle", icon: Brain, emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado.", grad: "from-sky-500 to-blue-500", cat: "quiz" as const, moz: false },
-  { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500", cat: "popular" as const, moz: false },
-  { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500", cat: "quiz" as const, moz: false },
-  { id: "kahoot", label: "Quiz ao Vivo", icon: Brain, emoji: "🎯", desc: "Quiz multiplayer — a audiência joga em tempo real!", grad: "from-sky-500 to-indigo-600", cat: "quiz" as const, moz: false },
-  { id: "bingo", label: "Bingo ao Vivo", icon: Trophy, emoji: "🎱", desc: "Cartão virtual com números sorteados em tempo real!", grad: "from-emerald-500 to-teal-600", cat: "popular" as const, moz: false },
-  { id: "challenge", label: "Roleta de Desafios", icon: RotateCcw, emoji: "🎭", desc: "Gire a roleta e cuma o desafio sorteado ao vivo!", grad: "from-fuchsia-500 to-pink-500", cat: "popular" as const, moz: false },
-  { id: "vsduel", label: "Arena de Duelo VS", icon: Swords, emoji: "⚔️", desc: "Duelo 1v1: reação, matemática e palavras ao vivo!", grad: "from-red-500 to-orange-600", cat: "versus" as const, moz: false },
-  { id: "speed", label: "Duelo de Velocidade", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido? Teste de reflexo 1v1!", grad: "from-cyan-500 to-blue-600", cat: "versus" as const, moz: false },
-  { id: "truthordare", label: "Verdade ou Desafio", icon: Heart, emoji: "🔥", desc: "Verdades picantes e desafios engraçados ao vivo!", grad: "from-rose-500 to-red-600", cat: "popular" as const, moz: false },
-  { id: "memory", label: "Jogo da Memória VS", icon: Brain, emoji: "🧠", desc: "Batalha de pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", cat: "puzzle" as const, moz: false },
-  { id: "punishment", label: "Roleta de Castigos", icon: Skull, emoji: "💀", desc: "Gire a roleta e cumpra o castigo sorteado!", grad: "from-red-600 to-rose-700", cat: "popular" as const, moz: false },
-  { id: "boknowledge", label: "Batalha de Conhecimentos", icon: Brain, emoji: "📚", desc: "Trivia VS com bônus de streak — 10 perguntas!", grad: "from-cyan-500 to-purple-600", cat: "quiz" as const, moz: false },
-  { id: "guessEmoji", label: "Adivinhe o Emoji", icon: SmilePlus, emoji: "😎", desc: "Decifre a frase a partir dos emojis!", grad: "from-yellow-500 to-amber-600", cat: "quiz" as const, moz: false },
-  { id: "quickdraw", label: "Desenho Rápido", icon: Pencil, emoji: "🎨", desc: "Desenhe e deixe o público adivinhar a palavra!", grad: "from-emerald-500 to-teal-600", cat: "quiz" as const, moz: false },
-  { id: "hotpotato", label: "Batata Quente", icon: Bomb, emoji: "💣", desc: "Passe a batata — quem tiver com ela quando explodir, sai!", grad: "from-orange-500 to-red-600", cat: "acao" as const, moz: false },
-  { id: "numguess", label: "Adivinha o Número VS", icon: Hash, emoji: "🔢", desc: "Duelo — quem adivinha o número secreto primeiro?", grad: "from-violet-500 to-fuchsia-600", cat: "versus" as const, moz: false },
-  { id: "chaos", label: "Desafio Caótico", icon: Shuffle, emoji: "🌪️", desc: "Desafios aleatórios contra o relógio: físico, mental, talento!", grad: "from-rose-500 to-pink-600", cat: "acao" as const, moz: false },
-  { id: "checkers", label: "Damas", icon: Grid3X3, emoji: "♟️", desc: "Jogo clássico de damas com capturas obrigatórias e promoção a rei!", grad: "from-amber-700 to-red-800", cat: "tabuleiro" as const, moz: false },
-  { id: "ludo", label: "Ludo", icon: Dices, emoji: "🎲", desc: "4 jogadores, dado, peças e muita estratégia para chegar a casa!", grad: "from-emerald-600 to-teal-700", cat: "tabuleiro" as const, moz: false },
-  { id: "connect4", label: "Ligar 4", icon: LayoutGrid, emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer o VS!", grad: "from-blue-500 to-yellow-500", cat: "tabuleiro" as const, moz: false },
-  { id: "battleship", label: "Batalha Naval", icon: Anchor, emoji: "🚢", desc: "Esconda os navios e afunde a frota inimiga!", grad: "from-slate-600 to-blue-900", cat: "tabuleiro" as const, moz: false },
-  { id: "tictactoe", label: "Galo VS", icon: CircleDot, emoji: "✕", desc: "Rápido, com apostas, streaks e modo velocidade!", grad: "from-violet-500 to-pink-500", cat: "tabuleiro" as const, moz: false },
-  { id: "uno", label: "UNO Cartas", icon: Sparkles, emoji: "🃏", desc: "Jogo de cartas clássico com cores, especiais e UNO!", grad: "from-indigo-500 to-purple-600", cat: "tabuleiro" as const, moz: false },
-  { id: "snakebattle", label: "Batalha de Cobras", icon: Gamepad2, emoji: "🐍", desc: "Duas cobras, um tabuleiro — quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", cat: "acao" as const, moz: false },
-  { id: "rps", label: "Pedra Papel Tesoura", icon: Swords, emoji: "✊", desc: "Clássico Jokenpô VS — melhor de 3, 5 ou 7 rounds!", grad: "from-amber-500 to-orange-600", cat: "versus" as const, moz: false },
-  { id: "colorsequence", label: "Sequência de Cores", icon: Sparkles, emoji: "🟢", desc: "Memorize a sequência de cores e repita — quem vai mais longe?", grad: "from-violet-500 to-fuchsia-600", cat: "puzzle" as const, moz: false },
-  { id: "spaceshooter", label: "Nave Espacial VS", icon: Zap, emoji: "🚀", desc: "Destrua naves inimigas — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", cat: "acao" as const, moz: false },
-  { id: "ballbreaker", label: "Quebra-Bloco VS", icon: Gamepad2, emoji: "🧱", desc: "Destrua todos os blocos — lado a lado, quem limpa primeiro!", grad: "from-red-500 to-orange-600", cat: "acao" as const, moz: false },
-  { id: "reactionrace", label: "Corrida de Reação", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido ao sinal? Teste de reflexos puro!", grad: "from-yellow-500 to-red-600", cat: "acao" as const, moz: false },
-  { id: "quickmath", label: "Duelo de Matemática", icon: Brain, emoji: "🧮", desc: "Contas rápidas — quem resolve primeiro marca ponto!", grad: "from-cyan-500 to-blue-700", cat: "versus" as const, moz: false },
-  { id: "memorycards", label: "Memória VS Cartas", icon: Brain, emoji: "🃏", desc: "Encontre os pares no tabuleiro partilhado — turno a turno!", grad: "from-indigo-500 to-violet-600", cat: "puzzle" as const, moz: false },
-  { id: "wordscramble", label: "Palavras Embaralhadas", icon: Shuffle, emoji: "🔤", desc: "Descubra a palavra escondida nas letras misturadas!", grad: "from-rose-500 to-pink-600", cat: "puzzle" as const, moz: false },
-  { id: "tictactoepro", label: "Galo PRO", icon: Grid3X3, emoji: "✖", desc: "Galo Ultimate — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", cat: "tabuleiro" as const, moz: false },
-  { id: "guessnumber100", label: "Adivinha 1 a 100", icon: Hash, emoji: "🔢", desc: "Quente/Frio — quem adivinha o número secreto primeiro?", grad: "from-teal-500 to-cyan-700", cat: "versus" as const, moz: false },
-  { id: "colormatch", label: "Cor versus Palavra", icon: Palette, emoji: "🎨", desc: "Teste Stroop — identifique a COR do texto, não a palavra!", grad: "from-pink-500 to-rose-700", cat: "puzzle" as const, moz: false },
-  { id: "targettap", label: "Alvo Rápido", icon: Target, emoji: "🎯", desc: "Toque nos alvos certos antes que desapareçam!", grad: "from-orange-500 to-red-600", cat: "puzzle" as const, moz: false },
-  { id: "diceluel", label: "Duelo de Dados", icon: Dices, emoji: "🎲", desc: "Banco ou Arriscar? Corrida a 100 ou melhor de rounds!", grad: "from-amber-600 to-yellow-600", cat: "versus" as const, moz: false },
-  { id: "patternmemory", label: "Memória de Padrões", icon: Grid3X3, emoji: "🧩", desc: "Memorize o padrão de células iluminadas e repita!", grad: "from-purple-500 to-violet-700", cat: "puzzle" as const, moz: false },
-  { id: "triviaflash", label: "Trivia Flash", icon: Brain, emoji: "❗", desc: "Verdadeiro ou Falso rápido — 20 perguntas, velocidade conta!", grad: "from-emerald-500 to-teal-700", cat: "quiz" as const, moz: false },
-  { id: "dominoes", label: "Dominó", icon: LayoutGrid, emoji: "🎲", desc: "Dominó clássico — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700", cat: "tabuleiro" as const, moz: false },
-  { id: "mazerace", label: "Corrida no Labirinto", icon: Map, emoji: "🧩", desc: "Quem sai do labirinto primeiro? Labirintos aleatórios!", grad: "from-green-600 to-emerald-700", cat: "puzzle" as const, moz: false },
-  { id: "slotsvs", label: "Caça-Níqueis VS", icon: Sparkles, emoji: "🎰", desc: "Gire as máquinas — quem acumula mais moedas vence!", grad: "from-amber-500 to-yellow-500", cat: "popular" as const, moz: false },
-  { id: "match4", label: "Combina 4", icon: Sparkles, emoji: "✨", desc: "Combine 4+ peças iguais — cascatas e combos!", grad: "from-pink-500 to-rose-600", cat: "puzzle" as const, moz: false },
-  { id: "towerstack", label: "Torre VS", icon: Layers, emoji: "🏗️", desc: "Empilhe blocos com precisão — quem constrói mais alto!", grad: "from-sky-500 to-blue-600", cat: "acao" as const, moz: false },
-  { id: "cannonbattle", label: "Batalha de Canhões", icon: Crosshair, emoji: "💣", desc: "Ajuste ângulo e força — destrua o adversário!", grad: "from-red-600 to-orange-700", cat: "acao" as const, moz: false },
-  { id: "spotdifference", label: "Encontre Diferenças", icon: Search, emoji: "🔍", desc: "Encontre 5 diferenças entre cenas geradas!", grad: "from-amber-500 to-yellow-600", cat: "puzzle" as const, moz: false },
-  { id: "wordchain", label: "Corrente de Palavras", icon: Shuffle, emoji: "🔗", desc: "A última letra vira a primeira — não repita palavras!", grad: "from-teal-500 to-emerald-600", cat: "quiz" as const, moz: false },
-  { id: "numbertetris", label: "Números Caindo", icon: LayoutGrid, emoji: "🔢", desc: "Números caem e combinam — estilo Tetris 2048!", grad: "from-orange-600 to-red-700", cat: "puzzle" as const, moz: false },
-  { id: "pongvs", label: "Pong VS", icon: Gamepad2, emoji: "🏓", desc: "Clássico Pong arcade — 1v1 ou contra o bot, primeiro a 5!", grad: "from-blue-600 to-indigo-700", cat: "acao" as const, moz: false },
-  { id: "whackamole", label: "Bate o Alvo", icon: Target, emoji: "🎯", desc: "Toque nas criaturas que aparecem — quem marca mais pontos em 30s!", grad: "from-emerald-500 to-green-600", cat: "acao" as const, moz: false },
-  { id: "colorcatch", label: "Pesca Cores", icon: Palette, emoji: "🎨", desc: "Clique nas cores certas o mais rápido possível!", grad: "from-pink-500 to-rose-600", cat: "puzzle" as const, moz: false },
-  { id: "mexerica", label: "Mexerica (Bate a Mão)", icon: Target, emoji: "✋", desc: "Jogo tradicional moçambicano — bata nas mãos que aparecem!", grad: "from-amber-600 to-yellow-600", cat: "mocambicano" as const, moz: true },
-  { id: "urusse", label: "Urusse (Mancala)", icon: Gamepad2, emoji: "🫘", desc: "Jogo de sementes moçambicano — semee e capture!", grad: "from-green-700 to-emerald-600", cat: "mocambicano" as const, moz: true },
-  { id: "capulanaquiz", label: "Quiz Capulana", icon: Brain, emoji: "🧠", desc: "Quiz sobre cultura, geografia e história de Moçambique!", grad: "from-red-600 to-amber-600", cat: "mocambicano" as const, moz: true },
-  { id: "chigogo", label: "Chigogo (Pedras)", icon: Gamepad2, emoji: "🪨", desc: "Jogo tradicional de pedras com padrões capulana!", grad: "from-amber-700 to-orange-600", cat: "mocambicano" as const, moz: true },
-  { id: "ntchuva", label: "Ntchuva (Amarelinha)", icon: Target, emoji: "🎯", desc: "Toque os números em sequência — não caia nas armadilhas!", grad: "from-green-600 to-yellow-600", cat: "mocambicano" as const, moz: true },
-  { id: "djikota", label: "Djikota (Oware)", icon: Gamepad2, emoji: "🏺", desc: "Jogo de tabuleiro moçambicano — semeie e capture sementes!", grad: "from-amber-800 to-red-700", cat: "mocambicano" as const, moz: true },
-  { id: "uri", label: "Uri (Adivinha)", icon: Brain, emoji: "🔢", desc: "Quente ou Frio? Adivinhe o número secreto antes do bot!", grad: "from-orange-500 to-red-600", cat: "mocambicano" as const, moz: true },
-  { id: "bicho", label: "Jogo do Bicho", icon: Sparkles, emoji: "🦩", desc: "Aposte no animal sorteado — Moçambique style!", grad: "from-amber-500 to-yellow-500", cat: "mocambicano" as const, moz: true },
+const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string; grad: string }[] = [
+  { id: "wheel", label: "Roda de Prémios", icon: RotateCcw, emoji: "🎰", desc: "Sorteie prémios reais com probabilidades configuráveis.", grad: "from-violet-500 to-fuchsia-500" },
+  { id: "keyword", label: "Caça à Palavra", icon: Search, emoji: "🔎", desc: "Audiência adivinha a palavra-chave secreta.", grad: "from-amber-500 to-orange-500" },
+  { id: "emoji", label: "Batalha de Emojis", icon: Vote, emoji: "💥", desc: "Vote ao vivo, vencedores entram no sorteio.", grad: "from-pink-500 to-rose-500" },
+  { id: "tap", label: "Tap Battle", icon: Zap, emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot.", grad: "from-amber-500 to-orange-500" },
+  { id: "quiz", label: "Quiz Battle", icon: Brain, emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado.", grad: "from-sky-500 to-blue-500" },
+  { id: "mystery", label: "Caixa Misteriosa", icon: Package, emoji: "🎁", desc: "4 caixas, prémios escondidos.", grad: "from-emerald-500 to-teal-500" },
+  { id: "millionaire", label: "Quem Quer Ser Milionário?", icon: Trophy, emoji: "💰", desc: "Perguntas e respostas para ganhar o prêmio máximo!", grad: "from-purple-500 to-violet-500" },
+  { id: "kahoot", label: "Quiz ao Vivo", icon: Brain, emoji: "🎯", desc: "Quiz multiplayer — a audiência joga em tempo real!", grad: "from-sky-500 to-indigo-600" },
+  { id: "bingo", label: "Bingo ao Vivo", icon: Trophy, emoji: "🎱", desc: "Cartão virtual com números sorteados em tempo real!", grad: "from-emerald-500 to-teal-600" },
+  { id: "challenge", label: "Roleta de Desafios", icon: RotateCcw, emoji: "🎭", desc: "Gire a roleta e cuma o desafio sorteado ao vivo!", grad: "from-fuchsia-500 to-pink-500" },
+  { id: "vsduel", label: "Arena de Duelo VS", icon: Swords, emoji: "⚔️", desc: "Duelo 1v1: reação, matemática e palavras ao vivo!", grad: "from-red-500 to-orange-600" },
+  { id: "speed", label: "Duelo de Velocidade", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido? Teste de reflexo 1v1!", grad: "from-cyan-500 to-blue-600" },
+  { id: "truthordare", label: "Verdade ou Desafio", icon: Heart, emoji: "🔥", desc: "Verdades picantes e desafios engraçados ao vivo!", grad: "from-rose-500 to-red-600" },
+  { id: "memory", label: "Jogo da Memória VS", icon: Brain, emoji: "🧠", desc: "Batalha de pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600" },
+  { id: "punishment", label: "Roleta de Castigos", icon: Skull, emoji: "💀", desc: "Gire a roleta e cumpra o castigo sorteado!", grad: "from-red-600 to-rose-700" },
+  { id: "boknowledge", label: "Batalha de Conhecimentos", icon: Brain, emoji: "📚", desc: "Trivia VS com bônus de streak — 10 perguntas!", grad: "from-cyan-500 to-purple-600" },
+  { id: "guessEmoji", label: "Adivinhe o Emoji", icon: SmilePlus, emoji: "😎", desc: "Decifre a frase a partir dos emojis!", grad: "from-yellow-500 to-amber-600" },
+  { id: "quickdraw", label: "Desenho Rápido", icon: Pencil, emoji: "🎨", desc: "Desenhe e deixe o público adivinhar a palavra!", grad: "from-emerald-500 to-teal-600" },
+  { id: "hotpotato", label: "Batata Quente", icon: Bomb, emoji: "💣", desc: "Passe a batata — quem tiver com ela quando explodir, sai!", grad: "from-orange-500 to-red-600" },
+  { id: "numguess", label: "Adivinha o Número VS", icon: Hash, emoji: "🔢", desc: "Duelo — quem adivinha o número secreto primeiro?", grad: "from-violet-500 to-fuchsia-600" },
+  { id: "chaos", label: "Desafio Caótico", icon: Shuffle, emoji: "🌪️", desc: "Desafios aleatórios contra o relógio: físico, mental, talento!", grad: "from-rose-500 to-pink-600" },
+  { id: "checkers", label: "Damas", icon: Grid3X3, emoji: "♟️", desc: "Jogo clássico de damas com capturas obrigatórias e promoção a rei!", grad: "from-amber-700 to-red-800" },
+  { id: "ludo", label: "Ludo", icon: Dices, emoji: "🎲", desc: "4 jogadores, dado, peças e muita estratégia para chegar a casa!", grad: "from-emerald-600 to-teal-700" },
+  { id: "connect4", label: "Ligar 4", icon: LayoutGrid, emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer o VS!", grad: "from-blue-500 to-yellow-500" },
+  { id: "battleship", label: "Batalha Naval", icon: Anchor, emoji: "🚢", desc: "Esconda os navios e afunde a frota inimiga!", grad: "from-slate-600 to-blue-900" },
+  { id: "tictactoe", label: "Galo VS", icon: CircleDot, emoji: "✕", desc: "Rápido, com apostas, streaks e modo velocidade!", grad: "from-violet-500 to-pink-500" },
+  { id: "uno", label: "UNO Cartas", icon: Sparkles, emoji: "🃏", desc: "Jogo de cartas clássico com cores, especiais e UNO!", grad: "from-indigo-500 to-purple-600" },
+  { id: "snakebattle", label: "Batalha de Cobras", icon: Gamepad2, emoji: "🐍", desc: "Duas cobras, um tabuleiro — quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600" },
+  { id: "rps", label: "Pedra Papel Tesoura", icon: Swords, emoji: "✊", desc: "Clássico Jokenpô VS — melhor de 3, 5 ou 7 rounds!", grad: "from-amber-500 to-orange-600" },
+  { id: "colorsequence", label: "Sequência de Cores", icon: Sparkles, emoji: "🟢", desc: "Memorize a sequência de cores e repita — quem vai mais longe?", grad: "from-violet-500 to-fuchsia-600" },
+  { id: "spaceshooter", label: "Nave Espacial VS", icon: Zap, emoji: "🚀", desc: "Destrua naves inimigas — quem faz mais pontos!", grad: "from-slate-500 to-blue-700" },
+  { id: "ballbreaker", label: "Quebra-Bloco VS", icon: Gamepad2, emoji: "🧱", desc: "Destrua todos os blocos — lado a lado, quem limpa primeiro!", grad: "from-red-500 to-orange-600" },
+  { id: "reactionrace", label: "Corrida de Reação", icon: Zap, emoji: "⚡", desc: "Quem reage mais rápido ao sinal? Teste de reflexos puro!", grad: "from-yellow-500 to-red-600" },
+  { id: "quickmath", label: "Duelo de Matemática", icon: Brain, emoji: "🧮", desc: "Contas rápidas — quem resolve primeiro marca ponto!", grad: "from-cyan-500 to-blue-700" },
+  { id: "memorycards", label: "Memória VS Cartas", icon: Brain, emoji: "🃏", desc: "Encontre os pares no tabuleiro partilhado — turno a turno!", grad: "from-indigo-500 to-violet-600" },
+  { id: "wordscramble", label: "Palavras Embaralhadas", icon: Shuffle, emoji: "🔤", desc: "Descubra a palavra escondida nas letras misturadas!", grad: "from-rose-500 to-pink-600" },
+  { id: "tictactoepro", label: "Galo PRO", icon: Grid3X3, emoji: "✖", desc: "Galo Ultimate — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700" },
+  { id: "guessnumber100", label: "Adivinha 1 a 100", icon: Hash, emoji: "🔢", desc: "Quente/Frio — quem adivinha o número secreto primeiro?", grad: "from-teal-500 to-cyan-700" },
+  { id: "colormatch", label: "Cor versus Palavra", icon: Palette, emoji: "🎨", desc: "Teste Stroop — identifique a COR do texto, não a palavra!", grad: "from-pink-500 to-rose-700" },
+  { id: "targettap", label: "Alvo Rápido", icon: Target, emoji: "🎯", desc: "Toque nos alvos certos antes que desapareçam!", grad: "from-orange-500 to-red-600" },
+  { id: "diceluel", label: "Duelo de Dados", icon: Dices, emoji: "🎲", desc: "Banco ou Arriscar? Corrida a 100 ou melhor de rounds!", grad: "from-amber-600 to-yellow-600" },
+  { id: "patternmemory", label: "Memória de Padrões", icon: Grid3X3, emoji: "🧩", desc: "Memorize o padrão de células iluminadas e repita!", grad: "from-purple-500 to-violet-700" },
+  { id: "triviaflash", label: "Trivia Flash", icon: Brain, emoji: "❗", desc: "Verdadeiro ou Falso rápido — 20 perguntas, velocidade conta!", grad: "from-emerald-500 to-teal-700" },
+  { id: "dominoes", label: "Dominó", icon: LayoutGrid, emoji: "🎲", desc: "Dominó clássico — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700" },
+  { id: "mazerace", label: "Corrida no Labirinto", icon: Map, emoji: "🧩", desc: "Quem sai do labirinto primeiro? Labirintos aleatórios!", grad: "from-green-600 to-emerald-700" },
+  { id: "slotsvs", label: "Caça-Níqueis VS", icon: Sparkles, emoji: "🎰", desc: "Gire as máquinas — quem acumula mais moedas vence!", grad: "from-amber-500 to-yellow-500" },
+  { id: "match4", label: "Combina 4", icon: Sparkles, emoji: "✨", desc: "Combine 4+ peças iguais — cascatas e combos!", grad: "from-pink-500 to-rose-600" },
+  { id: "towerstack", label: "Torre VS", icon: Layers, emoji: "🏗️", desc: "Empilhe blocos com precisão — quem constrói mais alto!", grad: "from-sky-500 to-blue-600" },
+  { id: "cannonbattle", label: "Batalha de Canhões", icon: Crosshair, emoji: "💣", desc: "Ajuste ângulo e força — destrua o adversário!", grad: "from-red-600 to-orange-700" },
+  { id: "spotdifference", label: "Encontre Diferenças", icon: Search, emoji: "🔍", desc: "Encontre 5 diferenças entre cenas geradas!", grad: "from-amber-500 to-yellow-600" },
+  { id: "wordchain", label: "Corrente de Palavras", icon: Shuffle, emoji: "🔗", desc: "A última letra vira a primeira — não repita palavras!", grad: "from-teal-500 to-emerald-600" },
+  { id: "numbertetris", label: "Números Caindo", icon: LayoutGrid, emoji: "🔢", desc: "Números caem e combinam — estilo Tetris 2048!", grad: "from-orange-600 to-red-700" },
+  { id: "pongvs", label: "Pong VS", icon: Gamepad2, emoji: "🏓", desc: "Clássico Pong arcade — 1v1 ou contra o bot, primeiro a 5!", grad: "from-blue-600 to-indigo-700" },
+  { id: "whackamole", label: "Bate o Alvo", icon: Target, emoji: "🎯", desc: "Toque nas criaturas que aparecem — quem marca mais pontos em 30s!", grad: "from-emerald-500 to-green-600" },
+  { id: "colorcatch", label: "Pesca Cores", icon: Palette, emoji: "🎨", desc: "Clique nas cores certas o mais rápido possível!", grad: "from-pink-500 to-rose-600" },
+  { id: "mexerica", label: "Mexerica (Bate a Mão)", icon: Target, emoji: "✋", desc: "Jogo tradicional moçambicano — bata nas mãos que aparecem!", grad: "from-amber-600 to-yellow-600" },
+  { id: "urusse", label: "Urusse (Mancala)", icon: Gamepad2, emoji: "🫘", desc: "Jogo de sementes moçambicano — semee e capture!", grad: "from-green-700 to-emerald-600" },
+  { id: "capulanaquiz", label: "Quiz Capulana", icon: Brain, emoji: "🧠", desc: "Quiz sobre cultura, geografia e história de Moçambique!", grad: "from-red-600 to-amber-600" },
+  { id: "chigogo", label: "Chigogo (Pedras)", icon: Gamepad2, emoji: "🪨", desc: "Jogo tradicional de pedras com padrões capulana!", grad: "from-amber-700 to-orange-600" },
+  { id: "ntchuva", label: "Ntchuva (Amarelinha)", icon: Target, emoji: "🎯", desc: "Toque os números em sequência — não caia nas armadilhas!", grad: "from-green-600 to-yellow-600" },
+  { id: "djikota", label: "Djikota (Oware)", icon: Gamepad2, emoji: "🏺", desc: "Jogo de tabuleiro moçambicano — semeie e capture sementes!", grad: "from-amber-800 to-red-700" },
+  { id: "uri", label: "Uri (Adivinha)", icon: Brain, emoji: "🔢", desc: "Quente ou Frio? Adivinhe o número secreto antes do bot!", grad: "from-orange-500 to-red-600" },
+  { id: "bicho", label: "Jogo do Bicho", icon: Sparkles, emoji: "🦩", desc: "Aposte no animal sorteado — Moçambique style!", grad: "from-amber-500 to-yellow-500" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -181,8 +177,6 @@ const LiveHub = () => {
   const [active, setActive] = useState<GameId>(() => {
     try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
   });
-  const [cat, setCat] = useState<CatId>("todos");
-  const [showGame, setShowGame] = useState(false);
   const [config, setConfig] = useState<LiveGameConfig>(() => {
     try {
       const s = localStorage.getItem("liveGameConfig");
@@ -314,13 +308,11 @@ const LiveHub = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const recordScore = (game: string) => (name: string, score: number) => {
-    if (!name) return;
-    if (isLive) {
-      setLeaderboard((prev) => [
-        ...prev,
-        { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
-      ]);
-    }
+    if (!name || !isLive) return;
+    setLeaderboard((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
+    ]);
   };
 
   const broadcastWinner = (name: string, meta?: string) => {
@@ -409,9 +401,6 @@ const LiveHub = () => {
 
   const fmtTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
   const activeMeta = GAMES.find((g) => g.id === active);
-  const filteredGames = cat === "todos" ? GAMES : GAMES.filter((g) => g.cat === cat);
-  const mozGames = GAMES.filter((g) => g.moz);
-  const handleSelectGame = (id: GameId) => { setActive(id); setShowGame(true); };
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
@@ -419,19 +408,19 @@ const LiveHub = () => {
 
       {/* Hero — live engagement only */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/20 via-background to-[#FFD700]/10" />
-        <ParticleBackground preset="stars" count={20} className="absolute inset-0 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
+        <ParticleBackground preset="stars" count={25} className="absolute inset-0 pointer-events-none" />
         <div className="relative container mx-auto px-4 py-6 md:py-12">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#009140]/20 to-[#FFD700]/20 border border-[#009140]/30 text-[11px] font-bold text-[#009140] mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-xs font-bold mb-3">
               <Radio className="h-3.5 w-3.5 animate-pulse" />
-              JOGOS AO VIVO
+              LIVE ENGAGEMENT
             </div>
-            <h1 className="font-display text-2xl md:text-4xl font-bold">
-              Jogos para a sua <span className="bg-gradient-to-r from-[#009140] to-[#FFD700] bg-clip-text text-transparent">Live</span>
+            <h1 className="font-display text-3xl md:text-5xl font-bold mb-2">
+              Jogos para a sua <span className="text-primary">Live</span>
             </h1>
-            <p className="text-muted-foreground text-xs md:text-sm mt-1 max-w-lg">
-              Animes a tua audiência com jogos interativos, quizzes e desafios em tempo real.
+            <p className="text-muted-foreground text-sm md:text-base mb-4">
+              Plataforma dedicada para empresas animarem lives com roda de prémios, batalhas, quizzes e caixas misteriosas — tudo configurável.
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -454,10 +443,13 @@ const LiveHub = () => {
                 </>
               ) : (
                 <>
-                  <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#009140] to-[#009140]/80 text-white text-sm font-bold shadow-lg shadow-[#009140]/30 hover:shadow-xl transition-all">
+                  <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
                     <Play className="h-4 w-4 fill-current" /> Iniciar Live
                   </button>
-              </>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-muted/50 text-muted-foreground text-[11px] font-medium">
+                    <Lock className="h-3 w-3" /> Sem código ativo
+                  </div>
+                </>
               )}
               <LiveGameSettings 
                 config={config} 
@@ -492,8 +484,8 @@ const LiveHub = () => {
 
       {!isLive && (
         <div className="container mx-auto px-3 sm:px-4 pt-3">
-          <div className="rounded-xl border bg-gradient-to-r from-[#009140]/5 to-[#FFD700]/5 border-[#009140]/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-            Joga livremente! <strong className="text-foreground">Inicia uma Live</strong> para gravar pontuações e vencedores.
+          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+            🔒 Pontuações e vencedores só são contabilizados depois de <strong>iniciar a live</strong>. Configure os jogos no painel da empresa.
           </div>
         </div>
       )}
@@ -510,57 +502,22 @@ const LiveHub = () => {
           onCategoryChange={(id) => setActive(id as GameId)}
         />
 
-        <div className="hidden md:block mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame className="h-5 w-5 text-[#FF6B35]" />
-              <h2 className="font-display text-lg font-bold">Jogos Moçambicanos</h2>
-              <span className="px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[10px] font-bold">NOVOS</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {mozGames.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => handleSelectGame(g.id)}
-                  className="flex-shrink-0 w-40 rounded-2xl border-2 border-[#009140]/30 bg-gradient-to-br from-[#009140]/10 to-[#FFD700]/5 p-3 text-left hover:border-[#FFD700] hover:shadow-lg hover:shadow-[#009140]/10 transition-all group"
-                >
-                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{g.emoji}</div>
-                  <p className="font-display text-xs font-bold text-foreground leading-tight">{g.label}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{g.desc}</p>
-                  <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[9px] font-bold">MOÇAMBIQUE</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-            <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            {CAT_LIST.map((cid) => (
-              <button
-                key={cid}
-                onClick={() => setCat(cid)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${cat === cid ? "bg-gradient-to-r from-[#009140] to-[#FFD700] text-white shadow-lg shadow-[#009140]/20" : "bg-card border border-border text-muted-foreground hover:border-[#009140]/40 hover:text-foreground"}`}
-              >
-                {CAT_LABELS[cid]}
-              </button>
-            ))}
-          </div>
-
-          {/* Desktop game cards */}
-        <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-3 mb-8 mt-4">
-          {filteredGames.map((g) => {
+        {/* Desktop game cards */}
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 mt-4">
+          {GAMES.map((g) => {
             const isActive = active === g.id;
             return (
               <button
                 key={g.id}
-                onClick={() => handleSelectGame(g.id)}
+                onClick={() => setActive(g.id)}
                 className={`text-left rounded-2xl border-2 p-4 transition-all ${
-                  isActive ? "border-primary bg-primary/5 shadow-lg shadow-primary/10" : g.moz ? "border-[#009140]/30 bg-gradient-to-br from-[#009140]/5 to-[#FFD700]/5 hover:border-[#009140]/60 hover:shadow-lg hover:shadow-[#009140]/10" : "border-border bg-card hover:border-primary/40 hover:shadow-md"
+                  isActive ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
                 }`}
               >
-                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2 group-hover:scale-110 transition-transform`}>
+                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2`}>
                   <g.icon className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex items-start justify-between gap-2"><p className="font-display text-sm font-bold leading-tight">{g.label}</p>{g.moz && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] font-bold flex-shrink-0">MZ</span>}</div>
+                <p className="font-display text-sm font-bold mb-1">{g.label}</p>
                 <p className="text-[11px] text-muted-foreground line-clamp-2">{g.desc}</p>
               </button>
             );

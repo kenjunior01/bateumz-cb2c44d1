@@ -417,7 +417,8 @@ const LiveHub = () => {
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
 
-      {/* Hero — live engagement only */}
+      
+
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/20 via-background to-[#FFD700]/10" />
         <ParticleBackground preset="stars" count={20} className="absolute inset-0 pointer-events-none" />
@@ -435,62 +436,84 @@ const LiveHub = () => {
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              {isLive ? (
-                <>
-                  <div className="flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">AO VIVO · {fmtTime(elapsed)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2">
-                    <span className="text-[11px] text-muted-foreground">Código:</span>
-                    <span className="font-mono text-sm font-bold text-primary">{liveCode}</span>
-                    <button onClick={copyCode} className="p-1 rounded hover:bg-secondary" aria-label="Copiar">
-                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {user ? (
+                isLive ? (
+                  <>
+                    <div className="flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">AO VIVO · {fmtTime(elapsed)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2">
+                      <span className="text-[11px] text-muted-foreground">Código:</span>
+                      <span className="font-mono text-sm font-bold text-primary">{liveCode}</span>
+                      <button onClick={copyCode} className="p-1 rounded hover:bg-secondary" aria-label="Copiar">
+                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                    <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
+                      <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
                     </button>
-                  </div>
-                  <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
-                    <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
-                  </button>
-                </>
-              ) : (
-                <>
+                  </>
+                ) : (
                   <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#009140] to-[#009140]/80 text-white text-sm font-bold shadow-lg shadow-[#009140]/30 hover:shadow-xl transition-all">
                     <Play className="h-4 w-4 fill-current" /> Iniciar Live
                   </button>
-              </>
+                )
+              ) : (
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#009140] to-[#FFD700] text-black text-sm font-bold shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Gamepad2 className="h-4 w-4" /> Jogar Agora — Grátis
+                </Link>
               )}
-              <LiveGameSettings 
-                config={config} 
-                onChange={setConfig} 
-                branding={branding}
-                onBrandingChange={setBranding}
-              />
-              <Link
-                to="/dashboard/raffles/create"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
-              >
-                <Plus className="h-3.5 w-3.5" /> Criar Sorteio Vinculado
-              </Link>
+              {user && (
+                <>
+                  <LiveGameSettings 
+                    config={config} 
+                    onChange={setConfig} 
+                    branding={branding}
+                    onBrandingChange={setBranding}
+                  />
+                  <Link
+                    to="/dashboard/raffles/create"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Criar Sorteio Vinculado
+                  </Link>
+                </>
+              )}
             </div>
 
-            {/* Host summary banner — what dashboard set as active */}
+
             {activeMeta && (
               <div className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-2.5">
                 <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
                 <div className="text-left">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Jogo ativo no painel</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{user ? "Jogo ativo no painel" : "A jogar"}</p>
                   <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
-                  {isLive ? "transmitindo" : "em espera"}
-                </span>
+                {user && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                    {isLive ? "transmitindo" : "em espera"}
+                  </span>
+                )}
               </div>
             )}
           </motion.div>
         </div>
       </section>
 
-      {!isLive && (
+      {!isLive && !user && (
+        <div className="container mx-auto px-3 sm:px-4 pt-3">
+          <div className="rounded-xl border bg-gradient-to-r from-[#009140]/5 to-[#FFD700]/5 border-[#009140]/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+            <Gamepad2 className="h-4 w-4 text-[#009140] flex-shrink-0" />
+            <span>Joga todos os jogos gratuitamente! <strong className="text-foreground">Cria uma conta</strong> para guardar pontuações e criar as tuas próprias lives.</span>
+          </div>
+        </div>
+      )}
+
+      {!isLive && user && (
         <div className="container mx-auto px-3 sm:px-4 pt-3">
           <div className="rounded-xl border bg-gradient-to-r from-[#009140]/5 to-[#FFD700]/5 border-[#009140]/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
             Joga livremente! <strong className="text-foreground">Inicia uma Live</strong> para gravar pontuações e vencedores.
@@ -499,7 +522,8 @@ const LiveHub = () => {
       )}
 
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
-        {/* Mobile chips */}
+        
+
         <MobileDiscoveryHeader
           title="Jogos da Live"
           searchValue=""
@@ -545,7 +569,8 @@ const LiveHub = () => {
             ))}
           </div>
 
-          {/* Game cards grid - visible on all screens */}
+          
+
         <div id="game-grid" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3 mb-8 mt-4">
           {filteredGames.map((g) => {
             const isActive = active === g.id;
@@ -575,10 +600,12 @@ const LiveHub = () => {
           })}
         </div>
 
-        {/* Game area */}
+        
+
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
-            {/* Active game header with back button */}
+            
+
             <div className="flex items-center gap-3 mb-4">
               <button
                 onClick={() => { const el = document.getElementById('game-grid'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
@@ -602,7 +629,8 @@ const LiveHub = () => {
             <AnimatePresence mode="wait">
               {active === "wheel" && (
                 <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  {/* Saved Games Selector */}
+                  
+
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl font-bold flex items-center gap-2">
@@ -1003,6 +1031,7 @@ const LiveHub = () => {
             </AnimatePresence>
           </div>
 
+          {user && (
           <aside className="space-y-4">
             <LiveControlPanel
               liveCode={liveCode}
@@ -1043,6 +1072,7 @@ const LiveHub = () => {
               </p>
             </div>
           </aside>
+          )}
         </div>
       </section>
 

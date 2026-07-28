@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Radio, Users, Trophy, Gamepad2, Zap, Heart, Gift,
   ChevronLeft, Send, Check, Clock, Star, X, ArrowRight,
-  Crown, Flame, Lock, LogIn, Volume2, VolumeX, Share2, Bell, Eye,
+  Crown, Flame, Lock, Volume2, VolumeX, Share2, Bell, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -98,14 +98,10 @@ const SpectatorBingo = ({ scheduledLiveId, liveCode }: { scheduledLiveId?: strin
               ? "Gere sua cart\u00F3ria e jogue em tempo real!"
               : "Aguardando o in\u00EDcio do bingo..."}
           </p>
-          {game && user ? (
+          {game ? (
             <Button onClick={handleJoin} className="bg-emerald-500 hover:bg-emerald-600">
               Gerar Cart\u00F3ria
             </Button>
-          ) : !user ? (
-            <Link to="/login">
-              <Button variant="outline"><LogIn className="h-4 w-4 mr-2" /> Entrar para jogar</Button>
-            </Link>
           ) : null}
         </div>
       ) : (
@@ -217,7 +213,6 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
 
       <button
         onClick={active ? () => setTaps((p) => p + 1) : startGame}
-        disabled={!user}
         className={cn(
           "w-full h-32 rounded-2xl text-xl font-black transition-all active:scale-95",
           active
@@ -225,14 +220,8 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
             : "bg-gradient-to-r from-primary/10 to-accent/10 text-primary border-2 border-dashed border-primary/30"
         )}
       >
-        {active ? `\u{1F4AA} TOQUE! (${timeLeft}s)` : user ? "\u{1F3C3} Come\u00E7ar" : "\u{1F512} Entrar para jogar"}
+        {active ? `\u{1F4AA} TOQUE! (${timeLeft}s)` : "\u{1F3C3} Come\u00E7ar"}
       </button>
-
-      {!user && (
-        <p className="text-center text-[10px] text-muted-foreground">
-          <Link to="/login" className="text-primary underline">Fa\u00E7a login</Link> para participar
-        </p>
-      )}
     </div>
   );
 };
@@ -303,12 +292,13 @@ const LiveParticipar = () => {
   }, [messages.length]);
 
   const handleJoin = async () => {
-    if (!user) return;
-    await sendChatMessage({
-      scheduled_live_id: scheduledLiveId,
-      live_code: liveCode || undefined,
-      message: "Entrou na live! \u{1F44B}",
-    });
+    if (user) {
+      await sendChatMessage({
+        scheduled_live_id: scheduledLiveId,
+        live_code: liveCode || undefined,
+        message: "Entrou na live! \u{1F44B}",
+      });
+    }
     setJoined(true);
   };
 

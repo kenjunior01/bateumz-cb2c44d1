@@ -337,10 +337,6 @@ const PrizeWheel = ({
   const spin = async () => {
     if (spinning || prizes.length < 2) return;
 
-    if (gameId && !user) {
-      toast.error(t("wheel.loginToSpin"));
-      return;
-    }
     if (gameId && user && !region?.id) {
       toast.error(t("error"));
       return;

@@ -291,10 +291,13 @@ const AppContent = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowLoading(false);
-    }, 3000);
+    }, 4000);
 
     if (!configLoading) {
-      setShowLoading(false);
+      const quickTimer = setTimeout(() => {
+        setShowLoading(false);
+      }, 1800);
+      return () => { clearTimeout(timer); clearTimeout(quickTimer); };
     }
 
 
@@ -330,13 +333,26 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
   componentDidCatch(error: Error, info: ErrorInfo) { console.error('AppErrorBoundary:', error, info); }
   render() {
     if (this.state.hasError) return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="text-6xl">Something went wrong</div>
-          <h2 className="text-2xl font-bold">Algo correu mal</h2>
-          <p className="text-muted-foreground">Ocorreu um erro inesperado. Tente novamente.</p>
-          <Button onClick={() => window.location.reload()} className="gap-2">Recarregar Pagina</Button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center p-6 overflow-hidden" style={{ background: "hsl(var(--background))" }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="text-center space-y-5 max-w-md relative z-10"
+        >
+          <motion.div
+            className="text-7xl"
+            animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            ⚠️
+          </motion.div>
+          <h2 className="text-2xl font-display font-bold">Algo correu mal</h2>
+          <p className="text-muted-foreground text-sm">Ocorreu um erro inesperado. Tente recarregar a página.</p>
+          <Button onClick={() => window.location.reload()} className="gap-2 rounded-full px-6">
+            Recarregar Página
+          </Button>
+        </motion.div>
       </div>
     );
     return this.props.children;

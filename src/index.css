@@ -919,3 +919,246 @@ select:focus-visible {
 .dark .vignette-overlay::after {
   background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.15) 100%);
 }
+
+/* ===== PREMIUM GAME EFFECTS ===== */
+
+/* Screen shake */
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-6px, -4px) rotate(-1deg); }
+  20% { transform: translate(5px, 3px) rotate(1deg); }
+  30% { transform: translate(-4px, 6px) rotate(0.5deg); }
+  40% { transform: translate(6px, -2px) rotate(-0.5deg); }
+  50% { transform: translate(-3px, 4px) rotate(1deg); }
+  60% { transform: translate(4px, -5px) rotate(-1deg); }
+  70% { transform: translate(-5px, 2px) rotate(0.5deg); }
+  80% { transform: translate(3px, -3px) rotate(-0.5deg); }
+  90% { transform: translate(-2px, 5px) rotate(1deg); }
+}
+.game-screen-shake {
+  animation: screen-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Intense shake for big wins */
+@keyframes screen-shake-intense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  10% { transform: translate(-10px, -8px) rotate(-2deg) scale(1.01); }
+  20% { transform: translate(8px, 6px) rotate(2deg) scale(0.99); }
+  30% { transform: translate(-6px, 10px) rotate(1deg); }
+  40% { transform: translate(10px, -4px) rotate(-1deg); }
+  50% { transform: translate(-5px, 8px) rotate(2deg) scale(1.01); }
+  60% { transform: translate(7px, -8px) rotate(-2deg); }
+  70% { transform: translate(-8px, 4px) rotate(1deg); }
+  80% { transform: translate(5px, -6px) rotate(-1deg) scale(0.99); }
+  90% { transform: translate(-3px, 8px) rotate(1deg); }
+}
+.game-screen-shake-intense {
+  animation: screen-shake-intense 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Flash effect overlay */
+@keyframes flash-white {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+@keyframes flash-green {
+  0% { opacity: 0.7; background: #22c55e; }
+  100% { opacity: 0; background: #22c55e; }
+}
+@keyframes flash-red {
+  0% { opacity: 0.7; background: #ef4444; }
+  100% { opacity: 0; background: #ef4444; }
+}
+@keyframes flash-gold {
+  0% { opacity: 0.8; background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706); }
+  100% { opacity: 0; background: #fbbf24; }
+}
+.game-flash-white { animation: flash-white 0.4s ease-out forwards; }
+.game-flash-green { animation: flash-green 0.5s ease-out forwards; }
+.game-flash-red { animation: flash-red 0.5s ease-out forwards; }
+.game-flash-gold { animation: flash-gold 0.6s ease-out forwards; }
+
+/* Pulsing glow ring for wheel */
+@keyframes glow-ring-pulse {
+  0%, 100% { box-shadow: 0 0 20px 5px rgba(251, 191, 36, 0.3), 0 0 60px 10px rgba(251, 191, 36, 0.1); }
+  50% { box-shadow: 0 0 40px 15px rgba(251, 191, 36, 0.5), 0 0 100px 20px rgba(251, 191, 36, 0.2); }
+}
+@keyframes glow-ring-spin {
+  0% { box-shadow: 0 0 30px 8px rgba(251, 191, 36, 0.4), 0 0 80px 15px rgba(251, 191, 36, 0.15); }
+  50% { box-shadow: 0 0 50px 20px rgba(251, 191, 36, 0.6), 0 0 120px 30px rgba(251, 191, 36, 0.25); }
+  100% { box-shadow: 0 0 30px 8px rgba(251, 191, 36, 0.4), 0 0 80px 15px rgba(251, 191, 36, 0.15); }
+}
+.wheel-glow-idle { animation: glow-ring-pulse 3s ease-in-out infinite; }
+.wheel-glow-spinning { animation: glow-ring-spin 0.5s ease-in-out infinite; border-radius: 50%; }
+
+/* Spinning pointer bounce */
+@keyframes pointer-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(4px); }
+}
+.wheel-pointer-bounce {
+  animation: pointer-bounce 0.15s ease-in-out infinite;
+}
+
+/* Neon border animation */
+@keyframes neon-border-rotate {
+  0% { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.3), inset 0 0 15px rgba(251, 191, 36, 0.05); }
+  33% { border-color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), inset 0 0 20px rgba(245, 158, 11, 0.08); }
+  66% { border-color: #d97706; box-shadow: 0 0 15px rgba(217, 119, 6, 0.3), inset 0 0 15px rgba(217, 119, 6, 0.05); }
+  100% { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.3), inset 0 0 15px rgba(251, 191, 36, 0.05); }
+}
+.neon-border-gold { animation: neon-border-rotate 3s ease-in-out infinite; }
+
+/* Floating particles for game backgrounds */
+@keyframes particle-float-1 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; } 25% { transform: translate(30px, -50px) scale(1.2); opacity: 0.8; } 50% { transform: translate(-20px, -100px) scale(0.8); opacity: 0.5; } 75% { transform: translate(40px, -60px) scale(1.1); opacity: 0.7; } }
+@keyframes particle-float-2 { 0%, 100% { transform: translate(0, 0) scale(0.8); opacity: 0.2; } 33% { transform: translate(-40px, -70px) scale(1.3); opacity: 0.6; } 66% { transform: translate(20px, -120px) scale(0.9); opacity: 0.4; } }
+@keyframes particle-float-3 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; } 50% { transform: translate(50px, -80px) scale(0.7); opacity: 0.9; } }
+
+.game-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.game-particle-1 { width: 4px; height: 4px; background: #fbbf24; animation: particle-float-1 8s ease-in-out infinite; }
+.game-particle-2 { width: 3px; height: 3px; background: #f59e0b; animation: particle-float-2 12s ease-in-out infinite; }
+.game-particle-3 { width: 5px; height: 5px; background: #fcd34d; animation: particle-float-3 10s ease-in-out infinite; }
+.game-particle-4 { width: 2px; height: 2px; background: #fde68a; animation: particle-float-2 15s ease-in-out infinite reverse; }
+.game-particle-5 { width: 6px; height: 6px; background: #fbbf24; animation: particle-float-1 18s ease-in-out infinite reverse; opacity: 0.15; }
+.game-particle-6 { width: 3px; height: 3px; background: #ffffff; animation: particle-float-3 9s ease-in-out infinite; opacity: 0.2; }
+
+/* Tap burst particle */
+@keyframes tap-burst {
+  0% { transform: scale(0) translate(0, 0); opacity: 1; }
+  100% { transform: scale(1) translate(var(--burst-x, 0px), var(--burst-y, -60px)); opacity: 0; }
+}
+.tap-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: tap-burst 0.6s ease-out forwards;
+}
+
+/* Millionaire lightning effect */
+@keyframes lightning-flash {
+  0%, 100% { opacity: 0; }
+  5% { opacity: 0.8; }
+  10% { opacity: 0; }
+  15% { opacity: 0.5; }
+  20% { opacity: 0; }
+}
+.lightning-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 40%, rgba(251, 191, 36, 0.1) 50%, transparent 60%);
+  animation: lightning-flash 4s ease-in-out infinite;
+}
+
+/* Dramatic timer pulse */
+@keyframes timer-urgent {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.timer-urgent { animation: timer-urgent 0.5s ease-in-out infinite; }
+
+/* Timer bar */
+@keyframes timer-bar-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.timer-bar {
+  transform-origin: left;
+  animation: timer-bar-shrink var(--timer-duration, 30s) linear forwards;
+}
+
+/* Prize level glow */
+@keyframes prize-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.2); }
+}
+.prize-glow { animation: prize-glow 2s ease-in-out infinite; }
+
+/* Option correct/wrong reveal */
+@keyframes option-reveal-correct {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  50% { box-shadow: 0 0 30px 10px rgba(34, 197, 94, 0.3); }
+  100% { box-shadow: 0 0 15px 3px rgba(34, 197, 94, 0.2); }
+}
+@keyframes option-reveal-wrong {
+ 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  30% { transform: translateX(-8px); }
+  60% { transform: translateX(8px); }
+  100% { box-shadow: 0 0 15px 3px rgba(239, 68, 68, 0.2); transform: translateX(0); }
+}
+.option-reveal-correct { animation: option-reveal-correct 1s ease-out forwards; }
+.option-reveal-wrong { animation: option-reveal-wrong 0.5s ease-out forwards; }
+
+/* Win overlay explosion */
+@keyframes win-scale-in {
+  0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.win-overlay-enter { animation: win-scale-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+/* 3D card tilt */
+.game-card-3d {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+.game-card-3d:hover {
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 30px rgba(251, 191, 36, 0.1);
+}
+
+/* Shimmer effect for loading states */
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.game-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.game-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: shimmer-sweep 2s ease-in-out infinite;
+}
+
+/* Spin button glow pulse */
+@keyframes spin-btn-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(251, 191, 36, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(251, 191, 36, 0.4); }
+}
+.spin-btn-glow { animation: spin-btn-glow 2s ease-in-out infinite; }
+
+/* Bingo number highlight */
+@keyframes bingo-number-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.bingo-number-pop { animation: bingo-number-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+/* Celebration rays */
+@keyframes celebration-rays {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.celebration-rays {
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.1), transparent, rgba(251, 191, 36, 0.05), transparent);
+  animation: celebration-rays 10s linear infinite;
+  pointer-events: none;
+}
+
+/* Energy bar glow */
+@keyframes energy-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
+}
+.energy-bar-glow { animation: energy-pulse 1s ease-in-out infinite; }

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { Plus, Trash2, Settings2, Volume2, VolumeX, Trophy, Share2, AlertTriangle, Gift, Sparkles, Zap, Star, PartyPopper, Monitor, Smartphone } from "lucide-react";
+import { Plus, Trash2, Settings2, Volume2, VolumeX, Trophy, Share2, AlertTriangle, Gift, Sparkles, Zap, Star, PartyPopper, Monitor, Smartphone, Flame } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -191,6 +191,9 @@ const PrizeWheel = ({
   const [result, setResult] = useState<WheelPrize | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
   const [loading, setLoading] = useState(false);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [flashClass, setFlashClass] = useState("");
+  const [showCelebration, setShowCelebration] = useState(false);
   const [prizes, setPrizes] = useState<WheelPrize[]>(initialPrizes);
   const [gameName, setGameName] = useState("Roda da Sorte");
   const [defaultEffect, setDefaultEffect] = useState<string>("confetti");
@@ -408,17 +411,42 @@ const PrizeWheel = ({
         } else {
           setRotation(finalRotation);
           setSpinning(false);
-          setResult(winner);
-          onWin?.(winner);
 
-          const landed = getSegmentAtPointer(finalRotation, prizes.length);
-          if (landed !== winningIndex) {
-            console.warn("Wheel alignment check:", { landed, winningIndex, segmentAngleDeg });
+          const isWin = !isNoWinLabel(winner.label) && winner.rewardType !== "none";
+
+          setShakeKey(prev => prev + 1);
+          setFlashClass(isWin ? "game-flash-gold" : "game-flash-white");
+          setTimeout(() => setFlashClass(""), 700);
+
+          if (isWin) {
+            setShowCelebration(true);
+            setTimeout(() => setShowCelebration(false), 2000);
           }
 
-          if (particleEffects && !isNoWinLabel(winner.label) && winner.rewardType !== "none") {
-            fireConfetti(winner.effectType || defaultEffect || "confetti");
-          }
+          setTimeout(() => {
+            setResult(winner);
+            onWin?.(winner);
+
+            const landed = getSegmentAtPointer(finalRotation, prizes.length);
+            if (landed !== winningIndex) {
+              console.warn("Wheel alignment check:", { landed, winningIndex, segmentAngleDeg });
+            }
+
+            if (particleEffects && isWin) {
+              fireConfetti(winner.effectType || defaultEffect || "confetti");
+              setTimeout(() => fireConfetti("stars"), 300);
+              if (winner.rewardValue) {
+                setTimeout(() => {
+                  const end = Date.now() + 2000;
+                  const interval = setInterval(() => {
+                    if (Date.now() > end) return clearInterval(interval);
+                    confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] });
+                    confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] });
+                  }, 50);
+                }, 500);
+              }
+            }
+          }, 400);
         }
       };
 
@@ -445,7 +473,7 @@ const PrizeWheel = ({
   const totalWeight = prizes.reduce((s, p) => s + Math.max(0, p.weight), 0) || 1;
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center font-sans"
+    <div key={shakeKey} className={`min-h-screen relative overflow-hidden flex flex-col items-center justify-center font-sans ${shakeKey > 0 ? (result && !isNoWinLabel(result.label) && result.rewardType !== "none" ? "game-screen-shake-intense" : "game-screen-shake") : ""}`}
          style={{ 
            backgroundColor: currentTheme.backgroundColor,
            backgroundImage: branding?.backgroundImageUrl ? `url(${branding.backgroundImageUrl})` : 'none',
@@ -454,6 +482,15 @@ const PrizeWheel = ({
            color: currentTheme.textColor
          }}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
+
+      {flashClass && <div className={`fixed inset-0 z-[100] pointer-events-none ${flashClass}`} />}
+      {showCelebration && <div className="celebration-rays z-[90]" />}
+      <div className="game-particle game-particle-1" style={{ top: '10%', left: '15%' }} />
+      <div className="game-particle game-particle-2" style={{ top: '20%', right: '20%' }} />
+      <div className="game-particle game-particle-3" style={{ bottom: '30%', left: '10%' }} />
+      <div className="game-particle game-particle-4" style={{ top: '60%', right: '15%' }} />
+      <div className="game-particle game-particle-5" style={{ bottom: '15%', right: '30%' }} />
+      <div className="game-particle game-particle-6" style={{ top: '40%', left: '80%' }} />
       
       <div className={`relative z-10 w-full max-w-7xl px-4 py-8 flex ${mode === "horizontal" ? "flex-col md:flex-row" : "flex-col"} items-center gap-8`}>
         {/* Mode Selector & Theme Selector (only when editable) */}
@@ -541,17 +578,21 @@ const PrizeWheel = ({
         {/* Center: The Wheel */}
         <div className="relative group">
           {/* Modern Enhanced Pointer - More Precise */}
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20 drop-shadow-2xl">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-primary shadow-lg relative" style={{ borderColor: currentTheme.primaryColor }}>
+          <div className={`absolute -top-8 left-1/2 -translate-x-1/2 z-20 drop-shadow-2xl ${spinning ? "wheel-pointer-bounce" : ""}`}>
+            <div className={`w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 shadow-lg relative ${spinning ? "neon-border-gold" : ""}`} style={{ borderColor: currentTheme.primaryColor }}>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
                 <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent" style={{ borderTopColor: currentTheme.primaryColor }} />
               </div>
-              <Sparkles className="w-6 h-6" style={{ color: currentTheme.primaryColor }} />
+              {spinning ? (
+                <Flame className="w-6 h-6 animate-pulse" style={{ color: currentTheme.primaryColor }} />
+              ) : (
+                <Sparkles className="w-6 h-6" style={{ color: currentTheme.primaryColor }} />
+              )}
             </div>
           </div>
 
           {/* Wheel Container */}
-          <div className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)]" style={{ borderColor: `${currentTheme.primaryColor}40` }}>
+          <div className={`relative p-6 rounded-full bg-white/5 border-2 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)] ${spinning ? "wheel-glow-spinning neon-border-gold" : "wheel-glow-idle"}`} style={{ borderColor: `${currentTheme.primaryColor}40` }}>
             <canvas
               ref={canvasRef}
               width="600"
@@ -569,7 +610,7 @@ const PrizeWheel = ({
                 disabled={spinning || loading}
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full 
                 flex flex-col items-center justify-center font-black text-sm transition-all duration-300 z-20
-                ${spinning || loading ? 'bg-gray-500 scale-95 opacity-50 cursor-not-allowed' : 'bg-white hover:scale-110 shadow-2xl active:scale-90 cursor-pointer'}`}
+                ${spinning || loading ? 'bg-gray-500 scale-95 opacity-50 cursor-not-allowed' : 'bg-white hover:scale-110 shadow-2xl active:scale-90 cursor-pointer spin-btn-glow'}`}
                 style={{ color: wheelConfig?.wheel_background_color || currentTheme.primaryColor }}
               >
                 {loading || spinning ? (
@@ -596,7 +637,7 @@ const PrizeWheel = ({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.3, y: -100 }}
                 transition={{ type: "spring", bounce: 0.6, duration: 0.8 }}
-                className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl border-2 ${
+                className={`win-overlay-enter rounded-3xl p-8 text-center space-y-4 shadow-2xl border-2 game-shimmer ${
                   result.rewardType === "none" || isNoWinLabel(result.label)
                     ? "bg-secondary/90 text-muted-foreground border-white/20"
                     : "border-white/20"

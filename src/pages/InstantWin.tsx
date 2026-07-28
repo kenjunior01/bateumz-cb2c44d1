@@ -99,13 +99,13 @@ export default function InstantWin() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {games.map((g) => (
+            {games.map((g, i) => (
               <Link
                 key={`${g.type}-${g.id}`}
                 to={g.type === "spin" ? `/games/spin-wheel/${g.id}` : `/games/millionaire/${g.id}`}
                 className="group"
               >
-                <Card className="h-full overflow-hidden transition hover:border-primary/50 hover:shadow-lg">
+                <Card className="h-full overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3),0_0_30px_rgba(251,191,36,0.1)] hover:-translate-y-1 game-card-3d game-shimmer">
                   <div
                     className="relative flex h-40 items-center justify-center bg-muted"
                     style={
@@ -115,20 +115,26 @@ export default function InstantWin() {
                     }
                   >
                     {!g.cover_image_url && (
-                      <Sparkles className="h-10 w-10 text-muted-foreground" />
+                      <motion.div
+                        animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <Sparkles className="h-10 w-10 text-primary/60" />
+                      </motion.div>
                     )}
                     <span className="absolute left-3 top-3 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur">
                       {g.type === "spin" ? "Spin Wheel" : "Millionaire"}
                     </span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
                   </div>
                   <div className="p-4">
-                    <h3 className="mb-1 line-clamp-1 font-semibold">{g.title}</h3>
+                    <h3 className="mb-1 line-clamp-1 font-semibold group-hover:text-primary transition-colors">{g.title}</h3>
                     <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                       {g.description || "Play now for a chance to win instantly."}
                     </p>
                     <div className="flex items-center text-sm font-medium text-primary">
                       Play now
-                      <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-1" />
+                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-2" />
                     </div>
                   </div>
                 </Card>

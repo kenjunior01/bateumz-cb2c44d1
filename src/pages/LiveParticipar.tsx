@@ -168,12 +168,31 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
   const [timeLeft, setTimeLeft] = useState(10);
   const [active, setActive] = useState(false);
   const [bestScore, setBestScore] = useState(0);
+  const [tapParticles, setTapParticles] = useState<{id: number; x: number; y: number; color: string}[]>([]);
+  const [shakeKey, setShakeKey] = useState(0);
+  const tapRef = useRef<HTMLDivElement>(null);
 
-  const startGame = () => {
-    setTaps(0);
-    setTimeLeft(10);
-    setActive(true);
+  const spawnTapParticle = (e: React.MouseEvent) => {
+    if (!tapRef.current) return;
+    const rect = tapRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const colors = ["#f97316", "#ef4444", "#fbbf24", "#f59e0b", "#ffffff"];
+    const newParticles = Array.from({ length: 6 }, (_, i) => ({
+      id: Date.now() + i, x: x + (Math.random() - 0.5) * 60, y: y + (Math.random() - 0.5) * 60,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    }));
+    setTapParticles(prev => [...prev, ...newParticles]);
+    setTimeout(() => setTapParticles(prev => prev.filter(p => !newParticles.find(np => np.id === p.id))), 600);
   };
+
+  const handleTap = (e: React.MouseEvent) => {
+    if (!active) { startGame(); return; }
+    spawnTapParticle(e);
+    setTaps(p => { const n = p + 1; if (n % 20 === 0) setShakeKey(k => k + 1); return n; });
+  };
+
+  const startGame = () => { setTaps(0); setTimeLeft(10); setActive(true); setTapParticles([]); };
 
   useEffect(() => {
     if (!active) return;
@@ -202,19 +221,23 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
         )}
       </div>
 
-      <div className="text-center py-2">
-        <p className="text-4xl font-black text-primary">{taps}</p>
+      <div key={shakeKey} className={`text-center py-2 ${shakeKey > 0 ? "game-screen-shake" : ""}`}>
+        <motion.p key={taps} initial={{ scale: 1.3 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 15 }} className="text-5xl font-black text-primary">{taps}</motion.p>
         <p className="text-xs text-muted-foreground mt-1">toques</p>
       </div>
 
       {active && (
-        <Progress value={(timeLeft / 10) * 100} className="h-2" />
+        <div className="relative">
+          <div className={`absolute inset-0 rounded-full ${timeLeft <= 3 ? 'energy-bar-glow' : ''}`} />
+          <Progress value={(timeLeft / 10) * 100} className={`h-3 ${timeLeft <= 3 ? '[&>div]:!bg-red-500' : timeLeft <= 5 ? '[&>div]:!bg-amber-500' : ''}`} />
+          {timeLeft <= 3 && <p className="text-center text-[10px] text-red-400 font-bold mt-1 animate-pulse">ULTIMOS SEGUNDOS!</p>}
+        </div>
       )}
 
       <button
-        onClick={active ? () => setTaps((p) => p + 1) : startGame}
+        onClick={handleTap}
         className={cn(
-          "w-full h-32 rounded-2xl text-xl font-black transition-all active:scale-95",
+          "w-full h-32 rounded-2xl text-xl font-black transition-all active:scale-90",
           active
             ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
             : "bg-gradient-to-r from-primary/10 to-accent/10 text-primary border-2 border-dashed border-primary/30"

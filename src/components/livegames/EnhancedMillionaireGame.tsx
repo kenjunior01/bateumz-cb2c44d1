@@ -87,6 +87,9 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
   const [triviaLoading, setTriviaLoading] = useState(false);
+  const [flashClass, setFlashClass] = useState("");
+  const [shakeKey, setShakeKey] = useState(0);
+  const [questionKey, setQuestionKey] = useState(0);
 
   // Default questions for fallback
   const defaultQuestions: Question[] = [
@@ -239,12 +242,32 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
     setAnswered(true);
 
     const isCorrect = choice === currentQuestion.correct_answer;
-    
+
+    setFlashClass("");
+    setTimeout(() => {
+      setFlashClass(isCorrect ? "game-flash-green" : "game-flash-red");
+      setShakeKey(k => k + 1);
+      setTimeout(() => setFlashClass(""), 600);
+    }, 100);
+
     setTimeout(async () => {
       if (isCorrect) {
         if (currentLevel === (game?.total_questions || prizeStructure.length)) {
           setStatus('won');
-          confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+          setShakeKey(k => k + 1);
+          setFlashClass("game-flash-gold");
+          setTimeout(() => setFlashClass(""), 800);
+          confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+          setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { x: 0.3, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] }), 200);
+          setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { x: 0.7, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] }), 400);
+          setTimeout(() => {
+            const end = Date.now() + 3000;
+            const iv = setInterval(() => {
+              if (Date.now() > end) return clearInterval(iv);
+              confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
+              confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
+            }, 80);
+          }, 600);
           saveSession('completed', currentPrize?.amount || 0);
           onComplete?.(currentPrize?.amount || 0, currentLevel, 'won');
         } else {
@@ -256,6 +279,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
             setSelectedAnswer(null);
             setDisabledOptions([]);
             setTimeLeft(game?.time_per_question || 30);
+            setQuestionKey(k => k + 1);
           }, 1500);
         }
       } else {
@@ -317,17 +341,27 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
   };
 
   if (loading || triviaLoading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-[#0a0e17] gap-4">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="text-white text-lg">Carregando perguntas...</p>
+    <div className="h-screen flex flex-col items-center justify-center bg-[#0a0e17] gap-4 relative overflow-hidden">
+      <div className="game-particle game-particle-1" style={{ top: '20%', left: '30%' }} />
+      <div className="game-particle game-particle-3" style={{ bottom: '30%', right: '20%' }} />
+      <div className="game-particle game-particle-5" style={{ top: '60%', left: '10%' }} />
+      <div className="relative">
+        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary relative" />
+      </div>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="text-white text-lg"
+      >Carregando perguntas...</motion.p>
     </div>
   );
   
   if (!game || !currentQuestion) return <Navigate to="/" replace />;
 
   return (
-    <div 
-      className="min-h-screen relative flex flex-col bg-[#0a0e17] text-white overflow-hidden"
+    <div key={shakeKey} className={`min-h-screen relative flex flex-col bg-[#0a0e17] text-white overflow-hidden ${shakeKey > 0 && status !== 'playing' ? 'game-screen-shake' : ''}`}
       style={{ 
         backgroundColor: game.background_color || '#0a0e17',
         backgroundImage: game.background_image_url ? `url(${game.background_image_url})` : 'none',
@@ -336,6 +370,13 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
       }}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e17]/80 via-[#0a0e17]/60 to-[#0a0e17]/95"></div>
+      {flashClass && <div className={`fixed inset-0 z-[100] pointer-events-none ${flashClass}`} />}
+      <div className="game-particle game-particle-1" style={{ top: '15%', left: '10%' }} />
+      <div className="game-particle game-particle-2" style={{ top: '25%', right: '15%' }} />
+      <div className="game-particle game-particle-3" style={{ bottom: '20%', left: '20%' }} />
+      <div className="game-particle game-particle-4" style={{ top: '50%', right: '8%' }} />
+      <div className="game-particle game-particle-5" style={{ bottom: '10%', right: '25%' }} />
+      <div className="game-particle game-particle-6" style={{ top: '70%', left: '5%' }} />
 
       {/* Top Header */}
       <div className="relative z-10 p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
@@ -358,14 +399,38 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
           >
             <RefreshCw className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/10">
-            <Timer className={`w-5 h-5 ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-primary'}`} />
-            <span className="text-xl font-mono font-bold">{timeLeft}s</span>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-500 ${
+            timeLeft <= 5 ? 'bg-red-500/20 border-red-500/50 timer-urgent' :
+            timeLeft <= 10 ? 'bg-amber-500/20 border-amber-500/40' :
+            'bg-black/40 border-white/10'
+          }`}>
+            <Timer className={`w-5 h-5 transition-colors duration-500 ${
+              timeLeft <= 5 ? 'text-red-400' :
+              timeLeft <= 10 ? 'text-amber-400' :
+              'text-primary'
+            }`} />
+            <span className={`text-xl font-mono font-bold transition-colors duration-500 ${
+              timeLeft <= 5 ? 'text-red-400' :
+              timeLeft <= 10 ? 'text-amber-400' :
+              'text-white'
+            }`}>{timeLeft}s</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(!soundEnabled)}>
             {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </Button>
         </div>
+      </div>
+
+      <div className="absolute top-[72px] left-0 right-0 h-1 bg-white/5 z-20">
+        <div
+          className="h-full transition-colors duration-1000"
+          style={{
+            width: status === 'playing' && !answered ? `${(timeLeft / (game?.time_per_question || 30)) * 100}%` : '0%',
+            background: timeLeft <= 5 ? 'linear-gradient(90deg, #ef4444, #f87171)' : timeLeft <= 10 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, hsl(var(--primary)), #fbbf24)',
+            transition: 'width 1s linear, background 1s ease',
+            boxShadow: timeLeft <= 5 ? '0 0 15px rgba(239, 68, 68, 0.5)' : timeLeft <= 10 ? '0 0 10px rgba(251, 191, 36, 0.3)' : '0 0 5px rgba(251, 191, 36, 0.2)'
+          }}
+        />
       </div>
 
       <div className="relative z-10 flex-1 container mx-auto px-4 py-8 grid lg:grid-cols-[1fr_320px] gap-8">
@@ -394,11 +459,16 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
               <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
               <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary"></div>
               <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                key={currentLevel}
-                className="bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+                initial={{ opacity: 0, scale: 0.85, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                key={questionKey}
+                className="relative bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden"
               >
+                <div className="lightning-effect" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <p className="text-xs uppercase tracking-[0.3em] text-primary/60 mb-4 font-bold">Pergunta {currentLevel} de {game?.total_questions || prizeStructure.length}</p>
                 <h2 className="text-2xl md:text-4xl font-bold leading-tight">
                   {currentQuestion.question_text}
                 </h2>
@@ -415,26 +485,26 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
               const isCorrect = letter === currentQuestion.correct_answer;
               const isDisabled = disabledOptions.includes(letter);
 
-              let stateClass = "border-white/20 bg-white/5 hover:bg-white/10";
-              if (isSelected) stateClass = "border-primary bg-primary/20 text-primary shadow-[0_0_20px_rgba(var(--primary),0.3)]";
-              if (answered && isCorrect) stateClass = "border-green-500 bg-green-500/20 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] animate-pulse";
-              if (answered && isSelected && !isCorrect) stateClass = "border-red-500 bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]";
+              let stateClass = "border-white/20 bg-white/5 hover:bg-white/10 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]";
+              if (isSelected) stateClass = "border-primary bg-primary/20 text-primary shadow-[0_0_25px_rgba(var(--primary),0.4)]";
+              if (answered && isCorrect) stateClass = "border-green-500 bg-green-500/20 text-green-500 option-reveal-correct";
+              if (answered && isSelected && !isCorrect) stateClass = "border-red-500 bg-red-500/20 text-red-500 option-reveal-wrong";
               if (isDisabled) stateClass = "opacity-20 pointer-events-none grayscale";
 
               return (
                 <motion.button
-                  key={letter}
-                  initial={{ opacity: 0, x: letter < 'C' ? -20 : 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (letter.charCodeAt(0) - 'A'.charCodeAt(0)) * 0.1 }}
+                  key={`${questionKey}-${letter}`}
+                  initial={{ opacity: 0, x: letter < 'C' ? -30 : 30, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  transition={{ delay: 0.1 + (letter.charCodeAt(0) - 'A'.charCodeAt(0)) * 0.08, type: "spring", stiffness: 180, damping: 20 }}
                   onClick={() => handleAnswer(letter)}
                   disabled={answered || isDisabled || status !== 'playing'}
                   className={`relative group flex items-center p-1 rounded-full border-2 transition-all duration-300 ${stateClass}`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black text-primary group-hover:bg-primary group-hover:text-black transition-colors">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center font-black text-primary group-hover:bg-primary group-hover:text-black group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)] transition-all duration-200 text-sm md:text-base">
                     {letter}
                   </div>
-                  <span className="flex-1 px-6 font-semibold text-lg text-left">{text}</span>
+                  <span className="flex-1 px-4 md:px-6 font-semibold text-base md:text-lg text-left">{text}</span>
                   <div className="w-12 h-[2px] bg-white/10 absolute -right-4 top-1/2 -translate-y-1/2 group-hover:bg-primary transition-colors hidden md:block"></div>
                 </motion.button>
               );
@@ -484,13 +554,13 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
                     <motion.div 
                       key={i} 
                       initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: (prizeStructure.length - i) * 0.05 }}
-                      className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all ${isCurrent ? 'bg-primary text-black font-black scale-105 shadow-lg' : isPast ? 'opacity-40' : 'hover:bg-white/5'}`}
+                      animate={{ opacity: 1, x: 0, scale: isCurrent ? 1.05 : 1 }}
+                      transition={{ delay: (prizeStructure.length - i) * 0.05, type: "spring", stiffness: 200, damping: 20 }}
+                      className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all ${isCurrent ? 'bg-primary text-black font-black shadow-lg prize-glow' : isPast ? 'opacity-40 line-through' : 'hover:bg-white/5'}`}
                     >
-                      <span className={`text-xs w-6 ${isCurrent ? 'text-black/60' : 'text-primary'}`}>{p.level}</span>
+                      <span className={`text-xs w-6 font-bold ${isCurrent ? 'text-black/60' : 'text-primary'}`}>{p.level}</span>
                       <span className="flex-1 text-sm">{p.amount.toLocaleString()} {p.currency}</span>
-                      {p.is_safe_haven && <CheckCircle2 className={`w-4 h-4 ${isCurrent ? 'text-black' : 'text-primary'}`} />}
+                      {p.is_safe_haven && <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isCurrent ? 'text-black/60' : 'text-primary'}`} />}
                     </motion.div>
                   );
                 })}

@@ -1,5 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import BusinessGameCard from "@/components/livegames/BusinessGameCard";
+import GameHistoryPanel from "@/components/livegames/GameHistoryPanel";
+import GuestNameDialog from "@/components/livegames/GuestNameDialog";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -29,6 +44,7 @@ import {
   Medal,
   Wallet,
   Clock,
+  Gamepad2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -70,6 +86,33 @@ interface Contest {
   evaluation_type: string;
   end_date: string | null;
   created_at?: string | null;
+}
+
+interface SpinWheelGame {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  total_plays?: number;
+}
+
+interface MillionaireGameInfo {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  total_plays?: number;
+}
+
+interface ChallengeRoulette {
+  id: string;
+  title: string | null;
+  is_published: boolean;
+  created_at: string;
 }
 
 interface PrestacaoProduct {
@@ -127,6 +170,12 @@ export default function BusinessProfile() {
   const [products, setProducts] = useState<PrestacaoProduct[]>([]);
   const [winners, setWinners] = useState<RaffleWinner[]>([]);
   const [rankings, setRankings] = useState<ContestRanking[]>([]);
+  const [spinGames, setSpinGames] = useState<SpinWheelGame[]>([]);
+  const [millionaireGames, setMillionaireGames] = useState<MillionaireGameInfo[]>([]);
+  const [challengeRoulettes, setChallengeRoulettes] = useState<ChallengeRoulette[]>([]);
+  const [guestName, setGuestName] = useState("");
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [pendingGame, setPendingGame] = useState<{type: string; id: string} | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -165,6 +214,22 @@ export default function BusinessProfile() {
 
       // Load winners + rankings (non-blocking)
       void loadWinnersAndRankings(rafflesData, contestsData);
+    };
+
+    const loadGames = async () => {
+      const bizId = id!;
+      const [spinsRes, millsRes, roulettesRes] = await Promise.all([
+        supabase.from("spin_wheel_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        supabase.from("millionaire_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        supabase.from("challenge_roulettes").select("id, title, is_published, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+      ]);
+      setSpinGames((spinsRes.data as SpinWheelGame[]) || []);
+      setMillionaireGames((millsRes.data as MillionaireGameInfo[]) || []);
+      setChallengeRoulettes((roulettesRes.data as ChallengeRoulette[]) || []);
+
+      // Load guest name from localStorage
+      const saved = localStorage.getItem("bateumz_guest_name");
+      if (saved) setGuestName(saved);
     };
 
     const loadWinnersAndRankings = async (rs: Raffle[], cs: Contest[]) => {
@@ -239,17 +304,54 @@ export default function BusinessProfile() {
     load();
   }, [id]);
 
+  const allGames = useMemo(() => [
+    ...spinGames.map((g) => ({ ...g, type: "spin" as const })),
+    ...millionaireGames.map((g) => ({ ...g, type: "millionaire" as const })),
+    ...challengeRoulettes.map((g) => ({ ...g, type: "roulette" as const, description: null, cover_image_url: null, title: g.title || "Roleta de Desafios" })),
+  ], [spinGames, millionaireGames, challengeRoulettes]);
+
   const stats = useMemo(() => {
     const activeRaffles = raffles.filter((r) => r.status === "active").length;
     const totalSold = raffles.reduce((acc, r) => acc + (r.sold_tickets || 0), 0);
+    const totalGames = spinGames.length + millionaireGames.length + challengeRoulettes.length;
+    const activeGames = [...spinGames, ...millionaireGames].filter((g) => g.is_active).length;
     return {
       activeRaffles,
       totalRaffles: raffles.length,
       contests: contests.length,
       products: products.length,
       totalSold,
+      totalGames,
+      activeGames,
     };
-  }, [raffles, contests, products]);
+  }, [raffles, contests, products, spinGames, millionaireGames, challengeRoulettes]);
+
+  const handlePlayGame = useCallback((type: string, gameId: string) => {
+    if (!guestName) {
+      setPendingGame({ type, id: gameId });
+      setShowNameDialog(true);
+    } else {
+      const routes: Record<string, string> = {
+        spin: `/games/spin-wheel/${gameId}`,
+        millionaire: `/games/millionaire/${gameId}`,
+      };
+      const route = routes[type] || `/jogos`;
+      navigate(route);
+    }
+  }, [guestName, navigate]);
+
+  const handleGuestNameSubmit = useCallback((name: string) => {
+    setGuestName(name);
+    setShowNameDialog(false);
+    if (pendingGame) {
+      const routes: Record<string, string> = {
+        spin: `/games/spin-wheel/${pendingGame.id}`,
+        millionaire: `/games/millionaire/${pendingGame.id}`,
+      };
+      navigate(routes[pendingGame.type] || `/jogos`);
+      setPendingGame(null);
+    }
+  }, [pendingGame, navigate]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -451,7 +553,11 @@ export default function BusinessProfile() {
                 <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
                 Vencedores
               </TabsTrigger>
-            </TabsList>
+            <TabsTrigger value="jogos" className="gap-1.5">
+                  <Gamepad2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Jogos</span>
+                </TabsTrigger>
+              </TabsList>
           </div>
 
           {/* TAB: ALL */}
@@ -644,6 +750,40 @@ export default function BusinessProfile() {
             />
           </TabsContent>
 
+          <TabsContent value="jogos" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gamepad2 className="h-5 w-5 text-primary" />
+                    <h3 className="font-bold text-lg">Jogos Interactivos</h3>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {stats.totalGames} jogos
+                  </Badge>
+                </div>
+
+                {allGames.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-10 text-center">
+                      <Gamepad2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhum jogo configurado ainda</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {allGames.map((game, i) => (
+                      <BusinessGameCard
+                        key={`${game.type}-${game.id}`}
+                        game={game}
+                        index={i}
+                        onClick={() => handlePlayGame(game.type, game.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <GameHistoryPanel businessId={id!} />
+              </TabsContent>
+
           <TabsContent value="winners">
             {winners.length === 0 && rankings.length === 0 ? (
               <EmptyState message="Ainda não há vencedores nem rankings publicados." />
@@ -655,6 +795,13 @@ export default function BusinessProfile() {
       </div>
 
       <Footer />
+
+      <GuestNameDialog
+        open={showNameDialog}
+        onNameSubmit={handleGuestNameSubmit}
+        gameTitle={pendingGame?.type === "spin" ? "Roleta" : pendingGame?.type === "millionaire" ? "Millionario" : "Jogo"}
+        gameEmoji={pendingGame?.type === "spin" ? "🎲" : pendingGame?.type === "millionaire" ? "💰" : "🎮"}
+      />
     </div>
   );
 }

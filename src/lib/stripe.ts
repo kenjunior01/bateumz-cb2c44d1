@@ -1,10 +1,12 @@
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 
-/** Lazy-loaded Stripe.js instance — reused across the app */
-export const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY as string,
-);
+/** Lazy-loaded Stripe.js instance — reused across the app. Null when no key configured. */
+const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string | undefined;
+export const stripePromise: Promise<Stripe | null> = STRIPE_KEY
+  ? loadStripe(STRIPE_KEY)
+  : Promise.resolve(null);
+
 
 /**
  * Create a Stripe Checkout Session via Supabase Edge Function.

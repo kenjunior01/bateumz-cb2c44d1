@@ -35,13 +35,14 @@ const StayInLoop = () => {
   };
 
   return (
-    <section className="relative py-16">
+    <section className="relative py-16 holographic-bg overflow-hidden">
+      <div className="nebula-blob nebula-blob-2" style={{ opacity: 0.4 }} />
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mx-auto max-w-2xl rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card/40 to-accent/10 p-8 text-center backdrop-blur-sm"
+          className="relative z-10 mx-auto max-w-2xl rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card/40 to-accent/10 p-8 text-center backdrop-blur-sm"
         >
           <Sparkles className="mx-auto mb-3 h-8 w-8 text-accent" />
           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">

@@ -193,7 +193,8 @@ const WinnersSection = () => {
   };
 
   return (
-    <section id="winners" className="relative py-24">
+    <section id="winners" className="relative py-24 section-glow-divider">
+      <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]" style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 5%, transparent)" }} />
       <div className="container mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-4 text-center">
           <span className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-primary">

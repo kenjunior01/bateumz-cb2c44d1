@@ -42,8 +42,9 @@ const features = [
 
 const FeaturesGrid = () => {
   return (
-    <section id="how-it-works" className="relative py-24">
+    <section id="how-it-works" className="relative py-24 section-glow-divider energy-wave">
       <div className="absolute right-0 top-1/2 h-80 w-80 -translate-y-1/2 rounded-full blur-[120px]" style={{ background: "color-mix(in srgb, var(--region-secondary, hsl(var(--accent))) 6%, transparent)" }} />
+      <div className="absolute left-0 bottom-0 h-64 w-64 rounded-full blur-[100px]" style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 4%, transparent)" }} />
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

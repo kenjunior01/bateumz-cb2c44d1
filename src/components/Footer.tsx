@@ -9,9 +9,10 @@ const Footer = () => {
   const { t } = useLanguage();
   return (
     <footer
-      className="border-t border-border py-16"
+      className="relative border-t border-border py-16 section-glow-divider"
       style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--card))) 4%, hsl(var(--card)/0.3))" }}
     >
+      <div className="absolute inset-0 h-24 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
       <div className="container mx-auto px-6">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-4 flex items-center justify-center gap-2">

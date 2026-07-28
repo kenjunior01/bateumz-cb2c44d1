@@ -123,6 +123,149 @@ export type Database = {
           },
         ]
       }
+      blog_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          post_count: number | null
+          slug: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          post_count?: number | null
+          slug: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          post_count?: number | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      blog_likes: {
+        Row: {
+          created_at: string
+          post_slug: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_slug: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_slug?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_posts: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          category_id: string | null
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          is_trending: boolean | null
+          like_count: number | null
+          published: boolean | null
+          published_at: string | null
+          reading_time_min: number | null
+          region_id: string | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
+          share_count: number | null
+          slug: string
+          source_url: string | null
+          summary: string | null
+          title: string
+          trending_score: number | null
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string | null
+          category_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_trending?: boolean | null
+          like_count?: number | null
+          published?: boolean | null
+          published_at?: string | null
+          reading_time_min?: number | null
+          region_id?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          share_count?: number | null
+          slug: string
+          source_url?: string | null
+          summary?: string | null
+          title: string
+          trending_score?: number | null
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string | null
+          category_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_trending?: boolean | null
+          like_count?: number | null
+          published?: boolean | null
+          published_at?: string | null
+          reading_time_min?: number | null
+          region_id?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          share_count?: number | null
+          slug?: string
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+          trending_score?: number | null
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bolao_members: {
         Row: {
           bolao_id: string
@@ -2288,169 +2431,113 @@ export type Database = {
         }
         Relationships: []
       }
-      stripe_payments: {
+      world_cup_matches: {
         Row: {
+          away_score: number | null
+          away_team_id: string | null
+          home_score: number | null
+          home_team_id: string | null
           id: string
-          raffle_id: string
-          user_id: string
-          amount: number
-          currency: string
-          stripe_session_id: string
-          status: string
-          created_at: string
-          updated_at: string
+          match_date: string
+          stadium: string | null
+          status: string | null
         }
         Insert: {
+          away_score?: number | null
+          away_team_id?: string | null
+          home_score?: number | null
+          home_team_id?: string | null
           id?: string
-          raffle_id: string
-          user_id: string
-          amount: number
-          currency: string
-          stripe_session_id?: string
-          status?: string
-          created_at?: string
-          updated_at?: string
+          match_date: string
+          stadium?: string | null
+          status?: string | null
         }
         Update: {
+          away_score?: number | null
+          away_team_id?: string | null
+          home_score?: number | null
+          home_team_id?: string | null
           id?: string
-          raffle_id?: string
-          user_id?: string
-          amount?: number
-          currency?: string
-          stripe_session_id?: string
-          status?: string
-          created_at?: string
-          updated_at?: string
+          match_date?: string
+          stadium?: string | null
+          status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "world_cup_matches_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_cup_matches_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      vouchers: {
+      world_cup_predictions: {
         Row: {
+          away_score: number
+          created_at: string | null
+          home_score: number
           id: string
-          code: string
-          type: string
-          value: number
-          min_purchase: number | null
-          max_uses: number | null
-          current_uses: number
-          valid_from: string
-          valid_until: string
-          is_active: boolean
-          created_by: string
-          raffle_id: string | null
-          region: string | null
-          created_at: string
+          match_id: string | null
+          points_earned: number | null
+          user_id: string | null
         }
         Insert: {
+          away_score: number
+          created_at?: string | null
+          home_score: number
           id?: string
+          match_id?: string | null
+          points_earned?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          away_score?: number
+          created_at?: string | null
+          home_score?: number
+          id?: string
+          match_id?: string | null
+          points_earned?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_cup_predictions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "world_cup_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_cup_teams: {
+        Row: {
           code: string
-          type: string
-          value: number
-          min_purchase?: number | null
-          max_uses?: number | null
-          current_uses?: number
-          valid_from: string
-          valid_until: string
-          is_active?: boolean
-          created_by: string
-          raffle_id?: string | null
-          region?: string | null
-          created_at?: string
+          flag_url: string | null
+          group_name: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          flag_url?: string | null
+          group_name?: string | null
+          id?: string
+          name: string
         }
         Update: {
           code?: string
-          type?: string
-          value?: number
-          min_purchase?: number | null
-          max_uses?: number | null
-          current_uses?: number
-          valid_from?: string
-          valid_until?: string
-          is_active?: boolean
-          raffle_id?: string | null
-          region?: string | null
-        }
-        Relationships: []
-      }
-      voucher_redemptions: {
-        Row: {
-          id: string
-          voucher_id: string
-          user_id: string
-          raffle_id: string
-          discount_applied: number
-          created_at: string
-        }
-        Insert: {
+          flag_url?: string | null
+          group_name?: string | null
           id?: string
-          voucher_id: string
-          user_id: string
-          raffle_id: string
-          discount_applied: number
-          created_at?: string
-        }
-        Update: {
-          voucher_id?: string
-          user_id?: string
-          raffle_id?: string
-          discount_applied?: number
-        }
-        Relationships: []
-      }
-      wallets: {
-        Row: {
-          id: string
-          user_id: string
-          balance: number
-          currency: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          balance?: number
-          currency: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          balance?: number
-          currency?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      wallet_transactions: {
-        Row: {
-          id: string
-          wallet_id: string
-          type: string
-          amount: number
-          description?: string
-          reference_type?: string
-          reference_id?: string
-          status: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          wallet_id: string
-          type: string
-          amount: number
-          description?: string
-          reference_type?: string
-          reference_id?: string
-          status?: string
-          created_at?: string
-        }
-        Update: {
-          type?: string
-          amount?: number
-          description?: string
-          reference_type?: string
-          reference_id?: string
-          status?: string
+          name?: string
         }
         Relationships: []
       }
@@ -2621,12 +2708,6 @@ export type Database = {
         }
         Relationships: []
       }
-      push_subscriptions: {
-        Row: { id: string; user_id: string; endpoint: string; p256dh_key: string; auth_key: string; created_at: string; device_info?: string }
-        Insert: { id?: string; user_id: string; endpoint: string; p256dh_key: string; auth_key: string; created_at?: string; device_info?: string }
-        Update: { id?: string; user_id?: string; endpoint?: string; p256dh_key?: string; auth_key?: string; device_info?: string }
-        Relationships: []
-      }
     }
     Functions: {
       admin_country: { Args: { _user_id: string }; Returns: string }
@@ -2693,6 +2774,42 @@ export type Database = {
           visits: number
         }[]
       }
+      get_trending_posts: {
+        Args: { limit_count?: number }
+        Returns: {
+          author_id: string | null
+          author_name: string | null
+          category_id: string | null
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          is_trending: boolean | null
+          like_count: number | null
+          published: boolean | null
+          published_at: string | null
+          reading_time_min: number | null
+          region_id: string | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
+          share_count: number | null
+          slug: string
+          source_url: string | null
+          summary: string | null
+          title: string
+          trending_score: number | null
+          updated_at: string
+          view_count: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "blog_posts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2700,6 +2817,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_blog_view: { Args: { post_slug: string }; Returns: undefined }
       increment_prestacao_product_views: {
         Args: { _product_id: string }
         Returns: undefined
@@ -2722,107 +2840,9 @@ export type Database = {
           read_ct: number
         }[]
       }
-      tournament_matches: {
-        Row: {
-          game_type: string
-          id: string
-          live_code: string
-          played_at: string
-          tournament_id: string
-        }
-        Insert: {
-          game_type: string
-          id?: string
-          live_code: string
-          played_at?: string
-          tournament_id: string
-        }
-        Update: {
-          game_type?: string
-          live_code?: string
-        }
-        Relationships: []
-      }
-      tournament_standings: {
-        Row: {
-          avatar_url: string | null
-          display_name: string | null
-          games_played: number
-          id: string
-          rank: number | null
-          tournament_id: string
-          total_points: number
-          updated_at: string
-          user_id: string
-          wins: number
-        }
-        Insert: {
-          avatar_url?: string | null
-          display_name?: string | null
-          games_played?: number
-          id?: string
-          rank?: number | null
-          tournament_id: string
-          total_points?: number
-          updated_at?: string
-          user_id: string
-          wins?: number
-        }
-        Update: {
-          avatar_url?: string | null
-          display_name?: string | null
-          games_played?: number
-          rank?: number | null
-          total_points?: number
-          updated_at?: string
-          wins?: number
-        }
-        Relationships: []
-      }
-      tournaments: {
-        Row: {
-          business_id: string
-          created_at: string
-          currency: string | null
-          description: string | null
-          end_date: string
-          id: string
-          max_participants: number | null
-          name: string
-          prize_description: string | null
-          prize_value: number | null
-          rules: string | null
-          start_date: string
-          status: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          currency?: string | null
-          description?: string | null
-          end_date: string
-          id?: string
-          max_participants?: number | null
-          name: string
-          prize_description?: string | null
-          prize_value?: number | null
-          rules?: string | null
-          start_date: string
-          status?: string
-        }
-        Update: {
-          currency?: string | null
-          description?: string | null
-          end_date?: string
-          max_participants?: number | null
-          name?: string
-          prize_description?: string | null
-          prize_value?: number | null
-          rules?: string | null
-          start_date?: string
-          status?: string
-        }
-        Relationships: []
+      toggle_blog_like: {
+        Args: { post_slug: string; user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

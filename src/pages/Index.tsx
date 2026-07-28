@@ -112,24 +112,26 @@ const Index = () => {
                 {POPULAR_GAMES.map((g, i) => (
                   <motion.div
                     key={g.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: i * 0.06, type: "spring", stiffness: 280, damping: 24 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                   >
                     <Link
                       to={`/lives?game=${g.id}`}
-                      className="group block rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all"
+                      className="group block rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-xl hover:shadow-black/5 transition-all duration-300 game-card-shine border-morph"
                     >
                       <div className={`h-1 bg-gradient-to-r ${g.grad}`} />
                       <div className="p-3">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xl">{g.emoji}</span>
+                          <span className="text-xl group-hover:scale-110 transition-transform duration-300 drop-shadow-sm">{g.emoji}</span>
                           <span className="text-sm font-bold group-hover:text-primary transition-colors">{g.label}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground">Online</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-lg bg-secondary text-muted-foreground">Online</span>
                           {g.hasBot && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">Bot IA</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">Bot IA</span>
                           )}
                         </div>
                       </div>

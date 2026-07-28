@@ -115,7 +115,7 @@ const AllGames = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter">
       <Helmet>
         <title>50+ Jogos Online Grátis — Bateu</title>
         <meta name="description" content="Jogue mais de 50 jogos online grátis: estratégia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
@@ -127,156 +127,226 @@ const AllGames = () => {
 
       <Navbar />
 
-      {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
+        <div className="absolute inset-0 animate-mesh-bg" style={{ backgroundImage: 'linear-gradient(135deg, hsl(var(--primary)/0.1), hsl(var(--background)) 40%, hsl(var(--accent)/0.05) 70%)', backgroundSize: '400% 400%' }} />
+        <div className="absolute -top-1/2 -right-1/3 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl animate-aurora" />
         <div className="relative container mx-auto px-4 py-8 md:py-14">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 25 }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 text-primary text-xs font-bold mb-3 border border-primary/15"
+            >
               <Gamepad2 className="h-3.5 w-3.5" />
               {ALL_GAMES.length} JOGOS DISPONÍVEIS
-            </div>
-            <h1 className="font-display text-3xl md:text-5xl font-bold mb-2">
-              Todos os <span className="text-primary">Jogos</span>
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base mb-4">
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="font-display text-3xl md:text-5xl font-bold mb-2"
+            >
+              Todos os <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">Jogos</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.5 }}
+              className="text-muted-foreground text-sm md:text-base mb-5"
+            >
               Mais de 50 jogos online grátis. Estratégia, arcade, puzzle, quiz, reflexos e muito mais — jogue contra amigos ou contra o computador!
-            </p>
+            </motion.p>
 
-            {/* Stats */}
-            <div className="flex flex-wrap gap-3 mb-6">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 text-xs font-bold">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="flex flex-wrap gap-3 mb-6"
+            >
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 text-xs font-bold border border-emerald-500/15">
                 <Users className="h-3.5 w-3.5" /> {botGames.length} jogos com Bot IA
               </div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 text-xs font-bold">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 text-xs font-bold border border-blue-500/15">
                 <Zap className="h-3.5 w-3.5" /> Jogo instantâneo
               </div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-3 py-1.5 text-xs font-bold">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-3 py-1.5 text-xs font-bold border border-violet-500/15">
                 <Radio className="h-3.5 w-3.5" /> Modo Live
               </div>
-            </div>
+            </motion.div>
 
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+              className="relative max-w-md"
+            >
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Procurar jogo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-card/80 backdrop-blur-sm border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all shadow-sm"
               />
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Filters */}
       <section className="container mx-auto px-4 pt-4 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar"
+        >
           {CATEGORIES.map((c) => (
-            <button
+            <motion.button
               key={c.id}
               onClick={() => setCategory(c.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                category === c.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap ${
+                category === c.id ? "text-white" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
               }`}
             >
-              <span>{c.emoji}</span>
-              <span>{c.label}</span>
-              <span className="opacity-60">({categoryCounts[c.id] || 0})</span>
-            </button>
+              {category === c.id && (
+                <motion.div
+                  layoutId="allGamesCat"
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-md shadow-primary/20"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{c.emoji}</span>
+              <span className="relative z-10">{c.label}</span>
+              <span className="relative z-10 opacity-70">({categoryCounts[c.id] || 0})</span>
+            </motion.button>
           ))}
-        </div>
-        <div className="flex items-center gap-2 mt-2">
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.45 }}
+          className="flex items-center gap-2 mt-2"
+        >
           <span className="text-xs text-muted-foreground">Ordenar:</span>
-          <button
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={() => setSortBy("name")}
-            className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${sortBy === "name" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-          >Nome</button>
-          <button
+            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${sortBy === "name" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >Nome</motion.button>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={() => setSortBy("category")}
-            className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${sortBy === "category" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-          >Categoria</button>
-          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} jogo{filtered.length !== 1 ? "s" : ""}</span>
-        </div>
+            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${sortBy === "category" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >Categoria</motion.button>
+          <span className="text-xs text-muted-foreground ml-auto animate-count-up" key={filtered.length}>{filtered.length} jogo{filtered.length !== 1 ? "s" : ""}</span>
+        </motion.div>
       </section>
 
-      {/* Games Grid */}
       <section className="container mx-auto px-4 pb-8">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           <motion.div
+            layout
             key={category + search + sortBy}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
           >
-            {filtered.map((game) => (
-              <Link
+            {filtered.map((game, i) => (
+              <motion.div
                 key={game.id}
-                to={`/lives?game=${game.id}`}
-                className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all duration-200"
+                layout
+                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: Math.min(i * 0.025, 0.5), type: "spring", stiffness: 280, damping: 24 }}
               >
-                {/* Gradient top bar */}
-                <div className={`h-1.5 bg-gradient-to-r ${game.grad}`} />
-                <div className="p-3">
-                  <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${game.grad} mb-2 text-lg shadow-sm`}>
-                    {game.emoji}
-                  </div>
-                  <h3 className="text-sm font-bold leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-1">
-                    {game.label}
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{game.desc}</p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-medium text-muted-foreground">
-                      {game.players}
-                    </span>
-                    {game.hasBot && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                        Bot IA
+                <Link
+                  to={`/lives?game=${game.id}`}
+                  className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-xl hover:shadow-black/5 transition-all duration-300 game-card-shine border-morph block"
+                >
+                  <div className={`h-1.5 bg-gradient-to-r ${game.grad}`} />
+                  <div className="p-3">
+                    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${game.grad} mb-2 text-lg shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                      {game.emoji}
+                    </div>
+                    <h3 className="text-sm font-bold leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-1">
+                      {game.label}
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{game.desc}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-secondary text-[10px] font-medium text-muted-foreground">
+                        {game.players}
                       </span>
-                    )}
+                      {game.hasBot && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-emerald-500/10 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          Bot IA
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </motion.div>
         </AnimatePresence>
 
+        <AnimatePresence>
         {filtered.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">🎮</div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="text-center py-16"
+          >
+            <motion.div
+              initial={{ y: 0 }}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              className="text-5xl mb-4"
+            >🎮</motion.div>
             <h3 className="text-lg font-bold mb-1">Nenhum jogo encontrado</h3>
             <p className="text-sm text-muted-foreground">Tenta outro termo de pesquisa ou categoria</p>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </section>
 
-      {/* Bot Games Highlight */}
       {category === "todos" && !search && (
-        <section className="container mx-auto px-4 pb-12">
-          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 p-6 md:p-8">
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="container mx-auto px-4 pb-12"
+        >
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 p-6 md:p-8 backdrop-blur-sm">
             <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl shrink-0">
+              <motion.div
+                initial={{ scale: 0, rotate: -30 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.6, type: "spring", stiffness: 300, damping: 20 }}
+                className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-emerald-500/20"
+              >
                 🤖
-              </div>
+              </motion.div>
               <div>
                 <h2 className="text-xl font-bold mb-1">Jogue contra o Computador</h2>
                 <p className="text-sm text-muted-foreground mb-3">
                   {botGames.length} jogos têm inteligência artificial integrada com 3 níveis de dificuldade. Não precisa de parceiro — jogue quando quiser!
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {botGames.slice(0, 8).map((g) => (
-                    <Link
+                  {botGames.slice(0, 8).map((g, i) => (
+                    <motion.div
                       key={g.id}
-                      to={`/lives?game=${g.id}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-medium hover:border-primary/40 transition-all"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.65 + i * 0.05 }}
                     >
-                      <span>{g.emoji}</span> {g.label}
-                    </Link>
+                      <Link
+                        to={`/lives?game=${g.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-medium hover:border-primary/40 hover:shadow-md transition-all"
+                      >
+                        <span>{g.emoji}</span> {g.label}
+                      </Link>
+                    </motion.div>
                   ))}
                   {botGames.length > 8 && (
                     <span className="inline-flex items-center px-3 py-1.5 text-xs text-muted-foreground">
@@ -287,7 +357,7 @@ const AllGames = () => {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
       )}
 
       <Footer />

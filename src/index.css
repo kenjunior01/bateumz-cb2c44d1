@@ -338,3 +338,262 @@ select:focus-visible {
 .particles-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .particles-overlay canvas { width: 100% !important; height: 100% !important; }
 
+/* ============================================ Premium Design System v2 ============================================ */
+
+/* Animated gradient mesh background - HoYoverse/Genshin style */
+@keyframes mesh-move {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+}
+.animate-mesh-bg {
+  background-size: 400% 400%;
+  animation: mesh-move 20s ease infinite;
+}
+
+/* Aurora / northern lights effect */
+@keyframes aurora {
+  0%, 100% { opacity: 0.3; transform: translateX(-25%) scaleY(1); }
+  33% { opacity: 0.5; transform: translateX(10%) scaleY(1.2); }
+  66% { opacity: 0.4; transform: translateX(-15%) scaleY(0.9); }
+}
+.animate-aurora {
+  animation: aurora 8s ease-in-out infinite;
+}
+
+/* Magnetic hover effect for interactive cards */
+@keyframes magnetic-pull {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* Glassmorphism premium card */
+.glass-card-premium {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient border animation - Jackbox Games style */
+@keyframes border-rotate {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.gradient-border-animated {
+  position: relative;
+  background: hsl(var(--card));
+  border-radius: 1rem;
+}
+.gradient-border-animated::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--angle),
+    #009140, #FFD700, #D7263D, #6366f1, #009140
+  );
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  animation: border-rotate 4s linear infinite;
+}
+.gradient-border-animated:hover::before {
+  opacity: 1;
+}
+
+/* Ripple click effect */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%),
+    rgba(0, 145, 64, 0.25) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.ripple-effect:active::after {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* Typing / counter animation */
+@keyframes count-up {
+  0% { opacity: 0; transform: translateY(8px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-count-up {
+  animation: count-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Spotlight / cursor-follow glow effect */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(0, 145, 64, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  transform: translate(var(--mouse-x, -200px), var(--mouse-y, -200px));
+  z-index: 1;
+}
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+/* Breathing glow for active elements - Kahoot style */
+@keyframes breathe-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0, 145, 64, 0.2), 0 0 16px rgba(0, 145, 64, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(0, 145, 64, 0.4), 0 0 32px rgba(0, 145, 64, 0.15), 0 0 48px rgba(0, 145, 64, 0.06);
+  }
+}
+.animate-breathe-glow {
+  animation: breathe-glow 3s ease-in-out infinite;
+}
+
+/* Slide-in from different directions */
+@keyframes slide-in-left {
+  0% { opacity: 0; transform: translateX(-24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  0% { opacity: 0; transform: translateX(24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-scale {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-slide-in-left { animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-slide-in-right { animation: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-slide-in-scale { animation: slide-in-scale 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Smooth category pill indicator */
+@keyframes pill-indicator {
+  0% { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+/* Game card shine sweep - premium product card effect */
+@keyframes card-shine {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+.game-card-shine {
+  position: relative;
+  overflow: hidden;
+}
+.game-card-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transition: none;
+  pointer-events: none;
+  z-index: 2;
+}
+.game-card-shine:hover::after {
+  animation: card-shine 0.6s ease-out;
+}
+
+/* Horizontal scroll snap for Moçambicanos section */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-snap-x > * {
+  scroll-snap-align: start;
+}
+
+/* Active game pulse ring */
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid rgba(0, 145, 64, 0.4);
+  animation: pulse-ring 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Smooth page transitions */
+@keyframes page-enter {
+  0% { opacity: 0; transform: translateY(16px) scale(0.99); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.animate-page-enter {
+  animation: page-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Number ticker for stats */
+@keyframes ticker {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+.animate-ticker {
+  animation: ticker 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Confetti burst placeholder */
+@keyframes confetti-burst {
+  0% { transform: scale(0); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Smooth border-radius morphing */
+.border-morph {
+  transition: border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.border-morph:hover {
+  border-radius: 1.25rem;
+}
+
+/* Moçambicanos section gradient line */
+.moz-gradient-line {
+  height: 3px;
+  background: linear-gradient(90deg, #009140, #FFD700, #D7263D, #009140);
+  background-size: 200% 100%;
+  animation: mesh-move 4s linear infinite;
+  border-radius: 2px;
+}
+
+/* Responsive animation reduction */
+@media (max-width: 768px) {
+  .gradient-border-animated::before { display: none; }
+  .spotlight-card::before { display: none; }
+  .game-card-shine::after { display: none; }
+}

@@ -413,27 +413,50 @@ const LiveHub = () => {
   const mozGames = GAMES.filter((g) => g.moz);
   const handleSelectGame = (id: GameId) => { setActive(id); setShowGame(true); };
 
+  const springTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
+
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter">
       <Navbar />
 
-      
-
       <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/20 via-background to-[#FFD700]/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/15 via-background to-[#FFD700]/8 animate-mesh-bg" style={{ backgroundImage: 'linear-gradient(135deg, rgba(0,145,64,0.15), hsl(var(--background)) 40%, rgba(255,215,0,0.08) 70%, rgba(215,38,61,0.05))', backgroundSize: '400% 400%' }} />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/2 -right-1/4 w-[600px] h-[600px] rounded-full bg-[#009140]/5 blur-3xl animate-aurora" />
+          <div className="absolute -bottom-1/2 -left-1/4 w-[500px] h-[500px] rounded-full bg-[#FFD700]/5 blur-3xl animate-aurora" style={{ animationDelay: '-4s' }} />
+        </div>
         <ParticleBackground preset="stars" count={20} className="absolute inset-0 pointer-events-none" />
         <div className="relative container mx-auto px-4 py-6 md:py-12">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#009140]/20 to-[#FFD700]/20 border border-[#009140]/30 text-[11px] font-bold text-[#009140] mb-2">
-              <Radio className="h-3.5 w-3.5 animate-pulse" />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 25 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#009140]/20 to-[#FFD700]/20 border border-[#009140]/30 text-[11px] font-bold text-[#009140] mb-3"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#009140] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#009140]" />
+              </span>
               JOGOS AO VIVO
-            </div>
-            <h1 className="font-display text-2xl md:text-4xl font-bold">
-              Jogos para a sua <span className="bg-gradient-to-r from-[#009140] to-[#FFD700] bg-clip-text text-transparent">Live</span>
-            </h1>
-            <p className="text-muted-foreground text-xs md:text-sm mt-1 max-w-lg">
-              Animes a tua audiência com jogos interativos, quizzes e desafios em tempo real.
-            </p>
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="font-display text-2xl md:text-4xl lg:text-5xl font-bold leading-tight"
+            >
+              Jogos para a sua{" "}
+              <span className="bg-gradient-to-r from-[#009140] via-[#FFD700] to-[#009140] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">Live</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.5 }}
+              className="text-muted-foreground text-xs md:text-sm mt-2 max-w-lg"
+            >
+              Animes a tua audiência com jogos interativos, quizzes e desafios em tempo real. 60+ jogos com IA, modos multiplayer e jogos tradicionais moçambicanos.
+            </motion.p>
 
             <div className="flex flex-wrap items-center gap-2">
               {user ? (
@@ -505,20 +528,35 @@ const LiveHub = () => {
       </section>
 
       {!isLive && !user && (
-        <div className="container mx-auto px-3 sm:px-4 pt-3">
-          <div className="rounded-xl border bg-gradient-to-r from-[#009140]/5 to-[#FFD700]/5 border-[#009140]/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-            <Gamepad2 className="h-4 w-4 text-[#009140] flex-shrink-0" />
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="container mx-auto px-3 sm:px-4 pt-3"
+        >
+          <div className="rounded-2xl border border-[#009140]/20 bg-gradient-to-r from-[#009140]/5 via-transparent to-[#FFD700]/5 p-4 text-xs text-muted-foreground flex items-center gap-3 backdrop-blur-sm">
+            <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-gradient-to-br from-[#009140] to-[#FFD700] flex items-center justify-center">
+              <Gamepad2 className="h-5 w-5 text-white" />
+            </div>
             <span>Joga todos os jogos gratuitamente! <strong className="text-foreground">Cria uma conta</strong> para guardar pontuações e criar as tuas próprias lives.</span>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {!isLive && user && (
-        <div className="container mx-auto px-3 sm:px-4 pt-3">
-          <div className="rounded-xl border bg-gradient-to-r from-[#009140]/5 to-[#FFD700]/5 border-[#009140]/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-            Joga livremente! <strong className="text-foreground">Inicia uma Live</strong> para gravar pontuações e vencedores.
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="container mx-auto px-3 sm:px-4 pt-3"
+        >
+          <div className="rounded-2xl border border-[#009140]/20 bg-gradient-to-r from-[#009140]/5 via-transparent to-[#FFD700]/5 p-4 text-xs text-muted-foreground flex items-center gap-3 backdrop-blur-sm">
+            <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-gradient-to-br from-[#009140] to-[#009140]/70 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <span>Joga livremente! <strong className="text-foreground">Inicia uma Live</strong> para gravar pontuações e vencedores.</span>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
@@ -534,71 +572,135 @@ const LiveHub = () => {
           onCategoryChange={(id) => setActive(id as GameId)}
         />
 
-        <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame className="h-5 w-5 text-[#FF6B35]" />
-              <h2 className="font-display text-base md:text-lg font-bold">Jogos Moçambicanos</h2>
-              <span className="px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[10px] font-bold">NOVOS</span>
-            </div>
-            <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-              {mozGames.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => handleSelectGame(g.id)}
-                  className="flex-shrink-0 w-32 md:w-40 rounded-2xl border-2 border-[#009140]/30 bg-gradient-to-br from-[#009140]/10 to-[#FFD700]/5 p-2.5 md:p-3 text-left hover:border-[#FFD700] hover:shadow-lg hover:shadow-[#009140]/10 transition-all group active:scale-95"
-                >
-                  <div className="text-2xl md:text-3xl mb-1.5 group-hover:scale-110 transition-transform">{g.emoji}</div>
-                  <p className="font-display text-[11px] md:text-xs font-bold text-foreground leading-tight">{g.label}</p>
-                  <p className="text-[9px] md:text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{g.desc}</p>
-                  <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[8px] md:text-[9px] font-bold">MOÇAMBIQUE</span>
-                </button>
-              ))}
-            </div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-1">
+            <Flame className="h-5 w-5 text-[#FF6B35]" />
+            <h2 className="font-display text-base md:text-lg font-bold">Jogos Moçambicanos</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#009140] to-[#FFD700] text-white text-[10px] font-bold shadow-md shadow-[#009140]/20">NOVOS</span>
           </div>
-
-          <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-            <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            {CAT_LIST.map((cid) => (
-              <button
-                key={cid}
-                onClick={() => setCat(cid)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${cat === cid ? "bg-gradient-to-r from-[#009140] to-[#FFD700] text-white shadow-lg shadow-[#009140]/20" : "bg-card border border-border text-muted-foreground hover:border-[#009140]/40 hover:text-foreground"}`}
+          <p className="text-xs text-muted-foreground mb-4 ml-8">Jogos tradicionais de Moçambique, agora digitais</p>
+          <div className="moz-gradient-line mb-4" />
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-3 -mx-1 px-1 no-scrollbar scroll-snap-x">
+            {mozGames.map((g, i) => (
+              <motion.button
+                key={g.id}
+                onClick={() => handleSelectGame(g.id)}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 + i * 0.06, type: "spring", stiffness: 260, damping: 24 }}
+                whileHover={{ y: -6, scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex-shrink-0 w-36 md:w-44 rounded-2xl border border-[#009140]/20 bg-gradient-to-br from-[#009140]/8 to-[#FFD700]/5 p-3 md:p-4 text-left hover:border-[#FFD700]/60 hover:shadow-xl hover:shadow-[#009140]/15 transition-all duration-300 group spotlight-card game-card-shine"
               >
-                {CAT_LABELS[cid]}
-              </button>
+                <div className="relative z-10">
+                  <div className="text-3xl md:text-4xl mb-2 group-hover:scale-110 transition-transform duration-300 drop-shadow-lg">{g.emoji}</div>
+                  <p className="font-display text-xs md:text-sm font-bold text-foreground leading-tight">{g.label}</p>
+                  <p className="text-[9px] md:text-[10px] text-muted-foreground mt-1 line-clamp-2">{g.desc}</p>
+                  <div className="flex items-center gap-1.5 mt-2.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] text-[8px] md:text-[9px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#009140]" />
+                      MOÇAMBIQUE
+                    </span>
+                  </div>
+                </div>
+              </motion.button>
             ))}
           </div>
+        </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.4 }}
+            className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar"
+          >
+            <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            {CAT_LIST.map((cid) => (
+              <motion.button
+                key={cid}
+                onClick={() => setCat(cid)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`relative px-4 py-2 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${cat === cid ? "text-white" : "bg-card border border-border text-muted-foreground hover:border-[#009140]/40 hover:text-foreground"}`}
+              >
+                {cat === cid && (
+                  <motion.div
+                    layoutId="catPill"
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-[#009140] to-[#FFD700] shadow-lg shadow-[#009140]/25"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{CAT_LABELS[cid]}</span>
+              </motion.button>
+            ))}
+          </motion.div>
 
           
 
-        <div id="game-grid" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3 mb-8 mt-4">
-          {filteredGames.map((g) => {
+        <motion.div
+          id="game-grid"
+          layout
+          className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3.5 mb-8 mt-4"
+        >
+          <AnimatePresence mode="popLayout">
+          {filteredGames.map((g, i) => {
             const isActive = active === g.id;
             return (
-              <button
+              <motion.button
                 key={g.id}
+                layout
+                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                transition={{
+                  delay: Math.min(i * 0.03, 0.6),
+                  type: "spring",
+                  stiffness: 280,
+                  damping: 24
+                }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
                 onClick={() => handleSelectGame(g.id)}
-                className={`text-left rounded-2xl border-2 p-3 md:p-4 transition-all duration-200 ${
+                className={`relative text-left rounded-2xl p-3 md:p-4 transition-colors duration-200 overflow-hidden game-card-shine ripple-effect border-morph ${
                   isActive
-                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.02]"
+                    ? "border-2 border-[#009140]/60 bg-gradient-to-br from-[#009140]/10 to-[#FFD700]/5 shadow-lg shadow-[#009140]/15 animate-breathe-glow"
                     : g.moz
-                      ? "border-[#009140]/30 bg-gradient-to-br from-[#009140]/5 to-[#FFD700]/5 hover:border-[#009140]/60 hover:shadow-lg hover:shadow-[#009140]/10 hover:scale-[1.01]"
-                      : "border-border bg-card hover:border-primary/40 hover:shadow-md hover:scale-[1.01]"
+                      ? "border border-[#009140]/20 bg-card hover:border-[#009140]/50 hover:shadow-lg hover:shadow-[#009140]/10"
+                      : "border border-border bg-card hover:border-primary/30 hover:shadow-lg hover:shadow-black/5"
                 }`}
               >
-                <div className={`inline-flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2 transition-transform`}
-                  style={isActive ? { transform: "scale(1.1)" } : {}}>
-                  <g.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
+                <div className="relative z-10">
+                  <div className={`inline-flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-xl bg-gradient-to-br ${g.grad} mb-2.5 shadow-md transition-transform duration-300 group-hover:scale-110 ${isActive ? "ring-2 ring-[#009140]/30 ring-offset-2 ring-offset-background" : ""}`}>
+                    <g.icon className="h-4.5 w-4.5 md:h-5 md:w-5 text-white" />
+                  </div>
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="font-display text-xs md:text-sm font-bold leading-tight">{g.label}</p>
+                    {g.moz && (
+                      <span className="text-[8px] md:text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#009140]/15 to-[#FFD700]/10 text-[#009140] font-bold flex-shrink-0">MZ</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{g.desc}</p>
+                  {isActive && (
+                    <motion.div
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      className="flex items-center gap-1 mt-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#009140] animate-pulse" />
+                      <span className="text-[9px] font-bold text-[#009140]">A JOGAR</span>
+                    </motion.div>
+                  )}
                 </div>
-                <div className="flex items-start justify-between gap-1">
-                  <p className="font-display text-xs md:text-sm font-bold leading-tight">{g.label}</p>
-                  {g.moz && <span className="text-[8px] md:text-[9px] px-1.5 py-0.5 rounded-full bg-[#009140]/15 text-[#009140] font-bold flex-shrink-0">MZ</span>}
-                </div>
-                <p className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{g.desc}</p>
-              </button>
+              </motion.button>
             );
           })}
-        </div>
+          </AnimatePresence>
+        </motion.div>
 
         
 
@@ -606,29 +708,47 @@ const LiveHub = () => {
           <div>
             
 
-            <div className="flex items-center gap-3 mb-4">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center gap-3 mb-4"
+            >
               <button
                 onClick={() => { const el = document.getElementById('game-grid'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+                className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all active:scale-95"
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Jogos
               </button>
               {activeMeta && (
-                <div className="flex items-center gap-2">
-                  <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-base`}>
+                <div className="flex items-center gap-2.5">
+                  <motion.div
+                    key={activeMeta.id + '-icon'}
+                    initial={{ scale: 0, rotate: -90 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-base shadow-lg`}
+                  >
                     {activeMeta.emoji}
-                  </div>
+                  </motion.div>
                   <div>
-                    <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
+                    <motion.p
+                      key={activeMeta.id + '-label'}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05, duration: 0.3 }}
+                      className="text-sm font-bold leading-tight"
+                    >{activeMeta.label}</motion.p>
                     <p className="text-[10px] text-muted-foreground">{activeMeta.desc}</p>
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             <AnimatePresence mode="wait">
               {active === "wheel" && (
-                <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="wheel" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   
 
                   <div className="mb-8">
@@ -707,17 +827,17 @@ const LiveHub = () => {
                 </motion.div>
               )}
               {active === "tap" && (
-                <motion.div key="tap" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="tap" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TapBattle duration={config.tapDuration} onScore={recordScore("Tap Battle")} />
                 </motion.div>
               )}
               {active === "quiz" && (
-                <motion.div key="quiz" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="quiz" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <QuizBattle totalQuestions={config.quizQuestions} timePerQ={config.quizTimePerQ} onScore={recordScore("Quiz Battle")} />
                 </motion.div>
               )}
               {active === "mystery" && (
-                <motion.div key="mystery" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="mystery" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <MysteryBox
                     highChance={config.mysteryHigh}
                     lowChance={config.mysteryLow}
@@ -727,7 +847,7 @@ const LiveHub = () => {
                 </motion.div>
               )}
               {active === "keyword" && (
-                <motion.div key="keyword" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="keyword" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <KeywordHunt
                     liveCode={liveCode}
                     onScore={recordScore("Caça à Palavra")}
@@ -736,7 +856,7 @@ const LiveHub = () => {
                 </motion.div>
               )}
               {active === "emoji" && (
-                <motion.div key="emoji" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="emoji" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <EmojiBattle
                     onScore={recordScore("Batalha de Emojis")}
                     onWinner={(label, votes) => broadcastWinner(label, `Batalha de Emojis · ${votes} votos`)}
@@ -744,287 +864,287 @@ const LiveHub = () => {
                 </motion.div>
               )}
               {active === "millionaire" && (
-                <motion.div key="millionaire" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="millionaire" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <EnhancedMillionaireGame />
                 </motion.div>
               )}
               {active === "kahoot" && (
-                <motion.div key="kahoot" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="kahoot" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <KahootMultiplayerQuiz scheduledLiveId={undefined} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "bingo" && (
-                <motion.div key="bingo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="bingo" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <LiveBingo liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "challenge" && (
-                <motion.div key="challenge" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="challenge" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ChallengeRoulette />
                 </motion.div>
               )}
               {active === "vsduel" && (
-                <motion.div key="vsduel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="vsduel" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <VSDuelArena onScore={recordScore("Arena de Duelo VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "speed" && (
-                <motion.div key="speed" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="speed" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <SpeedReaction onScore={recordScore("Duelo de Velocidade")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "truthordare" && (
-                <motion.div key="truthordare" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="truthordare" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TruthOrDare onScore={recordScore("Verdade ou Desafio")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "memory" && (
-                <motion.div key="memory" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="memory" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <MemoryChallenge onScore={recordScore("Jogo da Memória VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "punishment" && (
-                <motion.div key="punishment" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="punishment" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <PunishmentWheel />
                 </motion.div>
               )}
               {active === "boknowledge" && (
-                <motion.div key="boknowledge" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="boknowledge" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <BattleOfKnowledge onScore={recordScore("Batalha de Conhecimentos")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "guessEmoji" && (
-                <motion.div key="guessEmoji" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="guessEmoji" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <GuessTheEmoji onScore={recordScore("Adivinhe o Emoji")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "quickdraw" && (
-                <motion.div key="quickdraw" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="quickdraw" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <QuickDrawChallenge onScore={recordScore("Desenho Rápido")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "hotpotato" && (
-                <motion.div key="hotpotato" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="hotpotato" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <HotPotatoGame onScore={recordScore("Batata Quente")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "numguess" && (
-                <motion.div key="numguess" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="numguess" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <NumberGuessBattle onScore={recordScore("Adivinha o Número VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "chaos" && (
-                <motion.div key="chaos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="chaos" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ChaosChallenge onScore={recordScore("Desafio Caótico")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "checkers" && (
-                <motion.div key="checkers" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="checkers" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <CheckersGame onScore={recordScore("Damas")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "ludo" && (
-                <motion.div key="ludo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="ludo" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <LudoGame onScore={recordScore("Ludo")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "connect4" && (
-                <motion.div key="connect4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="connect4" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ConnectFourGame onScore={recordScore("Ligar 4")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "battleship" && (
-                <motion.div key="battleship" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="battleship" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <BattleshipGame onScore={recordScore("Batalha Naval")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "tictactoe" && (
-                <motion.div key="tictactoe" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="tictactoe" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TicTacToeVS onScore={recordScore("Galo VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "uno" && (
-                <motion.div key="uno" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="uno" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <UnoCardGame onScore={recordScore("UNO Cartas")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "snakebattle" && (
-                <motion.div key="snakebattle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="snakebattle" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <SnakeBattle onScore={recordScore("Batalha de Cobras")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "rps" && (
-                <motion.div key="rps" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="rps" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <RockPaperScissors onScore={recordScore("Pedra Papel Tesoura")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "colorsequence" && (
-                <motion.div key="colorsequence" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="colorsequence" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ColorSequence onScore={recordScore("Sequência de Cores")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "spaceshooter" && (
-                <motion.div key="spaceshooter" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="spaceshooter" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <SpaceShooter onScore={recordScore("Nave Espacial VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "ballbreaker" && (
-                <motion.div key="ballbreaker" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="ballbreaker" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <BallBreaker onScore={recordScore("Quebra-Bloco VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "reactionrace" && (
-                <motion.div key="reactionrace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="reactionrace" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ReactionRace onScore={recordScore("Corrida de Reação")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "quickmath" && (
-                <motion.div key="quickmath" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="quickmath" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <QuickMath onScore={recordScore("Duelo de Matemática")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "memorycards" && (
-                <motion.div key="memorycards" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="memorycards" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <MemoryCardsVS onScore={recordScore("Memória VS Cartas")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "wordscramble" && (
-                <motion.div key="wordscramble" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="wordscramble" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <WordScramble onScore={recordScore("Palavras Embaralhadas")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "tictactoepro" && (
-                <motion.div key="tictactoepro" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="tictactoepro" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TicTacToePro onScore={recordScore("Galo PRO")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "guessnumber100" && (
-                <motion.div key="guessnumber100" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="guessnumber100" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <GuessNumber100 onScore={recordScore("Adivinha 1 a 100")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "colormatch" && (
-                <motion.div key="colormatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="colormatch" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ColorMatch onScore={recordScore("Cor versus Palavra")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "targettap" && (
-                <motion.div key="targettap" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="targettap" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TargetTap onScore={recordScore("Alvo Rápido")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "diceluel" && (
-                <motion.div key="diceluel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="diceluel" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <DiceDuel onScore={recordScore("Duelo de Dados")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "patternmemory" && (
-                <motion.div key="patternmemory" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="patternmemory" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <PatternMemory onScore={recordScore("Memória de Padrões")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "triviaflash" && (
-                <motion.div key="triviaflash" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="triviaflash" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TriviaFlash onScore={recordScore("Trivia Flash")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "dominoes" && (
-                <motion.div key="dominoes" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="dominoes" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <Dominoes onScore={recordScore("Dominó")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "mazerace" && (
-                <motion.div key="mazerace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="mazerace" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <MazeRace onScore={recordScore("Corrida no Labirinto")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "slotsvs" && (
-                <motion.div key="slotsvs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="slotsvs" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <SlotsVS onScore={recordScore("Caça-Níqueis VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "match4" && (
-                <motion.div key="match4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="match4" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <Match4Grid onScore={recordScore("Combina 4")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "towerstack" && (
-                <motion.div key="towerstack" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="towerstack" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <TowerStack onScore={recordScore("Torre VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "cannonbattle" && (
-                <motion.div key="cannonbattle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="cannonbattle" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <CannonBattle onScore={recordScore("Batalha de Canhões")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "spotdifference" && (
-                <motion.div key="spotdifference" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="spotdifference" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <SpotDifference onScore={recordScore("Encontre Diferenças")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "wordchain" && (
-                <motion.div key="wordchain" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="wordchain" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <WordChain onScore={recordScore("Corrente de Palavras")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "numbertetris" && (
-                <motion.div key="numbertetris" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="numbertetris" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <NumberTetris onScore={recordScore("Números Caindo")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "pongvs" && (
-                <motion.div key="pongvs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="pongvs" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <PongVS onScore={recordScore("Pong VS")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "whackamole" && (
-                <motion.div key="whackamole" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="whackamole" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <WhackAMole onScore={recordScore("Bate o Alvo")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "colorcatch" && (
-                <motion.div key="colorcatch" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="colorcatch" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ColorCatch onScore={recordScore("Pesca Cores")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "mexerica" && (
-                <motion.div key="mexerica" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="mexerica" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <MexericaGame onScore={recordScore("Mexerica")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "urusse" && (
-                <motion.div key="urusse" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="urusse" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <UrusseGame onScore={recordScore("Urusse")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "capulanaquiz" && (
-                <motion.div key="capulanaquiz" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="capulanaquiz" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <CapulanaQuiz onScore={recordScore("Quiz Capulana")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "chigogo" && (
-                <motion.div key="chigogo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="chigogo" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <ChigogoGame onScore={recordScore("Chigogo")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "ntchuva" && (
-                <motion.div key="ntchuva" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="ntchuva" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <NtchuvaGame onScore={recordScore("Ntchuva")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "djikota" && (
-                <motion.div key="djikota" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="djikota" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <DjikotaGame onScore={recordScore("Djikota")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "uri" && (
-                <motion.div key="uri" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="uri" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <UriGame onScore={recordScore("Uri")} liveCode={liveCode} />
                 </motion.div>
               )}
               {active === "bicho" && (
-                <motion.div key="bicho" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="bicho" initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -12 }} transition={springTransition}>
                   <BichoGame onScore={recordScore("Jogo do Bicho")} liveCode={liveCode} />
                 </motion.div>
               )}
@@ -1083,18 +1203,27 @@ const LiveHub = () => {
         {endOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
             onClick={() => !ending && setEndOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }}
+              initial={{ scale: 0.85, y: 30, opacity: 0, rotateX: 10 }}
+              animate={{ scale: 1, y: 0, opacity: 1, rotateX: 0 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
               className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
+                  className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center"
+                >
                   <Square className="h-5 w-5 fill-current" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="font-display text-lg font-bold">Encerrar a Live?</h3>
                   <p className="text-xs text-muted-foreground">O código <span className="font-mono font-bold text-foreground">{liveCode}</span> será invalidado e o ranking será arquivado no histórico.</p>
@@ -1103,26 +1232,35 @@ const LiveHub = () => {
 
               <div className="rounded-2xl bg-muted/40 border border-border p-4 mb-4 text-center">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Confirmação disponível em</p>
-                <p className={`font-mono text-3xl font-bold ${endCountdown === 0 ? "text-destructive" : "text-primary"}`}>
+                <motion.p
+                  key={endCountdown}
+                  initial={{ scale: 1.3, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className={`font-mono text-3xl font-bold ${endCountdown === 0 ? "text-destructive" : "text-primary"}`}
+                >
                   {endCountdown > 0 ? `${endCountdown}s` : "Pronto"}
-                </p>
+                </motion.p>
               </div>
 
               <div className="flex gap-2">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => !ending && setEndOpen(false)}
                   disabled={ending}
                   className="flex-1 px-4 py-2.5 rounded-full bg-secondary text-foreground text-sm font-bold disabled:opacity-50"
                 >
                   Cancelar
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={confirmEndLive}
                   disabled={endCountdown > 0 || ending}
                   className="flex-1 px-4 py-2.5 rounded-full bg-destructive text-destructive-foreground text-sm font-bold hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {ending ? "A encerrar…" : "Encerrar Live"}
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

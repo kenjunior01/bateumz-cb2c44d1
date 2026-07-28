@@ -116,7 +116,7 @@ export default function Referral() {
   const progressToNext = nextMilestone ? Math.min(100, (totalPoints / nextMilestone.points) * 100) : 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
         {/* Hero */}

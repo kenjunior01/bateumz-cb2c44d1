@@ -162,7 +162,7 @@ export default function Contests() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0 bg-mesh-soft bg-noise">
       <div className="hidden md:block"><Navbar /></div>
       <div className="container mx-auto px-3 sm:px-4 md:pt-24 pb-10">
         {/* Mobile sticky header */}

@@ -226,7 +226,7 @@ export default function Community() {
   }));
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0 bg-mesh-soft bg-noise">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-2 md:pt-28 pb-10 md:pb-20 max-w-3xl">
         {/* Mobile sticky header */}

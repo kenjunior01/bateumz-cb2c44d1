@@ -452,7 +452,7 @@ export default function Blog() {
         }}
       />
 
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
         {/* ============ HERO ============ */}
         <section className="relative overflow-hidden">
           {/* Fundo gradiente animado */}

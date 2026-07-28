@@ -58,7 +58,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-16 lg:pb-0">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0 bg-mesh-soft bg-noise">
+      <div className="nebula-blob nebula-blob-2" />
+      <div className="nebula-blob nebula-blob-4" />
+      <div className="ambient-glow" />
       <Navbar />
       <LiveTicker />
 
@@ -93,8 +96,8 @@ const Index = () => {
             <FeaturesGrid />
 
             {/* Jogos Populares */}
-            <section className="py-8">
-              <div className="flex items-center justify-between mb-4">
+            <section className="py-8 section-glow-divider energy-wave">
+              <div className="relative z-10 flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                     <Gamepad2 className="h-4 w-4 text-white" />
@@ -108,7 +111,7 @@ const Index = () => {
                   Ver todos <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {POPULAR_GAMES.map((g, i) => (
                   <motion.div
                     key={g.id}
@@ -139,7 +142,7 @@ const Index = () => {
                   </motion.div>
                 ))}
               </div>
-              <div className="mt-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-4 flex items-center justify-between">
+              <div className="relative z-10 mt-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <div>

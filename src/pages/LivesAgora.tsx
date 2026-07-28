@@ -285,7 +285,7 @@ const LivesAgora = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-16 lg:pb-0">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0 bg-cosmic bg-noise">
       <Navbar />
 
       <div className="container mx-auto px-4 py-6 max-w-6xl">

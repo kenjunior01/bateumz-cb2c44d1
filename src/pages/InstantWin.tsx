@@ -48,7 +48,7 @@ export default function InstantWin() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-cosmic bg-noise">
       <Navbar />
 
       <section className="relative overflow-hidden border-b border-border/40">

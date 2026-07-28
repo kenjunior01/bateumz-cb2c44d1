@@ -35,7 +35,7 @@ const Transparency = () => {
   }, [raffleId]);
 
   return (
-    <div className="min-h-screen bg-background pb-16 lg:pb-0">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0 bg-mesh-soft bg-noise">
       <Navbar />
 
       <section className="relative py-16 overflow-hidden">

@@ -115,7 +115,7 @@ const AllGames = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter bg-cosmic bg-noise">
       <Helmet>
         <title>50+ Jogos Online Grátis — Bateu</title>
         <meta name="description" content="Jogue mais de 50 jogos online grátis: estratégia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />

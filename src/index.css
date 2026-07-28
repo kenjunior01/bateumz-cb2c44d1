@@ -597,3 +597,325 @@ select:focus-visible {
   .spotlight-card::before { display: none; }
   .game-card-shine::after { display: none; }
 }
+
+/* ============================================ PREMIUM BACKGROUND SYSTEM v3 ============================================ */
+
+/* Global animated background - cosmic mesh with multiple layers */
+@keyframes cosmic-drift {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+}
+@keyframes cosmic-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+}
+@keyframes cosmic-orbit {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(30px, -20px) rotate(90deg); }
+  50% { transform: translate(-10px, 30px) rotate(180deg); }
+  75% { transform: translate(-30px, -10px) rotate(270deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+@keyframes nebula-float {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.08; }
+  33% { transform: translate(40px, -30px) scale(1.1); opacity: 0.12; }
+  66% { transform: translate(-20px, 20px) scale(0.95); opacity: 0.06; }
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes gradient-pan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes energy-wave {
+  0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
+  30% { opacity: 0.6; }
+  70% { opacity: 0.6; }
+  100% { transform: translateX(200%) skewX(-15deg); opacity: 0; }
+}
+@keyframes dna-helix {
+  0% { transform: rotate(0deg) translateX(20px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(20px) rotate(-360deg); }
+}
+
+/* === BG-COSMIC: Full-page cosmic background for LiveHub/game pages === */
+.bg-cosmic {
+  position: relative;
+  overflow: hidden;
+}
+.bg-cosmic::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  background:
+    radial-gradient(ellipse 120% 80% at 20% 30%, rgba(0, 145, 64, 0.06), transparent 50%),
+    radial-gradient(ellipse 100% 60% at 80% 20%, rgba(255, 215, 0, 0.04), transparent 50%),
+    radial-gradient(ellipse 80% 100% at 60% 80%, rgba(215, 38, 61, 0.04), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 10% 70%, rgba(99, 102, 241, 0.03), transparent 50%);
+  animation: cosmic-drift 30s ease infinite;
+  background-size: 400% 400%;
+  pointer-events: none;
+}
+.bg-cosmic::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -4;
+  background-image:
+    radial-gradient(circle 1px at 15% 25%, rgba(0, 145, 64, 0.3), transparent),
+    radial-gradient(circle 1px at 45% 15%, rgba(255, 215, 0, 0.25), transparent),
+    radial-gradient(circle 0.8px at 75% 35%, rgba(215, 38, 61, 0.2), transparent),
+    radial-gradient(circle 1.2px at 85% 65%, rgba(99, 102, 241, 0.2), transparent),
+    radial-gradient(circle 0.6px at 25% 75%, rgba(0, 145, 64, 0.2), transparent),
+    radial-gradient(circle 1px at 55% 85%, rgba(255, 215, 0, 0.15), transparent),
+    radial-gradient(circle 0.8px at 95% 10%, rgba(215, 38, 61, 0.25), transparent),
+    radial-gradient(circle 0.7px at 35% 55%, rgba(99, 102, 241, 0.15), transparent);
+  animation: cosmic-pulse 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* === BG-MESH-SOFT: Soft mesh gradient for Index/landing === */
+.bg-mesh-soft {
+  position: relative;
+  overflow: hidden;
+}
+.bg-mesh-soft::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0, 145, 64, 0.04), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 90% 10%, rgba(255, 215, 0, 0.03), transparent 50%),
+    radial-gradient(ellipse 90% 70% at 50% 90%, rgba(99, 102, 241, 0.03), transparent 50%);
+  animation: cosmic-drift 40s ease infinite;
+  background-size: 300% 300%;
+  pointer-events: none;
+}
+.bg-mesh-soft::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -4;
+  background-image:
+    linear-gradient(rgba(0, 145, 64, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 145, 64, 0.015) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
+  pointer-events: none;
+}
+
+/* === BG-NOISE: Subtle noise texture overlay === */
+.bg-noise::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+}
+
+/* === BG-GRID: Subtle dot grid pattern === */
+.bg-dots::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -4;
+  opacity: 0.25;
+  background-image:
+    radial-gradient(circle 0.5px, hsl(var(--muted-foreground) / 0.15), transparent 0.5px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+/* === NEBULA BLOBS: Floating color nebulae for sections === */
+.nebula-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: nebula-float 20s ease-in-out infinite;
+}
+.nebula-blob-1 { width: 500px; height: 500px; top: -10%; left: -5%; background: rgba(0, 145, 64, 0.06); animation-delay: 0s; }
+.nebula-blob-2 { width: 400px; height: 400px; top: 20%; right: -10%; background: rgba(255, 215, 0, 0.04); animation-delay: -7s; animation-duration: 25s; }
+.nebula-blob-3 { width: 350px; height: 350px; bottom: 10%; left: 20%; background: rgba(215, 38, 61, 0.04); animation-delay: -14s; animation-duration: 22s; }
+.nebula-blob-4 { width: 300px; height: 300px; bottom: -5%; right: 15%; background: rgba(99, 102, 241, 0.03); animation-delay: -3s; animation-duration: 28s; }
+
+/* === ENERGY WAVE: Sweeping light wave across sections === */
+.energy-wave {
+  position: relative;
+  overflow: hidden;
+}
+.energy-wave::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 145, 64, 0.03), rgba(255, 215, 0, 0.02), transparent);
+  animation: energy-wave 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* === PREMIUM NAVBAR GLASS === */
+.navbar-glass-premium {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.navbar-glass-premium::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 145, 64, 0.15), rgba(255, 215, 0, 0.1), transparent);
+}
+
+/* === SECTION DIVIDER GLOW === */
+.section-glow-divider {
+  position: relative;
+}
+.section-glow-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 5%;
+  right: 5%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 145, 64, 0.08), rgba(255, 215, 0, 0.06), rgba(215, 38, 61, 0.04), transparent);
+}
+
+/* === FLOATING STARS: Pure CSS twinkling stars === */
+.floating-stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -4;
+  overflow: hidden;
+}
+.floating-stars span {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  animation: star-twinkle 4s ease-in-out infinite;
+}
+.floating-stars span:nth-child(1) { top: 8%; left: 12%; animation-delay: 0s; animation-duration: 3.5s; }
+.floating-stars span:nth-child(2) { top: 15%; left: 78%; animation-delay: 1.2s; animation-duration: 4.2s; }
+.floating-stars span:nth-child(3) { top: 32%; left: 45%; animation-delay: 0.6s; animation-duration: 3.8s; }
+.floating-stars span:nth-child(4) { top: 55%; left: 88%; animation-delay: 2.1s; animation-duration: 4.5s; }
+.floating-stars span:nth-child(5) { top: 70%; left: 22%; animation-delay: 0.9s; animation-duration: 3.2s; }
+.floating-stars span:nth-child(6) { top: 85%; left: 65%; animation-delay: 1.8s; animation-duration: 4s; }
+.floating-stars span:nth-child(7) { top: 42%; left: 5%; animation-delay: 2.5s; animation-duration: 3.6s; }
+.floating-stars span:nth-child(8) { top: 25%; left: 92%; animation-delay: 0.3s; animation-duration: 4.8s; }
+
+/* === HOLOGRAPHIC SHIMMER: For premium sections === */
+.holographic-bg {
+  position: relative;
+  overflow: hidden;
+}
+.holographic-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 145, 64, 0.03) 0%,
+    rgba(255, 215, 0, 0.02) 25%,
+    rgba(99, 102, 241, 0.03) 50%,
+    rgba(215, 38, 61, 0.02) 75%,
+    rgba(0, 145, 64, 0.03) 100%
+  );
+  background-size: 300% 300%;
+  animation: gradient-pan 15s ease infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* === VIGNETTE: Cinematic vignette for immersive pages === */
+.vignette-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.08) 100%);
+}
+
+/* === GLASSMORPHISM SECTIONS === */
+.glass-section {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* === AMBIENT GLOW RING: Subtle glow at page edges === */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -4;
+  box-shadow:
+    inset 0 0 150px rgba(0, 145, 64, 0.02),
+    inset 0 0 300px rgba(0, 145, 64, 0.01);
+}
+
+/* Responsive bg reduction for mobile */
+@media (max-width: 768px) {
+  .bg-cosmic::before { animation-duration: 50s; }
+  .bg-cosmic::after { display: none; }
+  .bg-mesh-soft::before { animation-duration: 60s; }
+  .bg-mesh-soft::after { display: none; }
+  .nebula-blob { filter: blur(100px); opacity: 0.5; }
+  .energy-wave::before { animation-duration: 14s; }
+  .floating-stars { display: none; }
+  .vignette-overlay::after { display: none; }
+}
+
+/* Dark mode enhancements for backgrounds */
+.dark .bg-cosmic::before {
+  background:
+    radial-gradient(ellipse 120% 80% at 20% 30%, rgba(0, 145, 64, 0.08), transparent 50%),
+    radial-gradient(ellipse 100% 60% at 80% 20%, rgba(255, 215, 0, 0.05), transparent 50%),
+    radial-gradient(ellipse 80% 100% at 60% 80%, rgba(215, 38, 61, 0.05), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 10% 70%, rgba(99, 102, 241, 0.04), transparent 50%);
+}
+.dark .bg-mesh-soft::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0, 145, 64, 0.06), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 90% 10%, rgba(255, 215, 0, 0.04), transparent 50%),
+    radial-gradient(ellipse 90% 70% at 50% 90%, rgba(99, 102, 241, 0.04), transparent 50%);
+}
+.dark .bg-noise::before { opacity: 0.025; }
+.dark .nebula-blob-1 { background: rgba(0, 145, 64, 0.1); }
+.dark .nebula-blob-2 { background: rgba(255, 215, 0, 0.07); }
+.dark .nebula-blob-3 { background: rgba(215, 38, 61, 0.06); }
+.dark .nebula-blob-4 { background: rgba(99, 102, 241, 0.05); }
+.dark .ambient-glow {
+  box-shadow:
+    inset 0 0 200px rgba(0, 145, 64, 0.04),
+    inset 0 0 400px rgba(0, 145, 64, 0.02);
+}
+.dark .navbar-glass-premium {
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+.dark .vignette-overlay::after {
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.15) 100%);
+}

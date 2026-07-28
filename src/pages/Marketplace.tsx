@@ -258,7 +258,7 @@ const Marketplace = () => {
     (showGames && games.length > 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
       {/* Desktop navbar */}
       <div className="hidden md:block">
         <Navbar />

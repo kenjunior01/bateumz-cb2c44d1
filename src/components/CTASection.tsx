@@ -102,7 +102,7 @@ const badgeVariants = {
 };
 
 const CTASection = () => (
-  <section className="relative py-28 md:py-36 overflow-hidden">
+  <section className="relative py-28 md:py-36 overflow-hidden bg-cosmic">
     {floatingOrbs.map((orb, i) => (
       <motion.div
         key={i}

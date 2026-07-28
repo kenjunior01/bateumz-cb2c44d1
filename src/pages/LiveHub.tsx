@@ -416,14 +416,20 @@ const LiveHub = () => {
   const springTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0 animate-page-enter bg-cosmic bg-noise vignette-overlay">
+      <div className="nebula-blob nebula-blob-1" />
+      <div className="nebula-blob nebula-blob-2" />
+      <div className="nebula-blob nebula-blob-3" />
+      <div className="ambient-glow" />
+      <div className="floating-stars"><span /><span /><span /><span /><span /><span /><span /><span /></div>
       <Navbar />
 
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/15 via-background to-[#FFD700]/8 animate-mesh-bg" style={{ backgroundImage: 'linear-gradient(135deg, rgba(0,145,64,0.15), hsl(var(--background)) 40%, rgba(255,215,0,0.08) 70%, rgba(215,38,61,0.05))', backgroundSize: '400% 400%' }} />
+      <section className="relative overflow-hidden border-b border-border holographic-bg">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#009140]/12 via-background to-[#FFD700]/6 animate-mesh-bg" style={{ backgroundImage: 'linear-gradient(135deg, rgba(0,145,64,0.12), hsl(var(--background)) 40%, rgba(255,215,0,0.06) 70%, rgba(215,38,61,0.04))', backgroundSize: '400% 400%' }} />
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-1/2 -right-1/4 w-[600px] h-[600px] rounded-full bg-[#009140]/5 blur-3xl animate-aurora" />
-          <div className="absolute -bottom-1/2 -left-1/4 w-[500px] h-[500px] rounded-full bg-[#FFD700]/5 blur-3xl animate-aurora" style={{ animationDelay: '-4s' }} />
+          <div className="absolute -top-1/2 -right-1/4 w-[700px] h-[700px] rounded-full bg-[#009140]/6 blur-3xl animate-aurora" />
+          <div className="absolute -bottom-1/2 -left-1/4 w-[600px] h-[600px] rounded-full bg-[#FFD700]/5 blur-3xl animate-aurora" style={{ animationDelay: '-4s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-indigo-500/3 blur-3xl animate-aurora" style={{ animationDelay: '-2s' }} />
         </div>
         <ParticleBackground preset="stars" count={20} className="absolute inset-0 pointer-events-none" />
         <div className="relative container mx-auto px-4 py-6 md:py-12">
@@ -559,7 +565,7 @@ const LiveHub = () => {
         </motion.div>
       )}
 
-      <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
+      <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8 section-glow-divider energy-wave">
         
 
         <MobileDiscoveryHeader

@@ -234,7 +234,13 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-[90vh] overflow-hidden">
+    <section className="relative min-h-[90vh] overflow-hidden bg-cosmic">
+      <div className="nebula-blob nebula-blob-1" />
+      <div className="nebula-blob nebula-blob-2" />
+      <div className="nebula-blob nebula-blob-3" />
+      <div className="nebula-blob nebula-blob-4" />
+      <div className="floating-stars"><span /><span /><span /><span /><span /><span /><span /><span /></div>
+      <div className="ambient-glow" />
       {/* Mesh gradient background */}
       <div className="absolute inset-0">
         <div

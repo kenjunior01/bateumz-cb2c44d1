@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import BottomTabBar from "@/components/BottomTabBar";
 import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
 const EMOJI_QUICK = ["\u2764\uFE0F", "\u{1F525}", "\u{1F389}", "\u{1F4AF}", "\u{1F602}", "\u{1F44F}", "\u{1F618}", "\u{1F4A5}"];
@@ -170,6 +171,8 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
   const [bestScore, setBestScore] = useState(0);
   const [tapParticles, setTapParticles] = useState<{id: number; x: number; y: number; color: string}[]>([]);
   const [shakeKey, setShakeKey] = useState(0);
+  const [flashClass, setFlashClass] = useState("");
+  const [gameEnded, setGameEnded] = useState(false);
   const tapRef = useRef<HTMLDivElement>(null);
 
   const spawnTapParticle = (e: React.MouseEvent) => {
@@ -189,10 +192,22 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
   const handleTap = (e: React.MouseEvent) => {
     if (!active) { startGame(); return; }
     spawnTapParticle(e);
-    setTaps(p => { const n = p + 1; if (n % 20 === 0) setShakeKey(k => k + 1); return n; });
+    setTaps(p => {
+      const n = p + 1;
+      if (n % 10 === 0) {
+        setShakeKey(k => k + 1);
+        setFlashClass("game-flash-white");
+        setTimeout(() => setFlashClass(""), 300);
+      }
+      if (n % 25 === 0) {
+        setFlashClass("game-flash-gold");
+        setTimeout(() => setFlashClass(""), 400);
+      }
+      return n;
+    });
   };
 
-  const startGame = () => { setTaps(0); setTimeLeft(10); setActive(true); setTapParticles([]); };
+  const startGame = () => { setTaps(0); setTimeLeft(10); setActive(true); setTapParticles([]); setGameEnded(false); setFlashClass(""); };
 
   useEffect(() => {
     if (!active) return;
@@ -200,7 +215,19 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
       setTimeLeft((p) => {
         if (p <= 1) {
           setActive(false);
-          setBestScore((b) => Math.max(b, taps));
+          setGameEnded(true);
+          const finalTaps = taps;
+          setBestScore((b) => {
+            const newBest = Math.max(b, finalTaps);
+            if (finalTaps >= 50) {
+              setFlashClass("game-flash-gold");
+              setTimeout(() => setFlashClass(""), 600);
+              confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 }, colors: ["#f97316", "#fbbf24", "#ffffff"] });
+              setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.3, y: 0.5 }, colors: ["#f97316", "#ef4444"] }), 200);
+              setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.7, y: 0.5 }, colors: ["#f97316", "#ef4444"] }), 400);
+            }
+            return newBest;
+          });
           return 0;
         }
         return p - 1;
@@ -221,7 +248,8 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
         )}
       </div>
 
-      <div key={shakeKey} className={`text-center py-2 ${shakeKey > 0 ? "game-screen-shake" : ""}`}>
+      <div key={shakeKey} className={"text-center py-2 relative " + (shakeKey > 0 ? "game-screen-shake" : "")}>
+        {flashClass && <div className={"absolute inset-0 z-10 pointer-events-none rounded-2xl " + flashClass} />}
         <motion.p key={taps} initial={{ scale: 1.3 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 15 }} className="text-5xl font-black text-primary">{taps}</motion.p>
         <p className="text-xs text-muted-foreground mt-1">toques</p>
       </div>
@@ -237,14 +265,24 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
       <button
         onClick={handleTap}
         className={cn(
-          "w-full h-32 rounded-2xl text-xl font-black transition-all active:scale-90",
+          "w-full h-32 rounded-2xl text-xl font-black transition-all active:scale-90 relative overflow-hidden",
           active
-            ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
+            ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30 spin-btn-glow"
             : "bg-gradient-to-r from-primary/10 to-accent/10 text-primary border-2 border-dashed border-primary/30"
         )}
       >
-        {active ? `\u{1F4AA} TOQUE! (${timeLeft}s)` : "\u{1F3C3} Come\u00E7ar"}
+        {active && taps >= 50 && <div className="absolute inset-0 celebration-rays" />}
+        {active ? "\u{1F4AA} TOQUE! (" + timeLeft + "s)" : "\u{1F3C3} Come\u00E7ar"}
       </button>
+      {gameEnded && taps >= 50 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mt-2"
+        >
+          <p className="text-xs font-bold text-primary animate-pulse">✨ INCREDIBLE! ✨</p>
+        </motion.div>
+      )}
     </div>
   );
 };

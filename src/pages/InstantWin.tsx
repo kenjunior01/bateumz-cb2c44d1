@@ -52,6 +52,9 @@ export default function InstantWin() {
       <Navbar />
 
       <section className="relative overflow-hidden border-b border-border/40">
+        <div className="game-particle game-particle-1" style={{ top: "20%", left: "8%" }} />
+        <div className="game-particle game-particle-2" style={{ top: "40%", right: "12%" }} />
+        <div className="game-particle game-particle-5" style={{ bottom: "15%", left: "25%" }} />
         <div
           className="absolute inset-0 opacity-40"
           style={{
@@ -87,8 +90,13 @@ export default function InstantWin() {
             ))}
           </div>
         ) : games.length === 0 ? (
-          <Card className="p-10 text-center">
-            <Trophy className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+          <Card className="p-10 text-center game-shimmer">
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Trophy className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+            </motion.div>
             <h3 className="mb-2 text-xl font-semibold">No live games right now</h3>
             <p className="mb-6 text-muted-foreground">
               Check back soon — new instant-win games are added regularly.
@@ -118,8 +126,10 @@ export default function InstantWin() {
                       <motion.div
                         animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="relative"
                       >
                         <Sparkles className="h-10 w-10 text-primary/60" />
+                        <div className="absolute inset-0 blur-xl bg-primary/20 rounded-full animate-pulse" />
                       </motion.div>
                     )}
                     <span className="absolute left-3 top-3 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur">

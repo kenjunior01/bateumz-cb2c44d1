@@ -90,6 +90,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
   const [flashClass, setFlashClass] = useState("");
   const [shakeKey, setShakeKey] = useState(0);
   const [questionKey, setQuestionKey] = useState(0);
+  const [showCelebrationRays, setShowCelebrationRays] = useState(false);
 
   // Default questions for fallback
   const defaultQuestions: Question[] = [
@@ -255,23 +256,27 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
         if (currentLevel === (game?.total_questions || prizeStructure.length)) {
           setStatus('won');
           setShakeKey(k => k + 1);
+          setShowCelebrationRays(true);
           setFlashClass("game-flash-gold");
-          setTimeout(() => setFlashClass(""), 800);
-          confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-          setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { x: 0.3, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] }), 200);
-          setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { x: 0.7, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] }), 400);
+          setTimeout(() => setFlashClass(""), 1200);
+          confetti({ particleCount: 200, spread: 100, origin: { y: 0.55 } });
+          setTimeout(() => confetti({ particleCount: 150, spread: 140, origin: { x: 0.2, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff", "#fde68a"] }), 150);
+          setTimeout(() => confetti({ particleCount: 150, spread: 140, origin: { x: 0.8, y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff", "#fde68a"] }), 300);
+          setTimeout(() => confetti({ particleCount: 100, spread: 80, origin: { y: 0.3 }, colors: ["#fbbf24", "#ffffff"], shapes: ["star"] }), 500);
           setTimeout(() => {
-            const end = Date.now() + 3000;
+            const end = Date.now() + 4000;
             const iv = setInterval(() => {
               if (Date.now() > end) return clearInterval(iv);
-              confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
-              confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
-            }, 80);
-          }, 600);
+              confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
+              confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ["#fbbf24", "#ffffff"] });
+            }, 60);
+          }, 800);
           saveSession('completed', currentPrize?.amount || 0);
           onComplete?.(currentPrize?.amount || 0, currentLevel, 'won');
         } else {
           toast.success("Resposta Correta!");
+          confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 }, colors: ["#22c55e", "#4ade80", "#ffffff"] });
+          setTimeout(() => confetti({ particleCount: 20, spread: 40, origin: { x: 0.5, y: 0.6 }, colors: ["#22c55e", "#ffffff"] }), 150);
           // Advance after delay
           setTimeout(() => {
             setCurrentLevel(prev => prev + 1);
@@ -284,6 +289,10 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
         }
       } else {
         setStatus('lost');
+        setShakeKey(k => k + 1);
+        setTimeout(() => {
+          confetti({ particleCount: 30, spread: 60, origin: { y: 0.6 }, colors: ["#ef4444", "#991b1b"] });
+        }, 500);
         const safePrize = calculateSafePrize();
         saveSession('abandoned', safePrize);
         onComplete?.(safePrize, currentLevel, 'lost');
@@ -338,6 +347,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
     setDisabledOptions([]);
     setTimeLeft(game?.time_per_question || 30);
     setLifelinesUsed({});
+    setShowCelebrationRays(false);
   };
 
   if (loading || triviaLoading) return (
@@ -371,6 +381,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
     >
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e17]/80 via-[#0a0e17]/60 to-[#0a0e17]/95"></div>
       {flashClass && <div className={`fixed inset-0 z-[100] pointer-events-none ${flashClass}`} />}
+      {showCelebrationRays && <div className="celebration-rays" />}
       <div className="game-particle game-particle-1" style={{ top: '15%', left: '10%' }} />
       <div className="game-particle game-particle-2" style={{ top: '25%', right: '15%' }} />
       <div className="game-particle game-particle-3" style={{ bottom: '20%', left: '20%' }} />
@@ -463,7 +474,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 key={questionKey}
-                className="relative bg-black/60 backdrop-blur-xl border-2 border-primary/30 p-8 md:p-12 rounded-[2rem] text-center shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden"
+                className={"relative bg-black/60 backdrop-blur-xl border-2 " + (timeLeft <= 5 && !answered ? "border-red-500/60 shadow-[0_0_40px_rgba(239,68,68,0.3)]" : timeLeft <= 10 && !answered ? "border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.2)]" : "border-primary/30 shadow-[0_0_40px_rgba(0,0,0,0.5)]") + " p-8 md:p-12 rounded-[2rem] text-center overflow-hidden"}
               >
                 <div className="lightning-effect" />
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
@@ -582,7 +593,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
             <motion.div 
               initial={{ scale: 0.8, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="text-center space-y-8 p-12 rounded-[3rem] border-2 border-white/10 bg-white/5"
+              className="text-center space-y-8 p-12 rounded-[3rem] border-2 border-white/10 bg-white/5 win-overlay-enter game-shimmer"
             >
               {status === 'won' ? (
                 <>
@@ -599,15 +610,19 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
                 </>
               ) : (
                 <>
-                  <div className="w-24 h-24 bg-red-500 rounded-full mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.5)]">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", bounce: 0.4 }}
+                    className="w-24 h-24 bg-red-500 rounded-full mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.5)]">
                     <XCircle className="w-12 h-12 text-white" />
-                  </div>
+                  </motion.div>
                   <h2 className="text-5xl font-black italic uppercase tracking-tighter">FIM DE JOGO</h2>
                   <p className="text-xl text-white/70">Leva para casa: <br/><span className="text-primary text-3xl font-black">{calculateSafePrize()} {prizeStructure[0]?.currency || 'MZN'}</span></p>
                 </>
               )}
               <div className="flex gap-4 justify-center pt-4">
-                <Button size="lg" className="px-12 py-8 text-xl font-black rounded-full" onClick={restartGame}>TENTAR NOVAMENTE</Button>
+                <Button size="lg" className="px-12 py-8 text-xl font-black rounded-full spin-btn-glow" onClick={restartGame}>TENTAR NOVAMENTE</Button>
                 <Button size="lg" variant="outline" className="px-12 py-8 text-xl font-black rounded-full border-white/20" onClick={() => window.location.href = '/'}>SAIR</Button>
               </div>
             </motion.div>

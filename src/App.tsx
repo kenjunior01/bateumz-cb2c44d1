@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
 import CountryLanguageSync from "@/components/CountryLanguageSync";
 import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
@@ -376,26 +377,28 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <RegionalConfigProvider>
-      <ThemeProvider>
-        <DynamicThemeProvider>
-          <LanguageProvider>
-            <CurrencyProvider>
-              <RegionalThemeProvider>
-                <CountryLanguageSync />
-                <PayPalProvider>
-                  <AuthProvider>
-                    <AppErrorBoundary>
-                      <AppContent />
-                    </AppErrorBoundary>
-                  </AuthProvider>
-                </PayPalProvider>
-              </RegionalThemeProvider>
-            </CurrencyProvider>
-          </LanguageProvider>
-        </DynamicThemeProvider>
-      </ThemeProvider>
-    </RegionalConfigProvider>
+    <HelmetProvider>
+      <RegionalConfigProvider>
+        <ThemeProvider>
+          <DynamicThemeProvider>
+            <LanguageProvider>
+              <CurrencyProvider>
+                <RegionalThemeProvider>
+                  <CountryLanguageSync />
+                  <PayPalProvider>
+                    <AuthProvider>
+                      <AppErrorBoundary>
+                        <AppContent />
+                      </AppErrorBoundary>
+                    </AuthProvider>
+                  </PayPalProvider>
+                </RegionalThemeProvider>
+              </CurrencyProvider>
+            </LanguageProvider>
+          </DynamicThemeProvider>
+        </ThemeProvider>
+      </RegionalConfigProvider>
+    </HelmetProvider>
   </QueryClientProvider>
 );
 

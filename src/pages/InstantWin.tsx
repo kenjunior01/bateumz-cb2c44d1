@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Zap, Trophy, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +19,7 @@ type GameCard = {
 };
 
 export default function InstantWin() {
+  const { t } = useLanguage();
   const [games, setGames] = useState<GameCard[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,13 +72,13 @@ export default function InstantWin() {
           >
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium backdrop-blur">
               <Zap className="h-3.5 w-3.5 text-primary" />
-              Instant Win
+              {t("instantWin.badge")}
             </div>
             <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
-              Play now. Win instantly.
+              {t("instantWin.title")}
             </h1>
             <p className="text-lg text-muted-foreground">
-              Spin the wheel or beat the quiz — real prizes, verified draws, no waiting.
+              {t("instantWin.subtitle")}
             </p>
           </motion.div>
         </div>
@@ -97,12 +99,12 @@ export default function InstantWin() {
             >
               <Trophy className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             </motion.div>
-            <h3 className="mb-2 text-xl font-semibold">No live games right now</h3>
+            <h3 className="mb-2 text-xl font-semibold">{t("instantWin.noGames")}</h3>
             <p className="mb-6 text-muted-foreground">
-              Check back soon — new instant-win games are added regularly.
+              {t("instantWin.noGamesDesc")}
             </p>
             <Button asChild>
-              <Link to="/">Back to Home</Link>
+              <Link to="/">{t("common.back")}</Link>
             </Button>
           </Card>
         ) : (
@@ -133,17 +135,17 @@ export default function InstantWin() {
                       </motion.div>
                     )}
                     <span className="absolute left-3 top-3 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur">
-                      {g.type === "spin" ? "Spin Wheel" : "Millionaire"}
+                      {g.type === "spin" ? t("menu.spinWheel") : t("menu.millionaire")}
                     </span>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
                   </div>
                   <div className="p-4">
                     <h3 className="mb-1 line-clamp-1 font-semibold group-hover:text-primary transition-colors">{g.title}</h3>
                     <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
-                      {g.description || "Play now for a chance to win instantly."}
+                      {g.description || t("instantWin.subtitle")}
                     </p>
                     <div className="flex items-center text-sm font-medium text-primary">
-                      Play now
+                      {t("instantWin.play")}
                       <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-2" />
                     </div>
                   </div>

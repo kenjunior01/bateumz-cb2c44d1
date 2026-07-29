@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, Component, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -182,10 +182,16 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 const LiveHub = () => {
   const { toast: uiToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const gameFromUrl = searchParams.get("game") as GameId | null;
   const { user, role } = useAuth();
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [active, setActive] = useState<GameId>(() => {
-    try { return (localStorage.getItem("liveActiveGame") as GameId) || "wheel"; } catch { return "wheel"; }
+    try {
+      const fromUrl = gameFromUrl;
+      if (fromUrl && GAMES.some(g => g.id === fromUrl)) return fromUrl;
+      return (localStorage.getItem("liveActiveGame") as GameId) || "wheel";
+    } catch { return "wheel"; }
   });
   const [config, setConfig] = useState<LiveGameConfig>(() => {
     try {
@@ -317,8 +323,15 @@ const LiveHub = () => {
     return unsub;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync active game when URL ?game= param changes (e.g. from AllGames page)
+  useEffect(() => {
+    if (gameFromUrl && GAMES.some(g => g.id === gameFromUrl) && gameFromUrl !== active) {
+      setActive(gameFromUrl);
+    }
+  }, [gameFromUrl]);
+
   const recordScore = (game: string) => (name: string, score: number) => {
-    if (!name || !isLive) return;
+    if (!name) return;
     setLeaderboard((prev) => [
       ...prev,
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
@@ -326,10 +339,9 @@ const LiveHub = () => {
   };
 
   const broadcastWinner = (name: string, meta?: string) => {
-    if (!isLive) return;
     const w = { name, meta, at: Date.now() };
     winnersRef.current = [...winnersRef.current, w];
-    publish({ type: "winner", payload: w });
+    if (isLive) publish({ type: "winner", payload: w });
   };
 
   const resetConfig = () => { setConfig(DEFAULT_CONFIG); setWheelPrizes(DEFAULT_WHEEL_PRIZES); };
@@ -421,15 +433,15 @@ const LiveHub = () => {
         <ParticleBackground preset="stars" count={25} className="absolute inset-0 pointer-events-none" />
         <div className="relative container mx-auto px-4 py-6 md:py-12">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-xs font-bold mb-3">
-              <Radio className="h-3.5 w-3.5 animate-pulse" />
-              LIVE ENGAGEMENT
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
+              <Gamepad2 className="h-3.5 w-3.5" />
+              {GAMES.length} JOGOS DISPONÍVEIS
             </div>
             <h1 className="font-display text-3xl md:text-5xl font-bold mb-2">
-              Jogos para a sua <span className="text-primary">Live</span>
+              Jogos <span className="text-primary">Online</span>
             </h1>
             <p className="text-muted-foreground text-sm md:text-base mb-4">
-              Plataforma dedicada para empresas animarem lives com roda de prémios, batalhas, quizzes e caixas misteriosas — tudo configurável.
+              Joga quando quiseres! Escolhe um jogo e diverte-te. Empresas podem iniciar uma live para envolver a audiência em tempo real.
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -456,7 +468,7 @@ const LiveHub = () => {
                     <Play className="h-4 w-4 fill-current" /> Iniciar Live
                   </button>
                   <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-muted/50 text-muted-foreground text-[11px] font-medium">
-                    <Lock className="h-3 w-3" /> Sem código ativo
+                    <Gamepad2 className="h-3 w-3" /> Modo jogo livre
                   </div>
                 </>
               )}
@@ -478,11 +490,11 @@ const LiveHub = () => {
               <div className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-2.5">
                 <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
                 <div className="text-left">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Jogo ativo no painel</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">A jogar agora</p>
                   <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
-                  {isLive ? "transmitindo" : "em espera"}
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/15 text-primary"}`}>
+                  {isLive ? "ao vivo" : "pronto a jogar"}
                 </span>
               </div>
             )}
@@ -490,17 +502,17 @@ const LiveHub = () => {
         </div>
       </section>
 
-      {!isLive && (
+      {!user && (
         <div className="container mx-auto px-3 sm:px-4 pt-3">
           <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
-            🔒 Pontuações e vencedores só são contabilizados depois de <strong>iniciar a live</strong>. Configure os jogos no painel da empresa.
+            🔒 <strong>Entra na tua conta</strong> para guardar as tuas pontuações e aceder a todas as funcionalidades. <Link to="/register" className="underline font-bold">Criar conta</Link> ou <Link to="/login" className="underline font-bold">Entrar</Link>
           </div>
         </div>
       )}
 
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
         <MobileDiscoveryHeader
-          title="Jogos da Live"
+          title="Todos os Jogos"
           searchValue=""
           onSearchChange={() => {}}
           searchPlaceholder="Procurar jogo..."
@@ -1055,13 +1067,13 @@ const LiveHub = () => {
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <h3 className="font-display text-sm font-bold">Dicas para a sua Live</h3>
+                <h3 className="font-display text-sm font-bold">Dicas</h3>
               </div>
               <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
-                <li>Configure os prémios e probabilidades antes de começar.</li>
-                <li>Partilhe o código da live para os participantes.</li>
-                <li>Use o leaderboard para coroar o vencedor no fim.</li>
-                <li>Vincule um sorteio para distribuir prémios reais.</li>
+                <li>Escolhe qualquer jogo da lista e joga imediatamente.</li>
+                <li>Empresas podem iniciar uma live para envolver a audiência.</li>
+                <li>O teu ranking local é guardado automaticamente.</li>
+                <li>Desafia os teus amigos e supera o teu recorde!</li>
               </ul>
             </div>
 
@@ -1071,7 +1083,7 @@ const LiveHub = () => {
                 <h3 className="font-display text-sm font-bold">Modo Multi-jogador</h3>
               </div>
               <p className="text-xs text-muted-foreground">
-                Tap Battle e Quiz Battle suportam 1v1 ou contra bot — perfeito para desafios entre o anfitrião e convidados.
+                Vários jogos suportam 1v1 ou contra bot IA — perfeito para desafiar amigos. Inicia uma live para partilhar com a audiência!
               </p>
             </div>
           </aside>

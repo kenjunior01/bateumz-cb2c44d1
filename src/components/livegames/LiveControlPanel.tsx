@@ -445,7 +445,7 @@ const HeatGauge = ({ level }: { level: number }) => {
     <div className="relative rounded-2xl border border-border/60 bg-card/40 backdrop-blur p-3 overflow-hidden">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold inline-flex items-center gap-1.5">
-          <Fire className="h-3 w-3" /> Calor
+          <Flame className="h-3 w-3" /> Calor
         </span>
         <span className={`text-[11px] font-bold ${meta.tone}`}>{meta.label}</span>
       </div>

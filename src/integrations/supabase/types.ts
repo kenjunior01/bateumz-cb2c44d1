@@ -49,6 +49,54 @@ export type Database = {
           },
         ]
       }
+      analytics_snapshots: {
+        Row: {
+          avg_session_duration: number | null
+          business_user_id: string
+          created_at: string | null
+          date: string
+          id: string
+          metadata: Json | null
+          top_game_name: string | null
+          top_game_type: string | null
+          total_players: number | null
+          total_prize_value: number | null
+          total_sessions: number | null
+          total_winners: number | null
+          unique_players: number | null
+        }
+        Insert: {
+          avg_session_duration?: number | null
+          business_user_id: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          metadata?: Json | null
+          top_game_name?: string | null
+          top_game_type?: string | null
+          total_players?: number | null
+          total_prize_value?: number | null
+          total_sessions?: number | null
+          total_winners?: number | null
+          unique_players?: number | null
+        }
+        Update: {
+          avg_session_duration?: number | null
+          business_user_id?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          metadata?: Json | null
+          top_game_name?: string | null
+          top_game_type?: string | null
+          total_players?: number | null
+          total_prize_value?: number | null
+          total_sessions?: number | null
+          total_winners?: number | null
+          unique_players?: number | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -397,6 +445,63 @@ export type Database = {
           },
         ]
       }
+      company_branding: {
+        Row: {
+          accent_color: string | null
+          background_color: string | null
+          background_image_url: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_slogan: string | null
+          created_at: string | null
+          enabled: boolean | null
+          font_family: string | null
+          id: string
+          overlay_style: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          text_color: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          background_color?: string | null
+          background_image_url?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          font_family?: string | null
+          id?: string
+          overlay_style?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          background_color?: string | null
+          background_image_url?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_slogan?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          font_family?: string | null
+          id?: string
+          overlay_style?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contest_submissions: {
         Row: {
           contest_id: string
@@ -668,6 +773,60 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      game_sessions: {
+        Row: {
+          business_user_id: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          game_id: string | null
+          game_name: string
+          game_type: string
+          id: string
+          is_winner: boolean | null
+          live_code: string | null
+          metadata: Json | null
+          player_count: number | null
+          player_name: string | null
+          prize: string | null
+          prize_value: number | null
+          score: number | null
+        }
+        Insert: {
+          business_user_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          game_id?: string | null
+          game_name: string
+          game_type: string
+          id?: string
+          is_winner?: boolean | null
+          live_code?: string | null
+          metadata?: Json | null
+          player_count?: number | null
+          player_name?: string | null
+          prize?: string | null
+          prize_value?: number | null
+          score?: number | null
+        }
+        Update: {
+          business_user_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          game_id?: string | null
+          game_name?: string
+          game_type?: string
+          id?: string
+          is_winner?: boolean | null
+          live_code?: string | null
+          metadata?: Json | null
+          player_count?: number | null
+          player_name?: string | null
+          prize?: string | null
+          prize_value?: number | null
+          score?: number | null
         }
         Relationships: []
       }
@@ -1254,6 +1413,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      overlay_configs: {
+        Row: {
+          animation_intensity: string | null
+          border_radius: number | null
+          created_at: string | null
+          custom_css: string | null
+          id: string
+          is_default: boolean | null
+          layout: string | null
+          name: string | null
+          opacity: number | null
+          position: string | null
+          show_branding: boolean | null
+          show_confetti: boolean | null
+          show_player_count: boolean | null
+          show_score: boolean | null
+          show_sound_effects: boolean | null
+          show_timer: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          animation_intensity?: string | null
+          border_radius?: number | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          is_default?: boolean | null
+          layout?: string | null
+          name?: string | null
+          opacity?: number | null
+          position?: string | null
+          show_branding?: boolean | null
+          show_confetti?: boolean | null
+          show_player_count?: boolean | null
+          show_score?: boolean | null
+          show_sound_effects?: boolean | null
+          show_timer?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          animation_intensity?: string | null
+          border_radius?: number | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          is_default?: boolean | null
+          layout?: string | null
+          name?: string | null
+          opacity?: number | null
+          position?: string | null
+          show_branding?: boolean | null
+          show_confetti?: boolean | null
+          show_player_count?: boolean | null
+          show_score?: boolean | null
+          show_sound_effects?: boolean | null
+          show_timer?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       participants: {
         Row: {
@@ -2839,6 +3061,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      refresh_daily_analytics: {
+        Args: { p_date?: string; p_user_id: string }
+        Returns: undefined
       }
       toggle_blog_like: {
         Args: { post_slug: string; user_id: string }

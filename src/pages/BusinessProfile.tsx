@@ -15,16 +15,6 @@ import { Input } from "@/components/ui/input";
 import BusinessGameCard from "@/components/livegames/BusinessGameCard";
 import GameHistoryPanel from "@/components/livegames/GameHistoryPanel";
 import GuestNameDialog from "@/components/livegames/GuestNameDialog";
-import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Ticket,
   Trophy,

@@ -66,6 +66,7 @@ import Install from "./pages/Install.tsx";
 import Referral from "./pages/Referral.tsx";
 import Community from "./pages/Community.tsx";
 import WhiteLabelConfig from "./pages/dashboard/WhiteLabelConfig.tsx";
+import GameBrandingConfig from "./pages/dashboard/GameBrandingConfig.tsx";
 import DashboardPrizes from "./pages/dashboard/DashboardPrizes.tsx";
 import DashboardNotifications from "./pages/dashboard/DashboardNotifications.tsx";
 import Profile from "./pages/Profile.tsx";
@@ -235,6 +236,7 @@ function AnimatedRoutes() {
             <Route path="prizes" element={<DashboardPrizes />} />
             <Route path="notifications" element={<DashboardNotifications />} />
             <Route path="white-label" element={<WhiteLabelConfig />} />
+            <Route path="game-branding" element={<GameBrandingConfig />} />
             <Route path="contests" element={<DashboardContests />} />
             <Route path="prestacoes" element={<DashboardPrestacoes />} />
             <Route path="live-games" element={<DashboardLiveGames />} />

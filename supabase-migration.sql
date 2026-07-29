@@ -99,29 +99,57 @@ ALTER TABLE public.game_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.overlay_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_snapshots ENABLE ROW LEVEL SECURITY;
 
--- company_branding RLS
-CREATE POLICY "branding_select_own" ON public.company_branding FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "branding_select_public" ON public.company_branding FOR SELECT USING (true);
-CREATE POLICY "branding_insert_own" ON public.company_branding FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY "branding_update_own" ON public.company_branding FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "branding_delete_own" ON public.company_branding FOR DELETE USING (user_id = auth.uid());
+-- company_branding RLS (DROP + CREATE for idempotency)
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "branding_select_own" ON public.company_branding;
+  DROP POLICY IF EXISTS "branding_select_public" ON public.company_branding;
+  DROP POLICY IF EXISTS "branding_insert_own" ON public.company_branding;
+  DROP POLICY IF EXISTS "branding_update_own" ON public.company_branding;
+  DROP POLICY IF EXISTS "branding_delete_own" ON public.company_branding;
+  CREATE POLICY "branding_select_own" ON public.company_branding FOR SELECT USING (user_id = auth.uid());
+  CREATE POLICY "branding_select_public" ON public.company_branding FOR SELECT USING (true);
+  CREATE POLICY "branding_insert_own" ON public.company_branding FOR INSERT WITH CHECK (user_id = auth.uid());
+  CREATE POLICY "branding_update_own" ON public.company_branding FOR UPDATE USING (user_id = auth.uid());
+  CREATE POLICY "branding_delete_own" ON public.company_branding FOR DELETE USING (user_id = auth.uid());
+ EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- game_sessions RLS
-CREATE POLICY "sessions_select_own" ON public.game_sessions FOR SELECT USING (business_user_id = auth.uid());
-CREATE POLICY "sessions_select_public" ON public.game_sessions FOR SELECT USING (true);
-CREATE POLICY "sessions_insert" ON public.game_sessions FOR INSERT WITH CHECK (business_user_id = auth.uid() OR business_user_id IS NULL);
-CREATE POLICY "sessions_update_own" ON public.game_sessions FOR UPDATE USING (business_user_id = auth.uid());
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "sessions_select_own" ON public.game_sessions;
+  DROP POLICY IF EXISTS "sessions_select_public" ON public.game_sessions;
+  DROP POLICY IF EXISTS "sessions_insert" ON public.game_sessions;
+  DROP POLICY IF EXISTS "sessions_update_own" ON public.game_sessions;
+  CREATE POLICY "sessions_select_own" ON public.game_sessions FOR SELECT USING (business_user_id = auth.uid());
+  CREATE POLICY "sessions_select_public" ON public.game_sessions FOR SELECT USING (true);
+  CREATE POLICY "sessions_insert" ON public.game_sessions FOR INSERT WITH CHECK (business_user_id = auth.uid() OR business_user_id IS NULL);
+  CREATE POLICY "sessions_update_own" ON public.game_sessions FOR UPDATE USING (business_user_id = auth.uid());
+ EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- overlay_configs RLS
-CREATE POLICY "overlay_select_own" ON public.overlay_configs FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "overlay_insert_own" ON public.overlay_configs FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY "overlay_update_own" ON public.overlay_configs FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "overlay_delete_own" ON public.overlay_configs FOR DELETE USING (user_id = auth.uid());
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "overlay_select_own" ON public.overlay_configs;
+  DROP POLICY IF EXISTS "overlay_insert_own" ON public.overlay_configs;
+  DROP POLICY IF EXISTS "overlay_update_own" ON public.overlay_configs;
+  DROP POLICY IF EXISTS "overlay_delete_own" ON public.overlay_configs;
+  CREATE POLICY "overlay_select_own" ON public.overlay_configs FOR SELECT USING (user_id = auth.uid());
+  CREATE POLICY "overlay_insert_own" ON public.overlay_configs FOR INSERT WITH CHECK (user_id = auth.uid());
+  CREATE POLICY "overlay_update_own" ON public.overlay_configs FOR UPDATE USING (user_id = auth.uid());
+  CREATE POLICY "overlay_delete_own" ON public.overlay_configs FOR DELETE USING (user_id = auth.uid());
+ EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- analytics_snapshots RLS
-CREATE POLICY "analytics_select_own" ON public.analytics_snapshots FOR SELECT USING (business_user_id = auth.uid());
-CREATE POLICY "analytics_insert" ON public.analytics_snapshots FOR INSERT WITH CHECK (business_user_id = auth.uid());
-CREATE POLICY "analytics_update_own" ON public.analytics_snapshots FOR UPDATE USING (business_user_id = auth.uid());
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "analytics_select_own" ON public.analytics_snapshots;
+  DROP POLICY IF EXISTS "analytics_insert" ON public.analytics_snapshots;
+  DROP POLICY IF EXISTS "analytics_update_own" ON public.analytics_snapshots;
+  CREATE POLICY "analytics_select_own" ON public.analytics_snapshots FOR SELECT USING (business_user_id = auth.uid());
+  CREATE POLICY "analytics_insert" ON public.analytics_snapshots FOR INSERT WITH CHECK (business_user_id = auth.uid());
+  CREATE POLICY "analytics_update_own" ON public.analytics_snapshots FOR UPDATE USING (business_user_id = auth.uid());
+ EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- FUNCTION: Auto-update updated_at
 CREATE OR REPLACE FUNCTION public.update_updated_at()
@@ -132,7 +160,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS branding_updated_at ON public.company_branding;
 CREATE TRIGGER branding_updated_at BEFORE UPDATE ON public.company_branding FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+DROP TRIGGER IF EXISTS overlay_updated_at ON public.overlay_configs;
 CREATE TRIGGER overlay_updated_at BEFORE UPDATE ON public.overlay_configs FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- FUNCTION: Aggregate analytics snapshot

@@ -340,7 +340,8 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
   static getDerivedStateFromError(error: Error) { return {hasError: true, error}; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error('AppErrorBoundary:', error, info); }
   render() {
-    if (this.state.hasError) return (
+    if (this.state.hasError) {
+      return (
       <div className="min-h-screen flex items-center justify-center p-6 overflow-hidden" style={{ background: "hsl(var(--background))" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -357,12 +358,18 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
           </motion.div>
           <h2 className="text-2xl font-display font-bold">Algo correu mal</h2>
           <p className="text-muted-foreground text-sm">Ocorreu um erro inesperado. Tente recarregar a página.</p>
-          <Button onClick={() => window.location.reload()} className="gap-2 rounded-full px-6">
-            Recarregar Página
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => this.setState({ hasError: false, error: null })} variant="outline" className="gap-2 rounded-full px-6">
+              Tentar novamente
+            </Button>
+            <Button onClick={() => window.location.reload()} className="gap-2 rounded-full px-6">
+              Recarregar Página
           </Button>
+          </div>
         </motion.div>
       </div>
-    );
+      );
+    }
     return this.props.children;
   }
 }

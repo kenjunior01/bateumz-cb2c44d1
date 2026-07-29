@@ -41,8 +41,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(0);
-  const [shakeKey, setShakeKey] = useState(0);
-  const [flashClass, setFlashClass] = useState("");
 
   // Timer
   useEffect(() => {
@@ -140,19 +138,7 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
   const handleFinish = async () => {
     if (!game) return;
     await setQuizStatus(game.id, "finished");
-    setFlashClass("game-flash-gold");
-    setTimeout(() => setFlashClass(""), 1000);
     confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
-    setTimeout(() => confetti({ particleCount: 150, spread: 120, origin: { x: 0.2, y: 0.4 }, colors: ["#fbbf24", "#f59e0b", "#3b82f6", "#ffffff"] }), 200);
-    setTimeout(() => confetti({ particleCount: 150, spread: 120, origin: { x: 0.8, y: 0.4 }, colors: ["#fbbf24", "#f59e0b", "#3b82f6", "#ffffff"] }), 400);
-    setTimeout(() => {
-      const end = Date.now() + 3000;
-      const iv = setInterval(() => {
-        if (Date.now() > end) return clearInterval(iv);
-        confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ["#fbbf24", "#3b82f6"] });
-        confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ["#fbbf24", "#3b82f6"] });
-      }, 80);
-    }, 600);
   };
 
   // PLAYER: Answer
@@ -168,20 +154,10 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
     const isCorrect = idx === currentQ.correct_index;
     setAnswerFeedback(isCorrect ? "correct" : "wrong");
 
-    if (isCorrect) {
-      setFlashClass("game-flash-green");
-      setTimeout(() => setFlashClass(""), 500);
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ["#22c55e", "#4ade80", "#ffffff"] });
-      setTimeout(() => confetti({ particleCount: 40, spread: 40, origin: { x: 0.5, y: 0.6 }, colors: ["#22c55e", "#ffffff"] }), 150);
-    } else {
-      setShakeKey(k => k + 1);
-      setFlashClass("game-flash-red");
-      setTimeout(() => setFlashClass(""), 500);
-    }
-
     if (data?.points_earned > 0) {
       setTotalPoints((prev) => prev + (data.points_earned || 0));
       if (isCorrect && onScore) onScore(user?.user_metadata?.display_name || "Jogador", data.points_earned);
+      confetti({ particleCount: isCorrect ? 100 : 0, spread: 60 });
     }
 
     setTimeout(() => { setAnswerFeedback(null); }, 2500);
@@ -191,16 +167,7 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
 
   // ===== RENDER =====
   return (
-<<<<<<< HEAD
-    <div className={"space-y-4 relative " + (flashClass ? "" : "")}>
-      {flashClass && <div className={"absolute inset-0 z-10 pointer-events-none rounded-2xl " + flashClass} />}
-      <div className="game-particle game-particle-1" style={{ top: "5%", left: "5%" }} />
-      <div className="game-particle game-particle-2" style={{ top: "10%", right: "10%" }} />
-      <div className="game-particle game-particle-4" style={{ bottom: "8%", right: "5%" }} />
-      {/* Host: No game yet */}
-=======
     <div className="space-y-4">
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
       {!game && isHost && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
@@ -293,20 +260,18 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
       )}
 
       {game && game.status === "question" && currentQ && (
-        <div key={shakeKey} className={"space-y-4 " + (shakeKey > 0 ? "game-screen-shake" : "")}>
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Badge className="bg-blue-500 text-white">Pergunta {game.current_question_index + 1}/{questions.length}</Badge>
             <div className="flex items-center gap-1.5">
-              <div className={"flex items-center gap-1.5 px-3 py-1 rounded-full border " + (timeLeft <= 5 ? "bg-red-500/20 border-red-500/50 timer-urgent" : timeLeft <= 10 ? "bg-amber-500/20 border-amber-500/40" : "bg-black/40 border-white/10")}>
-              <Clock className={`h-3.5 w-3.5 ${timeLeft <= 5 ? "text-red-400" : timeLeft <= 10 ? "text-amber-400" : "text-muted-foreground"}`} />
-              <span className={`font-mono text-sm font-bold ${timeLeft <= 5 ? "text-red-400" : timeLeft <= 10 ? "text-amber-400" : "text-foreground"}`}>{timeLeft}s</span>
-              </div>
+              <Clock className={`h-3.5 w-3.5 ${timeLeft <= 5 ? "text-red-500" : "text-muted-foreground"}`} />
+              <span className={`font-mono text-sm font-bold ${timeLeft <= 5 ? "text-red-500 animate-pulse" : "text-foreground"}`}>{timeLeft}s</span>
             </div>
           </div>
 
-          <Progress value={(timeLeft / (game.time_per_question || 15)) * 100} className={"h-1.5 " + (timeLeft <= 5 ? "[&>div]:!bg-red-500 [&>div]:!shadow-[0_0_10px_rgba(239,68,68,0.5)]" : timeLeft <= 10 ? "[&>div]:!bg-amber-500" : "")} />
+          <Progress value={(timeLeft / (game.time_per_question || 15)) * 100} className="h-1" />
 
-          <Card className={"border-2 " + (timeLeft <= 5 && !answerLocked ? "border-red-500/40 shadow-[0_0_30px_rgba(239,68,68,0.2)]" : "border-primary/20")}>
+          <Card className="border-2 border-primary/20">
             <CardContent className="py-6">
               <h3 className="text-center text-lg font-bold mb-6">{currentQ.question}</h3>
               <div className="grid gap-2 max-w-md mx-auto">
@@ -316,8 +281,8 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
                   const isCorrect = i === currentQ.correct_index;
 
                   let bgClass = "border-border hover:border-primary/40";
-                  if (isRevealed && isCorrect) bgClass = "bg-emerald-500/20 border-emerald-500 option-reveal-correct";
-                  else if (isRevealed && isSelected && !isCorrect) bgClass = "bg-red-500/20 border-red-500 option-reveal-wrong";
+                  if (isRevealed && isCorrect) bgClass = "bg-emerald-500/20 border-emerald-500";
+                  else if (isRevealed && isSelected && !isCorrect) bgClass = "bg-red-500/20 border-red-500";
                   else if (isSelected) bgClass = `bg-gradient-to-r ${COLORS[i % COLORS.length]} border-transparent`;
 
                   return (
@@ -411,17 +376,10 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
       )}
 
       {game && game.status === "finished" && (
-        <Card className="border-amber-500/30 game-shimmer">
+        <Card className="border-amber-500/30">
           <CardContent className="py-8 text-center">
-            <motion.div
-              initial={{ scale: 0, rotate: -30 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", bounce: 0.5 }}
-              className="w-16 h-16 bg-amber-500 rounded-full mx-auto flex items-center justify-center shadow-[0_0_40px_rgba(251,191,36,0.5)] mb-3"
-            >
-              <Crown className="h-8 w-8 text-black" />
-            </motion.div>
-            <h3 className="font-bold text-2xl mb-1">Quiz Finalizado!</h3>
+            <Crown className="h-12 w-12 mx-auto text-amber-500 mb-3" />
+            <h3 className="font-bold text-xl mb-1">Quiz Finalizado!</h3>
             {!isHost && <p className="text-sm text-muted-foreground mb-2">Pontuação final: <strong className="text-primary">{totalPoints}</strong></p>}
             {leaderboard.length > 0 && (
               <div className="mt-4 space-y-1">

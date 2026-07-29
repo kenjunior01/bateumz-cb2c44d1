@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
@@ -15,18 +16,43 @@ import {
 } from "@/components/ui/navigation-menu";
 import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
+import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
 
-type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string };
-type MenuGroup = { label: string; items: SubItem[] };
+// Premium announcement banner data — can be driven by CMS later
+const ANNOUNCEMENT_KEY = "bateu_navbar_announcement_dismissed";
+type Announcement = {
+  id: string;
+  emoji: string;
+  text: string;
+  cta: { label: string; href: string };
+  gradient: string;
+};
+
+const currentAnnouncement: Announcement | null = {
+  id: "live-may2025",
+  emoji: "🔥",
+  text: "Lives a decorrer agora — participe e ganhe prémios em tempo real!",
+  cta: { label: "Entrar Agora", href: "/lives-agora" },
+  gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
+};
+
+type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string; live?: boolean; trending?: boolean };
+type MenuGroup = { label: string; icon: typeof Trophy; items: SubItem[]; spotlight: { label: string; desc: string; href: string; cta: string } };
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const { user, role, signOut } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [liveCount, setLiveCount] = useState(0);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const lastY = useRef(0);
+  const navRef = useRef<HTMLDivElement>(null);
+  const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
   const { rt } = useRegionalTheme();
-<<<<<<< HEAD
-=======
   const { format } = useCurrency();
   const location = useLocation();
 
@@ -152,47 +178,82 @@ const Navbar = () => {
     setAnnouncementDismissed(true);
     }
   };
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
 
   const groups: MenuGroup[] = [
     {
-      label: rt("nav.group.raffles", "Raffles"),
+      label: rt("nav.group.raffles", "Sorteios"),
+      icon: Ticket,
+      spotlight: {
+        label: rt("nav.spotlight.marketplace", "Sorteios a decorrer agora"),
+        desc: rt("nav.spotlight.marketplace.desc", "Participe em sorteios verificados e acompanhe o sorteio ao vivo"),
+        href: "/marketplace",
+        cta: rt("nav.spotlight.cta", "Ver tudo"),
+      },
       items: [
-        { label: rt("nav.marketplace", "Marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc", "All active raffles") },
-        { label: rt("nav.contests", "Contests"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc", "Photo, video and talent") },
-        { label: rt("nav.instantwin", "Instant Win"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc", "Scratch cards & spin wheel") },
-        { label: rt("nav.mytickets", "My Tickets"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc", "Track your entries") },
+        { label: rt("nav.marketplace", "Marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc", "Todos os sorteios activos"), trending: true },
+        { label: rt("nav.contests", "Concursos"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc", "Foto, video e talento") },
+        { label: rt("nav.instantwin", "Ganha Já"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc", "Raspadinhas e roleta") },
+        { label: rt("nav.mytickets", "Meus Bilhetes"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc", "Acompanhe as suas participações") },
       ],
     },
     {
-      label: rt("nav.group.business", "Business"),
+      label: rt("nav.group.business", "Negócios"),
+      icon: Building2,
+      spotlight: {
+        label: rt("nav.spotlight.prestacoes", "Prestações — viaturas e imóveis"),
+        desc: rt("nav.spotlight.prestacoes.desc", "Adquira bens premium em prestações mensais com sorteio final"),
+        href: "/prestacoes/catalogo",
+        cta: rt("nav.spotlight.cta", "Explorar"),
+      },
       items: [
-        { label: rt("nav.directory", "Directory"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc", "Verified partner brands") },
-        { label: rt("nav.installments.catalog", "Installments Catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc", "Vehicles, real estate & more"), badge: rt("nav.badge.new", "New") },
-        { label: rt("nav.installments.about", "About Installments"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc", "How financed payments work") },
-        { label: rt("nav.createraffle", "Create Raffle"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc", "Launch your own raffle") },
+        { label: rt("nav.directory", "Directório"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc", "Marcas parceiras verificadas") },
+        { label: rt("nav.installments.catalog", "Catálogo Prestações"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc", "Viaturas, imóveis e mais"), badge: rt("nav.badge.new", "Novo") },
+        { label: rt("nav.installments.about", "Sobre Prestações"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc", "Como funcionam os pagamentos") },
+        { label: rt("nav.createraffle", "Criar Sorteio"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc", "Lance o seu próprio sorteio") },
       ],
     },
     {
       label: rt("nav.group.entertainment", "Entretenimento"),
+      icon: Gamepad2,
+      spotlight: {
+        label: rt("nav.spotlight.live", "Lives a acontecer agora"),
+        desc: rt("nav.spotlight.live.desc", "Entre em jogos ao vivo com streamers e ganhe prémios em tempo real"),
+        href: "/lives-agora",
+        cta: rt("nav.spotlight.cta.live", "Entrar agora"),
+      },
       items: [
-        { label: rt("nav.games", "Todos os Jogos"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc", "50+ jogos online gratis, jogue agora!"), badge: "Hot" },
-        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives a acontecer agora") },
+        { label: rt("nav.games", "Todos os Jogos"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc", "50+ jogos online grátis, jogue agora!"), badge: "Hot", trending: true },
+        { label: rt("nav.tournaments", "Torneios"), href: "/tournaments", icon: Swords, desc: rt("nav.tournaments.desc", "Competições entre jogadores com prémios reais"), badge: rt("nav.badge.new", "Novo") },
+        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives a acontecer agora"), live: true },
         { label: rt("nav.lives", "Jogos ao Vivo"), href: "/lives", icon: Radio, desc: rt("nav.lives.desc", "Engajamento ao vivo para empresas") },
-        { label: rt("nav.blog", "Blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc", "Dicas, novidades e conteudo viral"), badge: "Novo" },
+        { label: rt("nav.blog", "Blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc", "Dicas, novidades e conteúdo viral") },
       ],
     },
     {
       label: rt("nav.group.community", "Comunidade"),
+      icon: MessageCircle,
+      spotlight: {
+        label: rt("nav.spotlight.transparency", "Transparência verificada"),
+        desc: rt("nav.spotlight.transparency.desc", "Todos os sorteios são verificáveis e auditáveis"),
+        href: "/transparencia",
+        cta: rt("nav.spotlight.cta", "Verificar"),
+      },
       items: [
-        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Chat e votacoes em tempo real") },
-        { label: rt("nav.winners", "Historico de Vencedores"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Sorteios concluidos") },
-        { label: rt("nav.transparency", "Transparencia"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Verificacao blockchain") },
-        { label: rt("nav.how", "Como Funciona"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Guia rapido da plataforma") },
+        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Chat e votações em tempo real") },
+        { label: rt("nav.winners", "Histórico de Vencedores"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Sorteios concluídos") },
+        { label: rt("nav.transparency", "Transparência"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Verificação blockchain") },
+        { label: rt("nav.how", "Como Funciona"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Guia rápido da plataforma") },
       ],
     },
     {
       label: rt("nav.group.more", "Mais"),
+      icon: LayoutGrid,
+      spotlight: {
+        label: rt("nav.spotlight.referral", "Indique amigos, ganhe pontos"),
+        desc: rt("nav.spotlight.referral.desc", "Partilhe o seu link e acumule pontos a cada adesão"),
+        href: "/referral",
+        cta: rt("nav.spotlight.cta", "Partilhar"),
+      },
       items: [
         { label: rt("nav.referral", "Indique e Ganhe"), href: "/referral", icon: Users, desc: rt("nav.referral.desc", "Convide amigos, ganhe pontos") },
         { label: rt("nav.faq", "FAQ"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc", "Perguntas frequentes") },
@@ -200,149 +261,29 @@ const Navbar = () => {
     },
   ];
 
+  // Mobile quick actions — one-tap access at the top of the mobile menu
+  const quickActions = [
+    { label: rt("nav.quick.live", "Ao Vivo"), href: "/lives-agora", icon: Radio, live: true },
+    { label: rt("nav.quick.games", "Jogos"), href: "/jogos", icon: Gamepad2 },
+    { label: rt("nav.quick.market", "Sorteios"), href: "/marketplace", icon: Store },
+    { label: rt("nav.quick.tickets", "Bilhetes"), href: "/my-tickets", icon: Ticket },
+  ];
 
+  // Show/hide navbar on specific routes (overlay, dashboard, admin)
+  const hideNavbar = location.pathname.startsWith("/overlay/");
+  if (hideNavbar) return null;
 
   return (
-<<<<<<< HEAD
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 navbar-glass-premium hidden lg:block"
-    >
-      <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-2">
-          <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
-          <span
-            className="font-display text-xl font-bold"
-            style={{ color: "var(--region-primary, hsl(var(--foreground)))" }}
-          >
-            Bateu
-          </span>
-        </Link>
-
-        <div className="hidden lg:flex">
-          <NavigationMenu>
-            <NavigationMenuList>
-              {groups.map((g) => (
-                <NavigationMenuItem key={g.label}>
-                  <NavigationMenuTrigger className="bg-transparent text-sm font-medium text-muted-foreground hover:text-foreground data-[state=open]:text-foreground">
-                    {g.label}
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid w-[420px] gap-1 p-3">
-                      {g.items.map((item) => (
-                        <li key={item.label}>
-                          <Link
-                            to={item.href}
-                            className="group flex items-start gap-3 rounded-lg p-3 transition-colors hover:bg-secondary"
-                          >
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary group-hover:bg-primary/20">
-                              <item.icon className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-foreground">{item.label}</span>
-                                {item.badge && (
-                                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
-                                    {item.badge}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.desc}</p>
-                            </div>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              ))}
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          <RegionCountrySwitcher compact />
-          <LanguageSwitcher />
-          <ThemeToggle />
-          {user ? (
-            <>
-              <Link to="/my-points" className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1">
-                <Star className="h-4 w-4 text-accent" /> {t("nav.points")}
-              </Link>
-              <Link to={role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile"} className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                {role === "business" || role === "admin" ? t("nav.dashboard") : t("nav.profile")}
-              </Link>
-              {role === "admin" && (
-                <Link to="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
-                  {t("nav.admin")}
-                </Link>
-              )}
-              <button onClick={signOut} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                {t("nav.signout")}
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                {t("nav.signin")}
-              </Link>
-              <Link
-                to="/register"
-                style={{ background: "var(--region-primary, hsl(var(--primary)))" }}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary"
-              >
-                <Zap className="h-4 w-4" />
-                {t("nav.signup")}
-              </Link>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 lg:hidden">
-          <LanguageSwitcher />
-          <ThemeToggle />
-          <button className="text-foreground" onClick={() => setOpen(!open)}>
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </div>
-
-=======
     <>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
       <AnimatePresence>
-        {open && (
+        {currentAnnouncement && !announcementDismissed && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border lg:hidden"
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            className="relative z-[51] hidden lg:block overflow-hidden"
           >
-<<<<<<< HEAD
-            <div className="flex flex-col gap-4 px-6 py-4 max-h-[70vh] overflow-y-auto">
-              {groups.map((g) => (
-                <div key={g.label}>
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">{g.label}</p>
-                  <div className="flex flex-col gap-0.5">
-                    {g.items.map((item) => (
-                      <Link
-                        key={item.label}
-                        to={item.href}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground hover:bg-secondary"
-                      >
-                        <item.icon className="h-4 w-4 text-primary" />
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && (
-                          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent">
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-=======
             <div
               style={{ background: currentAnnouncement.gradient }}
               className="relative overflow-hidden"
@@ -361,20 +302,29 @@ const Navbar = () => {
                   <p className="text-xs font-semibold text-primary-foreground truncate">
                     {currentAnnouncement.text}
                   </p>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 </div>
-              ))}
-              <Link to="/register" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
-                <Zap className="h-4 w-4" />
-                {t("nav.signup")}
-              </Link>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    to={currentAnnouncement.cta.href}
+                    onClick={dismissAnnouncement}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-[11px] font-bold text-primary-foreground backdrop-blur-sm transition-all hover:bg-white/25 hover:scale-105 active:scale-95"
+                  >
+                    {currentAnnouncement.cta.label}
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                  <button
+                    onClick={dismissAnnouncement}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-primary-foreground/70 transition-colors hover:bg-white/30 hover:text-primary-foreground"
+                    aria-label="Fechar anúncio"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-<<<<<<< HEAD
-    </motion.nav>
-=======
 
       <motion.nav
         ref={navRef}
@@ -961,7 +911,6 @@ const Navbar = () => {
         )}
       </AnimatePresence>
     </>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
   );
 };
 

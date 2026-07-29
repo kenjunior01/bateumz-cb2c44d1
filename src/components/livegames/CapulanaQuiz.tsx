@@ -1,9 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
-const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
-
 interface CapulanaQuizProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
 
 interface Question {
@@ -166,11 +163,7 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
               Testa os teus conhecimentos sobre Mocambique! {TOTAL_QUESTIONS} perguntas de cultura, geografia, gastronomia e mais.
             </p>
             <div className="flex justify-center gap-2">
-<<<<<<< HEAD
-              {_MODES.map((m) => (
-=======
               {(["bot", "pvp"]).map((m) => (
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -179,11 +172,7 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-<<<<<<< HEAD
-                {_DIFFS.map((d) => (
-=======
                 {(["Facil", "Medio", "Dificil"]).map((d) => (
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}

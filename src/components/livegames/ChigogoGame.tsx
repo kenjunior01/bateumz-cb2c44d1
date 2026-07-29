@@ -1,9 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
-const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
-
 interface ChigogoProps {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
@@ -171,11 +168,7 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
               Esconda a pedrinha numa das 3 maos. O adversario adivinha onde esta! Primeiro a {ROUNDS_TO_WIN} pontos vence.
             </p>
             <div className="flex justify-center gap-2">
-<<<<<<< HEAD
-              {_MODES.map((m) => (
-=======
               {(["bot", "pvp"]).map((m) => (
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -184,11 +177,7 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-<<<<<<< HEAD
-                {_DIFFS.map((d) => (
-=======
                 {(["Facil", "Medio", "Dificil"]).map((d) => (
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}

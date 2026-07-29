@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  type ComponentType,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -10,15 +17,34 @@ import {
   Check,
   ExternalLink,
   AlertTriangle,
+  Radio,
+  Play,
+  Square,
+  QrCode,
+  Crown,
+  Activity,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+  Zap,
+  TrendingUp,
+  RotateCcw,
+  Medal,
+  Share2,
+  MessageCircle,
+  Send,
+  Printer,
+  FileJson,
+  FileText,
+  Clock,
+  Flame,
+  /* ───── Revolution: cockpit + host tools ───── */
   Volume2,
   VolumeX,
-  Minimize2,
-<<<<<<< HEAD
-  Maximize2,
-  Crown,
-  Flame,
   Target,
-=======
+  Gauge,
+  Maximize2,
+  Minimize2,
   Lightbulb,
   Star,
   Award,
@@ -29,66 +55,277 @@ import {
   Rocket,
   Brain,
   Wand2,
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
   Mic,
-  Radio,
-  Share2,
-  FileDown,
-  Keyboard,
+  Hand,
+  Timer,
+  Eye,
+  EyeOff,
+  Palette,
+  Gauge as GaugeIcon,
+  BarChart3,
+  ChevronUp,
+  Pause,
+  CircleDot,
+  Terminal,
+  Cpu,
+  Signal,
+  ArrowUpRight,
+  ArrowRight,
+  CircleDollarSign,
+  Gift,
+  Heart,
+  PartyPopper,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
+import QRCode from "qrcode";
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+} from "recharts";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LeaderEntry } from "./LiveLeaderboard";
 import { buildOverlayUrl, getPublicBaseUrl, isOnPublicDomain } from "@/lib/publicUrl";
+import { shareTo } from "@/lib/share";
+import { fireConfetti } from "@/lib/celebrate";
+import {
+  playPopSound,
+  playWinSound,
+  playMilestoneChime,
+  playLevelUpSound,
+  playSendSound,
+} from "@/lib/sounds";
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Props — 100% backward compatible with the previous LiveControlPanel.     */
+/* ════════════════════════════════════════════════════════════════════════ */
 
 interface Props {
+  /** Active live session code (e.g. "AB12CD"). Empty string when no live is running. */
   liveCode: string;
+  /** All recorded score entries for the current live. */
   entries: LeaderEntry[];
+  /** Clear the leaderboard. */
   onClear: () => void;
+  /** Reset game/wheel configuration to defaults. */
   onResetConfig: () => void;
+  /** Whether the live session is currently broadcasting. Drives the AO VIVO badge. */
+  isLive?: boolean;
+  /** Live session elapsed time in seconds. Shown next to the live code. */
+  elapsedSec?: number;
+  /** Human-readable label of the game currently selected in the studio. */
+  activeGameLabel?: string;
+  /** Start a new live session. Hides the Iniciar button when omitted. */
+  onStartLive?: () => void;
+  /** Open the end-live confirmation flow. Hides the Encerrar button when omitted. */
+  onEndLive?: () => void;
+  /** Broadcast a winner to the overlay + audience. Powers the "Anunciar" button. */
+  onBroadcastWinner?: (name: string, meta?: string) => void;
+  /** Explicit participant invite URL. Defaults to `${origin}/lives?code=${liveCode}`. */
+  inviteUrl?: string;
 }
 
-const TAB_ITEMS = [
-  { id: "studio", label: "Estúdio", icon: Radio },
-  { id: "share", label: "Partilhar", icon: Share2 },
-  { id: "export", label: "Exportar", icon: FileDown },
-] as const;
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Constants & types                                                         */
+/* ════════════════════════════════════════════════════════════════════════ */
 
-const TAB_TYPE = TAB_ITEMS.map((t) => t.id);
-type TabId = (typeof TAB_TYPE)[number];
+const fmtTime = (s: number) =>
+  `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-const PODIUM_COLORS = ["text-yellow-400", "text-slate-300", "text-amber-600"];
-const PODIUM_BG = [
-  "from-yellow-500/20 to-yellow-600/5 border-yellow-500/30",
-  "from-slate-400/20 to-slate-500/5 border-slate-400/30",
-  "from-amber-600/20 to-amber-700/5 border-amber-600/30",
+const fmtTimeLong = (s: number) => {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+};
+
+/** Tailwind gradient classes for the game distribution bars — cycles through 4 brand-safe combos. */
+const BAR_GRADIENTS = [
+  "bg-gradient-to-r from-primary to-primary/70",
+  "bg-gradient-to-r from-accent to-rose-500",
+  "bg-gradient-to-r from-emerald-500 to-teal-500",
+  "bg-gradient-to-r from-amber-500 to-orange-500",
 ];
-const PODIUM_HEIGHTS = ["h-20", "h-16", "h-14"];
-const PODIUM_ORDER = [1, 0, 2];
 
-const sparklineFromEntries = (entries: LeaderEntry[]): number[] => {
-  const now = Date.now();
-  const buckets = new Array(24).fill(0);
+const relTime = (ts: number): string => {
+  const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (sec < 5) return "agora";
+  if (sec < 60) return `há ${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `há ${min}min`;
+  const h = Math.floor(min / 60);
+  return `há ${h}h`;
+};
+
+type StatItem = {
+  key: string;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  sub?: string;
+};
+
+type TabKey = "studio" | "share" | "export";
+
+type Highlight = {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub?: string;
+  tone: "gold" | "fire" | "primary" | "emerald";
+};
+
+type Suggestion = {
+  icon: ComponentType<{ className?: string }>;
+  text: string;
+  action?: { label: string; run: () => void };
+  tone: "info" | "warn" | "success" | "fire";
+};
+
+type Achievement = {
+  id: string;
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  desc: string;
+  tone: "gold" | "fire" | "primary" | "emerald";
+};
+
+type CommandItem = {
+  id: string;
+  label: string;
+  hint?: string;
+  icon: ComponentType<{ className?: string }>;
+  run: () => void;
+  disabled?: boolean;
+  group: "Live" | "Partilha" | "Exportar" | "Ações";
+  hotkey?: string;
+};
+
+type IconType = ComponentType<{ className?: string }>;
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Pure helpers — heat, quality, highlights, suggestions, hype, cohorts     */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+const computeHeat = (entries: LeaderEntry[], now: number): number => {
+  const last60 = entries.filter((e) => e.at >= now - 60_000).length;
+  const raw = Math.log2(1 + last60) * 22;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+};
+
+const heatMeta = (level: number) => {
+  if (level >= 80) return { label: "FOGO", tone: "text-rose-600 dark:text-rose-400", ring: "from-rose-500 to-orange-500" };
+  if (level >= 55) return { label: "A ferver", tone: "text-orange-600 dark:text-orange-400", ring: "from-orange-500 to-amber-500" };
+  if (level >= 30) return { label: "Quente", tone: "text-amber-600 dark:text-amber-400", ring: "from-amber-400 to-yellow-500" };
+  if (level >= 12) return { label: "Morno", tone: "text-sky-600 dark:text-sky-400", ring: "from-sky-400 to-cyan-500" };
+  return { label: "Frio", tone: "text-blue-600 dark:text-blue-400", ring: "from-blue-500 to-indigo-500" };
+};
+
+const computeQuality = (
+  players: number,
+  plays: number,
+  games: number,
+  heat: number,
+): number => {
+  if (plays === 0) return 0;
+  const breadth = Math.min(30, players * 6);
+  const volume = Math.min(25, plays * 1.5);
+  const diversity = Math.min(20, games * 5);
+  const momentum = (heat / 100) * 15;
+  const retention = Math.min(10, (plays / Math.max(1, players)) * 2);
+  return Math.round(breadth + volume + diversity + momentum + retention);
+};
+
+const qualityMeta = (score: number) => {
+  if (score >= 80) return { label: "Excelente", tone: "text-emerald-600 dark:text-emerald-400", ring: "#10b981" };
+  if (score >= 55) return { label: "Boa", tone: "text-lime-600 dark:text-lime-400", ring: "#84cc16" };
+  if (score >= 30) return { label: "OK", tone: "text-amber-600 dark:text-amber-400", ring: "#f59e0b" };
+  return { label: "Aquecer", tone: "text-rose-600 dark:text-rose-400", ring: "#f43f5e" };
+};
+
+const computeHighlights = (entries: LeaderEntry[]): Highlight[] => {
+  if (!entries.length) return [];
+  const out: Highlight[] = [];
+
+  const top = [...entries].sort((a, b) => b.score - a.score)[0];
+  out.push({
+    icon: Trophy,
+    label: "Maior pontuação",
+    value: `${top.score} pts`,
+    sub: `${top.name} · ${top.game}`,
+    tone: "gold",
+  });
+
+  let curName = "";
+  let curCount = 0;
+  let bestName = "";
+  let bestCount = 0;
   for (const e of entries) {
-    const age = now - e.at;
-    if (age > 7200000) continue;
-    const idx = Math.min(23, 23 - Math.floor(age / 300000));
-    buckets[idx] += 1;
+    if (e.name === curName) {
+      curCount++;
+    } else {
+      curName = e.name;
+      curCount = 1;
+    }
+    if (curCount > bestCount) {
+      bestCount = curCount;
+      bestName = curName;
+    }
   }
-  return buckets;
+  if (bestCount >= 2) {
+    out.push({
+      icon: Flame,
+      label: "Sequência",
+      value: `${bestCount} jogadas`,
+      sub: bestName,
+      tone: "fire",
+    });
+  }
+
+  const gameMap = new Map<string, number>();
+  entries.forEach((e) => gameMap.set(e.game, (gameMap.get(e.game) || 0) + 1));
+  const [topGame, topGameCount] = [...gameMap.entries()].sort((a, b) => b[1] - a[1])[0];
+  out.push({
+    icon: Layers,
+    label: "Jogo favorito",
+    value: topGame,
+    sub: `${topGameCount} jogadas`,
+    tone: "primary",
+  });
+
+  const uniquePlayers = new Set(entries.map((e) => e.name)).size;
+  if (uniquePlayers >= 3) {
+    out.push({
+      icon: Users,
+      label: "Audiência",
+      value: `${uniquePlayers} jogadores`,
+      sub: "únicos nesta sessão",
+      tone: "emerald",
+    });
+  }
+
+  return out;
 };
 
-const computeQualityScore = (entries: LeaderEntry[]): number => {
-  if (entries.length === 0) return 0;
-  const players = new Set(entries.map((e) => e.name)).size;
-  const games = new Set(entries.map((e) => e.game)).size;
-  const engagement = Math.min(100, Math.round((entries.length / Math.max(1, players)) * 25));
-  const diversity = Math.min(100, Math.round(games * 20));
-  const activity = Math.min(100, Math.round(players * 10));
-  return Math.round((engagement * 0.4 + diversity * 0.3 + activity * 0.3));
+const highlightTone = (tone: Highlight["tone"]) => {
+  switch (tone) {
+    case "gold":
+      return { bg: "from-amber-500/15 to-yellow-500/5", text: "text-amber-600 dark:text-amber-400", ring: "border-amber-500/30" };
+    case "fire":
+      return { bg: "from-orange-500/15 to-rose-500/5", text: "text-orange-600 dark:text-orange-400", ring: "border-orange-500/30" };
+    case "primary":
+      return { bg: "from-primary/15 to-primary/5", text: "text-primary", ring: "border-primary/30" };
+    case "emerald":
+      return { bg: "from-emerald-500/15 to-teal-500/5", text: "text-emerald-600 dark:text-emerald-400", ring: "border-emerald-500/30" };
+  }
 };
 
-<<<<<<< HEAD
-=======
 const suggestionTone = (tone: Suggestion["tone"]) => {
   switch (tone) {
     case "info":
@@ -230,275 +467,1118 @@ const HeatGauge = ({ level }: { level: number }) => {
 };
 
 /** Circular SVG progress ring showing the Session Quality Score. */
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
 const QualityRing = ({ score }: { score: number }) => {
-  const radius = 40;
-  const stroke = 6;
-  const normalized = Math.max(0, Math.min(100, score));
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (normalized / 100) * circumference;
-
-  const colorClass =
-    normalized >= 75 ? "text-emerald-500" : normalized >= 50 ? "text-yellow-500" : "text-orange-500";
-
+  const meta = qualityMeta(score);
+  const R = 22;
+  const C = 2 * Math.PI * R;
+  const offset = C - (score / 100) * C;
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center">
-      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={radius} fill="none" className="stroke-border/40" strokeWidth={stroke} />
-        <motion.circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="none"
-          className={colorClass}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        />
-      </svg>
-      <div className="relative flex flex-col items-center">
-        <motion.span
-          className={`text-2xl font-bold tabular-nums ${colorClass}`}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          {normalized}
-        </motion.span>
-        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Qualidade</span>
+    <div className="relative rounded-2xl border border-border/60 bg-card/40 backdrop-blur p-3 flex items-center gap-3 overflow-hidden">
+      <div className="relative h-14 w-14 shrink-0">
+        <svg viewBox="0 0 56 56" className="h-14 w-14 -rotate-90">
+          <circle cx="28" cy="28" r={R} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+          <motion.circle
+            cx="28"
+            cy="28"
+            r={R}
+            fill="none"
+            stroke={meta.ring}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={C}
+            initial={{ strokeDashoffset: C }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`font-display text-base font-bold leading-none ${meta.tone}`}>
+            {score}
+          </span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold inline-flex items-center gap-1.5">
+          <Gauge className="h-3 w-3" /> Qualidade
+        </p>
+        <p className={`text-xs font-bold ${meta.tone}`}>{meta.label}</p>
+        <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
+          Volume · diversidade · momentum
+        </p>
       </div>
     </div>
   );
 };
 
-const SparklineChart = ({ data }: { data: number[] }) => {
-  const maxVal = Math.max(1, ...data);
-  const width = 200;
-  const height = 48;
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - (v / maxVal) * height;
-    return `${x},${y}`;
-  });
-  const pathD = `M ${points.join(" L ")}`;
-
-  const areaD = `M 0,${height} L ${points.join(" L ")} L ${width},${height} Z`;
-
+/** Goal tracker — set a plays goal and watch progress fill. */
+const GoalTracker = ({
+  goal,
+  progress,
+  reached,
+  onAdjust,
+}: {
+  goal: number;
+  progress: number;
+  reached: boolean;
+  onAdjust: (delta: number) => void;
+}) => {
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-12" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <motion.path
-        d={areaD}
-        fill="url(#sparkGrad)"
-        className="text-primary"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-      />
-      <motion.path
-        d={pathD}
-        fill="none"
-        className="stroke-primary"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
-      />
-    </svg>
+    <div className="relative rounded-2xl border border-border/60 bg-card/40 p-3 overflow-hidden">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold inline-flex items-center gap-1.5">
+          <Target className="h-3 w-3" /> Meta da sessão
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onAdjust(-5)}
+            disabled={goal <= 5}
+            className="h-5 w-5 rounded-md bg-muted/60 hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center disabled:opacity-40"
+            aria-label="Diminuir meta em 5"
+          >
+            −
+          </button>
+          <span className="font-mono font-bold text-xs text-foreground w-8 text-center tabular-nums">
+            {goal}
+          </span>
+          <button
+            onClick={() => onAdjust(5)}
+            disabled={goal >= 200}
+            className="h-5 w-5 rounded-md bg-muted/60 hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center disabled:opacity-40"
+            aria-label="Aumentar meta em 5"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="relative h-2.5 rounded-full bg-muted/60 overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(100, progress)}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className={`h-full rounded-full ${
+            reached
+              ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+              : "bg-gradient-to-r from-primary to-accent"
+          }`}
+        >
+          {reached && <div className="absolute inset-0 bg-white/20 animate-shimmer" />}
+        </motion.div>
+      </div>
+      <div className="mt-1.5 flex items-center justify-between text-[9px] text-muted-foreground">
+        <span>{Math.round(progress)}% concluída</span>
+        {reached ? (
+          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+            <Check className="h-2.5 w-2.5" /> Meta atingida!
+          </span>
+        ) : (
+          <span className="font-mono font-bold text-foreground/70">
+            {Math.max(0, goal - Math.round((progress / 100) * goal))} restantes
+          </span>
+        )}
+      </div>
+    </div>
   );
 };
 
-const PodiumCard = ({
-  entry,
-  rank,
-  heightClass,
-  colorClass,
-  bgClass,
-}: {
-  entry: LeaderEntry;
-  rank: number;
-  heightClass: string;
-  colorClass: string;
-  bgClass: string;
-}) => (
-  <motion.div
-    className={`flex flex-col items-center flex-1 min-w-0`}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: rank * 0.15, duration: 0.5 }}
-  >
+/** Compact card showing a single highlight record. */
+const HighlightCard = ({ h }: { h: Highlight }) => {
+  const tone = highlightTone(h.tone);
+  return (
     <motion.div
-      className={`w-10 h-10 rounded-full bg-gradient-to-br ${bgClass} border-2 flex items-center justify-center mb-1.5 ${colorClass}`}
-      whileHover={{ scale: 1.1 }}
-      transition={{ type: "spring", stiffness: 400 }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`relative rounded-xl border ${tone.ring} bg-gradient-to-br ${tone.bg} p-2.5 overflow-hidden hover-lift`}
     >
-      {rank === 0 ? (
-        <Crown className="w-5 h-5" />
-      ) : (
-        <Trophy className="w-4 h-4" />
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <h.icon className={`h-3 w-3 ${tone.text}`} />
+        <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold truncate">
+          {h.label}
+        </span>
+      </div>
+      <p className="text-xs font-bold truncate" title={h.value}>
+        {h.value}
+      </p>
+      {h.sub && (
+        <p className="text-[9px] text-muted-foreground truncate" title={h.sub}>
+          {h.sub}
+        </p>
       )}
     </motion.div>
-    <p className="text-[11px] font-bold text-foreground truncate w-full text-center">{entry.name}</p>
-    <p className={`text-[10px] font-bold tabular-nums ${colorClass}`}>{entry.score} pts</p>
-    <div
-      className={`w-full mt-2 rounded-t-lg bg-gradient-to-b ${bgClass} border border-t border-x ${heightClass}`}
-    />
-  </motion.div>
-);
+  );
+};
 
-const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) => {
-  const [activeTab, setActiveTab] = useState<TabId>("studio");
-  const [copied, setCopied] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
-  const [compact, setCompact] = useState(false);
-  const [goalTarget, setGoalTarget] = useState(50);
-  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+/**
+ * ★ REVOLUTION: Hype Meter — vertical surge detector with pulsing glow.
+ */
+const HypeMeter = ({ level }: { level: number }) => {
+  const meta = hypeMeta(level);
+  const segments = 12;
+  const active = Math.round((level / 100) * segments);
+  return (
+    <div className={`relative rounded-2xl border border-border/60 bg-card/40 backdrop-blur p-3 overflow-hidden transition-shadow ${meta.glow}`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold inline-flex items-center gap-1.5">
+          <Rocket className="h-3 w-3" /> Hype agora
+        </span>
+        <span className={`text-[11px] font-bold ${meta.tone} ${level >= 75 ? "animate-pulse" : ""}`}>
+          {meta.label}
+        </span>
+      </div>
+      <div className="flex items-end gap-0.5 h-6">
+        {Array.from({ length: segments }).map((_, i) => {
+          const isActive = i < active;
+          const color =
+            i >= 9 ? "from-rose-500 to-orange-500"
+            : i >= 6 ? "from-orange-500 to-amber-500"
+            : i >= 3 ? "from-amber-400 to-yellow-500"
+            : "from-sky-400 to-cyan-500";
+          return (
+            <motion.div
+              key={i}
+              initial={{ height: 4 }}
+              animate={{
+                height: isActive ? Math.max(6, (i + 1) * 2.2) : 4,
+                opacity: isActive ? 1 : 0.25,
+              }}
+              transition={{ duration: 0.3, delay: i * 0.02 }}
+              className={`flex-1 rounded-sm bg-gradient-to-t ${color}`}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between text-[9px] text-muted-foreground">
+        <span>Surge (20s)</span>
+        <span className="font-mono font-bold text-foreground/70">{level}%</span>
+      </div>
+    </div>
+  );
+};
 
+/**
+ * ★ REVOLUTION: Vitals Strip — ultra-compact KPI row that stays visible.
+ */
+const VitalsStrip = ({
+  players,
+  plays,
+  peak,
+  avg,
+  heat,
+  elapsedSec,
+  isLive,
+}: {
+  players: number;
+  plays: number;
+  peak: number;
+  avg: number;
+  heat: number;
+  elapsedSec?: number;
+  isLive?: boolean;
+}) => {
+  const items = [
+    { icon: Users, value: players, label: "Jog", tone: "text-primary" },
+    { icon: Activity, value: plays, label: "Jogd", tone: "text-emerald-600 dark:text-emerald-400" },
+    { icon: Trophy, value: peak, label: "Pico", tone: "text-amber-600 dark:text-amber-400" },
+    { icon: Zap, value: avg, label: "Méd", tone: "text-violet-600 dark:text-violet-400" },
+  ];
+  return (
+    <div className="grid grid-cols-5 gap-1.5">
+      {items.map((it) => (
+        <div
+          key={it.label}
+          className="rounded-xl bg-card/60 border border-border/60 px-1.5 py-1.5 text-center backdrop-blur"
+        >
+          <it.icon className={`h-2.5 w-2.5 mx-auto ${it.tone} mb-0.5`} />
+          <p className="font-mono text-[11px] font-bold leading-none">{it.value}</p>
+          <p className="text-[8px] text-muted-foreground mt-0.5 uppercase tracking-wide">{it.label}</p>
+        </div>
+      ))}
+      <div className="rounded-xl bg-card/60 border border-border/60 px-1.5 py-1.5 text-center backdrop-blur">
+        <Clock className={`h-2.5 w-2.5 mx-auto mb-0.5 ${isLive ? "text-emerald-500" : "text-muted-foreground"}`} />
+        <p className="font-mono text-[11px] font-bold leading-none">
+          {typeof elapsedSec === "number" ? fmtTime(elapsedSec) : "—"}
+        </p>
+        <p className="text-[8px] text-muted-foreground mt-0.5 uppercase tracking-wide">Tempo</p>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ★ REVOLUTION: Cohorts panel — segments players by engagement tier.
+ */
+const CohortsPanel = ({ cohorts }: { cohorts: Cohort[] }) => {
+  const total = cohorts.reduce((s, c) => s + c.count, 0) || 1;
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-2.5">
+        <Users className="h-3 w-3 text-primary" /> Segmentação de audiência
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {cohorts.map((c) => {
+          const pct = Math.round((c.count / total) * 100);
+          return (
+            <motion.div
+              key={c.label}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl bg-muted/30 border border-border/60 p-2"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold">
+                  <c.icon className={`h-3 w-3 ${c.tone}`} /> {c.label}
+                </span>
+                <span className={`font-mono text-xs font-bold ${c.tone}`}>{c.count}</span>
+              </div>
+              <div className="relative h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.5 }}
+                  className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary"
+                />
+              </div>
+              <p className="text-[8px] text-muted-foreground mt-1">{c.desc} · {pct}%</p>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ★ REVOLUTION: Trajectory forecast — projected plays + ETA to goal.
+ */
+const TrajectoryPanel = ({
+  trajectory,
+  goal,
+  plays,
+}: {
+  trajectory: ReturnType<typeof computeTrajectory>;
+  goal: number;
+  plays: number;
+}) => {
+  const willHitGoal = trajectory.projected >= goal;
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-2">
+        <TrendingUp className="h-3 w-3 text-primary" /> Projeção & ETA
+        <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">{trajectory.pacePerMin.toFixed(1)}/min</span>
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-muted/30 border border-border/60 p-2">
+          <p className="text-[9px] uppercase tracking-wide text-muted-foreground font-bold mb-0.5">Projetado (30min)</p>
+          <p className={`font-display text-lg font-bold ${willHitGoal ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+            {trajectory.projected}
+          </p>
+          <p className="text-[9px] text-muted-foreground">jogadas estimadas</p>
+        </div>
+        <div className="rounded-xl bg-muted/30 border border-border/60 p-2">
+          <p className="text-[9px] uppercase tracking-wide text-muted-foreground font-bold mb-0.5">Meta em</p>
+          {plays >= goal ? (
+            <p className="font-display text-lg font-bold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+              <Check className="h-4 w-4" /> Feita
+            </p>
+          ) : trajectory.etaSec === null ? (
+            <p className="font-display text-lg font-bold text-muted-foreground">—</p>
+          ) : (
+            <p className="font-display text-lg font-bold text-amber-600 dark:text-amber-400">
+              {fmtTimeLong(trajectory.etaSec)}
+            </p>
+          )}
+          <p className="text-[9px] text-muted-foreground">ao ritmo atual</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ★ REVOLUTION: Achievements grid — unlocked session badges.
+ */
+const AchievementsGrid = ({ achievements }: { achievements: Achievement[] }) => {
+  if (!achievements.length) return null;
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-2.5">
+        <Award className="h-3 w-3 text-amber-500" /> Conquistas
+        <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">{achievements.length} desbloqueadas</span>
+      </p>
+      <div className="grid grid-cols-4 gap-1.5">
+        {achievements.map((a, i) => {
+          const tone = achievementTone(a.tone);
+          return (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, scale: 0.7, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ delay: i * 0.06, type: "spring", stiffness: 300, damping: 18 }}
+              className={`group relative rounded-xl border ${tone.ring} bg-gradient-to-br ${tone.bg} p-2 flex flex-col items-center text-center cursor-default hover-lift`}
+              title={`${a.title} — ${a.desc}`}
+            >
+              <a.icon className={`h-4 w-4 ${tone.text} mb-1`} />
+              <span className="text-[8px] font-bold leading-tight">{a.title}</span>
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center">
+                <Check className="h-2 w-2 text-white" />
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ★ REVOLUTION: Quick Dock — floating circular action cluster.
+ */
+const QuickDock = ({
+  onCrown,
+  onShare,
+  onCopyCode,
+  onToggleSound,
+  soundOn,
+  disabledCrown,
+}: {
+  onCrown: () => void;
+  onShare: () => void;
+  onCopyCode: () => void;
+  onToggleSound: () => void;
+  soundOn: boolean;
+  disabledCrown: boolean;
+}) => {
+  const actions = [
+    { icon: Crown, label: "Coroar", onClick: onCrown, tone: "from-amber-400 to-yellow-600 text-white", disabled: disabledCrown },
+    { icon: Share2, label: "Partilhar", onClick: onShare, tone: "from-emerald-500 to-teal-600 text-white", disabled: false },
+    { icon: Copy, label: "Código", onClick: onCopyCode, tone: "from-primary to-primary/70 text-primary-foreground", disabled: false },
+    { icon: soundOn ? Volume2 : VolumeX, label: soundOn ? "Som on" : "Som off", onClick: onToggleSound, tone: soundOn ? "from-violet-500 to-fuchsia-600 text-white" : "from-slate-500 to-slate-600 text-white", disabled: false },
+  ];
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-2.5 backdrop-blur">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-2 px-1">
+        <Zap className="h-3 w-3 text-accent" /> Dock rápido
+      </p>
+      <div className="grid grid-cols-4 gap-2">
+        {actions.map((a, i) => (
+          <motion.button
+            key={a.label}
+            whileHover={{ scale: a.disabled ? 1 : 1.08, y: a.disabled ? 0 : -2 }}
+            whileTap={{ scale: a.disabled ? 1 : 0.92 }}
+            onClick={a.onClick}
+            disabled={a.disabled}
+            className={`relative h-12 rounded-xl bg-gradient-to-br ${a.tone} flex flex-col items-center justify-center gap-0.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-shadow hover:shadow-glow`}
+            title={a.label}
+            aria-label={a.label}
+          >
+            <a.icon className="h-4 w-4" />
+            <span className="text-[8px] font-bold uppercase tracking-wide">{a.label}</span>
+            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-card border border-border text-[8px] font-mono font-bold flex items-center justify-center text-foreground/60">
+              {i + 1}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ★ REVOLUTION: Command Palette (⌘K) — type to execute any panel action.
+ */
+const CommandPalette = ({
+  open,
+  onClose,
+  items,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: CommandItem[];
+}) => {
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setActive(0);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return items;
+    const q = query.toLowerCase();
+    return items.filter(
+      (it) =>
+        it.label.toLowerCase().includes(q) ||
+        it.group.toLowerCase().includes(q) ||
+        it.hint?.toLowerCase().includes(q),
+    );
+  }, [items, query]);
+
+  useEffect(() => {
+    setActive(0);
+  }, [query]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, CommandItem[]>();
+    filtered.forEach((it) => {
+      if (!map.has(it.group)) map.set(it.group, []);
+      map.get(it.group)!.push(it);
+    });
+    return [...map.entries()];
+  }, [filtered]);
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((a) => Math.min(a + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(a - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const it = filtered[active];
+      if (it && !it.disabled) {
+        it.run();
+        onClose();
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 bg-background/70 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl rounded-2xl border border-border bg-card shadow-elegant overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border/60">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder="Pesquisar ação... (ex: coroar, exportar, copiar)"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/50 text-muted-foreground">
+                ESC
+              </kbd>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto p-1.5">
+              {filtered.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Search className="h-6 w-6 mx-auto text-muted-foreground/40 mb-2" />
+                  <p className="text-xs text-muted-foreground">Nenhuma ação encontrada para "{query}"</p>
+                </div>
+              ) : (
+                groups.map(([group, gItems]) => (
+                  <div key={group} className="mb-1.5">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-2 py-1">
+                      {group}
+                    </p>
+                    {gItems.map((it) => {
+                      const idx = filtered.indexOf(it);
+                      const isActive = idx === active;
+                      return (
+                        <button
+                          key={it.id}
+                          onMouseEnter={() => setActive(idx)}
+                          onClick={() => {
+                            if (!it.disabled) {
+                              it.run();
+                              onClose();
+                            }
+                          }}
+                          disabled={it.disabled}
+                          className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors ${
+                            isActive
+                              ? "bg-primary/10 text-primary"
+                              : "hover:bg-muted/50 text-foreground"
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          <it.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="text-xs font-medium flex-1 truncate">{it.label}</span>
+                          {it.hint && (
+                            <span className="text-[9px] text-muted-foreground font-mono">{it.hint}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="px-3 py-1.5 border-t border-border/60 flex items-center justify-between text-[9px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Command className="h-3 w-3" /> Atalhos: ↑↓ navegar · Enter executar
+              </span>
+              <span className="font-mono">{filtered.length} ações</span>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Main component                                                            */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+const LiveControlPanel = ({
+  liveCode,
+  entries,
+  onClear,
+  onResetConfig,
+  isLive,
+  elapsedSec,
+  activeGameLabel,
+  onStartLive,
+  onEndLive,
+  onBroadcastWinner,
+  inviteUrl,
+}: Props) => {
+  /* ───── Clipboard / UI state ───── */
+  const [copiedOverlay, setCopiedOverlay] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedMd, setCopiedMd] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [dangerOpen, setDangerOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string>("");
+  const [tab, setTab] = useState<TabKey>("studio");
+  const [now, setNow] = useState<number>(Date.now());
+
+  /* ───── Host preferences (persisted) ───── */
+  const [soundOn, setSoundOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("lcp.soundOn") !== "0"; } catch { return true; }
+  });
+  const [compact, setCompact] = useState<boolean>(() => {
+    try { return localStorage.getItem("lcp.compact") === "1"; } catch { return false; }
+  });
+  const [playsGoal, setPlaysGoal] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem("lcp.playsGoal"));
+      return v >= 5 && v <= 200 ? v : 25;
+    } catch { return 25; }
+  });
+
+  /* ───── REVOLUTION: command palette ───── */
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const prevPlayersRef = useRef<number>(0);
+  const prevEntriesLenRef = useRef<number>(0);
+  const prevAchievementsRef = useRef<Set<string>>(new Set());
+
+  // Tick once per second so relative timestamps + connection freshness stay live.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Persist host prefs
+  useEffect(() => {
+    try { localStorage.setItem("lcp.soundOn", soundOn ? "1" : "0"); } catch {}
+  }, [soundOn]);
+  useEffect(() => {
+    try { localStorage.setItem("lcp.compact", compact ? "1" : "0"); } catch {}
+  }, [compact]);
+  useEffect(() => {
+    try { localStorage.setItem("lcp.playsGoal", String(playsGoal)); } catch {}
+  }, [playsGoal]);
+
+  /* ───── Sound on new entry ───── */
+  useEffect(() => {
+    if (!soundOn || !isLive) return;
+    if (entries.length > prevEntriesLenRef.current && prevEntriesLenRef.current !== 0) {
+      playPopSound();
+    }
+    prevEntriesLenRef.current = entries.length;
+  }, [entries.length, soundOn, isLive]);
+
+  /* ───── Milestone detection (5 / 10 / 25 / 50 / 100 unique players) ───── */
+  const uniquePlayers = useMemo(() => new Set(entries.map((e) => e.name)).size, [entries]);
+  useEffect(() => {
+    const prev = prevPlayersRef.current;
+    const milestones = [5, 10, 25, 50, 100];
+    const crossed = milestones.find((m) => prev < m && uniquePlayers >= m);
+    if (crossed && prev > 0) {
+      if (soundOn) playMilestoneChime();
+      fireConfetti({ intensity: crossed >= 25 ? "high" : "medium" });
+      toast.success(`🎉 ${crossed} jogadores únicos!`, {
+        description: "A audiência está a crescer — mantém o ritmo!",
+      });
+    }
+    prevPlayersRef.current = uniquePlayers;
+  }, [uniquePlayers, soundOn]);
+
+  // ----- Derived stats ---------------------------------------------------------
   const stats = useMemo(() => {
     const players = new Set(entries.map((e) => e.name));
     const games = new Set(entries.map((e) => e.game));
+    const plays = entries.length;
     const top = [...entries].sort((a, b) => b.score - a.score)[0];
-    return { players: players.size, games: games.size, plays: entries.length, top };
+    const peak = entries.reduce((m, e) => Math.max(m, e.score), 0);
+    const avg = plays > 0 ? Math.round(entries.reduce((s, e) => s + e.score, 0) / plays) : 0;
+    return { players: players.size, games: games.size, plays, top, peak, avg };
   }, [entries]);
 
-  const topThree = useMemo(() => {
-    return [...entries].sort((a, b) => b.score - a.score).slice(0, 3);
+  const statCards: StatItem[] = [
+    { key: "players", icon: Users, label: "Jogadores", value: stats.players, sub: `${stats.games} jogos` },
+    { key: "plays", icon: Activity, label: "Jogadas", value: stats.plays, sub: "total" },
+    { key: "peak", icon: Trophy, label: "Pico", value: stats.peak, sub: "pontuação" },
+    { key: "avg", icon: Zap, label: "Média", value: stats.avg, sub: "por jogada" },
+  ];
+
+  // ----- Heat, quality, highlights, suggestions, hype, cohorts, trajectory ----
+  const heat = useMemo(() => computeHeat(entries, now), [entries, now]);
+  const quality = useMemo(
+    () => computeQuality(stats.players, stats.plays, stats.games, heat),
+    [stats.players, stats.plays, stats.games, heat],
+  );
+  const highlights = useMemo(() => computeHighlights(entries), [entries]);
+  const hype = useMemo(() => computeHype(entries, now), [entries, now]);
+  const cohorts = useMemo(() => computeCohorts(entries), [entries]);
+  const trajectory = useMemo(
+    () => computeTrajectory(stats.plays, elapsedSec || 0, playsGoal),
+    [stats.plays, elapsedSec, playsGoal],
+  );
+  const achievements = useMemo(
+    () => computeAchievements(entries, stats.players, stats.games, heat, elapsedSec || 0),
+    [entries, stats.players, stats.games, heat, elapsedSec],
+  );
+
+  /* ───── REVOLUTION: achievement unlock toast ───── */
+  useEffect(() => {
+    const current = new Set(achievements.map((a) => a.id));
+    const newlyUnlocked = [...current].filter((id) => !prevAchievementsRef.current.has(id));
+    if (prevAchievementsRef.current.size > 0 && newlyUnlocked.length > 0) {
+      const a = achievements.find((x) => x.id === newlyUnlocked[0]);
+      if (a) {
+        if (soundOn) playLevelUpSound();
+        fireConfetti({ intensity: "medium" });
+        toast.success(`🏆 Conquista desbloqueada: ${a.title}`, {
+          description: a.desc,
+        });
+      }
+    }
+    prevAchievementsRef.current = current;
+  }, [achievements, soundOn]);
+
+  const goalProgress = playsGoal > 0 ? (stats.plays / playsGoal) * 100 : 0;
+  const goalReached = stats.plays >= playsGoal && playsGoal > 0;
+
+  // Fire a toast + sound when the goal is first reached
+  const prevGoalReachedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (goalReached && !prevGoalReachedRef.current) {
+      if (soundOn) playWinSound();
+      fireConfetti({ intensity: "high" });
+      toast.success("🎯 Meta atingida!", {
+        description: `${stats.plays} jogadas registadas. Podes aumentar a meta ou continuar.`,
+      });
+    }
+    prevGoalReachedRef.current = goalReached;
+  }, [goalReached, stats.plays, soundOn]);
+
+  // ----- Top 3 podium ---------------------------------------------------------
+  const podium = useMemo(() => {
+    const byPlayer = new Map<string, number>();
+    entries.forEach((e) => byPlayer.set(e.name, Math.max(byPlayer.get(e.name) || 0, e.score)));
+    return [...byPlayer.entries()]
+      .map(([name, score]) => ({ name, score }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
   }, [entries]);
 
-  const sparkData = useMemo(() => sparklineFromEntries(entries), [entries]);
-  const qualityScore = useMemo(() => computeQualityScore(entries), [entries]);
-  const goalProgress = Math.min(100, Math.round((entries.length / Math.max(1, goalTarget)) * 100));
+  // ----- Game distribution (top 4 by plays) -----------------------------------
+  const gameStats = useMemo(() => {
+    const m = new Map<string, number>();
+    entries.forEach((e) => m.set(e.game, (m.get(e.game) || 0) + 1));
+    return [...m.entries()]
+      .map(([game, count]) => ({ game, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  }, [entries]);
+  const maxGameCount = gameStats[0]?.count || 1;
 
+  // ----- Engagement timeline (plays per minute, last 10 buckets) -------------
+  const timeline = useMemo(() => {
+    if (!entries.length) return [] as { t: string; plays: number }[];
+    const bucketMs = 60_000;
+    const nowTs = Date.now();
+    const buckets: { t: string; plays: number }[] = [];
+    for (let i = 9; i >= 0; i--) {
+      const start = nowTs - i * bucketMs;
+      const end = start + bucketMs;
+      const plays = entries.filter((e) => e.at >= start && e.at < end).length;
+      const d = new Date(start);
+      buckets.push({
+        t: `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`,
+        plays,
+      });
+    }
+    return buckets;
+  }, [entries, now]);
+  const peakPlays = timeline.reduce((m, b) => Math.max(m, b.plays), 0);
+
+  // ----- Recent activity feed (last 5, newest first) ------------------------
+  const recent = useMemo(
+    () => [...entries].sort((a, b) => b.at - a.at).slice(0, 5),
+    [entries],
+  );
+
+  // ----- Connection freshness (time since last entry) -----------------------
+  const lastEntryAt = entries.length ? Math.max(...entries.map((e) => e.at)) : 0;
+  const staleSec = lastEntryAt ? Math.floor((now - lastEntryAt) / 1000) : Infinity;
+  const connection =
+    !isLive
+      ? "idle"
+      : staleSec < 30
+        ? "live"
+        : staleSec < 90
+          ? "warm"
+          : "stale";
+  const connMeta = {
+    live: { dot: "bg-emerald-500", label: "Tempo real", color: "text-emerald-600 dark:text-emerald-400" },
+    warm: { dot: "bg-amber-500", label: "Aquecendo", color: "text-amber-600 dark:text-amber-400" },
+    stale: { dot: "bg-rose-500", label: "Inativo", color: "text-rose-600 dark:text-rose-400" },
+    idle: { dot: "bg-slate-400", label: "Em espera", color: "text-muted-foreground" },
+  }[connection];
+
+  // ----- URLs -----------------------------------------------------------------
+  const overlayUrl = buildOverlayUrl(liveCode);
+  const baseUrl = getPublicBaseUrl();
+  const onPublic = isOnPublicDomain();
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const participantUrl =
+    inviteUrl ||
+    (liveCode ? `${currentOrigin || baseUrl}/lives?code=${encodeURIComponent(liveCode)}` : "");
+
+  // ----- QR code (regenerates when participantUrl changes) --------------------
+  useEffect(() => {
+    if (!showQR || !participantUrl) {
+      setQrUrl("");
+      return;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(participantUrl, {
+      width: 256,
+      margin: 1,
+      color: { dark: "#0b1220", light: "#ffffff" },
+      errorCorrectionLevel: "M",
+    })
+      .then((url) => {
+        if (!cancelled) setQrUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrUrl("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showQR, participantUrl]);
+
+  // ----- Actions --------------------------------------------------------------
   const exportCSV = useCallback(() => {
+    if (!entries.length) {
+      toast.error("Sem jogadores para exportar.");
+      return;
+    }
     const header = "name,score,game,timestamp\n";
     const rows = entries
       .map((e) => `"${e.name}",${e.score},"${e.game}",${new Date(e.at).toISOString()}`)
       .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
+    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `live-${liveCode}-participants.csv`;
+    a.download = `live-${liveCode || "session"}-participantes.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Ficheiro CSV exportado com sucesso!");
+    toast.success(`${entries.length} participantes exportados (CSV).`);
   }, [entries, liveCode]);
 
-  const overlayUrl = buildOverlayUrl(liveCode);
-  const baseUrl = getPublicBaseUrl();
-  const onPublic = isOnPublicDomain();
+  const exportJSON = useCallback(() => {
+    if (!entries.length) {
+      toast.error("Sem jogadores para exportar.");
+      return;
+    }
+    const payload = {
+      liveCode,
+      exportedAt: new Date().toISOString(),
+      stats: { players: stats.players, plays: stats.plays, peak: stats.peak, avg: stats.avg, quality, heat, hype, trajectory },
+      podium,
+      gameDistribution: gameStats,
+      highlights,
+      achievements,
+      entries: entries.map((e) => ({ ...e, atISO: new Date(e.at).toISOString() })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `live-${liveCode || "session"}-relatorio.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Relatório JSON exportado.");
+  }, [entries, liveCode, stats, quality, heat, hype, trajectory, podium, gameStats, highlights, achievements]);
+
+  const printReport = useCallback(() => {
+    if (!entries.length) {
+      toast.error("Sem jogadores para imprimir.");
+      return;
+    }
+    const rows = [...entries]
+      .sort((a, b) => b.score - a.score)
+      .map(
+        (e, i) =>
+          `<tr><td>${i + 1}</td><td>${e.name.replace(/[<>&]/g, "")}</td><td>${e.game.replace(/[<>&]/g, "")}</td><td>${e.score}</td><td>${new Date(e.at).toLocaleString("pt-MZ")}</td></tr>`,
+      )
+      .join("");
+    const html = `<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>Live ${liveCode} — Relatório</title>
+      <style>
+        body{font-family:Inter,system-ui,sans-serif;padding:32px;color:#0b1220}
+        h1{font-family:'Space Grotesk',sans-serif;margin:0 0 4px}
+        .muted{color:#64748b;font-size:13px;margin-bottom:24px}
+        .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+        .stat{border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+        .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:700}
+        .stat .v{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #e2e8f0}
+        th{background:#f8fafc;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}
+        .podium{display:flex;gap:8px;margin-bottom:24px}
+        .pod{flex:1;border-radius:12px;padding:12px;border:1px solid #e2e8f0}
+        .pod.g{background:#fef3c7;border-color:#fbbf24}
+        .pod.s{background:#f1f5f9;border-color:#94a3b8}
+        .pod.b{background:#fed7aa;border-color:#fb923c}
+        .pod .r{font-size:10px;text-transform:uppercase;font-weight:700;color:#64748b}
+        .pod .n{font-weight:700;margin-top:4px}
+        .pod .s{font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif}
+      </style></head>
+      <body>
+        <h1>Relatório da Live ${liveCode || ""}</h1>
+        <div class="muted">Exportado em ${new Date().toLocaleString("pt-MZ")} · ${entries.length} jogadas · ${stats.players} jogadores únicos · qualidade ${quality}/100</div>
+        <div class="grid">
+          <div class="stat"><div class="l">Jogadores</div><div class="v">${stats.players}</div></div>
+          <div class="stat"><div class="l">Jogadas</div><div class="v">${stats.plays}</div></div>
+          <div class="stat"><div class="l">Pico</div><div class="v">${stats.peak}</div></div>
+          <div class="stat"><div class="l">Média</div><div class="v">${stats.avg}</div></div>
+        </div>
+        <div class="podium">
+          ${podium[0] ? `<div class="pod g"><div class="r">🥇 1º</div><div class="n">${podium[0].name}</div><div class="s">${podium[0].score} pts</div></div>` : ""}
+          ${podium[1] ? `<div class="pod s"><div class="r">🥈 2º</div><div class="n">${podium[1].name}</div><div class="s">${podium[1].score} pts</div></div>` : ""}
+          ${podium[2] ? `<div class="pod b"><div class="r">🥉 3º</div><div class="n">${podium[2].name}</div><div class="s">${podium[2].score} pts</div></div>` : ""}
+        </div>
+        <table><thead><tr><th>#</th><th>Jogador</th><th>Jogo</th><th>Pontos</th><th>Quando</th></tr></thead><tbody>${rows}</tbody></table>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.error("Bloqueador de pop-ups ativo. Permita pop-ups para imprimir.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 350);
+  }, [entries, liveCode, stats, quality, podium]);
+
+  const copyAsMarkdown = useCallback(async () => {
+    if (!entries.length) {
+      toast.error("Sem jogadores para copiar.");
+      return;
+    }
+    const sorted = [...entries].sort((a, b) => b.score - a.score);
+    const md = [
+      `# Leaderboard da Live ${liveCode || ""}`,
+      "",
+      `> ${entries.length} jogadas · ${stats.players} jogadores · qualidade ${quality}/100 · exportado em ${new Date().toLocaleString("pt-MZ")}`,
+      "",
+      "| # | Jogador | Jogo | Pontos |",
+      "| --- | --- | --- | --- |",
+      ...sorted.map((e, i) => `| ${i + 1} | ${e.name} | ${e.game} | ${e.score} |`),
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopiedMd(true);
+      setTimeout(() => setCopiedMd(false), 1500);
+      toast.success("Tabela Markdown copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }, [entries, liveCode, stats, quality]);
 
   const copyOverlay = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(overlayUrl);
-      setCopied(true);
-      toast.success("URL copiada para o clipboard!");
-      setTimeout(() => setCopied(false), 1500);
+      setCopiedOverlay(true);
+      setTimeout(() => setCopiedOverlay(false), 1500);
+      toast.success("URL do overlay copiada!");
     } catch {
-      toast.error("Erro ao copiar URL");
+      toast.error("Não foi possível copiar.");
     }
   }, [overlayUrl]);
 
-  const handleClear = useCallback(() => {
+  const copyInvite = useCallback(async () => {
+    if (!participantUrl) {
+      toast.error("Inicie a live para gerar o link.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(participantUrl);
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 1500);
+      toast.success("Link de participação copiado!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }, [participantUrl]);
+
+  const copyCode = useCallback(async () => {
+    if (!liveCode) {
+      toast.error("Sem código ativo.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(liveCode);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 1500);
+      if (soundOn) playSendSound();
+      toast.success("Código copiado!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }, [liveCode, soundOn]);
+
+  const crownLeader = useCallback(() => {
+    if (!stats.top) {
+      toast.error("Sem líder para coroar.");
+      return;
+    }
+    fireConfetti({ intensity: "high" });
+    if (soundOn) playWinSound();
+    onBroadcastWinner?.(stats.top.name, `Coroado como líder · ${stats.top.score} pts em ${stats.top.game}`);
+    toast.success(`"${stats.top.name}" coroado como vencedor!`);
+  }, [stats.top, onBroadcastWinner, soundOn]);
+
+  const shareText = `Estou ao vivo no Bateu! Entra na live ${liveCode ? `com o código ${liveCode} ` : ""}e joga comigo 🎮🔥`;
+
+  const confirmClear = useCallback(() => {
+    if (!entries.length) return;
     onClear();
-    toast.success("Leaderboard limpo!");
-  }, [onClear]);
+    toast.success("Leaderboard limpo.");
+  }, [entries.length, onClear]);
 
-  const handleResetConfig = useCallback(() => {
-    onResetConfig();
-    toast.success("Configurações repostas!");
-  }, [onResetConfig]);
+  const podiumTone = (i: number) =>
+    i === 0
+      ? "from-amber-400 to-yellow-600 text-white"
+      : i === 1
+        ? "from-slate-300 to-slate-500 text-white"
+        : "from-amber-700 to-orange-800 text-white";
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCmdPaletteOpen((prev) => !prev);
-      }
-      if (e.key === "Escape" && cmdPaletteOpen) {
-        setCmdPaletteOpen(false);
-      }
-    },
-    [cmdPaletteOpen]
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  const cmdPaletteActions = useMemo(
-    () => [
-      { label: "Abrir Overlay (OBS)", action: () => window.open(overlayUrl, "_blank") },
-      { label: "Copiar URL do Overlay", action: copyOverlay },
-      { label: "Exportar CSV", action: exportCSV },
-      { label: "Limpar Leaderboard", action: handleClear },
-      { label: "Repor Configurações", action: handleResetConfig },
-      { label: "Ativar Som", action: () => setSoundOn(true) },
-      { label: "Desativar Som", action: () => setSoundOn(false) },
-      { label: compact ? "Modo Expandido" : "Modo Compacto", action: () => setCompact((p) => !p) },
-    ],
-    [overlayUrl, copyOverlay, exportCSV, handleClear, handleResetConfig, compact]
-  );
-
-  const runAction = useCallback((action: () => void) => {
-    action();
-    setCmdPaletteOpen(false);
+  const adjustGoal = useCallback((delta: number) => {
+    setPlaysGoal((g) => Math.max(5, Math.min(200, g + delta)));
   }, []);
 
-  const glassBase =
-    "backdrop-blur-xl bg-white/[0.06] dark:bg-white/[0.03] border border-white/[0.12] dark:border-white/[0.08]";
+  const goToShare = useCallback(() => setTab("share"), []);
+  const goToExport = useCallback(() => setTab("export"), []);
+  const goToStudio = useCallback(() => setTab("studio"), []);
 
-  const glassCard =
-    "backdrop-blur-lg bg-white/[0.04] dark:bg-white/[0.02] border border-white/[0.10] dark:border-white/[0.06] rounded-2xl";
+  /* ───── REVOLUTION: command palette items ───── */
+  const commandItems = useMemo<CommandItem[]>(() => {
+    const items: CommandItem[] = [];
+    if (onStartLive && !isLive)
+      items.push({ id: "start-live", label: "Iniciar Live", icon: Play, run: () => onStartLive(), group: "Live", hotkey: "L" });
+    if (onEndLive && isLive)
+      items.push({ id: "end-live", label: "Encerrar Live", icon: Square, run: () => onEndLive(), group: "Live", hotkey: "E" });
+    if (stats.top && onBroadcastWinner)
+      items.push({ id: "crown", label: "Coroar líder atual", icon: Crown, run: crownLeader, group: "Live", hotkey: "1" });
+    items.push({ id: "copy-code", label: "Copiar código da live", icon: Copy, run: copyCode, disabled: !liveCode, group: "Partilha", hotkey: "C" });
+    items.push({ id: "copy-invite", label: "Copiar link de participação", icon: Share2, run: copyInvite, disabled: !participantUrl, group: "Partilha" });
+    items.push({ id: "copy-overlay", label: "Copiar URL do overlay (OBS)", icon: ExternalLink, run: copyOverlay, group: "Partilha" });
+    items.push({ id: "toggle-qr", label: showQR ? "Ocultar QR code" : "Mostrar QR participante", icon: QrCode, run: () => { setShowQR((v) => !v); setTab("share"); }, group: "Partilha" });
+    items.push({ id: "share-wa", label: "Partilhar no WhatsApp", icon: MessageCircle, run: () => { setTab("share"); if (participantUrl) shareTo("whatsapp", { title: "Bateu Live", text: shareText, url: participantUrl }); }, disabled: !participantUrl, group: "Partilha" });
+    items.push({ id: "share-fb", label: "Partilhar no Facebook", icon: Share2, run: () => { setTab("share"); if (participantUrl) shareTo("facebook", { title: "Bateu Live", text: shareText, url: participantUrl }); }, disabled: !participantUrl, group: "Partilha" });
+    items.push({ id: "export-csv", label: "Exportar participantes (CSV)", icon: FileText, run: exportCSV, disabled: !entries.length, group: "Exportar" });
+    items.push({ id: "export-json", label: "Exportar relatório (JSON)", icon: FileJson, run: exportJSON, disabled: !entries.length, group: "Exportar" });
+    items.push({ id: "export-print", label: "Imprimir / PDF", icon: Printer, run: printReport, disabled: !entries.length, group: "Exportar" });
+    items.push({ id: "export-md", label: "Copiar tabela Markdown", icon: Copy, run: copyAsMarkdown, disabled: !entries.length, group: "Exportar" });
+    items.push({ id: "tab-studio", label: "Ir para o Estúdio", icon: Activity, run: goToStudio, group: "Ações", hotkey: "S" });
+    items.push({ id: "tab-share", label: "Ir para Partilha", icon: Share2, run: goToShare, group: "Ações", hotkey: "P" });
+    items.push({ id: "tab-export", label: "Ir para Exportar", icon: Download, run: goToExport, group: "Ações", hotkey: "X" });
+    items.push({ id: "toggle-sound", label: soundOn ? "Silenciar efeitos sonoros" : "Ativar efeitos sonoros", icon: soundOn ? VolumeX : Volume2, run: () => setSoundOn((v) => !v), group: "Ações", hotkey: "M" });
+    items.push({ id: "toggle-compact", label: compact ? "Modo detalhado" : "Modo compacto", icon: compact ? Maximize2 : Minimize2, run: () => setCompact((v) => !v), group: "Ações", hotkey: "K" });
+    items.push({ id: "goal-up", label: "Aumentar meta em 5", icon: Target, run: () => adjustGoal(5), group: "Ações" });
+    items.push({ id: "goal-down", label: "Diminuir meta em 5", icon: Target, run: () => adjustGoal(-5), group: "Ações" });
+    items.push({ id: "clear-board", label: "Limpar leaderboard", icon: Trash2, run: confirmClear, disabled: !entries.length, group: "Ações" });
+    items.push({ id: "reset-config", label: "Repor configurações do jogo", icon: RotateCcw, run: onResetConfig, group: "Ações" });
+    return items;
+  }, [
+    onStartLive, onEndLive, onBroadcastWinner, isLive, stats.top, crownLeader,
+    copyCode, copyInvite, copyOverlay, liveCode, participantUrl, showQR,
+    shareText, exportCSV, exportJSON, printReport, copyAsMarkdown, entries.length,
+    goToStudio, goToShare, goToExport, soundOn, compact, adjustGoal, confirmClear, onResetConfig,
+  ]);
 
-  const glassHover = "hover:bg-white/[0.08] dark:hover:bg-white/[0.05] hover:border-white/[0.18] transition-all duration-200";
+  /* ───── REVOLUTION: keyboard shortcuts ───── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // ⌘K / Ctrl+K opens the palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+        return;
+      }
+      // Don't trigger hotkeys when typing in inputs or when palette is open
+      const target = e.target as HTMLElement;
+      if (paletteOpen) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      switch (k) {
+        case "1":
+          if (stats.top && onBroadcastWinner) { e.preventDefault(); crownLeader(); }
+          break;
+        case "c":
+          if (liveCode) { e.preventDefault(); copyCode(); }
+          break;
+        case "s":
+          e.preventDefault(); setTab("studio"); break;
+        case "p":
+          e.preventDefault(); setTab("share"); break;
+        case "x":
+          e.preventDefault(); setTab("export"); break;
+        case "m":
+          e.preventDefault(); setSoundOn((v) => !v); break;
+        case "l":
+          if (onStartLive && !isLive) { e.preventDefault(); onStartLive(); }
+          break;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [paletteOpen, stats.top, onBroadcastWinner, crownLeader, liveCode, copyCode, onStartLive, isLive]);
 
-<<<<<<< HEAD
-  if (compact) {
-    return (
-      <div ref={panelRef} className="w-full">
-        <motion.div
-          className={`${glassBase} rounded-2xl overflow-hidden`}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <motion.div
-                className="w-2 h-2 rounded-full bg-red-500"
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              <span className="font-display text-sm font-bold text-foreground">Live</span>
-              <span className="text-[10px] font-mono text-muted-foreground">{liveCode}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Users className="w-3.5 h-3.5" />
-                <span className="font-bold text-foreground">{stats.players}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Trophy className="w-3.5 h-3.5" />
-                <span className="font-bold text-foreground">{stats.plays}</span>
-              </div>
-              <button
-                onClick={() => setCompact(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                aria-label="Modo expandido"
-=======
   /* ───── REVOLUTION: smart suggestions with action buttons ───── */
   const suggestions = useMemo<Suggestion[]>(() => {
     const out: Suggestion[] = [];
@@ -733,39 +1813,21 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                 onClick={crownLeader}
                 className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-600 text-white text-xs font-bold shadow-glow"
                 title="Coroar líder e disparar confetes (1)"
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
               >
-                <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-            </div>
+                <Crown className="h-3.5 w-3.5" /> Coroar
+              </motion.button>
+            )}
+            {activeGameLabel && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full bg-secondary text-foreground text-[11px] font-medium max-w-[60%]">
+                <Activity className="h-3 w-3 text-primary shrink-0" />
+                <span className="truncate" title={activeGameLabel}>
+                  {activeGameLabel}
+                </span>
+              </div>
+            )}
           </div>
-        </motion.div>
-      </div>
-    );
-  }
+        )}
 
-<<<<<<< HEAD
-  return (
-    <div ref={panelRef} className="w-full max-w-lg mx-auto">
-      <motion.div
-        className={`${glassBase} rounded-3xl overflow-hidden shadow-2xl shadow-black/20`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <div className="relative px-5 py-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                  <Mic className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <motion.div
-                  className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 border-2 border-background"
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-=======
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="w-full">
           <TabsList className="grid grid-cols-3 h-9 w-full bg-muted/50 p-1">
             <TabsTrigger value="studio" className="text-[11px] gap-1">
@@ -868,132 +1930,9 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
               </div>
-              <div>
-                <h3 className="font-display text-base font-bold text-foreground">Painel da Live</h3>
-                <p className="text-[10px] font-mono text-muted-foreground tracking-wide">{liveCode}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setSoundOn((p) => !p)}
-                className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.12] transition-colors"
-                aria-label={soundOn ? "Desativar som" : "Ativar som"}
-              >
-                {soundOn ? (
-                  <Volume2 className="w-4 h-4 text-foreground" />
-                ) : (
-                  <VolumeX className="w-4 h-4 text-muted-foreground" />
-                )}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setCompact(true)}
-                className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.12] transition-colors"
-                aria-label="Modo compacto"
-              >
-                <Minimize2 className="w-4 h-4 text-foreground" />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setCmdPaletteOpen(true)}
-                className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.12] transition-colors"
-                aria-label="Atalhos de teclado"
-              >
-                <Keyboard className="w-4 h-4 text-foreground" />
-              </motion.button>
-            </div>
-          </div>
+            )}
 
-<<<<<<< HEAD
-          <div className="absolute bottom-1.5 right-5">
-            <span className="text-[9px] text-muted-foreground/50 font-mono">⌘K</span>
-          </div>
-        </div>
-
-        <div className="px-5 pt-3 pb-2">
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { icon: Users, label: "Jogadores", value: stats.players, accent: "text-blue-400" },
-              { icon: Trophy, label: "Jogadas", value: stats.plays, accent: "text-emerald-400" },
-              { icon: Sliders, label: "Jogos", value: stats.games, accent: "text-purple-400" },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                className={`${glassCard} p-3 text-center`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.3 }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <s.icon className={`w-4 h-4 mx-auto mb-1 ${s.accent}`} />
-                <motion.p
-                  className="font-display text-xl font-bold text-foreground"
-                  key={s.value}
-                  initial={{ scale: 1.3, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  {s.value}
-                </motion.p>
-                <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">{s.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-5 pt-2 pb-0">
-          <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-            {TAB_ITEMS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabId)}
-                className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.06]"
-                }`}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 rounded-lg bg-primary"
-                    style={{ zIndex: -1 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-5 py-4 min-h-[280px]">
-          <AnimatePresence mode="wait">
-            {activeTab === "studio" && (
-              <motion.div
-                key="studio"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-4"
-              >
-                <div className={glassCard}>
-                  <div className="px-4 pt-3 pb-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <Flame className="w-3.5 h-3.5 text-orange-400" />
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Atividade ao Vivo
-                        </span>
-=======
             {!compact && entries.length > 0 && (
               <CohortsPanel cohorts={cohorts} />
             )}
@@ -1061,14 +2000,27 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                         <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300 font-bold">
                           Líder atual
                         </p>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                       </div>
-                      <span className="text-[10px] text-muted-foreground font-mono">Últimas 2h</span>
+                      <p className="text-sm font-bold truncate">{stats.top.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {stats.top.score} pts · {stats.top.game}
+                      </p>
                     </div>
-                    <SparklineChart data={sparkData} />
+                    {onBroadcastWinner && (
+                      <button
+                        onClick={() =>
+                          onBroadcastWinner(
+                            stats.top!.name,
+                            `Líder atual · ${stats.top!.score} pts em ${stats.top!.game}`,
+                          )
+                        }
+                        className="px-2.5 py-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold hover:bg-amber-600 inline-flex items-center gap-1 shrink-0 transition-colors"
+                        aria-label="Anunciar líder no overlay"
+                      >
+                        <Zap className="h-3 w-3" /> Anunciar
+                      </button>
+                    )}
                   </div>
-<<<<<<< HEAD
-=======
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1082,20 +2034,10 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                   {highlights.map((h, i) => (
                     <HighlightCard key={`${h.label}-${i}`} h={h} />
                   ))}
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 </div>
+              </div>
+            )}
 
-<<<<<<< HEAD
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`${glassCard} p-4 flex flex-col items-center`}>
-                    <QualityRing score={qualityScore} />
-                  </div>
-                  <div className={`${glassCard} p-4 flex flex-col`}>
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Target className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        Objectivo
-=======
             {!compact && gameStats.length > 0 && (
               <div className="rounded-2xl border border-border/60 bg-card/40 p-3 space-y-2">
                 <div className="flex items-center justify-between">
@@ -1109,74 +2051,19 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                     <div key={g.game} className="flex items-center gap-2">
                       <span className="text-[11px] text-foreground truncate w-24 shrink-0" title={g.game}>
                         {g.game}
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                       </span>
-                    </div>
-                    <div className="flex-1 flex flex-col justify-center">
-                      <p className="text-2xl font-bold font-display text-foreground">
-                        {entries.length}
-                        <span className="text-sm text-muted-foreground font-normal">/{goalTarget}</span>
-                      </p>
-                      <div className="w-full h-2.5 rounded-full bg-white/[0.08] mt-2 overflow-hidden">
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                         <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60"
                           initial={{ width: 0 }}
-                          animate={{ width: `${goalProgress}%` }}
-                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          animate={{ width: `${(g.count / maxGameCount) * 100}%` }}
+                          transition={{ duration: 0.5, delay: i * 0.06, ease: "easeOut" }}
+                          className={`h-full rounded-full ${BAR_GRADIENTS[i % BAR_GRADIENTS.length]}`}
                         />
                       </div>
-                      <div className="flex items-center justify-between mt-1.5">
-                        <span className="text-[9px] text-muted-foreground">{goalProgress}%</span>
-                        <button
-                          onClick={() => setGoalTarget((p) => Math.max(10, p + 10))}
-                          className="text-[9px] text-primary hover:text-primary/80 font-semibold"
-                        >
-                          +10 meta
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {topThree.length > 0 && (
-                  <div className={`${glassCard} p-4`}>
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Crown className="w-3.5 h-3.5 text-yellow-400" />
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        Pódio dos Campeões
+                      <span className="text-[10px] text-muted-foreground font-mono w-6 text-right">
+                        {g.count}
                       </span>
                     </div>
-<<<<<<< HEAD
-                    <div className="flex items-end gap-2 px-2">
-                      {PODIUM_ORDER.map((origRank) => {
-                        const entry = topThree[origRank];
-                        if (!entry) return null;
-                        return (
-                          <PodiumCard
-                            key={entry.id}
-                            entry={entry}
-                            rank={origRank}
-                            heightClass={PODIUM_HEIGHTS[origRank]}
-                            colorClass={PODIUM_COLORS[origRank]}
-                            bgClass={PODIUM_BG[origRank]}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {activeTab === "share" && (
-              <motion.div
-                key="share"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-3"
-=======
                   ))}
                 </div>
               </div>
@@ -1508,210 +2395,64 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
                 onClick={() => setDangerOpen((o) => !o)}
                 className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/40 transition-colors"
                 aria-expanded={dangerOpen}
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
               >
-                <motion.a
-                  href={overlayUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 ${glassHover}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Abrir Overlay (OBS)
-                </motion.a>
-
-                <div className={`${glassCard} p-3`}>
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
-                    URL do overlay
-                  </p>
-                  <p className="text-[11px] font-mono break-all text-foreground/80 leading-relaxed">
-                    {overlayUrl}
-                  </p>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={copyOverlay}
-                  className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold ${glassCard} ${glassHover}`}
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-foreground" />
-                  )}
-                  {copied ? "Copiado!" : "Copiar URL do overlay"}
-                </motion.button>
-
-                {!onPublic && (
+                <span className="text-[11px] font-bold text-muted-foreground inline-flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Zona de gestão
+                </span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${dangerOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              <AnimatePresence>
+                {dangerOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${glassCard} p-3 border-amber-500/30 bg-amber-500/[0.06]`}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden border-t border-border/60"
                   >
-                    <div className="flex gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                          Abra o Live Hub em {baseUrl}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed">
-                          O overlay sincroniza com o Live Hub apenas quando ambos estão abertos no mesmo domínio
-                          público ({baseUrl}). Está actualmente em{" "}
-                          <span className="font-mono">
-                            {typeof window !== "undefined" ? window.location.origin : ""}
-                          </span>
-                          , então o OBS não receberá as actualizações em tempo real.
-                        </p>
-                      </div>
+                    <div className="p-3 space-y-2">
+                      <button
+                        onClick={confirmClear}
+                        disabled={!entries.length}
+                        className="w-full px-3 py-2 rounded-full bg-destructive/10 text-destructive text-[11px] font-bold inline-flex items-center justify-center gap-1.5 hover:bg-destructive/20 disabled:opacity-50 transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" /> Limpar leaderboard ({entries.length})
+                      </button>
+                      <button
+                        onClick={onResetConfig}
+                        className="w-full px-3 py-2 rounded-full bg-secondary text-foreground text-[11px] font-bold inline-flex items-center justify-center gap-1.5 hover:bg-secondary/80 transition-colors"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Repor configurações
+                      </button>
                     </div>
                   </motion.div>
                 )}
-
-<<<<<<< HEAD
-                <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                  Cole o URL do overlay como <strong className="text-foreground/80">Browser Source</strong> no
-                  OBS / Streamlabs (1280×720, transparente).
-                </p>
-              </motion.div>
-            )}
-
-            {activeTab === "export" && (
-              <motion.div
-                key="export"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-3"
-              >
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={exportCSV}
-                  disabled={!entries.length}
-                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold ${glassCard} ${glassHover} disabled:opacity-40 disabled:pointer-events-none`}
-                >
-                  <Download className="w-4 h-4" />
-                  Exportar Participantes (CSV)
-                </motion.button>
-
-                <div className={`${glassCard} p-4`}>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
-                    Resumo dos dados
-                  </p>
-                  <div className="space-y-1.5">
-                    {[
-                      { label: "Total de registos", value: entries.length },
-                      { label: "Jogadores únicos", value: stats.players },
-                      { label: "Jogos diferentes", value: stats.games },
-                      { label: "Pontuação máxima", value: stats.top ? `${stats.top.score} pts` : "—" },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{row.label}</span>
-                        <span className="font-bold text-foreground tabular-nums">{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleClear}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] font-semibold hover:bg-red-500/20 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Limpar Leaderboard
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleResetConfig}
-                    className={`flex-1 flex items-center justify-center py-2.5 rounded-xl text-[11px] font-semibold ${glassCard} ${glassHover}`}
-                  >
-                    Repor Configurações
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="px-5 py-3 border-t border-white/[0.06] bg-white/[0.02]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <motion.div
-                className="w-1.5 h-1.5 rounded-full bg-emerald-500"
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-              <span className="text-[10px] text-muted-foreground">Transmissão activa</span>
+              </AnimatePresence>
             </div>
-            <span className="text-[9px] text-muted-foreground/40 font-mono">bateu.live</span>
-          </div>
-        </div>
-      </motion.div>
+          </TabsContent>
+        </Tabs>
 
-      <AnimatePresence>
-        {cmdPaletteOpen && (
-=======
         {!onPublic && (
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
           <motion.div
-            className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2"
           >
-            <motion.div
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setCmdPaletteOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-            <motion.div
-              className={`relative w-full max-w-sm ${glassBase} rounded-2xl shadow-2xl overflow-hidden`}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <div className="px-4 py-3 border-b border-white/[0.08]">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Paleta de Comandos
-                </p>
-              </div>
-              <div className="max-h-72 overflow-y-auto py-1">
-                {cmdPaletteActions.map((cmd, i) => (
-                  <motion.button
-                    key={cmd.label}
-                    onClick={() => runAction(cmd.action)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.08] transition-colors"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    whileHover={{ x: 4 }}
-                  >
-                    <span className="text-sm text-foreground font-medium">{cmd.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-              <div className="px-4 py-2 border-t border-white/[0.08] flex items-center gap-2">
-                <span className="text-[9px] text-muted-foreground/50">ESC para fechar</span>
-              </div>
-            </motion.div>
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0">
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                Abra o Live Hub em {baseUrl}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                O overlay sincroniza via Supabase Realtime em qualquer domínio, mas para o cache
+                local funcionar use <span className="font-mono break-all">{baseUrl}</span>. Está em{" "}
+                <span className="font-mono break-all">{currentOrigin}</span>.
+              </p>
+            </div>
           </motion.div>
         )}
-<<<<<<< HEAD
-      </AnimatePresence>
-    </div>
-=======
 
         <div className="flex items-start gap-2 px-1">
           <Sparkles className="h-3 w-3 text-accent shrink-0 mt-0.5" />
@@ -1723,7 +2464,6 @@ const LiveControlPanel = ({ liveCode, entries, onClear, onResetConfig }: Props) 
         </div>
       </div>
     </motion.div>
->>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
   );
 };
 

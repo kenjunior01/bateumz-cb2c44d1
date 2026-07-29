@@ -165,7 +165,6 @@ export default function Contests() {
     <div className="min-h-screen bg-background pb-20 lg:pb-0 bg-mesh-soft bg-noise">
       <div className="hidden md:block"><Navbar /></div>
       <div className="container mx-auto px-3 sm:px-4 md:pt-24 pb-10">
-        {/* Mobile sticky header */}
         <MobileDiscoveryHeader
           title="Concursos"
           searchValue={search}
@@ -176,7 +175,6 @@ export default function Contests() {
           onCategoryChange={(id) => setTab(id as "active" | "past")}
         />
 
-        {/* Desktop hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10 hidden md:block">
           <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />
           <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-1">Concursos</h1>
@@ -185,7 +183,6 @@ export default function Contests() {
           </p>
         </motion.div>
 
-        {/* Desktop search row */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-4 max-w-3xl mx-auto hidden md:block">
           <div className="flex flex-col sm:flex-row gap-2 items-stretch">
             <div className="relative flex-1">

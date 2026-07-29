@@ -87,12 +87,10 @@ export default function TicketQRCode({
   return (
     <Card className="glass overflow-hidden">
       <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-        {/* Title */}
         <h3 className="font-display text-lg font-bold text-foreground">
           {t("qr.title")}
         </h3>
 
-        {/* QR Code Image */}
         <div className="relative rounded-xl border-2 border-border p-3 bg-white">
           {generating ? (
             <div className="flex items-center justify-center w-[240px] h-[240px]">
@@ -107,7 +105,6 @@ export default function TicketQRCode({
           )}
         </div>
 
-        {/* Ticket Info */}
         <div className="space-y-1.5 w-full">
           <div className="flex items-center justify-center gap-2">
             <Ticket className="h-4 w-4 text-primary" />
@@ -124,7 +121,6 @@ export default function TicketQRCode({
           </Badge>
         </div>
 
-        {/* Download Button */}
         <Button
           variant="outline"
           size="sm"

@@ -238,7 +238,6 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
 
   return (
     <div className={`rounded-xl border ${v.bg} p-4 space-y-4`}>
-      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className={`h-5 w-5 ${v.color} shrink-0`} />
@@ -251,7 +250,6 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
         )}
       </div>
 
-      {/* Recipient identifier */}
       {recipient && (
         <div className="flex items-center gap-3 rounded-lg bg-card p-3 border border-border">
           <div className="flex-1 min-w-0">
@@ -269,13 +267,11 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
         </div>
       )}
 
-      {/* Amount */}
       <div className="rounded-lg bg-primary/10 p-3 text-center">
         <p className="text-xs text-muted-foreground mb-0.5">{t("pay.amountToSend")}</p>
         <p className="font-display text-2xl font-bold text-primary">{formatMZN(totalAmount)}</p>
       </div>
 
-      {/* Steps */}
       <div>
         <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wider">{t("pay.steps")}</p>
         <ol className="space-y-1.5">

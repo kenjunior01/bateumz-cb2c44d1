@@ -304,14 +304,12 @@ function MachinePanel({
 
   return (
     <div className="flex flex-col items-center gap-3 flex-1 max-w-[280px] mx-auto w-full">
-      {/* Machine frame */}
       <div
         className={cn(
           "bg-gradient-to-b from-slate-800 to-slate-900 border-2 rounded-2xl p-3 sm:p-4 w-full relative overflow-hidden",
           accentBorder
         )}
       >
-        {/* Reel container */}
         <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
           <div className="bg-slate-950 flex relative">
             {reels.map((reel, ri) => (
@@ -320,7 +318,6 @@ function MachinePanel({
                 className="relative overflow-hidden"
                 style={{ width: CELL_H, height: ROWS * CELL_H }}
               >
-                {/* Spinning strip */}
                 <div
                   ref={(el) => {
                     reelRefs.current[ri] = el;
@@ -338,7 +335,6 @@ function MachinePanel({
                   ))}
                 </div>
 
-                {/* Win glow on center cell */}
                 <AnimatePresence>
                   {winPos[ri] && !spinning && (
                     <motion.div
@@ -360,15 +356,12 @@ function MachinePanel({
               </div>
             ))}
 
-            {/* Reel vertical separators */}
             <div className="absolute top-0 bottom-0 left-[33.33%] w-px bg-slate-700/60 z-10" />
             <div className="absolute top-0 bottom-0 left-[66.66%] w-px bg-slate-700/60 z-10" />
 
-            {/* Row horizontal separators */}
             <div className="absolute left-0 right-0 h-px bg-slate-700/40 z-10" style={{ top: CELL_H }} />
             <div className="absolute left-0 right-0 h-px bg-slate-700/40 z-10" style={{ top: 2 * CELL_H }} />
 
-            {/* Payline side indicators */}
             <div
               className="absolute left-0 right-0 pointer-events-none z-20 flex"
               style={{ top: CELL_H, height: CELL_H }}
@@ -380,7 +373,6 @@ function MachinePanel({
           </div>
         </div>
 
-        {/* Win / status text */}
         <div className="h-9 flex items-center justify-center mt-2 overflow-hidden">
           <AnimatePresence mode="wait">
             {wonAmount > 0 && !spinning && (
@@ -414,10 +406,8 @@ function MachinePanel({
           )}
         </div>
 
-        {/* Coin rain */}
         <CoinRain show={wonAmount > 0 && !spinning && !!win} />
 
-        {/* Jackpot overlay */}
         <AnimatePresence>
           {win?.isJackpot && !spinning && (
             <motion.div
@@ -439,7 +429,6 @@ function MachinePanel({
         </AnimatePresence>
       </div>
 
-      {/* Spin button */}
       <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.04 }}>
         <Button
           onClick={onSpin}
@@ -589,10 +578,8 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
   /* ---- Render ---- */
   return (
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 space-y-4 text-white select-none">
-      {/* ===== SCOREBOARD ===== */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between gap-2">
-          {/* P1 info */}
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <span className="text-cyan-400 font-bold text-sm sm:text-base truncate">Jogador 1</span>
             <Badge variant="outline" className="gap-1 border-cyan-500/30 shrink-0 text-slate-200">
@@ -613,12 +600,10 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
             </Badge>
           </div>
 
-          {/* Title */}
           <h2 className="text-base sm:text-xl font-black text-amber-400 tracking-wider shrink-0">
             CAÇA-NÍQUEIS VS
           </h2>
 
-          {/* P2 info */}
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 justify-end">
             <Badge variant="outline" className="gap-1 border-pink-500/30 shrink-0 text-slate-200">
               <Coins className="w-3.5 h-3.5 text-yellow-400" />
@@ -641,7 +626,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* ===== BET + SPINS ===== */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
           <span className="text-slate-400 text-sm font-medium">Apostar:</span>
@@ -670,9 +654,7 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* ===== MACHINES ===== */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-5 md:gap-8">
-        {/* P1 Machine */}
         <MachinePanel
           playerName="Jogador 1"
           coins={state.p1Coins}
@@ -690,7 +672,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
           hoverClass="hover:from-cyan-500 hover:to-cyan-600"
         />
 
-        {/* VS badge */}
         <div className="flex items-center py-1">
           <Badge
             variant="outline"
@@ -700,7 +681,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
           </Badge>
         </div>
 
-        {/* P2 Machine */}
         <MachinePanel
           playerName="Jogador 2"
           coins={state.p2Coins}
@@ -719,7 +699,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
         />
       </div>
 
-      {/* ===== CONTROLS ===== */}
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
@@ -739,7 +718,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
         </Button>
       </div>
 
-      {/* ===== PAYTABLE ===== */}
       <AnimatePresence>
         {showPaytable && (
           <motion.div
@@ -798,7 +776,6 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ===== GAME OVER OVERLAY ===== */}
       <AnimatePresence>
         {state.gameOver && (
           <motion.div

@@ -84,7 +84,6 @@ export default function BlogNewsWidget() {
             <Link key={post.id} to={`/blog/${post.slug}`}>
               <div className="p-4 hover:bg-muted/50 transition-colors group cursor-pointer">
                 <div className="flex gap-4">
-                  {/* Image */}
                   <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
                     <img 
                       src={post.image_url || "/placeholder.svg"} 
@@ -93,7 +92,6 @@ export default function BlogNewsWidget() {
                     />
                   </div>
                   
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-none">

@@ -389,7 +389,6 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
       <div className="game-particle game-particle-5" style={{ bottom: '10%', right: '25%' }} />
       <div className="game-particle game-particle-6" style={{ top: '70%', left: '5%' }} />
 
-      {/* Top Header */}
       <div className="relative z-10 p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.5)]">
@@ -446,10 +445,8 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
 
       <div className="relative z-10 flex-1 container mx-auto px-4 py-8 grid lg:grid-cols-[1fr_320px] gap-8">
         
-        {/* Main Game Area */}
         <div className="flex flex-col justify-center space-y-12">
           
-          {/* Question Box with Branding */}
           <div className="relative space-y-6">
             {(game.company_logo_url || game.company_slogan) && (
               <motion.div 
@@ -487,7 +484,6 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
             </div>
           </div>
 
-          {/* Options Grid */}
           <div className="grid md:grid-cols-2 gap-4">
             {['A', 'B', 'C', 'D'].map((letter) => {
               const optionKey = `option_${letter.toLowerCase()}` as keyof Question;
@@ -523,9 +519,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
           </div>
         </div>
 
-        {/* Sidebar: Pyramid & Lifelines */}
         <div className="space-y-6">
-          {/* Lifelines */}
           <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
             <CardContent className="p-6">
               <h3 className="text-xs font-black uppercase tracking-widest opacity-50 mb-4">Ajudas Disponíveis</h3>
@@ -550,7 +544,6 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
             </CardContent>
           </Card>
 
-          {/* Prize Pyramid */}
           <Card className="bg-black/40 border-white/10 backdrop-blur-xl overflow-hidden">
             <CardContent className="p-0">
               <div className="bg-white/5 p-4 border-b border-white/10 flex justify-between items-center">
@@ -581,7 +574,6 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
         </div>
       </div>
 
-      {/* Status Overlays */}
       <AnimatePresence>
         {status !== 'playing' && (
           <motion.div 

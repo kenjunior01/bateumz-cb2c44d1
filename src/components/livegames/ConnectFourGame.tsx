@@ -264,7 +264,6 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Mode Toggle & Difficulty */}
       <div className="flex flex-wrap items-center justify-center gap-2">
         <div className="flex rounded-xl bg-white/5 p-0.5">
           <button onClick={() => switchMode("pvp")} className={cn(
@@ -294,7 +293,6 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
         )}
       </div>
 
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-blue-900/30 to-yellow-900/30 border border-blue-500/20">
         <div className="text-center flex-1">
           <div className="w-5 h-5 rounded-full bg-red-500 mx-auto mb-1 shadow-lg shadow-red-500/50" />
@@ -314,7 +312,6 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Turn indicator */}
       {!gameOver && (
         <div className="text-center">
           {botThinking ? (
@@ -337,7 +334,6 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
         </div>
       )}
 
-      {/* Board */}
       <div className="flex justify-center">
         <div className={cn("rounded-2xl bg-blue-800 p-2 shadow-2xl shadow-blue-900/50", botThinking && "ring-2 ring-purple-500/40")}>
           <div className="flex gap-1.5 mb-1 px-0.5">
@@ -386,7 +382,6 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 justify-center">
         {[10, 25, 50, 100].map(v => (
           <Button key={v} size="sm" variant={bet === v ? "default" : "outline"}

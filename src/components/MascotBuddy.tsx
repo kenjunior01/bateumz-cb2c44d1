@@ -238,7 +238,6 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
     >
-      {/* Particle burst */}
       {CELEBRATION_EMOJIS.map((e, i) => (
         <motion.span
           key={i}
@@ -259,7 +258,6 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
         </motion.span>
       ))}
 
-      {/* Central card */}
       <motion.div
         initial={{ scale: 0, rotate: -10 }}
         animate={{ scale: 1, rotate: 0 }}
@@ -267,7 +265,6 @@ function CelebrationOverlay({ data, onClose }: { data: CelebrationData; onClose:
         transition={{ type: "spring", damping: 10, stiffness: 150, delay: 0.2 }}
         className="pointer-events-auto glass rounded-3xl p-6 sm:p-8 text-center max-w-sm mx-4 border-2 border-primary/30 shadow-2xl relative overflow-hidden"
       >
-        {/* Glow ring */}
         <motion.div
           className="absolute inset-0 rounded-3xl"
           animate={{ boxShadow: [
@@ -571,21 +568,18 @@ export default function MascotBuddy() {
 
   return (
     <>
-      {/* Celebration overlay */}
       <AnimatePresence>
         {celebration && (
           <CelebrationOverlay data={celebration} onClose={() => setCelebration(null)} />
         )}
       </AnimatePresence>
 
-      {/* Mini mascots floating around */}
       <AnimatePresence>
         {miniMascots.map((pos) => (
           <FloatingMiniMascot key={pos} mood={mood} onClick={openChat} position={pos} />
         ))}
       </AnimatePresence>
 
-      {/* Main mascot button when hidden */}
       {!visible && !dismissed && (
         <motion.button
           onClick={openChat}
@@ -615,7 +609,6 @@ export default function MascotBuddy() {
             className="fixed bottom-24 right-4 z-50 w-[320px] sm:w-[360px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
             style={{ maxHeight: "70vh" }}
           >
-            {/* Chat header */}
             <div className="flex items-center gap-2 p-3 border-b border-border bg-primary/5">
               <motion.img
                 src={currentImage}
@@ -644,7 +637,6 @@ export default function MascotBuddy() {
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px] max-h-[400px]">
               {chatMessages.map((msg, i) => (
                 <motion.div
@@ -689,7 +681,6 @@ export default function MascotBuddy() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Quick questions */}
             {chatMessages.length <= 1 && (
               <div className="px-3 pb-2 flex flex-wrap gap-1">
                 {QUICK_QUESTIONS.map((q) => (
@@ -704,7 +695,6 @@ export default function MascotBuddy() {
               </div>
             )}
 
-            {/* Input */}
             <form
               onSubmit={(e) => { e.preventDefault(); sendMessage(chatInput); }}
               className="flex items-center gap-2 p-2 border-t border-border"

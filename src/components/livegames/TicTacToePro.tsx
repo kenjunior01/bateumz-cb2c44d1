@@ -539,7 +539,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
   if (gameMode === "menu") {
     return (
       <div className="flex flex-col items-center gap-5 p-4">
-        {/* Header */}
         <div className="text-center space-y-2">
           <Badge className="bg-gradient-to-r from-cyan-500/20 to-pink-500/20 text-white border-cyan-500/30 text-xs px-3 py-1">
             <Grid3X3 className="h-4 w-4 mr-1.5" />
@@ -553,7 +552,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           </p>
         </div>
 
-        {/* Mode selection */}
         <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
           <motion.button
             whileHover={{ scale: 1.04 }}
@@ -612,7 +610,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           </motion.button>
         </div>
 
-        {/* Difficulty selector (bot only) */}
         <AnimatePresence>
           {selectedMode === "bot" && (
             <motion.div
@@ -627,7 +624,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                 Dificuldade
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {(["facil", "medio", "dificil"] as const).map((d) => {
+                {(["facil", "medio", "dificil"]).map((d) => {
                   const cfg = DIFFICULTY_CONFIG[d];
                   const active = difficulty === d;
                   return (
@@ -672,7 +669,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           )}
         </AnimatePresence>
 
-        {/* Start button */}
         <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full max-w-xs">
           <Button
             onClick={() => startGame(selectedMode)}
@@ -696,9 +692,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
   /* ================================================================ */
   return (
     <div className="space-y-3">
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20">
-        {/* Player X */}
         <div className="text-center flex-1">
           <span
             className={cn(
@@ -716,7 +710,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           <p className="text-lg font-black text-white">{scores.x}</p>
         </div>
 
-        {/* Center badge */}
         <div className="text-center px-3">
           <Badge className="bg-gradient-to-r from-cyan-500/20 to-pink-500/20 text-white border-cyan-500/30 text-[10px] sm:text-xs">
             <Grid3X3 className="h-3 w-3 mr-1" />
@@ -734,7 +727,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           </div>
         </div>
 
-        {/* Player O */}
         <div className="text-center flex-1">
           <span
             className={cn(
@@ -758,7 +750,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Turn indicator */}
       <AnimatePresence mode="wait">
         {!gameOver && (
           <motion.div
@@ -792,10 +783,9 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
         )}
       </AnimatePresence>
 
-      {/* Big Board (3×3 of small boards) */}
       <div className="flex justify-center">
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
-          {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map((boardIdx) => {
+          {([0, 1, 2, 3, 4, 5, 6, 7, 8]).map((boardIdx) => {
             const miniResult = miniResults[boardIdx];
             const isActiveTarget = activeTarget === boardIdx;
             const isLastWin = lastMiniWinBoard === boardIdx;
@@ -838,7 +828,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                     "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/20"
                 )}
               >
-                {/* Won board overlay */}
                 {boardIsWon && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.5 }}
@@ -859,16 +848,14 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                   </motion.div>
                 )}
 
-                {/* Drawn board overlay */}
                 {boardIsDraw && (
                   <div className="absolute inset-0 flex items-center justify-center z-10 rounded-lg">
                     <span className="text-lg text-slate-600 font-bold">—</span>
                   </div>
                 )}
 
-                {/* Small board grid */}
                 <div className="grid grid-cols-3 gap-px sm:gap-0.5">
-                  {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map((cellIdx) => {
+                  {([0, 1, 2, 3, 4, 5, 6, 7, 8]).map((cellIdx) => {
                     const globalIdx = boardIdx * 9 + cellIdx;
                     const cellValue = cells[globalIdx];
                     const isValid = canPlayCell(boardIdx, cellIdx);
@@ -923,7 +910,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                           </motion.span>
                         )}
 
-                        {/* Valid target cell glow */}
                         {isValid && !cellValue && isInTargetBoard && (
                           <motion.div
                             className="absolute inset-0 rounded-md pointer-events-none"
@@ -944,7 +930,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center justify-center gap-2">
         <Button
           size="sm"
@@ -974,7 +959,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
         </Button>
       </div>
 
-      {/* Help / Rules */}
       <AnimatePresence>
         {showHelp && (
           <motion.div
@@ -1054,7 +1038,6 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
         )}
       </AnimatePresence>
 
-      {/* Game Over */}
       <AnimatePresence>
         {gameOver && (
           <motion.div

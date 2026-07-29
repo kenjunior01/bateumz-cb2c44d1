@@ -489,7 +489,6 @@ export default function DashboardBlog() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -509,7 +508,6 @@ export default function DashboardBlog() {
         </Button>
       </motion.div>
 
-      {/* Stats Cards */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -539,7 +537,6 @@ export default function DashboardBlog() {
         ))}
       </motion.div>
 
-      {/* Main Content Tabs */}
       <Tabs defaultValue="posts" className="space-y-4">
         <TabsList>
           <TabsTrigger value="posts" className="gap-2">
@@ -552,9 +549,7 @@ export default function DashboardBlog() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ─── Posts Tab ──────────────────────────────────────────────────────── */}
         <TabsContent value="posts" className="space-y-4">
-          {/* Search & Filters */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -610,7 +605,6 @@ export default function DashboardBlog() {
             </Button>
           </motion.div>
 
-          {/* Posts Table */}
           <Card>
             <CardContent className="p-0">
               {loading ? (
@@ -679,7 +673,6 @@ export default function DashboardBlog() {
                             transition={{ delay: index * 0.03 }}
                             className="border-b border-border/30 hover:bg-muted/30 transition-colors group"
                           >
-                            {/* Post title + image */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
                                 {post.image_url ? (
@@ -704,7 +697,6 @@ export default function DashboardBlog() {
                               </div>
                             </td>
 
-                            {/* Category */}
                             <td className="px-4 py-3 hidden md:table-cell">
                               {post.blog_categories ? (
                                 <Badge variant="secondary" className="text-xs">
@@ -715,7 +707,6 @@ export default function DashboardBlog() {
                               )}
                             </td>
 
-                            {/* Status */}
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <Badge
                                 variant={post.published ? "default" : "outline"}
@@ -741,21 +732,18 @@ export default function DashboardBlog() {
                               </Badge>
                             </td>
 
-                            {/* Views */}
                             <td className="px-4 py-3 hidden lg:table-cell">
                               <span className="text-sm text-muted-foreground">
                                 {formatNumber(post.view_count || 0)}
                               </span>
                             </td>
 
-                            {/* Date */}
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <span className="text-sm text-muted-foreground">
                                 {formatDate(post.created_at)}
                               </span>
                             </td>
 
-                            {/* Actions */}
                             <td className="px-4 py-3 text-right">
                               <div className="relative inline-block">
                                 <Button
@@ -843,9 +831,7 @@ export default function DashboardBlog() {
           </Card>
         </TabsContent>
 
-        {/* ─── Categories Tab ───────────────────────────────────────────────── */}
         <TabsContent value="categories" className="space-y-4">
-          {/* Add Category */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -896,7 +882,6 @@ export default function DashboardBlog() {
             </Card>
           </motion.div>
 
-          {/* Categories List */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -968,7 +953,6 @@ export default function DashboardBlog() {
         </TabsContent>
       </Tabs>
 
-      {/* ─── Post Create/Edit Dialog ─────────────────────────────────────────── */}
       <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -983,7 +967,6 @@ export default function DashboardBlog() {
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
-            {/* Title */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Título <span className="text-destructive">*</span>
@@ -995,7 +978,6 @@ export default function DashboardBlog() {
               />
             </div>
 
-            {/* Slug */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Slug</label>
               <div className="flex gap-2">
@@ -1022,7 +1004,6 @@ export default function DashboardBlog() {
               </p>
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Categoria</label>
               <Select
@@ -1044,7 +1025,6 @@ export default function DashboardBlog() {
               </Select>
             </div>
 
-            {/* Summary */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Resumo
@@ -1065,7 +1045,6 @@ export default function DashboardBlog() {
               />
             </div>
 
-            {/* Image URL */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 URL da Imagem de Destaque
@@ -1119,7 +1098,6 @@ export default function DashboardBlog() {
               </p>
             </div>
 
-            {/* Content */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Conteúdo (HTML)</label>
               <Textarea
@@ -1136,7 +1114,6 @@ export default function DashboardBlog() {
               </p>
             </div>
 
-            {/* Source URL */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 URL da Fonte (opcional)
@@ -1153,7 +1130,6 @@ export default function DashboardBlog() {
               />
             </div>
 
-            {/* SEO Keywords */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Tag className="h-4 w-4" />
@@ -1175,7 +1151,6 @@ export default function DashboardBlog() {
               </p>
             </div>
 
-            {/* Published Toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20">
               <div>
                 <p className="text-sm font-medium">
@@ -1195,7 +1170,6 @@ export default function DashboardBlog() {
               />
             </div>
 
-            {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t border-border">
               <Button
                 variant="outline"
@@ -1223,7 +1197,6 @@ export default function DashboardBlog() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Delete Confirm Dialog ───────────────────────────────────────────── */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -1265,7 +1238,6 @@ export default function DashboardBlog() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Close dropdown on outside click ──────────────────────────────────── */}
       <AnimatePresence>
         {openMenu && (
           <motion.div

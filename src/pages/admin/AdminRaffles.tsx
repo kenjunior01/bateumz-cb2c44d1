@@ -249,7 +249,6 @@ export default function AdminRaffles() {
         </CardContent>
       </Card>
 
-      {/* Reject Modal */}
       <Dialog open={rejectModal.open} onOpenChange={(o) => { if (!o) { setRejectModal({ open: false, id: "" }); setRejectReason(""); } }}>
         <DialogContent>
           <DialogHeader>

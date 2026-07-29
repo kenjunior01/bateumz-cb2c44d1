@@ -118,13 +118,11 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-28 pb-10">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5 lg:mb-10">
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">Meus Luck Points</h1>
           <p className="text-sm text-muted-foreground">Acumule pontos, suba de nível e resgate recompensas exclusivas.</p>
         </motion.div>
 
-        {/* Hero Pontos card mobile */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-4 lg:hidden">
           <Card className="glass border-primary/30 bg-gradient-to-br from-primary/15 via-card to-accent/10 overflow-hidden relative">
             <CardContent className="p-4 relative z-10">
@@ -147,7 +145,6 @@ const UserDashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Stats Cards desktop */}
         <div className="hidden lg:grid gap-4 md:grid-cols-3 mb-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="glass border-primary/20 glow-primary">
@@ -191,7 +188,6 @@ const UserDashboard = () => {
           </motion.div>
         </div>
 
-        {/* Mini stats mobile */}
         <div className="grid grid-cols-2 gap-2 mb-4 lg:hidden">
           <Card className="glass">
             <CardContent className="p-3 flex items-center gap-2.5">
@@ -213,7 +209,6 @@ const UserDashboard = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="rewards" className="space-y-6">
           <TabsList className="glass border border-border">
             <TabsTrigger value="rewards" className="gap-2"><Gift className="h-4 w-4" /> Recompensas</TabsTrigger>

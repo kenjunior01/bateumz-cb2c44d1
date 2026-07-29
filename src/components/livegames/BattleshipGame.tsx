@@ -400,7 +400,6 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-slate-800 to-blue-900/30 border border-blue-500/20">
         <div className="text-center flex-1">
           <span className={cn("text-sm font-black", current === 1 && !gameOver && "text-cyan-400")}>
@@ -432,7 +431,6 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Turn / bot thinking indicator */}
       {!gameOver && (
         <div className="flex justify-center gap-4">
           {botThinking ? (
@@ -451,9 +449,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
         </div>
       )}
 
-      {/* Boards side by side on desktop, stacked on mobile */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* My board (show ships) */}
         <div>
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 text-center">
             Meu Tabuleiro ({myShips.remaining} restantes)
@@ -475,7 +471,6 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           </div>
         </div>
 
-        {/* Enemy board (attack grid) */}
         <div>
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 text-center flex items-center justify-center gap-1">
             <Crosshair className="h-3 w-3" /> Ataque ao Inimigo
@@ -508,7 +503,6 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 justify-center">
         {[10, 25, 50, 100].map(v => (
           <Button

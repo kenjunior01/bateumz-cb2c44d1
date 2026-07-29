@@ -230,7 +230,6 @@ export default function ContestDetail() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-16">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <Link to="/concursos" className="text-sm text-muted-foreground hover:text-primary mb-4 inline-flex items-center gap-1 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Voltar aos concursos
@@ -289,7 +288,6 @@ export default function ContestDetail() {
                         <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} />
                       </div>
 
-                      {/* Video: link or file */}
                       <div>
                         <Label className="flex items-center gap-2 mb-2"><Video className="h-4 w-4" /> Vídeo</Label>
                         <div className="flex gap-2 mb-2">
@@ -323,7 +321,6 @@ export default function ContestDetail() {
             </motion.div>
           </div>
 
-          {/* Phases Timeline */}
           {(contest as any).contest_mode === "multi" && Array.isArray((contest as any).phases) && (contest as any).phases.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="mt-6 p-4 rounded-xl glass">
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold flex items-center gap-1">🏆 Fases do Concurso</p>
@@ -354,7 +351,6 @@ export default function ContestDetail() {
             </motion.div>
           )}
 
-          {/* Sponsor Badge */}
           {(contest as any).sponsor_name && (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/30 bg-accent/5">
               {(contest as any).sponsor_logo_url && <img src={(contest as any).sponsor_logo_url} alt="" className="h-5 w-5 rounded-full object-cover" />}
@@ -363,7 +359,6 @@ export default function ContestDetail() {
             </motion.div>
           )}
 
-          {/* Stats bar */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap gap-4 mt-6 p-4 rounded-xl glass">
             {contest.prize_description && (
               <div className="flex items-center gap-2 text-sm">
@@ -396,12 +391,10 @@ export default function ContestDetail() {
           </motion.div>
         </motion.div>
 
-        {/* Live Leaderboard */}
         {sorted.length > 0 && (isOpen || isVoting) && (
           <LiveLeaderboard contestId={contest.id} evaluationType={contest.evaluation_type} />
         )}
 
-        {/* Winners Section */}
         <AnimatePresence>
           {winners.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
@@ -444,7 +437,6 @@ export default function ContestDetail() {
           )}
         </AnimatePresence>
 
-        {/* Gallery */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <Flame className="h-5 w-5 text-primary" />
@@ -490,7 +482,6 @@ export default function ContestDetail() {
                         </div>
                       )}
 
-                      {/* Inline social video embed */}
                       {hasSocialVideo && !sub.photo_url && (
                         <SocialVideoEmbed url={sub.video_url!} className="aspect-video" />
                       )}
@@ -502,7 +493,6 @@ export default function ContestDetail() {
                         </div>
                         {sub.description && <p className="text-xs text-muted-foreground line-clamp-2">{sub.description}</p>}
 
-                        {/* Score bar */}
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{contest.evaluation_type === "views" ? "Views" : "Votos"}</span>
@@ -511,21 +501,18 @@ export default function ContestDetail() {
                           <Progress value={pct} className="h-1.5" />
                         </div>
 
-                        {/* Social video button if also has photo */}
                         {hasSocialVideo && sub.photo_url && (
                           <Button variant="outline" size="sm" onClick={() => setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id })} className="w-full gap-2 text-xs">
                             <Video className="h-3 w-3" /> Ver Vídeo
                           </Button>
                         )}
 
-                        {/* Direct video */}
                         {sub.video_url && !hasSocialVideo && (
                           <Button variant="outline" size="sm" onClick={() => setSelectedMedia({ url: sub.video_url!, type: "video", submissionId: sub.id })} className="w-full gap-2 text-xs">
                             <Video className="h-3 w-3" /> Ver Vídeo ({sub.views_count} views)
                           </Button>
                         )}
 
-                        {/* Emoji reactions + vote row */}
                         <div className="flex items-center justify-between pt-1">
                           <EmojiReactions compact onReact={() => {}} />
                           <div className="flex items-center gap-2">
@@ -558,7 +545,6 @@ export default function ContestDetail() {
         </motion.div>
       </div>
 
-      {/* Media Lightbox */}
       <Dialog open={!!selectedMedia} onOpenChange={() => setSelectedMedia(null)}>
         <DialogContent className="max-w-4xl p-2">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>

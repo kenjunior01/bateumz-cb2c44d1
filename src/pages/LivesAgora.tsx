@@ -88,16 +88,13 @@ const LiveCard = ({ live, index }: { live: any; index: number }) => {
         className="group block rounded-2xl border border-border/60 overflow-hidden hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-card"
       >
         <div className={cn("relative h-44 bg-gradient-to-br flex items-center justify-center overflow-hidden", gradient)}>
-          {/* Live badge */}
           <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/95 backdrop-blur-sm text-white text-[10px] font-bold shadow-lg shadow-red-500/30">
             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
             AO VIVO
           </div>
-          {/* Viewers */}
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px]">
             <Eye className="h-3 w-3" /> {viewers}
           </div>
-          {/* Category tag */}
           {live.category && (
             <div className="absolute bottom-3 left-3">
               <Badge className="bg-white/15 backdrop-blur-sm text-white border-0 text-[9px] rounded-full">
@@ -105,9 +102,7 @@ const LiveCard = ({ live, index }: { live: any; index: number }) => {
               </Badge>
             </div>
           )}
-          {/* Background watermark */}
           <span className="text-5xl font-black text-white/5 select-none">BATEU</span>
-          {/* Follow button on hover */}
           <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               size="sm"
@@ -289,7 +284,6 @@ const LivesAgora = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Hero header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 p-6 md:p-8 border border-primary/10">
             <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
@@ -322,7 +316,6 @@ const LivesAgora = () => {
           </div>
         </motion.div>
 
-        {/* Search */}
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -333,7 +326,6 @@ const LivesAgora = () => {
           />
         </div>
 
-        {/* Category chips */}
         <div className="flex gap-1.5 overflow-x-auto pb-2 mb-5 scrollbar-hide">
           {CATEGORIES.map((cat) => (
             <button
@@ -351,7 +343,6 @@ const LivesAgora = () => {
           ))}
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-2xl bg-muted/40 w-fit mb-6">
           {tabs.map((t) => {
             const Icon = t.icon;
@@ -376,9 +367,7 @@ const LivesAgora = () => {
           })}
         </div>
 
-        {/* Tab Content */}
         <AnimatePresence mode="wait">
-          {/* LIVE TAB */}
           {tab === "live" && (
             <motion.div key="live" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {loading ? (
@@ -407,7 +396,6 @@ const LivesAgora = () => {
             </motion.div>
           )}
 
-          {/* UPCOMING TAB */}
           {tab === "upcoming" && (
             <motion.div key="upcoming" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {loading ? (
@@ -451,7 +439,6 @@ const LivesAgora = () => {
             </motion.div>
           )}
 
-          {/* CREATORS TAB */}
           {tab === "creators" && (
             <motion.div key="creators" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {loading ? (
@@ -471,7 +458,6 @@ const LivesAgora = () => {
             </motion.div>
           )}
 
-          {/* CLIPS TAB */}
           {tab === "clips" && (
             <motion.div key="clips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {loading ? (

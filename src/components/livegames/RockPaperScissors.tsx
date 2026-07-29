@@ -202,7 +202,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-700/50">
-      {/* Scoreboard */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <motion.div
@@ -274,9 +273,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Controls Row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Mode Toggle */}
         <div className="flex rounded-lg overflow-hidden border border-slate-700">
           <button
             onClick={() => switchMode("1v1")}
@@ -302,10 +299,9 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
           </button>
         </div>
 
-        {/* Best Of Selector */}
         <div className="flex items-center gap-1">
           <span className="text-slate-500 text-xs mr-1">Melhor de</span>
-          {([3, 5, 7] as const).map((val) => (
+          {([3, 5, 7]).map((val) => (
             <button
               key={val}
               onClick={() => changeBestOf(val)}
@@ -322,7 +318,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
           ))}
         </div>
 
-        {/* Reset */}
         <Button
           variant="ghost"
           size="sm"
@@ -334,7 +329,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
         </Button>
       </div>
 
-      {/* Bet System */}
       <div className="flex items-center gap-2">
         <Coins className="w-4 h-4 text-yellow-500" />
         <span className="text-slate-400 text-xs">Aposta:</span>
@@ -355,9 +349,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
         ))}
       </div>
 
-      {/* Main Game Area */}
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-4 items-start">
-        {/* Player 1 Side */}
         <div
           className={cn(
             "flex flex-col items-center gap-3 transition-all duration-500 rounded-xl p-3",
@@ -369,7 +361,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
             isGameOver && p2Winning && "opacity-40"
           )}
         >
-          {/* P1 Choice Display */}
           <div className="relative">
             <AnimatePresence mode="wait">
               {p1Revealed && p1ChoiceData ? (
@@ -413,7 +404,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
             </AnimatePresence>
           </div>
 
-          {/* P1 Buttons */}
           <div className="flex gap-2">
             {CHOICES.map((choice) => {
               const isSelected = p1Choice === choice.id;
@@ -446,7 +436,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
           </p>
         </div>
 
-        {/* VS Center */}
         <div className="flex flex-col items-center justify-center gap-3 self-center">
           <motion.span
             animate={
@@ -460,7 +449,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
             VS
           </motion.span>
 
-          {/* Reveal / Next Button */}
           <AnimatePresence mode="wait">
             {phase === "choosing" && canReveal && (
               <motion.div
@@ -563,7 +551,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
           </AnimatePresence>
         </div>
 
-        {/* Player 2 Side */}
         <div
           className={cn(
             "flex flex-col items-center gap-3 transition-all duration-500 rounded-xl p-3",
@@ -575,7 +562,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
             isGameOver && p1Winning && "opacity-40"
           )}
         >
-          {/* P2 Choice Display */}
           <div className="relative">
             <AnimatePresence mode="wait">
               {p2Revealed && p2ChoiceData ? (
@@ -619,7 +605,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
             </AnimatePresence>
           </div>
 
-          {/* P2 Buttons */}
           {mode === "1v1" ? (
             <div className="flex gap-2">
               {CHOICES.map((choice) => {
@@ -682,7 +667,6 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Status Messages */}
       {mode === "1v1" && phase === "choosing" && p1Choice && !p2Choice && (
         <motion.p
           initial={{ opacity: 0 }}

@@ -438,7 +438,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto select-none">
-      {/* Scoreboard */}
       <div className="w-full rounded-2xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-center gap-1 min-w-[80px]">
@@ -506,7 +505,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Duration selector */}
       {phase === "idle" && (
         <div className="flex items-center gap-2">
           <Timer className="w-4 h-4 text-slate-400" />
@@ -530,7 +528,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* Game Grid */}
       <div className="relative w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-3">
         <div className="grid grid-cols-4 gap-2 justify-items-center">
           {grid.map((row, r) =>
@@ -543,7 +540,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
 
               return (
                 <div key={cellKey} className="relative">
-                  {/* Ripple effect */}
                   <AnimatePresence>
                     {ripples.some((rp) => rp.row === r && rp.col === c) && (
                       <motion.div
@@ -561,7 +557,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
                     )}
                   </AnimatePresence>
 
-                  {/* Floating scores */}
                   <AnimatePresence>
                     {floats
                       .filter((f) => Math.floor(f.row) === r && Math.floor(f.col) === c)
@@ -582,7 +577,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
                       ))}
                   </AnimatePresence>
 
-                  {/* Cell button */}
                   <motion.button
                     onClick={() => handleTap(r, c)}
                     disabled={phase !== "playing" || !target}
@@ -635,7 +629,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
                       )}
                     </AnimatePresence>
 
-                    {/* Time remaining bar for target */}
                     {target && phase === "playing" && (
                       <TargetTimerBar
                         target={target}
@@ -657,7 +650,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
           )}
         </div>
 
-        {/* Idle / Done overlays */}
         <AnimatePresence>
           {phase === "idle" && (
             <motion.div
@@ -756,7 +748,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] sm:text-xs text-slate-400">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full border-2 border-cyan-400 bg-cyan-500/20" />
@@ -780,7 +771,6 @@ export default function TargetTap({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Restart during game */}
       {phase === "playing" && (
         <Button
           variant="ghost"

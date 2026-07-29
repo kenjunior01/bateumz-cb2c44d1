@@ -472,7 +472,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
 
   return (
     <div className="relative w-full max-w-4xl mx-auto flex flex-col gap-3 p-2 sm:p-4 select-none">
-      {/* ── Scoreboard ── */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -512,7 +511,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </motion.div>
 
-      {/* ── Controls ── */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Button
@@ -535,7 +533,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         </Button>
       </div>
 
-      {/* ── Top player (opponent) ── */}
       <div className="flex flex-col items-center gap-1">
         <span className={cn('text-xs font-semibold flex items-center gap-1.5', colorClass(topIdx as 0 | 1))}>
           <div className={cn('w-2 h-2 rounded-full', dotColor(topIdx as 0 | 1))} />
@@ -567,7 +564,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </div>
 
-      {/* ── Chain area ── */}
       <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] flex flex-col gap-2">
         <AnimatePresence mode="wait">
           <motion.p
@@ -640,7 +636,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         )}
       </div>
 
-      {/* ── Bottom player (active) ── */}
       <div className="flex flex-col items-center gap-1.5">
         <span className={cn('text-xs font-semibold flex items-center gap-1.5', colorClass(bottomIdx as 0 | 1))}>
           <div className={cn('w-2 h-2 rounded-full', dotColor(bottomIdx as 0 | 1))} />
@@ -684,7 +679,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </div>
 
-      {/* ── Action buttons ── */}
       <AnimatePresence>
         {phase === 'playing' && isHumanTurn && (
           <motion.div
@@ -720,7 +714,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── Blocked indicator ── */}
       <AnimatePresence>
         {phase === 'playing' && !hasValidMove && boneyard.length === 0 && isHumanTurn && (
           <motion.div
@@ -734,7 +727,6 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── Round-over overlay ── */}
       <AnimatePresence>
         {phase === 'roundOver' && (
           <motion.div

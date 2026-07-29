@@ -104,7 +104,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Header stats */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-500" />
@@ -120,7 +119,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
         </div>
       </div>
 
-      {/* Player seat indicator */}
       <div className="flex items-center justify-center gap-2 py-2">
         <Crown className="h-4 w-4 text-amber-500" />
         <span className="text-sm font-bold">Na Cadeira Quente</span>
@@ -129,7 +127,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
         )}
       </div>
 
-      {/* Question card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -147,7 +144,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
         </motion.div>
       </AnimatePresence>
 
-      {/* Timer bar */}
       {timerActive && (
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
@@ -160,7 +156,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
         </div>
       )}
 
-      {/* Action buttons */}
       {!showResult && !timerActive && !isHost && (
         <div className="grid grid-cols-2 gap-3">
           <motion.button
@@ -203,7 +198,6 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
         </motion.div>
       )}
 
-      {/* Host controls */}
       {isHost && (
         <div className="flex gap-2 pt-2">
           <Button onClick={nextQuestion} variant="outline" className="flex-1 rounded-xl gap-1">

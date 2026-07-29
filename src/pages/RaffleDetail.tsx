@@ -207,7 +207,6 @@ const RaffleDetail = () => {
         </button>
 
         <div className="grid gap-8 lg:grid-cols-5">
-          {/* Left column - Raffle info */}
           <div className="lg:col-span-3 space-y-6">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="relative overflow-hidden rounded-2xl aspect-video bg-secondary">
               {raffle.image_url ? (
@@ -309,9 +308,7 @@ const RaffleDetail = () => {
             )}
           </div>
 
-          {/* Right column - Number selection or Social Entry */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Social raffle entry */}
             {(raffle.raffle_type === "social" || (raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0)) ? (
               <SocialRaffleEntry
                 raffleId={raffle.id}
@@ -392,7 +389,6 @@ const RaffleDetail = () => {
         </div>
       </div>
 
-      {/* Checkout Bottom Sheet */}
       <AnimatePresence>
         {checkoutStep > 0 && (
           <motion.div
@@ -409,7 +405,6 @@ const RaffleDetail = () => {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="w-full max-w-md md:rounded-2xl rounded-t-3xl bg-card border border-border shadow-2xl overflow-hidden max-h-[85vh] md:max-h-[80vh] flex flex-col"
             >
-              {/* Header */}
               {checkoutStep < 4 && (
                 <div className="px-5 pt-5 pb-3 border-b border-border shrink-0">
                   <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4 md:hidden" />
@@ -426,10 +421,8 @@ const RaffleDetail = () => {
                 </div>
               )}
 
-              {/* Content */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 <AnimatePresence mode="wait" custom={slideDirection}>
-                  {/* Step 1: Review + PayPal */}
                   {checkoutStep === 1 && (
                     <motion.div
                       key="review"
@@ -497,7 +490,6 @@ const RaffleDetail = () => {
                     </motion.div>
                   )}
 
-                  {/* Step 4: Success */}
                   {checkoutStep === 4 && (
                     <motion.div
                       key="success"
@@ -536,7 +528,6 @@ const RaffleDetail = () => {
                 </AnimatePresence>
               </div>
 
-              {/* Footer */}
               {checkoutStep === 1 && (
                 <div className="px-5 pb-5 pt-2 border-t border-border shrink-0">
                   <Button variant="outline" className="w-full" onClick={() => goToStep(0)}>

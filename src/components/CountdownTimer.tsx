@@ -46,7 +46,6 @@ const CountdownTimer = ({ targetDate }: Props) => {
 
   return (
     <div className="space-y-2">
-      {/* Urgency banner */}
       {isCritical && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}

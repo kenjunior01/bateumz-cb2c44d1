@@ -1,9 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
-const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
-
 interface UrusseProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
 
 /* Traditional Mancala / Bao board game */
@@ -264,7 +261,6 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
       <CapulanaBg />
 
       <div className="relative z-10 p-4 md:p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg flex items-center justify-center text-xl"
@@ -288,7 +284,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
               Semeie as sementes nos buracos. Capture as do adversario quando a ultima semente cair num buraco vazio do seu lado!
             </p>
             <div className="flex justify-center gap-2">
-              {_MODES.map((m) => (
+              {(["bot", "pvp"]).map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -297,7 +293,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
-                {_DIFFS.map((d) => (
+                {(["Facil", "Medio", "Dificil"]).map((d) => (
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}
@@ -312,9 +308,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
           <>
             {message && <p className="text-center text-xs mb-2" style={{ color: "#FFD700" }}>{message}</p>}
 
-            {/* Board */}
             <div className="space-y-1">
-              {/* P2 store + top row */}
               <div className="flex items-center gap-1">
                 <div className="w-12 h-16 rounded-lg flex items-center justify-center text-lg font-black shrink-0"
                   style={{ background: "linear-gradient(180deg, #8B6914, #556B2F)", color: "#FFD700", border: "2px solid rgba(139,105,20,0.5)" }}>
@@ -327,7 +321,6 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                       className={`relative rounded-lg py-2 flex flex-col items-center justify-center ${lastMove === i ? "ring-2 ring-yellow-400" : ""} ${currentPlayer === 1 && mode !== "bot" && pits[i] > 0 ? "cursor-pointer" : ""}`}
                       style={{ background: lastMove === i ? "rgba(255,215,0,0.15)" : "rgba(139,105,20,0.15)", border: "1px solid rgba(139,105,20,0.3)", minHeight: 56 }}>
                       <span className="text-lg font-black" style={{ color: "#FFD700" }}>{pits[i]}</span>
-                      {/* Seeds visualization */}
                       <div className="flex flex-wrap gap-0.5 justify-center mt-0.5">
                         {Array.from({ length: Math.min(pits[i], 8) }).map((_, s) => (
                           <div key={s} className="w-1.5 h-1.5 rounded-full" style={{ background: CAPULANA_COLORS[s % CAPULANA_COLORS.length] }} />
@@ -339,7 +332,6 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                 <div className="w-12 shrink-0" /> {/* spacer */}
               </div>
 
-              {/* P1 bottom row + store */}
               <div className="flex items-center gap-1">
                 <div className="w-12 shrink-0" /> {/* spacer */}
                 <div className="flex-1 grid grid-cols-6 gap-1">
@@ -364,13 +356,11 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
               </div>
             </div>
 
-            {/* Labels */}
             <div className="flex justify-between mt-2 text-[10px]" style={{ color: "#CD853F" }}>
               <span style={{ color: "#FF6B35" }}>{p2Label} (cima)</span>
               <span style={{ color: "#009140" }}>{p1Label} (baixo)</span>
             </div>
 
-            {/* Game over */}
             {phase === "gameOver" && (
               <div className="text-center mt-4 space-y-3">
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-5xl">🏆</motion.div>

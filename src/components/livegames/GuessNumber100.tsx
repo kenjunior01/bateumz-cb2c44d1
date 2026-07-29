@@ -392,7 +392,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
 
   return (
     <div className="w-full max-w-lg mx-auto p-4 space-y-4">
-      {/* Scoreboard */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-center gap-1 min-w-[80px]">
@@ -446,7 +445,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* START SCREEN */}
       {gameState === "start" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -470,7 +468,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             Quanto menos tentativas, mais pontos!
           </p>
 
-          {/* Mode Toggle */}
           <div className="flex flex-col items-center gap-3">
             <span className="text-white/40 text-xs">Modo de Jogo</span>
             <div className="flex items-center gap-2">
@@ -500,7 +497,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             </div>
           </div>
 
-          {/* Bot Difficulty */}
           {mode === "bot" && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -546,7 +542,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </motion.div>
       )}
 
-      {/* Game Info Bar */}
       {gameState !== "start" && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Badge
@@ -578,7 +573,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* Visual Number Line */}
       {gameState !== "start" && (
         <div className="py-2">
           <NumberLine
@@ -590,7 +584,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* New Round Overlay */}
       <AnimatePresence>
         {gameState === "new-round" && (
           <motion.div
@@ -619,7 +612,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Guessing State */}
       <AnimatePresence>
         {gameState === "guessing" && (
           <motion.div
@@ -628,7 +620,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-4"
           >
-            {/* Current Player Indicator */}
             <motion.div
               key={`player-indicator-${currentPlayer}`}
               initial={{ x: currentPlayer === 1 ? -50 : 50, opacity: 0 }}
@@ -670,7 +661,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               )}
             </motion.div>
 
-            {/* Input + Button (only for human player) */}
             {!(mode === "bot" && currentPlayer === 2) && (
               <div className="flex gap-2">
                 <input
@@ -709,7 +699,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               </div>
             )}
 
-            {/* Bot thinking display */}
             {mode === "bot" && currentPlayer === 2 && (
               <motion.div
                 className="flex items-center justify-center gap-3 py-4"
@@ -721,7 +710,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               </motion.div>
             )}
 
-            {/* Last Hint Animation */}
             <AnimatePresence>
               {lastHint && lastHint !== "correct" && (
                 <motion.div
@@ -764,7 +752,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Round Result */}
       <AnimatePresence>
         {gameState === "round-result" && roundWinner !== null && (
           <motion.div
@@ -829,7 +816,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Game Over */}
       <AnimatePresence>
         {gameState === "game-over" && (
           <motion.div
@@ -935,7 +921,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Guess History */}
       {guesses.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
@@ -1001,7 +986,6 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* Restart button (visible during game) */}
       {gameState !== "game-over" && gameState !== "new-round" && gameState !== "start" && (
         <div className="flex justify-center pt-2">
           <Button

@@ -349,7 +349,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      {/* Scoreboard */}
       <div className="rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-start gap-1">
@@ -391,12 +390,10 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Round dots */}
       <div className="flex items-center justify-center gap-2">
         {roundDots}
       </div>
 
-      {/* Main game area */}
       <AnimatePresence mode="wait">
         <motion.div
           key={`${gameState}-${currentRound}`}
@@ -414,7 +411,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
               : "border-slate-700"
           )}
         >
-          {/* WAITING STATE */}
           {gameState === "waiting" && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -445,7 +441,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
             </motion.div>
           )}
 
-          {/* COUNTDOWN STATE */}
           {gameState === "countdown" && (
             <>
               <motion.div
@@ -507,7 +502,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
             </>
           )}
 
-          {/* READY / GO STATE */}
           {gameState === "ready" && (
             <>
               <motion.div
@@ -534,7 +528,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                   JÁ!
                 </motion.span>
               </motion.div>
-              {/* Green flash rings */}
               <motion.div
                 initial={{ scale: 0, opacity: 0.6 }}
                 animate={{ scale: 4, opacity: 0 }}
@@ -555,7 +548,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
               >
                 AGORA! Toque o mais rápido possível!
               </motion.p>
-              {/* Live reaction times */}
               {p1Pressed && p1Time !== null && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -581,7 +573,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
             </>
           )}
 
-          {/* RESULT STATE */}
           {gameState === "result" && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -609,7 +600,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
               </motion.div>
 
               <div className="flex w-full items-center justify-center gap-6">
-                {/* P1 result card */}
                 <motion.div
                   initial={{ x: -30, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
@@ -659,7 +649,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                   VS
                 </motion.span>
 
-                {/* P2 result card */}
                 <motion.div
                   initial={{ x: 30, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
@@ -734,7 +723,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
             </motion.div>
           )}
 
-          {/* GAME OVER STATE */}
           {gameState === "gameOver" && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -787,7 +775,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                 </motion.div>
               )}
 
-              {/* Full round history */}
               <div className="flex w-full gap-4">
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
@@ -892,7 +879,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Mobile tap buttons */}
       {(gameState === "waiting" || gameState === "countdown" || gameState === "ready") && (
         <div className="flex gap-3">
           <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
@@ -952,7 +938,6 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* Bottom controls */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"

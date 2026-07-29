@@ -96,7 +96,7 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
           </div>
           <div><label className="text-xs text-muted-foreground mb-2 block">Dificuldade</label>
             <div className="flex gap-2">
-              {([['easy','Fácil','Grid3X3','from-green-500 to-emerald-500'],['medium','Médio','LayoutGrid','from-amber-500 to-orange-500'],['hard','Difícil','LayoutGrid','from-red-500 to-rose-500']] as const).map(([k,l,ic,gr]) => (
+              {([['easy','Fácil','Grid3X3','from-green-500 to-emerald-500'],['medium','Médio','LayoutGrid','from-amber-500 to-orange-500'],['hard','Difícil','LayoutGrid','from-red-500 to-rose-500']]).map(([k,l,ic,gr]) => (
                 <button key={k} onClick={() => setDifficulty(k as Difficulty)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-all border-2 ${difficulty === k ? `bg-gradient-to-r ${gr} text-white border-transparent` : 'border-border bg-card text-muted-foreground hover:border-primary/40'}`}>
                   {l}
                 </button>
@@ -111,7 +111,6 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
 
   return (
     <div className="space-y-4">
-      {/* Score bar */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div className={`flex items-center gap-2 ${currentPlayer === 1 ? 'scale-105' : 'opacity-70'} transition-transform`}>
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-white">{p1Name[0]}</div>
@@ -127,13 +126,11 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-xs font-bold text-white">{p2Name[0]}</div>
         </div>
       </div>
-      {/* Turn indicator */}
       <AnimatePresence mode="wait">
         <motion.div key={currentPlayer} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`text-center text-sm font-bold py-1 rounded-full ${currentPlayer === 1 ? 'bg-blue-500/10 text-blue-400' : 'bg-pink-500/10 text-pink-400'}`}>
           Vez de {currentPlayer === 1 ? p1Name : p2Name}
         </motion.div>
       </AnimatePresence>
-      {/* Card grid */}
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${g.cols}, 1fr)` }}>
         {cards.map((card) => (
           <motion.div key={card.id} whileTap={{ scale: 0.95 }} className={`aspect-square cursor-pointer perspective-500 ${card.matched ? 'opacity-60' : ''}`} onClick={() => handleFlip(card.id)}>
@@ -148,7 +145,6 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
           </motion.div>
         ))}
       </div>
-      {/* Winner overlay */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

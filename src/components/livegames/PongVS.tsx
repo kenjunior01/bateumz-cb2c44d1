@@ -524,7 +524,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
-      {/* ── Mode Selection Screen ── */}
       {phase === "idle" && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -532,7 +531,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
           transition={{ duration: 0.35, ease: "easeOut" }}
           className="w-full flex flex-col gap-4"
         >
-          {/* Title */}
           <div className="text-center">
             <motion.h2
               initial={{ opacity: 0, y: -8 }}
@@ -553,9 +551,7 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             </motion.p>
           </div>
 
-          {/* Mode Cards */}
           <div className="grid grid-cols-2 gap-3 w-full">
-            {/* Bot Mode Card */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -598,7 +594,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
               )}
             </motion.button>
 
-            {/* Local VS Card */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -642,7 +637,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             </motion.button>
           </div>
 
-          {/* ── Difficulty Selector (Bot Mode Only) ── */}
           <AnimatePresence mode="wait">
             {mode === "bot" && (
               <motion.div
@@ -697,7 +691,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             )}
           </AnimatePresence>
 
-          {/* ── Player Names ── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -727,7 +720,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             )}
           </motion.div>
 
-          {/* Start Button */}
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
@@ -737,7 +729,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             <Play className="h-4 w-4 fill-current" /> Começar Jogo
           </motion.button>
 
-          {/* Controls Info */}
           <div className="rounded-xl bg-muted/40 border border-border p-3 text-center">
             <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-1">
               Controles
@@ -754,7 +745,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         </motion.div>
       )}
 
-      {/* ── Score Bar ── */}
       {phase !== "idle" && (
         <div className="w-full flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
@@ -781,7 +771,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         </div>
       )}
 
-      {/* ── Canvas ── */}
       <div className="relative w-full" style={{ maxWidth: CANVAS_W }}>
         <canvas
           ref={canvasRef}
@@ -791,7 +780,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
           tabIndex={0}
         />
 
-        {/* Countdown Overlay */}
         <AnimatePresence>
           {phase === "countdown" && (
             <motion.div
@@ -808,7 +796,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
           )}
         </AnimatePresence>
 
-        {/* Winner Overlay */}
         <AnimatePresence>
           {phase === "done" && (
             <motion.div
@@ -840,7 +827,6 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         </AnimatePresence>
       </div>
 
-      {/* Controls Hint During Play */}
       {phase === "playing" && (
         <p className="text-[10px] text-muted-foreground text-center">
           {mode === "vs"

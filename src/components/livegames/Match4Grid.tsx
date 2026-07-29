@@ -515,7 +515,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
             !interactive && 'opacity-60',
           )}
         >
-          {/* Cells */}
           <div className="grid grid-cols-6 gap-1">
             {pl.grid.map((row, r) =>
               row.map((cell, c) => {
@@ -600,7 +599,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
             )}
           </div>
 
-          {/* Score popups */}
           <AnimatePresence>
             {pl.popups.map((pop) => (
               <motion.div
@@ -622,7 +620,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
             ))}
           </AnimatePresence>
 
-          {/* Combo text */}
           <AnimatePresence>
             {pl.comboShow > 0 && (
               <motion.div
@@ -640,7 +637,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
             )}
           </AnimatePresence>
 
-          {/* No-match feedback */}
           <AnimatePresence>
             {pl.noMatch && (
               <motion.div
@@ -658,7 +654,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
             )}
           </AnimatePresence>
 
-          {/* Overlay when not active */}
           {!interactive && (
             <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center pointer-events-none z-10" />
           )}
@@ -680,7 +675,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
      ============================================================ */
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-4xl mx-auto px-2 py-4 select-none">
-      {/* ---- Scoreboard ---- */}
       <div className="w-full bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-2xl px-3 sm:px-5 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="text-cyan-400 font-bold text-sm sm:text-lg truncate">
@@ -706,7 +700,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* ---- Timer & Duration ---- */}
       <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
         <div
           className={cn(
@@ -737,7 +730,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* ---- Status line / Game Over ---- */}
       <div className="h-10 flex items-center justify-center">
         {over ? (
           <motion.div
@@ -770,9 +762,7 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
         )}
       </div>
 
-      {/* ---- Grids ---- */}
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start overflow-x-auto w-full justify-center pb-1">
-        {/* Player 1 */}
         <div className="flex flex-col items-center gap-1.5">
           <span className="text-cyan-400 font-semibold text-xs sm:text-sm tracking-wide">
             {NAMES[0]}
@@ -780,14 +770,12 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
           {renderGrid(0)}
         </div>
 
-        {/* VS divider */}
         <div className="flex items-center justify-center py-2 sm:py-8">
           <span className="text-slate-600 font-extrabold text-xl sm:text-3xl select-none">
             VS
           </span>
         </div>
 
-        {/* Player 2 */}
         <div className="flex flex-col items-center gap-1.5">
           <span className="text-pink-400 font-semibold text-xs sm:text-sm tracking-wide">
             {NAMES[1]}
@@ -796,7 +784,6 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* ---- Controls ---- */}
       <div className="flex gap-3 mt-1">
         {!active && !over && (
           <Button

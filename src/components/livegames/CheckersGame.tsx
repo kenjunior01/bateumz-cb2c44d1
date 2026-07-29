@@ -406,7 +406,6 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-amber-900/30 to-red-900/30 border border-amber-500/20">
         <div className="text-center flex-1">
           <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -445,7 +444,6 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Turn indicator */}
       {!gameOver && (
         <div className="text-center">
           {botThinking ? (
@@ -460,7 +458,6 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
         </div>
       )}
 
-      {/* Board */}
       <div className="flex justify-center">
         <div className="rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border-2 border-amber-700/30">
           {board.map((row, r) => (
@@ -506,7 +503,6 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Betting panel */}
       {gameOver ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
           <div className="text-5xl">🏆</div>

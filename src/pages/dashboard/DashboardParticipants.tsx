@@ -311,7 +311,6 @@ export default function DashboardParticipants() {
         )}
       </AnimatePresence>
 
-      {/* Receipt Modal */}
       <AnimatePresence>
         {receiptModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

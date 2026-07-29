@@ -34,19 +34,14 @@ export default function TournamentLeaderboard({ standings }: TournamentLeaderboa
 
   return (
     <div className="space-y-2">
-      {/* Top 3 podium */}
       {standings.length >= 3 && (
         <div className="grid grid-cols-3 items-end gap-2 py-4">
-          {/* 2nd place */}
           <PodiumCard standing={standings[1]} position={2} t={t} />
-          {/* 1st place */}
           <PodiumCard standing={standings[0]} position={1} t={t} tall />
-          {/* 3rd place */}
           <PodiumCard standing={standings[2]} position={3} t={t} />
         </div>
       )}
 
-      {/* Full list */}
       <div className="space-y-1.5">
         <AnimatePresence>
           {standings.map((s, idx) => {
@@ -62,7 +57,6 @@ export default function TournamentLeaderboard({ standings }: TournamentLeaderboa
                   isTopThree ? "bg-accent/10" : "hover:bg-muted/50"
                 }`}
               >
-                {/* Rank badge */}
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                     RANK_STYLES[rank] ?? "bg-muted text-muted-foreground"
@@ -71,7 +65,6 @@ export default function TournamentLeaderboard({ standings }: TournamentLeaderboa
                   {rank}
                 </div>
 
-                {/* Avatar + name */}
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={s.avatar_url} />
                   <AvatarFallback className="text-xs">
@@ -91,7 +84,6 @@ export default function TournamentLeaderboard({ standings }: TournamentLeaderboa
                   </p>
                 </div>
 
-                {/* Points */}
                 <div className="text-right">
                   <p className={`text-sm font-bold ${isTopThree ? RANK_COLORS[rank] : ""}`}>
                     {s.total_points.toLocaleString("pt-BR")}

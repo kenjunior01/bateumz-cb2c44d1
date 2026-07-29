@@ -478,7 +478,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-4 relative">
       {showConfetti && <ConfettiParticles color={confettiColor} />}
 
-      {/* Scoreboard */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
         <motion.div
           className="flex items-center gap-2"
@@ -519,7 +518,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         </motion.div>
       </div>
 
-      {/* Round / Timer / Difficulty */}
       {gameState !== "idle" && (
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
           <span className="text-white/60 font-medium">
@@ -537,7 +535,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* Timer bar */}
       {gameState === "playing" && (
         <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
           <motion.div
@@ -549,7 +546,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         </div>
       )}
 
-      {/* IDLE STATE */}
       <AnimatePresence mode="wait">
         {gameState === "idle" && (
           <motion.div
@@ -572,7 +568,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               A dificuldade aumenta a cada rodada.
             </p>
 
-            {/* Mode Toggle */}
             <div className="flex flex-col items-center gap-3">
               <span className="text-white/40 text-xs">Modo de Jogo</span>
               <div className="flex items-center gap-2">
@@ -602,7 +597,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               </div>
             </div>
 
-            {/* Bot Difficulty */}
             {mode === "bot" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -695,7 +689,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* COUNTDOWN STATE */}
         {gameState === "countdown" && (
           <motion.div
             key="countdown"
@@ -719,7 +712,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* PLAYING STATE */}
         {gameState === "playing" && problem && (
           <motion.div
             key={"playing-" + currentRound}
@@ -728,7 +720,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             exit={{ opacity: 0 }}
             className="flex flex-col gap-4"
           >
-            {/* Problem Display */}
             <motion.div
               className="bg-white/5 border border-white/10 rounded-2xl px-6 py-8 sm:py-10 text-center relative overflow-hidden"
               initial={{ scale: 0.5, opacity: 0 }}
@@ -741,9 +732,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               </p>
             </motion.div>
 
-            {/* Player Inputs */}
             <div className={cn("grid gap-3 sm:gap-4 mt-2", mode === "bot" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
-              {/* Player 1 */}
               <motion.div
                 className={cn(
                   "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
@@ -795,7 +784,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 </div>
               </motion.div>
 
-              {/* Player 2 / Bot */}
               {mode === "bot" ? (
                 <motion.div
                   className={cn(
@@ -879,7 +867,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               )}
             </div>
 
-            {/* Stats Row */}
             <div className={cn("grid gap-3 mt-1 text-xs text-white/40 px-2", mode === "bot" ? "grid-cols-1" : "grid-cols-2")}>
               <div className="flex items-center gap-3">
                 <span className="text-cyan-400/70">Média: {p1AvgTime}s</span>
@@ -895,7 +882,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ROUND RESULT STATE */}
         {gameState === "roundResult" && roundResult && (
           <motion.div
             key={"result-" + currentRound}
@@ -954,7 +940,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* GAME OVER STATE */}
         {gameState === "gameOver" && (
           <motion.div
             key="gameOver"
@@ -1042,7 +1027,6 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Bottom controls */}
       {(gameState === "playing" || gameState === "roundResult") && (
         <div className="flex items-center justify-center gap-3 mt-2">
           <Button

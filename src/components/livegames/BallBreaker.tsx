@@ -864,7 +864,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
   /* ──────────────────────── JSX ──────────────────────── */
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-[720px] mx-auto select-none">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -894,7 +893,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
         </div>
       </motion.div>
 
-      {/* Scoreboard row */}
       <div className="flex items-center justify-between w-full max-w-[700px] px-1">
         <motion.div
           animate={{ scale: p1Ref.current.score > 0 ? [1, 1.05, 1] : 1 }}
@@ -927,7 +925,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
         </motion.div>
       </div>
 
-      {/* Canvas */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -948,7 +945,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
           }}
         />
 
-        {/* Overlay: idle */}
         <AnimatePresence>
           {phase === "idle" && (
             <motion.div
@@ -973,7 +969,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
                 </p>
               </div>
 
-              {/* Controls info */}
               <div className="flex gap-6 mt-1">
                 <div className="text-center">
                   <div className="text-cyan-400 text-[11px] font-bold">{P1_NAME}</div>
@@ -985,7 +980,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
                 </div>
               </div>
 
-              {/* Power-up legend */}
               <div className="flex gap-3 mt-2">
                 <div className="flex items-center gap-1 text-[10px]">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PU_COLORS.wide }} />
@@ -1012,7 +1006,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
           )}
         </AnimatePresence>
 
-        {/* Overlay: done */}
         <AnimatePresence>
           {phase === "done" && winner && (
             <motion.div
@@ -1076,7 +1069,6 @@ export default function BallBreaker({ onScore, liveCode }: Props) {
         </AnimatePresence>
       </motion.div>
 
-      {/* Bottom info */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

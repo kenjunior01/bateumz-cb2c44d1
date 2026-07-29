@@ -440,7 +440,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
 
   return (
     <div className="min-h-[540px] bg-gradient-to-b from-zinc-900 to-zinc-950 text-white flex flex-col items-center justify-center p-4 select-none overflow-hidden rounded-2xl border border-zinc-800/60 shadow-2xl">
-      {/* ── Score bar ── */}
       <AnimatePresence>
         {phase !== "idle" && (
           <motion.div
@@ -459,9 +458,7 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── Main content ── */}
       <AnimatePresence mode="wait">
-        {/* ==================== IDLE ==================== */}
         {phase === "idle" && (
           <motion.div
             key="idle"
@@ -531,7 +528,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== MEMORIZE ==================== */}
         {phase === "memorize" && (
           <motion.div
             key={`mem-${round}`}
@@ -551,7 +547,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </p>
             </motion.div>
 
-            {/* Progress bar */}
             <div className="w-full max-w-xs flex items-center gap-2">
               <div className="flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
                 <motion.div
@@ -566,7 +561,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </span>
             </div>
 
-            {/* Grid with staggered lit cells */}
             <div
               className="grid gap-2"
               style={{
@@ -594,7 +588,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== RECALL P1 / P2 ==================== */}
         {(phase === "recall_p1" || phase === "recall_p2") && (
           <motion.div
             key={phase}
@@ -602,7 +595,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className="flex flex-col items-center gap-3"
           >
-            {/* Player banner */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -621,7 +613,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               Toque nas células que se lembra do padrão
             </p>
 
-            {/* Grid */}
             <div
               className="grid gap-2"
               style={{
@@ -663,7 +654,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== FEEDBACK P1 ==================== */}
         {phase === "feedback_p1" && (
           <motion.div
             key="feedback_p1"
@@ -708,7 +698,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== FEEDBACK P2 ==================== */}
         {phase === "feedback_p2" && (
           <motion.div
             key="feedback_p2"
@@ -753,7 +742,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== ROUND RESULT ==================== */}
         {phase === "round_result" && (
           <motion.div
             key={`result-${round}`}
@@ -765,7 +753,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               Resultado da Rodada {round + 1}
             </p>
 
-            {/* Winner banner */}
             <AnimatePresence>
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -787,7 +774,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </motion.div>
             </AnimatePresence>
 
-            {/* Pattern reveal */}
             <div
               className="grid gap-1.5"
               style={{
@@ -811,7 +797,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
             </div>
             <p className="text-zinc-500 text-[11px]">Padrão correto</p>
 
-            {/* Player results cards */}
             <div className="grid grid-cols-2 gap-3 w-full">
               {(
                 [
@@ -864,7 +849,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               ))}
             </div>
 
-            {/* Running totals */}
             <div className="flex items-center gap-4 text-sm mt-1">
               <span className="text-cyan-400 font-bold">J1: {p1Total}</span>
               <span className="text-zinc-600">—</span>
@@ -881,7 +865,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== GAME OVER ==================== */}
         {phase === "game_over" && (
           <motion.div
             key="game_over"
@@ -900,7 +883,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
 
             <h2 className="text-2xl sm:text-3xl font-extrabold">Resultado Final</h2>
 
-            {/* Winner banner */}
             {p1Total > p2Total && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -935,7 +917,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </motion.div>
             )}
 
-            {/* Final score comparison */}
             <div className="flex items-center gap-6 mt-1">
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
@@ -958,7 +939,6 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </motion.div>
             </div>
 
-            {/* Score bar */}
             {p1Total + p2Total > 0 && (
               <div className="w-full max-w-xs h-3 bg-zinc-800 rounded-full overflow-hidden flex mt-1">
                 <motion.div

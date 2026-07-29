@@ -186,7 +186,6 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black p-4 flex items-center justify-center">
       <Card className="w-full max-w-2xl border-white/10 bg-black/50 backdrop-blur-xl overflow-hidden">
-        {/* Header */}
         <CardHeader className="bg-gradient-to-r from-primary/20 to-blue-500/20 border-b border-white/10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -207,7 +206,6 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
             </div>
           </div>
 
-          {/* Progress Bar */}
           <Progress value={timePercentage} className="mb-4 h-2" />
 
           <div className="flex items-center justify-between">
@@ -220,13 +218,11 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
           </div>
         </CardHeader>
 
-        {/* Content */}
         <CardContent className="p-8 space-y-6">
           <h2 className="text-2xl font-bold text-white">
             {currentChallenge.question}
           </h2>
 
-          {/* Options */}
           <div className="grid gap-3">
             {currentChallenge.options.map((option, index) => (
               <motion.button
@@ -256,7 +252,6 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
             ))}
           </div>
 
-          {/* Result & Next Button */}
           <AnimatePresence>
             {answered && (
               <motion.div

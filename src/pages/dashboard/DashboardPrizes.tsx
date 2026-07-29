@@ -102,7 +102,6 @@ export default function DashboardPrizes() {
         ))}
       </div>
 
-      {/* Winners Section */}
       {completed.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass border-yellow-500/20">
@@ -138,7 +137,6 @@ export default function DashboardPrizes() {
         </motion.div>
       )}
 
-      {/* Active Prizes */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card className="glass">
           <CardHeader>

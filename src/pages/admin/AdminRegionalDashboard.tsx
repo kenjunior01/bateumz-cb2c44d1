@@ -165,7 +165,6 @@ export default function AdminRegionalDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Globe className="h-6 w-6 text-primary" />
         <h1 className="font-display text-2xl font-bold">
@@ -191,7 +190,6 @@ export default function AdminRegionalDashboard() {
         )}
       </div>
 
-      {/* Stats Cards */}
       {currentRegion && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
@@ -258,7 +256,6 @@ export default function AdminRegionalDashboard() {
         </div>
       )}
 
-      {/* Tabs */}
       {currentRegion && (
         <Tabs defaultValue="raffles" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -267,7 +264,6 @@ export default function AdminRegionalDashboard() {
             <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
 
-          {/* Recent Raffles */}
           <TabsContent value="raffles" className="space-y-4">
             <Card>
               <CardHeader>
@@ -309,7 +305,6 @@ export default function AdminRegionalDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Top Users */}
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
@@ -340,7 +335,6 @@ export default function AdminRegionalDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Settings */}
           <TabsContent value="settings" className="space-y-4">
             <Card>
               <CardHeader>

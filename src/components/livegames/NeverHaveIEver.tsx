@@ -93,7 +93,6 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Statement card */}
       <div className={cn("relative rounded-3xl p-8 text-center text-white overflow-hidden", COLORS[currentIndex % COLORS.length])}>
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative z-10">
@@ -118,7 +117,6 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
         </div>
       </div>
 
-      {/* Vote buttons */}
       {!revealed ? (
         <div className="grid grid-cols-2 gap-3">
           <motion.button
@@ -145,7 +143,6 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-3"
           >
-            {/* Results bar */}
             <div className="relative h-12 rounded-2xl overflow-hidden bg-blue-500/10">
               <div
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-2xl transition-all duration-700 ease-out"
@@ -165,7 +162,6 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
         </AnimatePresence>
       )}
 
-      {/* Controls */}
       <div className="flex gap-2">
         <Button onClick={nextStatement} variant="outline" className="flex-1 rounded-xl">
           Próximo <ArrowRight className="h-4 w-4 ml-1" />
@@ -180,7 +176,6 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
         )}
       </div>
 
-      {/* Add custom statement */}
       <AnimatePresence>
         {showAdd && isHost && (
           <motion.div

@@ -152,7 +152,7 @@ export default function AdminPayments() {
           <Input placeholder="Pesquisar pagamentos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <div className="flex gap-2">
-          {(["all", "pending", "completed", "rejected"] as const).map((f) => (
+          {(["all", "pending", "completed", "rejected"]).map((f) => (
             <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)}>
               {f === "all" ? "Todos" : f === "pending" ? "Pendentes" : f === "completed" ? "Aprovados" : "Rejeitados"}
             </Button>
@@ -256,7 +256,6 @@ export default function AdminPayments() {
         </CardContent>
       </Card>
 
-      {/* Receipt Modal */}
       <Dialog open={!!receiptModal} onOpenChange={() => setReceiptModal(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

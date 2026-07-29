@@ -113,7 +113,6 @@ export default function NotificationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Permission status + toggle */}
         <div className="flex items-center justify-between rounded-xl bg-secondary/30 p-3">
           <div className="flex items-center gap-2">
             {permission === 'granted' ? (
@@ -140,14 +139,12 @@ export default function NotificationSettings() {
           </div>
         </div>
 
-        {/* Re-request button if denied */}
         {permission === 'denied' && (
           <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {t('push.denied')} — Verifique as configurações do navegador para permitir notificações.
           </p>
         )}
 
-        {/* Preference toggles */}
         <div className="space-y-2">
           {PREF_KEYS.map(({ key, labelKey }) => (
             <div
@@ -164,7 +161,6 @@ export default function NotificationSettings() {
           ))}
         </div>
 
-        {/* Test notification button */}
         {permission === 'granted' && (
           <Button
             variant="outline"

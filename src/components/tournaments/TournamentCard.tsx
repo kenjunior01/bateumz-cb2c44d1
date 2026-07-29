@@ -62,7 +62,6 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
         onClick={onClick}
       >
         <CardContent className="p-4 space-y-3">
-          {/* Header row */}
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-bold text-base leading-tight line-clamp-2">
               {tournament.name}
@@ -72,7 +71,6 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
             </Badge>
           </div>
 
-          {/* Date range */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             <span>
@@ -80,7 +78,6 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
             </span>
           </div>
 
-          {/* Prize */}
           {tournament.prize_description && (
             <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
               <Gift className="h-3.5 w-3.5" />
@@ -93,7 +90,6 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
             </div>
           )}
 
-          {/* Progress bar */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{t("tournament.progress")}</span>
@@ -102,7 +98,6 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
             <Progress value={progress} className="h-2" />
           </div>
 
-          {/* Footer */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {tournament.max_participants != null && (
               <div className="flex items-center gap-1">

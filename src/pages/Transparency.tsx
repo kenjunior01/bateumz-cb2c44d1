@@ -70,7 +70,6 @@ const Transparency = () => {
         </div>
       </section>
 
-      {/* How verification works — visual guide */}
       <section className="container mx-auto px-4 pb-8">
         <div className="max-w-3xl mx-auto rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-card p-6">
           <h2 className="font-display text-lg font-bold text-foreground mb-4 text-center">
@@ -92,7 +91,6 @@ const Transparency = () => {
         </div>
       </section>
 
-      {/* Per-raffle verification from winner links */}
       {raffleId && (
         <section className="container mx-auto px-4 pb-8">
           <div className="max-w-3xl mx-auto rounded-2xl border-2 border-primary/30 bg-card p-6">

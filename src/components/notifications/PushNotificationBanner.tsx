@@ -61,12 +61,10 @@ export default function PushNotificationBanner() {
           className="fixed top-0 left-0 right-0 z-[100] flex justify-center px-3 pt-3 sm:px-4 sm:pt-4"
         >
           <div className="relative flex w-full max-w-2xl items-center gap-3 rounded-xl border border-primary/20 bg-card/95 px-4 py-3 shadow-lg backdrop-blur-md sm:gap-4 sm:px-5 sm:py-3.5">
-            {/* Bell icon */}
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 sm:h-10 sm:w-10">
               <Bell className="h-5 w-5 text-primary sm:h-5 sm:w-5" />
             </div>
 
-            {/* Text */}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">{t('push.enable')}</p>
               <p className="truncate text-xs text-muted-foreground sm:text-sm">
@@ -74,7 +72,6 @@ export default function PushNotificationBanner() {
               </p>
             </div>
 
-            {/* Activate button */}
             <Button
               size="sm"
               className="shrink-0 gap-1.5"
@@ -85,7 +82,6 @@ export default function PushNotificationBanner() {
               {t('push.activate')}
             </Button>
 
-            {/* Dismiss */}
             <button
               onClick={handleDismiss}
               className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 sm:-right-2 sm:-top-2 sm:h-7 sm:w-7"

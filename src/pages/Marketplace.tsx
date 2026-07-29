@@ -199,7 +199,7 @@ const Marketplace = () => {
       <div>
         <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar</p>
         <div className="flex flex-wrap gap-2">
-          {(["newest", "ending", "popular"] as const).map((s) => (
+          {(["newest", "ending", "popular"]).map((s) => (
             <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
               {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
             </Button>
@@ -210,7 +210,7 @@ const Marketplace = () => {
         <div>
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidade de sorteio</p>
           <div className="flex flex-wrap gap-2">
-            {(["all", "paid", "free", "points"] as const).map((t) => (
+            {(["all", "paid", "free", "points"]).map((t) => (
               <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
                 {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
@@ -258,14 +258,12 @@ const Marketplace = () => {
     (showGames && games.length > 0);
 
   return (
-    <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
-      {/* Desktop navbar */}
+    <div className="min-h-screen bg-background">
       <div className="hidden md:block">
         <Navbar />
       </div>
 
       <div className="container mx-auto px-4 md:pt-28 pb-20">
-        {/* Mobile sticky header (Meituan) */}
         <MobileDiscoveryHeader
           title={t("marketplace.title")}
           searchValue={search}
@@ -277,13 +275,11 @@ const Marketplace = () => {
           onOpenFilters={() => setFilterSheetOpen(true)}
         />
 
-        {/* Desktop title */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 hidden md:block">
           <h1 className="font-display text-4xl font-bold text-foreground mb-2">{t("marketplace.title")}</h1>
           <p className="text-muted-foreground text-lg">{t("marketplace.subtitle")}</p>
         </motion.div>
 
-        {/* Desktop search + filter */}
         <div className="hidden md:flex flex-col gap-3 mb-8">
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -333,7 +329,6 @@ const Marketplace = () => {
           )}
         </div>
 
-        {/* Mobile filter sheet */}
         <MobileFilterSheet
           open={filterSheetOpen && isMobile}
           onOpenChange={setFilterSheetOpen}
@@ -359,7 +354,6 @@ const Marketplace = () => {
           </div>
         ) : (
           <div className="space-y-10">
-            {/* Games Section */}
             {showGames && games.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="flex items-center gap-2 mb-4">
@@ -407,7 +401,6 @@ const Marketplace = () => {
               </motion.div>
             )}
 
-            {/* Contests Section */}
             {showContests && filteredContests.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 {contentType === "all" && (
@@ -479,7 +472,6 @@ const Marketplace = () => {
               </motion.div>
             )}
 
-            {/* Raffles Section */}
             {showRaffles && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 {contentType === "all" && filteredRaffles.length > 0 && (
@@ -566,7 +558,6 @@ const Marketplace = () => {
               </motion.div>
             )}
 
-            {/* No contests message */}
             {showContests && filteredContests.length === 0 && contentType === "contests" && (
               <div className="text-center py-20">
                 <Trophy className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />

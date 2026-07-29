@@ -74,7 +74,6 @@ export default function LiveLeaderboard({ contestId, evaluationType }: Props) {
         />
       </div>
       <div className="flex items-end justify-center gap-3 sm:gap-6">
-        {/* Reorder for podium: 2nd, 1st, 3rd */}
         {[leaders[1], leaders[0], leaders[2]].filter(Boolean).map((entry, visualIdx) => {
           const realRank = visualIdx === 0 ? 2 : visualIdx === 1 ? 1 : 3;
           const height = realRank === 1 ? "h-20" : realRank === 2 ? "h-14" : "h-10";

@@ -63,7 +63,6 @@ const TrustSignals = () => {
           ))}
         </div>
 
-        {/* How it works — replaces placeholder testimonials */}
         <div className="text-center mb-6">
           <h3 className="font-display text-lg font-bold text-foreground mb-1">
             {t("trust.howTitle")}

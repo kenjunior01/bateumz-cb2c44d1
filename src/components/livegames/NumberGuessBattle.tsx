@@ -73,7 +73,7 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
           </div>
           <div><label className="text-xs text-muted-foreground mb-2 block">Faixa do número secreto</label>
             <div className="flex gap-2">
-              {(['1-50','1-100','1-200'] as const).map(r => (
+              {(['1-50','1-100','1-200']).map(r => (
                 <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold border-2 transition-all ${range === r ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent' : 'border-border bg-card text-muted-foreground'}`}>{r}</button>
               ))}
             </div>
@@ -86,7 +86,6 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
 
   return (
     <div className="space-y-4">
-      {/* Turn indicator */}
       <div className="text-center">
         <AnimatePresence mode="wait">
           <motion.div key={currentPlayer} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${currentPlayer === 1 ? 'bg-cyan-500/10 text-cyan-400' : 'bg-fuchsia-500/10 text-fuchsia-400'}`}>
@@ -96,7 +95,6 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Player 1 */}
         <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 1 ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-border bg-card opacity-60'}`}>
           <div className="flex items-center justify-between">
             <span className="font-bold text-sm">{p1Name}</span>
@@ -110,7 +108,6 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
           {p1Guesses.length > 0 && <div className="flex flex-wrap gap-1">{p1Guesses.map((g, i) => <Badge key={i} variant="outline" className="text-[10px]">{g}</Badge>)}</div>}
         </div>
 
-        {/* Player 2 */}
         <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 2 ? 'border-fuchsia-500/50 bg-fuchsia-500/5' : 'border-border bg-card opacity-60'}`}>
           <div className="flex items-center justify-between">
             <span className="font-bold text-sm">{p2Name}</span>
@@ -125,7 +122,6 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
         </div>
       </div>
 
-      {/* Winner */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

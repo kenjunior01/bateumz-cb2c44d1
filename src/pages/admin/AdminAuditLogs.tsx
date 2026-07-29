@@ -120,7 +120,6 @@ export default function AdminAuditLogs() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Total", value: stats.total, icon: ScrollText, color: "text-primary" },
@@ -142,7 +141,6 @@ export default function AdminAuditLogs() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -158,7 +156,6 @@ export default function AdminAuditLogs() {
         </div>
       </div>
 
-      {/* Timeline */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">

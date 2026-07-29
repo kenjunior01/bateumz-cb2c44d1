@@ -233,7 +233,6 @@ const SupportChatbot = () => {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className="fixed bottom-36 right-4 lg:bottom-24 lg:right-6 z-40 w-[calc(100vw-2rem)] sm:w-96 max-h-[70vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
           >
-            {/* ── Header ── */}
             <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-accent/10 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -256,7 +255,6 @@ const SupportChatbot = () => {
               </Button>
             </div>
 
-            {/* ── Quick Actions ── */}
             {showQuickActions && messages.length <= 2 && (
               <div className="px-3 py-2.5 border-b border-border bg-background/50">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
@@ -280,7 +278,6 @@ const SupportChatbot = () => {
               </div>
             )}
 
-            {/* ── Messages ── */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.map((m, i) => (
                 <motion.div
@@ -324,7 +321,6 @@ const SupportChatbot = () => {
               <div ref={endRef} />
             </div>
 
-            {/* ── Suggestions ── */}
             <AnimatePresence>
               {messages.length > 0 &&
                 messages[messages.length - 1].role === "assistant" &&
@@ -350,7 +346,6 @@ const SupportChatbot = () => {
                 )}
             </AnimatePresence>
 
-            {/* ── Quick Questions ── */}
             {messages.length <= 2 && (
               <div className="px-3 pb-2 flex flex-wrap gap-1.5">
                 {QUICK_QUESTIONS.map((q) => (
@@ -365,7 +360,6 @@ const SupportChatbot = () => {
               </div>
             )}
 
-            {/* ── Input ── */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();

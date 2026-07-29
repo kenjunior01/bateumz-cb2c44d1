@@ -113,7 +113,6 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Amount selection */}
           <div>
             <Label className="text-xs text-muted-foreground mb-2 block">Escolha o valor</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -161,7 +160,6 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
             )}
           </div>
 
-          {/* Message */}
           <div>
             <Label className="text-xs text-muted-foreground mb-2 block">Mensagem (opcional)</Label>
             <Input
@@ -172,7 +170,6 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
             />
           </div>
 
-          {/* Preview */}
           {selectedTier && (
             <div className={`rounded-xl p-3 bg-gradient-to-r ${selectedTier.color} text-white`}>
               <p className="text-[10px] uppercase tracking-widest opacity-80 mb-1">Pré-visualização</p>
@@ -186,7 +183,6 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
             </div>
           )}
 
-          {/* Recent tips */}
           {recentTips.length > 0 && (
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Gorjetas recentes</p>
@@ -201,7 +197,6 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
             </div>
           )}
 
-          {/* Send button */}
           <Button
             onClick={handleSend}
             disabled={sending || (!showAmountInput ? selectedAmount < 1 : !parseFloat(customAmount))}

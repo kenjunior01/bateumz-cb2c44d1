@@ -225,7 +225,6 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
         backgroundPosition: 'center'
       }}
     >
-      {/* Background Overlay for better contrast */}
       <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
       <div className="relative z-10 text-center mb-12">
@@ -250,7 +249,6 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
       </div>
 
       <div className="relative z-10 mb-12">
-        {/* Pointer */}
         <div 
           className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 w-0 h-0 
                     border-l-[20px] border-l-transparent 
@@ -274,7 +272,6 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
             className="w-full max-w-lg drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]" 
           />
           
-          {/* Center Button */}
           <button
             onClick={spinWheel}
             disabled={isSpinning}
@@ -298,7 +295,6 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
         </motion.div>
       </div>
 
-      {/* Winner Modal */}
       <AnimatePresence>
         {winner && !isSpinning && (
           <motion.div
@@ -333,7 +329,6 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Customization Panel */}
       {editable && (
         <div className="fixed bottom-8 right-8 z-40">
           <Sheet>

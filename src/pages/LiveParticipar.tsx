@@ -107,7 +107,6 @@ const SpectatorBingo = ({ scheduledLiveId, liveCode }: { scheduledLiveId?: strin
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Drawn numbers display */}
           {game.drawn_numbers && game.drawn_numbers.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {game.drawn_numbers.slice(-12).map((n) => (
@@ -118,7 +117,6 @@ const SpectatorBingo = ({ scheduledLiveId, liveCode }: { scheduledLiveId?: strin
             </div>
           )}
 
-          {/* Bingo card grid */}
           <div className="grid grid-cols-5 gap-1">
             {BINGO_HEADER.map((h, i) => (
               <div key={h} className="h-7 rounded-lg bg-primary/20 text-primary text-xs font-black flex items-center justify-center">
@@ -384,7 +382,6 @@ const LiveParticipar = () => {
     <div className="min-h-screen bg-background pb-16 lg:pb-0">
       <FloatingReactions scheduledLiveId={scheduledLiveId} liveCode={liveCode || undefined} />
 
-      {/* Tip animation overlay */}
       <AnimatePresence>
         {recentTips.map((tip, i) => (
           <motion.div
@@ -407,7 +404,6 @@ const LiveParticipar = () => {
       </AnimatePresence>
 
       <div className="max-w-2xl mx-auto flex flex-col h-screen lg:h-screen">
-        {/* Top bar */}
         <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/40 bg-background/80 backdrop-blur-sm z-10">
           <div className="flex items-center gap-3">
             <Link to="/lives-agora">
@@ -442,20 +438,17 @@ const LiveParticipar = () => {
           </div>
         </div>
 
-        {/* Video / Stream area */}
         <div className="shrink-0 relative bg-gradient-to-br from-primary/20 via-background to-accent/10 aspect-video max-h-[40vh] lg:max-h-[50vh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
           <div className="relative z-20 text-center">
             <p className="text-5xl font-black text-white/10 select-none">BATEU</p>
             <p className="text-xs text-white/40 mt-1">Plataforma de Entretenimento</p>
           </div>
-          {/* Live game indicator */}
           <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2">
             <Badge className="bg-black/40 backdrop-blur-sm text-white border-0 text-[10px] rounded-full gap-1">
               <Gamepad2 className="h-3 w-3" /> Jogos ativos
             </Badge>
           </div>
-          {/* Viewer count overlay */}
           <div className="absolute top-3 right-3 z-20">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white text-[10px]">
               <Eye className="h-3 w-3" /> {viewerCount}
@@ -463,7 +456,6 @@ const LiveParticipar = () => {
           </div>
         </div>
 
-        {/* Panel tabs - mobile bottom sheet style */}
         <div className="shrink-0 flex items-center gap-1 px-4 py-2 border-b border-border/40 overflow-x-auto">
           {[
             { id: "chat" as const, label: "Chat", icon: Zap },
@@ -488,10 +480,8 @@ const LiveParticipar = () => {
           })}
         </div>
 
-        {/* Main content area - scrollable */}
         <div className="flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
-            {/* CHAT PANEL */}
             {activePanel === "chat" && (
               <motion.div
                 key="chat"
@@ -553,7 +543,6 @@ const LiveParticipar = () => {
                   <div ref={chatEndRef} />
                 </div>
 
-                {/* Emoji quick reactions */}
                 <div className="shrink-0 flex items-center gap-1 px-4 py-1.5 overflow-x-auto">
                   {EMOJI_QUICK.map((emoji) => (
                     <button
@@ -566,7 +555,6 @@ const LiveParticipar = () => {
                   ))}
                 </div>
 
-                {/* Chat input */}
                 <div className="shrink-0 flex gap-2 px-4 py-3 border-t border-border/40 bg-background">
                   <Input
                     value={chatInput}
@@ -589,7 +577,6 @@ const LiveParticipar = () => {
               </motion.div>
             )}
 
-            {/* GAMES PANEL */}
             {activePanel === "games" && (
               <motion.div
                 key="games"
@@ -617,7 +604,6 @@ const LiveParticipar = () => {
               </motion.div>
             )}
 
-            {/* BINGO PANEL */}
             {activePanel === "bingo" && (
               <motion.div
                 key="bingo"

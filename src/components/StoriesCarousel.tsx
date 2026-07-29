@@ -314,7 +314,6 @@ const StoriesCarousel = () => {
                   className="flex flex-col items-center gap-1.5 shrink-0 snap-start group"
                 >
                   <div className="relative">
-                    {/* Static gradient ring (no infinite rotation = stable on mobile) */}
                     {!viewed && (
                       <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${typeRing[story.type]}`} />
                     )}
@@ -329,14 +328,12 @@ const StoriesCarousel = () => {
                         ) : (
                           <story.icon className="h-6 w-6 text-white drop-shadow" />
                         )}
-                        {/* Shine sweep on hover */}
                         <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
                           <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Time-remaining mini badge */}
                     <div className="absolute -bottom-0.5 -right-0.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-background border border-border text-[8px] font-semibold text-muted-foreground shadow-sm">
                       <Clock className="h-2 w-2" />
                       {formatRemaining(story.createdAt)}
@@ -354,7 +351,6 @@ const StoriesCarousel = () => {
         </div>
       </section>
 
-      {/* Fullscreen Story Viewer */}
       <AnimatePresence>
         {activeStory && (
           <motion.div
@@ -364,7 +360,6 @@ const StoriesCarousel = () => {
             className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
             onClick={() => setActiveStory(null)}
           >
-            {/* Progress bars */}
             <div className="absolute top-4 left-4 right-4 flex gap-1 z-10">
               {stories.map((s, i) => {
                 const activeIdx = stories.findIndex((st) => st.id === activeStory.id);
@@ -407,12 +402,10 @@ const StoriesCarousel = () => {
                 if (activeStory.link) navigate(activeStory.link);
               }}
             >
-              {/* Background image for user stories with picture */}
               {activeStory.type === "user" && activeStory.image && (
                 <OptimizedImage src={activeStory.image} alt="" optimizeWidth={720} priority className="absolute inset-0 w-full h-full object-cover" />
               )}
 
-              {/* Static decorative blobs */}
               <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-black/30 blur-3xl pointer-events-none" />
 
@@ -466,7 +459,6 @@ const StoriesCarousel = () => {
               </div>
             </motion.div>
 
-            {/* Navigate stories */}
             <button
               className="absolute left-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-2"
               onClick={(e) => {

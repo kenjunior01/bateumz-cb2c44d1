@@ -287,7 +287,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
     <div className="min-w-[340px] max-w-lg mx-auto">
       <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-5">
 
-        {/* Scoreboard */}
         <div className="bg-gradient-to-r from-violet-900/30 to-fuchsia-900/30 border border-violet-500/20 rounded-xl px-4 py-3 flex items-center justify-between">
           <div className="flex flex-col items-center gap-1 min-w-[70px]">
             <div className={cn(
@@ -358,7 +357,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           </div>
         </div>
 
-        {/* Controls row */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Button
@@ -410,7 +408,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           </div>
         </div>
 
-        {/* Status */}
         <div className="flex flex-col items-center gap-2">
           <AnimatePresence mode="wait">
             <motion.div
@@ -447,7 +444,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
             </motion.div>
           </AnimatePresence>
 
-          {/* Round / Nível info */}
           {gameState !== 'idle' && (
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="text-xs border-slate-600 text-slate-300">
@@ -459,7 +455,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
             </div>
           )}
 
-          {/* Progress bar */}
           {gameState === 'input' && sequence.length > 0 && !(mode === 'bot' && currentPlayer === 2) && (
             <div className="w-full max-w-xs h-1.5 bg-slate-800 rounded-full overflow-hidden">
               <motion.div
@@ -475,7 +470,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           )}
         </div>
 
-        {/* Game board - 2x2 grid */}
         <div className="flex items-center justify-center">
           <AnimatePresence>
             {gameState === 'gameOver' && (
@@ -570,7 +564,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
                       : 'none',
                   }}
                 >
-                  {/* Ripple effect on tap */}
                   <AnimatePresence>
                     {isTapping && (
                       <motion.div
@@ -586,7 +579,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
                     )}
                   </AnimatePresence>
 
-                  {/* Flash glow overlay */}
                   {isFlashing && (
                     <motion.div
                       className="absolute inset-0 rounded-3xl"
@@ -605,7 +597,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           </div>
         </div>
 
-        {/* Bottom controls */}
         <div className="flex items-center justify-between">
           <div className="text-xs text-slate-500">
             {gameState !== 'idle' && (
@@ -660,7 +651,6 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           </div>
         </div>
 
-        {/* Sequence length visual indicator */}
         {sequence.length > 0 && gameState !== 'idle' && (
           <div className="flex items-center justify-center gap-1 flex-wrap">
             {sequence.map((colorIdx, i) => (

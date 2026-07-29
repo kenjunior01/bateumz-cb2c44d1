@@ -260,7 +260,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
 
   return (
     <div className="space-y-5 relative">
-      {/* Confetti */}
       <AnimatePresence>
         {showConfetti && (
           <div className="fixed inset-0 pointer-events-none z-50">
@@ -277,7 +276,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         )}
       </AnimatePresence>
 
-      {/* Success Banner if already submitted */}
       {entryStatus === "approved" && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="overflow-hidden border-0 shadow-lg">
@@ -316,7 +314,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         </motion.div>
       )}
 
-      {/* Hero Banner */}
       <Card className="overflow-hidden border-0 shadow-xl">
         <div className="relative bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 p-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.15),transparent_50%)]" />
@@ -353,7 +350,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         </div>
       </Card>
 
-      {/* Username */}
       {isEditable && (
         <Card className="glass">
           <CardContent className="p-4">
@@ -371,7 +367,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         </Card>
       )}
 
-      {/* Mission Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -453,7 +448,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                     )}
                   </div>
 
-                  {/* Proof upload section - optional, gives bonus points */}
                   {completed && isEditable && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                       className="border-t border-border pt-3">
@@ -501,7 +495,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
                     </motion.div>
                   )}
 
-                  {/* Show existing proof if not editable */}
                   {!isEditable && proofUrls[actionKey] && (
                     <div className="border-t border-border pt-3">
                       <img src={proofUrls[actionKey]} alt="Comprovativo" className="w-full h-24 object-cover rounded-lg" />
@@ -514,7 +507,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         })}
       </div>
 
-      {/* Number Selection - appears after completing all missions */}
       {isEditable && allCompleted && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="overflow-hidden border-0 shadow-xl border-primary/20">
@@ -571,7 +563,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         </motion.div>
       )}
 
-      {/* Submit Button */}
       {isEditable && (
         <motion.div className="space-y-3">
           <Button onClick={handleSubmit}
@@ -590,7 +581,6 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
         </motion.div>
       )}
 
-      {/* How it works */}
       <Card className="glass overflow-hidden">
         <CardContent className="p-0">
           <div className="bg-gradient-to-r from-primary/5 to-accent/5 px-5 py-3 border-b border-border/50">

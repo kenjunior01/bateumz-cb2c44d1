@@ -123,7 +123,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
 
   return (
     <div className="space-y-4">
-      {/* Scoreboard - always visible during battle */
       {(phase === "battle" || phase === "voting") && (
         <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30">
           <div className="text-center flex-1">
@@ -140,7 +139,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
         </div>
       )}
 
-      {/* SETUP PHASE */}
       {phase === "setup" && (
         <div className="text-center py-8 space-y-6">
           <div className="text-6xl">⚔️</div>
@@ -157,10 +155,8 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
         </div>
       )}
 
-      {/* BATTLE PHASE */}
       {phase === "battle" && (
         <div className="space-y-4">
-          {/* Current player indicator */}
           <div className="text-center">
             <Badge className={cn("text-sm", currentPlayer === 1 ? "bg-primary" : "bg-rose-500")}>
               <Crown className="h-3.5 w-3.5 mr-1" />
@@ -168,7 +164,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
             </Badge>
           </div>
 
-          {/* Challenge card */}
           <AnimatePresence mode="wait">
             <motion.div
               key={`${currentRound}-${currentPlayer}`}
@@ -185,7 +180,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
             </motion.div>
           </AnimatePresence>
 
-          {/* Timer */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <Timer className="h-3 w-3 text-muted-foreground" />
@@ -194,7 +188,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
             <Progress value={(timeLeft / 30) * 100} className={cn("h-2", timeLeft <= 5 && "[&>div]:bg-red-500")} />
           </div>
 
-          {/* Host: next player / next round */}
           {isHost && (
             <Button onClick={nextPlayer} className="w-full rounded-xl gap-2">
               {currentPlayer === 1 ? `Próximo: ${player2Name}` : "Ir para Votação"} <ChevronRight className="h-4 w-4" />
@@ -203,7 +196,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
         </div>
       )}
 
-      {/* VOTING PHASE */}
       {phase === "voting" && (
         <div className="space-y-4">
           <div className="text-center">
@@ -246,7 +238,6 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
         </div>
       )}
 
-      {/* RESULTS PHASE */}
       {phase === "results" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}

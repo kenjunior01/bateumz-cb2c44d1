@@ -135,7 +135,6 @@ export default function WhiteLabelConfig() {
                 className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
             </div>
             
-            {/* Logo Upload */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">Logotipo</label>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
@@ -244,7 +243,6 @@ export default function WhiteLabelConfig() {
         </Card>
       </motion.div>
 
-      {/* Preview */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <Card className="glass">
           <CardContent className="p-6 space-y-3">

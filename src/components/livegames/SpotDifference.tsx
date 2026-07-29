@@ -493,7 +493,6 @@ export default function SpotDifference({
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-slate-950 rounded-2xl p-6 text-white select-none">
-      {/* ── Header ─────────────────────────────────────────────── */}
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
           Encontre as Diferenças
@@ -530,7 +529,6 @@ export default function SpotDifference({
         )}
       </div>
 
-      {/* ── Feedback Toast ─────────────────────────────────────── */}
       <AnimatePresence>
         {feedback && (
           <motion.div
@@ -553,7 +551,6 @@ export default function SpotDifference({
         )}
       </AnimatePresence>
 
-      {/* ── Idle Screen ────────────────────────────────────────── */}
       {status === "idle" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -577,10 +574,8 @@ export default function SpotDifference({
         </motion.div>
       )}
 
-      {/* ── Game Scenes ────────────────────────────────────────── */}
       {(status === "playing" || status === "roundResult") && (
         <div className="flex gap-4 justify-center mb-4">
-          {/* Scene A — Player 1 */}
           <div className="text-center">
             <Badge className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
               Jogador 1
@@ -593,12 +588,10 @@ export default function SpotDifference({
               style={{ width: SCENE_W, height: SCENE_H }}
               onClick={(e) => handleClick(1, "A", e)}
             >
-              {/* shapes */}
               {sceneA.map((s) => (
                 <ShapeEl key={s.id} shape={s} />
               ))}
 
-              {/* found-difference markers */}
               {diffs.map((d, i) =>
                 found[i] !== null ? (
                   <motion.div
@@ -615,7 +608,6 @@ export default function SpotDifference({
             </div>
           </div>
 
-          {/* Scene B — Player 2 */}
           <div className="text-center">
             <Badge className="bg-pink-500/20 text-pink-300 border border-pink-500/30 mb-2">
               Jogador 2
@@ -650,11 +642,9 @@ export default function SpotDifference({
         </div>
       )}
 
-      {/* ── Scoreboard ─────────────────────────────────────────── */}
       {(status === "playing" || status === "roundResult") && (
         <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4 mb-4">
           <div className="flex justify-between items-center">
-            {/* P1 column */}
             <div className="text-center flex-1">
               <p className="text-xs text-cyan-400 uppercase tracking-wider">
                 Jogador 1
@@ -665,7 +655,6 @@ export default function SpotDifference({
               </p>
             </div>
 
-            {/* centre – found dots */}
             <div className="text-center px-4">
               <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">
                 Encontradas
@@ -687,7 +676,6 @@ export default function SpotDifference({
               </div>
             </div>
 
-            {/* P2 column */}
             <div className="text-center flex-1">
               <p className="text-xs text-pink-400 uppercase tracking-wider">
                 Jogador 2
@@ -701,7 +689,6 @@ export default function SpotDifference({
         </div>
       )}
 
-      {/* ── Round Result Banner ────────────────────────────────── */}
       <AnimatePresence>
         {status === "roundResult" && (
           <motion.div
@@ -723,7 +710,6 @@ export default function SpotDifference({
         )}
       </AnimatePresence>
 
-      {/* ── Game Over ─────────────────────────────────────────── */}
       <AnimatePresence>
         {status === "gameOver" && (
           <motion.div
@@ -760,7 +746,6 @@ export default function SpotDifference({
         )}
       </AnimatePresence>
 
-      {/* ── Small Reset during play ───────────────────────────── */}
       {status === "playing" && (
         <div className="text-center mt-2">
           <Button

@@ -266,13 +266,11 @@ export default function PrestacoesCatalogo() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
-      {/* Desktop navbar */}
       <div className="hidden md:block">
         <Navbar />
       </div>
 
       <main className="container mx-auto px-4 md:pt-24">
-        {/* Mobile sticky header (Meituan style) */}
         <MobileDiscoveryHeader
           title="Catálogo a Prestações"
           searchValue={search}
@@ -284,7 +282,6 @@ export default function PrestacoesCatalogo() {
           onOpenFilters={() => setFiltersOpen(true)}
         />
 
-        {/* Desktop header */}
         <motion.header
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -311,7 +308,6 @@ export default function PrestacoesCatalogo() {
           </aside>
 
           <section>
-            {/* Desktop search row */}
             <div className="hidden md:flex items-center gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -321,7 +317,6 @@ export default function PrestacoesCatalogo() {
               </div>
             </div>
 
-            {/* Result count + active filters summary (mobile + desktop) */}
             <div className="flex items-center justify-between mb-3 px-1">
               <p className="text-[11px] md:text-xs text-muted-foreground">
                 {loading ? "A carregar..." : `${filtered.length} produto${filtered.length === 1 ? "" : "s"}`}
@@ -334,7 +329,6 @@ export default function PrestacoesCatalogo() {
                   Limpar
                 </button>
               )}
-              {/* Desktop sort outside sidebar */}
               <div className="hidden md:block">
                 <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(true)}>
                   <SlidersHorizontal className="h-4 w-4 mr-1" /> Mais filtros
@@ -409,7 +403,6 @@ export default function PrestacoesCatalogo() {
         </div>
       </main>
 
-      {/* Mobile filter bottom sheet */}
       <MobileFilterSheet
         open={filtersOpen}
         onOpenChange={setFiltersOpen}

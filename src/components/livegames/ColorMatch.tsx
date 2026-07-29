@@ -321,7 +321,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
 
   return (
     <div className="relative flex min-h-[600px] w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-white/10 bg-gray-950 px-4 py-6 sm:px-6">
-      {/* ==================== IDLE ==================== */}
       <AnimatePresence mode="wait">
         {phase === "idle" && (
           <motion.div
@@ -368,7 +367,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== COUNTDOWN ==================== */}
         {phase === "countdown" && countdownVal > 0 && (
           <motion.div
             key={`cd-${countdownVal}`}
@@ -385,7 +383,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== PLAYING / ROUND RESULT ==================== */}
         {(phase === "playing" || phase === "roundResult") && roundData && (
           <motion.div
             key={`round-${round}`}
@@ -394,7 +391,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
             exit={{ opacity: 0 }}
             className="flex w-full flex-col items-center gap-4"
           >
-            {/* ---- Scoreboard ---- */}
             <div className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 px-3 py-2 sm:px-5 sm:py-3">
               <div className="flex items-center gap-2">
                 <Badge className="bg-cyan-600/80 text-white text-xs">P1</Badge>
@@ -445,7 +441,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               </div>
             </div>
 
-            {/* ---- Round / Timer / Speed ---- */}
             <div className="flex w-full items-center gap-3 text-xs text-gray-400 sm:text-sm">
               <span className="font-medium whitespace-nowrap">
                 Round {round}/{TOTAL_ROUNDS}
@@ -465,12 +460,10 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               </div>
             </div>
 
-            {/* ---- Question ---- */}
             <p className="text-sm text-gray-400 mt-1 sm:text-base">
               Qual a COR do texto?
             </p>
 
-            {/* ---- Word display ---- */}
             <div className="flex min-h-[120px] w-full items-center justify-center rounded-2xl border border-white/5 bg-gray-900/60 px-8 py-6 sm:min-h-[140px]">
               <AnimatePresence mode="wait">
                 <motion.span
@@ -487,7 +480,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               </AnimatePresence>
             </div>
 
-            {/* ---- Round result message ---- */}
             <AnimatePresence>
               {phase === "roundResult" && lastWinner && (
                 <motion.div
@@ -511,9 +503,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               )}
             </AnimatePresence>
 
-            {/* ---- Player 1 & 2 buttons ---- */}
             <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10">
-              {/* Player 1 */}
               <div className="flex flex-col items-center gap-1">
                 <span className="mb-1 text-xs font-bold text-cyan-400 tracking-widest">
                   JOGADOR 1
@@ -572,7 +562,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
                 </div>
               </div>
 
-              {/* Player 2 */}
               <div className="flex flex-col items-center gap-1">
                 <span className="mb-1 text-xs font-bold text-pink-400 tracking-widest">
                   JOGADOR 2
@@ -632,7 +621,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               </div>
             </div>
 
-            {/* ---- Next round / view results ---- */}
             {phase === "roundResult" && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -650,7 +638,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        {/* ==================== GAME OVER ==================== */}
         {phase === "gameOver" && (
           <motion.div
             key="gameOver"
@@ -669,7 +656,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               Fim de Jogo!
             </h2>
 
-            {/* Final scores */}
             <div className="flex items-center gap-8">
               <div className="flex flex-col items-center gap-1">
                 <span className="text-xs font-bold text-cyan-400">Jogador 1</span>
@@ -700,7 +686,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               </div>
             </div>
 
-            {/* Winner */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -717,13 +702,11 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               {p1Score === p2Score && "🤝 Empate!"}
             </motion.p>
 
-            {/* Streak stats */}
             <div className="flex gap-4 text-xs text-gray-400">
               <span>Maior streak P1: 🔥{p1MaxStreak}</span>
               <span>Maior streak P2: 🔥{p2MaxStreak}</span>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3 mt-2">
               <Button
                 onClick={goToMenu}
@@ -744,7 +727,6 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      {/* live code badge */}
       {liveCode && (
         <Badge
           variant="outline"

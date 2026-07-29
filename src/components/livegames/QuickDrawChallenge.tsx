@@ -111,14 +111,12 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
 
   return (
     <div className="space-y-3">
-      {/* Top bar */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div><Badge variant="outline">Rodada {round}</Badge></div>
         <div className={`font-mono text-lg font-bold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-foreground'}`}><Timer className="h-4 w-4 inline mr-1" />{timeLeft}s</div>
         {phase === 'drawing' && <div className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">A DIVINHAR: {word.toUpperCase()}</div>}
       </div>
 
-      {/* Canvas */}
       <div className="rounded-2xl overflow-hidden border-2 border-border bg-[#1a1a2e]">
         <canvas ref={canvasRef} width={600} height={400} className="w-full touch-none cursor-crosshair"
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
@@ -126,7 +124,6 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
         />
       </div>
 
-      {/* Tools */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex gap-1">{['#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'].map(c => (
           <button key={c} onClick={() => setColor(c)} className={`h-7 w-7 rounded-full border-2 transition-transform ${color === c ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
@@ -139,7 +136,6 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
         </div>
       </div>
 
-      {/* Guess area */}
       {phase === 'drawing' && (
         <div className="flex gap-2">
           <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitGuess()} placeholder="Digite seu palpite..." className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
@@ -147,12 +143,10 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
         </div>
       )}
 
-      {/* Guessed players */}
       {guessed.length > 0 && (
         <div className="flex gap-2 flex-wrap">{guessed.map((g, i) => <Badge key={i} className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">✅ {g}</Badge>)}</div>
       )}
 
-      {/* Result */}
       {phase === 'result' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-card border border-border p-4 text-center space-y-3">
           <p className="text-sm text-muted-foreground">A palavra era:</p>

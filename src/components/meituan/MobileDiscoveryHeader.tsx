@@ -48,7 +48,6 @@ export default function MobileDiscoveryHeader({
 
   return (
     <header className="md:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/40 -mx-4 px-4 pt-2 pb-2">
-      {/* Top row */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => (backTo ? navigate(backTo) : navigate(-1))}
@@ -82,7 +81,6 @@ export default function MobileDiscoveryHeader({
         {rightAction}
       </div>
 
-      {/* Page title (subtle, like Meituan section header) */}
       {title && (
         <div className="mt-1.5 px-1 flex items-center justify-between">
           <h1 className="text-[13px] font-semibold text-muted-foreground tracking-wide uppercase">
@@ -91,7 +89,6 @@ export default function MobileDiscoveryHeader({
         </div>
       )}
 
-      {/* Category chips row */}
       {categories.length > 0 && (
         <div className="mt-2 -mx-4 px-4">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar snap-x">

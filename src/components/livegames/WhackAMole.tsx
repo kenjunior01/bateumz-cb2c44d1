@@ -282,7 +282,6 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
         </motion.div>
       )}
 
-      {/* Score bar */}
       {phase !== "idle" && (
         <div className="w-full flex items-center justify-between px-2">
           <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 transition ${lastHit === "p1" ? "bg-blue-500/20" : "bg-muted/40"}`}>
@@ -304,10 +303,8 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
         </div>
       )}
 
-      {/* Game grid */}
       {phase !== "idle" && (
         <div className="relative w-full">
-          {/* Countdown overlay */}
           <AnimatePresence>
             {phase === "countdown" && (
               <motion.div
@@ -375,7 +372,6 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
                     )}
                   </AnimatePresence>
 
-                  {/* Hole indicator */}
                   {!cell && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="h-8 w-8 rounded-full bg-black/20" />
@@ -386,7 +382,6 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
             })}
           </div>
 
-          {/* Winner overlay */}
           <AnimatePresence>
             {phase === "done" && (
               <motion.div

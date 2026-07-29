@@ -121,9 +121,7 @@ export default function WalletDashboard() {
 
   return (
     <div className="space-y-6 pb-24">
-      {/* ── Balance Card ── */}
       <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-primary via-primary/90 to-accent">
-        {/* Decorative circles */}
         <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/5" />
         <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-white/5" />
 
@@ -159,7 +157,6 @@ export default function WalletDashboard() {
         </CardContent>
       </Card>
 
-      {/* ── Quick Deposit ── */}
       <div>
         <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">
           Depósito Rápido
@@ -178,7 +175,6 @@ export default function WalletDashboard() {
         </div>
       </div>
 
-      {/* ── Transactions ── */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -189,7 +185,6 @@ export default function WalletDashboard() {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          {/* Filter tabs */}
           <Tabs value={filterType} onValueChange={setFilterType} className="mb-4">
             <TabsList className="h-8 p-0.5">
               <TabsTrigger value="all" className="text-xs h-7 px-2.5">
@@ -207,7 +202,6 @@ export default function WalletDashboard() {
             </TabsList>
           </Tabs>
 
-          {/* Transaction list */}
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (

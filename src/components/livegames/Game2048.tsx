@@ -297,7 +297,6 @@ export default function Game2048({ onScore, liveCode }: Game2048Props) {
 
   return (
     <div className="space-y-4">
-      {/* Timer bar */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -308,7 +307,6 @@ export default function Game2048({ onScore, liveCode }: Game2048Props) {
         </div>
       </div>
 
-      {/* Score comparison */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div className="text-center">
           <p className="text-xs text-muted-foreground">{p1Name}</p>
@@ -328,7 +326,6 @@ export default function Game2048({ onScore, liveCode }: Game2048Props) {
         </div>
       </div>
 
-      {/* Boards */}
       <div className="grid grid-cols-2 gap-3">
         <BoardDisplay
           board={p1Board} label={p1Name} score={p1Score} bestTile={p1Best}
@@ -340,7 +337,6 @@ export default function Game2048({ onScore, liveCode }: Game2048Props) {
         />
       </div>
 
-      {/* Winner overlay */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

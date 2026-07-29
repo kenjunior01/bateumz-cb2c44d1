@@ -113,7 +113,6 @@ const PopularLeaderboard = () => {
         </motion.div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Top Raffles */}
           {raffles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -176,7 +175,6 @@ const PopularLeaderboard = () => {
             </motion.div>
           )}
 
-          {/* Top Contests */}
           {contests.length > 0 && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}

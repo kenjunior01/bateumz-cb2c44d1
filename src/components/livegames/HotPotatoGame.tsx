@@ -101,7 +101,6 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
 
   return (
     <div className="space-y-4">
-      {/* Top info */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <Badge variant="outline">Rodada {round}</Badge>
         <div className="flex items-center gap-2">
@@ -111,10 +110,8 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
         <Badge variant="outline">Velocidade {speed.toFixed(1)}x</Badge>
       </div>
 
-      {/* Bomb bar */}
       <div className="h-2 rounded-full bg-muted overflow-hidden"><motion.div className={`h-full transition-colors ${dangerLevel === 'critical' ? 'bg-red-500' : dangerLevel === 'warning' ? 'bg-orange-500' : 'bg-emerald-500'}`} animate={{ width: `${bombTimer}%` }} /></div>
 
-      {/* Players circle */}
       <div className="relative py-8">
         <div className="flex justify-center items-center gap-3 flex-wrap">
           {players.map((p, i) => {
@@ -134,10 +131,8 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
         </div>
       </div>
 
-      {/* Alive count */}
       <p className="text-center text-sm text-muted-foreground">{alivePlayers.length} jogador(es) restantes</p>
 
-      {/* BOOM */}
       <AnimatePresence>
         {phase === 'boom' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur flex items-center justify-center p-4">
@@ -151,7 +146,6 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
         )}
       </AnimatePresence>
 
-      {/* Winner */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

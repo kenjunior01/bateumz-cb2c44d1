@@ -229,7 +229,6 @@ export default function Community() {
     <div className="min-h-screen bg-background pb-20 md:pb-0 bg-mesh-soft bg-noise">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-2 md:pt-28 pb-10 md:pb-20 max-w-3xl">
-        {/* Mobile sticky header */}
         <MobileDiscoveryHeader
           title="Comunidade"
           searchValue=""
@@ -240,7 +239,6 @@ export default function Community() {
           onCategoryChange={setFilter}
         />
 
-        {/* Desktop header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block mb-8">
           <h1 className="font-display text-3xl font-bold text-foreground flex items-center gap-3">
             <MessageCircle className="h-8 w-8 text-primary" /> Comunidade
@@ -248,7 +246,6 @@ export default function Community() {
           <p className="text-muted-foreground mt-1">Partilhe testemunhos, dicas, crie sondagens e celebre com outros participantes</p>
         </motion.div>
 
-        {/* Filters (desktop only — mobile usa chips no header) */}
         <div className="hidden md:flex gap-2 mb-6 overflow-x-auto pb-2">
           {MESSAGE_TYPES.map(t => (
             <Button key={t.id} variant={filter === t.id ? "default" : "outline"} size="sm" onClick={() => setFilter(t.id)} className="shrink-0">
@@ -257,7 +254,6 @@ export default function Community() {
           ))}
         </div>
 
-        {/* Compose */}
         {user ? (
           <Card className="glass mb-6">
             <CardContent className="p-4">
@@ -339,7 +335,6 @@ export default function Community() {
           </Card>
         )}
 
-        {/* Messages */}
         {loading ? (
           <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : filtered.length === 0 ? (

@@ -148,7 +148,6 @@ export default function SocialAnalytics() {
         <p className="text-sm text-muted-foreground">Métricas de engajamento dos sorteios sociais</p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total Participações", value: stats.total, icon: Users, accent: "text-foreground" },
@@ -168,7 +167,6 @@ export default function SocialAnalytics() {
         ))}
       </div>
 
-      {/* Status breakdown */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Pendentes", value: stats.pending, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
@@ -190,7 +188,6 @@ export default function SocialAnalytics() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Growth chart */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="glass border-glass-border">
             <CardHeader><CardTitle className="text-lg">Crescimento (14 dias)</CardTitle></CardHeader>
@@ -216,7 +213,6 @@ export default function SocialAnalytics() {
           </Card>
         </motion.div>
 
-        {/* Platform distribution */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass border-glass-border">
             <CardHeader><CardTitle className="text-lg">Por Plataforma</CardTitle></CardHeader>
@@ -253,7 +249,6 @@ export default function SocialAnalytics() {
           </Card>
         </motion.div>
 
-        {/* Top missions */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Card className="glass border-glass-border">
             <CardHeader><CardTitle className="text-lg">Missões Mais Completadas</CardTitle></CardHeader>
@@ -277,7 +272,6 @@ export default function SocialAnalytics() {
           </Card>
         </motion.div>
 
-        {/* Tier distribution */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           <Card className="glass border-glass-border">
             <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Crown className="h-5 w-5 text-amber-400" /> Distribuição por Nível</CardTitle></CardHeader>
@@ -314,7 +308,6 @@ export default function SocialAnalytics() {
         </motion.div>
       </div>
 
-      {/* Per-raffle breakdown */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Sorteios Sociais</CardTitle></CardHeader>

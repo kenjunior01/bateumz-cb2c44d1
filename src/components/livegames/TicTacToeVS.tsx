@@ -111,7 +111,6 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-violet-900/30 to-pink-900/30 border border-violet-500/20">
         <div className="text-center flex-1">
           <span className={cn("text-2xl font-black", current === "X" && !gameOver ? "text-cyan-400" : "text-slate-500")}>✕</span>
@@ -135,7 +134,6 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Board */}
       <div className="flex justify-center">
         <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-900/50 border border-slate-800">
           {board.map((cell, i) => (
@@ -165,7 +163,6 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 justify-center">
         <Button size="sm" variant={isSpeedMode ? "default" : "outline"}
           className={cn("rounded-xl text-xs", isSpeedMode && "bg-red-500")}

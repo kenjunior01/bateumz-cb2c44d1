@@ -112,7 +112,6 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                 </div>
               ) : (
                 <>
-                  {/* Status */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -150,7 +149,6 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                     </div>
                   </motion.div>
 
-                  {/* Winner info */}
                   {verification?.winner_ticket_number && (
                     <div className="rounded-xl bg-primary/10 border border-primary/20 p-4 mb-4">
                       <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Bilhete Vencedor</label>
@@ -158,7 +156,6 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                     </div>
                   )}
 
-                  {/* Details */}
                   <div className="space-y-3 mb-6">
                     <div className="rounded-xl bg-secondary/50 p-4">
                       <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Sorteio</label>
@@ -198,7 +195,6 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                       </div>
                     )}
 
-                    {/* Seed data for transparency */}
                     {verification?.seed_data && (
                       <div className="rounded-xl bg-secondary/50 p-4">
                         <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Dados de Verificação</label>

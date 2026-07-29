@@ -247,7 +247,6 @@ export default function Prestacoes() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-3 sm:px-4 pt-4 lg:pt-24 pb-24 lg:pb-16">
-        {/* Hero */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -264,7 +263,6 @@ export default function Prestacoes() {
             das melhores empresas de Moçambique.
           </p>
 
-          {/* Quick CTAs - mobile prominent */}
           <div className="mt-5 grid grid-cols-2 gap-2 sm:hidden">
             <a href="/prestacoes/catalogo">
               <Button className="w-full gap-1 h-11 text-sm">
@@ -303,7 +301,6 @@ export default function Prestacoes() {
           </div>
         </motion.section>
 
-        {/* Categories */}
         <section id="categorias" className="mt-8 sm:mt-16 scroll-mt-24">
           <div className="mb-3 sm:mb-6 flex items-end justify-between">
             <h2 className="font-display text-lg sm:text-2xl font-bold text-foreground md:text-3xl">Categorias</h2>
@@ -339,7 +336,6 @@ export default function Prestacoes() {
           </div>
         </section>
 
-        {/* Simulator */}
         <section id="simulador" className="mt-16 scroll-mt-24">
           <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6 md:p-10">
             <div className="flex items-center gap-3">
@@ -483,7 +479,6 @@ export default function Prestacoes() {
           </div>
         </section>
 
-        {/* How it works */}
         <section id="como-funciona" className="mt-16 scroll-mt-24">
           <h2 className="font-display text-2xl font-bold text-foreground md:text-3xl">Como vai funcionar</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -512,7 +507,6 @@ export default function Prestacoes() {
           </p>
         </section>
 
-        {/* Lead form */}
         <section id="interesse" className="mt-16 scroll-mt-24">
           <motion.div
             initial={{ opacity: 0 }}

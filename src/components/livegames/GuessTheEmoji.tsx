@@ -104,7 +104,6 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
 
   return (
     <div className="space-y-4">
-      {/* Score bar */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div className="flex items-center gap-2"><Star className="h-4 w-4 text-yellow-400" /><span className="font-bold">{score} pts</span></div>
         {streak >= 2 && <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">🔥 {streak}x streak</Badge>}
@@ -144,7 +143,6 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
         )}
       </AnimatePresence>
 
-      {/* Results */}
       {results.length > 0 && !revealed && (
         <div className="flex gap-1 flex-wrap">
           {results.map((r, i) => (

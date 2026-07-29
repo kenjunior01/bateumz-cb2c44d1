@@ -108,7 +108,6 @@ export default function BusinessDirectory() {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-10 max-w-6xl">
-        {/* Mobile sticky header */}
         <MobileDiscoveryHeader
           title="Diretório de Empresas"
           searchValue={search}
@@ -119,7 +118,6 @@ export default function BusinessDirectory() {
           onCategoryChange={(id) => setFilter(id as any)}
         />
 
-        {/* Hero (desktop) */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block text-center mb-12 pt-16">
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.1 }}>
             <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -143,7 +141,6 @@ export default function BusinessDirectory() {
           )}
         </motion.div>
 
-        {/* Stats showcase (desktop only) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -166,7 +163,6 @@ export default function BusinessDirectory() {
           ))}
         </motion.div>
 
-        {/* CTA banner (desktop only — mobile fica mais limpo) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,7 +184,6 @@ export default function BusinessDirectory() {
           </Link>
         </motion.div>
 
-        {/* Search (desktop only) */}
         <div className="hidden md:block relative mb-8 max-w-md mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

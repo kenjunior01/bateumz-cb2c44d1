@@ -366,7 +366,6 @@ export default function DashboardContests() {
                     </div>
                   </div>
 
-                  {/* Contest Mode: Single vs Multi-phase */}
                   <div className="rounded-lg border border-primary/20 p-3 space-y-3 bg-gradient-to-br from-primary/5 to-transparent">
                     <div className="flex items-center gap-2">
                       <Layers className="h-4 w-4 text-primary" />
@@ -411,7 +410,6 @@ export default function DashboardContests() {
                     )}
                   </div>
 
-                  {/* Sponsor & Entry Fee */}
                   <div className="rounded-lg border border-border/50 p-3 space-y-3">
                     <p className="text-sm font-semibold">💼 Patrocínio & Acesso</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

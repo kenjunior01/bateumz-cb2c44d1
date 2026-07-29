@@ -192,7 +192,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-xl font-bold flex items-center gap-2">
@@ -216,7 +215,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
         </div>
       </div>
 
-      {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Desafios', value: challenges.length, color: 'text-blue-500' },
@@ -231,7 +229,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
         ))}
       </div>
 
-      {/* Challenge list */}
       <AnimatePresence>
         {challenges.map((ch, idx) => {
           const tc = TYPE_CONFIG[ch.type] || TYPE_CONFIG.custom;
@@ -246,7 +243,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
               exit={{ opacity: 0, x: -20, height: 0 }}
               className="rounded-2xl border border-border bg-card overflow-hidden"
             >
-              {/* Summary row */}
               <button
                 onClick={() => setEditingId(isEditing ? null : ch.id)}
                 className="w-full flex items-center gap-3 p-4 text-left hover:bg-secondary/50 transition-colors"
@@ -287,7 +283,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
                 </div>
               </button>
 
-              {/* Expanded editor */}
               <AnimatePresence>
                 {isEditing && (
                   <motion.div
@@ -379,7 +374,6 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
                         </div>
                       </div>
 
-                      {/* For quiz type, add options */}
                       {ch.type === 'quiz' && (
                         <div>
                           <Label className="text-xs mb-2 block">Opcoes (uma por linha)</Label>

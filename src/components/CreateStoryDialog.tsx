@@ -112,7 +112,6 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Preview */}
           <div className={`relative aspect-[9/12] rounded-2xl bg-gradient-to-br ${bg} overflow-hidden flex items-center justify-center p-6 text-center`}>
             {imagePreview && (
               <img src={imagePreview} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -132,7 +131,6 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
             )}
           </div>
 
-          {/* Text */}
           <div>
             <Textarea
               value={content}
@@ -144,7 +142,6 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
             <p className="text-[11px] text-muted-foreground text-right mt-1">{content.length}/280</p>
           </div>
 
-          {/* Gradient picker */}
           <div className="flex gap-2 overflow-x-auto pb-1">
             {GRADIENTS.map((g) => (
               <button
@@ -159,7 +156,6 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
             ))}
           </div>
 
-          {/* Image upload */}
           <input
             ref={fileInputRef}
             type="file"

@@ -133,7 +133,6 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
 
   return (
     <div className="space-y-4">
-      {/* Score bar */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">{p1Name[0]}</div>
@@ -147,10 +146,8 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
         </div>
       </div>
 
-      {/* Progress */}
       <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">Pergunta {qIdx + 1}/{questions.length}</span><div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden"><motion.div className="h-full bg-gradient-to-r from-cyan-500 to-purple-500" animate={{ width: `${((qIdx + 1) / questions.length) * 100}%` }} /></div></div>
 
-      {/* Timer */}
       <div className="flex justify-center"><div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold ${timeLeft <= 5 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-muted text-foreground'}`}><Clock className="h-4 w-4" />{timeLeft}s</div></div>
 
       <AnimatePresence mode="wait">
@@ -162,7 +159,6 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
           <motion.div key={qIdx} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
             <Badge variant="outline" className="text-xs">{q.category}</Badge>
             <h3 className="text-lg font-bold">{q.q}</h3>
-            {/* P1 options (top) */}
             <div className="space-y-2">
               <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{p1Name}</p>
               <div className="grid grid-cols-2 gap-2">
@@ -180,7 +176,6 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
               </div>
             </div>
             <div className="border-t border-border" />
-            {/* P2 options (bottom) */}
             <div className="space-y-2">
               <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">{p2Name}</p>
               <div className="grid grid-cols-2 gap-2">
@@ -201,7 +196,6 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
         ) : null}
       </AnimatePresence>
 
-      {/* Winner */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

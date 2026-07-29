@@ -172,7 +172,6 @@ export const RegionalCEODashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-white">CEO Regional Dashboard</h1>
           <p className="text-gray-400">
@@ -184,7 +183,6 @@ export const RegionalCEODashboard: React.FC = () => {
           </Badge>
         </div>
 
-        {/* Main Tabs */}
         <Tabs defaultValue="branding" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-white/10">
             <TabsTrigger value="branding" className="gap-2">
@@ -201,7 +199,6 @@ export const RegionalCEODashboard: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Branding Tab */}
           <TabsContent value="branding" className="space-y-6">
             <Card className="border-white/10 bg-white/5">
               <CardHeader>
@@ -271,7 +268,6 @@ export const RegionalCEODashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Logo Upload */}
             <Card className="border-white/10 bg-white/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -299,7 +295,6 @@ export const RegionalCEODashboard: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* Translations Tab */}
           <TabsContent value="translations" className="space-y-6">
             <Card className="border-white/10 bg-white/5">
               <CardHeader>
@@ -353,7 +348,6 @@ export const RegionalCEODashboard: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
             <Card className="border-white/10 bg-white/5">
               <CardHeader>

@@ -164,7 +164,6 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* Scoreboard */}
       <div className="grid grid-cols-2 gap-2">
         {activePlayers.map(p => (
           <div key={p} className={cn("p-3 rounded-2xl border-2 transition-all", current === p && !gameOver && "border-white/30 bg-white/5 scale-[1.02]")}
@@ -187,7 +186,6 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
         ))}
       </div>
 
-      {/* Mode toggle */}
       <div className="flex justify-center gap-2">
         <Button size="sm" variant={playerMode === "2p" ? "default" : "outline"} className={cn("rounded-xl text-xs", playerMode === "2p" && "bg-gradient-to-r from-red-500 to-blue-500")}
           onClick={() => { setPlayerMode("2p"); reset(); }}>2 Jogadores</Button>
@@ -195,23 +193,19 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
           onClick={() => { setPlayerMode("4p"); reset(); }}>4 Jogadores</Button>
       </div>
 
-      {/* Board */}
       <div className="flex justify-center">
         <div className="relative w-72 h-72 sm:w-80 sm:h-80 rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 border-2 border-emerald-600/30 shadow-2xl overflow-hidden">
-          {/* Cross path */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-[30%] h-full bg-amber-100/90" />
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-[30%] w-full bg-amber-100/90" />
           </div>
-          {/* Center home */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/90 border-4 border-emerald-700 flex items-center justify-center shadow-inner">
               <Home className="h-5 w-5 text-emerald-700" />
             </div>
           </div>
-          {/* Base areas - 4 corners */}
           {[0, 1, 2, 3].map(p => {
             const positions = p === 0 ? "top-0 left-0" : p === 1 ? "top-0 right-0" : p === 2 ? "bottom-0 left-0" : "bottom-0 right-0";
             return (
@@ -240,7 +234,6 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
         </div>
       </div>
 
-      {/* Dice & Controls */}
       <div className="flex flex-col items-center gap-3">
         <motion.div
           key={dice}
@@ -265,7 +258,6 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
           <div className="text-sm text-slate-400">Escolha uma peça para mover</div>
         )}
 
-        {/* Piece selection when on board */}
         {rolled && pieces[current].map((pos, i) => pos >= 0 && pos < HOME_POSITIONS && (
           <Button key={i} size="sm" variant="outline" className="rounded-xl"
             onClick={() => movePiece(i)}>
@@ -274,7 +266,6 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
         ))}
       </div>
 
-      {/* Betting */}
       <div className="flex flex-wrap gap-2 justify-center">
         <span className="text-xs text-slate-500 flex items-center"><Coins className="h-3 w-3 mr-1" />Aposta:</span>
         {[10, 25, 50, 100].map(v => (

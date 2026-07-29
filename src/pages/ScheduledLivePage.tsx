@@ -170,7 +170,6 @@ const ScheduledLivePage = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-emerald-500/5 pb-20">
       <MobileTopBar />
       <main className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
-        {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl overflow-hidden border border-border bg-card shadow-lg">
           {live.cover_url && (
@@ -213,7 +212,6 @@ const ScheduledLivePage = () => {
           </div>
         </motion.div>
 
-        {/* Ambassador CTA */}
         <div className="rounded-3xl border border-border bg-card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-emerald-600" />
@@ -246,7 +244,6 @@ const ScheduledLivePage = () => {
           )}
         </div>
 
-        {/* Prizes */}
         {prizes.length > 0 && (
           <div className="rounded-3xl border border-border bg-card p-5 space-y-2">
             <div className="flex items-center gap-2 mb-2">
@@ -268,7 +265,6 @@ const ScheduledLivePage = () => {
           </div>
         )}
 
-        {/* Ranking */}
         <div className="rounded-3xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <Users className="h-4 w-4 text-emerald-600" />

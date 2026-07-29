@@ -100,7 +100,6 @@ export default function TournamentDetail() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8">
-        {/* Back button */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Button
             variant="ghost"
@@ -113,7 +112,6 @@ export default function TournamentDetail() {
           </Button>
         </motion.div>
 
-        {/* Header card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -144,12 +142,10 @@ export default function TournamentDetail() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Description */}
               {tournament.description && (
                 <p className="text-sm text-muted-foreground">{tournament.description}</p>
               )}
 
-              {/* Info grid */}
               <div className="grid grid-cols-2 gap-3">
                 <InfoItem
                   icon={<Calendar className="h-4 w-4" />}
@@ -178,7 +174,6 @@ export default function TournamentDetail() {
                 />
               </div>
 
-              {/* Rules */}
               {tournament.rules && (
                 <>
                   <Separator />
@@ -194,7 +189,6 @@ export default function TournamentDetail() {
                 </>
               )}
 
-              {/* Business link */}
               <Separator />
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
@@ -209,7 +203,6 @@ export default function TournamentDetail() {
                 </Button>
               </div>
 
-              {/* Join button */}
               {tournament.status === "active" && (
                 <Button className="w-full" size="lg">
                   <Trophy className="h-4 w-4 mr-2" />
@@ -220,7 +213,6 @@ export default function TournamentDetail() {
           </Card>
         </motion.div>
 
-        {/* Leaderboard */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

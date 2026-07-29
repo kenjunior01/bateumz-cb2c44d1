@@ -513,7 +513,6 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
   /* ===================== MAIN GAME SCREEN ===================== */
   return (
     <div className="flex flex-col gap-4 p-3 md:p-4 w-full max-w-3xl mx-auto">
-      {/* Scoreboard */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-cyan-400 font-bold text-sm">Jogador 1</span>
@@ -547,7 +546,6 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
         </div>
       </div>
 
-      {/* Progress + Timer + Category */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
           Pergunta {currentIndex + 1}/{TOTAL_QUESTIONS}
@@ -566,7 +564,6 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
         </Badge>
       </div>
 
-      {/* Question Card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -613,9 +610,7 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Player Zones - Side by Side on desktop, stacked on mobile */}
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Player 1 Zone */}
         <motion.div
           animate={
             showingResult && p1Answered
@@ -714,7 +709,6 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
           )}
         </motion.div>
 
-        {/* Player 2 Zone */}
         <motion.div
           animate={
             showingResult && p2Answered
@@ -814,7 +808,6 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
         </motion.div>
       </div>
 
-      {/* Restart Button */}
       <div className="flex justify-center pt-1">
         <Button
           onClick={handleRestart}

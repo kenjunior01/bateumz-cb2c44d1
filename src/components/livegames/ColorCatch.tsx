@@ -253,7 +253,6 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
         </motion.div>
       )}
 
-      {/* Target color indicator + scores */}
       {phase !== "idle" && (
         <div className="w-full flex items-center justify-between px-2">
           <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 transition ${lastHit === "p1" ? "bg-blue-500/20" : "bg-muted/40"}`}>
@@ -276,10 +275,8 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
         </div>
       )}
 
-      {/* Game area */}
       {phase !== "idle" && (
         <div className="relative w-full aspect-square max-w-md rounded-2xl border-2 border-border bg-background/50 overflow-hidden">
-          {/* Countdown overlay */}
           <AnimatePresence>
             {phase === "countdown" && (
               <motion.div key={countdown} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 rounded-2xl">
@@ -288,7 +285,6 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
             )}
           </AnimatePresence>
 
-          {/* Circles */}
           <AnimatePresence>
             {circles.map((c) => {
               const color = COLORS[c.colorIndex];
@@ -314,7 +310,6 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
             })}
           </AnimatePresence>
 
-          {/* Winner overlay */}
           <AnimatePresence>
             {phase === "done" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 rounded-2xl gap-3">

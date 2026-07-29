@@ -114,7 +114,6 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
       </div>
 
       <div className="p-4 space-y-4">
-        {/* My link */}
         {!user ? (
           <Link to="/login" className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold">
             <LogIn className="h-4 w-4" /> Entrar para ser embaixador
@@ -155,7 +154,6 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
           </div>
         )}
 
-        {/* Tabs */}
         {liveCode && (
           <div className="flex gap-1 rounded-full bg-muted p-1 text-[11px] font-bold">
             <button onClick={() => setTab("live")}
@@ -169,7 +167,6 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
           </div>
         )}
 
-        {/* Ranking */}
         <div>
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
             Top embaixadores · {tab === "live" ? "esta live" : "de sempre"}

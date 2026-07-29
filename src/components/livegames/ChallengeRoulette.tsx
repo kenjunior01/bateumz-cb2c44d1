@@ -302,7 +302,6 @@ const ChallengeRoulette = () => {
               </Button>
             </div>
 
-            {/* Add challenge */}
             <div className="flex gap-1.5">
               <Input
                 value={newChallenge.text}

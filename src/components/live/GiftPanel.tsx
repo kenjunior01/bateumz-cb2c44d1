@@ -64,7 +64,6 @@ const GiftPanel = ({ open, onOpenChange, onSendGift }: Props) => {
         </SheetHeader>
 
         <div className="space-y-4 overflow-y-auto pb-8">
-          {/* Gift grid */}
           <div className="grid grid-cols-4 gap-2">
             {GIFTS.map((gift) => (
               <button
@@ -84,7 +83,6 @@ const GiftPanel = ({ open, onOpenChange, onSendGift }: Props) => {
             ))}
           </div>
 
-          {/* Quantity selector */}
           {selectedGift && (
             <AnimatePresence>
               <motion.div
@@ -115,7 +113,6 @@ const GiftPanel = ({ open, onOpenChange, onSendGift }: Props) => {
                   </div>
                 </div>
 
-                {/* Quick quantities */}
                 <div className="flex gap-2">
                   {[1, 5, 10, 50].map((q) => (
                     <button
@@ -131,7 +128,6 @@ const GiftPanel = ({ open, onOpenChange, onSendGift }: Props) => {
                   ))}
                 </div>
 
-                {/* Total + Send */}
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-muted-foreground">Total</p>

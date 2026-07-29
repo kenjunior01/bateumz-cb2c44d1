@@ -142,7 +142,6 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
       <CapulanaBg />
 
       <div className="relative z-10 p-4 md:p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg flex items-center justify-center text-xl"
@@ -167,7 +166,11 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
               Testa os teus conhecimentos sobre Mocambique! {TOTAL_QUESTIONS} perguntas de cultura, geografia, gastronomia e mais.
             </p>
             <div className="flex justify-center gap-2">
+<<<<<<< HEAD
               {_MODES.map((m) => (
+=======
+              {(["bot", "pvp"]).map((m) => (
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -176,7 +179,11 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
+<<<<<<< HEAD
                 {_DIFFS.map((d) => (
+=======
+                {(["Facil", "Medio", "Dificil"]).map((d) => (
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}
@@ -189,17 +196,14 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
 
         {(phase === "playing" || phase === "answered") && q && (
           <div className="space-y-4">
-            {/* Category + emoji */}
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl">{q.emoji}</span>
               <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(0,145,64,0.15)", color: "#009140" }}>{q.category}</span>
               {streak >= 3 && <span className="text-xs font-bold px-2 py-0.5 rounded-full animate-pulse" style={{ background: "rgba(255,0,0,0.15)", color: "#FFD700" }}>🔥 Streak {streak}</span>}
             </div>
 
-            {/* Question */}
             <h3 className="text-lg font-bold text-center" style={{ color: "#FFD700" }}>{q.q}</h3>
 
-            {/* Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {q.options.map((opt, i) => {
                 const isCorrect = i === q.correct;

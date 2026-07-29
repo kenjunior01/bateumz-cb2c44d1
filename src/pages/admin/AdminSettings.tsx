@@ -211,7 +211,6 @@ export default function AdminSettings() {
           <TabsTrigger value="system">Sistema</TabsTrigger>
         </TabsList>
 
-        {/* GENERAL TAB */}
         <TabsContent value="general" className="space-y-6">
             <Card className="glass border-primary/20">
               <CardHeader>
@@ -283,7 +282,6 @@ export default function AdminSettings() {
             </Card>
 
             <div className="grid gap-6 lg:grid-cols-2">
-            {/* Featured Raffle */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="glass border-primary/20">
                 <CardHeader>
@@ -333,7 +331,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Announcement Banner */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
               <Card className="glass border-accent/20">
                 <CardHeader>
@@ -370,7 +367,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Platform */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <Card className="glass">
                 <CardHeader>
@@ -399,10 +395,8 @@ export default function AdminSettings() {
           </div>
         </TabsContent>
 
-        {/* PAYMENTS TAB */}
         <TabsContent value="payments" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Moçambique - M-Pesa */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="glass border-[#E21B1B]/20">
                 <CardHeader>
@@ -426,7 +420,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Moçambique - e-Mola */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
               <Card className="glass border-[#FF6600]/20">
                 <CardHeader>
@@ -450,7 +443,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Moçambique - PaySuite */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <Card className="glass border-primary/20">
                 <CardHeader>
@@ -482,7 +474,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Angola - Multicaixa Express */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
               <Card className="glass border-[#0066CC]/20">
                 <CardHeader>
@@ -518,7 +509,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Angola - Unitel Money */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
               <Card className="glass border-[#FF0000]/20">
                 <CardHeader>
@@ -550,7 +540,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Angola - Africell Money */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
               <Card className="glass border-pink-500/20">
                 <CardHeader>
@@ -574,7 +563,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Angola - Transferência BAI */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
               <Card className="glass border-emerald-500/20">
                 <CardHeader>
@@ -602,7 +590,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Angola - Transferência BFA */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
               <Card className="glass border-amber-500/20">
                 <CardHeader>
@@ -630,7 +617,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Brasil - Pix */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
               <Card className="glass border-emerald-500/20">
                 <CardHeader>
@@ -658,7 +644,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Brasil - Boleto */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <Card className="glass border-slate-500/20">
                 <CardHeader>
@@ -682,7 +667,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* Brasil - Cartão */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
               <Card className="glass border-primary/20">
                 <CardHeader>
@@ -717,7 +701,6 @@ export default function AdminSettings() {
               </Card>
             </motion.div>
 
-            {/* PayPal */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
               <Card className="glass border-[#003087]/20">
                 <CardHeader>
@@ -757,7 +740,6 @@ export default function AdminSettings() {
           </div>
         </TabsContent>
 
-        {/* BUSINESS TAB */}
         <TabsContent value="business" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -808,7 +790,6 @@ export default function AdminSettings() {
           </div>
         </TabsContent>
 
-        {/* SYSTEM TAB */}
         <TabsContent value="system" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

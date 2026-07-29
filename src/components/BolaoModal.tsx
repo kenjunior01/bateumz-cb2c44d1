@@ -119,7 +119,6 @@ export default function BolaoModal({ raffleId, raffleTitle, open, onClose }: Pro
               </button>
             </div>
 
-            {/* Tabs */}
             <div className="flex gap-2 mb-5">
               <button
                 onClick={() => { setTab("create"); setCreatedCode(null); }}

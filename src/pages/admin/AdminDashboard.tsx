@@ -103,7 +103,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Alert badges */}
       {(stats.pendingPayments > 0 || stats.socialEntries > 0) && (
         <div className="flex flex-wrap gap-3">
           {stats.pendingPayments > 0 && (
@@ -134,7 +133,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card, i) => (
           <motion.div key={card.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
@@ -153,7 +151,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Secondary stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="glass">
           <CardContent className="p-4 flex items-center gap-3">
@@ -193,7 +190,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent raffles */}
         <Card className="glass">
           <CardHeader><CardTitle>Sorteios Recentes</CardTitle></CardHeader>
           <CardContent>
@@ -226,7 +222,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent users + Quick actions */}
         <div className="space-y-6">
           <Card className="glass">
             <CardHeader><CardTitle>Novos Utilizadores</CardTitle></CardHeader>

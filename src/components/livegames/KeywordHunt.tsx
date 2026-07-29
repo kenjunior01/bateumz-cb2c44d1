@@ -165,7 +165,6 @@ const KeywordHunt = ({ liveCode, onScore, onWinner }: Props) => {
       </div>
 
       <div className="p-4 space-y-3">
-        {/* Pista */}
         <div className="rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
@@ -182,7 +181,6 @@ const KeywordHunt = ({ liveCode, onScore, onWinner }: Props) => {
           )}
         </div>
 
-        {/* Host controls */}
         <div className="flex gap-2">
           {!running ? (
             <button onClick={start} className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold">
@@ -195,7 +193,6 @@ const KeywordHunt = ({ liveCode, onScore, onWinner }: Props) => {
           )}
         </div>
 
-        {/* Participant entry form */}
         <form onSubmit={submitGuess} className="rounded-2xl border border-border bg-background/50 p-3 space-y-2">
           <div className="flex items-center gap-2 mb-1">
             <KeyRound className="h-3.5 w-3.5 text-primary" />
@@ -239,7 +236,6 @@ const KeywordHunt = ({ liveCode, onScore, onWinner }: Props) => {
           </AnimatePresence>
         </form>
 
-        {/* Live chat */}
         <div ref={scrollRef} className="h-48 rounded-2xl border border-border bg-background/50 p-3 overflow-y-auto space-y-1.5">
           <AnimatePresence initial={false}>
             {chat.map((m) => (

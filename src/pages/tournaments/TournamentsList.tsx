@@ -65,7 +65,6 @@ export default function TournamentsList() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -82,7 +81,6 @@ export default function TournamentsList() {
           </p>
         </motion.div>
 
-        {/* Tabs */}
         <Tabs defaultValue="active">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="active">{t("tournament.active")}</TabsTrigger>

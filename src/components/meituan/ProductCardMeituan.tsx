@@ -61,7 +61,6 @@ export default function ProductCardMeituan({
     >
       <Link to={to} className="block">
         <div className="rounded-2xl overflow-hidden bg-card border border-border/50 active:scale-[0.99] transition group">
-          {/* Image */}
           <div className="relative aspect-square bg-muted overflow-hidden">
             {image ? (
               <img
@@ -99,7 +98,6 @@ export default function ProductCardMeituan({
             )}
           </div>
 
-          {/* Body */}
           <div className="p-2.5 space-y-1">
             <h3 className="text-[13px] font-semibold leading-tight line-clamp-2 min-h-[34px]">
               {title}

@@ -286,7 +286,6 @@ export default function AdminRegionalManagers() {
   // ===== RENDER =====
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Animated background particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
@@ -294,7 +293,6 @@ export default function AdminRegionalManagers() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -319,7 +317,6 @@ export default function AdminRegionalManagers() {
           </div>
         </motion.div>
 
-        {/* Stats Cards */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -349,7 +346,6 @@ export default function AdminRegionalManagers() {
           ))}
         </motion.div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-slate-900/80 border border-slate-800 p-1 rounded-2xl">
             <TabsTrigger value="managers" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
@@ -360,9 +356,7 @@ export default function AdminRegionalManagers() {
             </TabsTrigger>
           </TabsList>
 
-          {/* MANAGERS TAB */}
           <TabsContent value="managers" className="mt-6">
-            {/* Search */}
             <div className="relative mb-6">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
@@ -397,7 +391,6 @@ export default function AdminRegionalManagers() {
                       >
                         <CardContent className="p-5">
                           <div className="flex items-center gap-4">
-                            {/* Avatar */}
                             <div className={`relative w-12 h-12 rounded-2xl bg-gradient-to-br ${manager.role === "senior_manager" ? "from-amber-500 to-orange-600" : "from-cyan-500 to-blue-600"} flex items-center justify-center text-white font-black text-lg shadow-lg`}
                             >
                               {manager.user_name?.charAt(0)?.toUpperCase() || "?"}
@@ -431,7 +424,6 @@ export default function AdminRegionalManagers() {
                             </div>
                           </div>
 
-                          {/* Expanded Details */}
                           <AnimatePresence>
                             {expandedManager === manager.id && (
                               <motion.div
@@ -482,7 +474,6 @@ export default function AdminRegionalManagers() {
             )}
           </TabsContent>
 
-          {/* REGIONS TAB */}
           <TabsContent value="regions" className="mt-6">
             {loading ? (
               <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-emerald-400" /></div>
@@ -536,7 +527,6 @@ export default function AdminRegionalManagers() {
         </Tabs>
       </div>
 
-      {/* ===== MANAGER DIALOG ===== */}
       <Dialog open={managerDialogOpen} onOpenChange={setManagerDialogOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-lg">
           <DialogHeader>
@@ -600,7 +590,6 @@ export default function AdminRegionalManagers() {
         </DialogContent>
       </Dialog>
 
-      {/* ===== REGION DIALOG ===== */}
       <Dialog open={regionDialogOpen} onOpenChange={setRegionDialogOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-lg">
           <DialogHeader>
@@ -670,7 +659,6 @@ export default function AdminRegionalManagers() {
         </DialogContent>
       </Dialog>
 
-      {/* ===== DELETE DIALOG ===== */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-md">
           <DialogHeader>

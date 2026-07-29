@@ -199,7 +199,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2 text-white">
           <span className="text-2xl">🎯</span> Verdade ou Desafio
@@ -216,10 +215,8 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
         </div>
       </div>
 
-      {/* SETUP PHASE */}
       {phase === 'setup' && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          {/* Add players */}
           <Card className="bg-zinc-900/80 border-zinc-800">
             <CardContent className="p-4 space-y-3">
               <p className="text-sm text-zinc-400">Adicione pelo menos 2 jogadores para começar</p>
@@ -255,7 +252,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
             </CardContent>
           </Card>
 
-          {/* Spin button */}
           {players.length >= 2 && (
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
               <Button
@@ -267,7 +263,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
             </motion.div>
           )}
 
-          {/* Scoreboard */}
           {players.length >= 2 && (
             <Card className="bg-zinc-900/80 border-zinc-800">
               <CardContent className="p-4 space-y-2">
@@ -289,7 +284,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
             </Card>
           )}
 
-          {/* Round history */}
           {roundHistory.length > 0 && (
             <Card className="bg-zinc-900/80 border-zinc-800">
               <CardContent className="p-4 space-y-2">
@@ -314,9 +308,7 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
         </motion.div>
       )}
 
-      {/* ANIMATED PHASES */}
       <AnimatePresence mode="wait">
-        {/* SPINNING PHASE */}
         {phase === 'spinning' && (
           <motion.div
             key="spin"
@@ -326,7 +318,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
             className="py-8"
           >
             <div className="relative w-56 h-56 mx-auto mb-6">
-              {/* Spinning ring */}
               <motion.div
                 className="absolute inset-0 rounded-full border-4 border-purple-500/30"
                 animate={{ rotate: 360 }}
@@ -337,7 +328,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
                 animate={{ rotate: -360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
               />
-              {/* Center circle */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-14 h-14 rounded-full bg-zinc-800 border-2 border-zinc-600 flex items-center justify-center z-20">
                   <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 0.3 }}>
@@ -345,7 +335,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
                   </motion.div>
                 </div>
               </div>
-              {/* Player names around circle */}
               {players.map((p, i) => {
                 const angle = (i / players.length) * 360 - 90;
                 const isActive = i === spinDisplayIdx;
@@ -378,7 +367,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
           </motion.div>
         )}
 
-        {/* CHOICE PHASE */}
         {phase === 'choice' && (
           <motion.div
             key="choice"
@@ -423,7 +411,6 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
           </motion.div>
         )}
 
-        {/* REVEAL PHASE */}
         {phase === 'reveal' && challengeType && (
           <motion.div
             key={`reveal-${revealKey}`}

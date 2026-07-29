@@ -162,7 +162,6 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
     >
       <Link to={`/blog/${post.slug}`} className="block group">
         <Card className="h-full overflow-hidden border-border/50 bg-card hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group-hover:-translate-y-1 rounded-2xl">
-          {/* Imagem de capa */}
           <div className="relative aspect-video overflow-hidden">
             <img
               src={post.image_url || '/placeholder.svg'}
@@ -172,7 +171,6 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            {/* Badges virais */}
             <div className="absolute top-3 left-3 flex gap-1.5">
               {post.is_trending && (
                 <Badge className="bg-orange-500 text-white border-none gap-1 text-[10px] font-bold shadow-lg">
@@ -190,7 +188,6 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
           </div>
 
           <CardContent className="p-4 flex flex-col gap-2.5">
-            {/* Categoria + Data */}
             <div className="flex items-center justify-between gap-2">
               <Badge
                 variant="secondary"
@@ -209,17 +206,14 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
               </span>
             </div>
 
-            {/* Título */}
             <h3 className="font-bold text-base leading-snug line-clamp-2 group-hover:text-primary transition-colors">
               {post.title}
             </h3>
 
-            {/* Resumo */}
             <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
               {post.summary}
             </p>
 
-            {/* Métricas */}
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1 border-t border-border/30">
               <span className="flex items-center gap-1" title="Tempo de leitura">
                 <Clock className="h-3 w-3" />
@@ -406,7 +400,6 @@ export default function Blog() {
   /* ---------- render ---------- */
   return (
     <>
-      {/* ---- SEO ---- */}
       <Helmet>
         <title>Blog – Bateu Online | Notícias, Dicas e Sorteios</title>
         <meta
@@ -433,7 +426,6 @@ export default function Blog() {
         />
       </Helmet>
 
-      {/* JSON-LD: CollectionPage */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -452,10 +444,8 @@ export default function Blog() {
         }}
       />
 
-      <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
-        {/* ============ HERO ============ */}
+      <div className="min-h-screen bg-background">
         <section className="relative overflow-hidden">
-          {/* Fundo gradiente animado */}
           <div
             className="absolute inset-0"
             style={{
@@ -467,7 +457,6 @@ export default function Blog() {
           />
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-          {/* Partículas decorativas */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(6)].map((_, i) => (
               <motion.div
@@ -529,7 +518,6 @@ export default function Blog() {
               participação e muito mais.
             </motion.p>
 
-            {/* Barra de busca */}
             <motion.div
               className="max-w-lg mx-auto relative"
               initial={{ opacity: 0, y: 20 }}
@@ -546,7 +534,6 @@ export default function Blog() {
             </motion.div>
           </div>
 
-          {/* Curva inferior */}
           <div className="absolute bottom-0 left-0 right-0">
             <svg
               viewBox="0 0 1440 60"
@@ -563,7 +550,6 @@ export default function Blog() {
         </section>
 
         <div className="container mx-auto px-4 pb-20">
-          {/* ============ CATEGORIAS ============ */}
           {!loading && categories.length > 0 && (
             <motion.section
               className="mb-10 -mt-2"
@@ -620,7 +606,6 @@ export default function Blog() {
             </motion.section>
           )}
 
-          {/* ============ ESTADO DE ERRO ============ */}
           {error && !loading && (
             <motion.div
               className="text-center py-20"
@@ -639,7 +624,6 @@ export default function Blog() {
             </motion.div>
           )}
 
-          {/* ============ LOADING SKELETONS ============ */}
           {loading && !error && (
             <div className="space-y-12">
               <FeaturedSkeleton />
@@ -659,10 +643,8 @@ export default function Blog() {
             </div>
           )}
 
-          {/* ============ CONTEÚDO ============ */}
           {!loading && !error && (
             <div className="space-y-14">
-              {/* ---- Post Destaque ---- */}
               <AnimatePresence>
                 {featuredPost && (
                   <motion.section
@@ -741,7 +723,6 @@ export default function Blog() {
                 )}
               </AnimatePresence>
 
-              {/* ---- Em Alta ---- */}
               {trendingPosts.length > 0 && (
                 <motion.section
                   initial={{ opacity: 0, y: 20 }}
@@ -820,7 +801,6 @@ export default function Blog() {
                 </motion.section>
               )}
 
-              {/* ---- Grid Principal ---- */}
               <section>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-bold flex items-center gap-2">
@@ -866,7 +846,6 @@ export default function Blog() {
                   </motion.div>
                 ) : (
                   <>
-                    {/* Grid responsivo tipo masonry */}
                     <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
                       {visiblePosts.map((post, i) => (
                         <div key={post.id} className="break-inside-avoid">
@@ -875,7 +854,6 @@ export default function Blog() {
                       ))}
                     </div>
 
-                    {/* ---- Load More ---- */}
                     {hasMore && (
                       <div className="flex justify-center mt-12">
                         <Button
@@ -903,7 +881,6 @@ export default function Blog() {
                 )}
               </section>
 
-              {/* ============ FOOTER CTA ============ */}
               <motion.section
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -912,7 +889,6 @@ export default function Blog() {
               >
                 <Link to="/marketplace" className="block group">
                   <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 via-primary to-primary/70 p-8 md:p-12">
-                    {/* Decoração de fundo */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
 
@@ -947,7 +923,6 @@ export default function Blog() {
           )}
         </div>
 
-        {/* ============ Keyframes para gradiente animado ============ */}
         <style>{`
           @keyframes gradientShift {
             0% { background-position: 0% 50%; }

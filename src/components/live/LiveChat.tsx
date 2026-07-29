@@ -107,7 +107,6 @@ const LiveChat = ({ scheduledLiveId, liveCode, isModerator, onTipClick, compact 
 
   return (
     <div className={`flex flex-col bg-card border border-border rounded-2xl overflow-hidden ${compact ? "h-[400px]" : "h-[500px] lg:h-[600px]"}`}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold flex items-center gap-1.5">
@@ -123,7 +122,6 @@ const LiveChat = ({ scheduledLiveId, liveCode, isModerator, onTipClick, compact 
         )}
       </div>
 
-      {/* Messages */}
       <ScrollArea className="flex-1" ref={scrollRef}>
         <div className="p-3 space-y-1.5">
           {loading && (
@@ -208,7 +206,6 @@ const LiveChat = ({ scheduledLiveId, liveCode, isModerator, onTipClick, compact 
         </div>
       </ScrollArea>
 
-      {/* Reply bar */}
       <AnimatePresence>
         {replying && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-border px-3 py-2 bg-muted/30 flex items-center gap-2">
@@ -223,7 +220,6 @@ const LiveChat = ({ scheduledLiveId, liveCode, isModerator, onTipClick, compact 
         )}
       </AnimatePresence>
 
-      {/* Emoji picker + Input */}
       <div className="border-t border-border p-2 space-y-1.5">
         <AnimatePresence>
           {showEmoji && (

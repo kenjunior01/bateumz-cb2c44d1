@@ -149,7 +149,6 @@ export default function CreateRaffle() {
         </div>
       </div>
 
-      {/* Prize Info */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Informações do Prémio</CardTitle></CardHeader>
@@ -219,7 +218,6 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
-      {/* Raffle Type */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Tipo de Sorteio</CardTitle></CardHeader>
@@ -325,7 +323,6 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
-      {/* Draw Mode */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Timer className="h-4 w-4 text-primary" /> Modo de Sorteio</CardTitle></CardHeader>
@@ -380,7 +377,6 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
-      {/* Tickets */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg">Configuração de Bilhetes</CardTitle></CardHeader>
@@ -466,7 +462,6 @@ export default function CreateRaffle() {
         </Card>
       </motion.div>
 
-      {/* Location */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <Card className="glass border-glass-border">
           <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Localização (Opcional)</CardTitle></CardHeader>

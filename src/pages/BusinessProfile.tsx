@@ -418,9 +418,7 @@ export default function BusinessProfile() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero - estilo cartão de empresa premium */}
       <div className="relative">
-        {/* Cover image / gradient */}
         <div className="relative h-32 sm:h-48 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/80 to-accent" />
           <div
@@ -430,7 +428,6 @@ export default function BusinessProfile() {
                 "radial-gradient(circle at 20% 80%, rgba(255,255,255,0.3) 0, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0, transparent 50%)",
             }}
           />
-          {/* Pattern overlay */}
           <div
             className="absolute inset-0 opacity-10"
             style={{
@@ -456,7 +453,6 @@ export default function BusinessProfile() {
         </div>
 
         <div className="container mx-auto max-w-6xl px-4">
-          {/* Avatar overlapping cover */}
           <div className="-mt-12 sm:-mt-16 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -503,7 +499,6 @@ export default function BusinessProfile() {
               </div>
             </motion.div>
 
-            {/* Stats grid */}
             <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-4 sm:mt-6">
               {[
                 { icon: Ticket, label: "Sorteios", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
@@ -530,7 +525,6 @@ export default function BusinessProfile() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl space-y-6">
         <AmbassadorPanel businessUserId={business.user_id} businessName={displayName} />
         <Tabs defaultValue="all">
@@ -560,7 +554,6 @@ export default function BusinessProfile() {
               </TabsList>
           </div>
 
-          {/* TAB: ALL */}
           <TabsContent value="all">
             {raffles.length === 0 && contests.length === 0 && products.length === 0 ? (
               <EmptyState />
@@ -1174,7 +1167,6 @@ function WinnersAndRankings({
 }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {/* Winners list */}
       <Card className="border-border/60">
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -1219,7 +1211,6 @@ function WinnersAndRankings({
         </CardContent>
       </Card>
 
-      {/* Contest rankings */}
       <Card className="border-border/60">
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -1366,7 +1357,6 @@ function FilteredList<T extends { id: string; created_at?: string | null }>({
 
   return (
     <div>
-      {/* Controls */}
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex flex-wrap gap-1.5">
           {statuses.map((s) => {

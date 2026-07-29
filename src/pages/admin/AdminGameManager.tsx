@@ -76,7 +76,6 @@ export default function AdminGameManager() {
           {games.map((game) => (
             <Card key={game.id} className="overflow-hidden border-primary/10">
               <div className="md:flex">
-                {/* Preview Thumbnail */}
                 <div 
                   className="md:w-64 h-48 md:h-auto bg-muted relative flex items-center justify-center overflow-hidden"
                   style={{ backgroundColor: game.background_color }}
@@ -92,7 +91,6 @@ export default function AdminGameManager() {
                   </div>
                 </div>
 
-                {/* Controls */}
                 <CardContent className="flex-1 p-6 grid md:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-2">

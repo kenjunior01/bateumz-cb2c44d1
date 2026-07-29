@@ -51,7 +51,6 @@ const FloatingReactions = ({ scheduledLiveId, liveCode }: Props) => {
 
   return (
     <>
-      {/* Floating animation layer */}
       <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
         {floating.map((fe) => {
           const age = (Date.now() - fe.createdAt) / 3500;
@@ -77,7 +76,6 @@ const FloatingReactions = ({ scheduledLiveId, liveCode }: Props) => {
         })}
       </div>
 
-      {/* Reaction bar */}
       <div className="flex items-center justify-center gap-1 py-2">
         {DEFAULT_EMOJIS.map((emoji) => (
           <button

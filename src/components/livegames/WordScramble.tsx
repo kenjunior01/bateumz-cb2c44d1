@@ -553,7 +553,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
       <AnimatePresence mode="wait">
-        {/* ========== CATEGORY SELECT ========== */}
         {gameState === "category_select" && (
           <motion.div
             key="category_select"
@@ -607,7 +606,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
           </motion.div>
         )}
 
-        {/* ========== COUNTDOWN ========== */}
         {gameState === "countdown" && (
           <motion.div
             key="countdown"
@@ -645,7 +643,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
           </motion.div>
         )}
 
-        {/* ========== PLAYING ========== */}
         {(gameState === "playing" || gameState === "round_result") && (
           <motion.div
             key="playing"
@@ -654,7 +651,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
             exit={{ opacity: 0 }}
             className="w-full max-w-2xl"
           >
-            {/* Scoreboard */}
             <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -716,7 +712,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               </div>
             </div>
 
-            {/* Timer bar */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1">
                 <Badge variant="outline" className="border-slate-700 text-slate-400 text-xs">
@@ -751,7 +746,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               </div>
             </div>
 
-            {/* Scrambled letters */}
             <div className="flex justify-center flex-wrap gap-2 my-6">
               <AnimatePresence>
                 {scrambledLetters.map((letter, i) => (
@@ -785,7 +779,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               </AnimatePresence>
             </div>
 
-            {/* Answer revealed in round result */}
             <AnimatePresence>
               {gameState === "round_result" && (
                 <motion.div
@@ -801,9 +794,7 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               )}
             </AnimatePresence>
 
-            {/* Player inputs */}
             <div className={cn("flex flex-col md:flex-row gap-4 mb-6")}>
-              {/* Player 1 */}
               <div className="flex-1">
                 <motion.div
                   animate={
@@ -866,7 +857,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
                 </AnimatePresence>
               </div>
 
-              {/* VS badge */}
               <div className="flex items-center justify-center">
                 <Badge
                   className="bg-gradient-to-r from-cyan-600 to-pink-600 border-0 text-white font-black text-sm px-4 py-1"
@@ -875,7 +865,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
                 </Badge>
               </div>
 
-              {/* Player 2 */}
               <div className="flex-1">
                 <motion.div
                   animate={
@@ -939,7 +928,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               </div>
             </div>
 
-            {/* Round result / Next round */}
             <AnimatePresence>
               {gameState === "round_result" && (
                 <motion.div
@@ -1010,7 +998,6 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
           </motion.div>
         )}
 
-        {/* ========== FINAL RESULTS ========== */}
         {gameState === "final_results" && (
           <motion.div
             key="final_results"

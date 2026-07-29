@@ -116,7 +116,6 @@ export default function RaffleHistory() {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-2 md:pt-28 pb-10 md:pb-20">
-        {/* Mobile sticky header */}
         <MobileDiscoveryHeader
           title="Histórico de Vencedores"
           searchValue={search}
@@ -127,7 +126,6 @@ export default function RaffleHistory() {
           onCategoryChange={(id) => setFilter(id as any)}
         />
 
-        {/* Desktop hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block text-center mb-10">
           <Trophy className="h-12 w-12 text-accent mx-auto mb-4" />
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">Histórico de Vencedores</h1>

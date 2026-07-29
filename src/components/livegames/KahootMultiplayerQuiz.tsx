@@ -191,12 +191,16 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
 
   // ===== RENDER =====
   return (
+<<<<<<< HEAD
     <div className={"space-y-4 relative " + (flashClass ? "" : "")}>
       {flashClass && <div className={"absolute inset-0 z-10 pointer-events-none rounded-2xl " + flashClass} />}
       <div className="game-particle game-particle-1" style={{ top: "5%", left: "5%" }} />
       <div className="game-particle game-particle-2" style={{ top: "10%", right: "10%" }} />
       <div className="game-particle game-particle-4" style={{ bottom: "8%", right: "5%" }} />
       {/* Host: No game yet */}
+=======
+    <div className="space-y-4">
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
       {!game && isHost && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
@@ -210,7 +214,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
         </Card>
       )}
 
-      {/* Player: Waiting */}
       {!game && !isHost && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
@@ -221,7 +224,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
         </Card>
       )}
 
-      {/* Game in progress */}
       {game && game.status === "waiting" && isHost && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -290,7 +292,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
         </div>
       )}
 
-      {/* Question active */}
       {game && game.status === "question" && currentQ && (
         <div key={shakeKey} className={"space-y-4 " + (shakeKey > 0 ? "game-screen-shake" : "")}>
           <div className="flex items-center justify-between">
@@ -354,7 +355,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
         </div>
       )}
 
-      {/* Showing results */}
       {game && showResults && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -371,7 +371,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
             )}
           </div>
 
-          {/* Leaderboard */}
           <Card>
             <CardContent className="py-3">
               <h4 className="text-sm font-bold mb-3 flex items-center gap-1.5"><Trophy className="h-4 w-4 text-amber-500" /> Ranking</h4>
@@ -411,7 +410,6 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
         </div>
       )}
 
-      {/* Finished */}
       {game && game.status === "finished" && (
         <Card className="border-amber-500/30 game-shimmer">
           <CardContent className="py-8 text-center">

@@ -119,7 +119,6 @@ export default function Referral() {
     <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
       <Navbar />
       <div className="container mx-auto px-4 pt-28 pb-20">
-        {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-2xl mx-auto mb-10">
           <motion.div
             animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
@@ -138,7 +137,6 @@ export default function Referral() {
           </p>
         </motion.div>
 
-        {/* Bonus campaign banner */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="max-w-2xl mx-auto mb-8 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/10 via-card/40 to-primary/10 p-5 text-center"
@@ -150,7 +148,6 @@ export default function Referral() {
           </p>
         </motion.div>
 
-        {/* Stats cards */}
         <div className="grid gap-4 sm:grid-cols-4 mb-8">
           {[
             { icon: Star, label: "Total points", value: totalPoints, color: "text-accent" },
@@ -170,7 +167,6 @@ export default function Referral() {
           ))}
         </div>
 
-        {/* Progress */}
         {nextMilestone && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="max-w-xl mx-auto mb-8">
             <Card className="glass border-accent/20">
@@ -189,7 +185,6 @@ export default function Referral() {
           </motion.div>
         )}
 
-        {/* Share Link */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="max-w-xl mx-auto mb-8">
           <Card className="glass border-primary/20">
             <CardContent className="p-6">
@@ -230,7 +225,6 @@ export default function Referral() {
           </Card>
         </motion.div>
 
-        {/* Points Rewards & Friends */}
         <div className="grid gap-6 lg:grid-cols-2 max-w-4xl mx-auto">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
             <Card className="glass">
@@ -307,7 +301,6 @@ export default function Referral() {
           </motion.div>
         </div>
 
-        {/* How it works */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-12 max-w-2xl mx-auto">
           <h2 className="font-display text-xl font-bold text-foreground text-center mb-6">How it works</h2>
           <div className="flex flex-col sm:flex-row items-center gap-4">

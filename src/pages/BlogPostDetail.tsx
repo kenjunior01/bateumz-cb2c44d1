@@ -410,13 +410,11 @@ export default function BlogPostDetail() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      {/* ══════ SEO ══════ */}
       <Helmet>
         <title>{pageTitle} | {SITE_NAME}</title>
         <meta name="description" content={pageDesc} />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={pageUrl} />
-        {/* Open Graph */}
         <meta property="og:type" content="article" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
@@ -430,14 +428,12 @@ export default function BlogPostDetail() {
         {post.seo_keywords?.map((kw) => (
           <meta property="article:tag" content={kw} key={kw} />
         ))}
-        {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDesc} />
         <meta name="twitter:image" content={postImage} />
       </Helmet>
 
-      {/* ══════ JSON-LD Structured Data ══════ */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -475,7 +471,6 @@ export default function BlogPostDetail() {
         }}
       />
 
-      {/* ══════ Breadcrumbs ══════ */}
       <div className="container mx-auto px-4 pt-4 pb-2">
         <Breadcrumb>
           <BreadcrumbList>
@@ -514,7 +509,6 @@ export default function BlogPostDetail() {
         </Breadcrumb>
       </div>
 
-      {/* ══════ Hero ══════ */}
       <div className="relative h-[40vh] md:h-[55vh] w-full overflow-hidden">
         <img
           src={post.image_url || "/placeholder.svg"}
@@ -523,7 +517,6 @@ export default function BlogPostDetail() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
-        {/* Badges flutuantes */}
         <div className="absolute top-4 right-4 z-10 flex gap-2">
           {post.is_featured && (
             <Badge className="gap-1 bg-yellow-500 text-black border-none font-bold shadow-lg">
@@ -586,11 +579,9 @@ export default function BlogPostDetail() {
         </div>
       </div>
 
-      {/* ══════ Conteúdo principal + sidebars ══════ */}
       <div className="container mx-auto px-4 mt-10 pb-20">
         <div className="flex gap-12 relative">
 
-          {/* ── Sticky share bar (desktop xl+) ── */}
           <div className="hidden xl:flex flex-col items-center gap-2 sticky top-24 self-start z-10">
             {shareLinks.map((s) => (
               <a
@@ -629,7 +620,6 @@ export default function BlogPostDetail() {
             </button>
           </div>
 
-          {/* ── TOC Sidebar (desktop lg+) ── */}
           {toc.length > 1 && (
             <aside className="hidden lg:block w-56 shrink-0 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
               <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
@@ -661,7 +651,6 @@ export default function BlogPostDetail() {
             </aside>
           )}
 
-          {/* ── Main content ── */}
           <article className="flex-1 min-w-0 max-w-3xl">
             <div
               ref={contentRef}
@@ -684,7 +673,6 @@ export default function BlogPostDetail() {
               dangerouslySetInnerHTML={{ __html: enrichedContent }}
             />
 
-            {/* ── Barra de ações mobile ── */}
             <div className="xl:hidden mt-10 pt-6 border-t border-border">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
@@ -738,7 +726,6 @@ export default function BlogPostDetail() {
               </div>
             </div>
 
-            {/* ── Tags ── */}
             {post.seo_keywords && post.seo_keywords.length > 0 && (
               <div className="mt-8 pt-6 border-t border-border">
                 <div className="flex items-center gap-2 mb-3">
@@ -755,7 +742,6 @@ export default function BlogPostDetail() {
               </div>
             )}
 
-            {/* ── Caixa do autor ── */}
             <Card className="mt-10 border-primary/10">
               <CardContent className="p-6 flex items-start gap-4">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -777,7 +763,6 @@ export default function BlogPostDetail() {
               </CardContent>
             </Card>
 
-            {/* ── Posts relacionados (inline, visível em todas as telas) ── */}
             {relatedPosts.length > 0 && (
               <section className="mt-14">
                 <div className="flex items-center gap-2 mb-6">
@@ -834,7 +819,6 @@ export default function BlogPostDetail() {
               </section>
             )}
 
-            {/* ── Footer CTA ── */}
             <Card className="mt-14 bg-gradient-to-r from-primary to-primary/80 border-none overflow-hidden">
               <CardContent className="p-8 md:p-10 flex flex-col md:flex-row items-center gap-6">
                 <div className="flex-1 text-center md:text-left space-y-2">
@@ -860,9 +844,7 @@ export default function BlogPostDetail() {
             </Card>
           </article>
 
-          {/* ── Sidebar direita (desktop lg+) ── */}
           <aside className="hidden lg:block w-72 shrink-0 space-y-6 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
-            {/* Compartilhar */}
             <Card className="border-primary/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -903,7 +885,6 @@ export default function BlogPostDetail() {
               </CardContent>
             </Card>
 
-            {/* Curtir */}
             <Card className="border-primary/10">
               <CardContent className="p-4 flex items-center gap-4">
                 <Button
@@ -925,7 +906,6 @@ export default function BlogPostDetail() {
               </CardContent>
             </Card>
 
-            {/* Posts relacionados sidebar */}
             {relatedPosts.length > 0 && (
               <Card className="border-primary/10">
                 <CardHeader className="pb-3">
@@ -964,7 +944,6 @@ export default function BlogPostDetail() {
         </div>
       </div>
 
-      {/* ══════ Botão voltar ao topo ══════ */}
       <motion.div
         className="fixed bottom-6 right-6 z-50"
         initial={{ opacity: 0, y: 20 }}

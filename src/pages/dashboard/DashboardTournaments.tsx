@@ -129,7 +129,6 @@ export default function DashboardTournaments() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent">
@@ -233,7 +232,6 @@ export default function DashboardTournaments() {
         </Dialog>
       </div>
 
-      {/* Tournament list */}
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -267,7 +265,6 @@ export default function DashboardTournaments() {
                     >
                       <TournamentCard tournament={tourn} onClick={() => {}} />
                     </div>
-                    {/* Actions bar */}
                     <div className="flex items-center justify-end gap-2 border-t border-border/50 px-4 py-2.5">
                       {tourn.status === "draft" && (
                         <Button

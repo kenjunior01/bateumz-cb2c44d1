@@ -324,7 +324,6 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
 
   return (
     <div className="flex flex-col items-center gap-6 p-4" style={bgStyle}>
-      {/* Minimum segments warning */}
       {segments.length < 4 && (
         <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200">
           <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-400" />
@@ -332,7 +331,6 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
         </div>
       )}
 
-      {/* Company branding */}
       {wheelConfig?.company_logo_url && (
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -347,7 +345,6 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
       )}
 
       <div className="relative">
-        {/* Pointer */}
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
 
         <motion.div

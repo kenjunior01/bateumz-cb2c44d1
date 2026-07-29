@@ -155,7 +155,6 @@ const DashboardLiveGames = () => {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <header className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/5 p-5 md:p-7">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
@@ -187,7 +186,6 @@ const DashboardLiveGames = () => {
         </div>
       </header>
 
-      {/* Quick stats — feels like a contest dashboard */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { icon: Trophy, label: "Jogos disponíveis", value: GAME_OPTIONS.length + millionaireGames.length + spinWheelGames.length, hint: `${GAME_OPTIONS.length} locais + ${millionaireGames.length} Milionário + ${spinWheelGames.length} Roda` },
@@ -204,7 +202,6 @@ const DashboardLiveGames = () => {
         ))}
       </section>
 
-      {/* Jogo ativo no momento — aplica imediatamente no Live Hub */}
       <section className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-card p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
@@ -238,7 +235,6 @@ const DashboardLiveGames = () => {
         </div>
       </section>
 
-      {/* DB-Backed Games Section */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
@@ -258,7 +254,6 @@ const DashboardLiveGames = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Millionaire Games */}
             <div className="rounded-xl border border-border/50 bg-background/50 p-4">
               <h4 className="font-display font-bold text-sm mb-3 flex items-center gap-2">
                 <span className="text-lg">🤑</span> Milionário ({millionaireGames.length})
@@ -289,7 +284,6 @@ const DashboardLiveGames = () => {
               )}
             </div>
 
-            {/* Spin Wheel Games */}
             <div className="rounded-xl border border-border/50 bg-background/50 p-4">
               <h4 className="font-display font-bold text-sm mb-3 flex items-center gap-2">
                 <span className="text-lg">🎡</span> Roda da Sorte ({spinWheelGames.length})
@@ -338,7 +332,6 @@ const DashboardLiveGames = () => {
         </div>
       </section>
 
-      {/* Tabs per game */}
       <Tabs defaultValue="wheel" className="w-full">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1 bg-secondary">
           <TabsTrigger value="wheel" className="text-xs"><Sliders className="h-3.5 w-3.5 mr-1.5" />Roda</TabsTrigger>
@@ -349,7 +342,6 @@ const DashboardLiveGames = () => {
           <TabsTrigger value="mystery" className="text-xs"><Package className="h-3.5 w-3.5 mr-1.5" />Caixa</TabsTrigger>
         </TabsList>
 
-        {/* Roda */}
         <TabsContent value="wheel" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -385,7 +377,6 @@ const DashboardLiveGames = () => {
           </div>
         </TabsContent>
 
-        {/* Palavra-chave */}
         <TabsContent value="keyword" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
             <div>
@@ -415,7 +406,6 @@ const DashboardLiveGames = () => {
           </div>
         </TabsContent>
 
-        {/* Emojis */}
         <TabsContent value="emoji" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -444,7 +434,6 @@ const DashboardLiveGames = () => {
           </div>
         </TabsContent>
 
-        {/* Tap */}
         <TabsContent value="tap" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <h3 className="font-display text-lg font-bold">Tap Battle</h3>
@@ -456,7 +445,6 @@ const DashboardLiveGames = () => {
           </div>
         </TabsContent>
 
-        {/* Quiz */}
         <TabsContent value="quiz" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <h3 className="font-display text-lg font-bold">Quiz Battle</h3>
@@ -473,7 +461,6 @@ const DashboardLiveGames = () => {
           </div>
         </TabsContent>
 
-        {/* Mystery */}
         <TabsContent value="mystery" className="mt-4">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <h3 className="font-display text-lg font-bold">Caixa Misteriosa — Probabilidades</h3>
@@ -497,7 +484,6 @@ const DashboardLiveGames = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Tip */}
       <div className="rounded-2xl border border-dashed border-border bg-card/50 p-4 flex items-start gap-3">
         <Eye className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-xs text-muted-foreground">

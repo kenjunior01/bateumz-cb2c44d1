@@ -153,7 +153,6 @@ function NumberSlot({ number, isRevealing }: { number: number | null; isRevealin
               {digit}
             </span>
           </motion.div>
-          {/* Shine effect */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
         </motion.div>
       ))}
@@ -237,7 +236,6 @@ function WinnerReveal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Gradient background */}
       <motion.div
         className="absolute inset-0"
         initial={{ opacity: 0 }}
@@ -252,7 +250,6 @@ function WinnerReveal({
       <div className="relative z-10 text-center max-w-lg mx-auto px-4">
         <ConfettiBurst active={true} />
 
-        {/* Crown animation */}
         <motion.div
           initial={{ y: -100, opacity: 0, rotate: -30 }}
           animate={{ y: 0, opacity: 1, rotate: 0 }}
@@ -262,7 +259,6 @@ function WinnerReveal({
             style={{ filter: "drop-shadow(0 0 30px hsl(45, 100%, 50% / 0.5))" }} />
         </motion.div>
 
-        {/* Title */}
         <motion.h2
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -272,7 +268,6 @@ function WinnerReveal({
           TEMOS UM VENCEDOR!
         </motion.h2>
 
-        {/* Winner card */}
         <motion.div
           initial={{ y: 50, opacity: 0, scale: 0.8 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -313,7 +308,6 @@ function WinnerReveal({
           </Card>
         </motion.div>
 
-        {/* Mascot celebration */}
         <motion.div
           initial={{ scale: 0, y: 50 }}
           animate={{ scale: 1, y: 0 }}
@@ -459,7 +453,6 @@ const LiveDraw = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Ambient background effects */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[150px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-accent/5 blur-[120px]" />
@@ -480,7 +473,6 @@ const LiveDraw = () => {
         </button>
 
         <div className="max-w-3xl mx-auto text-center">
-          {/* Header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <motion.div
               className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-sm text-accent mb-6"
@@ -499,14 +491,12 @@ const LiveDraw = () => {
             <p className="text-3xl font-display font-black text-accent mb-8">{formatMZN(raffle.prize_value)}</p>
           </motion.div>
 
-          {/* Digital Globe / Number Display */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="relative mx-auto mb-10"
           >
             <div className="relative w-80 h-80 mx-auto">
-              {/* Outer spinning rings */}
               <motion.div
                 animate={phase === "drawing" ? { rotate: 360 } : {}}
                 transition={phase === "drawing" ? { repeat: Infinity, duration: 2, ease: "linear" } : {}}
@@ -523,7 +513,6 @@ const LiveDraw = () => {
                 className="absolute inset-6 rounded-full border border-primary/10"
               />
 
-              {/* Globe core */}
               <div className="absolute inset-8 rounded-full bg-gradient-to-br from-secondary via-card to-secondary border border-border overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center">
                   {phase === "drawing" || currentNumber ? (
@@ -555,7 +544,6 @@ const LiveDraw = () => {
                   )}
                 </div>
 
-                {/* Orbiting numbers */}
                 {phase === "drawing" &&
                   globeNumbers.slice(0, 16).map((num, i) => (
                     <motion.div
@@ -573,7 +561,6 @@ const LiveDraw = () => {
                     </motion.div>
                   ))}
 
-                {/* Heartbeat glow */}
                 {heartbeat && (
                   <motion.div
                     className="absolute inset-0 rounded-full"
@@ -589,7 +576,6 @@ const LiveDraw = () => {
                 )}
               </div>
 
-              {/* Glow effect */}
               {phase === "drawing" && (
                 <motion.div
                   animate={{
@@ -604,7 +590,6 @@ const LiveDraw = () => {
             </div>
           </motion.div>
 
-          {/* Number slot display during draw */}
           <AnimatePresence>
             {(phase === "drawing" || (phase === "winner" && !winner)) && currentNumber && (
               <motion.div
@@ -618,7 +603,6 @@ const LiveDraw = () => {
             )}
           </AnimatePresence>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
             <Card className="glass">
               <CardContent className="p-4 text-center">
@@ -643,7 +627,6 @@ const LiveDraw = () => {
             </Card>
           </div>
 
-          {/* Draw button */}
           {phase === "idle" && !winner && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -670,7 +653,6 @@ const LiveDraw = () => {
             </motion.div>
           )}
 
-          {/* Drawing state text */}
           {phase === "drawing" && (
             <motion.p
               className="text-lg font-bold text-primary"
@@ -683,14 +665,12 @@ const LiveDraw = () => {
         </div>
       </div>
 
-      {/* Countdown overlay */}
       <AnimatePresence>
         {phase === "countdown" && (
           <PreDrawCountdown seconds={3} onComplete={onCountdownComplete} />
         )}
       </AnimatePresence>
 
-      {/* Winner reveal overlay */}
       <AnimatePresence>
         {phase === "winner" && winner && (
           <WinnerReveal

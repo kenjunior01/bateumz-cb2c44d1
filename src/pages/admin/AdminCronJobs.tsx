@@ -126,7 +126,6 @@ export default function AdminCronJobs() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { label: "Total de Jobs", value: jobs.length, icon: Calendar, color: "text-foreground" },
@@ -149,7 +148,6 @@ export default function AdminCronJobs() {
         ))}
       </div>
 
-      {/* Jobs Table */}
       <Card className="glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -257,7 +255,6 @@ export default function AdminCronJobs() {
         </CardContent>
       </Card>
 
-      {/* Info Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="glass border-primary/10">
           <CardContent className="p-4">

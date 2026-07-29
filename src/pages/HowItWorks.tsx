@@ -35,7 +35,6 @@ export default function HowItWorks() {
               transition={{ delay: i * 0.1 }}
               className="relative flex gap-6 pb-12 last:pb-0"
             >
-              {/* Timeline line */}
               {i < steps.length - 1 && (
                 <div className="absolute left-6 top-14 h-full w-px bg-gradient-to-b from-primary/40 to-transparent" />
               )}

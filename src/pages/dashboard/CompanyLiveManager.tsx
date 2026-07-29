@@ -326,7 +326,6 @@ const CompanyLiveManager = () => {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3 mb-2">
           <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white">
@@ -349,7 +348,6 @@ const CompanyLiveManager = () => {
           <TabsTrigger value="design" className="gap-1"><Palette className="h-3.5 w-3.5" /> Design</TabsTrigger>
         </TabsList>
 
-        {/* TEMPLATES TAB */}
         <TabsContent value="templates" className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-lg font-bold">Templates de Live</h2>
@@ -414,7 +412,6 @@ const CompanyLiveManager = () => {
           )}
         </TabsContent>
 
-        {/* GAMES TAB */}
         <TabsContent value="games" className="mt-6">
           {!current ? (
             <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
@@ -466,7 +463,6 @@ const CompanyLiveManager = () => {
 
               <Separator />
 
-              {/* Challenge Creator section */}
               <div>
                 <h3 className="font-display text-lg font-bold mb-3 flex items-center gap-2">
                   <Puzzle className="h-5 w-5 text-primary" /> Desafios Personalizados
@@ -477,7 +473,6 @@ const CompanyLiveManager = () => {
           )}
         </TabsContent>
 
-        {/* RULES TAB */}
         <TabsContent value="rules" className="mt-6">
           {!current ? (
             <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
@@ -494,7 +489,6 @@ const CompanyLiveManager = () => {
                 </Button>
               </div>
 
-              {/* Timing */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4" /> Temporizacao</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -517,7 +511,6 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Players */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4" /> Jogadores</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -536,7 +529,6 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Scoring */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Trophy className="h-4 w-4" /> Pontuacao</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -562,7 +554,6 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Board Games */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Gamepad2 className="h-4 w-4" /> Jogos de Tabuleiro</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -580,7 +571,6 @@ const CompanyLiveManager = () => {
           )}
         </TabsContent>
 
-        {/* DESIGN TAB */}
         <TabsContent value="design" className="mt-6">
           {!current ? (
             <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
@@ -597,7 +587,6 @@ const CompanyLiveManager = () => {
                 </Button>
               </div>
 
-              {/* Company Info */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Dados da Empresa</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
@@ -608,12 +597,11 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Colors */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Cores do Tema</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {(['primaryColor', 'secondaryColor', 'accentColor', 'backgroundColor'] as const).map((key) => (
+                    {(['primaryColor', 'secondaryColor', 'accentColor', 'backgroundColor']).map((key) => (
                       <div key={key} className="space-y-1">
                         <Label className="text-xs capitalize">{key.replace('Color', '').replace('background', 'Fundo')}</Label>
                         <div className="flex gap-2">
@@ -626,7 +614,6 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Visual Effects */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="h-4 w-4" /> Efeitos Visuais</CardTitle></CardHeader>
                 <CardContent className="space-y-4">

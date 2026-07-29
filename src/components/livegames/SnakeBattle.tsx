@@ -894,7 +894,6 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
                   Cobra Batalha
                 </h2>
 
-                {/* Mode Toggle */}
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <span className="text-[10px] text-slate-400">Modo:</span>
                   <div className="flex bg-slate-800 rounded-lg p-0.5 border border-slate-700">
@@ -924,7 +923,6 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
                   </div>
                 </div>
 
-                {/* Difficulty Selector — only in computador mode */}
                 <AnimatePresence mode="wait">
                   {isAI && (
                     <motion.div
@@ -1098,7 +1096,6 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
           </div>
         </div>
 
-        {/* P2 controls only in jogador mode */}
         {!isAI && (
           <div className="flex flex-col items-center gap-1">
             <span className="text-[10px] text-pink-400 font-medium">P2</span>

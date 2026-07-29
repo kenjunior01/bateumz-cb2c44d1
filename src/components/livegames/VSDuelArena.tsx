@@ -570,7 +570,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
 
   return (
     <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-3xl border border-border bg-card">
-      {/* ---- CONFETTI overlay ---- */}
       <AnimatePresence>
         {phase === 'gameOver' && (
           <motion.div
@@ -586,7 +585,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
         )}
       </AnimatePresence>
 
-      {/* =============== SETUP =============== */}
       <AnimatePresence mode="wait">
         {phase === 'setup' && (
           <motion.div
@@ -609,7 +607,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Player 1 */}
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
@@ -627,7 +624,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
                 />
               </div>
 
-              {/* VS divider */}
               <div className="flex items-center justify-center">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
                 <motion.div
@@ -640,7 +636,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
               </div>
 
-              {/* Player 2 */}
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
@@ -658,7 +653,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
                 />
               </div>
 
-              {/* Start */}
               <Button
                 onClick={startGame}
                 disabled={!p1.name.trim() || !p2.name.trim()}
@@ -671,7 +665,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           </motion.div>
         )}
 
-        {/* =============== VS INTRO =============== */}
         {phase === 'vsIntro' && (
           <motion.div
             key="vsIntro"
@@ -680,7 +673,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
             exit={{ opacity: 0 }}
             className="relative flex items-center justify-center min-h-[420px]"
           >
-            {/* Split background */}
             <div className="absolute inset-0 flex">
               <motion.div
                 className="w-1/2 bg-gradient-to-r from-red-600/30 to-red-600/10"
@@ -696,7 +688,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               />
             </div>
 
-            {/* Player 1 side */}
             <motion.div
               className="absolute left-4 flex flex-col items-center gap-2"
               initial={{ x: -80, opacity: 0 }}
@@ -711,7 +702,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               </span>
             </motion.div>
 
-            {/* VS Center */}
             <motion.div
               className="relative z-10 flex flex-col items-center"
               initial={{ scale: 0, rotate: -180 }}
@@ -742,7 +732,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               </motion.p>
             </motion.div>
 
-            {/* Player 2 side */}
             <motion.div
               className="absolute right-4 flex flex-col items-center gap-2"
               initial={{ x: 80, opacity: 0 }}
@@ -759,7 +748,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           </motion.div>
         )}
 
-        {/* =============== ROUND INTRO =============== */}
         {phase === 'roundIntro' && (
           <motion.div
             key={`roundIntro-${currentRound}`}
@@ -802,7 +790,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               {roundConfig.description}
             </motion.p>
 
-            {/* Score summary */}
             <div className="flex items-center gap-6 mt-8">
               <div className="flex flex-col items-center">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
@@ -821,7 +808,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           </motion.div>
         )}
 
-        {/* =============== PLAYING =============== */}
         {phase === 'playing' && (
           <motion.div
             key={`playing-${currentRound}-${roundType}`}
@@ -830,7 +816,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
             exit={{ opacity: 0 }}
             className="min-h-[480px] flex flex-col"
           >
-            {/* Top bar: round + timer */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-black/20">
               <Badge variant="outline" className="text-[10px] border-white/10 text-white/60">
                 {roundConfig.label}
@@ -850,9 +835,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               </Badge>
             </div>
 
-            {/* Split screen with health bars */}
             <div className="flex-1 grid grid-cols-2 divide-x divide-white/10">
-              {/* Player 1 */}
               <div className="flex flex-col items-center p-3 bg-gradient-to-b from-red-600/10 to-transparent relative">
                 <span className="text-xs font-bold text-red-400 truncate w-full text-center mb-1">
                   {p1.name}
@@ -863,13 +846,11 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
                   <span className="text-[10px] text-red-400 font-medium">{p1.score} vitória(s)</span>
                 </div>
 
-                {/* Round-specific content per player */}
                 <div className="flex-1 w-full flex items-center justify-center mt-3">
                   {renderPlayerAction(0)}
                 </div>
               </div>
 
-              {/* Player 2 */}
               <div className="flex flex-col items-center p-3 bg-gradient-to-b from-blue-600/10 to-transparent relative">
                 <span className="text-xs font-bold text-blue-400 truncate w-full text-center mb-1">
                   {p2.name}
@@ -886,14 +867,12 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
               </div>
             </div>
 
-            {/* Center VS overlay */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
               <span className="text-3xl md:text-5xl font-black text-white/10 select-none">VS</span>
             </div>
           </motion.div>
         )}
 
-        {/* =============== ROUND RESULT =============== */}
         {phase === 'roundResult' && (
           <motion.div
             key={`roundResult-${currentRound}`}
@@ -939,7 +918,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           </motion.div>
         )}
 
-        {/* =============== GAME OVER =============== */}
         {phase === 'gameOver' && (
           <motion.div
             key="gameOver"
@@ -948,7 +926,6 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
             exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center min-h-[480px] px-6 text-center relative"
           >
-            {/* Glowing background */}
             <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-purple-500/10 to-pink-500/10" />
 
             <motion.div

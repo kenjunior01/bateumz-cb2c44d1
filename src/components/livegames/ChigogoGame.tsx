@@ -143,7 +143,6 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
       <CapulanaBg />
 
       <div className="relative z-10 p-4 md:p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg flex items-center justify-center text-xl"
@@ -162,7 +161,6 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
           )}
         </div>
 
-        {/* First to N indicator */}
         {phase !== "menu" && phase !== "gameOver" && (
           <div className="text-center mb-3"><span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "rgba(255,215,0,0.1)", color: "#FFD700" }}>Primeiro a {ROUNDS_TO_WIN} vence</span></div>
         )}
@@ -173,7 +171,11 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
               Esconda a pedrinha numa das 3 maos. O adversario adivinha onde esta! Primeiro a {ROUNDS_TO_WIN} pontos vence.
             </p>
             <div className="flex justify-center gap-2">
+<<<<<<< HEAD
               {_MODES.map((m) => (
+=======
+              {(["bot", "pvp"]).map((m) => (
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                 <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
@@ -182,7 +184,11 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
+<<<<<<< HEAD
                 {_DIFFS.map((d) => (
+=======
+                {(["Facil", "Medio", "Dificil"]).map((d) => (
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
                   <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}
@@ -195,7 +201,6 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
 
         {(phase === "playing" || phase === "reveal" || phase === "roundResult") && (
           <div className="space-y-4">
-            {/* Turn indicator */}
             <div className="text-center">
               <p className="text-sm font-bold" style={{ color: "#FFD700" }}>
                 {phase === "playing" && isP1Turn && `Esconda a pedrinha, ${p1Label}!`}
@@ -205,7 +210,6 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
               </p>
             </div>
 
-            {/* 3 Hands */}
             <div className="flex justify-center gap-4 md:gap-8 py-6">
               {hands.map((h) => {
                 const isP1Selection = phase === "playing" && isP1Turn && selectedHand === h;
@@ -223,7 +227,6 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
                       border: `2px solid ${isP1Selection ? "#009140" : isGuess ? "#FF6B35" : isStoneHere ? "#FFD700" : "rgba(255,215,0,0.15)"}`,
                       minWidth: 90,
                     }}>
-                    {/* Fist SVG */}
                     <div className="w-16 h-16 relative">
                       {phase === "reveal" || phase === "roundResult" ? (
                         <AnimatePresence mode="wait">
@@ -231,11 +234,9 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
                             animate={isStoneHere ? { rotateY: 0 } : {}} exit={{ rotateY: 90 }} transition={{ duration: 0.3 }}>
                             {isStoneHere ? (
                               <div className="relative">
-                                {/* Open hand */}
                                 <svg viewBox="0 0 80 80" className="w-16 h-16">
                                   <ellipse cx="40" cy="45" rx="30" ry="28" fill="#8B6914" />
                                   <ellipse cx="40" cy="45" rx="28" ry="26" fill="#A0522D" />
-                                  {/* Stone */}
                                   <motion.div initial={{ scale: 0, y: -20 }} animate={{ scale: 1, y: 0 }} transition={{ delay: 0.2 }}>
                                     <ellipse cx="40" cy="40" rx="10" ry="8" fill={stoneColor} />
                                     <ellipse cx="37" cy="37" rx="4" ry="3" fill="rgba(255,255,255,0.2)" />
@@ -266,12 +267,10 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
               })}
             </div>
 
-            {/* Message */}
             {message && (
               <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center text-sm font-medium" style={{ color: "#FFD700" }}>{message}</motion.p>
             )}
 
-            {/* Round result next button */}
             {phase === "roundResult" && (
               <button onClick={nextRound} className="w-full py-2.5 rounded-xl text-black font-bold"
                 style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Proxima Ronda</button>

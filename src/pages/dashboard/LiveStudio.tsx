@@ -211,7 +211,6 @@ const LiveStudio = () => {
 
       {tab === "pre" && (
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Multi-platform links */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><LinkIcon className="h-4 w-4 text-blue-500" />Links das plataformas</h2>
             <ul className="space-y-2 mb-3">
@@ -242,7 +241,6 @@ const LiveStudio = () => {
             </div>
           </section>
 
-          {/* Sharing assets */}
           <section className="rounded-2xl border border-border bg-card p-4 md:col-span-2">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-500" />Materiais para divulgar</h2>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -258,7 +256,7 @@ const LiveStudio = () => {
               </div>
               <div className="rounded-xl border border-border p-3 space-y-2">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">Overlays para OBS</p>
-                {(["ranking", "prizes", "countdown", "announcement"] as const).map((v) => (
+                {(["ranking", "prizes", "countdown", "announcement"]).map((v) => (
                   <button key={v} onClick={() => { navigator.clipboard.writeText(buildOverlayUrl(live.id, v)); toast.success(`Overlay ${v} copiado!`); }} className="w-full text-[11px] px-3 py-1.5 rounded-full bg-secondary text-left flex items-center gap-2">
                     <Tv className="h-3 w-3" /> {v}
                   </button>
@@ -271,7 +269,6 @@ const LiveStudio = () => {
 
       {tab === "during" && (
         <div className="grid gap-4 md:grid-cols-3">
-          {/* Ranking */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-500" />Ranking ao vivo</h2>
             <ul className="space-y-1.5">
@@ -286,7 +283,6 @@ const LiveStudio = () => {
             </ul>
           </section>
 
-          {/* Polls */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-violet-500" />Sondagens</h2>
             <ul className="space-y-2 mb-3">
@@ -327,7 +323,6 @@ const LiveStudio = () => {
             </div>
           </section>
 
-          {/* Announcements */}
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><Megaphone className="h-4 w-4 text-red-500" />Anúncios</h2>
             <ul className="space-y-1.5 mb-3 max-h-60 overflow-y-auto">

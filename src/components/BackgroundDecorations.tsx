@@ -8,12 +8,10 @@ const floatAnimation = (delay: number, duration: number) => ({
 
 const BackgroundDecorations = memo(() => (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
-    {/* Gradient orbs */}
     <div className="absolute top-[10%] left-[8%] h-64 w-64 rounded-full bg-primary/[0.03] blur-[100px]" />
     <div className="absolute bottom-[20%] right-[10%] h-48 w-48 rounded-full bg-accent/[0.03] blur-[80px]" />
     <div className="absolute top-[50%] left-[50%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.02] blur-[120px]" />
 
-    {/* Floating SVGs */}
     <motion.svg animate={floatAnimation(0, 6)} className="absolute top-[8%] left-[5%] w-20 h-20 text-primary opacity-[0.05] dark:opacity-[0.07] rotate-12" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="6" y="16" width="52" height="32" rx="4" />
       <path d="M22 16v32" strokeDasharray="4 3" />
@@ -65,20 +63,17 @@ const BackgroundDecorations = memo(() => (
       <path d="M22 16v32" strokeDasharray="4 3" />
     </motion.svg>
 
-    {/* Blockchain chain link */}
     <motion.svg animate={floatAnimation(1, 9)} className="absolute top-[30%] right-[25%] w-12 h-12 text-primary opacity-[0.03] dark:opacity-[0.05] rotate-[10deg]" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="4" y="20" width="22" height="24" rx="6" />
       <rect x="38" y="20" width="22" height="24" rx="6" />
       <line x1="26" y1="32" x2="38" y2="32" />
     </motion.svg>
 
-    {/* Crown */}
     <motion.svg animate={floatAnimation(3.5, 7)} className="absolute top-[45%] right-[45%] w-10 h-10 text-accent opacity-[0.03] dark:opacity-[0.05] rotate-[-8deg]" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M8 44l8-28 12 14 4-18 4 18 12-14 8 28z" />
       <rect x="8" y="44" width="48" height="8" rx="2" />
     </motion.svg>
 
-    {/* Dotted grid pattern */}
     <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]" style={{
       backgroundImage: "radial-gradient(hsl(var(--primary)) 0.5px, transparent 0.5px)",
       backgroundSize: "32px 32px",

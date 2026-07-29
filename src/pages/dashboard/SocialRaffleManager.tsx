@@ -210,7 +210,6 @@ export default function SocialRaffleManager() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate("/dashboard/raffles")}
           className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground hover:text-foreground">
@@ -233,7 +232,6 @@ export default function SocialRaffleManager() {
         )}
       </div>
 
-      {/* Winner announcement */}
       {winner && (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
           <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-primary/5">
@@ -256,7 +254,6 @@ export default function SocialRaffleManager() {
         </motion.div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
           { label: "Total", value: stats.total, icon: Users, color: "text-foreground" },
@@ -274,7 +271,6 @@ export default function SocialRaffleManager() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -296,7 +292,6 @@ export default function SocialRaffleManager() {
         </div>
       </div>
 
-      {/* Entry List */}
       <div className="space-y-3">
         {filteredEntries.length === 0 && (
           <Card className="glass">
@@ -314,14 +309,12 @@ export default function SocialRaffleManager() {
               <Card className="glass hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    {/* Avatar */}
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
                       <span className="text-lg font-bold text-primary">
                         {(entry.social_username || "?").charAt(0).toUpperCase()}
                       </span>
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-foreground">@{entry.social_username || "—"}</p>
@@ -336,7 +329,6 @@ export default function SocialRaffleManager() {
                       </p>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-2 shrink-0">
                       <Button size="sm" variant="outline" onClick={() => setSelectedEntry(entry)} className="gap-1">
                         <Eye className="h-3.5 w-3.5" /> Ver
@@ -354,7 +346,6 @@ export default function SocialRaffleManager() {
                     </div>
                   </div>
 
-                  {/* Proof thumbnails */}
                   {entry.proofs && entry.proofs.length > 0 && (
                     <div className="flex gap-2 mt-3 overflow-x-auto">
                       {entry.proofs.map((proof, i) => (
@@ -372,7 +363,6 @@ export default function SocialRaffleManager() {
         })}
       </div>
 
-      {/* Entry Detail Dialog */}
       <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -381,7 +371,6 @@ export default function SocialRaffleManager() {
           </DialogHeader>
           {selectedEntry && (
             <div className="space-y-4">
-              {/* Status */}
               <div className="flex items-center gap-2">
                 <Badge className={`${statusConfig[selectedEntry.status]?.bg} ${statusConfig[selectedEntry.status]?.color} border-0`}>
                   {statusConfig[selectedEntry.status]?.label}
@@ -391,7 +380,6 @@ export default function SocialRaffleManager() {
                 )}
               </div>
 
-              {/* Missions */}
               <div>
                 <p className="text-sm font-bold text-foreground mb-2">Missões Completadas ({selectedEntry.missions_completed?.length || 0})</p>
                 <div className="space-y-1.5">
@@ -410,7 +398,6 @@ export default function SocialRaffleManager() {
                 </div>
               </div>
 
-              {/* Proofs */}
               {selectedEntry.proofs && selectedEntry.proofs.length > 0 && (
                 <div>
                   <p className="text-sm font-bold text-foreground mb-2">Comprovativos ({selectedEntry.proofs.length})</p>
@@ -428,7 +415,6 @@ export default function SocialRaffleManager() {
                 </div>
               )}
 
-              {/* Actions */}
               {selectedEntry.status === "pending" && (
                 <div className="space-y-3 pt-2 border-t border-border">
                   <Button onClick={() => handleApprove(selectedEntry)} disabled={processing} className="w-full gap-2">
@@ -450,7 +436,6 @@ export default function SocialRaffleManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Proof Lightbox */}
       <Dialog open={!!proofViewUrl} onOpenChange={() => setProofViewUrl(null)}>
         <DialogContent className="max-w-2xl p-2">
           <DialogHeader>

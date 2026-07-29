@@ -568,7 +568,6 @@ export default function TowerStack({ onScore, liveCode: _liveCode }: Props) {
   /* ---- JSX ---- */
   return (
     <div className="flex flex-col gap-3 w-full" ref={containerRef}>
-      {/* scoreboard */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -609,7 +608,6 @@ export default function TowerStack({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </motion.div>
 
-      {/* canvas */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -625,7 +623,6 @@ export default function TowerStack({ onScore, liveCode: _liveCode }: Props) {
           onPointerDown={handlePtr}
         />
 
-        {/* winner overlay */}
         <AnimatePresence>
           {bothDone && (
             <motion.div
@@ -668,7 +665,6 @@ export default function TowerStack({ onScore, liveCode: _liveCode }: Props) {
         </AnimatePresence>
       </motion.div>
 
-      {/* controls */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

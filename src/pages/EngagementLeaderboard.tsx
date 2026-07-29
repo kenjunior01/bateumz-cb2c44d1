@@ -137,7 +137,6 @@ export default function EngagementLeaderboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Zap className="h-8 w-8 text-primary" />
@@ -148,7 +147,6 @@ export default function EngagementLeaderboard() {
           </p>
         </div>
 
-        {/* User Stats */}
         {userRank && (
           <div className="grid gap-4 md:grid-cols-3 mb-8">
             <Card>
@@ -189,14 +187,12 @@ export default function EngagementLeaderboard() {
           </div>
         )}
 
-        {/* Tabs */}
         <Tabs defaultValue="leaderboard" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="leaderboard">Ranking Global</TabsTrigger>
             <TabsTrigger value="breakdown">Meu Progresso</TabsTrigger>
           </TabsList>
 
-          {/* Leaderboard Tab */}
           <TabsContent value="leaderboard" className="space-y-4">
             <Card>
               <CardHeader>
@@ -255,7 +251,6 @@ export default function EngagementLeaderboard() {
             </Card>
           </TabsContent>
 
-          {/* Breakdown Tab */}
           <TabsContent value="breakdown" className="space-y-4">
             <Card>
               <CardHeader>
@@ -294,7 +289,6 @@ export default function EngagementLeaderboard() {
                   </div>
                 )}
 
-                {/* Points Guide */}
                 <div className="border-t pt-6 mt-6">
                   <h3 className="font-bold mb-4">Guia de Pontos</h3>
                   <div className="space-y-2 text-sm">

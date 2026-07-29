@@ -103,7 +103,6 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Input Section */}
         <div className="space-y-3">
           <label className="text-sm font-semibold">Seu URL Personalizado</label>
           <div className="flex gap-2">
@@ -123,7 +122,6 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
             </div>
           </div>
 
-          {/* Status Indicator */}
           <div className="flex items-center gap-2">
             {isAvailable === null ? (
               <Badge variant="outline" className="gap-1">
@@ -144,7 +142,6 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
           </div>
         </div>
 
-        {/* Save Button */}
         <Button
           onClick={handleSave}
           disabled={!isAvailable || isSaving}
@@ -160,7 +157,6 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
           )}
         </Button>
 
-        {/* Public URL Display */}
         {currentSlug && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -191,7 +187,6 @@ export const CompanySlugManager: React.FC<CompanySlugManagerProps> = ({
           </motion.div>
         )}
 
-        {/* Guidelines */}
         <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
           <p className="text-sm font-semibold">Dicas para um bom URL:</p>
           <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">

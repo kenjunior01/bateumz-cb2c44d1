@@ -165,7 +165,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
 
   return (
     <div className="space-y-4">
-      {/* No game */}
       {!game && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
@@ -184,14 +183,17 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
         </Card>
       )}
 
-      {/* Game active */}
       {game && (
+<<<<<<< HEAD
         <div key={shakeKey} className={"space-y-4 relative " + (flashClass ? "" : "")}>
           {flashClass && <div className={"absolute inset-0 z-10 pointer-events-none rounded-2xl " + flashClass} />}
           <div className="game-particle game-particle-1" style={{ top: "5%", left: "10%" }} />
           <div className="game-particle game-particle-3" style={{ top: "15%", right: "5%" }} />
           <div className="game-particle game-particle-5" style={{ bottom: "10%", left: "20%" }} />
           {/* Status bar */}
+=======
+        <div className="space-y-4">
+>>>>>>> 3af2551 (feat: overlay pro, stats dashboard, company public profile, branding persistence)
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Badge className="bg-emerald-500 text-white">🎱 {patternLabels[game.pattern_type]}</Badge>
@@ -204,7 +206,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
             </div>
           </div>
 
-          {/* Host controls */}
           {isHost && game.status === "drawing" && (
             <div className="flex gap-2">
               <Button onClick={handleDraw} disabled={drawLoading || game.drawn_numbers.length >= 75} className={"flex-1 gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 " + (game.drawn_numbers.length < 75 && !drawLoading ? "spin-btn-glow" : "")}>
@@ -214,7 +215,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
             </div>
           )}
 
-          {/* Last drawn */}
           {lastDrawn && (
             <motion.div
               key={lastDrawn}
@@ -228,7 +228,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
             </motion.div>
           )}
 
-          {/* Player: No card yet */}
           {card && (
             <div className="grid grid-cols-5 gap-1.5 max-w-xs mx-auto">
               {BINGO_LETTERS.map((letter, ci) => (
@@ -254,7 +253,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
             </Card>
           )}
 
-          {/* Bingo! */}
           <AnimatePresence>
             {hasBingo && (
               <motion.div
@@ -271,7 +269,6 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
             )}
           </AnimatePresence>
 
-          {/* Drawn numbers grid */}
           {game.drawn_numbers.length > 0 && (
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Números sorteados ({game.drawn_numbers.length}/75)</p>

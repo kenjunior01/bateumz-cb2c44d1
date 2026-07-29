@@ -139,7 +139,7 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
 
           {active && (
             <motion.div key={phase} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 divide-x divide-white/10">
-              {([1, 2] as const).map((p) => {
+              {([1, 2]).map((p) => {
                 const name = p === 1 ? p1Name : p2Name;
                 const time = p === 1 ? p1Time : p2Time;
                 return (

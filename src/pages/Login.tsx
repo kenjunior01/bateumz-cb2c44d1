@@ -184,7 +184,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Animated background */}
       <div className="absolute inset-0">
         <motion.div
           className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/5 blur-[120px]"
@@ -203,7 +202,6 @@ export default function Login() {
         />
       </div>
 
-      {/* Floating emojis */}
       {FLOATING_EMOJIS.map((emoji, i) => (
         <FloatingEmoji
           key={i}
@@ -220,14 +218,12 @@ export default function Login() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative w-full max-w-md z-10"
       >
-        {/* Header */}
         <div className="mb-6 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
             <img src="/assets/bateu-logo.png" alt="Bateu" className="h-10 w-10 rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <span className="font-display text-2xl font-bold text-foreground">Bateu</span>
           </Link>
 
-          {/* Mascot with speech bubble */}
           <div className="flex items-center justify-center gap-3 mb-2">
             <motion.img
               key={mascotMood}
@@ -254,13 +250,11 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Login card */}
         <motion.div
           className="glass rounded-3xl p-6 sm:p-8 relative overflow-hidden"
           whileHover={{ boxShadow: "0 0 40px hsl(var(--primary) / 0.1)" }}
           transition={{ duration: 0.3 }}
         >
-          {/* Sparkle accent */}
           <motion.div
             className="absolute -top-6 -right-6 text-primary/20"
             animate={{ rotate: [0, 360] }}
@@ -286,7 +280,6 @@ export default function Login() {
             Entra na tua conta para continuar a ganhar
           </motion.p>
 
-          {/* Social Login */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-2">
             <Button
               variant="outline"

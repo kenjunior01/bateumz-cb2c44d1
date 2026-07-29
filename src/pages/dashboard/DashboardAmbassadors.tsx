@@ -136,7 +136,6 @@ const DashboardAmbassadors = () => {
         </button>
       </div>
 
-      {/* Prize editor */}
       {adding && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -183,7 +182,6 @@ const DashboardAmbassadors = () => {
         </div>
       )}
 
-      {/* Prizes list */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2">
           <Award className="h-4 w-4 text-emerald-500" />
@@ -253,7 +251,6 @@ const DashboardAmbassadors = () => {
         )}
       </div>
 
-      {/* Ranking */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 flex-wrap">
           <Trophy className="h-4 w-4 text-amber-500" />
@@ -297,7 +294,6 @@ const DashboardAmbassadors = () => {
         )}
       </div>
 
-      {/* Audit / History */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2">
           <Clock className="h-4 w-4 text-sky-500" />

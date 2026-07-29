@@ -251,7 +251,6 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="space-y-3">
-      {/* Scoreboard */}
       <div className="flex items-center justify-between p-2 rounded-2xl bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border border-indigo-500/20">
         {Array.from({ length: PLAYER_COUNT }, (_, i) => (
           <div key={i} className={cn("text-center flex-1", current === i && !gameOver && "scale-105")}
@@ -263,7 +262,6 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         ))}
       </div>
 
-      {/* Message */}
       <AnimatePresence>
         {message && (
           <motion.p key={message} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -271,14 +269,12 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         )}
       </AnimatePresence>
 
-      {/* Opponent hand (face down) */}
       <div className="flex justify-center gap-0.5">
         {hands[1].map((_, i) => (
           <div key={i} className="w-6 h-9 rounded bg-indigo-900 border border-indigo-700" />
         ))}
       </div>
 
-      {/* Discard pile */}
       <div className="flex justify-center items-center gap-4">
         <div className="text-center">
           <p className="text-[10px] text-slate-500 mb-1">Monte ({deck.length})</p>
@@ -296,14 +292,12 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
             </div>
           )}
         </div>
-        {/* Current color indicator */}
         <div className="flex flex-col gap-1">
           <p className="text-[10px] text-slate-500">Cor</p>
           <div className="w-6 h-6 rounded-full shadow-lg border-2 border-white/20" style={{ background: COLOR_HEX[currentColor] }} />
         </div>
       </div>
 
-      {/* My hand */}
       <div className="flex justify-center gap-1 flex-wrap">
         {hands[0].map((card) => {
           const playable = canPlay(card, topCard, currentColor) && current === 0 && !gameOver;
@@ -326,7 +320,6 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         })}
       </div>
 
-      {/* Actions */}
       <div className="flex gap-2 justify-center">
         <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={handleDraw} disabled={gameOver || current !== 0}>
           Comprar Carta
@@ -336,7 +329,6 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         </Button>
       </div>
 
-      {/* Color chooser modal */}
       <AnimatePresence>
         {choosingColor && (
           <motion.div

@@ -33,10 +33,8 @@ const DesktopWidgets = () => {
 
   return (
     <div className="space-y-4">
-      {/* Live Feed Widget */}
       <LiveFeed />
 
-      {/* Trending Raffles Widget */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass rounded-2xl p-5">
         <div className="mb-4 flex items-center gap-2">
@@ -67,12 +65,10 @@ const DesktopWidgets = () => {
         </div>
       </motion.div>
 
-      {/* Blog News Widget */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <BlogNewsWidget />
       </motion.div>
 
-      {/* Quick Stats Widget */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
         className="glass rounded-2xl p-5">
         <div className="mb-3 flex items-center gap-2">

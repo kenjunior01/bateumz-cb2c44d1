@@ -104,7 +104,6 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
           <CardTitle className="flex items-center gap-2 text-lg"><Skull className="h-5 w-5 text-red-400" /> Roleta de Castigos</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Wheel */}
           <div className="flex justify-center relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10 text-2xl drop-shadow-lg">▼</div>
             <canvas ref={canvasRef} className="max-w-[320px] w-full rounded-full shadow-2xl" />
@@ -112,7 +111,6 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
           <Button onClick={spin} disabled={spinning} className={`w-full text-base font-bold py-6 ${spinning ? '' : 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 animate-pulse'}`}>
             {spinning ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.5 }}><Zap className="h-5 w-5" /></motion.div> : <><Laugh className="h-5 w-5 mr-2" /> GIRAR A ROLETA!</>}
           </Button>
-          {/* Result */}
           <AnimatePresence>
             {showResult && result && (
               <motion.div initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 p-4 text-center text-white">
@@ -121,12 +119,10 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Add custom */}
           <div className="flex gap-2">
             <Input value={newPun} onChange={e => setNewPun(e.target.value)} onKeyDown={e => e.key === 'Enter' && addPunishment()} placeholder="Adicionar castigo customizado..." className="flex-1" />
             <Button onClick={addPunishment} size="icon" variant="outline"><Plus className="h-4 w-4" /></Button>
           </div>
-          {/* History */}
           {history.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-2 font-bold">Últimos castigos</p>
@@ -135,7 +131,6 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
               </div>
             </div>
           )}
-          {/* Manage */}
           <details className="group">
             <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">Gerenciar castigos ({segments.length})</summary>
             <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">

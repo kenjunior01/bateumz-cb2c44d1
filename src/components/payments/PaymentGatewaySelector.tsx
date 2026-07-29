@@ -39,7 +39,6 @@ export default function PaymentGatewaySelector({
 
   return (
     <div className="space-y-4">
-      {/* Gateway selector cards */}
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -74,7 +73,6 @@ export default function PaymentGatewaySelector({
         </button>
       </div>
 
-      {/* Render selected gateway */}
       {gateway === "paypal" && (
         <PayPalProvider currency={(currency as "USD" | "CAD")}>
           <PayPalCheckout

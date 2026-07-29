@@ -143,7 +143,6 @@ const DashboardScheduledLives = () => {
         </div>
       )}
 
-      {/* New live modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-lg bg-card rounded-3xl p-5 max-h-[90vh] overflow-y-auto">
@@ -211,7 +210,6 @@ const DashboardScheduledLives = () => {
         </div>
       )}
 
-      {/* Prizes modal */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-lg bg-card rounded-3xl p-5 max-h-[90vh] overflow-y-auto">

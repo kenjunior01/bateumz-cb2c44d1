@@ -70,7 +70,6 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
 
   return (
     <div className="max-w-md mx-auto flex flex-col items-center gap-4">
-      {/* Mode selector */}
       {phase === "idle" && (
         <div className="flex gap-2 w-full">
           <button

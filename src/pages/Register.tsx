@@ -202,7 +202,6 @@ export default function Register() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden relative">
-        {/* Confetti */}
         <div className="absolute inset-0 flex justify-center">
           {CONFETTI_EMOJIS.map((e, i) => (
             <ConfettiParticle key={i} emoji={e} delay={i * 0.15} />
@@ -241,7 +240,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background effects */}
       <div className="absolute inset-0">
         <motion.div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-primary/5 blur-[120px]"
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ repeat: Infinity, duration: 6 }} />
@@ -250,14 +248,12 @@ export default function Register() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-lg z-10">
-        {/* Header with mascot */}
         <div className="mb-6 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
             <img src="/assets/bateu-logo.png" alt="Bateu" className="h-10 w-10 rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <span className="font-display text-2xl font-bold text-foreground">Bateu</span>
           </Link>
 
-          {/* Mascot */}
           <div className="flex items-center justify-center gap-3 mb-2">
             <motion.img src={mascotForStep} alt="Bateu" className="h-16 w-16" width={64} height={64}
               key={step}
@@ -272,7 +268,6 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="flex gap-2 mb-6 px-4">
           {Array.from({ length: STEP_COUNT }).map((_, i) => (
             <motion.div key={i} className="h-1.5 flex-1 rounded-full overflow-hidden bg-secondary">
@@ -287,7 +282,6 @@ export default function Register() {
         </div>
 
         <div className="glass rounded-3xl p-6 sm:p-8 relative overflow-hidden">
-          {/* Step label */}
           <div className="flex items-center justify-between mb-5">
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
               Passo {step + 1} de {STEP_COUNT}
@@ -300,7 +294,6 @@ export default function Register() {
           </div>
 
           <AnimatePresence mode="wait" custom={direction}>
-            {/* STEP 0: Account Type */}
             {step === 0 && (
               <motion.div key="step0" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
@@ -345,7 +338,6 @@ export default function Register() {
                   </motion.button>
                 </div>
 
-                {/* Social Sign Up */}
                 <div className="mt-5 space-y-2">
                   <div className="text-center mb-2">
                     <p className="text-sm font-semibold text-foreground">Regista-te rapidamente</p>
@@ -374,7 +366,6 @@ export default function Register() {
               </motion.div>
             )}
 
-            {/* STEP 1: Credentials */}
             {step === 1 && (
               <motion.div key="step1" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
@@ -439,7 +430,6 @@ export default function Register() {
               </motion.div>
             )}
 
-            {/* STEP 2: Personal Info */}
             {step === 2 && (
               <motion.div key="step2" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
@@ -505,7 +495,6 @@ export default function Register() {
               </motion.div>
             )}
 
-            {/* STEP 3: Interests */}
             {step === 3 && (
               <motion.div key="step3" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
@@ -546,13 +535,11 @@ export default function Register() {
             )}
           </AnimatePresence>
 
-          {/* Error */}
           {error && (
             <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
               className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2 mt-4">{error}</motion.p>
           )}
 
-          {/* Navigation buttons */}
           <div className="mt-6 flex gap-3">
             {step < STEP_COUNT - 1 ? (
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
@@ -580,7 +567,6 @@ export default function Register() {
             )}
           </div>
 
-          {/* Skip optional steps */}
           {step >= 2 && step < STEP_COUNT - 1 && (
             <button onClick={goNext} className="w-full text-center text-xs text-muted-foreground mt-3 hover:text-foreground transition-colors">
               Pular este passo →
@@ -594,7 +580,6 @@ export default function Register() {
           )}
         </div>
 
-        {/* Footer */}
         <div className="mt-5 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             Já tem conta?{" "}

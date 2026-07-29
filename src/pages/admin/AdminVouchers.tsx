@@ -184,7 +184,6 @@ export default function AdminVouchers() {
                 <DialogTitle>Criar Novo Cupão</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                {/* Code */}
                 <div className="space-y-2">
                   <Label>Código do Cupão</Label>
                   <div className="flex gap-2 items-center">
@@ -213,7 +212,6 @@ export default function AdminVouchers() {
                   </div>
                 </div>
 
-                {/* Type */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Tipo de Desconto</Label>
@@ -241,7 +239,6 @@ export default function AdminVouchers() {
                   </div>
                 </div>
 
-                {/* Purchase & Uses */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Compra Mínima (MZN)</Label>
@@ -265,7 +262,6 @@ export default function AdminVouchers() {
                   </div>
                 </div>
 
-                {/* Dates */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Válido De</Label>
@@ -285,7 +281,6 @@ export default function AdminVouchers() {
                   </div>
                 </div>
 
-                {/* Active */}
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={form.is_active}
@@ -308,7 +303,6 @@ export default function AdminVouchers() {
         </div>
       </div>
 
-      {/* Vouchers Table */}
       <Card className="glass">
         <CardContent className="p-0">
           {loading ? (

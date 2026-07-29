@@ -418,7 +418,6 @@ export default function DashboardPrestacoes() {
         </TabsContent>
       </Tabs>
 
-      {/* Form dialog */}
       <Dialog open={!!form} onOpenChange={(o) => !o && setForm(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

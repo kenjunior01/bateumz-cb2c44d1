@@ -257,13 +257,11 @@ export default function AdminSuperDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Globe className="h-6 w-6 text-primary" />
         <h1 className="font-display text-2xl font-bold">Super Admin Dashboard</h1>
       </div>
 
-      {/* Global Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="py-6">
@@ -314,7 +312,6 @@ export default function AdminSuperDashboard() {
         </Card>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="regions" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="regions">Regiões</TabsTrigger>
@@ -322,9 +319,7 @@ export default function AdminSuperDashboard() {
           <TabsTrigger value="settings">Configurações Globais</TabsTrigger>
         </TabsList>
 
-        {/* Regions Tab */}
         <TabsContent value="regions" className="space-y-4">
-          {/* Create Region */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -368,7 +363,6 @@ export default function AdminSuperDashboard() {
             </CardContent>
           </Card>
 
-          {/* Regions List */}
           <Card>
             <CardHeader>
               <CardTitle>Todas as Regiões</CardTitle>
@@ -426,9 +420,7 @@ export default function AdminSuperDashboard() {
           </Card>
         </TabsContent>
 
-        {/* Admins Tab */}
         <TabsContent value="admins" className="space-y-4">
-          {/* Assign Admin */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -469,7 +461,6 @@ export default function AdminSuperDashboard() {
             </CardContent>
           </Card>
 
-          {/* Admins List */}
           <Card>
             <CardHeader>
               <CardTitle>Admins Regionais</CardTitle>
@@ -535,7 +526,6 @@ export default function AdminSuperDashboard() {
           </Card>
         </TabsContent>
 
-        {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>

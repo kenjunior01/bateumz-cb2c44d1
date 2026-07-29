@@ -94,6 +94,8 @@ import PrestacoesProduto from "./pages/PrestacoesProduto.tsx";
 import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
 import DashboardLiveGames from "./pages/dashboard/DashboardLiveGames.tsx";
 import DashboardLiveHistory from "./pages/dashboard/DashboardLiveHistory.tsx";
+import DashboardLiveStats from "./pages/dashboard/DashboardLiveStats.tsx";
+import CompanyPublicProfile from "./pages/CompanyPublicProfile.tsx";
 import DashboardAmbassadors from "./pages/dashboard/DashboardAmbassadors.tsx";
 import AmbassadorRedirect from "./pages/AmbassadorRedirect.tsx";
 import LiveAmbassadorsRanking from "./pages/LiveAmbassadorsRanking.tsx";
@@ -101,6 +103,7 @@ import ScheduledLivePage from "./pages/ScheduledLivePage.tsx";
 import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.tsx";
 import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
 import OverlayLive from "./pages/OverlayLive.tsx";
+import OverlayPro from "./pages/OverlayPro.tsx";
 import CompanyLiveManager from "./pages/dashboard/CompanyLiveManager.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import NotificationBell from "./components/live/NotificationBell.tsx";
@@ -167,6 +170,7 @@ function AnimatedRoutes() {
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
+          <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
           <Route path="/lives" element={<LiveHub />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
           <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
@@ -237,6 +241,7 @@ function AnimatedRoutes() {
             <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
             <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
             <Route path="live-history" element={<DashboardLiveHistory />} />
+            <Route path="live-stats" element={<DashboardLiveStats />} />
             <Route path="ambassadors" element={<DashboardAmbassadors />} />
             <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
             <Route path="live-studio/:id" element={<LiveStudio />} />
@@ -246,6 +251,7 @@ function AnimatedRoutes() {
             <Route path="settings" element={<DashboardSettings />} />
           </Route>
           <Route path="/overlay/live/:id" element={<OverlayLive />} />
+          <Route path="/overlay/pro" element={<OverlayPro />} />
           <Route
             path="/admin"
             element={

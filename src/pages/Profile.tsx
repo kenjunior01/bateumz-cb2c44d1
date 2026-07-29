@@ -148,7 +148,6 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-3 sm:px-4 pt-24 sm:pt-28 pb-24">
-        {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -208,7 +207,6 @@ const Profile = () => {
           </Card>
         </motion.div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { label: "Bilhetes", value: stats.total, icon: Ticket, color: "bg-primary/15 text-primary" },
@@ -237,7 +235,6 @@ const Profile = () => {
           ))}
         </div>
 
-        {/* Participation History */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="all">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

@@ -102,7 +102,6 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
 
   return (
     <div className="space-y-4">
-      {/* Score bar */}
       <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
         <div className="flex items-center gap-2"><Star className="h-4 w-4 text-yellow-400" /><span className="font-bold">{score} pts</span></div>
         <span className="text-xs text-muted-foreground">{qIdx + 1}/{challenges.length}</span>
@@ -126,7 +125,6 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
         )}
       </AnimatePresence>
 
-      {/* Round result */}
       <AnimatePresence>
         {succeeded !== null && (
           <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -139,14 +137,12 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
         )}
       </AnimatePresence>
 
-      {/* Results history dots */}
       {results.length > 0 && succeeded !== null && (
         <div className="flex gap-1 flex-wrap justify-center">
           {results.map((r, i) => <div key={i} className={`h-2.5 w-2.5 rounded-full ${r.completed ? 'bg-emerald-500' : 'bg-red-500'}`} />)}
         </div>
       )}
 
-      {/* Final */}
       <AnimatePresence>
         {phase === 'done' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">

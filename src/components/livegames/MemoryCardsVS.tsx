@@ -276,7 +276,6 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
         }}
         aria-label={`Carta ${index + 1}`}
       >
-        {/* ---- Back face (face-down) ---- */}
         <motion.div
           className={cn(
             'absolute inset-0 rounded-xl border bg-slate-800 border-slate-700 flex items-center justify-center',
@@ -297,7 +296,6 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
           </span>
         </motion.div>
 
-        {/* ---- Front face (face-up) ---- */}
         <motion.div
           className={cn(
             'absolute inset-0 rounded-xl border border-slate-300 dark:border-slate-400 bg-white dark:bg-slate-100 flex items-center justify-center',
@@ -762,14 +760,11 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto select-none">
-      {/* ---- Title ---- */}
       <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
         MEMÓRIA VS CARTAS
       </h2>
 
-      {/* ---- Scoreboard ---- */}
       <div className="w-full rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-3 flex items-center justify-between">
-        {/* P1 score */}
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all',
@@ -791,7 +786,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           <span className="text-cyan-400/60 text-xs">pares</span>
         </div>
 
-        {/* Center status */}
         <div className="flex flex-col items-center gap-1">
           {gameState === 'playing' && (
             <AnimatePresence mode="wait">
@@ -837,7 +831,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           )}
         </div>
 
-        {/* P2 score */}
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all',
@@ -867,9 +860,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </div>
 
-      {/* ---- Controls row ---- */}
       <div className="w-full flex flex-wrap items-center justify-center gap-2">
-        {/* Mode toggle */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-slate-400 mr-1">Modo:</span>
           <Button
@@ -899,7 +890,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           </Button>
         </div>
 
-        {/* Bot difficulty */}
         {mode === 'bot' && (
           <div className="flex items-center gap-1">
             <span className="text-xs text-slate-400 mr-1">IA:</span>
@@ -921,7 +911,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           </div>
         )}
 
-        {/* Grid size toggle */}
         <div className="flex items-center gap-1">
           <Grid3X3 className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-xs text-slate-400 mr-1">Tabuleiro</span>
@@ -942,7 +931,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           ))}
         </div>
 
-        {/* Timer toggle */}
         <div className="flex items-center gap-1">
           <Timer className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-xs text-slate-400 mr-1">Tempo</span>
@@ -964,7 +952,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </div>
 
-      {/* ---- Timer display ---- */}
       {timerOption > 0 && gameState === 'playing' && (
         <motion.div
           initial={{ opacity: 0, y: -5 }}
@@ -987,7 +974,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </motion.div>
       )}
 
-      {/* ---- Idle screen ---- */}
       {gameState === 'idle' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="text-slate-400 text-sm text-center max-w-xs">
@@ -1003,7 +989,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       )}
 
-      {/* ---- Card grid ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div
           className={cn(
@@ -1012,7 +997,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
             gameState === 'ended' && 'border-slate-700',
           )}
         >
-          {/* Feedback toast */}
           <AnimatePresence>
             {feedback && (
               <FeedbackToast
@@ -1042,7 +1026,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       )}
 
-      {/* ---- Footer ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div className="flex items-center gap-4 mt-1">
           <Button

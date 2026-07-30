@@ -7,70 +7,69 @@ import {
   Users,
   Star,
   ChevronRight,
+  Sparkles,
+  Crown,
+  Gift,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const SPRING_BOUNCE = { type: "spring" as const, stiffness: 300, damping: 20 };
 
 const trustBadges = [
   {
     icon: ShieldCheck,
     label: "Pagamento 100% Seguro",
-    sub: "Proteção total ao comprador",
+    sub: "Protecção total ao comprador",
+    color: "from-emerald-500 to-emerald-600",
   },
   {
     icon: Trophy,
-    label: "Prêmios Reais",
-    sub: "Entregues para todo o Brasil",
+    label: "Prémios Reais",
+    sub: "Entregues em todo Moçambique",
+    color: "from-amber-500 to-yellow-500",
   },
   {
     icon: Zap,
     label: "Resultado Instantâneo",
     sub: "Sorteio ao vivo em tempo real",
+    color: "from-blue-500 to-cyan-500",
   },
   {
     icon: Users,
-    label: "+50.000 Participantes",
-    sub: "Comunidade ativa e confiável",
+    label: "Comunidade Activa",
+    sub: "Milhares de participantes",
+    color: "from-violet-500 to-purple-500",
   },
 ];
 
 const floatingOrbs = [
   {
-    color: "hsl(220 70% 18% / 0.25)",
+    color: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 0.2, transparent)",
     size: "w-[500px] h-[500px]",
     initial: { x: -200, y: -100 },
     animate: { x: 100, y: 50 },
     duration: 18,
   },
   {
-    color: "hsl(352 73% 50% / 0.2)",
+    color: "color-mix(in srgb, var(--region-secondary, hsl(var(--accent))) 0.15, transparent)",
     size: "w-[400px] h-[400px]",
     initial: { x: 200, y: 100 },
     animate: { x: -100, y: -80 },
     duration: 22,
   },
   {
-    color: "hsl(42 95% 52% / 0.15)",
+    color: "color-mix(in srgb, hsl(42 95% 52%) 0.12, transparent)",
     size: "w-[350px] h-[350px]",
     initial: { x: 0, y: 200 },
     animate: { x: 50, y: -150 },
     duration: 15,
-  },
-  {
-    color: "hsl(220 60% 30% / 0.2)",
-    size: "w-[300px] h-[300px]",
-    initial: { x: -150, y: 150 },
-    animate: { x: 200, y: 100 },
-    duration: 20,
   },
 ];
 
 const containerVariants = {
   hidden: {},
   visible: {
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
-    },
+    transition: { staggerChildren: 0.15, delayChildren: 0.2 },
   },
 };
 
@@ -80,10 +79,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     filter: "blur(0px)",
-    transition: {
-      duration: 0.7,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -93,11 +89,7 @@ const badgeVariants = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: {
-      duration: 0.5,
-      delay: 0.5 + i * 0.1,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
+    transition: { duration: 0.5, delay: 0.5 + i * 0.1, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
@@ -115,16 +107,14 @@ const CTASection = () => (
         }}
         initial={{ x: orb.initial.x, y: orb.initial.y }}
         animate={{ x: orb.animate.x, y: orb.animate.y }}
-        transition={{
-          duration: orb.duration,
-          repeat: Infinity,
-          repeatType: "reverse",
-          ease: "easeInOut",
-        }}
+        transition={{ duration: orb.duration, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
       />
     ))}
 
     <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/40 to-background" />
+
+    {/* Celebration rays background */}
+    <div className="celebration-rays opacity-30" />
 
     <div className="relative z-10 container mx-auto px-6">
       <motion.div
@@ -134,18 +124,23 @@ const CTASection = () => (
         viewport={{ once: true, margin: "-50px" }}
         className="flex flex-col items-center text-center"
       >
+        {/* Crown icon */}
         <motion.div variants={itemVariants} className="mb-6 relative">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-400/30 via-yellow-300/20 to-amber-400/30 rounded-full blur-xl scale-150" />
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-lg shadow-amber-400/25">
-            <Star className="h-8 w-8 text-white" strokeWidth={2.5} />
-          </div>
+          <motion.div
+            className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-lg"
+            animate={{ boxShadow: ["0 10px 40px rgba(251,191,36,0.3)", "0 10px 60px rgba(251,191,36,0.5)", "0 10px 40px rgba(251,191,36,0.3)"] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          >
+            <Crown className="h-8 w-8 text-white" strokeWidth={2.5} />
+          </motion.div>
         </motion.div>
 
         <motion.h2
           variants={itemVariants}
           className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight max-w-3xl"
         >
-          Sua próxima grande{" "}
+          A sua próxima grande{" "}
           <span className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
             vitória
           </span>{" "}
@@ -156,51 +151,42 @@ const CTASection = () => (
           variants={itemVariants}
           className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
         >
-          Prêmios reais entregues em todo o Brasil. Pagamento seguro via
-          plataforma verificada — pague com saldo, cartão ou PIX em segundos.
+          Prémios reais entregues em todo Moçambique. Pagamento seguro via
+          plataforma verificada — pague com saldo, cartão ou M-Pesa em segundos.
         </motion.p>
 
-        <motion.div
-          variants={itemVariants}
-          className="mt-8 mb-10"
-        >
+        <motion.div variants={itemVariants} className="mt-8 mb-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm px-5 py-2.5 text-sm font-semibold text-primary shadow-sm">
             <ShieldCheck className="h-4 w-4" />
-            <span>100% Proteção ao Comprador</span>
+            <span>100% Protecção ao Comprador</span>
             <span className="text-primary/30">·</span>
             <span>Nenhum dado de cartão armazenado</span>
           </div>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row items-center gap-4 mb-16"
-        >
-          <Link
-            to="/marketplace"
-            className="group relative inline-flex items-center gap-2 rounded-xl px-10 py-4 text-lg font-semibold text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98]"
-            style={{
-              background:
-                "linear-gradient(135deg, hsl(220 70% 18%), hsl(352 73% 50%))",
-              boxShadow:
-                "0 4px 30px hsl(352 73% 50% / 0.3), 0 0 0 1px hsl(352 73% 50% / 0.1)",
-            }}
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              Ver sorteios abertos
-              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1.5" />
-            </span>
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4 mb-16">
+          <Link to="/marketplace">
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={SPRING_BOUNCE}>
+              <span className="group relative inline-flex items-center gap-2.5 rounded-xl px-10 py-4 text-lg font-semibold text-white transition-all duration-300 hover:shadow-xl" style={{ background: "var(--gradient-premium, linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))))", boxShadow: "0 4px 30px hsl(var(--accent) / 0.3), 0 0 0 1px hsl(var(--accent) / 0.1)" }}>
+                <Gift className="h-5 w-5" />
+                Ver sorteios abertos
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1.5" />
+              </span>
+            </motion.div>
           </Link>
 
-          <Link
-            to="/referral"
-            className="group inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-6 py-3.5 text-sm font-semibold text-foreground transition-all duration-300 hover:bg-secondary hover:border-border hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-          >
-            <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5" />
-            Indique um amigo, ganhe Pontos de Sorte
+          <Link to="/referral">
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={SPRING_BOUNCE}>
+              <span className="group inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-6 py-3.5 text-sm font-semibold text-foreground transition-all duration-300 hover:bg-secondary hover:border-border">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Indique um amigo, ganhe Pontos
+                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5" />
+              </span>
+            </motion.div>
           </Link>
         </motion.div>
 
+        {/* Trust badges grid */}
         <motion.div
           variants={itemVariants}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl"
@@ -212,19 +198,16 @@ const CTASection = () => (
                 key={badge.label}
                 custom={i}
                 variants={badgeVariants}
-                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg hover:-translate-y-1"
+                whileHover={{ y: -6, transition: { duration: 0.3 } }}
+                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg"
               >
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
-                  <Icon className="h-5 w-5 text-primary" />
+                <div className={"relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br " + badge.color}>
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="relative text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    {badge.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {badge.sub}
-                  </p>
+                  <p className="text-sm font-semibold text-foreground">{badge.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{badge.sub}</p>
                 </div>
               </motion.div>
             );

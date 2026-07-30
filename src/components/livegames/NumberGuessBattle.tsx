@@ -74,7 +74,7 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
           <div><label className="text-xs text-muted-foreground mb-2 block">Faixa do número secreto</label>
             <div className="flex gap-2">
               {(['1-50','1-100','1-200']).map(r => (
-                <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold border-2 transition-all ${range === r ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent' : 'border-border bg-card text-muted-foreground'}`}>{r}</button>
+                <button key={r} onClick={() => setRange(r as any)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold border-2 transition-all ${range === r ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent' : 'border-border bg-card text-muted-foreground'}`}>{r}</button>
               ))}
             </div>
           </div>

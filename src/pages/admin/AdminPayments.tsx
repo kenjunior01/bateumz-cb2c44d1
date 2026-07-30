@@ -155,7 +155,7 @@ export default function AdminPayments() {
         </div>
         <div className="flex gap-2">
           {(["all", "pending", "completed", "rejected"]).map((f) => (
-            <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)}>
+            <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f as any)}>
               {f === "all" ? "Todos" : f === "pending" ? "Pendentes" : f === "completed" ? "Aprovados" : "Rejeitados"}
             </Button>
           ))}

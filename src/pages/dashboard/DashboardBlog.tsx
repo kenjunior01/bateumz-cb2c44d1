@@ -515,7 +515,7 @@ export default function DashboardBlog() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
         {statsCards.map((stat) => (
-          <motion.div key={stat.label} variants={itemVariants} whileHover={cardHover}>
+          <motion.div key={stat.label} variants={itemVariants as any} whileHover={cardHover}>
             <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between">
@@ -911,7 +911,7 @@ export default function DashboardBlog() {
                       return (
                         <motion.div
                           key={cat.id}
-                          variants={itemVariants}
+                          variants={itemVariants as any}
                           whileHover={cardHover}
                         >
                           <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors">

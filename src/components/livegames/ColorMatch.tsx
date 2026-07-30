@@ -370,7 +370,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
         {phase === "countdown" && countdownVal > 0 && (
           <motion.div
             key={`cd-${countdownVal}`}
-            variants={countPop}
+            variants={countPop as any}
             initial="initial"
             animate="animate"
             exit="exit"
@@ -468,7 +468,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               <AnimatePresence mode="wait">
                 <motion.span
                   key={`${roundData.word.id}-${roundData.inkColor.id}`}
-                  variants={wordIn}
+                  variants={wordIn as any}
                   initial="hidden"
                   animate="visible"
                   exit="exit"

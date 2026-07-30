@@ -202,7 +202,7 @@ const Marketplace = () => {
         <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar</p>
         <div className="flex flex-wrap gap-2">
           {(["newest", "ending", "popular"]).map((s) => (
-            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
+            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s as any)}>
               {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
             </Button>
           ))}
@@ -213,7 +213,7 @@ const Marketplace = () => {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidade de sorteio</p>
           <div className="flex flex-wrap gap-2">
             {(["all", "paid", "free", "points"]).map((t) => (
-              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
+              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t as any)} className="gap-1">
                 {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
             ))}

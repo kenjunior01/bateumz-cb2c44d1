@@ -155,7 +155,7 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
   return (
     <motion.div
       custom={index}
-      variants={cardVariants}
+      variants={cardVariants as any}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.15 }}

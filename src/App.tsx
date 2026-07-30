@@ -297,6 +297,16 @@ const AppContent = () => {
   const [showLoading, setShowLoading] = useState(true);
   const { loading: configLoading } = useRegionalContext();
   const { user, loading: authLoading } = useAuth();
+  const [isOverlay, setIsOverlay] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      const p = window.location.pathname;
+      setIsOverlay(p.startsWith("/lives/overlay") || p.startsWith("/overlay/"));
+    };
+    check();
+    const id = setInterval(check, 300);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -314,24 +324,24 @@ const AppContent = () => {
     return () => clearTimeout(timer);
   }, [configLoading]);
 
-  if (showLoading) {
+  if (showLoading && !isOverlay) {
     return <LoadingScreen />;
   }
 
   return (
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BackgroundDecorations />
+      {!isOverlay && <><Toaster /><Sonner /><BackgroundDecorations /></>}
       <BrowserRouter>
-        {!authLoading && user && <PushNotificationBanner />}
-        <MobileTopBar />
+        {!isOverlay && <>
+          {!authLoading && user && <PushNotificationBanner />}
+          <MobileTopBar />
+        </>}
         <AnimatedRoutes />
-        <MascotBuddy />
+        {!isOverlay && <><MascotBuddy />
         <SupportChatbot />
         <NotificationBell />
         <BottomTabBar />
-        <RegionalPreviewBar />
+        <RegionalPreviewBar /></>}
       </BrowserRouter>
     </TooltipProvider>
   );

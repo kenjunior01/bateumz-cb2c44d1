@@ -82,10 +82,10 @@ export default function Login() {
   }, [email, password, error, focusedField]);
 
   const mascotMessages: Record<string, string> = {
-    happy: "Olá, amigo! Que bom te ver! 👋",
-    excited: "Tudo pronto, amigo! Vamos lá! 🚀",
-    thinking: "Hmm... algo não está certo, amigo 🤔",
-    winner: "Bem-vindo de volta, amigo! 🎉",
+    happy: "Hey there! Great to see you 👋",
+    excited: "All set! Let's go 🚀",
+    thinking: "Hmm... something looks off 🤔",
+    winner: "Welcome back! 🎉",
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +113,7 @@ export default function Login() {
       options: { redirectTo: window.location.origin },
     });
     if (error) {
-      setError("Erro ao conectar com Google. Tenta novamente.");
+      setError("Could not connect with Google. Please try again.");
       setGoogleLoading(false);
     }
   };
@@ -126,7 +126,7 @@ export default function Login() {
       options: { redirectTo: window.location.origin + '/dashboard' },
     });
     if (error) {
-      setError("Erro ao conectar com Apple. Tenta novamente.");
+      setError("Could not connect with Apple. Please try again.");
       setAppleLoading(false);
     }
   };
@@ -160,11 +160,11 @@ export default function Login() {
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
           />
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring" }}>
-            <h2 className="font-display text-2xl font-bold text-foreground">Bem-vindo de volta! 🎊</h2>
+            <h2 className="font-display text-2xl font-bold text-foreground">Welcome back! 🎊</h2>
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
             className="text-sm text-muted-foreground mt-3">
-            A redirecionar para o teu painel...
+            Redirecting to your dashboard...
           </motion.p>
           <motion.div
             className="mt-4 h-1.5 rounded-full bg-secondary overflow-hidden"
@@ -269,7 +269,7 @@ export default function Login() {
             transition={{ delay: 0.2 }}
             className="font-display text-xl font-bold text-foreground mb-1"
           >
-            Bem-vindo de volta! 🎉
+            Welcome back! 🎉
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}

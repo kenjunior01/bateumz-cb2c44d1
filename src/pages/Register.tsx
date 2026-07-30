@@ -113,19 +113,19 @@ export default function Register() {
   const friendlyAuthError = (raw: string) => {
     const m = (raw || "").toLowerCase();
     if (m.includes("weak") || m.includes("pwned") || m.includes("known to be"))
-      return "Essa senha é demasiado comum ou já foi exposta em fugas de dados. Usa uma combinação única de letras, números e símbolos (mínimo 8 caracteres).";
+      return "That password is too common or has appeared in a data breach. Use a unique mix of letters, numbers and symbols (at least 8 characters).";
     if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already"))
-      return "Já existe uma conta com este email. Tenta entrar ou usa outro email.";
-    if (m.includes("invalid email")) return "Email inválido. Verifica o endereço.";
-    if (m.includes("rate limit")) return "Demasiadas tentativas. Aguarda alguns segundos e tenta novamente.";
-    if (m.includes("password should be at least")) return "A senha deve ter no mínimo 8 caracteres.";
-    return raw || "Não foi possível criar a conta. Tenta novamente.";
+      return "An account with this email already exists. Try signing in or use another email.";
+    if (m.includes("invalid email")) return "Invalid email. Please check the address.";
+    if (m.includes("rate limit")) return "Too many attempts. Wait a few seconds and try again.";
+    if (m.includes("password should be at least")) return "Password must be at least 8 characters.";
+    return raw || "We could not create your account. Please try again.";
   };
 
   const handleSubmit = async () => {
     setError("");
     if (!passwordStrong(password)) {
-      setError("A senha precisa de pelo menos 8 caracteres, com letras e números.");
+      setError("Password needs at least 8 characters, including letters and numbers.");
       setDirection(-1);
       setStep(1);
       return;
@@ -175,7 +175,7 @@ export default function Register() {
       options: { redirectTo: window.location.origin },
     });
     if (error) {
-      setError("Erro ao conectar com Google. Tenta novamente.");
+      setError("Could not connect with Google. Please try again.");
       setGoogleLoading(false);
     }
   };
@@ -187,19 +187,19 @@ export default function Register() {
       options: { redirectTo: window.location.origin },
     });
     if (error) {
-      setError("Erro ao conectar com Apple. Tenta novamente.");
+      setError("Could not connect with Apple. Please try again.");
       setAppleLoading(false);
     }
   };
 
   const mascotForStep = step === 0 ? mascotHappy : step === 1 ? mascotExcited : step === 2 ? mascotHappy : mascotWinner;
   const mascotMessage = step === 0
-    ? "Vamos começar! 🎉 Escolhe o teu tipo de conta!"
+    ? "Let's get started! 🎉 Pick your account type."
     : step === 1
-    ? "Excelente escolha! Agora os teus dados! 🚀"
+    ? "Great choice! Now your details 🚀"
     : step === 2
-    ? "Quase lá! Conta-nos mais sobre ti! 😊"
-    : "Último passo! O que te interessa? ✨";
+    ? "Almost there! Tell us a bit about you 😊"
+    : "Last step! What are you into? ✨";
 
   if (success) {
     return (

@@ -23,6 +23,8 @@ import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const sb: any = supabase;
+
 interface Raffle {
   id: string;
   title: string;
@@ -105,10 +107,10 @@ const Marketplace = () => {
   useEffect(() => {
     const fetchData = async () => {
       const [rafflesRes, contestsRes, spinRes, millRes] = await Promise.all([
-        supabase.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
-        supabase.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
-        supabase.from("spin_wheel_games").select("*").eq("is_published", true),
-        supabase.from("millionaire_games").select("*").eq("is_published", true),
+        sb.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
+        sb.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
+        sb.from("spin_wheel_games").select("*").eq("is_published", true),
+        sb.from("millionaire_games").select("*").eq("is_published", true),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data as Raffle[]);
       if (contestsRes.data) setContests(contestsRes.data as Contest[]);

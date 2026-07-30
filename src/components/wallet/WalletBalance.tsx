@@ -7,6 +7,8 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { getBalance, type Wallet as WalletType } from "@/lib/wallet";
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 interface WalletBalanceProps {
   compact?: boolean;
 }
@@ -39,7 +41,7 @@ export default function WalletBalance({ compact = false }: WalletBalanceProps) {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("wallets")
         .select("balance, currency")
         .eq("user_id", user.id)

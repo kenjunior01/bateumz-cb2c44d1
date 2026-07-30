@@ -1,6 +1,8 @@
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 /** Lazy-loaded Stripe.js instance — reused across the app. Null when no key configured. */
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string | undefined;
 export const stripePromise: Promise<Stripe | null> = STRIPE_KEY
@@ -20,7 +22,7 @@ export async function createCheckoutSession(params: {
   quantity: number;
   description?: string;
 }): Promise<{ sessionId: string; url: string }> {
-  const { data, error } = await supabase.functions.invoke("stripe-create-session", {
+  const { data, error } = await sb.functions.invoke("stripe-create-session", {
     body: {
       raffle_id: params.raffleId,
       raffle_slug: params.raffleSlug,
@@ -48,7 +50,7 @@ export async function createPaymentIntent(params: {
   quantity: number;
   description?: string;
 }): Promise<{ clientSecret: string; paymentIntentId: string }> {
-  const { data, error } = await supabase.functions.invoke("stripe-create-payment-intent", {
+  const { data, error } = await sb.functions.invoke("stripe-create-payment-intent", {
     body: {
       raffle_id: params.raffleId,
       amount: params.amount,
@@ -75,7 +77,7 @@ export async function recordStripePayment(params: {
   stripeSessionId: string;
   status: string;
 }): Promise<void> {
-  const { error } = await supabase.from("stripe_payments").insert({
+  const { error } = await sb.from("stripe_payments").insert({
     raffle_id: params.raffleId,
     user_id: params.userId,
     amount: params.amount,

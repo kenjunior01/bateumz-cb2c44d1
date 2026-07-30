@@ -13,6 +13,8 @@ import {
 } from "@/lib/liveBus";
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 type OverlayStyle = 'modern' | 'minimal' | 'neon' | 'classic' | 'gaming';
 type LayoutMode = 'leaderboard' | 'scoreboard' | 'minimal' | 'fullscreen';
 
@@ -64,7 +66,7 @@ const DEFAULT_BRANDING: OverlayBranding = {
 const getBranding = async (code: string): Promise<OverlayBranding> => {
   try {
     // Try scheduled_lives first (for planned/scheduled events)
-    const { data: session } = await supabase
+    const { data: session } = await sb
       .from('scheduled_lives')
       .select('business_user_id')
       .eq('live_code', code)
@@ -73,7 +75,7 @@ const getBranding = async (code: string): Promise<OverlayBranding> => {
     
     // Fallback: try live_sessions table (for ad-hoc LiveHub sessions)
     if (!userId) {
-      const { data: liveSession } = await supabase
+      const { data: liveSession } = await sb
         .from('live_sessions')
         .select('business_user_id')
         .eq('live_code', code)
@@ -82,7 +84,7 @@ const getBranding = async (code: string): Promise<OverlayBranding> => {
     }
     
     if (userId) {
-      const { data: brand } = await supabase
+      const { data: brand } = await sb
         .from('company_branding')
         .select('*')
         .eq('user_id', userId)

@@ -8,6 +8,8 @@ import { fetchScheduledLiveById, updateScheduledLive, fetchScheduledLiveRanking,
 import { listLiveLinks, addLiveLink, removeLiveLink, listPolls, createPoll, closePoll, listPollVotes, listAnnouncements, postAnnouncement, listChecklist, setChecklistItem, getStudioSummary, buildOverlayUrl, PLATFORM_META, type LiveLink, type LivePoll, type LiveAnnouncement, type ChecklistItem, type LivePlatform, type StudioSummary, type ChecklistPhase } from "@/lib/liveStudio";
 import { toast } from "sonner";
 
+const sb: any = supabase;
+
 const tabs = ["pre", "during", "post"] as const;
 type TabKey = typeof tabs[number];
 
@@ -35,7 +37,7 @@ const LiveStudio = () => {
     const [ls, ck, pl, an, rk, sm, pr] = await Promise.all([
       listLiveLinks(lid), listChecklist(lid), listPolls(lid), listAnnouncements(lid),
       fetchScheduledLiveRanking(lid, { limit: 20 }), getStudioSummary(lid),
-      supabase.from("live_ambassador_prizes").select("*").eq("scheduled_live_id", lid).order("position"),
+      sb.from("live_ambassador_prizes").select("*").eq("scheduled_live_id", lid).order("position"),
     ]);
     setLinks(ls); setChecklist(ck); setPolls(pl); setAnnouncements(an); setRanking(rk); setSummary(sm);
     setPrizes((pr.data as any[]) || []);
@@ -72,14 +74,14 @@ const LiveStudio = () => {
   // Realtime
   useEffect(() => {
     if (!live) return;
-    const ch = supabase.channel(`studio-${live.id}`)
+    const ch = sb.channel(`studio-${live.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "live_polls", filter: `scheduled_live_id=eq.${live.id}` }, () => reload(live.id))
       .on("postgres_changes", { event: "*", schema: "public", table: "live_poll_votes" }, () => reload(live.id))
       .on("postgres_changes", { event: "*", schema: "public", table: "live_announcements", filter: `scheduled_live_id=eq.${live.id}` }, () => reload(live.id))
       .on("postgres_changes", { event: "*", schema: "public", table: "live_ambassador_visits", filter: `scheduled_live_id=eq.${live.id}` }, () => reload(live.id))
       .subscribe();
     const t = setInterval(() => reload(live.id), 15000);
-    return () => { supabase.removeChannel(ch); clearInterval(t); };
+    return () => { sb.removeChannel(ch); clearInterval(t); };
   }, [live?.id]);
 
   const setStatus = async (status: ScheduledLive["status"]) => {
@@ -344,7 +346,7 @@ const LiveStudio = () => {
                 {prizes.filter((p) => !p.winner_user_id).map((p) => (
                   <li key={p.id}>
                     <button onClick={async () => {
-                      const { data, error } = await supabase.rpc("award_ambassador_prize" as any, { p_prize_id: p.id, p_mode: "manual" } as any);
+                      const { data, error } = await sb.rpc("award_ambassador_prize" as any, { p_prize_id: p.id, p_mode: "manual" } as any);
                       if (error) { toast.error(error.message); return; }
                       const r: any = data;
                       if (r?.winner_user_id) { toast.success(`Vencedor: ${r.winner_name}`); await postAnnouncement(live.id, `🏆 ${p.title} entregue a ${r.winner_name}!`); }

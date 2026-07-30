@@ -19,6 +19,8 @@ import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
 
+const sb: any = supabase;
+
 // Premium announcement banner data — can be driven by CMS later
 const ANNOUNCEMENT_KEY = "bateu_navbar_announcement_dismissed";
 type Announcement = {

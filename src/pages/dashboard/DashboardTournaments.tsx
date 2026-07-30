@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import {
+
+const sb: any = supabase;
   createTournament,
   updateTournamentStatus,
   type Tournament,
@@ -67,7 +69,7 @@ export default function DashboardTournaments() {
 
   const loadTournaments = () => {
     if (!user) return;
-    supabase
+    sb
       .from("tournaments")
       .select("*")
       .eq("business_id", user.id)

@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 // ===== Types =====
 export type TournamentStatus = "draft" | "active" | "completed";
 
@@ -44,7 +46,7 @@ export interface TournamentMatch {
 export async function createTournament(
   data: Omit<Tournament, "id" | "created_at">
 ): Promise<Tournament> {
-  const { data: row, error } = await supabase
+  const { data: row, error } = await sb
     .from("tournaments")
     .insert(data as any)
     .select()
@@ -56,7 +58,7 @@ export async function createTournament(
 export async function getTournaments(
   status?: TournamentStatus
 ): Promise<Tournament[]> {
-  let query = supabase
+  let query = sb
     .from("tournaments")
     .select("*")
     .order("created_at", { ascending: false });
@@ -71,7 +73,7 @@ export async function getTournaments(
 }
 
 export async function getTournamentById(id: string): Promise<Tournament | null> {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("tournaments")
     .select("*")
     .eq("id", id)
@@ -83,7 +85,7 @@ export async function getTournamentById(id: string): Promise<Tournament | null> 
 export async function getTournamentStandings(
   tournamentId: string
 ): Promise<TournamentStanding[]> {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("tournament_standings")
     .select("*")
     .eq("tournament_id", tournamentId)
@@ -100,7 +102,7 @@ export async function addTournamentPoints(
   wins: 0 | 1 = 0
 ): Promise<void> {
   // Upsert: insert or add points to existing standing
-  const { error } = await supabase.rpc("add_tournament_points", {
+  const { error } = await sb.rpc("add_tournament_points", {
     p_tournament_id: tournamentId,
     p_user_id: userId,
     p_points: points,
@@ -108,7 +110,7 @@ export async function addTournamentPoints(
   });
   if (error) {
     // Fallback: fetch existing and update manually
-    const { data: existing } = await supabase
+    const { data: existing } = await sb
       .from("tournament_standings")
       .select("*")
       .eq("tournament_id", tournamentId)
@@ -116,7 +118,7 @@ export async function addTournamentPoints(
       .single();
 
     if (existing) {
-      await supabase
+      await sb
         .from("tournament_standings")
         .update({
           total_points: (existing.total_points ?? 0) + points,
@@ -126,7 +128,7 @@ export async function addTournamentPoints(
         })
         .eq("id", existing.id);
     } else {
-      await supabase.from("tournament_standings").insert({
+      await sb.from("tournament_standings").insert({
         tournament_id: tournamentId,
         user_id: userId,
         total_points: points,
@@ -139,7 +141,7 @@ export async function addTournamentPoints(
 
 export async function getActiveTournament(): Promise<Tournament | null> {
   const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("tournaments")
     .select("*")
     .eq("status", "active")
@@ -156,7 +158,7 @@ export async function updateTournamentStatus(
   id: string,
   status: TournamentStatus
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await sb
     .from("tournaments")
     .update({ status })
     .eq("id", id);
@@ -166,7 +168,7 @@ export async function updateTournamentStatus(
 export async function getTournamentParticipantCount(
   tournamentId: string
 ): Promise<number> {
-  const { count, error } = await supabase
+  const { count, error } = await sb
     .from("tournament_standings")
     .select("*", { count: "exact", head: true })
     .eq("tournament_id", tournamentId);

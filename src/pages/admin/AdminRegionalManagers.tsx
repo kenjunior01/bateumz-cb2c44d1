@@ -25,6 +25,8 @@ import { COUNTRIES, REGIONS_BY_COUNTRY } from "@/lib/regions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+const sb: any = supabase;
+
 interface RegionalManager {
   id: string;
   user_id: string;
@@ -124,8 +126,8 @@ export default function AdminRegionalManagers() {
     setLoading(true);
     try {
       const [managersRes, regionsRes] = await Promise.all([
-        supabase.from("regional_managers").select("*").order("created_at", { ascending: false }),
-        supabase.from("regions").select("*").order("country_code", { ascending: true }),
+        sb.from("regional_managers").select("*").order("created_at", { ascending: false }),
+        sb.from("regions").select("*").order("country_code", { ascending: true }),
       ]);
       if (managersRes.data) setManagers(managersRes.data as RegionalManager[]);
       if (regionsRes.data) setRegions(regionsRes.data as Region[]);
@@ -166,7 +168,7 @@ export default function AdminRegionalManagers() {
     setSavingManager(true);
     try {
       if (editingManager) {
-        const { error } = await supabase
+        const { error } = await sb
           .from("regional_managers")
           .update({
             user_name: managerForm.name,
@@ -178,7 +180,7 @@ export default function AdminRegionalManagers() {
         if (error) throw error;
         toast.success(t("common.save") + "!");
       } else {
-        const { error } = await supabase
+        const { error } = await sb
           .from("regional_managers")
           .insert({
             user_email: managerForm.email,
@@ -233,11 +235,11 @@ export default function AdminRegionalManagers() {
         country_name: country?.label || regionForm.country_code,
       };
       if (editingRegion) {
-        const { error } = await supabase.from("regions").update(payload).eq("id", editingRegion.id);
+        const { error } = await sb.from("regions").update(payload).eq("id", editingRegion.id);
         if (error) throw error;
         toast.success(t("common.save") + "!");
       } else {
-        const { error } = await supabase.from("regions").insert(payload);
+        const { error } = await sb.from("regions").insert(payload);
         if (error) throw error;
         toast.success(t("regional.createRegion") + "!");
       }
@@ -256,7 +258,7 @@ export default function AdminRegionalManagers() {
     setDeleting(true);
     try {
       const table = deleteTarget.type === "manager" ? "regional_managers" : "regions";
-      const { error } = await supabase.from(table).delete().eq("id", deleteTarget.id);
+      const { error } = await sb.from(table).delete().eq("id", deleteTarget.id);
       if (error) throw error;
       toast.success(t("regional.removeManager"));
       setDeleteDialogOpen(false);

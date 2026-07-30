@@ -21,6 +21,8 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { getTransactions, getWallet, type WalletTransaction } from "@/lib/wallet";
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 const TX_TYPE_CONFIG: Record<
@@ -88,7 +90,7 @@ export default function WalletDashboard() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: walletData } = await supabase
+      const { data: walletData } = await sb
         .from("wallets")
         .select("balance, currency")
         .eq("user_id", user.id)

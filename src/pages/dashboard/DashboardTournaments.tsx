@@ -24,13 +24,13 @@ import {
 } from "lucide-react";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import {
-
-const sb: any = supabase;
   createTournament,
   updateTournamentStatus,
   type Tournament,
   type TournamentStatus,
 } from "@/lib/tournaments";
+
+const sb: any = supabase;
 
 interface CreateForm {
   name: string;

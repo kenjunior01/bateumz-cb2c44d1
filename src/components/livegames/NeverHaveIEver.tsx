@@ -156,7 +156,7 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
             <div className="flex justify-between text-xs text-muted-foreground px-1">
               <span className="text-rose-500 font-medium">❤️ Já fiz ({currentVotes.yes})</span>
               <span className="text-blue-500 font-medium">
-{1F44E} Nunca ({currentVotes.no})</span>
+                👎 Nunca ({currentVotes.no})</span>
             </div>
           </motion.div>
         </AnimatePresence>

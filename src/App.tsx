@@ -175,6 +175,7 @@ function AnimatedRoutes() {
           <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
           <Route path="/lives" element={<LiveHub />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
+          <Route path="/lives/overlay-pro" element={<OverlayPro />} />
           <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
           <Route path="/transparencia" element={<Transparency />} />
           <Route path="/prestacoes" element={<Prestacoes />} />

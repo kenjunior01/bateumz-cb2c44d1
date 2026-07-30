@@ -63,16 +63,29 @@ const DEFAULT_BRANDING: OverlayBranding = {
 
 const getBranding = async (code: string): Promise<OverlayBranding> => {
   try {
+    // Try scheduled_lives first (for planned/scheduled events)
     const { data: session } = await supabase
       .from('scheduled_lives')
       .select('business_user_id')
       .eq('live_code', code)
       .single();
-    if (session?.business_user_id) {
+    let userId = session?.business_user_id;
+    
+    // Fallback: try live_sessions table (for ad-hoc LiveHub sessions)
+    if (!userId) {
+      const { data: liveSession } = await supabase
+        .from('live_sessions')
+        .select('business_user_id')
+        .eq('live_code', code)
+        .single();
+      userId = (liveSession as any)?.business_user_id;
+    }
+    
+    if (userId) {
       const { data: brand } = await supabase
         .from('company_branding')
         .select('*')
-        .eq('user_id', session.business_user_id)
+        .eq('user_id', userId)
         .single();
       if (brand) {
         return {

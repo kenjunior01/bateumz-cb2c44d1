@@ -60,6 +60,7 @@ const OverlayLive = () => {
 
   return (
     <div className="min-h-screen bg-transparent text-white p-6 font-display">
+      <style>{`html,body,#root{background:transparent !important;}`}</style>
       {view === "ranking" && (
         <div className="rounded-3xl bg-black/70 backdrop-blur-md border border-white/10 p-5 max-w-md">
           <div className="flex items-center gap-2 mb-3">

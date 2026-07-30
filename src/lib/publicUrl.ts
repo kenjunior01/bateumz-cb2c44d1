@@ -32,3 +32,8 @@ export const isOnPublicDomain = (): boolean => {
 
 export const buildOverlayUrl = (code: string): string =>
   `${getPublicBaseUrl()}/lives/overlay?code=${encodeURIComponent(code)}`;
+
+export const buildOverlayProUrl = (code: string, layout?: string): string => {
+  const base = `${getPublicBaseUrl()}/lives/overlay-pro?code=${encodeURIComponent(code)}`;
+  return layout ? `${base}&layout=${layout}` : base;
+};

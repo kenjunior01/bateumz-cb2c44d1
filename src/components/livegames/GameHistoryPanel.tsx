@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Clock, Users, ChevronDown, ChevronUp, Gamepad2, RotateCcw, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 interface HistoryEntry {
   id: string;
   game_type: string;
@@ -39,14 +41,14 @@ export default function GameHistoryPanel({ businessId }: GameHistoryPanelProps) 
     if (loaded) return;
     setLoading(true);
 
-    const { data: spinHistory } = await supabase
+    const { data: spinHistory } = await sb
       .from("spin_wheel_plays")
       .select("id, created_at, player_name, result_segment_label, spin_wheel_game_id")
       .eq("business_user_id", businessId)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    const { data: millHistory } = await supabase
+    const { data: millHistory } = await sb
       .from("millionaire_game_plays")
       .select("id, created_at, player_name, prize_won, final_prize_level, millionaire_game_id")
       .eq("business_user_id", businessId)

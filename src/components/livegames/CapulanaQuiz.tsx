@@ -164,7 +164,7 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
             </p>
             <div className="flex justify-center gap-2">
               {(["bot", "pvp"]).map((m) => (
-                <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
+                <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
                 </button>
@@ -173,7 +173,7 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
                 {(["Facil", "Medio", "Dificil"]).map((d) => (
-                  <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
+                  <button key={d} onClick={() => setDifficulty(d as any)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
                 ))}
               </div>

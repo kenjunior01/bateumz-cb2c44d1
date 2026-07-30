@@ -117,7 +117,7 @@ function generateRoundData(): {
     const si = diffIndices[d];
     const shapeA = sceneA[si];
     const bi = sceneB.findIndex((s) => s.id === shapeA.id);
-    const mod = pick(modTypes);
+    const mod = pick([...modTypes] as any);
 
     switch (mod) {
       /* ── colour change ─────────────────────────────────────── */

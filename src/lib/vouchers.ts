@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesInsert as SBTablesInsert } from "@/integrations/supabase/types";
 
+const sb: any = supabase;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Voucher {
@@ -65,7 +67,7 @@ export async function validateVoucher(
 ): Promise<{ valid: true; voucher: Voucher } | { valid: false; reason: string }> {
   const normalizedCode = code.trim().toUpperCase();
 
-  const { data: voucher, error } = await supabase
+  const { data: voucher, error } = await sb
     .from("vouchers")
     .select("*")
     .eq("code", normalizedCode)
@@ -109,13 +111,13 @@ export async function applyVoucher(
 ): Promise<{ success: true; discount: DiscountInfo } | { success: false; reason: string }> {
   const validation = await validateVoucher(code, raffleId);
   if (!validation.valid) {
-    return { success: false, reason: validation.reason };
+    return { success: false, reason: (validation as any).reason };
   }
 
   const voucher = validation.voucher;
 
   // Create redemption record
-  const { error: redemptionError } = await supabase.from("voucher_redemptions").insert({
+  const { error: redemptionError } = await sb.from("voucher_redemptions").insert({
     voucher_id: voucher.id,
     user_id: userId,
     raffle_id: raffleId,
@@ -128,9 +130,9 @@ export async function applyVoucher(
   }
 
   // Increment current_uses atomically
-  await supabase.rpc("increment_voucher_uses", { p_voucher_id: voucher.id }).single();
+  await sb.rpc("increment_voucher_uses", { p_voucher_id: voucher.id }).single();
   // Fallback if RPC doesn't exist:
-  await supabase
+  await sb
     .from("vouchers")
     .update({ current_uses: voucher.current_uses + 1 })
     .eq("id", voucher.id);
@@ -165,7 +167,7 @@ export interface CreateVoucherInput {
 export async function createVoucher(
   voucher: CreateVoucherInput
 ): Promise<Voucher | null> {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("vouchers")
     .insert({
       ...voucher,
@@ -188,7 +190,7 @@ export async function createVoucher(
  * List all vouchers (admin use).
  */
 export async function listVouchers() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("vouchers")
     .select("*")
     .order("created_at", { ascending: false });
@@ -205,7 +207,7 @@ export async function listVouchers() {
  * Toggle voucher active status.
  */
 export async function toggleVoucherStatus(id: string, isActive: boolean) {
-  const { error } = await supabase
+  const { error } = await sb
     .from("vouchers")
     .update({ is_active: isActive })
     .eq("id", id);
@@ -217,6 +219,6 @@ export async function toggleVoucherStatus(id: string, isActive: boolean) {
  * Delete a voucher.
  */
 export async function deleteVoucher(id: string) {
-  const { error } = await supabase.from("vouchers").delete().eq("id", id);
+  const { error } = await sb.from("vouchers").delete().eq("id", id);
   return !error;
 }

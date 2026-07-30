@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
+const sb: any = supabase;
+
 const CATEGORIES = [
   { id: "cantar", label: "Cantar", emoji: "🎤" },
   { id: "dancar", label: "Dançar", emoji: "💃" },
@@ -52,7 +54,7 @@ const ChallengeRoulette = () => {
   // Load saved roulettes
   useEffect(() => {
     if (!user) return;
-    supabase
+    sb
       .from("challenge_roulettes")
       .select("*")
       .eq("business_user_id", user.id)
@@ -63,7 +65,7 @@ const ChallengeRoulette = () => {
   // Load segments for selected roulette
   useEffect(() => {
     if (!selectedId) return;
-    supabase
+    sb
       .from("challenge_roulette_segments")
       .select("*")
       .eq("roulette_id", selectedId)
@@ -139,14 +141,14 @@ const ChallengeRoulette = () => {
 
   const handleAddSegment = async () => {
     if (!selectedId || !newChallenge.text.trim()) return;
-    const seg: Partial<Segment> = {
+    const seg: any = {
       roulette_id: selectedId,
       challenge_text: newChallenge.text.trim(),
       category: newChallenge.category,
       color: COLORS[segments.length % COLORS.length],
       segment_number: segments.length,
     };
-    const { data } = await supabase.from("challenge_roulette_segments").insert(seg).select().single();
+    const { data } = await sb.from("challenge_roulette_segments").insert(seg).select().single();
     if (data) {
       setSegments((prev) => [...prev, data as Segment]);
       setNewChallenge({ text: "", category: "engracado" });
@@ -154,13 +156,13 @@ const ChallengeRoulette = () => {
   };
 
   const handleRemoveSegment = async (seg: Segment) => {
-    await supabase.from("challenge_roulette_segments").delete().eq("id", seg.id);
+    await sb.from("challenge_roulette_segments").delete().eq("id", seg.id);
     setSegments((prev) => prev.filter((s) => s.id !== seg.id).map((s, i) => ({ ...s, segment_number: i })));
   };
 
   const handleCreate = async () => {
     if (!user) return;
-    const { data } = await supabase.from("challenge_roulettes").insert({ business_user_id: user.id }).select().single();
+    const { data } = await sb.from("challenge_roulettes").insert({ business_user_id: user.id }).select().single();
     if (data) {
       setRoulettes((prev) => [data, ...prev]);
       setSelectedId(data.id);
@@ -170,7 +172,7 @@ const ChallengeRoulette = () => {
 
   const handlePublish = async () => {
     if (!selectedId) return;
-    await supabase.from("challenge_roulettes").update({ is_published: true }).eq("id", selectedId);
+    await sb.from("challenge_roulettes").update({ is_published: true }).eq("id", selectedId);
     setRoulettes((prev) => prev.map((r) => (r.id === selectedId ? { ...r, is_published: true } : r)));
     toast.success("Roleta publicada!");
   };

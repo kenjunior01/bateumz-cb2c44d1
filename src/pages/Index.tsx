@@ -88,7 +88,7 @@ function AnimatedSection({ children, className = "", delay = 0 }: { children: Re
       ref={ref}
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
-      variants={sectionFade}
+      variants={sectionFade as any}
       transition={{ delay }}
       className={className}
     >
@@ -393,7 +393,7 @@ const Index = () => {
               <SectionHeader icon={Gamepad2} title="Jogos Populares" badge="50+ jogos" badgeIcon={Users} href="/jogos" />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {POPULAR_GAMES.map((g, i) => (
-                  <motion.div key={g.id} custom={i} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-30px" }}>
+                  <motion.div key={g.id} custom={i} variants={scaleIn as any} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-30px" }}>
                     <Link to={"/lives?game=" + g.id} className="group block premium-card rounded-2xl overflow-hidden card-lift">
                       <div className={"h-1.5 bg-gradient-to-r " + g.grad} />
                       <div className="p-3.5">
@@ -449,7 +449,7 @@ const Index = () => {
               <SectionHeader icon={Trophy} title="Concursos em Destaque" badge="Novo" badgeIcon={Flame} href="/concursos" />
               <div className="grid sm:grid-cols-3 gap-3">
                 {TRENDING_CONTESTS.map((item, i) => (
-                  <motion.div key={item.title} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-20px" }}>
+                  <motion.div key={item.title} custom={i} variants={fadeUp as any} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-20px" }}>
                     <Link to={item.slug} className="group block premium-card rounded-2xl overflow-hidden card-3d">
                       <div className="p-5">
                         <div className="flex items-start justify-between mb-3">
@@ -478,7 +478,7 @@ const Index = () => {
               <SectionHeader icon={Brain} title="Blog & Dicas" href="/blog" />
               <div className="grid sm:grid-cols-3 gap-3">
                 {BLOG_POSTS.map((post, i) => (
-                  <motion.div key={post.slug} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-20px" }}>
+                  <motion.div key={post.slug} custom={i} variants={fadeUp as any} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-20px" }}>
                     <Link to={"/blog/" + post.slug} className="group block premium-card rounded-2xl overflow-hidden card-lift">
                       <div className="p-5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{post.cat}</span>

@@ -30,6 +30,8 @@ import {
   type TournamentStatus,
 } from "@/lib/tournaments";
 
+const sb: any = supabase;
+
 interface CreateForm {
   name: string;
   description: string;
@@ -67,7 +69,7 @@ export default function DashboardTournaments() {
 
   const loadTournaments = () => {
     if (!user) return;
-    supabase
+    sb
       .from("tournaments")
       .select("*")
       .eq("business_id", user.id)

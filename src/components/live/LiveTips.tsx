@@ -127,7 +127,7 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
                       isSelected
                         ? `border-primary bg-gradient-to-br ${tier.color} text-white shadow-lg scale-105`
                         : "border-border hover:border-primary/40"
-                    }`
+                    }`}
                   >
                     <Icon className={`h-5 w-5 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
                     <span className={`text-sm font-extrabold ${isSelected ? "text-white" : ""}`}>{tier.label}</span>
@@ -138,7 +138,7 @@ const LiveTips = ({ scheduledLiveId, receiverId, open, onOpenChange }: Props) =>
                 onClick={() => setShowAmountInput(true)}
                 className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
                   showAmountInput ? "border-primary bg-primary/10 scale-105" : "border-border hover:border-primary/40"
-                }`
+                }`}
               >
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
                 <span className="text-sm font-extrabold">Outro</span>

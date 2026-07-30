@@ -9,6 +9,8 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+const sb: any = supabase;
+
 type PreferenceKey =
   | 'new_raffles'
   | 'raffle_results'
@@ -55,7 +57,7 @@ export default function NotificationSettings() {
   // Load preferences from user profile
   useEffect(() => {
     if (!user) return;
-    supabase
+    sb
       .from('profiles')
       .select('notification_preferences')
       .eq('user_id', user.id)
@@ -78,7 +80,7 @@ export default function NotificationSettings() {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
     setSavingPrefs(true);
-    const { error } = await supabase
+    const { error } = await sb
       .from('profiles')
       .update({ notification_preferences: next as any })
       .eq('user_id', user.id);

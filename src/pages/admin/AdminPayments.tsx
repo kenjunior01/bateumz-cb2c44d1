@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+const sb: any = supabase;
+
 interface Payment {
   id: string;
   ticket_number: number;
@@ -34,7 +36,7 @@ export default function AdminPayments() {
   const [receiptModal, setReceiptModal] = useState<string | null>(null);
 
   const fetchPayments = async () => {
-    const { data } = await supabase
+    const { data } = await sb
       .from("participants")
       .select("*, raffles(title, ticket_price)")
       .order("created_at", { ascending: false })
@@ -43,7 +45,7 @@ export default function AdminPayments() {
     if (data) {
       // Fetch profile names
       const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: profiles } = await supabase
+      const { data: profiles } = await sb
         .from("profiles")
         .select("user_id, display_name")
         .in("user_id", userIds);
@@ -65,7 +67,7 @@ export default function AdminPayments() {
   useEffect(() => { fetchPayments(); }, []);
 
   const handleApprove = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await sb
       .from("participants")
       .update({ payment_status: "completed" })
       .eq("id", id);
@@ -77,7 +79,7 @@ export default function AdminPayments() {
   };
 
   const handleReject = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await sb
       .from("participants")
       .update({ payment_status: "rejected" })
       .eq("id", id);
@@ -89,7 +91,7 @@ export default function AdminPayments() {
   };
 
   const getReceiptUrl = (path: string) => {
-    const { data } = supabase.storage.from("payment-receipts").getPublicUrl(path);
+    const { data } = sb.storage.from("payment-receipts").getPublicUrl(path);
     return data.publicUrl;
   };
 
@@ -153,7 +155,7 @@ export default function AdminPayments() {
         </div>
         <div className="flex gap-2">
           {(["all", "pending", "completed", "rejected"]).map((f) => (
-            <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)}>
+            <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f as any)}>
               {f === "all" ? "Todos" : f === "pending" ? "Pendentes" : f === "completed" ? "Aprovados" : "Rejeitados"}
             </Button>
           ))}

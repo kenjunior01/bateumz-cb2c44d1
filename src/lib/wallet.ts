@@ -5,6 +5,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 // ── Types ──────────────────────────────────────────────────────────
 
 export interface Wallet {
@@ -38,7 +40,7 @@ export type WalletTransactionInsert = Omit<WalletTransaction, "id" | "created_at
  * Fetch or create a wallet for the given user.
  */
 export async function getWallet(userId: string): Promise<Wallet | null> {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("wallets")
     .select("*")
     .eq("user_id", userId)
@@ -61,7 +63,7 @@ export async function getWallet(userId: string): Promise<Wallet | null> {
  * Create a brand-new wallet for a user.
  */
 async function createWallet(userId: string): Promise<Wallet | null> {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("wallets")
     .insert({ user_id: userId, balance: 0, currency: "MZN" })
     .select()
@@ -94,7 +96,7 @@ export async function createTransaction(
   tx: Omit<WalletTransactionInsert, "wallet_id" | "status">
 ): Promise<WalletTransaction | null> {
   // Try RPC first (atomic)
-  const { data: rpcData, error: rpcError } = await supabase.rpc(
+  const { data: rpcData, error: rpcError } = await sb.rpc(
     "wallet_process_transaction",
     {
       p_wallet_id: walletId,
@@ -111,7 +113,7 @@ export async function createTransaction(
   }
 
   // Fallback: sequential approach
-  const wallet = await supabase.from("wallets").select("balance").eq("id", walletId).single();
+  const wallet = await sb.from("wallets").select("balance").eq("id", walletId).single();
   if (wallet.error) {
     console.error("[wallet] createTransaction – fetch wallet error:", wallet.error);
     return null;
@@ -127,7 +129,7 @@ export async function createTransaction(
     return null;
   }
 
-  const { data: txData, error: txError } = await supabase
+  const { data: txData, error: txError } = await sb
     .from("wallet_transactions")
     .insert({
       wallet_id: walletId,
@@ -146,7 +148,7 @@ export async function createTransaction(
     return null;
   }
 
-  const { error: updError } = await supabase
+  const { error: updError } = await sb
     .from("wallets")
     .update({ balance: newBalance, updated_at: new Date().toISOString() })
     .eq("id", walletId);
@@ -169,7 +171,7 @@ export async function getTransactions(
   const wallet = await getWallet(userId);
   if (!wallet) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("wallet_transactions")
     .select("*")
     .eq("wallet_id", wallet.id)

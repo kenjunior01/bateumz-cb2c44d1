@@ -18,7 +18,7 @@ interface AuthContextType {
   role: string | null;
   adminCountries: string[];
   loading: boolean;
-  signUp: (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => Promise<{ error: any; session: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -40,22 +40,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     if (!profileData) {
       // OAuth user who skipped registration — auto-create a basic profile
       const displayName =
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0] ||
-        "Utilizador";
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.display_name ||
+        user?.email?.split("@")[0] ||
+        "Member";
 
       const { error: insertError } = await supabase
         .from("profiles")
         .insert({
           user_id: userId,
           display_name: displayName,
-          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+          avatar_url: user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null,
         } as any);
 
       if (!insertError) {
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from("profiles")
           .select("*")
           .eq("user_id", userId)
-          .single();
+          .maybeSingle();
         return newProfile;
       }
     }
@@ -103,10 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           province?: string;
           city?: string;
           interests?: string[];
+          company_name?: string;
         } = {};
         if (extra.phone) updates.phone = extra.phone;
         if (extra.province) updates.province = extra.province;
         if (extra.city) updates.city = extra.city;
+        if (extra.company_name) updates.company_name = extra.company_name;
         if (extra.interests?.length > 0) updates.interests = extra.interests;
         if (Object.keys(updates).length > 0) {
           await supabase.from("profiles").update(updates).eq("user_id", userId);
@@ -187,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -195,10 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           display_name: meta?.display_name || email,
           role: meta?.role || "user",
+          company_name: meta?.company_name,
         },
       },
     });
-    return { error };
+    return { error, session: data?.session ?? null };
   };
 
   const signIn = async (email: string, password: string) => {

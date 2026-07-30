@@ -236,7 +236,7 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
             </p>
             <div className="flex justify-center gap-2">
               {["bot", "pvp"].map((m) => (
-                <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === m ? "text-black" : "text-amber-200/60"}`}
+                <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === m ? "text-black" : "text-amber-200/60"}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
                 </button>
@@ -245,7 +245,7 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
                 {(["Facil", "Medio", "Dificil"]).map((d) => (
-                  <button key={d} onClick={() => setDifficulty(d)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${difficulty === d ? "text-black" : "text-amber-200/60"}`}
+                  <button key={d} onClick={() => setDifficulty(d as any)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${difficulty === d ? "text-black" : "text-amber-200/60"}`}
                     style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)" }}>
                     {d}
                   </button>

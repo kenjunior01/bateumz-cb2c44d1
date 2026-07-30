@@ -414,7 +414,7 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
         {phase === 'reveal' && challengeType && (
           <motion.div
             key={`reveal-${revealKey}`}
-            variants={cardVariants}
+            variants={cardVariants as any}
             initial="hidden"
             animate="visible"
             exit="exit"

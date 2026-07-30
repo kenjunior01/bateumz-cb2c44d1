@@ -23,6 +23,8 @@ import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const sb: any = supabase;
+
 interface Raffle {
   id: string;
   title: string;
@@ -105,10 +107,10 @@ const Marketplace = () => {
   useEffect(() => {
     const fetchData = async () => {
       const [rafflesRes, contestsRes, spinRes, millRes] = await Promise.all([
-        supabase.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
-        supabase.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
-        supabase.from("spin_wheel_games").select("*").eq("is_published", true),
-        supabase.from("millionaire_games").select("*").eq("is_published", true),
+        sb.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
+        sb.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
+        sb.from("spin_wheel_games").select("*").eq("is_published", true),
+        sb.from("millionaire_games").select("*").eq("is_published", true),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data as Raffle[]);
       if (contestsRes.data) setContests(contestsRes.data as Contest[]);
@@ -200,7 +202,7 @@ const Marketplace = () => {
         <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar</p>
         <div className="flex flex-wrap gap-2">
           {(["newest", "ending", "popular"]).map((s) => (
-            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
+            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s as any)}>
               {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
             </Button>
           ))}
@@ -211,7 +213,7 @@ const Marketplace = () => {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidade de sorteio</p>
           <div className="flex flex-wrap gap-2">
             {(["all", "paid", "free", "points"]).map((t) => (
-              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t)} className="gap-1">
+              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t as any)} className="gap-1">
                 {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
               </Button>
             ))}

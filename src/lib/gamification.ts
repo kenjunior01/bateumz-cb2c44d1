@@ -4,6 +4,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
+const sb: any = supabase;
+
 // ===================== TYPES =====================
 export interface CreatorLevel {
   level: number;
@@ -124,7 +126,7 @@ export function getStreakMultiplier(streak: number): number {
 // ===================== API FUNCTIONS =====================
 export async function awardXP(userId: string, eventType: XPEvent['type']) {
   const baseXP = XP_EVENTS[eventType];
-  const { data: streak } = await supabase
+  const { data: streak } = await sb
   .from('user_streaks')
   .select('*')
   .eq('user_id', userId)
@@ -133,15 +135,15 @@ export async function awardXP(userId: string, eventType: XPEvent['type']) {
   const multiplier = streak ? getStreakMultiplier(streak.current_streak) : 1;
   const totalXP = Math.floor(baseXP * multiplier);
 
-  await supabase.rpc('award_xp' as any, { p_user_id: userId, p_amount: totalXP, p_reason: eventType } as any).catch(() => {});
+  await sb.rpc('award_xp' as any, { p_user_id: userId, p_amount: totalXP, p_reason: eventType } as any).catch(() => {});
   return { baseXP, multiplier, totalXP };
 }
 
 export async function getUserGamification(userId: string) {
   const [xpRes, achievementsRes, streakRes] = await Promise.all([
-    supabase.from('creator_xp').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('user_achievements').select('*, achievement:achievements(*)').eq('user_id', userId),
-    supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
+    sb.from('creator_xp').select('*').eq('user_id', userId).maybeSingle(),
+    sb.from('user_achievements').select('*, achievement:achievements(*)').eq('user_id', userId),
+    sb.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
   ]);
 
   const totalXP = (xpRes.data as any)?.total_xp || 0;
@@ -155,7 +157,7 @@ export async function getUserGamification(userId: string) {
 }
 
 export async function checkAndUnlockAchievements(userId: string, stats: Record<string, number>) {
-  const { data: existing } = await supabase
+  const { data: existing } = await sb
   .from('user_achievements')
   .select('achievement_id')
   .eq('user_id', userId);
@@ -168,7 +170,7 @@ export async function checkAndUnlockAchievements(userId: string, stats: Record<s
     const statValue = stats[ach.key] || 0;
     if (statValue >= ach.threshold) {
       newUnlocks.push(ach);
-      await supabase.from('user_achievements').insert({
+      await sb.from('user_achievements').insert({
         user_id: userId,
         achievement_id: ach.key,
       }).catch(() => {});
@@ -180,14 +182,14 @@ export async function checkAndUnlockAchievements(userId: string, stats: Record<s
 
 export async function updateStreak(userId: string) {
   const today = new Date().toISOString().split('T')[0];
-  const { data: streak } = await supabase
+  const { data: streak } = await sb
   .from('user_streaks')
   .select('*')
   .eq('user_id', userId)
   .maybeSingle();
 
   if (!streak) {
-    await supabase.from('user_streaks').insert({
+    await sb.from('user_streaks').insert({
       user_id: userId,
       current_streak: 1,
       longest_streak: 1,
@@ -206,7 +208,7 @@ export async function updateStreak(userId: string) {
   if (lastDate === yesterday) {
     const newStreak = streak.current_streak + 1;
     const isBonus = newStreak > 1;
-    await supabase
+    await sb
       .from('user_streaks')
       .update({
         current_streak: newStreak,
@@ -218,7 +220,7 @@ export async function updateStreak(userId: string) {
   }
 
   // Streak broken
-  await supabase
+  await sb
     .from('user_streaks')
     .update({ current_streak: 1, last_live_date: today })
     .eq('user_id', userId);
@@ -227,7 +229,7 @@ export async function updateStreak(userId: string) {
 
 export async function getLeaderboard(type: 'xp' | 'followers' | 'tips' = 'xp', limit = 20) {
   if (type === 'xp') {
-    const { data } = await supabase
+    const { data } = await sb
       .from('creator_xp')
       .select('*, profiles(display_name, avatar_url, company_name)')
       .order('total_xp', { ascending: false })
@@ -235,7 +237,7 @@ export async function getLeaderboard(type: 'xp' | 'followers' | 'tips' = 'xp', l
     return data || [];
   }
   if (type === 'followers') {
-    const { data } = await supabase
+    const { data } = await sb
       .from('creator_stats')
       .select('*, profiles(display_name, avatar_url, company_name)')
       .order('follower_count', { ascending: false })
@@ -243,7 +245,7 @@ export async function getLeaderboard(type: 'xp' | 'followers' | 'tips' = 'xp', l
     return data || [];
   }
   // tips
-  const { data } = await supabase
+  const { data } = await sb
     .from('creator_stats')
     .select('*, profiles(display_name, avatar_url, company_name)')
     .order('tips_total', { ascending: false })

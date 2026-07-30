@@ -40,6 +40,8 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatMZN } from "@/lib/currency";
 
+const sb: any = supabase;
+
 interface BusinessInfo {
   user_id: string;
   display_name: string | null;
@@ -172,20 +174,20 @@ export default function BusinessProfile() {
     if (!id) return;
     const load = async () => {
       const [profileRes, rafflesRes, contestsRes, productsRes] = await Promise.all([
-        supabase.from("profiles_public").select("*").eq("user_id", id).single(),
-        supabase
+        sb.from("profiles_public").select("*").eq("user_id", id).single(),
+        sb
           .from("raffles")
           .select("*")
           .eq("business_user_id", id)
           .in("status", ["active", "completed", "drawn"])
           .order("created_at", { ascending: false }),
-        supabase
+        sb
           .from("contests")
           .select("*")
           .eq("created_by", id)
           .in("status", ["active", "voting", "completed"])
           .order("created_at", { ascending: false }),
-        supabase
+        sb
           .from("prestacao_products")
           .select("*")
           .eq("business_user_id", id)
@@ -209,9 +211,9 @@ export default function BusinessProfile() {
     const loadGames = async () => {
       const bizId = id!;
       const [spinsRes, millsRes, roulettesRes] = await Promise.all([
-        supabase.from("spin_wheel_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
-        supabase.from("millionaire_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
-        supabase.from("challenge_roulettes").select("id, title, is_published, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        sb.from("spin_wheel_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        sb.from("millionaire_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        sb.from("challenge_roulettes").select("id, title, is_published, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
       ]);
       setSpinGames((spinsRes.data as SpinWheelGame[]) || []);
       setMillionaireGames((millsRes.data as MillionaireGameInfo[]) || []);
@@ -229,7 +231,7 @@ export default function BusinessProfile() {
         .map((r) => r.id);
 
       if (finishedRaffleIds.length > 0) {
-        const { data: winnerRows } = await supabase
+        const { data: winnerRows } = await sb
           .from("participants")
           .select("raffle_id, ticket_number, user_id")
           .in("raffle_id", finishedRaffleIds)
@@ -237,7 +239,7 @@ export default function BusinessProfile() {
 
         if (winnerRows && winnerRows.length > 0) {
           const userIds = [...new Set(winnerRows.map((w: any) => w.user_id))];
-          const { data: profs } = await supabase
+          const { data: profs } = await sb
             .from("profiles_public")
             .select("user_id, display_name")
             .in("user_id", userIds);
@@ -266,7 +268,7 @@ export default function BusinessProfile() {
         await Promise.all(
           liveContests.map(async (c) => {
             const orderCol = c.evaluation_type === "views" ? "views_count" : "votes_count";
-            const { data } = await supabase
+            const { data } = await sb
               .from("contest_submissions")
               .select("id, participant_name, photo_url, votes_count, views_count")
               .eq("contest_id", c.id)
@@ -756,7 +758,7 @@ export default function BusinessProfile() {
                     {allGames.map((game, i) => (
                       <BusinessGameCard
                         key={`${game.type}-${game.id}`}
-                        game={game}
+                        game={game as any}
                         index={i}
                         onClick={() => handlePlayGame(game.type, game.id)}
                       />

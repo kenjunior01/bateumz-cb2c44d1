@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+const sb: any = supabase;
+
 const fmtDur = (s: number) => {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -68,7 +70,7 @@ const DashboardLiveStats = () => {
     if (!user) return;
     const loadDbStats = async () => {
       try {
-        const { data } = await supabase.from("spin_wheel_sessions").select("*").eq("business_user_id", user?.id || "");
+        const { data } = await sb.from("spin_wheel_sessions").select("*").eq("business_user_id", user?.id || "");
         if (data) setDbStats(data);
       } catch {}
     };

@@ -632,7 +632,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                       key={d}
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => setDifficulty(d)}
+                      onClick={() => setDifficulty(d as any)}
                       className={cn(
                         "rounded-xl border-2 py-2.5 px-2 flex flex-col items-center gap-1 transition-all duration-200",
                         active

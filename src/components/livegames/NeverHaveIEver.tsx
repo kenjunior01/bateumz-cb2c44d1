@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Hand, ThumbsUp, ThumbsDown, Shuffle, Plus, X, Sparkles } from "lucide-react";
+import { Hand, ThumbsUp, ThumbsDown, Shuffle, Plus, X, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -156,7 +156,7 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
             <div className="flex justify-between text-xs text-muted-foreground px-1">
               <span className="text-rose-500 font-medium">❤️ Já fiz ({currentVotes.yes})</span>
               <span className="text-blue-500 font-medium">
-{1F44E} Nunca ({currentVotes.no})</span>
+                👎 Nunca ({currentVotes.no})</span>
             </div>
           </motion.div>
         </AnimatePresence>

@@ -124,7 +124,7 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
     MT.forEach(([r,c],i) => { let pl: number|undefined; for(let p=0;p<4;p++) if(SO[p]===i) pl=p; m.set(`${r},${c}`,{type:SAFE.has(i)?"safe":"track",player:pl}); });
     HS.forEach((cells,p) => cells.forEach(([r,c],i) => m.set(`${r},${c}`,{type:"home",player:p})));
     m.set("7,7",{type:"center"});
-    [["7,6",0],["6,7",1],["7,8",2],["8,7",3]].forEach(([k,p]) => m.set(k,{type:"home",player:p as number}));
+    [["7,6",0],["6,7",1],["7,8",2],["8,7",3]].forEach(([k,p]) => m.set(String(k),{type:"home",player:p as number}));
     return m;
   }, []);
 

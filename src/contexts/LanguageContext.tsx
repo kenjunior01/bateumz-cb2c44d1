@@ -545,6 +545,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error.retry": "Try again",
     "error.gameCrash": "Error loading {game}",
     "error.gameCrashDesc": "Try selecting another game",
+  },
   pt: {
     // ===== Navbar / Top =====
     "nav.raffles": "Sorteios",

@@ -104,10 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           province?: string;
           city?: string;
           interests?: string[];
+          company_name?: string;
         } = {};
         if (extra.phone) updates.phone = extra.phone;
         if (extra.province) updates.province = extra.province;
         if (extra.city) updates.city = extra.city;
+        if (extra.company_name) updates.company_name = extra.company_name;
         if (extra.interests?.length > 0) updates.interests = extra.interests;
         if (Object.keys(updates).length > 0) {
           await supabase.from("profiles").update(updates).eq("user_id", userId);

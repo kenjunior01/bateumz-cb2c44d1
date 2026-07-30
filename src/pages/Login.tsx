@@ -339,7 +339,7 @@ export default function Login() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Senha</label>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
               <div className="relative group">
                 <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${focusedField === "password" ? "text-primary" : "text-muted-foreground"}`} />
                 <input
@@ -394,7 +394,7 @@ export default function Login() {
                   </>
                 ) : (
                   <>
-                    Entrar <ChevronRight className="h-4 w-4" />
+                    Sign in <ChevronRight className="h-4 w-4" />
                   </>
                 )}
               </motion.button>
@@ -409,9 +409,9 @@ export default function Login() {
               Esqueceu a senha? 🔑
             </Link>
             <p className="text-sm text-muted-foreground">
-              Não tem conta?{" "}
+              Don't have an account?{" "}
               <Link to="/register" className="text-primary hover:underline font-medium">
-                Criar conta 🚀
+                Create account 🚀
               </Link>
             </p>
           </motion.div>

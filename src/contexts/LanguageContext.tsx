@@ -511,7 +511,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "tournament.formCurrency": "Currency",
     "tournament.formMaxParticipants": "Max participants",
     "tournament.formRules": "Rules",
-  },
     "live.badge": "LIVE ENGAGEMENT",
     "live.title": "Games for your Live",
     "live.subtitle": "Dedicated platform for businesses to animate lives with interactive games.",

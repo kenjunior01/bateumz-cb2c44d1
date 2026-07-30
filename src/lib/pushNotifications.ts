@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
+const sb: any = supabase;
+
 // VAPID keys would normally be generated server-side and injected via environment variables.
 // These are placeholder values — replace with real VAPID public key before enabling push.
 // const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
@@ -103,7 +105,7 @@ export async function unsubscribePush(userId: string): Promise<boolean> {
     }
 
     // Remove from Supabase
-    await supabase
+    await sb
       .from('push_subscriptions')
       .delete()
       .eq('user_id', userId);
@@ -139,7 +141,7 @@ async function storeSubscription(userId: string, subscription: PushSubscription)
     ? `${navigator.userAgent}`
     : undefined;
 
-  await supabase.from('push_subscriptions').upsert(
+  await sb.from('push_subscriptions').upsert(
     {
       user_id: userId,
       endpoint: sub.endpoint ?? '',

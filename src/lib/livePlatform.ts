@@ -679,7 +679,7 @@ export async function createDuel(challengedId: string, topic?: string) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { error: "Not authenticated" };
   return sb.from("live_duels").insert({
-    challenger_id: user.id, challenged_id, topic,
+    challenger_id: user.id, challenged_id: challengedId, topic,
     expires_at: new Date(Date.now() + 86400000).toISOString(),
   }).select().single();
 }

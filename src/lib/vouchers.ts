@@ -111,7 +111,7 @@ export async function applyVoucher(
 ): Promise<{ success: true; discount: DiscountInfo } | { success: false; reason: string }> {
   const validation = await validateVoucher(code, raffleId);
   if (!validation.valid) {
-    return { success: false, reason: validation.reason };
+    return { success: false, reason: (validation as any).reason };
   }
 
   const voucher = validation.voucher;

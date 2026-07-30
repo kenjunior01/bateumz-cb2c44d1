@@ -38,7 +38,7 @@ export default function VoucherInput({ onApplied, raffleId }: VoucherInputProps)
       onApplied(result.discount);
     } else {
       setState("error");
-      setErrorMsg(t(result.reason, { value: "0" }));
+      setErrorMsg(t((result as any).reason, { value: "0" }));
     }
   };
 

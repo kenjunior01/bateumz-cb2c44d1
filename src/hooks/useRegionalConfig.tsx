@@ -90,31 +90,40 @@ export const detectUserRegion = async (): Promise<string> => {
     console.error('Error getting user metadata:', err);
   }
 
-  // 3. Try IP geolocation (fallback to free service)
+  // 3. Try IP geolocation (multiple fallbacks)
   try {
-    const response = await fetch('https://ipapi.co/json/');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch('https://ipwho.is/', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await response.json();
-    if (data.country_code) {
+    if (data?.country_code) {
       return data.country_code;
     }
-  } catch (err) {
-    console.error('Error detecting region from IP:', err);
+  } catch {
+    try {
+      const controller2 = new AbortController();
+      const timeoutId2 = setTimeout(() => controller2.abort(), 3000);
+      const r2 = await fetch('https://freeipapi.com/api/json', { signal: controller2.signal });
+      clearTimeout(timeoutId2);
+      const d2 = await r2.json();
+      if (d2?.countryCode) return d2.countryCode;
+    } catch {
+      // Both services failed, continue to fallbacks
+    }
   }
 
   // 4. Browser language
   const browserLang = navigator.language.split('-')[0].toUpperCase();
   const langMap: Record<string, string> = {
-    'PT': 'PT',
+    'PT': 'MZ',
     'BR': 'BR',
-    'ES': 'ES',
-    'FR': 'FR',
-    'EN': 'US',
-    'HI': 'IN',
+    'EN': 'MZ',
   };
   if (langMap[browserLang]) return langMap[browserLang];
 
-  // 5. Default
-  return 'US';
+  // 5. Default to Mozambique
+  return 'MZ';
 };
 
 /**

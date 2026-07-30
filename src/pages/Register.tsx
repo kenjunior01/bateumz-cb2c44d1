@@ -131,15 +131,21 @@ export default function Register() {
       return;
     }
     setLoading(true);
-    const { error, session } = await signUp(email, password, {
-      display_name: name,
-      role: accountType,
-      company_name: accountType === "business" ? companyName : undefined,
-    });
-    setLoading(false);
-    if (error) {
-      setError(friendlyAuthError(error.message));
-    } else {
+    try {
+      const { error, session } = await signUp(email, password, {
+        display_name: name,
+        role: accountType,
+        company_name: accountType === "business" ? companyName : undefined,
+      });
+      setLoading(false);
+      if (error) {
+        setError(friendlyAuthError(error.message));
+      } else if (!session && !error) {
+        // Email confirmation required - Supabase returns no session
+        setAutoSignedIn(false);
+        setSuccess(true);
+        playPopSound();
+      } else {
       if (refCode) {
         try {
           const { data: referrerProfile } = await supabase
@@ -165,6 +171,11 @@ export default function Register() {
       setAutoSignedIn(!!session);
       setSuccess(true);
       playPopSound();
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || "Ocorreu um erro inesperado. Tente novamente.");
+      console.error("Signup error:", err);
     }
   };
 

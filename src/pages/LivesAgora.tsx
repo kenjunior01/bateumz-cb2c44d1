@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getActiveLives, getTopCreators, toggleFollow, isFollowing,
-  getLiveViewerCount, getTrendingClips,
+  getLiveViewerCount, subscribeViewerCount, getTrendingClips,
   type CreatorStat, type LiveClip,
 } from "@/lib/livePlatform";
 import { useAuth } from "@/contexts/AuthContext";

@@ -259,7 +259,7 @@ const LiveStudio = () => {
               <div className="rounded-xl border border-border p-3 space-y-2">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">Overlays para OBS</p>
                 {(["ranking", "prizes", "countdown", "announcement"]).map((v) => (
-                  <button key={v} onClick={() => { navigator.clipboard.writeText(buildOverlayUrl(live.id, v)); toast.success(`Overlay ${v} copiado!`); }} className="w-full text-[11px] px-3 py-1.5 rounded-full bg-secondary text-left flex items-center gap-2">
+                  <button key={v} onClick={() => { navigator.clipboard.writeText(buildOverlayUrl(live.id, v as any)); toast.success(`Overlay ${v} copiado!`); }} className="w-full text-[11px] px-3 py-1.5 rounded-full bg-secondary text-left flex items-center gap-2">
                     <Tv className="h-3 w-3" /> {v}
                   </button>
                 ))}

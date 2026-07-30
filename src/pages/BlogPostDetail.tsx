@@ -46,6 +46,7 @@ interface BlogPost {
   summary: string;
   image_url: string;
   published_at: string;
+  updated_at?: string | null;
   seo_keywords: string[];
   seo_title: string | null;
   seo_description: string | null;
@@ -199,7 +200,7 @@ export default function BlogPostDetail() {
         setViewCount((postData.view_count || 0) + 1);
 
         /* Incrementar visualizações */
-        supabase.rpc("increment_blog_view", { post_slug: slug }).catch(() => {});
+        void supabase.rpc("increment_blog_view", { post_slug: slug }).then(() => {}, () => {});
 
         /* Gerar sumário */
         if (postData.content) {

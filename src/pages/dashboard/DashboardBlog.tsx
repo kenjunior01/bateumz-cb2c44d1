@@ -515,7 +515,7 @@ export default function DashboardBlog() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
         {statsCards.map((stat) => (
-          <motion.div key={stat.label} variants={itemVariants as any} whileHover={cardHover}>
+          <motion.div key={stat.label} variants={itemVariants as any} whileHover={cardHover as any}>
             <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between">
@@ -912,7 +912,7 @@ export default function DashboardBlog() {
                         <motion.div
                           key={cat.id}
                           variants={itemVariants as any}
-                          whileHover={cardHover}
+                          whileHover={cardHover as any}
                         >
                           <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors">
                             <div className="min-w-0 flex-1">
@@ -1217,14 +1217,14 @@ export default function DashboardBlog() {
                 setDeleteConfirmOpen(false);
                 setPostToDelete(null);
               }}
-              disabled={deleting}
+              disabled={!!deleting}
             >
               Cancelar
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={!!deleting}
               className="gap-2"
             >
               {deleting ? (

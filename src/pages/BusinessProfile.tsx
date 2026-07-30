@@ -758,7 +758,7 @@ export default function BusinessProfile() {
                     {allGames.map((game, i) => (
                       <BusinessGameCard
                         key={`${game.type}-${game.id}`}
-                        game={game}
+                        game={game as any}
                         index={i}
                         onClick={() => handlePlayGame(game.type, game.id)}
                       />

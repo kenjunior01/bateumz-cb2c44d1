@@ -140,7 +140,7 @@ function generateMathProblem(): { question: string; answer: number } {
   return { question: `${a} ${op} ${b}`, answer };
 }
 
-function scrambleWord(word: string): string {
+function shuffleLetters(word: string): string {
   const arr = word.split('');
   let scrambled = [...arr];
   for (let attempts = 0; attempts < 20; attempts++) {
@@ -391,7 +391,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           case 'scramble': {
             const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
             setScrambleAnswer(word);
-            setScrambleWord(scrambleWord(word));
+            setScrambleWord(shuffleLetters(word));
             setScrambleInputs(['', '']);
             break;
           }

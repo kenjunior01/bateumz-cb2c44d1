@@ -40,22 +40,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     if (!profileData) {
       // OAuth user who skipped registration — auto-create a basic profile
       const displayName =
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0] ||
-        "Utilizador";
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.display_name ||
+        user?.email?.split("@")[0] ||
+        "Member";
 
       const { error: insertError } = await supabase
         .from("profiles")
         .insert({
           user_id: userId,
           display_name: displayName,
-          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+          avatar_url: user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null,
         } as any);
 
       if (!insertError) {
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from("profiles")
           .select("*")
           .eq("user_id", userId)
-          .single();
+          .maybeSingle();
         return newProfile;
       }
     }

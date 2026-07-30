@@ -72,6 +72,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [autoSignedIn, setAutoSignedIn] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [searchParams] = useSearchParams();
@@ -130,7 +131,7 @@ export default function Register() {
       return;
     }
     setLoading(true);
-    const { error } = await signUp(email, password, {
+    const { error, session } = await signUp(email, password, {
       display_name: name,
       role: accountType,
       company_name: accountType === "business" ? companyName : undefined,
@@ -161,6 +162,7 @@ export default function Register() {
           company_name: accountType === "business" ? companyName : undefined,
         })
       );
+      setAutoSignedIn(!!session);
       setSuccess(true);
       playPopSound();
     }
@@ -170,7 +172,7 @@ export default function Register() {
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/dashboard' },
+      options: { redirectTo: window.location.origin },
     });
     if (error) {
       setError("Erro ao conectar com Google. Tenta novamente.");
@@ -182,7 +184,7 @@ export default function Register() {
     setAppleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
-      options: { redirectTo: window.location.origin + '/dashboard' },
+      options: { redirectTo: window.location.origin },
     });
     if (error) {
       setError("Erro ao conectar com Apple. Tenta novamente.");

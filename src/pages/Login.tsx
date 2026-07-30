@@ -68,7 +68,7 @@ export default function Login() {
       .eq("user_id", user.id);
     const roles = data?.map((item: any) => item.role) || [];
 
-    if (roles.includes("admin")) navigate("/admin");
+    if (roles.includes("superadmin") || roles.includes("admin")) navigate("/admin");
     else if (roles.includes("business")) navigate("/dashboard");
     else navigate("/profile");
   };
@@ -110,7 +110,7 @@ export default function Login() {
     playPopSound();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/dashboard' },
+      options: { redirectTo: window.location.origin },
     });
     if (error) {
       setError("Erro ao conectar com Google. Tenta novamente.");

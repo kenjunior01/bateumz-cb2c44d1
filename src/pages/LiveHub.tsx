@@ -362,7 +362,7 @@ const LiveHub = () => {
     publish({ type: "liveCode", payload: code });
     publish({ type: "liveStarted", payload: { code, at: now } });
     publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: now } });
-    (toast as any)({ title: "Live iniciada", description: `Código gerado: ${code}` });
+    uiToast({ title: "Live iniciada", description: `Código gerado: ${code}` });
   };
 
   const [endOpen, setEndOpen] = useState(false);
@@ -409,7 +409,7 @@ const LiveHub = () => {
       localStorage.removeItem("liveStartedAt");
       localStorage.setItem("liveActive", "0");
     } catch {}
-    (toast as any)({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
+    uiToast({ title: "Live encerrada", description: "Vencedores e ranking guardados no histórico." });
     setEndOpen(false);
     setEnding(false);
   };

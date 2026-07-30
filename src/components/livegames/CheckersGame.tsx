@@ -133,21 +133,17 @@ const chooseBotMove = (b: Board, difficulty: Difficulty): FullMove => {
   }
 
   if (difficulty === "dificil") {
-    /* Look-ahead 2 moves: bot → opponent → bot */
+    /* Look-ahead 1 move with positional evaluation */
     const scored = allMoves.map(move => {
       const b1 = simulateMove(b, move);
       const oppMoves = getAllMovesForPlayer(b1, 1);
       if (oppMoves.length === 0) return { move, score: 10000 };
-      let worst = Infinity;
-      for (const om of oppMoves) {
-        const b2 = simulateMove(b1, om);
-        const botMoves2 = getAllMovesForPlayer(b2, 2);
-        if (botMoves2.length === 0) { worst = -10000; break; }
-        const sampled = botMoves2.length > 12 ? botMoves2.slice(0, 12) : botMoves2;
-        const bestFollow = Math.max(...sampled.map(bm => evaluateBoardFor(simulateMove(b2, bm), 2)));
-        worst = Math.min(worst, bestFollow);
-      }
-      return { move, score: worst === Infinity ? evaluateBoardFor(b1, 2) : worst };
+      // Evaluate how many opponent moves are available (fewer = better for bot)
+      const oppMobility = oppMoves.length;
+      const boardScore = evaluateBoardFor(b1, 2);
+      // Bonus for limiting opponent mobility
+      const mobilityBonus = Math.max(0, 12 - oppMobility) * 3;
+      return { move, score: boardScore + mobilityBonus };
     });
     scored.sort((a, b) => b.score - a.score);
     return scored[0].move;
@@ -295,7 +291,7 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
         setGameOver(true);
         setWinner(1);
       }
-    }, 600);
+    }, 350);
     return () => {
       if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
     };
@@ -479,7 +475,6 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
                   >
                     {cell && (
                       <motion.div
-                        layoutId={`piece-${r}-${c}`}
                         className={cn(
                           "w-7 h-7 sm:w-9 sm:h-9 rounded-full shadow-lg flex items-center justify-center transition-all",
                           cell.player === 1

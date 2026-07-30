@@ -151,19 +151,31 @@ export const fetchRegionalConfig = async (countryCode: string): Promise<Regional
       };
     }
 
-    // Fetch branding
-    const { data: branding } = await (supabase as any)
-      .from('regional_branding')
-      .select('*')
-      .eq('region_id', region.id)
-      .maybeSingle();
+    // Fetch branding (table may not exist yet — return defaults on 404)
+    let branding = null;
+    try {
+      const res = await (supabase as any)
+        .from('regional_branding')
+        .select('*')
+        .eq('region_id', region.id)
+        .maybeSingle();
+      branding = res.data;
+    } catch {
+      branding = null;
+    }
 
-    // Fetch settings
-    const { data: settings } = await (supabase as any)
-      .from('regional_settings')
-      .select('*')
-      .eq('region_id', region.id)
-      .maybeSingle();
+    // Fetch settings (table may not exist yet — return defaults on 404)
+    let settings = null;
+    try {
+      const res = await (supabase as any)
+        .from('regional_settings')
+        .select('*')
+        .eq('region_id', region.id)
+        .maybeSingle();
+      settings = res.data;
+    } catch {
+      settings = null;
+    }
 
     const r: any = region;
     return {

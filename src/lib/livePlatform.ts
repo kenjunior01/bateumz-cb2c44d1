@@ -590,48 +590,67 @@ export async function toggleClipLike(clipId: string) {
 
 // ===================== NOTIFICATIONS =====================
 export async function getNotifications() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return [];
-  const { data } = await sb
-    .from("live_notifications")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  return data || [];
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return [];
+    const { data } = await sb
+      .from("live_notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return data || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function markNotificationRead(id: string) {
-  return sb.from("live_notifications").update({ is_read: true }).eq("id", id);
+  try {
+    return await sb.from("live_notifications").update({ is_read: true }).eq("id", id);
+  } catch {
+    return null;
+  }
 }
 
 export async function markAllNotificationsRead() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return;
-  return sb.from("live_notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    return await sb.from("live_notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+  } catch {
+    return null;
+  }
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return 0;
-  const { count } = await sb
-    .from("live_notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("is_read", false);
-  return count ?? 0;
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return 0;
+    const { count } = await sb
+      .from("live_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
-export function subscribeNotifications(onNotif: (n: LiveNotification) => void) {
-  const { data: { user } } = sb.auth.getUser();
-  if (!user) return () => {};
-  const ch = sb
-    .channel(`notifs:${user.id}`)
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_notifications", filter: `user_id=eq.${user.id}` },
-      (payload) => { onNotif(payload.new as LiveNotification); }
-    )
-    .subscribe();
-  return () => { sb.removeChannel(ch); };
+export function subscribeNotifications(onNotif: (n: LiveNotification) => void, userId?: string) {
+  if (!userId) return () => {};
+  try {
+    const ch = sb
+      .channel(`notifs:${userId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_notifications", filter: `user_id=eq.${userId}` },
+        (payload) => { onNotif(payload.new as LiveNotification); }
+      )
+      .subscribe();
+    return () => { sb.removeChannel(ch); };
+  } catch {
+    return () => {};
+  }
 }
 
 // ===================== PRESENCE =====================

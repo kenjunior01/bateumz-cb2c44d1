@@ -39,7 +39,7 @@ const NotificationBell = () => {
   useEffect(() => { load(); }, [user]);
   useEffect(() => {
     if (!user) return () => {};
-    const unsub = subscribeNotifications(() => load());
+    const unsub = subscribeNotifications(() => load(), user?.id);
     return unsub;
   }, [user]);
 

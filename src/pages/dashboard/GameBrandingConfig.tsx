@@ -22,6 +22,7 @@ import {
   Zap,
   Star,
   Check,
+  Globe, MapPin, Link as LinkIcon,
 } from "lucide-react";
 
 // Preset theme definitions
@@ -42,6 +43,42 @@ const OVERLAY_STYLES: { id: OverlayStyle; label: string; icon: React.ReactNode; 
   { id: "neon", label: "Neon", icon: <Zap className="h-5 w-5" />, desc: "Brilhante e vibrante" },
   { id: "classic", label: "Classico", icon: <Crown className="h-5 w-5" />, desc: "Tradicional e sofisticado" },
   { id: "gaming", label: "Gaming", icon: <Gamepad2 className="h-5 w-5" />, desc: "Dinamico e intenso" },
+];
+
+// Niche options for homepage personalization
+const NICHE_OPTIONS = [
+  { id: "entertainment", label: "Entretenimento", emoji: "🎉" },
+  { id: "gaming", label: "Gaming", emoji: "🎮" },
+  { id: "restaurant", label: "Restauração", emoji: "🍽" },
+  { id: "retail", label: "Retalho", emoji: "🛍" },
+  { id: "education", label: "Educação", emoji: "🎓" },
+  { id: "fitness", label: "Fitness", emoji: "💪" },
+  { id: "music", label: "Música", emoji: "🎵" },
+  { id: "fashion", label: "Moda", emoji: "🎨" },
+  { id: "tech", label: "Tecnologia", emoji: "⚡" },
+  { id: "food", label: "Food & Bebidas", emoji: "🍜" },
+  { id: "beauty", label: "Beleza", emoji: "✨" },
+  { id: "sports", label: "Desporto", emoji: "🏃" },
+  { id: "casino", label: "Casino", emoji: "👑" },
+  { id: "charity", label: "Solidariedade", emoji: "❤️" },
+  { id: "other", label: "Outro", emoji: "✨" },
+];
+
+const SOCIAL_ITEMS = [
+  { key: "instagram", label: "Instagram" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "facebook", label: "Facebook" },
+  { key: "youtube", label: "YouTube" },
+  { key: "twitter", label: "X / Twitter" },
+  { key: "website", label: "Website" },
+];
+
+// Layout options for public profile homepage
+const LAYOUT_OPTIONS = [
+  { id: "showcase", label: "Showcase", desc: "Hero imersivo + conteúdo em tabs" },
+  { id: "minimal", label: "Minimal", desc: "Limpo e focado no conteúdo" },
+  { id: "bold", label: "Bold", desc: "Texto grande e impactante" },
+  { id: "story", label: "Story", desc: "Apresenta a tua história" },
 ];
 
 // Mock leaderboard data for preview
@@ -72,6 +109,19 @@ const DEFAULT_BRANDING = {
   text_color: "#ffffff",
   overlay_style: "modern" as OverlayStyle,
   enabled: true,
+  niche: "entertainment",
+  hero_title: "",
+  hero_subtitle: "",
+  hero_cta_text: "",
+  hero_cta_link: "/lives",
+  about_text: "",
+  social_links: {},
+  homepage_layout: "showcase",
+  featured_badge: "",
+  show_leaderboard: true,
+  show_games: true,
+  show_lives: true,
+  show_stats: true,
 };
 
 // Main component
@@ -117,6 +167,19 @@ export default function GameBrandingConfig() {
           text_color: row.text_color || "#ffffff",
           overlay_style: row.overlay_style || "modern",
           enabled: row.enabled ?? true,
+          niche: row.niche || "entertainment",
+          hero_title: row.hero_title || "",
+          hero_subtitle: row.hero_subtitle || "",
+          hero_cta_text: row.hero_cta_text || "",
+          hero_cta_link: row.hero_cta_link || "/lives",
+          about_text: row.about_text || "",
+          social_links: row.social_links || {},
+          homepage_layout: row.homepage_layout || "showcase",
+          featured_badge: row.featured_badge || "",
+          show_leaderboard: row.show_leaderboard ?? true,
+          show_games: row.show_games ?? true,
+          show_lives: row.show_lives ?? true,
+          show_stats: row.show_stats ?? true,
         });
         if (row.company_logo_url) setLogoPreview(row.company_logo_url);
         if (row.background_image_url) setBgPreview(row.background_image_url);
@@ -239,6 +302,19 @@ export default function GameBrandingConfig() {
       text_color: branding.text_color,
       overlay_style: branding.overlay_style,
       enabled: branding.enabled,
+      niche: branding.niche,
+      hero_title: branding.hero_title,
+      hero_subtitle: branding.hero_subtitle,
+      hero_cta_text: branding.hero_cta_text,
+      hero_cta_link: branding.hero_cta_link,
+      about_text: branding.about_text,
+      social_links: branding.social_links,
+      homepage_layout: branding.homepage_layout,
+      featured_badge: branding.featured_badge,
+      show_leaderboard: branding.show_leaderboard,
+      show_games: branding.show_games,
+      show_lives: branding.show_lives,
+      show_stats: branding.show_stats,
     } as any;
 
     if (existingId) {
@@ -1077,6 +1153,66 @@ export default function GameBrandingConfig() {
           </motion.div>
         </div>
       </div>
+
+      {/* ─── Homepage / Niche Configuration ─── */}
+      <Card className="border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /> Perfil Público &amp; Homepage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <Label className="text-xs font-bold uppercase tracking-wider mb-2 block">Nicho do Negócio</Label>
+            <p className="text-[11px] text-muted-foreground mb-3">Escolhe o nicho que melhor representa a tua empresa.</p>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {NICHE_OPTIONS.map((n) => (
+                <button key={n.id} type="button" onClick={() => updateField("niche", n.id)}
+                  className={`p-2.5 rounded-xl border-2 text-center transition-all duration-200 ${branding.niche === n.id ? "border-primary bg-primary/10 shadow-md" : "border-border/50 hover:border-border"}`}>
+                  <span className="text-xl block mb-1">{n.emoji}</span>
+                  <span className="text-[9px] font-bold block leading-tight">{n.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div><Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Título do Hero</Label><Input placeholder="Ex: Vem divertir-te connosco" value={branding.hero_title} onChange={(e) => updateField("hero_title", e.target.value)} /></div>
+            <div><Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Subtítulo do Hero</Label><Input placeholder="Ex: A melhor experiência de jogos ao vivo" value={branding.hero_subtitle} onChange={(e) => updateField("hero_subtitle", e.target.value)} /></div>
+            <div><Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Texto do Botão CTA</Label><Input placeholder="Ex: Começar a Jogar" value={branding.hero_cta_text} onChange={(e) => updateField("hero_cta_text", e.target.value)} /></div>
+            <div><Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Link do CTA</Label><Input placeholder="/lives" value={branding.hero_cta_link} onChange={(e) => updateField("hero_cta_link", e.target.value)} /></div>
+          </div>
+          <div><Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Badge Destacado</Label><Input placeholder="Ex: Casino Premium" value={branding.featured_badge} onChange={(e) => updateField("featured_badge", e.target.value)} /></div>
+          <div>
+            <Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block">Sobre a Empresa</Label>
+            <textarea className="w-full min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Conta um pouco sobre a tua empresa..." value={branding.about_text} onChange={(e) => updateField("about_text", e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs font-bold uppercase tracking-wider mb-2 block">Redes Sociais</Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {SOCIAL_ITEMS.map((item) => (
+                <div key={item.key} className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground w-16 shrink-0">{item.label}</span>
+                  <Input placeholder={`https://${item.key}.com/...`} value={(branding.social_links as any)?.[item.key] || ""} onChange={(e) => { const u = { ...(branding.social_links as Record<string, string> || {}), [item.key]: e.target.value }; updateField("social_links", u as any); }} className="h-9 text-xs" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs font-bold uppercase tracking-wider mb-2 block">Layout do Perfil</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {LAYOUT_OPTIONS.map((l) => (
+                <button key={l.id} type="button" onClick={() => updateField("homepage_layout", l.id)} className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${branding.homepage_layout === l.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-border"}`}>
+                  <span className="text-xs font-bold block">{l.label}</span>
+                  <span className="text-[9px] text-muted-foreground block mt-0.5">{l.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border/50">
+            <a href={window.location.origin + "/empresa/" + (user?.id || "")} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors">
+              <Eye className="h-3.5 w-3.5" /> Ver Perfil Público
+            </a>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

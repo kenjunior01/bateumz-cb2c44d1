@@ -19,18 +19,18 @@ import mascotWinner from "@/assets/mascot-winner.png";
 const STEP_COUNT = 4;
 
 const INTERESTS = [
-  { id: "tech", label: "📱 Tecnologia", emoji: "📱" },
-  { id: "fashion", label: "👗 Moda", emoji: "👗" },
-  { id: "travel", label: "✈️ Viagens", emoji: "✈️" },
-  { id: "sports", label: "⚽ Desporto", emoji: "⚽" },
-  { id: "food", label: "🍕 Comida", emoji: "🍕" },
-  { id: "music", label: "🎵 Música", emoji: "🎵" },
-  { id: "gaming", label: "🎮 Jogos", emoji: "🎮" },
-  { id: "beauty", label: "💄 Beleza", emoji: "💄" },
-  { id: "cars", label: "🚗 Carros", emoji: "🚗" },
-  { id: "home", label: "🏠 Casa", emoji: "🏠" },
-  { id: "health", label: "💪 Saúde", emoji: "💪" },
-  { id: "education", label: "📚 Educação", emoji: "📚" },
+  { id: "tech", label: "📱 Tech", emoji: "📱" },
+  { id: "fashion", label: "👗 Fashion", emoji: "👗" },
+  { id: "travel", label: "✈️ Travel", emoji: "✈️" },
+  { id: "sports", label: "⚽ Sports", emoji: "⚽" },
+  { id: "food", label: "🍕 Food", emoji: "🍕" },
+  { id: "music", label: "🎵 Music", emoji: "🎵" },
+  { id: "gaming", label: "🎮 Gaming", emoji: "🎮" },
+  { id: "beauty", label: "💄 Beauty", emoji: "💄" },
+  { id: "cars", label: "🚗 Cars", emoji: "🚗" },
+  { id: "home", label: "🏠 Home", emoji: "🏠" },
+  { id: "health", label: "💪 Health", emoji: "💪" },
+  { id: "education", label: "📚 Education", emoji: "📚" },
 ];
 
 const CONFETTI_EMOJIS = ["🎉", "🎊", "✨", "🌟", "🎈", "🎁", "🏆", "💎"];
@@ -295,11 +295,11 @@ export default function Register() {
         <div className="glass rounded-3xl p-6 sm:p-8 relative overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-              Passo {step + 1} de {STEP_COUNT}
+              Step {step + 1} of {STEP_COUNT}
             </span>
             {step > 0 && (
               <button onClick={goBack} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <ChevronLeft className="h-3 w-3" /> Voltar
+                <ChevronLeft className="h-3 w-3" /> Back
               </button>
             )}
           </div>
@@ -308,8 +308,8 @@ export default function Register() {
             {step === 0 && (
               <motion.div key="step0" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <h2 className="font-display text-xl font-bold text-foreground mb-1">Quem és tu? 🤔</h2>
-                <p className="text-sm text-muted-foreground mb-6">Escolhe o tipo de conta que mais se adequa a ti</p>
+                <h2 className="font-display text-xl font-bold text-foreground mb-1">Who are you? 🤔</h2>
+                <p className="text-sm text-muted-foreground mb-6">Choose the account type that fits you best</p>
 
                 <div className="grid gap-3">
                   <motion.button onClick={() => { setAccountType("user"); playPopSound(); }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -320,11 +320,11 @@ export default function Register() {
                       <User className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="font-bold text-foreground text-sm">🎯 Participante</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Quero participar em sorteios, ganhar prémios e acumular pontos!</p>
+                      <p className="font-bold text-foreground text-sm">🎯 Participant</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">I want to join raffles, win prizes and earn points!</p>
                       {accountType === "user" && (
                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1 mt-2 text-primary text-[10px] font-medium">
-                          <Check className="h-3 w-3" /> Selecionado
+                          <Check className="h-3 w-3" /> Selected
                         </motion.div>
                       )}
                     </div>
@@ -338,11 +338,11 @@ export default function Register() {
                       <Building2 className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="font-bold text-foreground text-sm">🏢 Empresa</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Quero criar sorteios para promover o meu negócio e engajar clientes!</p>
+                      <p className="font-bold text-foreground text-sm">🏢 Business</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">I want to run raffles to promote my business and engage customers!</p>
                       {accountType === "business" && (
                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1 mt-2 text-primary text-[10px] font-medium">
-                          <Check className="h-3 w-3" /> Selecionado
+                          <Check className="h-3 w-3" /> Selected
                         </motion.div>
                       )}
                     </div>
@@ -351,8 +351,8 @@ export default function Register() {
 
                 <div className="mt-5 space-y-2">
                   <div className="text-center mb-2">
-                    <p className="text-sm font-semibold text-foreground">Regista-te rapidamente</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Usa a tua conta Google ou Apple</p>
+                    <p className="text-sm font-semibold text-foreground">Quick sign up</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Use your Google or Apple account</p>
                   </div>
                   <Button variant="outline" className="w-full h-10 gap-3 border-border hover:bg-secondary rounded-xl"
                     onClick={handleGoogleSignUp} disabled={googleLoading}>
@@ -362,7 +362,7 @@ export default function Register() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
-                    {googleLoading ? "A conectar..." : "Continuar com Google"}
+                    {googleLoading ? "A conectar..." : "Continue with Google"}
                   </Button>
                   <Button
                     variant="outline"
@@ -371,7 +371,7 @@ export default function Register() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                     </svg>
-                    {appleLoading ? "A conectar..." : "Continuar com Apple"}
+                    {appleLoading ? "A conectar..." : "Continue with Apple"}
                   </Button>
                 </div>
               </motion.div>
@@ -380,25 +380,25 @@ export default function Register() {
             {step === 1 && (
               <motion.div key="step1" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <h2 className="font-display text-xl font-bold text-foreground mb-1">Os teus dados 📝</h2>
-                <p className="text-sm text-muted-foreground mb-5">Informações essenciais para a tua conta</p>
+                <h2 className="font-display text-xl font-bold text-foreground mb-1">Your details 📝</h2>
+                <p className="text-sm text-muted-foreground mb-5">Essential information for your account</p>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Nome Completo</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Full name</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Como te chamas?" required
+                      <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" required
                         className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
                     </div>
                   </div>
 
                   {accountType === "business" && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">Nome da Empresa</label>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Business name</label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Nome do negócio" required
+                        <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Your business name" required
                           className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
                       </div>
                     </motion.div>
@@ -414,10 +414,10 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Senha</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 8 caracteres, com letras e números" required
+                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters, letters and numbers" required
                         className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
                     </div>
                     {password.length > 0 && (
@@ -431,8 +431,8 @@ export default function Register() {
                         </div>
                         <p className="text-[10px] text-muted-foreground">
                           {passwordStrong(password)
-                            ? "Boa! Evita senhas óbvias como nome+ano ou \"password123\"."
-                            : "Adiciona letras + números e pelo menos 8 caracteres. Evita senhas comuns (são rejeitadas por segurança)."}
+                            ? "Nice! Avoid obvious passwords like name+year or \"password123\"."
+                            : "Use letters + numbers and at least 8 characters. Common passwords are rejected for security."}
                         </p>
                       </motion.div>
                     )}
@@ -444,12 +444,12 @@ export default function Register() {
             {step === 2 && (
               <motion.div key="step2" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <h2 className="font-display text-xl font-bold text-foreground mb-1">Onde estás? 📍</h2>
-                <p className="text-sm text-muted-foreground mb-5">Ajuda-nos a mostrar sorteios perto de ti <span className="text-[10px]">(opcional)</span></p>
+                <h2 className="font-display text-xl font-bold text-foreground mb-1">Where are you? 📍</h2>
+                <p className="text-sm text-muted-foreground mb-5">Help us show raffles near you <span className="text-[10px]">(opcional)</span></p>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Telefone</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Phone</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+258 84 XXX XXXX"
@@ -458,7 +458,7 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">País</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Country</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <select value={country} onChange={(e) => { setCountry(e.target.value); setProvince(""); setCity(""); }}
@@ -471,7 +471,7 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Região / Província</label>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Region / State</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <select value={province} onChange={(e) => { setProvince(e.target.value); setCity(""); }}
@@ -484,7 +484,7 @@ export default function Register() {
 
                   {province && country === "MZ" && CITIES_BY_PROVINCE[province] && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">Cidade</label>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <select value={city} onChange={(e) => setCity(e.target.value)}
@@ -499,7 +499,7 @@ export default function Register() {
                   {refCode && (
                     <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2.5">
                       <Gift className="h-4 w-4 text-primary shrink-0" />
-                      <p className="text-xs text-foreground">Convite de amigo! Ambos ganham <span className="font-bold text-primary">50 pontos</span> 🎁</p>
+                      <p className="text-xs text-foreground">Friend invite! You both earn <span className="font-bold text-primary">50 points</span> 🎁</p>
                     </div>
                   )}
                 </div>
@@ -509,8 +509,8 @@ export default function Register() {
             {step === 3 && (
               <motion.div key="step3" custom={direction} variants={stepVariants}
                 initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <h2 className="font-display text-xl font-bold text-foreground mb-1">O que te interessa? ✨</h2>
-                <p className="text-sm text-muted-foreground mb-5">Vamos personalizar os sorteios para ti <span className="text-[10px]">(opcional)</span></p>
+                <h2 className="font-display text-xl font-bold text-foreground mb-1">What are you into? ✨</h2>
+                <p className="text-sm text-muted-foreground mb-5">We'll personalize raffles for you <span className="text-[10px]">(opcional)</span></p>
 
                 <div className="grid grid-cols-3 gap-2">
                   {INTERESTS.map((item, i) => (
@@ -539,7 +539,7 @@ export default function Register() {
 
                 {interests.length > 0 && (
                   <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-[10px] text-muted-foreground mt-3">
-                    {interests.length} {interests.length === 1 ? "interesse" : "interesses"} selecionados 💖
+                    {interests.length} {interests.length === 1 ? "interest" : "interests"} selected 💖
                   </motion.p>
                 )}
               </motion.div>
@@ -556,7 +556,7 @@ export default function Register() {
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                 onClick={goNext} disabled={!canProceed()}
                 className="w-full h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-40 flex items-center justify-center gap-2">
-                Continuar <ChevronRight className="h-4 w-4" />
+                Continue <ChevronRight className="h-4 w-4" />
               </motion.button>
             ) : (
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
@@ -567,7 +567,7 @@ export default function Register() {
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
                       <Sparkles className="h-4 w-4" />
                     </motion.div>
-                    A criar conta...
+                    Creating account...
                   </>
                 ) : (
                   <>
@@ -593,11 +593,11 @@ export default function Register() {
 
         <div className="mt-5 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
-            Já tem conta?{" "}
-            <Link to="/login" className="text-primary hover:underline font-medium">Entrar</Link>
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
           </p>
           <Link to="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3" /> Voltar ao site
+            <ArrowLeft className="h-3 w-3" /> Back to site
           </Link>
         </div>
       </motion.div>

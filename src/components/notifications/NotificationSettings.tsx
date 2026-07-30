@@ -62,17 +62,17 @@ export default function NotificationSettings() {
       .select('notification_preferences')
       .eq('user_id', user.id)
       .single()
-      .then(({ data }) => {
-        if (data?.notification_preferences && typeof data.notification_preferences === 'object') {
-          const stored = data.notification_preferences as Record<string, unknown>;
-          setPrefs({
-            ...DEFAULT_PREFS,
-            ...Object.fromEntries(
-              PREF_KEYS.map(({ key }) => [key, typeof stored[key] === 'boolean' ? stored[key] : DEFAULT_PREFS[key]]),
-            ),
-          });
-        }
-      });
+      .then(({ data, error }) => {
+        if (error || !data?.notification_preferences || typeof data.notification_preferences !== 'object') return;
+        const stored = data.notification_preferences as Record<string, unknown>;
+        setPrefs({
+          ...DEFAULT_PREFS,
+          ...Object.fromEntries(
+            PREF_KEYS.map(({ key }) => [key, typeof stored[key] === 'boolean' ? stored[key] : DEFAULT_PREFS[key]]),
+          ),
+        });
+      })
+      .catch(() => { /* column may not exist yet */ });
   }, [user]);
 
   const togglePref = async (key: PreferenceKey, value: boolean) => {

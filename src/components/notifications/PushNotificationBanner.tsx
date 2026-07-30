@@ -30,14 +30,18 @@ export default function PushNotificationBanner() {
   const { permission, isSubscribed, loading, requestAndSubscribe } = usePushNotifications();
   const [dismissed, setDismissed] = useState(false);
 
+  // Hide banner entirely if VAPID key is not configured
+  const vapidConfigured = !!(import.meta.env.VITE_VAPID_PUBLIC_KEY);
+
   useEffect(() => {
     if (isBannerDismissed()) {
       setDismissed(true);
     }
   }, []);
 
-  // Don't show if: not logged in, still loading auth, already subscribed, denied, or dismissed
+  // Don't show if: VAPID not configured, not logged in, still loading auth, already subscribed, denied, or dismissed
   const shouldShow =
+    vapidConfigured &&
     !authLoading &&
     !!user &&
     !dismissed &&

@@ -219,20 +219,29 @@ export default function Register() {
             animate={{ y: [0, -15, 0], rotate: [0, 10, -10, 0] }}
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} />
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring" }}>
-            <h2 className="font-display text-2xl font-bold text-foreground">Bem-vindo à família! 🎊</h2>
+            <h2 className="font-display text-2xl font-bold text-foreground">Welcome to Bateu! 🎊</h2>
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
             className="text-sm text-muted-foreground mt-3">
-            Enviámos um link de confirmação para <strong className="text-foreground">{email}</strong>
+            {autoSignedIn
+              ? <>Your account <strong className="text-foreground">{email}</strong> is ready.</>
+              : <>We sent a confirmation link to <strong className="text-foreground">{email}</strong></>}
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
             className="mt-6 space-y-3">
             <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs text-foreground">
               <Mail className="h-5 w-5 text-primary shrink-0" />
-              <span>Verifica o teu email para ativar a conta e começar a ganhar prémios!</span>
+              <span>
+                {autoSignedIn
+                  ? "You're signed in — start joining raffles and winning prizes!"
+                  : "Check your email to activate your account and start winning prizes!"}
+              </span>
             </div>
-            <Link to="/login" className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium">
-              Ir para o login <ChevronRight className="h-3 w-3" />
+            <Link
+              to={autoSignedIn ? (accountType === "business" ? "/dashboard" : "/profile") : "/login"}
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
+            >
+              {autoSignedIn ? "Go to my dashboard" : "Go to login"} <ChevronRight className="h-3 w-3" />
             </Link>
           </motion.div>
         </motion.div>

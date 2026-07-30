@@ -291,7 +291,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
 
   /* ---------- Cleanup ---------- */
   useEffect(() => {
-    return () => timersRef.forEach(clearTimeout);
+    return () => timersRef.current.forEach(clearTimeout);
   }, []);
 
   /* ---------- LiveBus subscribe ---------- */
@@ -307,8 +307,8 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
 
   /* ---------- Helpers ---------- */
   const clearTimers = useCallback(() => {
-    timersRef.forEach(clearTimeout);
-    timersRef.length = 0;
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current.length = 0;
   }, []);
 
   const updatePlayer = useCallback((index: 0 | 1, patch: Partial<Player>) => {
@@ -352,9 +352,9 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
       const t2 = setTimeout(() => {
         startRound(1);
       }, 2500);
-      timersRef.push(t2);
+      timersRef.current.push(t2);
     }, 3000);
-    timersRef.push(t1);
+    timersRef.current.push(t1);
   }, [players]);
 
   /* ---------- Start round ---------- */
@@ -401,7 +401,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           }
         }
       }, 2500);
-      timersRef.push(t1);
+      timersRef.current.push(t1);
     },
     [roundType],
   );
@@ -416,7 +416,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
     const t1 = setTimeout(() => {
       setReactionSignalShown(true);
     }, delay);
-    timersRef.push(t1);
+    timersRef.current.push(t1);
   }, []);
 
   const handleReactionTap = useCallback(
@@ -511,7 +511,7 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           setPhase('gameOver');
           reportScore(players[winnerIndex].name, newScores[winnerIndex].score * 100);
         }, 2500);
-        timersRef.push(t1);
+        timersRef.current.push(t1);
       } else if (currentRound >= TOTAL_ROUNDS) {
         // All rounds played, determine winner by score
         const t1 = setTimeout(() => {
@@ -522,12 +522,12 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
             reportScore(players[1].name, newScores[1].score * 100);
           }
         }, 2500);
-        timersRef.push(t1);
+        timersRef.current.push(t1);
       } else {
         const t1 = setTimeout(() => {
           startRound(currentRound + 1);
         }, 2500);
-        timersRef.push(t1);
+        timersRef.current.push(t1);
       }
     },
     [players, currentRound, reportScore, startRound],
@@ -545,10 +545,10 @@ export default function VSDuelArena({ onScore, liveCode }: VSDuelArenaProps) {
           setPhase('roundResult');
           if (currentRound >= TOTAL_ROUNDS) {
             const t1 = setTimeout(() => setPhase('gameOver'), 2500);
-            timersRef.push(t1);
+            timersRef.current.push(t1);
           } else {
             const t1 = setTimeout(() => startRound(currentRound + 1), 2500);
-            timersRef.push(t1);
+            timersRef.current.push(t1);
           }
           return 0;
         }

@@ -304,7 +304,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
           {([3, 5, 7]).map((val) => (
             <button
               key={val}
-              onClick={() => changeBestOf(val)}
+              onClick={() => changeBestOf(val as any)}
               disabled={phase !== "choosing" && phase !== "gameOver"}
               className={cn(
                 "w-7 h-7 rounded text-xs font-bold transition-colors",

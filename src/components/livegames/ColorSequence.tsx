@@ -291,7 +291,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           <div className="flex flex-col items-center gap-1 min-w-[70px]">
             <div className={cn(
               'text-xs font-medium',
-              currentPlayer === 1 && gameState === 'input' && !(mode === 'bot' && currentPlayer === 2)
+              currentPlayer === 1 && gameState === 'input' && !(mode === 'bot' && (currentPlayer as number) === 2)
                 ? 'text-cyan-400'
                 : 'text-slate-400'
             )}>
@@ -306,7 +306,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
             >
               {playerScores[0]}
             </motion.div>
-            {currentPlayer === 1 && gameState === 'input' && !(mode === 'bot' && currentPlayer === 2) && (
+            {currentPlayer === 1 && gameState === 'input' && !(mode === 'bot' && (currentPlayer as number) === 2) && (
               <motion.div
                 layoutId="turn-indicator"
                 className="w-2 h-2 rounded-full bg-cyan-400"
@@ -329,7 +329,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
           <div className="flex flex-col items-center gap-1 min-w-[70px]">
             <div className={cn(
               'text-xs font-medium',
-              currentPlayer === 2 && gameState === 'input' && !(mode === 'bot' && currentPlayer === 2)
+              currentPlayer === 2 && gameState === 'input' && !(mode === 'bot' && (currentPlayer as number) === 2)
                 ? 'text-pink-400'
                 : mode === 'bot'
                   ? 'text-slate-500'
@@ -346,7 +346,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
             >
               {playerScores[1]}
             </motion.div>
-            {currentPlayer === 2 && gameState === 'input' && !(mode === 'bot' && currentPlayer === 2) && (
+            {currentPlayer === 2 && gameState === 'input' && !(mode === 'bot' && (currentPlayer as number) === 2) && (
               <motion.div
                 layoutId="turn-indicator"
                 className="w-2 h-2 rounded-full bg-pink-400"
@@ -455,7 +455,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
             </div>
           )}
 
-          {gameState === 'input' && sequence.length > 0 && !(mode === 'bot' && currentPlayer === 2) && (
+          {gameState === 'input' && sequence.length > 0 && !(mode === 'bot' && (currentPlayer as number) === 2) && (
             <div className="w-full max-w-xs h-1.5 bg-slate-800 rounded-full overflow-hidden">
               <motion.div
                 className={cn(
@@ -526,7 +526,7 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
               const isTapping = playerTap === index;
               const isShaking = shakeButton === index;
               const isWrong = wrongIndex !== null && gameState === 'gameOver';
-              const isInputActive = gameState === 'input' && !(mode === 'bot' && currentPlayer === 2);
+              const isInputActive = gameState === 'input' && !(mode === 'bot' && (currentPlayer as number) === 2);
               const isDimmed = gameState === 'showing' && !isFlashing;
 
               return (

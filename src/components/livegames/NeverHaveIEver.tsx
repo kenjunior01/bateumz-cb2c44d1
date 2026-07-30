@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Hand, ThumbsUp, ThumbsDown, Shuffle, Plus, X, Sparkles } from "lucide-react";
+import { Hand, ThumbsUp, ThumbsDown, Shuffle, Plus, X, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

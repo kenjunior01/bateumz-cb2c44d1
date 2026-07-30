@@ -183,92 +183,92 @@ const Navbar = () => {
 
   const groups: MenuGroup[] = [
     {
-      label: rt("nav.group.raffles", "Sorteios"),
+      label: rt("nav.group.raffles"),
       icon: Ticket,
       spotlight: {
-        label: rt("nav.spotlight.marketplace", "Sorteios a decorrer agora"),
-        desc: rt("nav.spotlight.marketplace.desc", "Participe em sorteios verificados e acompanhe o sorteio ao vivo"),
+        label: rt("nav.spotlight.marketplace"),
+        desc: rt("nav.spotlight.marketplace.desc"),
         href: "/marketplace",
-        cta: rt("nav.spotlight.cta", "Ver tudo"),
+        cta: rt("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.marketplace", "Marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc", "Todos os sorteios activos"), trending: true },
-        { label: rt("nav.contests", "Concursos"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc", "Foto, video e talento") },
-        { label: rt("nav.instantwin", "Ganha Já"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc", "Raspadinhas e roleta") },
-        { label: rt("nav.mytickets", "Meus Bilhetes"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc", "Acompanhe as suas participações") },
+        { label: rt("nav.marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc"), trending: true },
+        { label: rt("nav.contests"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc") },
+        { label: rt("nav.instantwin"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc") },
+        { label: rt("nav.mytickets"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc") },
       ],
     },
     {
-      label: rt("nav.group.business", "Negócios"),
+      label: rt("nav.group.business"),
       icon: Building2,
       spotlight: {
-        label: rt("nav.spotlight.prestacoes", "Prestações — viaturas e imóveis"),
-        desc: rt("nav.spotlight.prestacoes.desc", "Adquira bens premium em prestações mensais com sorteio final"),
+        label: rt("nav.spotlight.prestacoes"),
+        desc: rt("nav.spotlight.prestacoes.desc"),
         href: "/prestacoes/catalogo",
-        cta: rt("nav.spotlight.cta", "Explorar"),
+        cta: rt("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.directory", "Directório"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc", "Marcas parceiras verificadas") },
-        { label: rt("nav.installments.catalog", "Catálogo Prestações"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc", "Viaturas, imóveis e mais"), badge: rt("nav.badge.new", "Novo") },
-        { label: rt("nav.installments.about", "Sobre Prestações"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc", "Como funcionam os pagamentos") },
-        { label: rt("nav.createraffle", "Criar Sorteio"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc", "Lance o seu próprio sorteio") },
+        { label: rt("nav.directory"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc") },
+        { label: rt("nav.installments.catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc"), badge: rt("nav.badge.new") },
+        { label: rt("nav.installments.about"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc") },
+        { label: rt("nav.createraffle"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc") },
       ],
     },
     {
-      label: rt("nav.group.entertainment", "Entretenimento"),
+      label: rt("nav.group.entertainment"),
       icon: Gamepad2,
       spotlight: {
-        label: rt("nav.spotlight.live", "Lives a acontecer agora"),
-        desc: rt("nav.spotlight.live.desc", "Entre em jogos ao vivo com streamers e ganhe prémios em tempo real"),
+        label: rt("nav.spotlight.live"),
+        desc: rt("nav.spotlight.live.desc"),
         href: "/lives-agora",
-        cta: rt("nav.spotlight.cta.live", "Entrar agora"),
+        cta: rt("nav.spotlight.cta.live"),
       },
       items: [
-        { label: rt("nav.games", "Todos os Jogos"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc", "50+ jogos online grátis, jogue agora!"), badge: "Hot", trending: true },
-        { label: rt("nav.tournaments", "Torneios"), href: "/tournaments", icon: Swords, desc: rt("nav.tournaments.desc", "Competições entre jogadores com prémios reais"), badge: rt("nav.badge.new", "Novo") },
-        { label: rt("nav.livedraw", "Live Draw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc", "Lives a acontecer agora"), live: true },
-        { label: rt("nav.lives", "Jogos ao Vivo"), href: "/lives", icon: Radio, desc: rt("nav.lives.desc", "Engajamento ao vivo para empresas") },
-        { label: rt("nav.blog", "Blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc", "Dicas, novidades e conteúdo viral") },
+        { label: rt("nav.games"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc"), badge: "Hot", trending: true },
+        { label: rt("nav.tournaments"), href: "/tournaments", icon: Swords, desc: rt("nav.tournaments.desc"), badge: rt("nav.badge.new") },
+        { label: rt("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc"), live: true },
+        { label: rt("nav.lives"), href: "/lives", icon: Radio, desc: rt("nav.lives.desc") },
+        { label: rt("nav.blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc") },
       ],
     },
     {
-      label: rt("nav.group.community", "Comunidade"),
+      label: rt("nav.group.community"),
       icon: MessageCircle,
       spotlight: {
-        label: rt("nav.spotlight.transparency", "Transparência verificada"),
-        desc: rt("nav.spotlight.transparency.desc", "Todos os sorteios são verificáveis e auditáveis"),
+        label: rt("nav.spotlight.transparency"),
+        desc: rt("nav.spotlight.transparency.desc"),
         href: "/transparencia",
-        cta: rt("nav.spotlight.cta", "Verificar"),
+        cta: rt("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.hub", "Hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc", "Chat e votações em tempo real") },
-        { label: rt("nav.winners", "Histórico de Vencedores"), href: "/historico", icon: History, desc: rt("nav.winners.desc", "Sorteios concluídos") },
-        { label: rt("nav.transparency", "Transparência"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc", "Verificação blockchain") },
-        { label: rt("nav.how", "Como Funciona"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc", "Guia rápido da plataforma") },
+        { label: rt("nav.hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc") },
+        { label: rt("nav.winners"), href: "/historico", icon: History, desc: rt("nav.winners.desc") },
+        { label: rt("nav.transparency"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc") },
+        { label: rt("nav.how"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc") },
       ],
     },
     {
-      label: rt("nav.group.more", "Mais"),
+      label: rt("nav.group.more"),
       icon: LayoutGrid,
       spotlight: {
-        label: rt("nav.spotlight.referral", "Indique amigos, ganhe pontos"),
-        desc: rt("nav.spotlight.referral.desc", "Partilhe o seu link e acumule pontos a cada adesão"),
+        label: rt("nav.spotlight.referral"),
+        desc: rt("nav.spotlight.referral.desc"),
         href: "/referral",
-        cta: rt("nav.spotlight.cta", "Partilhar"),
+        cta: rt("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.referral", "Indique e Ganhe"), href: "/referral", icon: Users, desc: rt("nav.referral.desc", "Convide amigos, ganhe pontos") },
-        { label: rt("nav.faq", "FAQ"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc", "Perguntas frequentes") },
+        { label: rt("nav.referral"), href: "/referral", icon: Users, desc: rt("nav.referral.desc") },
+        { label: rt("nav.faq"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc") },
       ],
     },
   ];
 
   // Mobile quick actions — one-tap access at the top of the mobile menu
   const quickActions = [
-    { label: rt("nav.quick.live", "Ao Vivo"), href: "/lives-agora", icon: Radio, live: true },
-    { label: rt("nav.quick.games", "Jogos"), href: "/jogos", icon: Gamepad2 },
-    { label: rt("nav.quick.market", "Sorteios"), href: "/marketplace", icon: Store },
-    { label: rt("nav.quick.tickets", "Bilhetes"), href: "/my-tickets", icon: Ticket },
+    { label: rt("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
+    { label: rt("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
+    { label: rt("nav.quick.market"), href: "/marketplace", icon: Store },
+    { label: rt("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
   ];
 
   // Show/hide navbar on specific routes (overlay, dashboard, admin)
@@ -388,18 +388,18 @@ const Navbar = () => {
                 >
                   Bateu
                 </span>
-                <span className="navbar-verified-dot hidden md:inline-flex" title={rt("nav.verified", "Plataforma verificada")}>
+                <span className="navbar-verified-dot hidden md:inline-flex" title={rt("nav.verified")}>
                   <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                 </span>
                 <Link
                   to="/lives-agora"
                   className="navbar-live-orb hidden items-center md:inline-flex"
-                  title={rt("nav.live.count", "Lives a decorrer agora")}
-                  aria-label={`${liveCount} ${rt("nav.live.count", "Lives a decorrer agora")}`}
+                  title={rt("nav.live.count")}
+                  aria-label={`${liveCount} ${rt("nav.live.count")}`}
                 >
                   <span className="navbar-live-orb-ring" aria-hidden="true" />
                   <span className="tabular-nums">{liveCount}</span>
-                  <span className="hidden xl:inline opacity-80">{rt("nav.live", "AO VIVO")}</span>
+                  <span className="hidden xl:inline opacity-80">{rt("nav.live")}</span>
                 </Link>
               </div>
             </Link>
@@ -445,7 +445,7 @@ const Navbar = () => {
                             </span>
                             <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
                               <Sparkles className="h-3 w-3" />
-                              {rt("nav.mega.explore", "Explorar")}
+                              {rt("nav.mega.explore")}
                             </span>
                           </div>
                           <ul className="gap-0.5">
@@ -531,10 +531,10 @@ const Navbar = () => {
               <Link
                 to="/marketplace"
                 className="navbar-search-trigger group flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:bg-secondary/50 hover:text-foreground"
-                aria-label={rt("nav.search", "Pesquisar")}
+                aria-label={rt("nav.search")}
               >
                 <Search className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                <span className="hidden xl:inline">{rt("nav.search.placeholder", "Pesquisar sorteios...")}</span>
+                <span className="hidden xl:inline">{rt("nav.search.placeholder")}</span>
                 <kbd className="navbar-kbd hidden xl:inline-flex">⌘K</kbd>
               </Link>
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">
@@ -547,7 +547,7 @@ const Navbar = () => {
                 <Link
                   to={role === "business" ? "/dashboard/notifications" : "/profile"}
                   className="navbar-bell relative flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-secondary/50"
-                  aria-label={t("nav.notifications", "Notificações")}
+                  aria-label={t("nav.notifications")}
                 >
                   <Bell className="h-[18px] w-[18px]" />
                   {unread > 0 && (
@@ -571,8 +571,8 @@ const Navbar = () => {
                     <Link
                       to="/wallet"
                       className="navbar-wallet-pill group relative"
-                      title={rt("nav.wallet", "Carteira")}
-                      aria-label={rt("nav.wallet", "Carteira")}
+                      title={rt("nav.wallet")}
+                      aria-label={rt("nav.wallet")}
                     >
                       <span className="navbar-wallet-shine" aria-hidden="true" />
                       <Wallet className="h-3.5 w-3.5 relative" />
@@ -582,7 +582,7 @@ const Navbar = () => {
                   <Link
                     to="/my-points"
                     className="navbar-points-pill group flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all duration-200 hover:bg-secondary/50"
-                    title={t("nav.points", "Pontos")}
+                    title={t("nav.points")}
                   >
                     <Star className="h-4 w-4 text-accent fill-accent/30 transition-transform group-hover:rotate-12" />
                     <span className="text-gradient-primary font-semibold">
@@ -592,8 +592,8 @@ const Navbar = () => {
                   <Link
                     to={role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile"}
                     className="navbar-avatar-ring"
-                    title={profile?.display_name || t("nav.profile", "Perfil")}
-                    aria-label={t("nav.profile", "Perfil")}
+                    title={profile?.display_name || t("nav.profile")}
+                    aria-label={t("nav.profile")}
                   >
                     {profile?.avatar_url ? (
                       <img src={profile.avatar_url} alt={profile?.display_name || "Perfil"} />
@@ -613,8 +613,8 @@ const Navbar = () => {
                   <button
                     onClick={signOut}
                     className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-secondary/50"
-                    title={t("nav.signout", "Sair")}
-                    aria-label={t("nav.signout", "Sair")}
+                    title={t("nav.signout")}
+                    aria-label={t("nav.signout")}
                   >
                     {t("nav.signout")}
                   </button>
@@ -647,7 +647,7 @@ const Navbar = () => {
               <Link
                 to="/marketplace"
                 className="flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
-                aria-label={rt("nav.search", "Pesquisar")}
+                aria-label={rt("nav.search")}
               >
                 <Search className="h-5 w-5" />
               </Link>
@@ -712,7 +712,7 @@ const Navbar = () => {
                   <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
                     <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
                     <span className="font-display text-lg font-bold text-gradient-primary">Bateu</span>
-                    <span className="navbar-verified-dot ml-0.5 inline-flex" title={rt("nav.verified", "Plataforma verificada")}>
+                    <span className="navbar-verified-dot ml-0.5 inline-flex" title={rt("nav.verified")}>
                       <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                     </span>
                   </Link>
@@ -758,7 +758,7 @@ const Navbar = () => {
                     >
                       <span className="navbar-live-orb-ring" aria-hidden="true" />
                       <span className="tabular-nums">{liveCount}</span>
-                      <span className="opacity-90">{rt("nav.live", "AO VIVO")}</span>
+                      <span className="opacity-90">{rt("nav.live")}</span>
                     </Link>
                     <Link
                       to="/marketplace"
@@ -766,7 +766,7 @@ const Navbar = () => {
                       className="navbar-search-trigger flex flex-1 items-center gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
                     >
                       <Search className="h-3.5 w-3.5" />
-                      <span className="flex-1 text-left">{rt("nav.search.placeholder", "Pesquisar sorteios...")}</span>
+                      <span className="flex-1 text-left">{rt("nav.search.placeholder")}</span>
                     </Link>
                   </div>
 
@@ -781,10 +781,10 @@ const Navbar = () => {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-primary-foreground">
-                          {rt("nav.hero.cta.title", "Participe e ganhe 50 pontos")}
+                          {rt("nav.hero.cta.title")}
                         </p>
                         <p className="truncate text-xs text-primary-foreground/80">
-                          {rt("nav.hero.cta.subtitle", "Sorteios, jogos e prémios a aguardar")}
+                          {rt("nav.hero.cta.subtitle")}
                         </p>
                       </div>
                       <Zap className="h-4 w-4 text-primary-foreground" />
@@ -885,7 +885,7 @@ const Navbar = () => {
                           >
                             <span className="navbar-wallet-shine" aria-hidden="true" />
                             <Wallet className="h-4 w-4 relative" />
-                            <span className="relative">{rt("nav.wallet", "Carteira")}: {format(walletBalance)}</span>
+                            <span className="relative">{rt("nav.wallet")}: {format(walletBalance)}</span>
                           </Link>
                         )}
                         <Link

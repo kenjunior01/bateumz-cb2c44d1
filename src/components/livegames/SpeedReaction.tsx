@@ -143,7 +143,7 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
                 const name = p === 1 ? p1Name : p2Name;
                 const time = p === 1 ? p1Time : p2Time;
                 return (
-                  <motion.button key={p} onClick={() => handleTap(p)} disabled={isGreen && lockedRef.current}
+                  <motion.button key={p} onClick={() => handleTap(p as any)} disabled={isGreen && lockedRef.current}
                     className={`relative min-h-[55vh] flex flex-col items-center justify-center gap-3 select-none active:scale-[0.98] transition-all duration-100
                       ${isWaiting ? 'bg-gradient-to-b from-red-950/80 to-red-900/60' : 'bg-gradient-to-b from-emerald-950/90 to-emerald-800/70'}
                       ${isGreen && lockedRef.current ? 'opacity-40 pointer-events-none' : ''}`}>

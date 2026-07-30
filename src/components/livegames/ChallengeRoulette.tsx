@@ -141,7 +141,7 @@ const ChallengeRoulette = () => {
 
   const handleAddSegment = async () => {
     if (!selectedId || !newChallenge.text.trim()) return;
-    const seg: Partial<Segment> = {
+    const seg: any = {
       roulette_id: selectedId,
       challenge_text: newChallenge.text.trim(),
       category: newChallenge.category,

@@ -508,7 +508,7 @@ const KahootMultiplayerQuiz = ({ scheduledLiveId, liveCode, isHost, onScore }: P
               >
                 <motion.div whileTap={{ scale: 0.97 }}>
                   <Button
-                    onClick={handleStartQuestion(0)}
+                    onClick={() => handleStartQuestion(0)}
                     className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white gap-1.5 relative overflow-hidden"
                     size="lg"
                   >

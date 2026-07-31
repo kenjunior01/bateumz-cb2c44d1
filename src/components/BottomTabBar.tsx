@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import ContestTypesShowcase from "@/components/ContestTypesShowcase";
 
 type ActionItem = {
   icon: typeof Home;
@@ -73,7 +72,6 @@ const BottomTabBar = () => {
   const { user, role, signOut } = useAuth();
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [contestsOpen, setContestsOpen] = useState(false);
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -86,7 +84,7 @@ const BottomTabBar = () => {
     { icon: Home, labelKey: "tab.home", href: "/" },
     { icon: Search, labelKey: "tab.explore", href: "/marketplace" },
     null,
-    { icon: Trophy, labelKey: "tab.contests", href: "#contests" },
+    { icon: Trophy, labelKey: "tab.contests", href: "/concursos" },
     { icon: Wallet, labelKey: "tab.wallet", href: user ? "/wallet" : "/login" },
   ];
 
@@ -129,19 +127,6 @@ const BottomTabBar = () => {
               }
 
               if (!tab) return null;
-
-              if (tab.href === "#contests") {
-                return (
-                  <button
-                    key={tab.labelKey}
-                    onClick={() => setContestsOpen(true)}
-                    className="relative flex flex-col items-center gap-1 py-2 min-h-[56px]"
-                  >
-                    <tab.icon className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-[11px] font-medium text-muted-foreground">{t(tab.labelKey)}</span>
-                  </button>
-                );
-              }
 
               const active = isActive(tab.href);
               return (
@@ -258,18 +243,6 @@ const BottomTabBar = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={contestsOpen} onOpenChange={setContestsOpen}>
-        <SheetContent side="bottom" className="h-[88vh] overflow-y-auto p-0 rounded-t-3xl">
-          <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border px-4 pt-4 pb-3">
-            <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-border" />
-            <SheetTitle className="text-left">{t("fab.contestsTitle")}</SheetTitle>
-          </div>
-          <div onClick={() => setContestsOpen(false)}>
-            <ContestTypesShowcase />
           </div>
         </SheetContent>
       </Sheet>

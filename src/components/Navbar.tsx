@@ -15,11 +15,10 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
-import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
 
-const sb: any = supabase;
+// supabase is used directly as (supabase as any) below
 
 // Premium announcement banner data — can be driven by CMS later
 const ANNOUNCEMENT_KEY = "bateu_navbar_announcement_dismissed";
@@ -54,7 +53,6 @@ const Navbar = () => {
   const navRef = useRef<HTMLDivElement>(null);
   const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
-  const { rt } = useRegionalTheme();
   const { format } = useCurrency();
   const location = useLocation();
 
@@ -183,92 +181,92 @@ const Navbar = () => {
 
   const groups: MenuGroup[] = [
     {
-      label: rt("nav.group.raffles"),
+      label: t("nav.group.raffles"),
       icon: Ticket,
       spotlight: {
-        label: rt("nav.spotlight.marketplace"),
-        desc: rt("nav.spotlight.marketplace.desc"),
+        label: t("nav.spotlight.marketplace"),
+        desc: t("nav.spotlight.marketplace.desc"),
         href: "/marketplace",
-        cta: rt("nav.spotlight.cta"),
+        cta: t("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.marketplace"), href: "/marketplace", icon: Store, desc: rt("nav.marketplace.desc"), trending: true },
-        { label: rt("nav.contests"), href: "/concursos", icon: Trophy, desc: rt("nav.contests.desc") },
-        { label: rt("nav.instantwin"), href: "/instant-win", icon: Sparkles, desc: rt("nav.instantwin.desc") },
-        { label: rt("nav.mytickets"), href: "/my-tickets", icon: Ticket, desc: rt("nav.mytickets.desc") },
+        { label: t("nav.marketplace"), href: "/marketplace", icon: Store, desc: t("nav.marketplace.desc"), trending: true },
+        { label: t("nav.contests"), href: "/concursos", icon: Trophy, desc: t("nav.contests.desc") },
+        { label: t("nav.instantwin"), href: "/instant-win", icon: Sparkles, desc: t("nav.instantwin.desc") },
+        { label: t("nav.mytickets"), href: "/my-tickets", icon: Ticket, desc: t("nav.mytickets.desc") },
       ],
     },
     {
-      label: rt("nav.group.business"),
+      label: t("nav.group.business"),
       icon: Building2,
       spotlight: {
-        label: rt("nav.spotlight.prestacoes"),
-        desc: rt("nav.spotlight.prestacoes.desc"),
+        label: t("nav.spotlight.prestacoes"),
+        desc: t("nav.spotlight.prestacoes.desc"),
         href: "/prestacoes/catalogo",
-        cta: rt("nav.spotlight.cta"),
+        cta: t("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.directory"), href: "/empresas", icon: Building2, desc: rt("nav.directory.desc") },
-        { label: rt("nav.installments.catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: rt("nav.installments.catalog.desc"), badge: rt("nav.badge.new") },
-        { label: rt("nav.installments.about"), href: "/prestacoes", icon: Calendar, desc: rt("nav.installments.about.desc") },
-        { label: rt("nav.createraffle"), href: "/dashboard/raffles/create", icon: Gift, desc: rt("nav.createraffle.desc") },
+        { label: t("nav.directory"), href: "/empresas", icon: Building2, desc: t("nav.directory.desc") },
+        { label: t("nav.installments.catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: t("nav.installments.catalog.desc"), badge: t("nav.badge.new") },
+        { label: t("nav.installments.about"), href: "/prestacoes", icon: Calendar, desc: t("nav.installments.about.desc") },
+        { label: t("nav.createraffle"), href: "/dashboard/raffles/create", icon: Gift, desc: t("nav.createraffle.desc") },
       ],
     },
     {
-      label: rt("nav.group.entertainment"),
+      label: t("nav.group.entertainment"),
       icon: Gamepad2,
       spotlight: {
-        label: rt("nav.spotlight.live"),
-        desc: rt("nav.spotlight.live.desc"),
+        label: t("nav.spotlight.live"),
+        desc: t("nav.spotlight.live.desc"),
         href: "/lives-agora",
-        cta: rt("nav.spotlight.cta.live"),
+        cta: t("nav.spotlight.cta.live"),
       },
       items: [
-        { label: rt("nav.games"), href: "/jogos", icon: Gamepad2, desc: rt("nav.games.desc"), badge: "Hot", trending: true },
-        { label: rt("nav.tournaments"), href: "/tournaments", icon: Swords, desc: rt("nav.tournaments.desc"), badge: rt("nav.badge.new") },
-        { label: rt("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: rt("nav.livedraw.desc"), live: true },
-        { label: rt("nav.lives"), href: "/lives", icon: Radio, desc: rt("nav.lives.desc") },
-        { label: rt("nav.blog"), href: "/blog", icon: Newspaper, desc: rt("nav.blog.desc") },
+        { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
+        { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
+        { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },
+        { label: t("nav.lives"), href: "/lives", icon: Radio, desc: t("nav.lives.desc") },
+        { label: t("nav.blog"), href: "/blog", icon: Newspaper, desc: t("nav.blog.desc") },
       ],
     },
     {
-      label: rt("nav.group.community"),
+      label: t("nav.group.community"),
       icon: MessageCircle,
       spotlight: {
-        label: rt("nav.spotlight.transparency"),
-        desc: rt("nav.spotlight.transparency.desc"),
+        label: t("nav.spotlight.transparency"),
+        desc: t("nav.spotlight.transparency.desc"),
         href: "/transparencia",
-        cta: rt("nav.spotlight.cta"),
+        cta: t("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.hub"), href: "/community", icon: MessageCircle, desc: rt("nav.hub.desc") },
-        { label: rt("nav.winners"), href: "/historico", icon: History, desc: rt("nav.winners.desc") },
-        { label: rt("nav.transparency"), href: "/transparencia", icon: ShieldCheck, desc: rt("nav.transparency.desc") },
-        { label: rt("nav.how"), href: "/como-funciona", icon: BookOpen, desc: rt("nav.how.desc") },
+        { label: t("nav.hub"), href: "/community", icon: MessageCircle, desc: t("nav.hub.desc") },
+        { label: t("nav.winners"), href: "/historico", icon: History, desc: t("nav.winners.desc") },
+        { label: t("nav.transparency"), href: "/transparencia", icon: ShieldCheck, desc: t("nav.transparency.desc") },
+        { label: t("nav.how"), href: "/como-funciona", icon: BookOpen, desc: t("nav.how.desc") },
       ],
     },
     {
-      label: rt("nav.group.more"),
+      label: t("nav.group.more"),
       icon: LayoutGrid,
       spotlight: {
-        label: rt("nav.spotlight.referral"),
-        desc: rt("nav.spotlight.referral.desc"),
+        label: t("nav.spotlight.referral"),
+        desc: t("nav.spotlight.referral.desc"),
         href: "/referral",
-        cta: rt("nav.spotlight.cta"),
+        cta: t("nav.spotlight.cta"),
       },
       items: [
-        { label: rt("nav.referral"), href: "/referral", icon: Users, desc: rt("nav.referral.desc") },
-        { label: rt("nav.faq"), href: "/faq", icon: HelpCircle, desc: rt("nav.faq.desc") },
+        { label: t("nav.referral"), href: "/referral", icon: Users, desc: t("nav.referral.desc") },
+        { label: t("nav.faq"), href: "/faq", icon: HelpCircle, desc: t("nav.faq.desc") },
       ],
     },
   ];
 
   // Mobile quick actions — one-tap access at the top of the mobile menu
   const quickActions = [
-    { label: rt("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
-    { label: rt("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
-    { label: rt("nav.quick.market"), href: "/marketplace", icon: Store },
-    { label: rt("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
+    { label: t("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
+    { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
+    { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
+    { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
   ];
 
   // Show/hide navbar on specific routes (overlay, dashboard, admin)
@@ -388,18 +386,18 @@ const Navbar = () => {
                 >
                   Bateu
                 </span>
-                <span className="navbar-verified-dot hidden md:inline-flex" title={rt("nav.verified")}>
+                <span className="navbar-verified-dot hidden md:inline-flex" title={t("nav.verified")}>
                   <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                 </span>
                 <Link
                   to="/lives-agora"
                   className="navbar-live-orb hidden items-center md:inline-flex"
-                  title={rt("nav.live.count")}
-                  aria-label={`${liveCount} ${rt("nav.live.count")}`}
+                  title={t("nav.live.count")}
+                  aria-label={`${liveCount} ${t("nav.live.count")}`}
                 >
                   <span className="navbar-live-orb-ring" aria-hidden="true" />
                   <span className="tabular-nums">{liveCount}</span>
-                  <span className="hidden xl:inline opacity-80">{rt("nav.live")}</span>
+                  <span className="hidden xl:inline opacity-80">{t("nav.live")}</span>
                 </Link>
               </div>
             </Link>
@@ -445,7 +443,7 @@ const Navbar = () => {
                             </span>
                             <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
                               <Sparkles className="h-3 w-3" />
-                              {rt("nav.mega.explore")}
+                              {t("nav.mega.explore")}
                             </span>
                           </div>
                           <ul className="gap-0.5">
@@ -531,10 +529,10 @@ const Navbar = () => {
               <Link
                 to="/marketplace"
                 className="navbar-search-trigger group flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:bg-secondary/50 hover:text-foreground"
-                aria-label={rt("nav.search")}
+                aria-label={t("nav.search")}
               >
                 <Search className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                <span className="hidden xl:inline">{rt("nav.search.placeholder")}</span>
+                <span className="hidden xl:inline">{t("nav.search.placeholder")}</span>
                 <kbd className="navbar-kbd hidden xl:inline-flex">⌘K</kbd>
               </Link>
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">
@@ -571,8 +569,8 @@ const Navbar = () => {
                     <Link
                       to="/wallet"
                       className="navbar-wallet-pill group relative"
-                      title={rt("nav.wallet")}
-                      aria-label={rt("nav.wallet")}
+                      title={t("nav.wallet")}
+                      aria-label={t("nav.wallet")}
                     >
                       <span className="navbar-wallet-shine" aria-hidden="true" />
                       <Wallet className="h-3.5 w-3.5 relative" />
@@ -647,7 +645,7 @@ const Navbar = () => {
               <Link
                 to="/marketplace"
                 className="flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
-                aria-label={rt("nav.search")}
+                aria-label={t("nav.search")}
               >
                 <Search className="h-5 w-5" />
               </Link>
@@ -712,7 +710,7 @@ const Navbar = () => {
                   <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
                     <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
                     <span className="font-display text-lg font-bold text-gradient-primary">Bateu</span>
-                    <span className="navbar-verified-dot ml-0.5 inline-flex" title={rt("nav.verified")}>
+                    <span className="navbar-verified-dot ml-0.5 inline-flex" title={t("nav.verified")}>
                       <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                     </span>
                   </Link>
@@ -758,7 +756,7 @@ const Navbar = () => {
                     >
                       <span className="navbar-live-orb-ring" aria-hidden="true" />
                       <span className="tabular-nums">{liveCount}</span>
-                      <span className="opacity-90">{rt("nav.live")}</span>
+                      <span className="opacity-90">{t("nav.live")}</span>
                     </Link>
                     <Link
                       to="/marketplace"
@@ -766,7 +764,7 @@ const Navbar = () => {
                       className="navbar-search-trigger flex flex-1 items-center gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
                     >
                       <Search className="h-3.5 w-3.5" />
-                      <span className="flex-1 text-left">{rt("nav.search.placeholder")}</span>
+                      <span className="flex-1 text-left">{t("nav.search.placeholder")}</span>
                     </Link>
                   </div>
 
@@ -781,10 +779,10 @@ const Navbar = () => {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-primary-foreground">
-                          {rt("nav.hero.cta.title")}
+                          {t("nav.hero.cta.title")}
                         </p>
                         <p className="truncate text-xs text-primary-foreground/80">
-                          {rt("nav.hero.cta.subtitle")}
+                          {t("nav.hero.cta.subtitle")}
                         </p>
                       </div>
                       <Zap className="h-4 w-4 text-primary-foreground" />
@@ -885,7 +883,7 @@ const Navbar = () => {
                           >
                             <span className="navbar-wallet-shine" aria-hidden="true" />
                             <Wallet className="h-4 w-4 relative" />
-                            <span className="relative">{rt("nav.wallet")}: {format(walletBalance)}</span>
+                            <span className="relative">{t("nav.wallet")}: {format(walletBalance)}</span>
                           </Link>
                         )}
                         <Link

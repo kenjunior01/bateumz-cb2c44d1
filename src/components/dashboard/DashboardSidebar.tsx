@@ -47,7 +47,7 @@ const mainItems = [
   { title: "Prestações", url: "/dashboard/prestacoes", icon: Wallet },
   { title: "Jogos de Live", url: "/dashboard/live-games", icon: Radio },
   { title: "Histórico de Lives", url: "/dashboard/live-history", icon: Trophy },
-  { title: "Gestu00e3o de Live", url: "/dashboard/live-manager", icon: Gamepad2 },
+  { title: "Gestão de Live", url: "/dashboard/live-manager", icon: Gamepad2 },
   { title: "Embaixadores", url: "/dashboard/ambassadors", icon: Sparkles },
   { title: "Lives Agendadas", url: "/dashboard/scheduled-lives", icon: Radio },
 ];

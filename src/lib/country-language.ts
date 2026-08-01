@@ -27,7 +27,7 @@ export function resolveLangFromCountry(country: string, dbDefault?: string | nul
   const db = dbDefault?.toLowerCase().replace("_", "-");
   if (db === "pt-br") return "pt-BR";
   if (db && SUPPORTED.includes(db as Lang)) return db as Lang;
-  return COUNTRY_DEFAULT_LANG[country.toUpperCase()] ?? "en";
+  return COUNTRY_DEFAULT_LANG[country.toUpperCase()] ?? "pt";
 }
 
 export function isLangExplicitlyChosen(): boolean {
@@ -36,6 +36,6 @@ export function isLangExplicitlyChosen(): boolean {
 }
 
 export function getStoredCountry(): string {
-  if (typeof window === "undefined") return "US";
+  if (typeof window === "undefined") return "MZ";
   return (localStorage.getItem("bateu_country") || detectCountryFromNavigator()).toUpperCase();
 }

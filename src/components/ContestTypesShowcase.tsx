@@ -15,12 +15,13 @@ import {
   Smile,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ContestType {
   icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  example: string;
+  titleKey: string;
+  descriptionKey: string;
+  exampleKey: string;
   evaluation: "votes" | "views";
   gradient: string;
   iconColor: string;
@@ -29,90 +30,90 @@ interface ContestType {
 const contestTypes: ContestType[] = [
   {
     icon: ChefHat,
-    title: "Cooking",
-    description: "Recipes, signature dishes and gastronomic creations",
-    example: "Ex: Best smash burger",
+    titleKey: "contest.cooking.title",
+    descriptionKey: "contest.cooking.desc",
+    exampleKey: "contest.cooking.example",
     evaluation: "votes",
     gradient: "from-orange-500/20 to-red-500/20",
     iconColor: "text-orange-500",
   },
   {
     icon: Music,
-    title: "Music & Dance",
-    description: "Live performances, choreographies and pure talent",
-    example: "Ex: Best original track",
+    titleKey: "contest.music.title",
+    descriptionKey: "contest.music.desc",
+    exampleKey: "contest.music.example",
     evaluation: "views",
     gradient: "from-purple-500/20 to-pink-500/20",
     iconColor: "text-purple-500",
   },
   {
     icon: Camera,
-    title: "Photography",
-    description: "Capture moments, landscapes and the beauty of the US & Canada",
-    example: "Ex: Best Rocky Mountains sunset",
+    titleKey: "contest.photography.title",
+    descriptionKey: "contest.photography.desc",
+    exampleKey: "contest.photography.example",
     evaluation: "votes",
     gradient: "from-blue-500/20 to-cyan-500/20",
     iconColor: "text-blue-500",
   },
   {
     icon: Video,
-    title: "Viral Video",
-    description: "Short, creative and laugh-out-loud videos",
-    example: "Ex: Funniest TikTok of the week",
+    titleKey: "contest.viralVideo.title",
+    descriptionKey: "contest.viralVideo.desc",
+    exampleKey: "contest.viralVideo.example",
     evaluation: "views",
     gradient: "from-pink-500/20 to-rose-500/20",
     iconColor: "text-pink-500",
   },
   {
     icon: Palette,
-    title: "Art & Design",
-    description: "Paintings, illustrations, graphic design and crafts",
-    example: "Ex: Best local brand logo",
+    titleKey: "contest.art.title",
+    descriptionKey: "contest.art.desc",
+    exampleKey: "contest.art.example",
     evaluation: "votes",
     gradient: "from-emerald-500/20 to-teal-500/20",
     iconColor: "text-emerald-500",
   },
   {
     icon: Mic,
-    title: "Comedy & Stand-up",
-    description: "Make North America laugh with your talent",
-    example: "Ex: Best 60-second bit",
+    titleKey: "contest.comedy.title",
+    descriptionKey: "contest.comedy.desc",
+    exampleKey: "contest.comedy.example",
     evaluation: "views",
     gradient: "from-yellow-500/20 to-amber-500/20",
     iconColor: "text-yellow-500",
   },
   {
     icon: Shirt,
-    title: "Fashion & Style",
-    description: "Outfits, streetwear and trending looks",
-    example: "Ex: Best fall street style",
+    titleKey: "contest.fashion.title",
+    descriptionKey: "contest.fashion.desc",
+    exampleKey: "contest.fashion.example",
     evaluation: "votes",
     gradient: "from-fuchsia-500/20 to-purple-500/20",
     iconColor: "text-fuchsia-500",
   },
   {
     icon: Dumbbell,
-    title: "Sports & Fitness",
-    description: "Physical challenges, plays and skills",
-    example: "Ex: Best amateur trick shot",
+    titleKey: "contest.sports.title",
+    descriptionKey: "contest.sports.desc",
+    exampleKey: "contest.sports.example",
     evaluation: "views",
     gradient: "from-green-500/20 to-lime-500/20",
     iconColor: "text-green-500",
   },
   {
     icon: Lightbulb,
-    title: "Innovation & Business",
-    description: "Entrepreneurial ideas and community projects",
-    example: "Ex: Best startup pitch",
+    titleKey: "contest.innovation.title",
+    descriptionKey: "contest.innovation.desc",
+    exampleKey: "contest.innovation.example",
     evaluation: "votes",
     gradient: "from-indigo-500/20 to-blue-500/20",
     iconColor: "text-indigo-500",
   },
   {
     icon: Smile,
-    title: "Kids & Family",
-    description: "Kids' talents, drawings and family moments",
-    example: "Ex: Most creative drawing",
+    titleKey: "contest.kids.title",
+    descriptionKey: "contest.kids.desc",
+    exampleKey: "contest.kids.example",
     evaluation: "votes",
     gradient: "from-cyan-500/20 to-sky-500/20",
     iconColor: "text-cyan-500",
@@ -120,6 +121,8 @@ const contestTypes: ContestType[] = [
 ];
 
 const ContestTypesShowcase = () => {
+  const { t } = useLanguage();
+
   return (
     <section className="py-8">
       <div className="container mx-auto px-4">
@@ -138,17 +141,17 @@ const ContestTypesShowcase = () => {
           </motion.div>
           <div>
             <h2 className="font-display text-lg sm:text-xl font-bold text-foreground leading-tight">
-              Contest Types
+              {t("contest.showcase.title")}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Show your talent and win prizes
+              {t("contest.showcase.subtitle")}
             </p>
           </div>
           <Link
             to="/concursos"
             className="ml-auto text-xs text-primary font-medium hover:underline flex items-center gap-1"
           >
-            See all <ArrowRight className="h-3 w-3" />
+            {t("contest.showcase.seeAll")} <ArrowRight className="h-3 w-3" />
           </Link>
         </motion.div>
 
@@ -157,7 +160,7 @@ const ContestTypesShowcase = () => {
             const Icon = type.icon;
             return (
               <motion.div
-                key={type.title}
+                key={type.titleKey}
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true }}
@@ -180,17 +183,17 @@ const ContestTypesShowcase = () => {
                         variant="outline"
                         className="text-[9px] px-1.5 py-0 h-4 bg-background/60 backdrop-blur border-border/50"
                       >
-                        {type.evaluation === "views" ? "👁️" : "❤️"}
+                        {type.evaluation === "views" ? "\u{1F441}\uFE0F" : "\u2764\uFE0F"}
                       </Badge>
                     </div>
                     <h3 className="font-semibold text-sm text-foreground mb-0.5 line-clamp-1">
-                      {type.title}
+                      {t(type.titleKey)}
                     </h3>
                     <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1.5">
-                      {type.description}
+                      {t(type.descriptionKey)}
                     </p>
                     <p className="text-[10px] font-medium text-primary/80 line-clamp-1 italic">
-                      {type.example}
+                      {t(type.exampleKey)}
                     </p>
 
                     <motion.div
@@ -218,7 +221,7 @@ const ContestTypesShowcase = () => {
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"
           >
             <Sparkles className="h-3 w-3" />
-            Got a contest idea? Suggest it to the community
+            {t("contest.showcase.suggest")}
             <ArrowRight className="h-3 w-3" />
           </Link>
         </motion.div>

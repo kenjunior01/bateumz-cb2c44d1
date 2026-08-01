@@ -181,6 +181,42 @@ const translations: Partial<Record<Lang, Dict>> = {
     "cat.sectionTitle": "Categories",
     "cat.filterByRegion": "🌍 Filter by region:",
 
+    // Contest Types Showcase
+    "contest.showcase.title": "Contest Types",
+    "contest.showcase.subtitle": "Show your talent and win prizes",
+    "contest.showcase.seeAll": "See all",
+    "contest.showcase.suggest": "Got a contest idea? Suggest it to the community",
+    "contest.cooking.title": "Cooking",
+    "contest.cooking.desc": "Recipes, signature dishes and gastronomic creations",
+    "contest.cooking.example": "Ex: Best smash burger",
+    "contest.music.title": "Music & Dance",
+    "contest.music.desc": "Live performances, choreographies and pure talent",
+    "contest.music.example": "Ex: Best original track",
+    "contest.photography.title": "Photography",
+    "contest.photography.desc": "Capture moments, landscapes and beauty",
+    "contest.photography.example": "Ex: Best sunset photo",
+    "contest.viralVideo.title": "Viral Video",
+    "contest.viralVideo.desc": "Short, creative and laugh-out-loud videos",
+    "contest.viralVideo.example": "Ex: Funniest video of the week",
+    "contest.art.title": "Art & Design",
+    "contest.art.desc": "Paintings, illustrations, graphic design and crafts",
+    "contest.art.example": "Ex: Best local brand logo",
+    "contest.comedy.title": "Comedy & Stand-up",
+    "contest.comedy.desc": "Make everyone laugh with your talent",
+    "contest.comedy.example": "Ex: Best 60-second bit",
+    "contest.fashion.title": "Fashion & Style",
+    "contest.fashion.desc": "Outfits, streetwear and trending looks",
+    "contest.fashion.example": "Ex: Best street style",
+    "contest.sports.title": "Sports & Fitness",
+    "contest.sports.desc": "Physical challenges, plays and skills",
+    "contest.sports.example": "Ex: Best amateur trick shot",
+    "contest.innovation.title": "Innovation & Business",
+    "contest.innovation.desc": "Entrepreneurial ideas and community projects",
+    "contest.innovation.example": "Ex: Best startup pitch",
+    "contest.kids.title": "Kids & Family",
+    "contest.kids.desc": "Kids' talents, drawings and family moments",
+    "contest.kids.example": "Ex: Most creative drawing",
+
     // Mobile actions
     "mobile.viewAll": "View all",
     "mobile.myTickets": "My tickets",
@@ -787,6 +823,42 @@ const translations: Partial<Record<Lang, Dict>> = {
     "cat.more": "Mais",
     "cat.sectionTitle": "Categorias",
     "cat.filterByRegion": "🌍 Filtrar por região:",
+
+    // Contest Types Showcase
+    "contest.showcase.title": "Tipos de Concursos",
+    "contest.showcase.subtitle": "Mostre o seu talento e ganhe prémios",
+    "contest.showcase.seeAll": "Ver todos",
+    "contest.showcase.suggest": "Tem uma ideia de concurso? Sugira à comunidade",
+    "contest.cooking.title": "Culinária",
+    "contest.cooking.desc": "Receitas, pratos exclusivos e criações gastronómicas",
+    "contest.cooking.example": "Ex: Melhor hambúrguer artesanal",
+    "contest.music.title": "Música e Dança",
+    "contest.music.desc": "Actuações ao vivo, coreografias e puro talento",
+    "contest.music.example": "Ex: Melhor música original",
+    "contest.photography.title": "Fotografia",
+    "contest.photography.desc": "Capture momentos, paisagens e beleza",
+    "contest.photography.example": "Ex: Melhor foto de pôr do sol",
+    "contest.viralVideo.title": "Vídeo Viral",
+    "contest.viralVideo.desc": "Vídeos curtos, criativos e divertidos",
+    "contest.viralVideo.example": "Ex: Vídeo mais engraçado da semana",
+    "contest.art.title": "Arte e Design",
+    "contest.art.desc": "Pinturas, ilustrações, design gráfico e artesanato",
+    "contest.art.example": "Ex: Melhor logótipo de marca local",
+    "contest.comedy.title": "Comédia e Stand-up",
+    "contest.comedy.desc": "Faça todos rir com o seu talento",
+    "contest.comedy.example": "Ex: Melhor piada de 60 segundos",
+    "contest.fashion.title": "Moda e Estilo",
+    "contest.fashion.desc": "Outfits, streetwear e tendências",
+    "contest.fashion.example": "Ex: Melhor estilo urbano",
+    "contest.sports.title": "Desporto e Fitness",
+    "contest.sports.desc": "Desafios físicos, jogadas e habilidades",
+    "contest.sports.example": "Ex: Melhor truque amador",
+    "contest.innovation.title": "Inovação e Negócios",
+    "contest.innovation.desc": "Ideias empreendedoras e projectos comunitários",
+    "contest.innovation.example": "Ex: Melhor pitch de startup",
+    "contest.kids.title": "Crianças e Família",
+    "contest.kids.desc": "Talentos infantis, desenhos e momentos em família",
+    "contest.kids.example": "Ex: Desenho mais criativo",
 
     // ===== Mobile actions =====
     "mobile.viewAll": "Ver Todos",
@@ -3389,7 +3461,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // made via the in-app switcher (tracked with `bateu_lang_explicit`). Legacy
   // PT defaults from previous releases are reset to English automatically.
   const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "en";
+    if (typeof window === "undefined") return "pt";
     const explicit = localStorage.getItem("bateu_lang_explicit") === "1";
     const stored = localStorage.getItem("bateu_lang") as Lang | null;
     if (explicit && stored && SUPPORTED.includes(stored)) return stored;
@@ -3410,10 +3482,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string, vars?: Record<string, string>) => {
-    // Prioritize the currently SELECTED LANGUAGE first, then English as fallback, then PT
-    const en = translations.en!;
-    const dict = translations[lang] ?? en;
-    const value = dict[key] ?? en[key] ?? translations.pt?.[key] ?? key;
+    // Prioritize the currently SELECTED LANGUAGE first, then PT as fallback, then English
+    const pt = translations.pt!;
+    const dict = translations[lang] ?? pt;
+    const value = dict[key] ?? pt[key] ?? translations.en?.[key] ?? key;
     return format(value, vars);
   };
 
@@ -3428,10 +3500,10 @@ export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) {
     return {
-      lang: "en" as Lang,
+      lang: "pt" as Lang,
       setLang: () => {},
       t: (k: string, vars?: Record<string, string>) =>
-        format(translations.en?.[k] ?? k, vars),
+        format(translations.pt?.[k] ?? translations.en?.[k] ?? k, vars),
     };
   }
   return ctx;

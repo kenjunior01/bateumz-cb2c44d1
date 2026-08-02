@@ -93,11 +93,20 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setErrorAction(null);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError("Enter both your email and password to continue.");
+      setMascotMood("thinking");
+      return;
+    }
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
     if (error) {
-      setError(error.message);
+      const friendly = describeSignInError(error.message);
+      setError(friendly.message);
+      setErrorAction(friendly.action ?? null);
       setMascotMood("thinking");
     } else {
       setMascotMood("winner");
@@ -106,6 +115,7 @@ export default function Login() {
       setTimeout(navigateAfterLogin, 1200);
     }
   };
+
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);

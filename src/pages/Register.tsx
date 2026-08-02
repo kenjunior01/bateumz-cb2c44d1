@@ -551,9 +551,10 @@ export default function Register() {
           </AnimatePresence>
 
           {error && (
-            <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+            <motion.p role="alert" data-testid="signup-error" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
               className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2 mt-4">{error}</motion.p>
           )}
+
 
           <div className="mt-6 flex gap-3">
             {step < STEP_COUNT - 1 ? (

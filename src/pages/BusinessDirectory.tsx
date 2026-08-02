@@ -431,9 +431,9 @@ export default function BusinessDirectory() {
                   key={wi}
                   className="text-shimmer inline-block mr-[0.3em]"
                   style={{
-                    "--shimmer-c1": "hsl(var(--foreground))" as unknown as string,
-                    "--shimmer-c2": "hsl(220 70% 18% / 0.5)" as unknown as string,
-                  }}
+                    "--shimmer-c1": "hsl(var(--foreground))",
+                    "--shimmer-c2": "hsl(220 70% 18% / 0.5)",
+                  } as React.CSSProperties}
                   initial={{ opacity: 0, y: 40, rotateX: -30 }}
                   animate={{ opacity: 1, y: 0, rotateX: 0 }}
                   transition={{ ...SPRING_BOUNCE, delay: 0.15 + wi * 0.08 }}

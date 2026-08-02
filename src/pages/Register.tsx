@@ -131,12 +131,22 @@ export default function Register() {
       setLoading(false);
       if (error) {
         setError(friendlyAuthError(error.message));
-      } else if (!session && !error) {
-        // Email confirmation required - Supabase returns no session
-        setAutoSignedIn(false);
-        setSuccess(true);
-        playPopSound();
-      } else {
+        return;
+      }
+
+      // Persist extra profile data regardless of whether a session exists yet.
+      // AuthContext picks this up on the first authenticated load.
+      localStorage.setItem(
+        "bateu_signup_extra",
+        JSON.stringify({
+          phone,
+          province,
+          city,
+          interests,
+          company_name: accountType === "business" ? companyName : undefined,
+        })
+      );
+
       if (refCode) {
         try {
           const { data: referrerProfile } = await supabase
@@ -149,20 +159,10 @@ export default function Register() {
           }
         } catch {}
       }
-      localStorage.setItem(
-        "bateu_signup_extra",
-        JSON.stringify({
-          phone,
-          province,
-          city,
-          interests,
-          company_name: accountType === "business" ? companyName : undefined,
-        })
-      );
+
       setAutoSignedIn(!!session);
       setSuccess(true);
       playPopSound();
-      }
     } catch (err: any) {
       setLoading(false);
       setError(describeSignUpError(err?.message).message);

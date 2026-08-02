@@ -376,16 +376,35 @@ export default function Login() {
 
             <AnimatePresence>
               {error && (
-                <motion.p
+                <motion.div
+                  role="alert"
+                  data-testid="login-error"
                   initial={{ opacity: 0, y: -10, height: 0 }}
                   animate={{ opacity: 1, y: 0, height: "auto" }}
                   exit={{ opacity: 0, y: -10, height: 0 }}
-                  className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2 flex items-center gap-2"
+                  className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2 space-y-1"
                 >
-                  <span>😕</span> {error}
-                </motion.p>
+                  <p className="flex items-start gap-2">
+                    <span>😕</span> <span>{error}</span>
+                  </p>
+                  {errorAction === "signup" && (
+                    <p className="text-xs">
+                      <Link to="/register" className="underline font-semibold">
+                        Create an account
+                      </Link>
+                      {" · "}
+                      <Link to="/forgot-password" className="underline font-semibold">
+                        Forgot password?
+                      </Link>
+                    </p>
+                  )}
+                  {errorAction === "resend_confirmation" && (
+                    <p className="text-xs">Confirm your email address, then sign in again.</p>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
+
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
               <motion.button

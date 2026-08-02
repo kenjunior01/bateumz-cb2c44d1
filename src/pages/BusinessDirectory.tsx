@@ -431,9 +431,9 @@ export default function BusinessDirectory() {
                   key={wi}
                   className="text-shimmer inline-block mr-[0.3em]"
                   style={{
-                    "--shimmer-c1": "hsl(var(--foreground))" as unknown as string,
-                    "--shimmer-c2": "hsl(220 70% 18% / 0.5)" as unknown as string,
-                  }}
+                    "--shimmer-c1": "hsl(var(--foreground))",
+                    "--shimmer-c2": "hsl(220 70% 18% / 0.5)",
+                  } as React.CSSProperties}
                   initial={{ opacity: 0, y: 40, rotateX: -30 }}
                   animate={{ opacity: 1, y: 0, rotateX: 0 }}
                   transition={{ ...SPRING_BOUNCE, delay: 0.15 + wi * 0.08 }}
@@ -616,7 +616,7 @@ export default function BusinessDirectory() {
             <div className="relative inline-block">
               <div className="absolute inset-0 rounded-full" style={{ background: C_PRIMARY, filter: "blur(50px)", width: 140, height: 140, top: "-10px", left: "-10px", animation: "empty-orb-pulse 4s ease-in-out infinite" }} />
               <motion.div className="relative">
-                <div
+                <motion.div
                   className="w-28 h-28 rounded-3xl flex items-center justify-center mx-auto mb-6"
                   style={{
                     background: "linear-gradient(135deg, hsl(220 70% 18% / 0.08), hsl(352 73% 50% / 0.04))",
@@ -626,7 +626,7 @@ export default function BusinessDirectory() {
                   transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
                 >
                   <Building2 className="h-12 w-12 text-muted-foreground/15" />
-                </div>
+                </motion.div>
               </motion.div>
             </div>
             <motion.p

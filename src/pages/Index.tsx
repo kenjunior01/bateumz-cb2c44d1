@@ -69,7 +69,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { delay: i * 0.07, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
   }),
 };
 
@@ -77,7 +77,7 @@ const sectionFade = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1, y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
   },
 };
 
@@ -85,7 +85,7 @@ const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
   visible: (i: number) => ({
     opacity: 1, scale: 1,
-    transition: { delay: i * 0.06, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { delay: i * 0.06, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] as const },
   }),
 };
 
@@ -302,7 +302,7 @@ const Index = () => {
             <motion.div
               initial={{ opacity: 0, x: -40 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] as const }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <motion.img
@@ -329,7 +329,7 @@ const Index = () => {
                 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl lg:text-[3.5rem] xl:text-7xl font-bold leading-[1.05] tracking-tight"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] as const }}
               >
                 <span className="text-gradient-primary">Sorteios ao vivo,</span>
                 <br />
@@ -424,7 +424,7 @@ const Index = () => {
                 className="relative hidden lg:flex justify-center"
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
               >
                 <div className="grid grid-cols-2 gap-5 w-full max-w-md">
                   {HERO_STATS.map((card, i) => (
@@ -432,7 +432,7 @@ const Index = () => {
                       key={card.desc}
                       initial={{ opacity: 0, y: 30, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: 0.5 + i * 0.12, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ delay: 0.5 + i * 0.12, duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
                       whileHover={{ y: -6, scale: 1.04, transition: { duration: 0.3 } }}
                       className="group relative"
                     >
@@ -475,7 +475,7 @@ const Index = () => {
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-40px" }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="glass-strong rounded-2xl p-4 sm:p-5 mb-6 gradient-border"
         >
           <SearchBar />

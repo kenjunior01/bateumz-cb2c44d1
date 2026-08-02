@@ -179,9 +179,9 @@ const AllGames = () => {
 
             <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3">
               <span className="text-shimmer" style={{
-                "--shimmer-c1": "hsl(var(--foreground))" as any,
-                "--shimmer-c2": "hsl(220 70% 18% / 0.6)" as any,
-              }}>Todos os Jogos</span>
+                "--shimmer-c1": "hsl(var(--foreground))",
+                "--shimmer-c2": "hsl(220 70% 18% / 0.6)",
+              } as React.CSSProperties}>Todos os Jogos</span>
             </h1>
             <p className="text-base text-muted-foreground mb-6 max-w-xl">
               Mais de 50 jogos online gratis. Estrategia, arcade, puzzle, quiz, reflexos e muito mais \u2014 jogue contra amigos ou contra o computador!

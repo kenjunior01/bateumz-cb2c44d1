@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { COUNTRIES, getRegions } from "@/lib/regions";
 import { playPopSound } from "@/lib/sounds";
+import { describeSignUpError } from "@/lib/authErrors";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotExcited from "@/assets/mascot-excited.png";
@@ -110,17 +111,7 @@ export default function Register() {
     return true;
   };
 
-  const friendlyAuthError = (raw: string) => {
-    const m = (raw || "").toLowerCase();
-    if (m.includes("weak") || m.includes("pwned") || m.includes("known to be"))
-      return "That password is too common or has appeared in a data breach. Use a unique mix of letters, numbers and symbols (at least 8 characters).";
-    if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already"))
-      return "An account with this email already exists. Try signing in or use another email.";
-    if (m.includes("invalid email")) return "Invalid email. Please check the address.";
-    if (m.includes("rate limit")) return "Too many attempts. Wait a few seconds and try again.";
-    if (m.includes("password should be at least")) return "Password must be at least 8 characters.";
-    return raw || "We could not create your account. Please try again.";
-  };
+  const friendlyAuthError = (raw: string) => describeSignUpError(raw).message;
 
   const handleSubmit = async () => {
     setError("");
@@ -140,12 +131,22 @@ export default function Register() {
       setLoading(false);
       if (error) {
         setError(friendlyAuthError(error.message));
-      } else if (!session && !error) {
-        // Email confirmation required - Supabase returns no session
-        setAutoSignedIn(false);
-        setSuccess(true);
-        playPopSound();
-      } else {
+        return;
+      }
+
+      // Persist extra profile data regardless of whether a session exists yet.
+      // AuthContext picks this up on the first authenticated load.
+      localStorage.setItem(
+        "bateu_signup_extra",
+        JSON.stringify({
+          phone,
+          province,
+          city,
+          interests,
+          company_name: accountType === "business" ? companyName : undefined,
+        })
+      );
+
       if (refCode) {
         try {
           const { data: referrerProfile } = await supabase
@@ -158,23 +159,13 @@ export default function Register() {
           }
         } catch {}
       }
-      localStorage.setItem(
-        "bateu_signup_extra",
-        JSON.stringify({
-          phone,
-          province,
-          city,
-          interests,
-          company_name: accountType === "business" ? companyName : undefined,
-        })
-      );
+
       setAutoSignedIn(!!session);
       setSuccess(true);
       playPopSound();
-      }
     } catch (err: any) {
       setLoading(false);
-      setError(err?.message || "Ocorreu um erro inesperado. Tente novamente.");
+      setError(describeSignUpError(err?.message).message);
       console.error("Signup error:", err);
     }
   };
@@ -225,6 +216,8 @@ export default function Register() {
         </div>
 
         <motion.div initial={{ opacity: 0, scale: 0.8, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", damping: 12 }}
+          data-testid="signup-success"
+          data-auto-signed-in={autoSignedIn ? "true" : "false"}
           className="glass rounded-3xl p-8 max-w-md text-center relative z-10">
           <motion.img src={mascotWinner} alt="Bateu" className="h-24 w-24 mx-auto mb-4" width={96} height={96}
             animate={{ y: [0, -15, 0], rotate: [0, 10, -10, 0] }}
@@ -373,7 +366,7 @@ export default function Register() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
-                    {googleLoading ? "A conectar..." : "Continue with Google"}
+                    {googleLoading ? "Connecting..." : "Continue with Google"}
                   </Button>
                   <Button
                     variant="outline"
@@ -382,7 +375,7 @@ export default function Register() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                     </svg>
-                    {appleLoading ? "A conectar..." : "Continue with Apple"}
+                    {appleLoading ? "Connecting..." : "Continue with Apple"}
                   </Button>
                 </div>
               </motion.div>
@@ -419,7 +412,7 @@ export default function Register() {
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Email</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required
                         className="h-11 w-full rounded-xl border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
                     </div>
                   </div>
@@ -558,20 +551,21 @@ export default function Register() {
           </AnimatePresence>
 
           {error && (
-            <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+            <motion.p role="alert" data-testid="signup-error" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
               className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2 mt-4">{error}</motion.p>
           )}
+
 
           <div className="mt-6 flex gap-3">
             {step < STEP_COUNT - 1 ? (
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                onClick={goNext} disabled={!canProceed()}
+                onClick={goNext} disabled={!canProceed()} data-testid="step-continue"
                 className="w-full h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-40 flex items-center justify-center gap-2">
                 Continue <ChevronRight className="h-4 w-4" />
               </motion.button>
             ) : (
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                onClick={handleSubmit} disabled={loading || !canProceed()}
+                onClick={handleSubmit} disabled={loading || !canProceed()} data-testid="submit-signup"
                 className="w-full h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-40 flex items-center justify-center gap-2">
                 {loading ? (
                   <>
@@ -582,7 +576,7 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    <Rocket className="h-4 w-4" /> Criar Conta!
+                    <Rocket className="h-4 w-4" /> Create account!
                   </>
                 )}
               </motion.button>

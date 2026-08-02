@@ -250,9 +250,9 @@ export default function Contests() {
             </motion.div>
             <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3">
               <span className="text-shimmer" style={{
-                "--shimmer-c1": "hsl(var(--foreground))" as any,
-                "--shimmer-c2": "hsl(352 73% 50% / 0.6)" as any,
-              }}>Concursos</span>
+                "--shimmer-c1": "hsl(var(--foreground))",
+                "--shimmer-c2": "hsl(352 73% 50% / 0.6)",
+              } as React.CSSProperties}>Concursos</span>
             </h1>
             <p className="text-base text-muted-foreground max-w-xl mx-auto">
               Participe, mostre o seu talento e ganhe premios incriveis!

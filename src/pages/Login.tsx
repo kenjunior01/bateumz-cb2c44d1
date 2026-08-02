@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { playPopSound } from "@/lib/sounds";
+import { describeSignInError, type FriendlyAuthError } from "@/lib/authErrors";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotExcited from "@/assets/mascot-excited.png";

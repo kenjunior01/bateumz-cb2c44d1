@@ -616,7 +616,7 @@ export default function BusinessDirectory() {
             <div className="relative inline-block">
               <div className="absolute inset-0 rounded-full" style={{ background: C_PRIMARY, filter: "blur(50px)", width: 140, height: 140, top: "-10px", left: "-10px", animation: "empty-orb-pulse 4s ease-in-out infinite" }} />
               <motion.div className="relative">
-                <div
+                <motion.div
                   className="w-28 h-28 rounded-3xl flex items-center justify-center mx-auto mb-6"
                   style={{
                     background: "linear-gradient(135deg, hsl(220 70% 18% / 0.08), hsl(352 73% 50% / 0.04))",
@@ -626,7 +626,7 @@ export default function BusinessDirectory() {
                   transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
                 >
                   <Building2 className="h-12 w-12 text-muted-foreground/15" />
-                </div>
+                </motion.div>
               </motion.div>
             </div>
             <motion.p

@@ -216,6 +216,8 @@ export default function Register() {
         </div>
 
         <motion.div initial={{ opacity: 0, scale: 0.8, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", damping: 12 }}
+          data-testid="signup-success"
+          data-auto-signed-in={autoSignedIn ? "true" : "false"}
           className="glass rounded-3xl p-8 max-w-md text-center relative z-10">
           <motion.img src={mascotWinner} alt="Bateu" className="h-24 w-24 mx-auto mb-4" width={96} height={96}
             animate={{ y: [0, -15, 0], rotate: [0, 10, -10, 0] }}

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { COUNTRIES, getRegions } from "@/lib/regions";
 import { playPopSound } from "@/lib/sounds";
+import { describeSignUpError } from "@/lib/authErrors";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotExcited from "@/assets/mascot-excited.png";
@@ -110,17 +111,7 @@ export default function Register() {
     return true;
   };
 
-  const friendlyAuthError = (raw: string) => {
-    const m = (raw || "").toLowerCase();
-    if (m.includes("weak") || m.includes("pwned") || m.includes("known to be"))
-      return "That password is too common or has appeared in a data breach. Use a unique mix of letters, numbers and symbols (at least 8 characters).";
-    if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already"))
-      return "An account with this email already exists. Try signing in or use another email.";
-    if (m.includes("invalid email")) return "Invalid email. Please check the address.";
-    if (m.includes("rate limit")) return "Too many attempts. Wait a few seconds and try again.";
-    if (m.includes("password should be at least")) return "Password must be at least 8 characters.";
-    return raw || "We could not create your account. Please try again.";
-  };
+  const friendlyAuthError = (raw: string) => describeSignUpError(raw).message;
 
   const handleSubmit = async () => {
     setError("");
@@ -174,7 +165,7 @@ export default function Register() {
       }
     } catch (err: any) {
       setLoading(false);
-      setError(err?.message || "Ocorreu um erro inesperado. Tente novamente.");
+      setError(describeSignUpError(err?.message).message);
       console.error("Signup error:", err);
     }
   };

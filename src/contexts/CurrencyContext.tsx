@@ -14,9 +14,10 @@ const STORAGE_KEY = "bateu_currency";
 function detectInitial(): SupportedCurrency {
   if (typeof window === "undefined") return "USD";
   const saved = localStorage.getItem(STORAGE_KEY) as SupportedCurrency | null;
-  if (saved === "USD" || saved === "CAD") return saved;
+  if (saved === "USD" || saved === "CAD" || saved === "INR") return saved;
   const loc = (navigator.language || "").toLowerCase();
   if (loc.endsWith("-ca") || loc.includes("fr-ca")) return "CAD";
+  if (loc.endsWith("-in")) return "INR";
   return "USD";
 }
 
@@ -40,9 +41,9 @@ export function useCurrency() {
   const ctx = useContext(CurrencyContext);
   if (!ctx) {
     return {
-      currency: "USD" as SupportedCurrency,
+      currency: "MZN" as SupportedCurrency,
       setCurrency: () => {},
-      format: (v: number) => formatMoney(v, "USD"),
+      format: (v: number) => formatMoney(v, "MZN"),
     };
   }
   return ctx;

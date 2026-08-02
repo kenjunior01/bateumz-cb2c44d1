@@ -10,6 +10,7 @@ export const COUNTRY_DEFAULT_LANG: Record<string, Lang> = {
   BR: "pt-BR",
   MZ: "pt",
   AO: "pt",
+  IN: "hi",
 };
 
 export function detectCountryFromNavigator(): string {
@@ -20,6 +21,7 @@ export function detectCountryFromNavigator(): string {
   if (loc === "pt" || loc.endsWith("-pt")) return "PT";
   if (loc.endsWith("-mz")) return "MZ";
   if (loc.endsWith("-ao")) return "AO";
+  if (loc.endsWith("-in") || loc === "hi" || loc === "hi-in") return "IN";
   return "US";
 }
 

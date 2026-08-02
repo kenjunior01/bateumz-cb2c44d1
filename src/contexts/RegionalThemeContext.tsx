@@ -38,6 +38,7 @@ function detectInitialCountry(): string {
   if (loc === "pt" || loc.endsWith("-pt")) return "PT";
   if (loc.endsWith("-mz")) return "MZ";
   if (loc.endsWith("-ao")) return "AO";
+  if (loc.endsWith("-in") || loc === "hi" || loc === "hi-in") return "IN";
   return "US";
 }
 

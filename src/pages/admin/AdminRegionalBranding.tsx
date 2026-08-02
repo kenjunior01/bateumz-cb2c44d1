@@ -39,7 +39,7 @@ interface TranslationRow {
   region_id: string | null;
 }
 
-const LANGS = ["en", "pt", "pt-BR", "es", "fr"];
+const LANGS = ["en", "pt", "pt-BR", "es", "fr", "hi"];
 
 export default function AdminRegionalBranding() {
   const { user, role, loading: authLoading } = useAuth();

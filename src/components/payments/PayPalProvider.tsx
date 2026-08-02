@@ -3,7 +3,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
-  currency?: "USD" | "CAD";
+  currency?: "USD" | "CAD" | "INR";
   children: ReactNode;
 }
 

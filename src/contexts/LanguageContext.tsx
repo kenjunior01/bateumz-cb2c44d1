@@ -10,6 +10,7 @@ type Dict = Record<string, string>;
 const translations: Partial<Record<Lang, Dict>> = {
   en: {
     // ===== Navbar / Top =====
+
     "nav.raffles": "Raffles",
     "nav.contests": "Contests",
     "nav.business": "Business",
@@ -663,9 +664,95 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error.retry": "Try again",
     "error.gameCrash": "Error loading {game}",
     "error.gameCrashDesc": "Try selecting another game",
+
+    // ===== Common UI Strings =====
+    "action.playAgain": "Play Again",
+    "action.rematch": "Rematch",
+    "action.exit": "Exit",
+    "action.newGame": "New Game",
+    "action.buyCard": "Buy Card",
+    "action.participate": "Participate",
+    "action.vote": "Vote",
+    "action.viewRaffle": "View Raffle",
+    "action.viewContest": "View Contest",
+    "action.enterGame": "Join Game",
+    "action.buyTicket": "Buy Ticket",
+    "action.buyTickets": "Buy Tickets",
+    "action.loginToPay": "Login to pay",
+    "action.loginToParticipate": "Login to Participate",
+    "action.contactSeller": "Login to contact seller",
+    "action.loginAndContact": "Login & Contact",
+    "action.createFreeAccount": "Create free account",
+    "action.viewMore": "View more",
+    "action.openRaffles": "View open raffles",
+    "action.enterLive": "Enter Live Now",
+    "action.openLivePage": "Open live page",
+    "action.copyProfileLink": "Profile link copied!",
+    "action.uploadFile": "Upload file",
+    "action.sendEntry": "Submit Entry",
+    "action.shareLive": "Join me on live on Bateu!",
+    "empty.noRaffles": "No raffles in this category",
+    "empty.noActiveRaffles": "No active raffles at the moment",
+    "empty.noRafflesInState": "No raffles in this status.",
+    "empty.noContestsInState": "No contests in this status.",
+    "empty.noGamesConfigured": "No games configured yet",
+    "empty.noResults": "No results for the selected filters.",
+    "empty.noContestActive": "No active contests at the moment.",
+    "empty.noContestClosed": "No closed contests.",
+    "empty.noContestFound": "No contest found",
+    "empty.noTicketFound": "No tickets found",
+    "empty.noTicketInState": "No tickets with this status.",
+    "empty.noGameFound": "No games found",
+    "empty.noParticipants": "No active participants in this raffle.",
+    "empty.noLiveActive": "No live in progress",
+    "empty.noLiveScheduled": "No scheduled lives",
+    "empty.noCreatorFound": "No creators found",
+    "empty.noClipAvailable": "No clips available",
+    "empty.noPlayerRanking": "No players in the ranking yet",
+    "empty.noWinnerFound": "No winners found",
+    "empty.noBusinessFound": "No businesses found",
+    "empty.noActiveRafflesWidget": "No active raffles",
+    "empty.noTransactions": "No transactions found",
+    "empty.noRewardsAvailable": "No rewards available at the moment.",
+    "empty.noPointsHistory": "No points history.",
+    "empty.noRedeemedRewards": "No redeemed rewards.",
+    "empty.noGameRegistered": "No games registered yet",
+    "empty.noChallengeCreated": "No challenges created yet.",
+    "empty.noMessages": "No messages yet. Be the first!",
+    "empty.beFirstToParticipate": "Be the first to participate!",
+    "empty.noSavedCard": "No saved card data",
+    "empty.noLivePerformed": "No lives performed yet",
+    "empty.noVotesYet": "No votes yet",
+    "empty.noAttemptsYet": "No attempts yet",
+    "empty.selectGift": "Select a gift to send",
+    "status.sending": "Sending...",
+    "status.loading": "Loading...",
+    "status.loadingQuestions": "Loading questions...",
+    "status.loadingStripe": "Loading Stripe",
+    "status.botThinking": "The bot is thinking...",
+    "error.sendFailed": "Failed to send.",
+    "error.sendParticipationFailed": "Could not submit the entry.",
+    "error.sendMessageFailed": "Failed to send message.",
+    "error.sendGiftFailed": "Failed to send gift.",
+    "error.createPollFailed": "Failed to create poll.",
+    "error.uploadFileFailed": "Error uploading file. Try again.",
+    "error.uploadImageFailed": "Error sending image: ",
+    "error.unknown": "unknown",
+    "error.sendReceiptFailed": "Error sending receipt: ",
+    "error.registerParticipationFailed": "Error registering participation: ",
+    "error.updateFailed": "Error updating: ",
+    "error.loadPostsFailed": "Could not load posts. Try again later.",
+    "error.submitFailed": "Submit failed",
+    "chat.sendMessage": "Send message...",
+    "chat.joinToChat": "Join the live to chat",
+    "chat.firstMessage": "Be the first to send a message!",
+    "voted": "Voted",
+    "enter": "Enter",
+
   },
   pt: {
     // ===== Navbar / Top =====
+
     "nav.raffles": "Sorteios",
     "nav.contests": "Concursos",
     "nav.business": "Empresas",
@@ -1164,6 +1251,7 @@ const translations: Partial<Record<Lang, Dict>> = {
   },
   "pt-BR": {
     // ===== Navbar / Top =====
+
     "nav.raffles": "Sorteios",
     "nav.contests": "Concursos",
     "nav.business": "Negócios",
@@ -1800,6 +1888,7 @@ const translations: Partial<Record<Lang, Dict>> = {
   },
   es: {
     // ===== Navbar / Top =====
+
     "nav.raffles": "Sorteos",
     "nav.contests": "Concursos",
     "nav.business": "Negocios",
@@ -2395,6 +2484,7 @@ const translations: Partial<Record<Lang, Dict>> = {
   },
   fr: {
     // ===== Navbar / Top =====
+
     "nav.raffles": "Tirages",
     "nav.contests": "Concours",
     "nav.business": "Entreprises",
@@ -2957,6 +3047,7 @@ const translations: Partial<Record<Lang, Dict>> = {
   },
   hi: {
     // ===== Navbar / Top =====
+
     "nav.raffles": "लॉटरी",
     "nav.contests": "प्रतियोगिताएं",
     "nav.business": "व्यवसाय",
@@ -3010,7 +3101,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.transparency.desc": "सार्वजनिक सत्यापन और ऑडिट",
     "nav.how": "कैसे काम करता है",
     "nav.how.desc": "हमारे प्रक्रिया समझें",
-    "nav.referral.desc": "दोस्तों को रेफ़र्यूडीली में भेजें",
+    "nav.referral.desc": "दोस्तों को रेफ़र करें और इनाम जीतें",
     "nav.faq": "FAQ",
     "nav.faq.desc": "सबसे पूछे जाने वाले सवाल",
     "nav.search": "खोजें",
@@ -3038,7 +3129,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.spotlight.referral": "रेफर करें और जीतें",
     "nav.spotlight.referral.desc": "दोस्तों को रेफ़र करें और हर रजिस्ट्रेशन पर रिवार्ड कमाएं",
     "nav.hero.cta.title": "जीतने के लिए हैं?",
-    "nav.hero.cta.subtitle": "अभी शामिल हों और अपकरणी पुरस्कार के लिए शुरू करें",
+    "nav.hero.cta.subtitle": "अभी शामिल हों और अविश्वसनीय पुरस्कार के लिए शुरू करें",
 
     // ===== Hero =====
     "hero.title.prefix": "आपका अगला",
@@ -3203,7 +3294,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "marketplace.noResults": "कोई परिणाम नहीं मिला",
     "marketplace.noRaffles": "कोई लॉटरी नहीं मिली",
     "marketplace.empty.title": "नए लॉटरी जल्द आ रहे हैं",
-    "marketplace.empty.subtitle": "हम प्रीमियम लॉटरी और प्रतियोगिताओं की तैयारी कर रहे हैं। लॉन्च पर सूचित होने के लिए अपना ईमेल छोड़ें।",
+    "marketplace.empty.subtitle": "हम शीघ्र लॉटरी और प्रतियोगिताएँ तैयार कर रहे हैं। लॉन्च पर सूचित होने के लिए अपना ईमेल दें।",
     "marketplace.empty.emailPlaceholder": "aapka@email.com",
     "marketplace.empty.cta": "मुझे सूचित करें",
     "marketplace.empty.confirmed": "आप सूची में हैं — लॉन्च पर हम आपको ईमेल करेंगे।",
@@ -3240,16 +3331,16 @@ const translations: Partial<Record<Lang, Dict>> = {
     "pay.method.paypal.desc": "अंतर्राष्ट्रीय भुगतान",
 
     // भारतीय भुगतान
-    "pay.method.upi": "भारतीय इन्टरनेट पेमेंट",
-    "pay.method.upi.desc": "तुरंत भारतीय पेमेंट",
+    "pay.method.upi": "UPI",
+    "pay.method.upi.desc": "भारतीय तत्काल भुगतान सेवा",
     "pay.method.paytm": "Paytm",
-    "pay.method.paytm.desc": "भारतीय वॉलेट",
+    "pay.method.paytm.desc": "भारतीय ईवॉलेट",
     "pay.method.phonepe": "PhonePe",
-    "pay.method.phonepe.desc": "भारतीय वॉलेट",
+    "pay.method.phonepe.desc": "भारतीय डिजिटल वॉलेट",
     "pay.method.gpay": "Google Pay",
-    "pay.method.gpay.desc": "गूगल पे",
+    "pay.method.gpay.desc": "गूगल पे (भारतीय भुगतान एप्लाइन)",
     "pay.method.rupay": "RuPay",
-    "pay.method.rupay.desc": "भारतीय कार्ड",
+    "pay.method.rupay.desc": "भारतीय कार्ड नेटवर्क",
 
 
     "pay.notConfigured.title": "{method} कॉन्फ़िगर नहीं है",
@@ -3667,10 +3758,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string, vars?: Record<string, string>) => {
-    // Prioritize the currently SELECTED LANGUAGE first, then PT as fallback, then English
+    // For PT/PT-BR: selected → pt → en → raw key
+    // For other langs (hi, es, fr): selected → en → raw key (skip PT)
+    const en = translations.en!;
+    const dict = translations[lang] ?? en;
+    const isPT = lang === "pt" || lang === "pt-BR";
     const pt = translations.pt!;
-    const dict = translations[lang] ?? pt;
-    const value = dict[key] ?? pt[key] ?? translations.en?.[key] ?? key;
+    const value = dict[key] ?? (isPT ? pt[key] : undefined) ?? en[key] ?? key;
     return format(value, vars);
   };
 

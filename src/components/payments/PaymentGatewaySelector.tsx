@@ -5,6 +5,7 @@ import PayPalCheckout from "@/components/payments/PayPalCheckout";
 import StripeCheckout from "@/components/payments/StripeCheckout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export type PaymentGateway = "paypal" | "stripe";
 
@@ -35,6 +36,7 @@ export default function PaymentGatewaySelector({
   onError,
   disabled,
 }: Props) {
+  const { t } = useLanguage();
   const [gateway, setGateway] = useState<PaymentGateway>("paypal");
 
   return (
@@ -52,7 +54,7 @@ export default function PaymentGatewaySelector({
         >
           <DollarSign className={cn("h-5 w-5", gateway === "paypal" ? "text-primary" : "text-muted-foreground")} />
           <span className={cn("text-xs font-medium", gateway === "paypal" ? "text-foreground" : "text-muted-foreground")}>
-            Pagar com PayPal
+            {t("pay.method.paypal")}
           </span>
         </button>
 
@@ -68,13 +70,13 @@ export default function PaymentGatewaySelector({
         >
           <CreditCard className={cn("h-5 w-5", gateway === "stripe" ? "text-primary" : "text-muted-foreground")} />
           <span className={cn("text-xs font-medium", gateway === "stripe" ? "text-foreground" : "text-muted-foreground")}>
-            Pagar com Cartão (Stripe)
+            {t("pay.method.card")} (Stripe)
           </span>
         </button>
       </div>
 
       {gateway === "paypal" && (
-        <PayPalProvider currency={(currency as "USD" | "CAD")}>
+        <PayPalProvider currency={(currency as "USD" | "CAD" | "INR")}>
           <PayPalCheckout
             raffleId={raffleId}
             quantity={quantity}
@@ -102,8 +104,8 @@ export default function PaymentGatewaySelector({
 
       <p className="text-[10px] text-muted-foreground text-center">
         {gateway === "paypal"
-          ? "Pague com saldo PayPal, cartão de crédito/débito ou transferência bancária — sem conta PayPal necessária."
-          : "Pague com Visa, Mastercard, ou outro cartão aceito. Autenticação 3D Secure quando necessário."}
+          ? t("pay.method.paypal.desc")
+          : t("pay.method.card.desc")}
       </p>
     </div>
   );

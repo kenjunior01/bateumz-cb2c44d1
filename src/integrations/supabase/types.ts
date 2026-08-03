@@ -2768,6 +2768,48 @@ export type Database = {
       }
     }
     Views: {
+      live_ambassador_prizes_public: {
+        Row: {
+          awarded_at: string | null
+          business_user_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_awarded: boolean | null
+          live_code: string | null
+          position: number | null
+          scheduled_live_id: string | null
+          scope: string | null
+          title: string | null
+        }
+        Insert: {
+          awarded_at?: string | null
+          business_user_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_awarded?: never
+          live_code?: string | null
+          position?: number | null
+          scheduled_live_id?: string | null
+          scope?: string | null
+          title?: string | null
+        }
+        Update: {
+          awarded_at?: string | null
+          business_user_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_awarded?: never
+          live_code?: string | null
+          position?: number | null
+          scheduled_live_id?: string | null
+          scope?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       platform_settings_public: {
         Row: {
           key: string | null

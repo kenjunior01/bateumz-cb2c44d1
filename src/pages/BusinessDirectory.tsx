@@ -34,7 +34,7 @@ const C_GOLD = "#fbbf24";
 const C_VIOLET = "hsl(270 60% 55%)";
 const C_CYAN = "hsl(190 80% 50%)";
 
-const TITLE_WORDS = ["Directorio", "de", "Empresas"];
+const TITLE_WORDS = ["Business", "Directory"];
 
 function CountingStat({ target, duration = 2 }: { target: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -50,7 +50,7 @@ function CountingStat({ target, duration = 2 }: { target: number; duration?: num
     };
     requestAnimationFrame(step);
   }, [target, duration]);
-  return <>{display.toLocaleString("pt-PT")}</>;
+  return <>{display.toLocaleString("en-US")}</>;
 }
 
 function DirectoryParticles() {
@@ -341,9 +341,9 @@ export default function BusinessDirectory() {
   const activeCount = useMemo(() => businesses.filter(b => b.raffle_count + b.contest_count > 0).length, [businesses]);
 
   const chipCategories = [
-    { id: "all", label: "Todas", icon: "\ud83c\udfe2", count: businesses.length },
-    { id: "verified", label: "Verificadas", icon: "\u2705", count: verifiedCount },
-    { id: "active", label: "Ativas", icon: "\u26a1", count: activeCount },
+    { id: "all", label: "All", icon: "\ud83c\udfe2", count: businesses.length },
+    { id: "verified", label: "Verified", icon: "\u2705", count: verifiedCount },
+    { id: "active", label: "Active", icon: "\u26a1", count: activeCount },
   ];
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -359,16 +359,16 @@ export default function BusinessDirectory() {
   );
 
   const desktopFilters = [
-    { id: "all" as const, label: "Todas", Icon: Globe, color: C_PRIMARY },
-    { id: "verified" as const, label: "Verificadas", Icon: Shield, color: C_GOLD },
-    { id: "active" as const, label: "Ativas", Icon: Flame, color: C_ACCENT },
+    { id: "all" as const, label: "All", Icon: Globe, color: C_PRIMARY },
+    { id: "verified" as const, label: "Verified", Icon: Shield, color: C_GOLD },
+    { id: "active" as const, label: "Active", Icon: Flame, color: C_ACCENT },
   ];
 
   const heroStats = [
-    { icon: Building2, label: "Empresas", value: businesses.length, color: C_PRIMARY },
-    { icon: CheckCircle, label: "Verificadas", value: verifiedCount, color: C_GOLD },
-    { icon: Ticket, label: "Sorteios", value: totalRaffles, color: C_ACCENT },
-    { icon: Trophy, label: "Concursos", value: totalContests, color: C_VIOLET },
+    { icon: Building2, label: "Businesses", value: businesses.length, color: C_PRIMARY },
+    { icon: CheckCircle, label: "Verified", value: verifiedCount, color: C_GOLD },
+    { icon: Ticket, label: "Raffles", value: totalRaffles, color: C_ACCENT },
+    { icon: Trophy, label: "Contests", value: totalContests, color: C_VIOLET },
   ];
 
   return (
@@ -376,10 +376,10 @@ export default function BusinessDirectory() {
       <Navbar />
 
       <MobileDiscoveryHeader
-        title="Directorio de Empresas"
+        title="Business Directory"
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Pesquisar empresa..."
+        searchPlaceholder="Search business..."
         categories={chipCategories}
         activeCategory={filter}
         onCategoryChange={(id) => setFilter(id as "all" | "verified" | "active")}
@@ -421,7 +421,7 @@ export default function BusinessDirectory() {
               >
                 <Crown className="h-4 w-4" style={{ color: C_GOLD }} />
               </motion.span>
-              <span className="text-xs font-bold text-muted-foreground tracking-wide uppercase">Plataforma de jogos e concursos</span>
+              <span className="text-xs font-bold text-muted-foreground tracking-wide uppercase">Games and contests platform</span>
             </motion.div>
 
             <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight mb-5 leading-[1.05]">
@@ -464,7 +464,7 @@ export default function BusinessDirectory() {
                 <div className="relative">
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors" style={{ color: searchFocused ? C_PRIMARY : undefined }} />
                   <Input
-                    placeholder="Pesquisar empresas por nome..."
+                    placeholder="Search businesses by name..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
@@ -477,7 +477,7 @@ export default function BusinessDirectory() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Pesquisar
+                    Search
                   </motion.div>
                 </div>
               </div>
@@ -633,7 +633,7 @@ export default function BusinessDirectory() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              Nenhuma empresa encontrada
+              No businesses found
             </motion.p>
             <motion.p
               className="text-sm text-muted-foreground/50"
@@ -761,7 +761,7 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2.5">
                                   <ActivityRing value={b.raffle_count} max={maxActivities} color={C_ACCENT} size={38} />
                                   <div>
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Sorteios</p>
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Raffles</p>
                                     <p className="text-base font-black font-display" style={{ color: C_ACCENT }}>{b.raffle_count}</p>
                                   </div>
                                 </div>
@@ -770,7 +770,7 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2.5">
                                   <ActivityRing value={b.contest_count} max={maxActivities} color={C_PRIMARY} size={38} />
                                   <div>
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Concursos</p>
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Contests</p>
                                     <p className="text-base font-black font-display" style={{ color: C_PRIMARY }}>{b.contest_count}</p>
                                   </div>
                                 </div>
@@ -779,7 +779,7 @@ export default function BusinessDirectory() {
 
                             <div className="dirv2-card-footer">
                               <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: C_PRIMARY }}>
-                                Ver perfil <ChevronRight className="h-3 w-3" />
+                                View profile <ChevronRight className="h-3 w-3" />
                               </span>
                               <span className="text-[10px] text-muted-foreground/30 font-medium">
                                 <Eye className="h-3 w-3 inline mr-1" />Verificado: {b.is_verified ? "Sim" : "Nao"}
@@ -847,14 +847,14 @@ export default function BusinessDirectory() {
                             <div className="flex items-center gap-2">
                               <ActivityRing value={b.raffle_count} max={maxActivities} color={C_ACCENT} size={36} />
                               <div>
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Sorteios</p>
+                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Raffles</p>
                                 <p className="text-sm font-black" style={{ color: C_ACCENT }}>{b.raffle_count}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <ActivityRing value={b.contest_count} max={maxActivities} color={C_PRIMARY} size={36} />
                               <div>
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Concursos</p>
+                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Contests</p>
                                 <p className="text-sm font-black" style={{ color: C_PRIMARY }}>{b.contest_count}</p>
                               </div>
                             </div>

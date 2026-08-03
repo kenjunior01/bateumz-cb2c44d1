@@ -191,9 +191,9 @@ export default function SocialRaffleEntry({ raffleId, socialActions, totalTicket
       const ext = file.name.split(".").pop();
       const path = `${user.id}/${raffleId}/${key}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("social-proofs").upload(path, file);
-      if (error) { toast.error(`Erro ao enviar comprovativo: ${error.message}`); setSubmitting(false); return; }
-      const { data: urlData } = supabase.storage.from("social-proofs").getPublicUrl(path);
-      uploadedProofs.push({ mission_key: key, url: urlData.publicUrl });
+      if (error) { toast.error(`Upload failed: ${error.message}`); setSubmitting(false); return; }
+      // Bucket is private — store the storage path; viewers resolve a signed URL on demand.
+      uploadedProofs.push({ mission_key: key, url: path });
     }
     for (const [key, url] of Object.entries(proofUrls)) {
       if (!uploadedProofs.find(p => p.mission_key === key)) {

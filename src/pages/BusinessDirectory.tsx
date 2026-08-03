@@ -448,7 +448,7 @@ export default function BusinessDirectory() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...SPRING, delay: 0.5 }}
             >
-              Descubra empresas que criam experiencias incriveis com sorteios, concursos, jogos ao vivo e muito mais
+              Discover businesses creating amazing experiences with raffles, contests, live games and much more
             </motion.p>
 
             <motion.div

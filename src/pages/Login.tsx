@@ -122,7 +122,7 @@ export default function Login() {
     playPopSound();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + (nextPath ?? "") },
     });
     if (error) {
       setError("Could not connect with Google. Please try again.");
@@ -135,7 +135,7 @@ export default function Login() {
     playPopSound();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
-      options: { redirectTo: window.location.origin + '/dashboard' },
+      options: { redirectTo: window.location.origin + (nextPath ?? '/dashboard') },
     });
     if (error) {
       setError("Could not connect with Apple. Please try again.");

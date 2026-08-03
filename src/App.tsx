@@ -121,6 +121,8 @@ import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
+import MobileMenuDrawer from "./components/mobile/MobileMenuDrawer.tsx";
+import { MobileNavProvider } from "./contexts/MobileNavigationContext.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
 import Wallet from "./pages/Wallet.tsx";
 import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
@@ -346,13 +348,16 @@ const AppContent = () => {
       <BrowserRouter>
         {!isOverlay && <>
           {!authLoading && user && <PushNotificationBanner />}
-          <MobileTopBar />
+          <MobileNavProvider>
+            <MobileTopBar />
+            <MobileMenuDrawer />
+            <BottomTabBar />
+          </MobileNavProvider>
         </>}
         <AnimatedRoutes />
         {!isOverlay && <><MascotBuddy />
         <SupportChatbot />
         <NotificationBell />
-        <BottomTabBar />
         <RegionalPreviewBar /></>}
       </BrowserRouter>
     </TooltipProvider>

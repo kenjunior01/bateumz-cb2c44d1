@@ -3114,10 +3114,7 @@ export type Database = {
         Args: { p_date?: string; p_user_id: string }
         Returns: undefined
       }
-      toggle_blog_like: {
-        Args: { post_slug: string; user_id: string }
-        Returns: boolean
-      }
+      toggle_blog_like: { Args: { post_slug: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "business" | "user" | "superadmin"

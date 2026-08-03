@@ -2,13 +2,14 @@
 // Supports US, CA, MZ, AO, BR, PT, IN.
 
 export const COUNTRIES = [
-  { code: "US", label: "United States", flag: "\U0001F1FA\U0001F1F8", currency: "USD", dial: "+1" },
-  { code: "CA", label: "Canada", flag: "\U0001F1E8\U0001F1E6", currency: "CAD", dial: "+1" },
-  { code: "PT", label: "Portugal", flag: "\U0001F1F5\U0001F1F9", currency: "EUR", dial: "+351" },
-  { code: "BR", label: "Brazil", flag: "\U0001F1E7\U0001F1F7", currency: "BRL", dial: "+55" },
-  { code: "MZ", label: "Mozambique", flag: "\U0001F1F2\U0001F1FF", currency: "MZN", dial: "+258" },
-  { code: "AO", label: "Angola", flag: "\U0001F1E6\U0001F1F4", currency: "AOA", dial: "+244" },
-  { code: "IN", label: "India", flag: "\U0001F1EE\U0001F1F3", currency: "INR", dial: "+91" },
+  { code: "US", label: "United States", flag: "🇺🇸", currency: "USD", dial: "+1" },
+  { code: "CA", label: "Canada", flag: "🇨🇦", currency: "CAD", dial: "+1" },
+  { code: "PT", label: "Portugal", flag: "🇵🇹", currency: "EUR", dial: "+351" },
+  { code: "BR", label: "Brazil", flag: "🇧🇷", currency: "BRL", dial: "+55" },
+  { code: "MZ", label: "Mozambique", flag: "🇲🇿", currency: "MZN", dial: "+258" },
+  { code: "AO", label: "Angola", flag: "🇦🇴", currency: "AOA", dial: "+244" },
+  { code: "IN", label: "India", flag: "🇮🇳", currency: "INR", dial: "+91" },
+
 ] as const;
 
 export type CountryCode = typeof COUNTRIES[number]["code"];

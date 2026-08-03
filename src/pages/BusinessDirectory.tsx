@@ -406,6 +406,46 @@ export default function BusinessDirectory() {
 
   return (
     <div className="min-h-screen bg-mesh-soft bg-noise pb-20 md:pb-0">
+      <Helmet>
+        <title>Business Directory — Verified Companies on Bateu</title>
+        <meta
+          name="description"
+          content="Browse verified businesses on Bateu running raffles, contests and live games. Filter by country and region, and open each company profile for prizes, lives and winners."
+        />
+        <link rel="canonical" href={`${getPublicBaseUrl()}/empresas`} />
+        <meta property="og:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta
+          property="og:description"
+          content="Discover verified companies creating raffles, contests and live games on Bateu."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${getPublicBaseUrl()}/empresas`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta
+          name="twitter:description"
+          content="Discover verified companies creating raffles, contests and live games on Bateu."
+        />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: "Business Directory",
+            description: "Verified companies running raffles, contests and live games on Bateu.",
+            url: `${getPublicBaseUrl()}/empresas`,
+            mainEntity: {
+              "@type": "ItemList",
+              numberOfItems: filtered.length,
+              itemListElement: paginated.slice(0, 12).map((b, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: b.company_name || b.display_name || "Business",
+                url: `${getPublicBaseUrl()}${businessProfilePath(b)}`,
+              })),
+            },
+          })}
+        </script>
+      </Helmet>
       <Navbar />
 
       <MobileDiscoveryHeader
@@ -417,6 +457,38 @@ export default function BusinessDirectory() {
         activeCategory={filter}
         onCategoryChange={(id) => setFilter(id as "all" | "verified" | "active")}
       />
+
+      <div className="md:hidden container mx-auto px-3 mt-2 flex gap-2">
+        <Select
+          value={country || "all"}
+          onValueChange={(v) => { setCountry(v === "all" ? "" : v); setRegion(""); }}
+        >
+          <SelectTrigger className="h-9 flex-1 rounded-xl glass border-border text-[11px] font-semibold" aria-label="Filter by country">
+            <Globe className="h-3.5 w-3.5 mr-1" style={{ color: C_PRIMARY }} />
+            <SelectValue placeholder="Country" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            <SelectItem value="all">All countries</SelectItem>
+            {COUNTRIES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {regionOptions.length > 0 && (
+          <Select value={region || "all"} onValueChange={(v) => setRegion(v === "all" ? "" : v)}>
+            <SelectTrigger className="h-9 flex-1 rounded-xl glass border-border text-[11px] font-semibold" aria-label="Filter by region">
+              <MapPin className="h-3.5 w-3.5 mr-1" style={{ color: C_ACCENT }} />
+              <SelectValue placeholder="Region" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50 max-h-[280px]">
+              <SelectItem value="all">All regions</SelectItem>
+              {regionOptions.map((r) => (
+                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       <div
         ref={heroRef}
@@ -590,6 +662,38 @@ export default function BusinessDirectory() {
               );
             })}
           </div>
+
+
+          <Select
+            value={country || "all"}
+            onValueChange={(v) => { setCountry(v === "all" ? "" : v); setRegion(""); }}
+          >
+            <SelectTrigger className="h-10 w-[168px] rounded-xl glass border-border text-xs font-semibold" aria-label="Filter by country">
+              <Globe className="h-3.5 w-3.5 mr-1" style={{ color: C_PRIMARY }} />
+              <SelectValue placeholder="Country" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">All countries</SelectItem>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {regionOptions.length > 0 && (
+            <Select value={region || "all"} onValueChange={(v) => setRegion(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-10 w-[178px] rounded-xl glass border-border text-xs font-semibold" aria-label="Filter by region">
+                <MapPin className="h-3.5 w-3.5 mr-1" style={{ color: C_ACCENT }} />
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50 max-h-[300px]">
+                <SelectItem value="all">All regions</SelectItem>
+                {regionOptions.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <div className="flex-1" />
 
@@ -906,6 +1010,52 @@ export default function BusinessDirectory() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {pageCount > 1 && (
+              <nav
+                className="mt-8 flex items-center justify-center gap-2 flex-wrap"
+                aria-label="Directory pagination"
+              >
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: pageCount }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === pageCount || Math.abs(n - currentPage) <= 1)
+                  .map((n, idx, arr) => (
+                    <span key={n} className="flex items-center gap-2">
+                      {idx > 0 && n - arr[idx - 1] > 1 && (
+                        <span className="text-xs text-muted-foreground/50">…</span>
+                      )}
+                      <button
+                        onClick={() => setPage(n)}
+                        aria-current={n === currentPage ? "page" : undefined}
+                        className="min-w-9 h-9 px-3 rounded-xl text-xs font-bold border transition-colors"
+                        style={{
+                          borderColor: n === currentPage ? C_PRIMARY : "hsl(var(--border))",
+                          background: n === currentPage ? C_PRIMARY + "14" : "transparent",
+                          color: n === currentPage ? C_PRIMARY : "hsl(var(--muted-foreground))",
+                        }}
+                      >
+                        {n}
+                      </button>
+                    </span>
+                  ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  disabled={currentPage === pageCount}
+                  className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
+                >
+                  Next
+                </button>
+                <span className="w-full text-center text-[11px] text-muted-foreground/60 mt-1">
+                  Page {currentPage} of {pageCount} · {filtered.length} businesses
+                </span>
+              </nav>
+            )}
 
             {!loading && filtered.length > 0 && (
               <motion.div

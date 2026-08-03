@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ProofImage, useProofUrl } from "@/components/ProofImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -351,7 +352,7 @@ export default function SocialRaffleManager() {
                       {entry.proofs.map((proof, i) => (
                         <button key={i} onClick={() => setProofViewUrl(proof.url)}
                           className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors">
-                          <img src={proof.url} alt={`Prova ${i + 1}`} className="h-16 w-20 object-cover" />
+                          <ProofImage proofRef={proof.url} alt={`Proof ${i + 1}`} className="h-16 w-20 object-cover" />
                         </button>
                       ))}
                     </div>
@@ -405,7 +406,7 @@ export default function SocialRaffleManager() {
                     {selectedEntry.proofs.map((proof, i) => (
                       <button key={i} onClick={() => setProofViewUrl(proof.url)}
                         className="rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all">
-                        <img src={proof.url} alt={proof.mission_key} className="w-full h-32 object-cover" />
+                        <ProofImage proofRef={proof.url} alt={proof.mission_key} className="w-full h-32 object-cover" />
                         <div className="p-1.5 bg-secondary/50">
                           <p className="text-[10px] text-muted-foreground truncate">{proof.mission_key}</p>
                         </div>
@@ -443,7 +444,7 @@ export default function SocialRaffleManager() {
             <DialogDescription>Verifique se a acção foi realizada correctamente</DialogDescription>
           </DialogHeader>
           {proofViewUrl && (
-            <img src={proofViewUrl} alt="Comprovativo" className="w-full rounded-lg" />
+            <ProofImage proofRef={proofViewUrl} alt="Proof" className="w-full rounded-lg" />
           )}
         </DialogContent>
       </Dialog>

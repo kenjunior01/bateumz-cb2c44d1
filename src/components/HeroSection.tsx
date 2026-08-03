@@ -69,6 +69,14 @@ const FLOATING_ICONS = [
   { icon: Gamepad2, x: "18%", y: "42%", size: 24, duration: 21, delay: 3.5 },
 ];
 
+const GAMING_STICKERS = [
+  { emoji: "\uD83C\uDFB0", x: "4%", y: "35%", size: 36, duration: 5, delay: 0, label: "JACKPOT" },
+  { emoji: "\uD83D\uDD25", x: "92%", y: "60%", size: 32, duration: 4.5, delay: 1.2, label: "HOT" },
+  { emoji: "\u2B50", x: "85%", y: "8%", size: 30, duration: 5.5, delay: 0.6, label: "TOP" },
+  { emoji: "\uD83C\uDFC6", x: "2%", y: "88%", size: 34, duration: 6, delay: 2, label: "WIN" },
+  { emoji: "\uD83D\uDC8E", x: "50%", y: "4%", size: 28, duration: 4, delay: 0.3, label: "RICH" },
+];
+
 const PARTICLE_COUNT = 40;
 const PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
   id: i,
@@ -180,6 +188,43 @@ function FloatingGameIcon({ icon: Icon, x, y, size, duration, delay }: { icon: t
       }}
     >
       <Icon className="text-white" style={{ width: size, height: size }} />
+    </motion.div>
+  );
+}
+
+function GamingSticker({ emoji, x, y, size, duration, delay, label }: { emoji: string; x: string; y: string; size: number; duration: number; delay: number; label: string }) {
+  return (
+    <motion.div
+      className="pointer-events-none absolute flex flex-col items-center gap-1"
+      style={{ left: x, top: y }}
+      animate={{
+        y: [0, -8, 4, -12, 0],
+        rotate: [0, 6, -4, 8, 0],
+        scale: [1, 1.05, 0.97, 1.08, 1],
+      }}
+      transition={{
+        duration,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay,
+      }}
+      initial={{ opacity: 0, scale: 0 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+    >
+      <motion.div
+        className="relative flex items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.06] px-2.5 py-1.5 backdrop-blur-md"
+        style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)" }}
+        whileHover={{ scale: 1.15, rotate: 5 }}
+      >
+        <span className="block" style={{ fontSize: size * 0.6, lineHeight: 1 }}>{emoji}</span>
+        <span className="ml-1.5 text-[9px] font-black uppercase tracking-widest text-white/50">{label}</span>
+        <motion.div
+          className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-400"
+          animate={{ opacity: [1, 0.3, 1], scale: [1, 0.6, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: delay + 0.5 }}
+        />
+      </motion.div>
     </motion.div>
   );
 }
@@ -454,6 +499,10 @@ const HeroSection = () => {
         <FloatingGameIcon key={i} icon={fi.icon} x={fi.x} y={fi.y} size={fi.size} duration={fi.duration} delay={fi.delay} />
       ))}
 
+      {GAMING_STICKERS.map((st, i) => (
+        <GamingSticker key={st.label} emoji={st.emoji} x={st.x} y={st.y} size={st.size} duration={st.duration} delay={st.delay} label={st.label} />
+      ))}
+
       {PARTICLES.map((p) => (
         <Particle key={p.id} p={p} />
       ))}
@@ -725,7 +774,25 @@ const HeroSection = () => {
         </div>
       </div>
 
+      <div className="gaming-grid-overlay" />
+
       <div className="absolute bottom-0 left-0 right-0 h-32" style={{ background: "linear-gradient(to top, hsl(220 40% 6%), transparent)" }} />
+
+      <motion.div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <div className="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-1.5 backdrop-blur-sm">
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+            <Diamond className="h-3 w-3 text-amber-400/60" />
+          </motion.div>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/30">Scroll to explore</span>
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+            <Diamond className="h-3 w-3 text-amber-400/60" />
+          </motion.div>
+        </div>
+      </motion.div>
     </section>
   );
 };

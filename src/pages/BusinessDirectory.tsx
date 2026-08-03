@@ -16,6 +16,7 @@ import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 import { Helmet } from "react-helmet-async";
 import { getPublicBaseUrl } from "@/lib/publicUrl";
 import { COUNTRIES, getRegions } from "@/lib/regions";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BusinessItem {
@@ -42,7 +43,7 @@ const C_GOLD = "#fbbf24";
 const C_VIOLET = "hsl(270 60% 55%)";
 const C_CYAN = "hsl(190 80% 50%)";
 
-const TITLE_WORDS = ["Business", "Directory"];
+// TITLE_WORDS replaced with t() calls inside component
 
 const PAGE_SIZE = 12;
 
@@ -268,6 +269,7 @@ function StatBadge({ icon: Icon, value, label, color }: { icon: React.ElementTyp
 export default function BusinessDirectory() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -390,9 +392,9 @@ export default function BusinessDirectory() {
   const activeCount = useMemo(() => businesses.filter(b => b.raffle_count + b.contest_count > 0).length, [businesses]);
 
   const chipCategories = [
-    { id: "all", label: "All", icon: "\ud83c\udfe2", count: businesses.length },
-    { id: "verified", label: "Verified", icon: "\u2705", count: verifiedCount },
-    { id: "active", label: "Active", icon: "\u26a1", count: activeCount },
+    { id: "all", label: t("biz.filter.all"), icon: "\ud83c\udfe2", count: businesses.length },
+    { id: "verified", label: t("biz.filter.verified"), icon: "\u2705", count: verifiedCount },
+    { id: "active", label: t("biz.filter.active"), icon: "\u26a1", count: activeCount },
   ];
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -407,47 +409,47 @@ export default function BusinessDirectory() {
     [businesses]
   );
 
-  const desktopFilters = [
-    { id: "all" as const, label: "All", Icon: Globe, color: C_PRIMARY },
-    { id: "verified" as const, label: "Verified", Icon: Shield, color: C_GOLD },
-    { id: "active" as const, label: "Active", Icon: Flame, color: C_ACCENT },
+  const desktopFilters: Array<{ id: "all" | "verified" | "active"; label: string; Icon: React.ElementType; color: string }> = [
+    { id: "all", label: t("biz.filter.all"), Icon: Globe, color: C_PRIMARY },
+    { id: "verified", label: t("biz.filter.verified"), Icon: Shield, color: C_GOLD },
+    { id: "active", label: t("biz.filter.active"), Icon: Flame, color: C_ACCENT },
   ];
 
   const heroStats = [
-    { icon: Building2, label: "Businesses", value: businesses.length, color: C_PRIMARY },
-    { icon: CheckCircle, label: "Verified", value: verifiedCount, color: C_GOLD },
-    { icon: Ticket, label: "Raffles", value: totalRaffles, color: C_ACCENT },
-    { icon: Trophy, label: "Contests", value: totalContests, color: C_VIOLET },
+    { icon: Building2, label: t("biz.stat.businesses"), value: businesses.length, color: C_PRIMARY },
+    { icon: CheckCircle, label: t("biz.stat.verified"), value: verifiedCount, color: C_GOLD },
+    { icon: Ticket, label: t("biz.stat.raffles"), value: totalRaffles, color: C_ACCENT },
+    { icon: Trophy, label: t("biz.stat.contests"), value: totalContests, color: C_VIOLET },
   ];
 
   return (
     <div className="min-h-screen bg-mesh-soft bg-noise pb-20 md:pb-0">
       <Helmet>
-        <title>Business Directory — Verified Companies on Bateu</title>
+        <title>{t("biz.seo.title")}</title>
         <meta
           name="description"
-          content="Browse verified businesses on Bateu running raffles, contests and live games. Filter by country and region, and open each company profile for prizes, lives and winners."
+          content={t("biz.seo.desc")}
         />
         <link rel="canonical" href={`${getPublicBaseUrl()}/empresas`} />
-        <meta property="og:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta property="og:title" content={t("biz.seo.title")} />
         <meta
           property="og:description"
-          content="Discover verified companies creating raffles, contests and live games on Bateu."
+          content={t("biz.seo.og_desc")}
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${getPublicBaseUrl()}/empresas`} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta name="twitter:title" content={t("biz.seo.title")} />
         <meta
           name="twitter:description"
-          content="Discover verified companies creating raffles, contests and live games on Bateu."
+          content={t("biz.seo.og_desc")}
         />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: "Business Directory",
-            description: "Verified companies running raffles, contests and live games on Bateu.",
+            name: t("biz.title1") + " " + t("biz.title2"),
+            description: t("biz.seo.ld_desc"),
             url: `${getPublicBaseUrl()}/empresas`,
             mainEntity: {
               "@type": "ItemList",
@@ -455,7 +457,7 @@ export default function BusinessDirectory() {
               itemListElement: paginated.slice(0, 12).map((b, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
-                name: b.company_name || b.display_name || "Business",
+                name: b.company_name || b.display_name || t("biz.card.business"),
                 url: `${getPublicBaseUrl()}${businessProfilePath(b)}`,
               })),
             },
@@ -465,10 +467,10 @@ export default function BusinessDirectory() {
       <Navbar />
 
       <MobileDiscoveryHeader
-        title="Business Directory"
+        title={t("biz.title1") + " " + t("biz.title2")}
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search business..."
+        searchPlaceholder={t("biz.mobile.search_placeholder")}
         categories={chipCategories}
         activeCategory={filter}
         onCategoryChange={(id) => setFilter(id as "all" | "verified" | "active")}
@@ -484,7 +486,7 @@ export default function BusinessDirectory() {
             <SelectValue placeholder="Country" />
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All countries</SelectItem>
+            <SelectItem value="all">{t("biz.filter.country")}</SelectItem>
             {COUNTRIES.map((c) => (
               <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
             ))}
@@ -497,7 +499,7 @@ export default function BusinessDirectory() {
               <SelectValue placeholder="Region" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50 max-h-[280px]">
-              <SelectItem value="all">All regions</SelectItem>
+              <SelectItem value="all">{t("biz.filter.region")}</SelectItem>
               {regionOptions.map((r) => (
                 <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
               ))}
@@ -542,11 +544,11 @@ export default function BusinessDirectory() {
               >
                 <Crown className="h-4 w-4" style={{ color: C_GOLD }} />
               </motion.span>
-              <span className="text-xs font-bold text-muted-foreground tracking-wide uppercase">Games and contests platform</span>
+              <span className="text-xs font-bold text-muted-foreground tracking-wide uppercase">{t("biz.platform_badge")}</span>
             </motion.div>
 
             <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight mb-5 leading-[1.05]">
-              {TITLE_WORDS.map((word, wi) => (
+              {[t("biz.title1"), t("biz.title2")].map((word, wi) => (
                 <motion.span
                   key={wi}
                   className="text-shimmer inline-block mr-[0.3em]"
@@ -569,7 +571,7 @@ export default function BusinessDirectory() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...SPRING, delay: 0.5 }}
             >
-              Discover businesses creating amazing experiences with raffles, contests, live games and much more
+              {t("biz.subtitle")}
             </motion.p>
 
             <motion.div
@@ -585,7 +587,7 @@ export default function BusinessDirectory() {
                 <div className="relative">
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors" style={{ color: searchFocused ? C_PRIMARY : undefined }} />
                   <Input
-                    placeholder="Search businesses by name..."
+                    placeholder={t("biz.search_placeholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
@@ -598,7 +600,7 @@ export default function BusinessDirectory() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Search
+                    {t("biz.search_btn")}
                   </motion.div>
                 </div>
               </div>
@@ -631,7 +633,7 @@ export default function BusinessDirectory() {
                     whileTap={{ scale: 0.96 }}
                   >
                     <Sparkles className="h-5 w-5" />
-                    <span>Create your first contest for free</span>
+                    <span>{t("biz.cta.hero_btn")}</span>
                     <ArrowRight className="h-4 w-4" />
                   </motion.button>
                 </Link>
@@ -689,7 +691,7 @@ export default function BusinessDirectory() {
               <SelectValue placeholder="Country" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">All countries</SelectItem>
+              <SelectItem value="all">{t("biz.filter.country")}</SelectItem>
               {COUNTRIES.map((c) => (
                 <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
               ))}
@@ -703,7 +705,7 @@ export default function BusinessDirectory() {
                 <SelectValue placeholder="Region" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50 max-h-[300px]">
-                <SelectItem value="all">All regions</SelectItem>
+                <SelectItem value="all">{t("biz.filter.region")}</SelectItem>
                 {regionOptions.map((r) => (
                   <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                 ))}
@@ -714,7 +716,7 @@ export default function BusinessDirectory() {
           <div className="flex-1" />
 
           <span className="text-xs text-muted-foreground/50 font-medium">
-            {filtered.length} {filtered.length === 1 ? "business" : "businesses"}
+            {filtered.length} {filtered.length === 1 ? t("biz.pagination.business_one") : t("biz.pagination.business_many")}
           </span>
 
           <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -786,7 +788,7 @@ export default function BusinessDirectory() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              No businesses found
+              {t("biz.empty.title")}
             </motion.p>
             <motion.p
               className="text-sm text-muted-foreground/50"
@@ -794,7 +796,7 @@ export default function BusinessDirectory() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              Try a different search or change the filter
+              {t("biz.empty.desc")}
             </motion.p>
           </div>
         ) : (
@@ -893,16 +895,16 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                                   {b.is_verified ? (
                                     <span className="dirv2-badge" style={{ "--badge-bg": C_GOLD + "15", "--badge-color": C_GOLD, "--badge-border": C_GOLD + "25" } as React.CSSProperties}>
-                                      <Shield className="h-3 w-3" /> Verified
+                                      <Shield className="h-3 w-3" /> {t("biz.card.verified")}
                                     </span>
                                   ) : (
                                     <span className="dirv2-badge" style={{ "--badge-bg": "rgba(255,255,255,0.04)", "--badge-color": "hsl(var(--muted-foreground))", "--badge-border": "rgba(255,255,255,0.06)" } as React.CSSProperties}>
-                                      <Building2 className="h-3 w-3" /> Business
+                                      <Building2 className="h-3 w-3" /> {t("biz.card.business")}
                                     </span>
                                   )}
                                   {total > 0 && (
                                     <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
+                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? t("biz.activity_one") : t("biz.activity_many")}
                                     </span>
                                   )}
                                 </div>
@@ -914,7 +916,7 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2.5">
                                   <ActivityRing value={b.raffle_count} max={maxActivities} color={C_ACCENT} size={38} />
                                   <div>
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Raffles</p>
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{t("biz.card.raffles_label")}</p>
                                     <p className="text-base font-black font-display" style={{ color: C_ACCENT }}>{b.raffle_count}</p>
                                   </div>
                                 </div>
@@ -923,7 +925,7 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2.5">
                                   <ActivityRing value={b.contest_count} max={maxActivities} color={C_PRIMARY} size={38} />
                                   <div>
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Contests</p>
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{t("biz.card.contests_label")}</p>
                                     <p className="text-base font-black font-display" style={{ color: C_PRIMARY }}>{b.contest_count}</p>
                                   </div>
                                 </div>
@@ -932,10 +934,10 @@ export default function BusinessDirectory() {
 
                             <div className="dirv2-card-footer">
                               <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: C_PRIMARY }}>
-                                View profile <ChevronRight className="h-3 w-3" />
+                                {t("biz.card.view_profile")} <ChevronRight className="h-3 w-3" />
                               </span>
                               <span className="text-[10px] text-muted-foreground/30 font-medium">
-                                <Eye className="h-3 w-3 inline mr-1" />Verified: {b.is_verified ? "Yes" : "No"}
+                                <Eye className="h-3 w-3 inline mr-1" />{t("biz.card.verified_status", { status: b.is_verified ? t("biz.card.yes") : t("biz.card.no") })}
                               </span>
                             </div>
                           </div>
@@ -988,7 +990,7 @@ export default function BusinessDirectory() {
                               {b.is_verified && <CheckCircle className="h-4 w-4 shrink-0" style={{ color: C_GOLD }} />}
                               {total > 0 && (
                                 <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
+                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? t("biz.activity_one") : t("biz.activity_many")}
                                 </span>
                               )}
                             </div>
@@ -1000,14 +1002,14 @@ export default function BusinessDirectory() {
                             <div className="flex items-center gap-2">
                               <ActivityRing value={b.raffle_count} max={maxActivities} color={C_ACCENT} size={36} />
                               <div>
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Raffles</p>
+                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">{t("biz.card.raffles_label")}</p>
                                 <p className="text-sm font-black" style={{ color: C_ACCENT }}>{b.raffle_count}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <ActivityRing value={b.contest_count} max={maxActivities} color={C_PRIMARY} size={36} />
                               <div>
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Contests</p>
+                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">{t("biz.card.contests_label")}</p>
                                 <p className="text-sm font-black" style={{ color: C_PRIMARY }}>{b.contest_count}</p>
                               </div>
                             </div>
@@ -1037,7 +1039,7 @@ export default function BusinessDirectory() {
                   disabled={currentPage === 1}
                   className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
                 >
-                  Previous
+                  {t("biz.pagination.previous")}
                 </button>
                 {Array.from({ length: pageCount }, (_, i) => i + 1)
                   .filter((n) => n === 1 || n === pageCount || Math.abs(n - currentPage) <= 1)
@@ -1065,10 +1067,10 @@ export default function BusinessDirectory() {
                   disabled={currentPage === pageCount}
                   className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
                 >
-                  Next
+                  {t("biz.pagination.next")}
                 </button>
                 <span className="w-full text-center text-[11px] text-muted-foreground/60 mt-1">
-                  Page {currentPage} of {pageCount} · {filtered.length} businesses
+                  {t("biz.pagination.page", { current: String(currentPage), total: String(pageCount) })} · {filtered.length} {filtered.length === 1 ? t("biz.pagination.business_one") : t("biz.pagination.business_many")}
                 </span>
               </nav>
             )}
@@ -1090,10 +1092,10 @@ export default function BusinessDirectory() {
                         >
                           <Sparkles className="h-5 w-5" style={{ color: C_GOLD }} />
                         </motion.span>
-                        Is your business not here yet?
+                        {t("biz.cta.title")}
                       </h2>
                       <p className="text-sm text-muted-foreground/70 max-w-md">
-                        Join hundreds of businesses already using the platform to run contests and reach thousands of participants. Your first contest is completely free.
+                        {t("biz.cta.desc")}
                       </p>
                     </div>
                     <Link to="/register">
@@ -1104,7 +1106,7 @@ export default function BusinessDirectory() {
                         whileTap={{ scale: 0.96 }}
                       >
                         <Rocket className="h-4 w-4" />
-                        <span>Get started now</span>
+                        <span>{t("biz.cta.btn")}</span>
                         <ArrowRight className="h-4 w-4" />
                       </motion.button>
                     </Link>

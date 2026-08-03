@@ -112,6 +112,7 @@ const CTASection = () => (
     ))}
 
     <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/40 to-background" />
+    <div className="gaming-grid-overlay opacity-50" />
 
     {/* Celebration rays background */}
     <div className="celebration-rays opacity-30" />
@@ -167,10 +168,10 @@ const CTASection = () => (
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4 mb-16">
           <Link to="/marketplace">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={SPRING_BOUNCE}>
-              <span className="group relative inline-flex items-center gap-2.5 rounded-xl px-10 py-4 text-lg font-semibold text-white transition-all duration-300 hover:shadow-xl" style={{ background: "var(--gradient-premium, linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))))", boxShadow: "0 4px 30px hsl(var(--accent) / 0.3), 0 0 0 1px hsl(var(--accent) / 0.1)" }}>
-                <Gift className="h-5 w-5" />
+              <span className="group relative inline-flex items-center gap-2.5 rounded-xl px-10 py-4 text-lg font-semibold text-white transition-all duration-300 hover:shadow-xl gradient-border-animated" style={{ background: "var(--gradient-premium, linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))))", boxShadow: "0 4px 30px hsl(var(--accent) / 0.3), 0 0 0 1px hsl(var(--accent) / 0.1)" }}>
+                <span className="relative z-10 flex items-center gap-2.5"><Gift className="h-5 w-5" />
                 Ver sorteios abertos
-                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1.5" />
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1.5" /></span>
               </span>
             </motion.div>
           </Link>
@@ -199,7 +200,7 @@ const CTASection = () => (
                 custom={i}
                 variants={badgeVariants}
                 whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg"
+                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg neon-border shine-card"
               >
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className={"relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br " + badge.color}>

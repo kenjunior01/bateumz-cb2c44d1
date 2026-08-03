@@ -24,18 +24,10 @@ import bateuLogo from "@/assets/bateu-logo.png";
 const ANNOUNCEMENT_KEY = "bateu_navbar_announcement_dismissed";
 type Announcement = {
   id: string;
-  emoji: string;
+  emoji: "\ud83d\udd25",
   text: string;
   cta: { label: string; href: string };
   gradient: string;
-};
-
-const currentAnnouncement: Announcement | null = {
-  id: "live-may2025",
-  emoji: "🔥",
-  text: "Lives happening now — join and win real-time prizes!",
-  cta: { label: "Join Now", href: "/lives-agora" },
-  gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
 };
 
 type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string; live?: boolean; trending?: boolean };
@@ -53,6 +45,14 @@ const Navbar = () => {
   const navRef = useRef<HTMLDivElement>(null);
   const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
+
+  const currentAnnouncement: Announcement | null = {
+    id: "live-may2025",
+    emoji: "\ud83d\udd25",
+    text: t("nav.announcement.text"),
+    cta: { label: t("nav.announcement.cta"), href: "/lives-agora" },
+    gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
+  };
   const { format } = useCurrency();
   const location = useLocation();
 

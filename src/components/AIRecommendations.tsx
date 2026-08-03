@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, Gift } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { formatMZN } from "@/lib/currency";
 
 interface Raffle {
@@ -19,6 +20,7 @@ interface Raffle {
 
 const AIRecommendations = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<Raffle[]>([]);
 
@@ -61,10 +63,11 @@ const AIRecommendations = () => {
       .order("sold_tickets", { ascending: false })
       .limit(20);
 
-    if (rafflesError || !raffles) {
-      console.error("Error loading recommendations:", rafflesError);
+    if (rafflesError) {
+      console.warn("Raffles fetch skipped:", rafflesError.message);
       return;
     }
+    if (!raffles) return;
 
     // Score & sort by relevance
     const scored = raffles.map((r) => {
@@ -88,9 +91,9 @@ const AIRecommendations = () => {
           <Sparkles className="h-4 w-4 text-primary" />
         </div>
         <h3 className="font-display text-sm font-bold text-foreground">
-          {user ? "Recommended for You" : "Featured Raffles"}
+          {user ? t("ai.recommended") : t("ai.featured")}
         </h3>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium ml-1">IA</span>
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium ml-1">{t("ai.badge")}</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -107,7 +110,9 @@ const AIRecommendations = () => {
               {r.image_url ? (
                 <img src={r.image_url} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl">🎁</div>
+                <div className="w-full h-full flex items-center justify-center text-2xl">
+                  <Gift className="h-8 w-8 text-muted-foreground/30" />
+                </div>
               )}
               <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold">
                 {Math.round((r.sold_tickets / Math.max(r.total_tickets, 1)) * 100)}%

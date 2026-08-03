@@ -293,6 +293,22 @@ const Index = () => {
 
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background pointer-events-none" />
 
+        <div className="absolute top-20 right-[10%] text-4xl opacity-[0.07] animate-float-sticker pointer-events-none select-none hidden lg:block" style={{ "--sticker-float": "-14px", "--sticker-rot-start": "-6deg", "--sticker-rot-end": "4deg" } as React.CSSProperties}>
+          🎰
+        </div>
+        <div className="absolute top-40 left-[8%] text-3xl opacity-[0.06] animate-float-sticker pointer-events-none select-none hidden lg:block" style={{ "--sticker-float": "-10px", "--sticker-rot-start": "4deg", "--sticker-rot-end": "-6deg", animationDelay: "1.2s" } as React.CSSProperties}>
+          🎯
+        </div>
+        <div className="absolute bottom-32 right-[15%] text-5xl opacity-[0.05] animate-float-sticker pointer-events-none select-none hidden lg:block" style={{ "--sticker-float": "-16px", "--sticker-rot-start": "-3deg", "--sticker-rot-end": "5deg", animationDelay: "2.5s" } as React.CSSProperties}>
+          🏆
+        </div>
+        <div className="absolute top-60 right-[30%] text-2xl opacity-[0.06] animate-float-sticker pointer-events-none select-none hidden xl:block" style={{ "--sticker-float": "-8px", "--sticker-rot-start": "5deg", "--sticker-rot-end": "-3deg", animationDelay: "0.8s" } as React.CSSProperties}>
+          ⚡
+        </div>
+        <div className="absolute bottom-48 left-[20%] text-3xl opacity-[0.05] animate-float-sticker pointer-events-none select-none hidden xl:block" style={{ "--sticker-float": "-12px", "--sticker-rot-start": "-4deg", "--sticker-rot-end": "6deg", animationDelay: "3s" } as React.CSSProperties}>
+          🎮
+        </div>
+
         <motion.div
           style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
           className="relative container mx-auto px-4 pt-8 pb-16 lg:pt-12 lg:pb-24"
@@ -370,7 +386,7 @@ const Index = () => {
               >
                 <Link to="/jogos">
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={SPRING_BOUNCE}>
-                    <Button size="lg" className="btn-premium gap-2.5 text-sm font-bold glow-primary px-7 py-6 text-base">
+                    <Button size="lg" className="btn-premium btn-magic gap-2.5 text-sm font-bold glow-primary px-7 py-6 text-base">
                       <Gamepad2 className="h-5 w-5" />
                       Explorar Jogos
                     </Button>

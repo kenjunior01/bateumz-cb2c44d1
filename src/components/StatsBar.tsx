@@ -90,26 +90,13 @@ const StatsBar = () => {
 
   return (
     <section className="relative overflow-hidden py-16 md:py-20">
-      <div
-        className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-amber-500/10"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute inset-0"
-        style={{
-          backdropFilter: "blur(40px) saturate(1.5)",
-          WebkitBackdropFilter: "blur(40px) saturate(1.5)",
-          backgroundColor: "rgba(255, 255, 255, 0.6)",
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "radial-gradient(circle at 25% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 50%), radial-gradient(circle at 75% 50%, rgba(236, 72, 153, 0.06) 0%, transparent 50%)",
-        }}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/3 to-violet-500/5" aria-hidden="true" />
+      <div className="absolute inset-0 opacity-[0.02]" style={{
+        backgroundImage: "radial-gradient(circle at 20% 50%, var(--region-primary, hsl(var(--primary))) 1px, transparent 1px), radial-gradient(circle at 80% 50%, var(--region-secondary, hsl(var(--accent))) 1px, transparent 1px)",
+        backgroundSize: "60px 60px, 40px 40px",
+      }} aria-hidden="true" />
+      <div className="absolute left-1/4 top-0 h-64 w-64 rounded-full blur-[140px] pointer-events-none" style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 8%, transparent)" }} aria-hidden="true" />
+      <div className="absolute right-1/4 bottom-0 h-64 w-64 rounded-full blur-[140px] pointer-events-none" style={{ background: "color-mix(in srgb, var(--region-secondary, hsl(var(--accent))) 6%, transparent)" }} aria-hidden="true" />
 
       <div ref={containerRef} className="container relative mx-auto px-4 sm:px-6">
         <motion.div
@@ -173,18 +160,18 @@ function StatCard({ stat, index, isInView }: StatCardProps) {
       className="group relative"
     >
       <div
-        className="relative overflow-hidden rounded-2xl border border-white/30 p-5 shadow-lg transition-shadow duration-300 group-hover:shadow-xl md:p-6"
+        className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-5 shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/20 md:p-6"
         style={{
-          background: "linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.35) 100%)",
-          backdropFilter: "blur(20px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(20px) saturate(1.8)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255,255,255,0.6)",
+          background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+          backdropFilter: "blur(20px) saturate(1.5)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.5)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
           style={{
-            background: "linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(236, 72, 153, 0.06) 50%, rgba(245, 158, 11, 0.04) 100%)",
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 8%, transparent) 0%, color-mix(in srgb, var(--region-accent, hsl(var(--accent))) 6%, transparent) 100%)",
           }}
         />
 
@@ -243,7 +230,7 @@ function StatCard({ stat, index, isInView }: StatCardProps) {
       <div
         className="absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{
-          background: "linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(236, 72, 153, 0.3), rgba(245, 158, 11, 0.2))",
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 25%, transparent), color-mix(in srgb, var(--region-accent, hsl(var(--accent))) 20%, transparent), color-mix(in srgb, var(--region-secondary, hsl(var(--secondary))) 15%, transparent))",
           zIndex: -1,
           filter: "blur(1px)",
         }}

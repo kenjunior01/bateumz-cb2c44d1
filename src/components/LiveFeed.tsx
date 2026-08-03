@@ -70,9 +70,14 @@ const LiveFeed = () => {
           <span className="text-sm font-semibold text-foreground">Atividade ao Vivo</span>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Ticket className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">The first raffles are about to start!</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Activity will appear here in real time.</p>
+          <div className="relative mb-3">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/10 flex items-center justify-center">
+              <Ticket className="h-6 w-6 text-primary/60" />
+            </div>
+            <div className="absolute inset-0 rounded-2xl animate-ping-slow opacity-20" style={{ background: "linear-gradient(135deg, var(--region-primary, hsl(var(--primary))), var(--region-accent, hsl(var(--accent))))" }} />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">Os primeiros sorteios estao a caminho!</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">A atividade aparecera aqui em tempo real</p>
         </div>
       </div>
     );

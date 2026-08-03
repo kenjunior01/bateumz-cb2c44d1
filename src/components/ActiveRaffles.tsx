@@ -57,7 +57,7 @@ const RaffleCard = ({ raffle, index }: { raffle: Raffle; index: number }) => {
       transition={{ delay: index * 0.05 }}
     >
       <Link to={getRaffleUrl(raffle)} className="block group">
-        <div className="rounded-2xl border border-border bg-card transition-all hover:border-primary/40 overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover-lift hover-glow overflow-hidden">
           <div className="relative aspect-[4/3] overflow-hidden">
             {raffle.image_url ? (
               <OptimizedImage
@@ -91,7 +91,7 @@ const RaffleCard = ({ raffle, index }: { raffle: Raffle; index: number }) => {
                   whileInView={{ width: `${pct}%` }}
                   viewport={{ once: true }}
                   transition={{ duration: 1, delay: 0.1 }}
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent progress-glow"
                 />
               </div>
             </div>
@@ -194,8 +194,28 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
   if (loading) {
     return (
       <section className="py-8">
-        <div className="flex justify-center py-12">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="flex flex-col items-center justify-center py-12">
+          <motion.div
+            className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/10 flex items-center justify-center mb-3"
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+          >
+            <Ticket className="h-6 w-6 text-primary" />
+          </motion.div>
+          <motion.div
+            className="flex gap-1 mt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-primary"
+                animate={{ y: [0, -8, 0], opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+              />
+            ))}
+          </motion.div>
         </div>
       </section>
     );
@@ -227,12 +247,27 @@ const ActiveRaffles = ({ categoryFilter, country, region }: ActiveRafflesProps) 
 
       {!hasResults ? (
         <div className="text-center py-16">
-          <Ticket className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">
+          <div className="relative inline-block mb-4">
+            <motion.div
+              className="h-20 w-20 rounded-3xl bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center mx-auto"
+              animate={{ rotate: [0, 5, -5, 0], y: [0, -6, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Ticket className="h-10 w-10 text-primary/30" />
+            </motion.div>
+            <motion.div
+              className="absolute inset-0 rounded-3xl"
+              animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0, 0.15] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              style={{ border: "1.5px solid", borderColor: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 15%, transparent)" }}
+            />
+          </div>
+          <p className="text-muted-foreground font-medium">
             {categoryFilter && categoryFilter !== "todos"
               ? "Nenhum sorteio nesta categoria"
               : "Nenhum sorteio ativo de momento"}
           </p>
+          <p className="text-xs text-muted-foreground/50 mt-2">Novos sorteios sao adicionados regularmente</p>
         </div>
       ) : (
         <>

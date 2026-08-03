@@ -1530,6 +1530,45 @@ export type Database = {
           },
         ]
       }
+      password_reset_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          error_message: string | null
+          id: string
+          ip_hint: string | null
+          link_type: string | null
+          metadata: Json
+          reason: string | null
+          stage: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          error_message?: string | null
+          id?: string
+          ip_hint?: string | null
+          link_type?: string | null
+          metadata?: Json
+          reason?: string | null
+          stage: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          error_message?: string | null
+          id?: string
+          ip_hint?: string | null
+          link_type?: string | null
+          metadata?: Json
+          reason?: string | null
+          stage?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           id: string

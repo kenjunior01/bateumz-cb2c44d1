@@ -149,11 +149,7 @@ export default function Register() {
 
       if (refCode) {
         try {
-          const { data: referrerProfile } = await supabase
-            .from("profiles_public")
-            .select("user_id")
-            .eq("referral_code", refCode)
-            .single();
+          const { data: referrerProfile } = await supabase.rpc("resolve_referral_code", { _code: refCode });
           if (referrerProfile) {
             localStorage.setItem("sortex_ref", refCode);
           }

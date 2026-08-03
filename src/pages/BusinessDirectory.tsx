@@ -1090,10 +1090,10 @@ export default function BusinessDirectory() {
                         >
                           <Sparkles className="h-5 w-5" style={{ color: C_GOLD }} />
                         </motion.span>
-                        A sua empresa ainda nao esta aqui?
+                        Is your business not here yet?
                       </h2>
                       <p className="text-sm text-muted-foreground/70 max-w-md">
-                        Junte-se a centenas de empresas que ja usam a plataforma para criar concursos e atrair milhares de participantes. O primeiro concurso e completamente gratis.
+                        Join hundreds of businesses already using the platform to run contests and reach thousands of participants. Your first contest is completely free.
                       </p>
                     </div>
                     <Link to="/register">
@@ -1104,7 +1104,7 @@ export default function BusinessDirectory() {
                         whileTap={{ scale: 0.96 }}
                       >
                         <Rocket className="h-4 w-4" />
-                        <span>Comecar Agora</span>
+                        <span>Get started now</span>
                         <ArrowRight className="h-4 w-4" />
                       </motion.button>
                     </Link>

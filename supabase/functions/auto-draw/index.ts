@@ -35,16 +35,16 @@ async function isAuthorized(req: Request): Promise<boolean> {
   
   // Check if user is superadmin or admin using is_superadmin function
   const adminSupabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: isSuperAdmin, error: funcError } = await adminSupabase.rpc("is_superadmin", { user_id: user.id });
+  const { data: isSuperAdmin, error: funcError } = await adminSupabase.rpc("is_superadmin", { _user_id: user.id });
   
   if (funcError) {
     return false;
   }
   
   // Also check if user is an admin
-  const { data: profile } = await adminSupabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: isAdmin } = await adminSupabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
   
-  return isSuperAdmin || profile?.role === "admin" || profile?.role === "superadmin";
+  return Boolean(isSuperAdmin || isAdmin);
 }
 
 Deno.serve(async (req) => {

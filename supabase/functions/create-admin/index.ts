@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const { data: isSuperAdmin } = await supabase.rpc("is_superadmin", { user_id: user.id });
+  const { data: isSuperAdmin } = await supabase.rpc("is_superadmin", { _user_id: user.id });
   if (!isSuperAdmin) {
     return new Response(JSON.stringify({ error: "Forbidden: superadmin only" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },

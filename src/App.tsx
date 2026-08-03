@@ -123,6 +123,7 @@ import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
 import MobileMenuDrawer from "./components/mobile/MobileMenuDrawer.tsx";
 import { MobileNavProvider } from "./contexts/MobileNavigationContext.tsx";
+import RecentPagesTracker from "./components/mobile/RecentPagesTracker.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
 import Wallet from "./pages/Wallet.tsx";
 import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
@@ -352,6 +353,7 @@ const AppContent = () => {
             <MobileTopBar />
             <MobileMenuDrawer />
             <BottomTabBar />
+            <RecentPagesTracker />
           </MobileNavProvider>
         </>}
         <AnimatedRoutes />

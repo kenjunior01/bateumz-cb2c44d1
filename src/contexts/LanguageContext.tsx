@@ -146,6 +146,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "Spin Wheel",
     "mob.languages": "Languages",
     "mob.terms": "Terms",
+    "mob.recent": "Recent",
+    "mob.favorites": "Favorites",
+    "mob.hide": "Hide",
+    "mob.recent": "Recent",
+    "mob.favorites": "Favorites",
+    "mob.hide": "Hide",
 
     // FAB Mega-menu
     "fab.quickAccess": "Quick access",
@@ -968,6 +974,9 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "Roleta",
     "mob.languages": "Idiomas",
     "mob.terms": "Termos",
+    "mob.recent": "Recentes",
+    "mob.favorites": "Favoritos",
+    "mob.hide": "Ocultar",
 
     // ===== FAB Mega-menu =====
     "fab.quickAccess": "Acesso rápido",
@@ -1546,6 +1555,9 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "Roleta",
     "mob.languages": "Idiomas",
     "mob.terms": "Termos",
+    "mob.recent": "Recentes",
+    "mob.favorites": "Favoritos",
+    "mob.hide": "Ocultar",
 
     // ===== FAB Mega-menu =====
     "fab.quickAccess": "Acesso rápido",
@@ -2220,6 +2232,9 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "Ruleta",
     "mob.languages": "Idiomas",
     "mob.terms": "Términos",
+    "mob.recent": "Recientes",
+    "mob.favorites": "Favoritos",
+    "mob.hide": "Ocultar",
 
     // ===== FAB Mega-menu =====
     "fab.quickAccess": "Acceso rápido",
@@ -2896,6 +2911,9 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "Roue",
     "mob.languages": "Langues",
     "mob.terms": "Conditions",
+    "mob.recent": "Récents",
+    "mob.favorites": "Favoris",
+    "mob.hide": "Masquer",
 
     // ===== FAB Mega-menu =====
     "fab.quickAccess": "Accès rapide",
@@ -3539,6 +3557,9 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.spinWheel": "स्पिन व्हील",
     "mob.languages": "भाषाएं",
     "mob.terms": "शर्तें",
+    "mob.recent": "हाल के",
+    "mob.favorites": "पसंदीदा",
+    "mob.hide": "छुपाएं",
 
     // ===== FAB Mega-menu =====
     "fab.quickAccess": "त्वरित पहुंच",

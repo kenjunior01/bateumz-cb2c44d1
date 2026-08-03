@@ -45,23 +45,23 @@ export const createScheduledLive = async (input: {
 }): Promise<ScheduledLive> => {
   const slugBase = SLUG_FALLBACK(input.title);
   const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
+  const insertData: any = {
+    business_user_id: input.business_user_id,
+    title: input.title,
+    description: input.description || null,
+    cover_url: input.cover_url || null,
+    source_type: input.source_type,
+    live_code: input.source_type === "internal" ? (input.live_code || null) : null,
+    external_url: input.source_type === "external" ? (input.external_url || null) : null,
+    external_platform: input.source_type === "external" ? (input.external_platform || "other") : null,
+    scheduled_at: input.scheduled_at,
+    ends_at: input.ends_at || null,
+    status: "scheduled",
+    slug,
+  };
   const { data, error } = await supabase
     .from("scheduled_lives")
-    .insert({
-      business_user_id: input.business_user_id,
-      title: input.title,
-      description: input.description || null,
-      cover_url: input.cover_url || null,
-      source_type: input.source_type,
-      live_code: input.source_type === "internal" ? (input.live_code || null) : null,
-      external_url: input.source_type === "external" ? (input.external_url || null) : null,
-      external_platform: input.source_type === "external" ? (input.external_platform || "other") : null,
-      scheduled_at: input.scheduled_at,
-      ends_at: input.ends_at || null,
-      template_id: input.template_id || null,
-      status: "scheduled",
-      slug,
-    })
+    .insert(insertData)
     .select("*")
     .single();
   if (error) throw error;

@@ -77,10 +77,36 @@ const getBranding = async (code: string): Promise<OverlayBranding> => {
     if (!userId) {
       const { data: liveSession } = await sb
         .from('live_sessions')
-        .select('business_user_id')
+        .select('user_id')
         .eq('live_code', code)
         .single();
-      userId = (liveSession as any)?.business_user_id;
+      userId = (liveSession as any)?.user_id;
+    }
+
+    // Also try loading template-specific branding if template param exists
+    const urlParams = new URLSearchParams(window.location.search);
+    const templateId = urlParams.get('template');
+    if (templateId) {
+      const { data: tpl } = await sb
+        .from('live_templates')
+        .select('branding')
+        .eq('id', templateId)
+        .single();
+      if (tpl?.branding) {
+        const b = tpl.branding as any;
+        return {
+          companyName: b.companyName || undefined,
+          companySlogan: b.companySlogan || undefined,
+          companyLogoUrl: b.companyLogoUrl || undefined,
+          primaryColor: b.primaryColor || DEFAULT_BRANDING.primaryColor,
+          secondaryColor: b.secondaryColor || DEFAULT_BRANDING.secondaryColor,
+          accentColor: b.accentColor || DEFAULT_BRANDING.accentColor,
+          backgroundColor: 'transparent',
+          textColor: b.textColor || DEFAULT_BRANDING.textColor,
+          backgroundImageUrl: b.backgroundImageUrl || undefined,
+          overlayStyle: (b.overlayStyle as OverlayStyle) || 'neon',
+        };
+      }
     }
     
     if (userId) {
@@ -452,8 +478,8 @@ const OverlayPro = () => {
       50% { text-shadow: 0 0 16px ${pc}CC, 0 0 32px ${pc}60, 0 0 48px ${pc}30; }
     }
     @keyframes borderGlow {
-      0%, 100% { border-color: ${pc}40; }
-      50% { border-color: ${pc}AA; }
+      0%, 100% { box-shadow: 0 0 8px ${pc}30, inset 0 0 8px ${pc}10; }
+      50% { box-shadow: 0 0 20px ${pc}60, 0 0 40px ${pc}30, inset 0 0 12px ${pc}20; }
     }
     @keyframes shimmer {
       0% { background-position: -200% center; }

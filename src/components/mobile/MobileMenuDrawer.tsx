@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Zap, Star, ChevronRight, Trophy, Ticket, Sparkles, Building2, Users,
   MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen,
-  Gift, Store, Gamepad2, Bell, Search, Flame, Wallet,
-  BadgeCheck, LogOut, Settings, User, X, Home, Layers,
-  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield
+  Gift, Store, Gamepad2, Bell, Search, Flame, Wallet, Clock, Heart,
+  BadgeCheck, LogOut, Settings, User, X, Home, Layers, TrendingUp,
+  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -122,6 +122,45 @@ const itemVariants: Variants = {
   exit: { opacity: 0, y: 8, scale: 0.97, transition: { duration: 0.15 } },
 };
 
+const RECENT_PAGES_KEY = "bateu_recent_pages";
+const FAVORITES_KEY = "bateu_menu_favorites";
+const MAX_RECENT = 6;
+
+function trackPageVisit(path: string) {
+  if (path === "/") return;
+  try {
+    const raw = sessionStorage.getItem(RECENT_PAGES_KEY);
+    const pages: string[] = raw ? JSON.parse(raw) : [];
+    const filtered = pages.filter((p) => p !== path);
+    filtered.unshift(path);
+    sessionStorage.setItem(RECENT_PAGES_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT)));
+  } catch { /* noop */ }
+}
+
+export function useTrackRecentPages() {
+  const location = useLocation();
+  useEffect(() => { trackPageVisit(location.pathname); }, [location.pathname]);
+}
+
+const ROUTE_META: Record<string, { icon: typeof Home; labelKey: string; grad: string }> = {
+  "/marketplace": { icon: Store, labelKey: "menu.marketplace", grad: "from-primary to-accent" },
+  "/concursos": { icon: Trophy, labelKey: "menu.contests", grad: "from-amber-500 to-orange-500" },
+  "/jogos": { icon: Gamepad2, labelKey: "menu.games", grad: "from-purple-500 to-violet-600" },
+  "/lives": { icon: Radio, labelKey: "menu.liveHub", grad: "from-red-500 to-pink-500" },
+  "/lives-agora": { icon: Radio, labelKey: "mob.liveNow", grad: "from-red-500 to-rose-600" },
+  "/blog": { icon: Newspaper, labelKey: "menu.blog", grad: "from-slate-500 to-slate-600" },
+  "/empresas": { icon: Building2, labelKey: "menu.directory", grad: "from-blue-500 to-cyan-500" },
+  "/community": { icon: MessageCircle, labelKey: "menu.hub", grad: "from-sky-500 to-indigo-500" },
+  "/wallet": { icon: Wallet, labelKey: "tab.wallet", grad: "from-emerald-500 to-teal-500" },
+  "/my-tickets": { icon: Ticket, labelKey: "menu.myTickets", grad: "from-emerald-500 to-teal-500" },
+  "/my-points": { icon: Star, labelKey: "menu.points", grad: "from-amber-500 to-orange-500" },
+  "/instant-win": { icon: Sparkles, labelKey: "menu.instantWin", grad: "from-violet-500 to-fuchsia-500" },
+  "/tournaments": { icon: Target, labelKey: "tournament.title", grad: "from-emerald-500 to-teal-600" },
+  "/referral": { icon: Users, labelKey: "menu.referral", grad: "from-fuchsia-500 to-pink-500" },
+  "/historico": { icon: History, labelKey: "menu.winners", grad: "from-amber-500 to-yellow-500" },
+  "/prestacoes/catalogo": { icon: CreditCard, labelKey: "menu.installments", grad: "from-rose-500 to-pink-500" },
+};
+
 export default function MobileMenuDrawer() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -136,6 +175,11 @@ export default function MobileMenuDrawer() {
   const [liveCount, setLiveCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [unread, setUnread] = useState(0);
+  const [recentPages, setRecentPages] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]")); } catch { return new Set(); }
+  });
+  const [showRecents, setShowRecents] = useState(true);
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname, setMenuOpen]);
 
@@ -173,6 +217,22 @@ export default function MobileMenuDrawer() {
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [user]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(RECENT_PAGES_KEY);
+      if (raw) setRecentPages(JSON.parse(raw));
+    } catch { /* noop */ }
+  }, [menuOpen]);
+
+  const toggleFavorite = useCallback((path: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path); else next.add(path);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
 
   const toggleGroup = (titleKey: string) => {
     setExpandedGroups((prev) => ({ ...prev, [titleKey]: !prev[titleKey] }));
@@ -289,6 +349,66 @@ export default function MobileMenuDrawer() {
                       <span className="text-sm text-muted-foreground flex-1">{t("mob.searchPlaceholder")}</span>
                     </button>
                   </motion.div>
+
+                  {recentPages.length > 0 && showRecents && (
+                    <motion.div variants={itemVariants}>
+                      <div className="flex items-center justify-between px-3 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{t("mob.recent")}</span>
+                        </div>
+                        <button onClick={() => setShowRecents(false)} className="text-[10px] text-muted-foreground">{t("mob.hide")}</button>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1 mob-menu-scroll">
+                        {recentPages.filter((p) => ROUTE_META[p]).map((path) => {
+                          const meta = ROUTE_META[path];
+                          return (
+                            <button
+                              key={path}
+                              onClick={() => goOrAuth(path)}
+                              className="mob-recent-chip group flex items-center gap-1.5 shrink-0 rounded-full bg-card/80 border border-border/40 px-3 py-2"
+                            >
+                              <meta.icon className="h-3.5 w-3.5 text-primary" strokeWidth={2} />
+                              <span className="text-[11px] font-semibold">{t(meta.labelKey)}</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleFavorite(path); }}
+                                className={"h-4 w-4 flex items-center justify-center " + (favorites.has(path) ? "text-accent" : "text-muted-foreground/30")}
+                              >
+                                <Heart className={"h-3 w-3 " + (favorites.has(path) ? "fill-accent" : "")} />
+                              </button>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {favorites.size > 0 && (
+                    <motion.div variants={itemVariants}>
+                      <div className="flex items-center gap-1.5 px-3 mb-1.5">
+                        <Heart className="h-3 w-3 text-accent" />
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{t("mob.favorites")}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[...favorites].filter((p) => ROUTE_META[p]).map((path) => {
+                          const meta = ROUTE_META[path];
+                          return (
+                            <button
+                              key={path}
+                              whileTap={{ scale: 0.92 }}
+                              onClick={() => goOrAuth(path)}
+                              className="mob-menu-item group flex flex-col items-center gap-1.5 rounded-2xl bg-card/80 border border-accent/20 p-2.5 backdrop-blur-sm"
+                            >
+                              <div className={"flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br " + meta.grad + " shadow-md group-active:scale-90 transition-transform"}>
+                                <meta.icon className="h-5 w-5 text-white" strokeWidth={1.8} />
+                              </div>
+                              <span className="text-[10.5px] font-semibold leading-tight text-center line-clamp-2 px-0.5">{t(meta.labelKey)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
 
                   {!user && (
                     <motion.div variants={itemVariants}>

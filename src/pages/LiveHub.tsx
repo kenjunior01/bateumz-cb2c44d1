@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, Component, type ReactNode } from "react";
+import { useEffect, useRef, useState, Component, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -6,71 +6,72 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomTabBar from "@/components/BottomTabBar";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
-import TapBattle from "@/components/livegames/TapBattle";
-import QuizBattle from "@/components/livegames/QuizBattle";
-import MysteryBox from "@/components/livegames/MysteryBox";
-import KeywordHunt from "@/components/livegames/KeywordHunt";
-import EmojiBattle from "@/components/livegames/EmojiBattle";
-import PrizeWheel, { DEFAULT_WHEEL_PRIZES, WheelPrize } from "@/components/livegames/PrizeWheel";
-import EnhancedMillionaireGame from "@/components/livegames/EnhancedMillionaireGame";
-import KahootMultiplayerQuiz from "@/components/livegames/KahootMultiplayerQuiz";
-import LiveBingo from "@/components/livegames/LiveBingo";
-import ChallengeRoulette from "@/components/livegames/ChallengeRoulette";
-import VSDuelArena from "@/components/livegames/VSDuelArena";
-import SpeedReaction from "@/components/livegames/SpeedReaction";
-import TruthOrDare from "@/components/livegames/TruthOrDare";
-import MemoryChallenge from "@/components/livegames/MemoryChallenge";
-import PunishmentWheel from "@/components/livegames/PunishmentWheel";
-import BattleOfKnowledge from "@/components/livegames/BattleOfKnowledge";
-import GuessTheEmoji from "@/components/livegames/GuessTheEmoji";
-import QuickDrawChallenge from "@/components/livegames/QuickDrawChallenge";
-import HotPotatoGame from "@/components/livegames/HotPotatoGame";
-import NumberGuessBattle from "@/components/livegames/NumberGuessBattle";
-import ChaosChallenge from "@/components/livegames/ChaosChallenge";
-import CheckersGame from "@/components/livegames/CheckersGame";
-import LudoGame from "@/components/livegames/LudoGame";
-import ConnectFourGame from "@/components/livegames/ConnectFourGame";
-import BattleshipGame from "@/components/livegames/BattleshipGame";
-import TicTacToeVS from "@/components/livegames/TicTacToeVS";
-import UnoCardGame from "@/components/livegames/UnoCardGame";
-import SnakeBattle from "@/components/livegames/SnakeBattle";
-import RockPaperScissors from "@/components/livegames/RockPaperScissors";
-import ColorSequence from "@/components/livegames/ColorSequence";
-import SpaceShooter from "@/components/livegames/SpaceShooter";
-import BallBreaker from "@/components/livegames/BallBreaker";
-import ReactionRace from "@/components/livegames/ReactionRace";
-import QuickMath from "@/components/livegames/QuickMath";
-import MemoryCardsVS from "@/components/livegames/MemoryCardsVS";
-import WordScramble from "@/components/livegames/WordScramble";
-import TicTacToePro from "@/components/livegames/TicTacToePro";
-import GuessNumber100 from "@/components/livegames/GuessNumber100";
-import ColorMatch from "@/components/livegames/ColorMatch";
-import TargetTap from "@/components/livegames/TargetTap";
-import DiceDuel from "@/components/livegames/DiceDuel";
-import PatternMemory from "@/components/livegames/PatternMemory";
-import TriviaFlash from "@/components/livegames/TriviaFlash";
-import Dominoes from "@/components/livegames/Dominoes";
-import MazeRace from "@/components/livegames/MazeRace";
-import SlotsVS from "@/components/livegames/SlotsVS";
-import Match4Grid from "@/components/livegames/Match4Grid";
-import TowerStack from "@/components/livegames/TowerStack";
-import CannonBattle from "@/components/livegames/CannonBattle";
-import SpotDifference from "@/components/livegames/SpotDifference";
-import WordChain from "@/components/livegames/WordChain";
-import NumberTetris from "@/components/livegames/NumberTetris";
-import PongVS from "@/components/livegames/PongVS";
-import WhackAMole from "@/components/livegames/WhackAMole";
-import ColorCatch from "@/components/livegames/ColorCatch";
-import MexericaGame from "@/components/livegames/MexericaGame";
-import ChigogoGame from "@/components/livegames/ChigogoGame";
-import UrusseGame from "@/components/livegames/UrusseGame";
-import CapulanaQuiz from "@/components/livegames/CapulanaQuiz";
-import CarromBoard from "@/components/livegames/CarromBoard";
-import TeenPatti from "@/components/livegames/TeenPatti";
-import KabaddiRaid from "@/components/livegames/KabaddiRaid";
-import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
+const TapBattle = lazy(() => import("@/components/livegames/TapBattle"));
+const QuizBattle = lazy(() => import("@/components/livegames/QuizBattle"));
+const MysteryBox = lazy(() => import("@/components/livegames/MysteryBox"));
+const KeywordHunt = lazy(() => import("@/components/livegames/KeywordHunt"));
+const EmojiBattle = lazy(() => import("@/components/livegames/EmojiBattle"));
+const PrizeWheel = lazy(() => import("@/components/livegames/PrizeWheel"));
+const EnhancedMillionaireGame = lazy(() => import("@/components/livegames/EnhancedMillionaireGame"));
+const KahootMultiplayerQuiz = lazy(() => import("@/components/livegames/KahootMultiplayerQuiz"));
+const LiveBingo = lazy(() => import("@/components/livegames/LiveBingo"));
+const ChallengeRoulette = lazy(() => import("@/components/livegames/ChallengeRoulette"));
+const VSDuelArena = lazy(() => import("@/components/livegames/VSDuelArena"));
+const SpeedReaction = lazy(() => import("@/components/livegames/SpeedReaction"));
+const TruthOrDare = lazy(() => import("@/components/livegames/TruthOrDare"));
+const MemoryChallenge = lazy(() => import("@/components/livegames/MemoryChallenge"));
+const PunishmentWheel = lazy(() => import("@/components/livegames/PunishmentWheel"));
+const BattleOfKnowledge = lazy(() => import("@/components/livegames/BattleOfKnowledge"));
+const GuessTheEmoji = lazy(() => import("@/components/livegames/GuessTheEmoji"));
+const QuickDrawChallenge = lazy(() => import("@/components/livegames/QuickDrawChallenge"));
+const HotPotatoGame = lazy(() => import("@/components/livegames/HotPotatoGame"));
+const NumberGuessBattle = lazy(() => import("@/components/livegames/NumberGuessBattle"));
+const ChaosChallenge = lazy(() => import("@/components/livegames/ChaosChallenge"));
+const CheckersGame = lazy(() => import("@/components/livegames/CheckersGame"));
+const LudoGame = lazy(() => import("@/components/livegames/LudoGame"));
+const ConnectFourGame = lazy(() => import("@/components/livegames/ConnectFourGame"));
+const BattleshipGame = lazy(() => import("@/components/livegames/BattleshipGame"));
+const TicTacToeVS = lazy(() => import("@/components/livegames/TicTacToeVS"));
+const UnoCardGame = lazy(() => import("@/components/livegames/UnoCardGame"));
+const SnakeBattle = lazy(() => import("@/components/livegames/SnakeBattle"));
+const RockPaperScissors = lazy(() => import("@/components/livegames/RockPaperScissors"));
+const ColorSequence = lazy(() => import("@/components/livegames/ColorSequence"));
+const SpaceShooter = lazy(() => import("@/components/livegames/SpaceShooter"));
+const BallBreaker = lazy(() => import("@/components/livegames/BallBreaker"));
+const ReactionRace = lazy(() => import("@/components/livegames/ReactionRace"));
+const QuickMath = lazy(() => import("@/components/livegames/QuickMath"));
+const MemoryCardsVS = lazy(() => import("@/components/livegames/MemoryCardsVS"));
+const WordScramble = lazy(() => import("@/components/livegames/WordScramble"));
+const TicTacToePro = lazy(() => import("@/components/livegames/TicTacToePro"));
+const GuessNumber100 = lazy(() => import("@/components/livegames/GuessNumber100"));
+const ColorMatch = lazy(() => import("@/components/livegames/ColorMatch"));
+const TargetTap = lazy(() => import("@/components/livegames/TargetTap"));
+const DiceDuel = lazy(() => import("@/components/livegames/DiceDuel"));
+const PatternMemory = lazy(() => import("@/components/livegames/PatternMemory"));
+const TriviaFlash = lazy(() => import("@/components/livegames/TriviaFlash"));
+const Dominoes = lazy(() => import("@/components/livegames/Dominoes"));
+const MazeRace = lazy(() => import("@/components/livegames/MazeRace"));
+const SlotsVS = lazy(() => import("@/components/livegames/SlotsVS"));
+const Match4Grid = lazy(() => import("@/components/livegames/Match4Grid"));
+const TowerStack = lazy(() => import("@/components/livegames/TowerStack"));
+const CannonBattle = lazy(() => import("@/components/livegames/CannonBattle"));
+const SpotDifference = lazy(() => import("@/components/livegames/SpotDifference"));
+const WordChain = lazy(() => import("@/components/livegames/WordChain"));
+const NumberTetris = lazy(() => import("@/components/livegames/NumberTetris"));
+const PongVS = lazy(() => import("@/components/livegames/PongVS"));
+const WhackAMole = lazy(() => import("@/components/livegames/WhackAMole"));
+const ColorCatch = lazy(() => import("@/components/livegames/ColorCatch"));
+const MexericaGame = lazy(() => import("@/components/livegames/MexericaGame"));
+const ChigogoGame = lazy(() => import("@/components/livegames/ChigogoGame"));
+const UrusseGame = lazy(() => import("@/components/livegames/UrusseGame"));
+const CapulanaQuiz = lazy(() => import("@/components/livegames/CapulanaQuiz"));
+const CarromBoard = lazy(() => import("@/components/livegames/CarromBoard"));
+const TeenPatti = lazy(() => import("@/components/livegames/TeenPatti"));
+const KabaddiRaid = lazy(() => import("@/components/livegames/KabaddiRaid"));
+import LiveLeaderboard, { type LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
-import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
+import LiveGameSettings, { DEFAULT_CONFIG, type LiveGameConfig, type CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
+import { DEFAULT_WHEEL_PRIZES, type WheelPrize } from "@/components/livegames/PrizeWheel";
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
 import { ParticleBackground } from "@/components/effects";
 import { appendHistory } from "@/lib/liveHistory";
@@ -190,8 +191,10 @@ const LiveHub = () => {
   const { toast: uiToast } = useToast();
   const [searchParams] = useSearchParams();
   const gameFromUrl = searchParams.get("game") as GameId | null;
+  const templateId = searchParams.get("template");
   const { user, role } = useAuth();
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
+  const [templateName, setTemplateName] = useState<string | null>(null);
   const [active, setActive] = useState<GameId>(() => {
     try {
       const fromUrl = gameFromUrl;
@@ -211,6 +214,45 @@ const LiveHub = () => {
       return s ? { ...DEFAULT_BRANDING, ...JSON.parse(s) } : DEFAULT_BRANDING;
     } catch { return DEFAULT_BRANDING; }
   });
+
+  // Load template from ?template= param
+  useEffect(() => {
+    if (!templateId) return;
+    const loadTemplate = async () => {
+      try {
+        const { data: tpl } = await (supabase as any)
+          .from("live_templates")
+          .select("name, game_ids, branding, rules, challenges")
+          .eq("id", templateId)
+          .single();
+        if (!tpl) return;
+        setTemplateName(tpl.name);
+        // Apply template branding if available
+        if (tpl.branding) {
+          const b = tpl.branding;
+          const tplBranding: Partial<CompanyBranding> = {};
+          if (b.primaryColor) tplBranding.primaryColor = b.primaryColor;
+          if (b.secondaryColor) tplBranding.secondaryColor = b.secondaryColor;
+          if (b.accentColor) tplBranding.accentColor = b.accentColor;
+          if (b.backgroundColor) tplBranding.backgroundColor = b.backgroundColor;
+          if (b.textColor) tplBranding.textColor = b.textColor;
+          if (Object.keys(tplBranding).length > 0) {
+            setBranding(prev => ({ ...prev, ...tplBranding }));
+          }
+        }
+        // Pre-select first game from template if available
+        if (tpl.game_ids && Array.isArray(tpl.game_ids) && tpl.game_ids.length > 0) {
+          const firstGame = tpl.game_ids[0];
+          if (GAMES.some(g => g.id === firstGame)) {
+            setActive(firstGame);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading template:", err);
+      }
+    };
+    loadTemplate();
+  }, [templateId]);
   const [wheelPrizes, setWheelPrizes] = useState<WheelPrize[]>(() => {
     try {
       const s = localStorage.getItem("liveWheelPrizes");
@@ -470,6 +512,12 @@ const LiveHub = () => {
                 </>
               ) : (
                 <>
+                  {templateName && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 border border-primary/20">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span className="text-[11px] text-primary font-bold">{templateName}</span>
+                    </div>
+                  )}
                   <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
                     <Play className="h-4 w-4 fill-current" /> Iniciar Live
                   </button>
@@ -551,6 +599,7 @@ const LiveHub = () => {
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
             <AnimatePresence mode="wait">
+              <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
               {active === "wheel" && (
                 <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <div className="mb-8">
@@ -1063,8 +1112,8 @@ const LiveHub = () => {
                   <GameErrorBoundary gameName="Kabaddi Raid">
                   <KabaddiRaid onScore={recordScore("Kabaddi Raid")} liveCode={liveCode} />
                   </GameErrorBoundary>
-                </motion.div>
-              )}
+                </motion.div>              )}
+              </Suspense>
             </AnimatePresence>
           </div>
 

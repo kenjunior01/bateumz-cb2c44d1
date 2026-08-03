@@ -288,7 +288,7 @@ export default function BlogPostDetail() {
     setLiked(willLike);
     setLikeCount((c) => (willLike ? c + 1 : Math.max(0, c - 1)));
     try {
-      await supabase.rpc("toggle_blog_like", { post_slug: slug, user_id: userId });
+      await supabase.rpc("toggle_blog_like", { post_slug: slug });
     } catch {
       setLiked(!willLike);
       setLikeCount((c) => (willLike ? c - 1 : c + 1));

@@ -34,7 +34,7 @@ const OverlayLive = () => {
       if (!sl) return;
       const [r, p, an] = await Promise.all([
         fetchScheduledLiveRanking(sl.id, { limit: 5 }),
-        supabase.from("live_ambassador_prizes").select("*").eq("scheduled_live_id", sl.id).order("position"),
+        supabase.from("live_ambassador_prizes_public").select("*").eq("scheduled_live_id", sl.id).order("position"),
         listAnnouncements(sl.id, 1),
       ]);
       setRanking(r); setPrizes((p.data as any[]) || []); setLast(an[0] || null);

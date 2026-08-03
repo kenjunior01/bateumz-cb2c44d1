@@ -339,7 +339,7 @@ export default function BusinessDirectory() {
     );
     contentRef.current.querySelectorAll("[data-bid]").forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading, filter, search, viewMode, country, region, currentPage]);
+  }, [loading, filter, search, viewMode, country, region, page]);
 
   const filtered = useMemo(() => {
     let list = businesses;

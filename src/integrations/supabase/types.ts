@@ -2910,7 +2910,6 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           is_verified: boolean | null
-          referral_code: string | null
           slug: string | null
           user_id: string | null
         }
@@ -2920,7 +2919,6 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           is_verified?: boolean | null
-          referral_code?: string | null
           slug?: string | null
           user_id?: string | null
         }
@@ -2930,7 +2928,6 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           is_verified?: boolean | null
-          referral_code?: string | null
           slug?: string | null
           user_id?: string | null
         }

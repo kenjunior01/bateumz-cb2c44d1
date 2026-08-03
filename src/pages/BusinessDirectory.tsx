@@ -744,7 +744,7 @@ export default function BusinessDirectory() {
                                     </span>
                                   ) : (
                                     <span className="dirv2-badge" style={{ "--badge-bg": "rgba(255,255,255,0.04)", "--badge-color": "hsl(var(--muted-foreground))", "--badge-border": "rgba(255,255,255,0.06)" } as React.CSSProperties}>
-                                      <Building2 className="h-3 w-3" /> Empresa
+                                      <Building2 className="h-3 w-3" /> Business
                                     </span>
                                   )}
                                   {total > 0 && (

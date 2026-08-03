@@ -13,31 +13,73 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for recovery token in URL hash
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsRecovery(true);
-    }
+    let active = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         setIsRecovery(true);
+        setChecking(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    const check = async () => {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const query = new URLSearchParams(window.location.search);
+
+      const errDesc = hash.get("error_description") || query.get("error_description");
+      if (errDesc) {
+        if (active) {
+          setLinkError(errDesc);
+          setChecking(false);
+        }
+        return;
+      }
+
+      // Recovery links may arrive as hash tokens, a PKCE ?code=, or ?token_hash=
+      if (hash.get("type") === "recovery" || query.get("type") === "recovery" || query.get("code")) {
+        if (active) setIsRecovery(true);
+      }
+
+      const tokenHash = query.get("token_hash");
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash });
+        if (active) {
+          if (error) setLinkError(error.message);
+          else setIsRecovery(true);
+          setChecking(false);
+        }
+        return;
+      }
+
+      // Fall back to an already-established recovery session
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      if (data.session) setIsRecovery(true);
+      setChecking(false);
+    };
+
+    // Give the Supabase client a moment to process the URL itself
+    const timer = setTimeout(check, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
+      toast.error("Password must be at least 6 characters");
       return;
     }
     if (password !== confirm) {
-      toast.error("As senhas não coincidem");
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -49,21 +91,36 @@ export default function ResetPassword() {
       toast.error(error.message);
     } else {
       setSuccess(true);
-      toast.success("Senha atualizada com sucesso!");
+      toast.success("Password updated successfully!");
       setTimeout(() => navigate("/login"), 2000);
     }
   };
 
+  if (checking && !success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <p className="text-muted-foreground text-sm">Verifying your reset link...</p>
+      </div>
+    );
+  }
+
   if (!isRecovery && !success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-          <p className="text-muted-foreground mb-4">Link de recuperação inválido ou expirado.</p>
-          <Link to="/login" className="text-primary hover:underline">Voltar ao login</Link>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
+          <p className="text-muted-foreground mb-2">
+            {linkError || "This password reset link is invalid or has expired."}
+          </p>
+          <p className="text-muted-foreground text-sm mb-4">Request a new link and open it on this same device.</p>
+          <div className="flex items-center justify-center gap-4">
+            <Link to="/forgot-password" className="text-primary hover:underline">Request new link</Link>
+            <Link to="/login" className="text-muted-foreground hover:underline">Back to login</Link>
+          </div>
         </motion.div>
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

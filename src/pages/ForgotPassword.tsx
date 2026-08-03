@@ -38,13 +38,13 @@ export default function ForgotPassword() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Trophy className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-display text-2xl font-bold text-foreground">SORTEX</span>
+            <span className="font-display text-2xl font-bold text-foreground">Bateu</span>
           </Link>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            {sent ? "Email Enviado" : "Recuperar Senha"}
+            {sent ? "Email Sent" : "Reset Password"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {sent ? "Verifique a sua caixa de entrada" : "Insira o seu email para redefinir a senha"}
+            {sent ? "Check your inbox" : "Enter your email to reset your password"}
           </p>
         </div>
 
@@ -55,11 +55,11 @@ export default function ForgotPassword() {
                 <Check className="h-8 w-8 text-primary" />
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Enviámos um link de recuperação para<br />
+                We sent a password reset link to<br />
                 <strong className="text-foreground">{email}</strong>
               </p>
               <Link to="/login" className="text-primary hover:underline text-sm font-medium">
-                Voltar ao login
+                Back to login
               </Link>
             </motion.div>
           ) : (
@@ -72,7 +72,7 @@ export default function ForgotPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
+                    placeholder="you@email.com"
                     required
                     className="h-10 w-full rounded-lg border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
@@ -80,7 +80,7 @@ export default function ForgotPassword() {
               </div>
               {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
               <Button type="submit" disabled={loading} className="w-full h-10 glow-primary">
-                {loading ? "A enviar..." : "Enviar Link de Recuperação"}
+                {loading ? "Sending..." : "Send Reset Link"}
               </Button>
             </form>
           )}
@@ -88,7 +88,7 @@ export default function ForgotPassword() {
 
         <div className="mt-4 text-center">
           <Link to="/login" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3" /> Voltar ao login
+            <ArrowLeft className="h-3 w-3" /> Back to login
           </Link>
         </div>
       </motion.div>

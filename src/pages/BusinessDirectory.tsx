@@ -510,7 +510,7 @@ export default function BusinessDirectory() {
                     whileTap={{ scale: 0.96 }}
                   >
                     <Sparkles className="h-5 w-5" />
-                    <span>Crie o seu primeiro concurso gratis</span>
+                    <span>Create your first contest for free</span>
                     <ArrowRight className="h-4 w-4" />
                   </motion.button>
                 </Link>
@@ -561,7 +561,7 @@ export default function BusinessDirectory() {
           <div className="flex-1" />
 
           <span className="text-xs text-muted-foreground/50 font-medium">
-            {filtered.length} {filtered.length === 1 ? "empresa" : "empresas"}
+            {filtered.length} {filtered.length === 1 ? "business" : "businesses"}
           </span>
 
           <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -641,7 +641,7 @@ export default function BusinessDirectory() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              Tente uma pesquisa diferente ou altere o filtro
+              Try a different search or change the filter
             </motion.p>
           </div>
         ) : (

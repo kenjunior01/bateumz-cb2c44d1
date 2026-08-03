@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ProofImage, useProofUrl } from "@/components/ProofImage";
+import { ProofImage } from "@/components/ProofImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import {

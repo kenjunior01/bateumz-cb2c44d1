@@ -84,7 +84,7 @@ export default function PlatformPulseWidget() {
           .eq("is_winner", true)
           .order("created_at", { ascending: false })
           .limit(10),
-        sb.from("platform_settings").select("value").eq("key", "announcements").maybeSingle(),
+        (sb as any).from("platform_settings_public").select("value").eq("key", "announcements").maybeSingle(),
       ]);
       if (cancelled) return;
 

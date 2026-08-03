@@ -27,6 +27,7 @@ export const MagicLinkEmail = ({
     <Preview>Your login link for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Text style={brand}>Bateu</Text>
         <Heading style={h1}>Your login link</Heading>
         <Text style={text}>
           Click the button below to log in to {siteName}. This link will expire
@@ -45,26 +46,38 @@ export const MagicLinkEmail = ({
 
 export default MagicLinkEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }
+const container = {
+  padding: '32px 28px',
+  maxWidth: '560px',
+  borderTop: '4px solid #D7263D',
+}
+const brand = {
+  fontSize: '20px',
+  fontWeight: 'bold' as const,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase' as const,
+  color: '#0A1F44',
+  margin: '0 0 24px',
+}
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#000000',
+  color: '#0A1F44',
   margin: '0 0 20px',
 }
 const text = {
   fontSize: '14px',
-  color: '#55575d',
+  color: '#5B6472',
   lineHeight: '1.5',
   margin: '0 0 25px',
 }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#0A1F44',
   color: '#ffffff',
   fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  borderRadius: '12px',
+  padding: '14px 24px',
   textDecoration: 'none',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '12px', color: '#8A93A3', margin: '30px 0 0' }

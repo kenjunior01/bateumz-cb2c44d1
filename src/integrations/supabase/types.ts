@@ -3111,6 +3111,7 @@ export type Database = {
         Args: { p_date?: string; p_user_id: string }
         Returns: undefined
       }
+      resolve_referral_code: { Args: { _code: string }; Returns: string }
       toggle_blog_like: { Args: { post_slug: string }; Returns: boolean }
     }
     Enums: {

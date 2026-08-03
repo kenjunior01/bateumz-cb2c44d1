@@ -12,6 +12,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require an authenticated caller (the buyer who uploaded the receipt)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: { user }, error: authErr } = await authClient.auth.getUser(
+      authHeader.slice(7)
+    );
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { raffle_id, participant_name, ticket_numbers, payment_method } =
       await req.json();
 
@@ -61,7 +84,7 @@ Deno.serve(async (req) => {
 
     // Log the notification (we store it as a record for the business to see)
     console.log(
-      `📧 Notification: New payment receipt from ${participant_name} for raffle "${raffle.title}" (${payment_method}). Tickets: ${ticket_numbers}. Business: ${businessName} (${businessUser.email})`
+      `📧 Notification: New payment receipt from ${participant_name} for raffle "${raffle.title}" (${payment_method}). Tickets: ${ticket_numbers}. Business: ${businessName}`
     );
 
     // In production, integrate with email/SMS service here
@@ -69,8 +92,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Notificação enviada para ${businessUser.email}`,
-        business_email: businessUser.email,
+        message: "The organizer has been notified about your receipt.",
       }),
       {
         status: 200,

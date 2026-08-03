@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -266,11 +267,18 @@ export default function BlogPostDetail() {
   const pageUrl = `${SITE_URL}/blog/${slug}`;
   const postImage = post?.image_url || "";
 
-  /* ─── Conteúdo com anchors injetados ─── */
+  /* ─── Article content (sanitized before rendering) ─── */
   const enrichedContent = useMemo(() => {
-    if (!post?.content || toc.length === 0) return post?.content || "";
-    return injectAnchorIds(post.content, toc);
+    if (!post?.content) return "";
+    const raw = toc.length > 0 ? injectAnchorIds(post.content, toc) : post.content;
+    return DOMPurify.sanitize(raw, {
+      ADD_TAGS: ["iframe"],
+      ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "target", "id"],
+      FORBID_TAGS: ["script", "style", "form", "object", "embed"],
+      FORBID_ATTR: ["onerror", "onload", "onclick"],
+    });
   }, [post?.content, toc]);
+
 
   /* ─── Ações ─── */
   const handleLike = useCallback(async () => {
@@ -280,7 +288,7 @@ export default function BlogPostDetail() {
     setLiked(willLike);
     setLikeCount((c) => (willLike ? c + 1 : Math.max(0, c - 1)));
     try {
-      await supabase.rpc("toggle_blog_like", { post_slug: slug, user_id: userId });
+      await supabase.rpc("toggle_blog_like", { post_slug: slug });
     } catch {
       setLiked(!willLike);
       setLikeCount((c) => (willLike ? c - 1 : c + 1));

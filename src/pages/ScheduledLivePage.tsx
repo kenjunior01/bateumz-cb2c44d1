@@ -58,7 +58,7 @@ const ScheduledLivePage = () => {
       if (sl) {
         const [{ data: bp }, { data: pr }] = await Promise.all([
           supabase.from("profiles").select("display_name, company_name").eq("user_id", sl.business_user_id).maybeSingle(),
-          supabase.from("live_ambassador_prizes").select("*").eq("scheduled_live_id", sl.id).order("position"),
+          supabase.from("live_ambassador_prizes_public").select("*").eq("scheduled_live_id", sl.id).order("position"),
         ]);
         setBusinessName((bp as any)?.company_name || (bp as any)?.display_name || "Empresa");
         setPrizes(pr || []);

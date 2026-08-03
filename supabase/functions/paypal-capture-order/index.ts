@@ -36,8 +36,13 @@ Deno.serve(async (req) => {
     if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
 
     const { order_id, raffle_id, ticket_numbers } = await req.json();
-    if (!order_id || !raffle_id || !Array.isArray(ticket_numbers) || ticket_numbers.length === 0) {
+    if (!order_id || typeof order_id !== 'string' || !raffle_id || !Array.isArray(ticket_numbers) || ticket_numbers.length === 0) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), { status: 400, headers: corsHeaders });
+    }
+    // Reject duplicated ticket numbers and non-integer values up front
+    const tickets: number[] = [...new Set(ticket_numbers.map((n: unknown) => Number(n)))];
+    if (tickets.length !== ticket_numbers.length || tickets.some((n) => !Number.isInteger(n) || n < 1) || tickets.length > 500) {
+      return new Response(JSON.stringify({ error: 'Invalid ticket numbers' }), { status: 400, headers: corsHeaders });
     }
 
     const token = await getAccessToken();
@@ -63,7 +68,23 @@ Deno.serve(async (req) => {
     const currency = (raffle?.currency || 'USD').toUpperCase();
     
     // Verify the amount paid matches the number of tickets
-    const expectedAmount = (Number(raffle.ticket_price) || 0) * ticket_numbers.length;
+    // Replay protection: an order id can only ever be captured into tickets once
+    const { count: alreadyUsed } = await admin
+      .from('participants')
+      .select('id', { count: 'exact', head: true })
+      .eq('paypal_order_id', order_id);
+    if ((alreadyUsed ?? 0) > 0) {
+      return new Response(JSON.stringify({ error: 'Order already processed' }), { status: 409, headers: corsHeaders });
+    }
+
+    // The order must have been created for this exact raffle
+    const orderReference = order?.purchase_units?.[0]?.reference_id;
+    if (orderReference && orderReference !== raffle_id) {
+      return new Response(JSON.stringify({ error: 'Order does not match this raffle' }), { status: 400, headers: corsHeaders });
+    }
+
+    // Server-authoritative: the amount PayPal approved must cover exactly this many tickets
+    const expectedAmount = (Number(raffle.ticket_price) || 0) * tickets.length;
     const paidAmount = parseFloat(order?.purchase_units?.[0]?.amount?.value || '0');
     const paidCurrency = order?.purchase_units?.[0]?.amount?.currency_code?.toUpperCase() || 'USD';
     
@@ -82,7 +103,7 @@ Deno.serve(async (req) => {
     }
     const captureId = cap?.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
 
-    const rows = ticket_numbers.map((n: number) => ({
+    const rows = tickets.map((n: number) => ({
       raffle_id,
       user_id: userId,
       ticket_number: n,

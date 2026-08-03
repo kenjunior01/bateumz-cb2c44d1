@@ -3003,6 +3003,17 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_business_directory: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          company_name: string
+          display_name: string
+          is_verified: boolean
+          slug: string
+          user_id: string
+        }[]
+      }
       get_live_ambassador_ranking: {
         Args: {
           p_business_user_id?: string

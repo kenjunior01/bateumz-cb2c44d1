@@ -198,13 +198,14 @@ const LoadingScreen = () => {
   const progressWidth = useTransform(progressMotion, [0, 100], ["0%", "100%"]);
 
   const TIPS = [
-    "A preparar os jogos...",
-    "A carregar 60+ jogos interativos...",
-    "A conectar com o servidor...",
-    "A configurar a experiencia...",
-    "Quase pronto...",
-    "A inicializar o motor de jogos...",
+    "Preparing the games...",
+    "Loading 60+ interactive games...",
+    "Connecting to the server...",
+    "Setting up your experience...",
+    "Almost ready...",
+    "Starting the game engine...",
   ];
+
 
   useEffect(() => {
     const phaseTimer = setTimeout(() => setPhase(1), 800);

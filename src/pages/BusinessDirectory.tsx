@@ -740,7 +740,7 @@ export default function BusinessDirectory() {
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                                   {b.is_verified ? (
                                     <span className="dirv2-badge" style={{ "--badge-bg": C_GOLD + "15", "--badge-color": C_GOLD, "--badge-border": C_GOLD + "25" } as React.CSSProperties}>
-                                      <Shield className="h-3 w-3" /> Verificado
+                                      <Shield className="h-3 w-3" /> Verified
                                     </span>
                                   ) : (
                                     <span className="dirv2-badge" style={{ "--badge-bg": "rgba(255,255,255,0.04)", "--badge-color": "hsl(var(--muted-foreground))", "--badge-border": "rgba(255,255,255,0.06)" } as React.CSSProperties}>
@@ -782,7 +782,7 @@ export default function BusinessDirectory() {
                                 View profile <ChevronRight className="h-3 w-3" />
                               </span>
                               <span className="text-[10px] text-muted-foreground/30 font-medium">
-                                <Eye className="h-3 w-3 inline mr-1" />Verificado: {b.is_verified ? "Sim" : "Nao"}
+                                <Eye className="h-3 w-3 inline mr-1" />Verified: {b.is_verified ? "Yes" : "No"}
                               </span>
                             </div>
                           </div>

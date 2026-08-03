@@ -395,7 +395,7 @@ export default function BusinessProfile() {
         await navigator.share({ title: `${title} • Bateu`, url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success("Link do perfil copiado!");
+        toast.success("Profile link copied!");
       }
     } catch {
       // user cancelled
@@ -432,9 +432,9 @@ export default function BusinessProfile() {
         <Navbar />
         <div className="container mx-auto px-4 py-20 text-center">
           <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Empresa não encontrada</h1>
+          <h1 className="text-2xl font-bold mb-2">Company not found</h1>
           <Button variant="outline" onClick={() => navigate("/empresas")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar ao Diretório
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to directory
           </Button>
         </div>
         <Footer />
@@ -500,7 +500,7 @@ export default function BusinessProfile() {
             onClick={() => navigate("/empresas")}
             className="absolute top-3 left-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
           </Button>
           <Button
             variant="secondary"
@@ -508,7 +508,7 @@ export default function BusinessProfile() {
             onClick={handleShare}
             className="absolute top-3 right-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <Share2 className="h-3.5 w-3.5" /> Partilhar
+            <Share2 className="h-3.5 w-3.5" /> Share
           </Button>
         </div>
 
@@ -540,7 +540,7 @@ export default function BusinessProfile() {
                   <h1 className="text-xl sm:text-2xl font-bold truncate">{displayName}</h1>
                   {business.is_verified && (
                     <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/20 text-[10px]">
-                      Verificada
+                      Verified
                     </Badge>
                   )}
                 </div>
@@ -551,9 +551,9 @@ export default function BusinessProfile() {
                 )}
                 <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Membro desde{" "}
+                  Member since{" "}
                   {business.created_at
-                    ? new Date(business.created_at).toLocaleDateString("pt-MZ", { month: "long", year: "numeric" })
+                    ? new Date(business.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })
                     : "—"}
                 </p>
               </div>
@@ -561,10 +561,10 @@ export default function BusinessProfile() {
 
             <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-4 sm:mt-6">
               {[
-                { icon: Ticket, label: "Sorteios", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
-                { icon: Trophy, label: "Concursos", value: stats.contests, color: "text-accent", bg: "bg-accent/10" },
-                { icon: ShoppingBag, label: "Prestações", value: stats.products, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                { icon: TrendingUp, label: "Vendidos", value: stats.totalSold, color: "text-amber-500", bg: "bg-amber-500/10" },
+                { icon: Ticket, label: "Raffles", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
+                { icon: Trophy, label: "Contests", value: stats.contests, color: "text-accent", bg: "bg-accent/10" },
+                { icon: ShoppingBag, label: "Installments", value: stats.products, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                { icon: TrendingUp, label: "Sold", value: stats.totalSold, color: "text-amber-500", bg: "bg-amber-500/10" },
               ].map((s, i) => (
                 <motion.div
                   key={s.label}
@@ -614,20 +614,20 @@ export default function BusinessProfile() {
               </TabsTrigger>
               <TabsTrigger value="all" className="text-[11px] sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-                Tudo
+                Everything
               </TabsTrigger>
               <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
-                Sorteios
+                Raffles
               </TabsTrigger>
               <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
-                Concursos
+                Contests
               </TabsTrigger>
               <TabsTrigger value="products" className="text-[11px] sm:text-sm">
-                Prestações
+                Installments
               </TabsTrigger>
               <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
                 <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-                Vencedores
+                Winners
               </TabsTrigger>
             <TabsTrigger value="jogos" className="gap-1.5 text-[11px] sm:text-sm">
                   <Gamepad2 className="h-3.5 w-3.5" />
@@ -750,9 +750,9 @@ export default function BusinessProfile() {
               formatScore={(r, sort) => {
                 if (sort === "popular") return `${r.sold_tickets || 0} bilhetes`;
                 if (sort === "ending" && r.end_date)
-                  return new Date(r.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                  return new Date(r.end_date).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
                 if (sort === "recent" && r.created_at)
-                  return new Date(r.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                  return new Date(r.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
                 return undefined;
               }}
               emptyMessage="Nenhum sorteio nesse estado."
@@ -780,9 +780,9 @@ export default function BusinessProfile() {
               }}
               formatScore={(c, sort) => {
                 if (sort === "ending" && c.end_date)
-                  return new Date(c.end_date).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                  return new Date(c.end_date).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
                 if (sort === "recent" && c.created_at)
-                  return new Date(c.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                  return new Date(c.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
                 return undefined;
               }}
               emptyMessage="Nenhum concurso nesse estado."
@@ -826,7 +826,7 @@ export default function BusinessProfile() {
                   return `${formatMZN(monthly)}/mês`;
                 }
                 if (sort === "recent" && p.created_at)
-                  return new Date(p.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "short" });
+                  return new Date(p.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
                 return undefined;
               }}
               emptyMessage="Esta empresa ainda não publicou produtos a prestações."
@@ -837,10 +837,10 @@ export default function BusinessProfile() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Gamepad2 className="h-5 w-5 text-primary" />
-                    <h3 className="font-bold text-lg">Jogos Interactivos</h3>
+                    <h3 className="font-bold text-lg">Interactive games</h3>
                   </div>
                   <Badge variant="secondary" className="text-[10px]">
-                    {stats.totalGames} jogos
+                    {stats.totalGames} games
                   </Badge>
                 </div>
 
@@ -848,7 +848,7 @@ export default function BusinessProfile() {
                   <Card className="border-dashed">
                     <CardContent className="py-10 text-center">
                       <Gamepad2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhum jogo configurado ainda</p>
+                      <p className="text-sm text-muted-foreground">No games configured yet</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -873,7 +873,7 @@ export default function BusinessProfile() {
 
           <TabsContent value="winners">
             {winners.length === 0 && rankings.length === 0 ? (
-              <EmptyState message="Ainda não há vencedores nem rankings publicados." />
+              <EmptyState message="No winners or rankings published yet." />
             ) : (
               <WinnersAndRankings winners={winners} rankings={rankings} navigate={navigate} full />
             )}

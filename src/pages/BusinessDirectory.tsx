@@ -13,6 +13,10 @@ import {
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
+import { Helmet } from "react-helmet-async";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
+import { COUNTRIES, getRegions } from "@/lib/regions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BusinessItem {
   user_id: string;
@@ -20,6 +24,10 @@ interface BusinessItem {
   company_name: string | null;
   avatar_url: string | null;
   is_verified: boolean | null;
+  slug: string | null;
+  province: string | null;
+  city: string | null;
+  country: string | null;
   raffle_count: number;
   contest_count: number;
 }
@@ -35,6 +43,12 @@ const C_VIOLET = "hsl(270 60% 55%)";
 const C_CYAN = "hsl(190 80% 50%)";
 
 const TITLE_WORDS = ["Business", "Directory"];
+
+const PAGE_SIZE = 12;
+
+/** Public profile URL — prefers the SEO slug, falls back to the user id. */
+export const businessProfilePath = (b: { slug?: string | null; user_id: string }) =>
+  "/empresa/" + (b.slug || b.user_id);
 
 function CountingStat({ target, duration = 2 }: { target: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -134,7 +148,7 @@ function FeaturedMarquee({ businesses }: { businesses: BusinessItem[] }) {
         {doubled.map((b, i) => (
           <Link
             key={b.user_id + "-" + i}
-            to={"/empresa/" + b.user_id + "/publico"}
+            to={businessProfilePath(b)}
             className="dirv2-marquee-item"
           >
             <div className="dirv2-marquee-avatar">
@@ -242,6 +256,9 @@ export default function BusinessDirectory() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "verified" | "active">("all");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [statsReady, setStatsReady] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -281,6 +298,10 @@ export default function BusinessDirectory() {
           company_name: p.company_name as string | null,
           avatar_url: p.avatar_url as string | null,
           is_verified: p.is_verified as boolean | null,
+          slug: (p.slug as string | null) ?? null,
+          province: (p.province as string | null) ?? null,
+          city: (p.city as string | null) ?? null,
+          country: (p.country as string | null) ?? null,
           raffle_count: rafflesByUser[p.user_id as string] || 0,
           contest_count: contestsByUser[p.user_id as string] || 0,
         }));
@@ -318,12 +339,14 @@ export default function BusinessDirectory() {
     );
     contentRef.current.querySelectorAll("[data-bid]").forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading, filter, search, viewMode]);
+  }, [loading, filter, search, viewMode, country, region, currentPage]);
 
   const filtered = useMemo(() => {
     let list = businesses;
     if (filter === "verified") list = list.filter(b => b.is_verified);
     if (filter === "active") list = list.filter(b => b.raffle_count + b.contest_count > 0);
+    if (country) list = list.filter(b => b.country === country);
+    if (region) list = list.filter(b => (b.province || "").toLowerCase() === region.toLowerCase());
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -333,7 +356,17 @@ export default function BusinessDirectory() {
       );
     }
     return list;
-  }, [businesses, search, filter]);
+  }, [businesses, search, filter, country, region]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  );
+  const regionOptions = country ? getRegions(country) : [];
+
+  useEffect(() => { setPage(1); }, [search, filter, country, region]);
 
   const totalRaffles = useMemo(() => businesses.reduce((s, b) => s + b.raffle_count, 0), [businesses]);
   const totalContests = useMemo(() => businesses.reduce((s, b) => s + b.contest_count, 0), [businesses]);
@@ -648,14 +681,14 @@ export default function BusinessDirectory() {
           <>
             <div className="md:hidden">
               <div className="grid grid-cols-2 gap-3 mt-3">
-                {filtered.map((b, i) => (
+                {paginated.map((b, i) => (
                   <motion.div
                     key={b.user_id}
                     data-bid={b.user_id}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i, 10) * 0.04, ...SPRING_GENTLE }}
-                    onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                    onClick={() => navigate(businessProfilePath(b))}
                     whileTap={{ scale: 0.96 }}
                   >
                     <div className="dirv2-mobile-card">
@@ -699,7 +732,7 @@ export default function BusinessDirectory() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {filtered.map((b, i) => {
+                  {paginated.map((b, i) => {
                     const total = b.raffle_count + b.contest_count;
                     const isVisible = visibleCards.has(b.user_id);
                     return (
@@ -709,7 +742,7 @@ export default function BusinessDirectory() {
                         initial={{ opacity: 0, y: 30, scale: 0.95 }}
                         animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 30, scale: isVisible ? 1 : 0.95 }}
                         transition={{ ...SPRING, delay: Math.min(i, 15) * 0.04 }}
-                        onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                        onClick={() => navigate(businessProfilePath(b))}
                         className="cursor-pointer"
                       >
                         <div className="dirv2-card">
@@ -749,7 +782,7 @@ export default function BusinessDirectory() {
                                   )}
                                   {total > 0 && (
                                     <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? "atividade" : "atividades"}
+                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
                                     </span>
                                   )}
                                 </div>
@@ -799,7 +832,7 @@ export default function BusinessDirectory() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {filtered.map((b, i) => {
+                  {paginated.map((b, i) => {
                     const total = b.raffle_count + b.contest_count;
                     const isVisible = visibleCards.has(b.user_id);
                     return (
@@ -810,7 +843,7 @@ export default function BusinessDirectory() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : -20 }}
                         transition={{ ...SPRING, delay: Math.min(i, 15) * 0.035 }}
-                        onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                        onClick={() => navigate(businessProfilePath(b))}
                         whileHover={{ x: 8 }}
                       >
                         <div className="dirv2-list-shine" />
@@ -835,7 +868,7 @@ export default function BusinessDirectory() {
                               {b.is_verified && <CheckCircle className="h-4 w-4 shrink-0" style={{ color: C_GOLD }} />}
                               {total > 0 && (
                                 <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? "atividade" : "atividades"}
+                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
                                 </span>
                               )}
                             </div>

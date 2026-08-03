@@ -13,6 +13,10 @@ import {
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
+import { Helmet } from "react-helmet-async";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
+import { COUNTRIES, getRegions } from "@/lib/regions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BusinessItem {
   user_id: string;
@@ -20,6 +24,10 @@ interface BusinessItem {
   company_name: string | null;
   avatar_url: string | null;
   is_verified: boolean | null;
+  slug: string | null;
+  province: string | null;
+  city: string | null;
+  country: string | null;
   raffle_count: number;
   contest_count: number;
 }
@@ -35,6 +43,28 @@ const C_VIOLET = "hsl(270 60% 55%)";
 const C_CYAN = "hsl(190 80% 50%)";
 
 const TITLE_WORDS = ["Business", "Directory"];
+
+const PAGE_SIZE = 12;
+
+/** province/state value -> country code, derived from the regions catalogue. */
+const REGION_TO_COUNTRY: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const c of COUNTRIES) {
+    for (const r of getRegions(c.code)) {
+      const key = r.value.toLowerCase();
+      if (!(key in map)) map[key] = c.code;
+    }
+  }
+  return map;
+})();
+
+/** Country of a business: campaign country first, otherwise inferred from its region. */
+const resolveCountry = (b: { country: string | null; province: string | null }) =>
+  b.country || (b.province ? REGION_TO_COUNTRY[b.province.toLowerCase()] ?? null : null);
+
+/** Public profile URL — prefers the SEO slug, falls back to the user id. */
+export const businessProfilePath = (b: { slug?: string | null; user_id: string }) =>
+  "/empresa/" + (b.slug || b.user_id);
 
 function CountingStat({ target, duration = 2 }: { target: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -134,7 +164,7 @@ function FeaturedMarquee({ businesses }: { businesses: BusinessItem[] }) {
         {doubled.map((b, i) => (
           <Link
             key={b.user_id + "-" + i}
-            to={"/empresa/" + b.user_id + "/publico"}
+            to={businessProfilePath(b)}
             className="dirv2-marquee-item"
           >
             <div className="dirv2-marquee-avatar">
@@ -242,6 +272,9 @@ export default function BusinessDirectory() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "verified" | "active">("all");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [statsReady, setStatsReady] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -281,6 +314,10 @@ export default function BusinessDirectory() {
           company_name: p.company_name as string | null,
           avatar_url: p.avatar_url as string | null,
           is_verified: p.is_verified as boolean | null,
+          slug: (p.slug as string | null) ?? null,
+          province: (p.province as string | null) ?? null,
+          city: (p.city as string | null) ?? null,
+          country: (p.country as string | null) ?? null,
           raffle_count: rafflesByUser[p.user_id as string] || 0,
           contest_count: contestsByUser[p.user_id as string] || 0,
         }));
@@ -318,12 +355,14 @@ export default function BusinessDirectory() {
     );
     contentRef.current.querySelectorAll("[data-bid]").forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading, filter, search, viewMode]);
+  }, [loading, filter, search, viewMode, country, region, page]);
 
   const filtered = useMemo(() => {
     let list = businesses;
     if (filter === "verified") list = list.filter(b => b.is_verified);
     if (filter === "active") list = list.filter(b => b.raffle_count + b.contest_count > 0);
+    if (country) list = list.filter(b => resolveCountry(b) === country);
+    if (region) list = list.filter(b => (b.province || "").toLowerCase() === region.toLowerCase());
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -333,7 +372,17 @@ export default function BusinessDirectory() {
       );
     }
     return list;
-  }, [businesses, search, filter]);
+  }, [businesses, search, filter, country, region]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  );
+  const regionOptions = country ? getRegions(country) : [];
+
+  useEffect(() => { setPage(1); }, [search, filter, country, region]);
 
   const totalRaffles = useMemo(() => businesses.reduce((s, b) => s + b.raffle_count, 0), [businesses]);
   const totalContests = useMemo(() => businesses.reduce((s, b) => s + b.contest_count, 0), [businesses]);
@@ -373,6 +422,46 @@ export default function BusinessDirectory() {
 
   return (
     <div className="min-h-screen bg-mesh-soft bg-noise pb-20 md:pb-0">
+      <Helmet>
+        <title>Business Directory — Verified Companies on Bateu</title>
+        <meta
+          name="description"
+          content="Browse verified businesses on Bateu running raffles, contests and live games. Filter by country and region, and open each company profile for prizes, lives and winners."
+        />
+        <link rel="canonical" href={`${getPublicBaseUrl()}/empresas`} />
+        <meta property="og:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta
+          property="og:description"
+          content="Discover verified companies creating raffles, contests and live games on Bateu."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${getPublicBaseUrl()}/empresas`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Business Directory — Verified Companies on Bateu" />
+        <meta
+          name="twitter:description"
+          content="Discover verified companies creating raffles, contests and live games on Bateu."
+        />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: "Business Directory",
+            description: "Verified companies running raffles, contests and live games on Bateu.",
+            url: `${getPublicBaseUrl()}/empresas`,
+            mainEntity: {
+              "@type": "ItemList",
+              numberOfItems: filtered.length,
+              itemListElement: paginated.slice(0, 12).map((b, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: b.company_name || b.display_name || "Business",
+                url: `${getPublicBaseUrl()}${businessProfilePath(b)}`,
+              })),
+            },
+          })}
+        </script>
+      </Helmet>
       <Navbar />
 
       <MobileDiscoveryHeader
@@ -384,6 +473,38 @@ export default function BusinessDirectory() {
         activeCategory={filter}
         onCategoryChange={(id) => setFilter(id as "all" | "verified" | "active")}
       />
+
+      <div className="md:hidden container mx-auto px-3 mt-2 flex gap-2">
+        <Select
+          value={country || "all"}
+          onValueChange={(v) => { setCountry(v === "all" ? "" : v); setRegion(""); }}
+        >
+          <SelectTrigger className="h-9 flex-1 rounded-xl glass border-border text-[11px] font-semibold" aria-label="Filter by country">
+            <Globe className="h-3.5 w-3.5 mr-1" style={{ color: C_PRIMARY }} />
+            <SelectValue placeholder="Country" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            <SelectItem value="all">All countries</SelectItem>
+            {COUNTRIES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {regionOptions.length > 0 && (
+          <Select value={region || "all"} onValueChange={(v) => setRegion(v === "all" ? "" : v)}>
+            <SelectTrigger className="h-9 flex-1 rounded-xl glass border-border text-[11px] font-semibold" aria-label="Filter by region">
+              <MapPin className="h-3.5 w-3.5 mr-1" style={{ color: C_ACCENT }} />
+              <SelectValue placeholder="Region" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50 max-h-[280px]">
+              <SelectItem value="all">All regions</SelectItem>
+              {regionOptions.map((r) => (
+                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       <div
         ref={heroRef}
@@ -558,6 +679,38 @@ export default function BusinessDirectory() {
             })}
           </div>
 
+
+          <Select
+            value={country || "all"}
+            onValueChange={(v) => { setCountry(v === "all" ? "" : v); setRegion(""); }}
+          >
+            <SelectTrigger className="h-10 w-[168px] rounded-xl glass border-border text-xs font-semibold" aria-label="Filter by country">
+              <Globe className="h-3.5 w-3.5 mr-1" style={{ color: C_PRIMARY }} />
+              <SelectValue placeholder="Country" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">All countries</SelectItem>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>{c.flag} {c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {regionOptions.length > 0 && (
+            <Select value={region || "all"} onValueChange={(v) => setRegion(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-10 w-[178px] rounded-xl glass border-border text-xs font-semibold" aria-label="Filter by region">
+                <MapPin className="h-3.5 w-3.5 mr-1" style={{ color: C_ACCENT }} />
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50 max-h-[300px]">
+                <SelectItem value="all">All regions</SelectItem>
+                {regionOptions.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <div className="flex-1" />
 
           <span className="text-xs text-muted-foreground/50 font-medium">
@@ -648,14 +801,14 @@ export default function BusinessDirectory() {
           <>
             <div className="md:hidden">
               <div className="grid grid-cols-2 gap-3 mt-3">
-                {filtered.map((b, i) => (
+                {paginated.map((b, i) => (
                   <motion.div
                     key={b.user_id}
                     data-bid={b.user_id}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i, 10) * 0.04, ...SPRING_GENTLE }}
-                    onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                    onClick={() => navigate(businessProfilePath(b))}
                     whileTap={{ scale: 0.96 }}
                   >
                     <div className="dirv2-mobile-card">
@@ -699,7 +852,7 @@ export default function BusinessDirectory() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {filtered.map((b, i) => {
+                  {paginated.map((b, i) => {
                     const total = b.raffle_count + b.contest_count;
                     const isVisible = visibleCards.has(b.user_id);
                     return (
@@ -709,7 +862,7 @@ export default function BusinessDirectory() {
                         initial={{ opacity: 0, y: 30, scale: 0.95 }}
                         animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 30, scale: isVisible ? 1 : 0.95 }}
                         transition={{ ...SPRING, delay: Math.min(i, 15) * 0.04 }}
-                        onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                        onClick={() => navigate(businessProfilePath(b))}
                         className="cursor-pointer"
                       >
                         <div className="dirv2-card">
@@ -749,7 +902,7 @@ export default function BusinessDirectory() {
                                   )}
                                   {total > 0 && (
                                     <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? "atividade" : "atividades"}
+                                      <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
                                     </span>
                                   )}
                                 </div>
@@ -799,7 +952,7 @@ export default function BusinessDirectory() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {filtered.map((b, i) => {
+                  {paginated.map((b, i) => {
                     const total = b.raffle_count + b.contest_count;
                     const isVisible = visibleCards.has(b.user_id);
                     return (
@@ -810,7 +963,7 @@ export default function BusinessDirectory() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : -20 }}
                         transition={{ ...SPRING, delay: Math.min(i, 15) * 0.035 }}
-                        onClick={() => navigate("/empresa/" + b.user_id + "/publico")}
+                        onClick={() => navigate(businessProfilePath(b))}
                         whileHover={{ x: 8 }}
                       >
                         <div className="dirv2-list-shine" />
@@ -835,7 +988,7 @@ export default function BusinessDirectory() {
                               {b.is_verified && <CheckCircle className="h-4 w-4 shrink-0" style={{ color: C_GOLD }} />}
                               {total > 0 && (
                                 <span className="dirv2-badge" style={{ "--badge-bg": C_PRIMARY + "10", "--badge-color": C_PRIMARY, "--badge-border": C_PRIMARY + "20" } as React.CSSProperties}>
-                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? "atividade" : "atividades"}
+                                  <Flame className="h-3 w-3" /> {total} {total === 1 ? "activity" : "activities"}
                                 </span>
                               )}
                             </div>
@@ -874,6 +1027,52 @@ export default function BusinessDirectory() {
               )}
             </AnimatePresence>
 
+            {pageCount > 1 && (
+              <nav
+                className="mt-8 flex items-center justify-center gap-2 flex-wrap"
+                aria-label="Directory pagination"
+              >
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: pageCount }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === pageCount || Math.abs(n - currentPage) <= 1)
+                  .map((n, idx, arr) => (
+                    <span key={n} className="flex items-center gap-2">
+                      {idx > 0 && n - arr[idx - 1] > 1 && (
+                        <span className="text-xs text-muted-foreground/50">…</span>
+                      )}
+                      <button
+                        onClick={() => setPage(n)}
+                        aria-current={n === currentPage ? "page" : undefined}
+                        className="min-w-9 h-9 px-3 rounded-xl text-xs font-bold border transition-colors"
+                        style={{
+                          borderColor: n === currentPage ? C_PRIMARY : "hsl(var(--border))",
+                          background: n === currentPage ? C_PRIMARY + "14" : "transparent",
+                          color: n === currentPage ? C_PRIMARY : "hsl(var(--muted-foreground))",
+                        }}
+                      >
+                        {n}
+                      </button>
+                    </span>
+                  ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  disabled={currentPage === pageCount}
+                  className="px-3 h-9 rounded-xl text-xs font-bold border border-border/60 bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:border-primary transition-colors"
+                >
+                  Next
+                </button>
+                <span className="w-full text-center text-[11px] text-muted-foreground/60 mt-1">
+                  Page {currentPage} of {pageCount} · {filtered.length} businesses
+                </span>
+              </nav>
+            )}
+
             {!loading && filtered.length > 0 && (
               <motion.div
                 className="mt-12 hidden md:block"
@@ -891,10 +1090,10 @@ export default function BusinessDirectory() {
                         >
                           <Sparkles className="h-5 w-5" style={{ color: C_GOLD }} />
                         </motion.span>
-                        A sua empresa ainda nao esta aqui?
+                        Is your business not here yet?
                       </h2>
                       <p className="text-sm text-muted-foreground/70 max-w-md">
-                        Junte-se a centenas de empresas que ja usam a plataforma para criar concursos e atrair milhares de participantes. O primeiro concurso e completamente gratis.
+                        Join hundreds of businesses already using the platform to run contests and reach thousands of participants. Your first contest is completely free.
                       </p>
                     </div>
                     <Link to="/register">
@@ -905,7 +1104,7 @@ export default function BusinessDirectory() {
                         whileTap={{ scale: 0.96 }}
                       >
                         <Rocket className="h-4 w-4" />
-                        <span>Comecar Agora</span>
+                        <span>Get started now</span>
                         <ArrowRight className="h-4 w-4" />
                       </motion.button>
                     </Link>

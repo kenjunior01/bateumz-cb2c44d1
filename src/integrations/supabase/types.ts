@@ -3007,9 +3007,12 @@ export type Database = {
         Args: never
         Returns: {
           avatar_url: string
+          city: string
           company_name: string
+          country: string
           display_name: string
           is_verified: boolean
+          province: string
           slug: string
           user_id: string
         }[]

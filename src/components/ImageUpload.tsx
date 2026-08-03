@@ -41,7 +41,15 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     try {
       // Create a unique file name
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        toast.error("Please sign in to upload images.");
+        setIsUploading(false);
+        return;
+      }
+      // Scope every upload to the owner's folder so storage policies can enforce ownership
+      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
       // Upload to Supabase Storage
       const { error } = await supabase.storage

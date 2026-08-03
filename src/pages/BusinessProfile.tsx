@@ -5,8 +5,13 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
 import BusinessLivesTab from "@/components/business/BusinessLivesTab";
+import BusinessTimeline from "@/components/business/BusinessTimeline";
+import BusinessManagePanel from "@/components/business/BusinessManagePanel";
+import { Helmet } from "react-helmet-async";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
 import PlatformPulseWidget from "@/components/PlatformPulseWidget";
-import { Radio } from "lucide-react";
+import { Radio, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +52,7 @@ const sb: any = supabase;
 
 interface BusinessInfo {
   user_id: string;
+  slug?: string | null;
   display_name: string | null;
   company_name: string | null;
   avatar_url: string | null;
@@ -159,6 +165,7 @@ const statusLabels: Record<string, string> = {
 export default function BusinessProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [business, setBusiness] = useState<BusinessInfo | null>(null);
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
@@ -171,29 +178,52 @@ export default function BusinessProfile() {
   const [guestName, setGuestName] = useState("");
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [pendingGame, setPendingGame] = useState<{type: string; id: string} | null>(null);
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const isUuid = (v: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
   useEffect(() => {
     if (!id) return;
     const load = async () => {
+      setLoading(true);
+      // Resolve the route param: it can be a user id OR a public slug
+      let bizId = id;
+      if (!isUuid(id)) {
+        const { data: bySlug } = await sb
+          .from("profiles_public")
+          .select("user_id")
+          .eq("slug", id)
+          .maybeSingle();
+        if (!bySlug) {
+          setBusiness(null);
+          setLoading(false);
+          return;
+        }
+        bizId = bySlug.user_id;
+      }
+      setResolvedId(bizId);
+
       const [profileRes, rafflesRes, contestsRes, productsRes] = await Promise.all([
-        sb.from("profiles_public").select("*").eq("user_id", id).single(),
+        sb.from("profiles_public").select("*").eq("user_id", bizId).single(),
         sb
           .from("raffles")
           .select("*")
-          .eq("business_user_id", id)
+          .eq("business_user_id", bizId)
           .in("status", ["active", "completed", "drawn"])
           .order("created_at", { ascending: false }),
         sb
           .from("contests")
           .select("*")
-          .eq("created_by", id)
+          .eq("created_by", bizId)
           .in("status", ["active", "voting", "completed"])
           .order("created_at", { ascending: false }),
         sb
           .from("prestacao_products")
           .select("*")
-          .eq("business_user_id", id)
+          .eq("business_user_id", bizId)
           .eq("status", "active")
           .order("created_at", { ascending: false }),
       ]);
@@ -209,18 +239,26 @@ export default function BusinessProfile() {
 
       // Load winners + rankings (non-blocking)
       void loadWinnersAndRankings(rafflesData, contestsData);
-      void loadGames();
+      void loadGames(bizId);
     };
 
-    const loadGames = async () => {
-      const bizId = id!;
+    const loadGames = async (bizId: string) => {
       const [spinsRes, millsRes, roulettesRes] = await Promise.all([
-        sb.from("spin_wheel_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
-        sb.from("millionaire_games").select("id, title, description, cover_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        sb.from("spin_wheel_games").select("id, name, description, background_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
+        sb.from("millionaire_games").select("id, name, description, background_image_url, is_active, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
         sb.from("challenge_roulettes").select("id, title, is_published, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
       ]);
-      setSpinGames((spinsRes.data as SpinWheelGame[]) || []);
-      setMillionaireGames((millsRes.data as MillionaireGameInfo[]) || []);
+      const normalize = (rows: any[]) =>
+        (rows || []).map((g) => ({
+          id: g.id,
+          title: g.name || g.title || "Game",
+          description: g.description ?? null,
+          cover_image_url: g.background_image_url ?? null,
+          is_active: !!g.is_active,
+          created_at: g.created_at,
+        }));
+      setSpinGames(normalize(spinsRes.data as any[]) as SpinWheelGame[]);
+      setMillionaireGames(normalize(millsRes.data as any[]) as MillionaireGameInfo[]);
       setChallengeRoulettes((roulettesRes.data as ChallengeRoulette[]) || []);
 
       // Load guest name from localStorage
@@ -298,7 +336,7 @@ export default function BusinessProfile() {
     };
 
     load();
-  }, [id]);
+  }, [id, reloadKey]);
 
   const allGames = useMemo(() => [
     ...spinGames.map((g) => ({ ...g, type: "spin" as const })),
@@ -407,11 +445,37 @@ export default function BusinessProfile() {
   const displayName = business.company_name || business.display_name || "Empresa";
   const initial = displayName.charAt(0).toUpperCase();
 
+  const isOwner = !!user && user.id === business.user_id;
+  const canonical = `${getPublicBaseUrl()}/empresa/${business.slug || business.user_id}`;
+  const metaDescription = `${displayName} on Bateu — live shows, interactive games, raffles and verified winners. Follow everything in one place.`;
+
   const goToCatalogForBusiness = () =>
     navigate(`/prestacoes/catalogo?business=${business.user_id}`);
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${displayName} — Games, Lives & Winners | Bateu`}</title>
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:title" content={`${displayName} on Bateu`} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonical} />
+        {business.avatar_url && <meta property="og:image" content={business.avatar_url} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${displayName} on Bateu`} />
+        <meta name="twitter:description" content={metaDescription} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: displayName,
+            url: canonical,
+            ...(business.avatar_url ? { logo: business.avatar_url } : {}),
+          })}
+        </script>
+      </Helmet>
       <Navbar />
 
       <div className="relative">
@@ -522,10 +586,32 @@ export default function BusinessProfile() {
       </div>
 
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl space-y-6">
+        {isOwner && (
+          <BusinessManagePanel
+            userId={business.user_id}
+            companyName={displayName}
+            currentSlug={business.slug}
+            onRefresh={() => setReloadKey((k) => k + 1)}
+            onSlugSaved={(newSlug) => {
+              setBusiness((b) => (b ? { ...b, slug: newSlug } : b));
+              navigate(`/empresa/${newSlug}`, { replace: true });
+            }}
+            counts={{
+              games: stats.totalGames,
+              raffles: stats.totalRaffles,
+              contests: stats.contests,
+              winners: winners.length,
+            }}
+          />
+        )}
         <AmbassadorPanel businessUserId={business.user_id} businessName={displayName} />
-        <Tabs defaultValue="all">
+        <Tabs defaultValue="feed">
           <div className="sticky top-14 sm:top-16 z-30 -mx-4 px-4 py-2 bg-background/85 backdrop-blur-md border-b border-border/40 mb-4 sm:mb-6">
             <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+              <TabsTrigger value="feed" className="text-[11px] sm:text-sm">
+                <Activity className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
+                Feed
+              </TabsTrigger>
               <TabsTrigger value="all" className="text-[11px] sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
                 Tudo
@@ -553,6 +639,10 @@ export default function BusinessProfile() {
                 </TabsTrigger>
               </TabsList>
           </div>
+
+          <TabsContent value="feed" className="mt-4">
+            <BusinessTimeline businessUserId={business.user_id} reloadKey={reloadKey} />
+          </TabsContent>
 
           <TabsContent value="all">
             {raffles.length === 0 && contests.length === 0 && products.length === 0 ? (
@@ -774,7 +864,7 @@ export default function BusinessProfile() {
                   </div>
                 )}
 
-                <GameHistoryPanel businessId={id!} />
+                <GameHistoryPanel businessId={resolvedId || business.user_id} />
               </TabsContent>
 
           <TabsContent value="lives" className="space-y-4 mt-4">

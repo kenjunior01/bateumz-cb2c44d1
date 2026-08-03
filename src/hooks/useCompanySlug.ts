@@ -1,112 +1,96 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
-interface Company {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url?: string;
-  description?: string;
+const sb: any = supabase;
+
+export interface CompanyBySlug {
+  user_id: string;
+  display_name: string | null;
+  company_name: string | null;
+  avatar_url: string | null;
+  slug: string | null;
 }
 
+/** Resolve a company profile from a URL slug (route param `:slug`). */
 export const useCompanySlug = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [company, setCompany] = useState<Company | null>(null);
+  const [company, setCompany] = useState<CompanyBySlug | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCompanyBySlug = async () => {
+    const run = async () => {
       if (!slug) {
-        setError('Slug não fornecido');
+        setError("Missing profile link");
         setLoading(false);
         return;
       }
+      const { data } = await sb
+        .from("profiles_public")
+        .select("user_id, display_name, company_name, avatar_url, slug")
+        .eq("slug", slug)
+        .maybeSingle();
 
-      try {
-        const { data, error: queryError } = await (supabase as any)
-          .from('companies')
-          .select('id, name, slug, logo_url, description')
-          .eq('slug', slug)
-          .single();
-
-        if (queryError) {
-          setError('Empresa não encontrada');
-          navigate('/404');
-          return;
-        }
-
-        setCompany(data);
-      } catch (err) {
-        console.error('Error fetching company:', err);
-        setError('Erro ao carregar empresa');
-      } finally {
+      if (!data) {
+        setError("Company not found");
         setLoading(false);
+        navigate("/404");
+        return;
       }
+      setCompany(data as CompanyBySlug);
+      setLoading(false);
     };
-
-    fetchCompanyBySlug();
+    void run();
   }, [slug, navigate]);
 
   return { company, loading, error };
 };
 
-/**
- * Generate a URL-friendly slug from a company name
- */
-export const generateSlug = (name: string): string => {
-  return name
+/** Generate a URL-friendly slug from a company name. */
+export const generateSlug = (name: string): string =>
+  name
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/** Check whether a slug is free (optionally ignoring the current owner). */
+export const checkSlugAvailability = async (
+  slug: string,
+  excludeUserId?: string,
+): Promise<boolean> => {
+  if (!slug) return false;
+  const { data } = await sb
+    .from("profiles_public")
+    .select("user_id")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!data) return true;
+  return !!excludeUserId && data.user_id === excludeUserId;
 };
 
-/**
- * Check if a slug is available
- */
-export const checkSlugAvailability = async (slug: string, excludeId?: string): Promise<boolean> => {
-  try {
-    let query = (supabase as any)
-      .from('companies')
-      .select('id')
-      .eq('slug', slug);
-
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-
-    const { data, error } = await query.single();
-
-    if (error && error.code === 'PGRST116') {
-      // No rows found - slug is available
-      return true;
-    }
-
-    return !data;
-  } catch (err) {
-    console.error('Error checking slug availability:', err);
-    return false;
-  }
+/** Persist a slug on the signed-in company profile. */
+export const saveCompanySlug = async (userId: string, slug: string) => {
+  const { error } = await sb.from("profiles").update({ slug }).eq("user_id", userId);
+  if (error) throw error;
 };
 
-/**
- * Generate a unique slug with counter if needed
- */
-export const generateUniqueSlug = async (name: string, excludeId?: string): Promise<string> => {
-  let slug = generateSlug(name);
+export const generateUniqueSlug = async (
+  name: string,
+  excludeUserId?: string,
+): Promise<string> => {
+  const base = generateSlug(name) || "company";
+  let candidate = base;
   let counter = 1;
-  let isAvailable = await checkSlugAvailability(slug, excludeId);
-
-  while (!isAvailable && counter < 100) {
-    slug = `${generateSlug(name)}-${counter}`;
-    isAvailable = await checkSlugAvailability(slug, excludeId);
-    counter++;
+  while (!(await checkSlugAvailability(candidate, excludeUserId)) && counter < 100) {
+    candidate = `${base}-${counter}`;
+    counter += 1;
   }
-
-  return slug;
+  return candidate;
 };

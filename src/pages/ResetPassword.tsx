@@ -135,13 +135,13 @@ export default function ResetPassword() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Trophy className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-display text-2xl font-bold text-foreground">SORTEX</span>
+            <span className="font-display text-2xl font-bold text-foreground">Bateu</span>
           </Link>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            {success ? "Senha Atualizada!" : "Nova Senha"}
+            {success ? "Password Updated!" : "New Password"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {success ? "Pode entrar com a nova senha" : "Defina a sua nova senha"}
+            {success ? "You can now sign in with your new password" : "Set your new password"}
           </p>
         </div>
 
@@ -151,40 +151,40 @@ export default function ResetPassword() {
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-4">
                 <Check className="h-8 w-8 text-primary" />
               </div>
-              <p className="text-muted-foreground text-sm">A redirecionar para o login...</p>
+              <p className="text-muted-foreground text-sm">Redirecting to login...</p>
             </motion.div>
           ) : (
             <form onSubmit={handleReset} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Nova Senha</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">New Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Minimum 6 characters"
                     required
                     className="h-10 w-full rounded-lg border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Confirmar Senha</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Confirm Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Repita a senha"
+                    placeholder="Repeat password"
                     required
                     className="h-10 w-full rounded-lg border border-border bg-secondary/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full h-10 glow-primary">
-                {loading ? "A atualizar..." : "Atualizar Senha"}
+                {loading ? "Updating..." : "Update Password"}
               </Button>
             </form>
           )}
@@ -192,7 +192,7 @@ export default function ResetPassword() {
 
         <div className="mt-4 text-center">
           <Link to="/login" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3" /> Voltar ao login
+            <ArrowLeft className="h-3 w-3" /> Back to login
           </Link>
         </div>
       </motion.div>

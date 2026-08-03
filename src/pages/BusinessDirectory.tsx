@@ -94,33 +94,44 @@ function DirectoryParticles() {
     let animId = 0;
     let w = 0;
     let h = 0;
-    const dots: { x: number; y: number; vx: number; vy: number; r: number; o: number }[] = [];
+    const dots: { x: number; y: number; vx: number; vy: number; r: number; o: number; od: number }[] = [];
     const resize = () => {
       w = canvas.width = canvas.offsetWidth * 2;
       h = canvas.height = canvas.offsetHeight * 2;
     };
     resize();
     window.addEventListener("resize", resize);
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 18; i++) {
       dots.push({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        r: Math.random() * 2 + 1,
-        o: Math.random() * 0.3 + 0.1,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
+        r: Math.random() * 2.5 + 1,
+        o: Math.random() * 0.2 + 0.05,
+        od: (Math.random() - 0.5) * 0.002,
       });
     }
-    const draw = () => {
+    let lastTime = 0;
+    const draw = (timestamp: number) => {
+      animId = requestAnimationFrame(draw);
+      if (timestamp - lastTime < 33) return;
+      lastTime = timestamp;
       ctx.clearRect(0, 0, w, h);
       for (const d of dots) {
         d.x += d.vx;
         d.y += d.vy;
+        d.o += d.od;
+        if (d.o > 0.3) { d.o = 0.3; d.od *= -1; }
+        if (d.o < 0.03) { d.o = 0.03; d.od *= -1; }
         if (d.x < 0 || d.x > w) d.vx *= -1;
         if (d.y < 0 || d.y > h) d.vy *= -1;
+        const grad = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 3);
+        grad.addColorStop(0, `rgba(255,255,255,${d.o})`);
+        grad.addColorStop(1, "transparent");
         ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255," + d.o + ")";
+        ctx.arc(d.x, d.y, d.r * 3, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
         ctx.fill();
       }
       for (let i = 0; i < dots.length; i++) {
@@ -128,19 +139,18 @@ function DirectoryParticles() {
           const dx = dots[i].x - dots[j].x;
           const dy = dots[i].y - dots[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 180) {
+          if (dist < 220) {
             ctx.beginPath();
             ctx.moveTo(dots[i].x, dots[i].y);
             ctx.lineTo(dots[j].x, dots[j].y);
-            ctx.strokeStyle = "rgba(255,255,255," + (0.04 * (1 - dist / 180)) + ")";
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(255,255,255,${0.025 * (1 - dist / 220)})`;
+            ctx.lineWidth = 0.8;
             ctx.stroke();
           }
         }
       }
-      animId = requestAnimationFrame(draw);
     };
-    draw();
+    animId = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
@@ -150,7 +160,7 @@ function DirectoryParticles() {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ opacity: 0.6 }}
+      style={{ opacity: 0.5 }}
     />
   );
 }
@@ -514,20 +524,17 @@ export default function BusinessDirectory() {
         className="relative overflow-hidden hidden md:block"
         style={{ minHeight: "520px", opacity: heroOpacity }}
       >
-        <div className="aurora-hero">
-          <div className="aurora-blob aurora-blob-1" style={{ background: "hsl(220 70% 18% / 0.3)", width: "600px", height: "600px" }} />
-          <div className="aurora-blob aurora-blob-2" style={{ background: "hsl(352 73% 50% / 0.18)", width: "500px", height: "500px" }} />
-          <div className="aurora-blob aurora-blob-3" style={{ background: "hsl(270 60% 40% / 0.12)", width: "450px", height: "450px" }} />
+        <div className="dir-hero-aurora">
+          <div className="dir-hero-aurora-blob dir-hero-aurora-blob-1" />
+          <div className="dir-hero-aurora-blob dir-hero-aurora-blob-2" />
         </div>
         <DirectoryParticles />
         <div
-          className="hero-mouse-light"
+          className="dir-hero-cursor"
           style={{
-            background: "radial-gradient(700px circle at " + mousePos.x + "px " + mousePos.y + "px, hsl(220 70% 18% / 0.08), transparent 40%)",
+            background: "radial-gradient(600px circle at " + mousePos.x + "px " + mousePos.y + "px, hsl(220 70% 18% / 0.06), transparent 40%)",
           }}
         />
-        <div className="hero-grid-overlay" style={{ "--grid-color": "rgba(255,255,255,0.3)" } as React.CSSProperties} />
-        <div className="hero-bottom-fade" />
 
         <div className="relative z-10 container mx-auto px-4 max-w-6xl">
           <div className="text-center pt-24 pb-6">

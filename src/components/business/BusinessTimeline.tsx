@@ -7,12 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Gamepad2,
-  Radio,
-  Trophy,
-  Ticket,
-  Filter,
-  PlayCircle,
+  Gamepad2, Radio, Trophy, Ticket, Filter, PlayCircle, Clock,
 } from "lucide-react";
 
 const sb: any = supabase;
@@ -30,11 +25,11 @@ interface FeedItem {
   image?: string | null;
 }
 
-const kindMeta: Record<Kind, { icon: typeof Trophy; label: string; color: string }> = {
-  game: { icon: Gamepad2, label: "Game", color: "text-violet-500" },
-  live: { icon: Radio, label: "Live", color: "text-rose-500" },
-  winner: { icon: Trophy, label: "Winner", color: "text-amber-500" },
-  raffle: { icon: Ticket, label: "Raffle", color: "text-primary" },
+const kindMeta: Record<Kind, { icon: typeof Trophy; label: string; color: string; bg: string }> = {
+  game: { icon: Gamepad2, label: "Game", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)" },
+  live: { icon: Radio, label: "Live", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  winner: { icon: Trophy, label: "Winner", color: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
+  raffle: { icon: Ticket, label: "Raffle", color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
 };
 
 interface Props {
@@ -42,7 +37,6 @@ interface Props {
   reloadKey?: number;
 }
 
-/** Single chronological timeline uniting games, lives and winners. */
 export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Props) {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +56,6 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
       if (cancelled) return;
 
       const feed: FeedItem[] = [];
-
       ((spins.data as any[]) || []).forEach((g) =>
         feed.push({ id: `sp-${g.id}`, kind: "game", title: g.name || "Spin wheel", subtitle: "Spin the wheel", badge: g.is_active ? "Active" : "Paused", at: g.created_at, href: `/games/spin-wheel/${g.id}` }),
       );
@@ -71,14 +64,10 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
       );
       ((lives.data as any[]) || []).forEach((l) =>
         feed.push({
-          id: `lv-${l.id}`,
-          kind: "live",
-          title: l.title,
+          id: `lv-${l.id}`, kind: "live", title: l.title,
           subtitle: l.status === "live" ? "Streaming now" : l.status === "scheduled" ? "Upcoming live" : "Replay available",
           badge: l.status === "live" ? "Live now" : l.status === "scheduled" ? "Upcoming" : "Replay",
-          at: l.scheduled_at,
-          href: `/live-evento/${l.slug}`,
-          image: l.cover_url,
+          at: l.scheduled_at, href: `/live-evento/${l.slug}`, image: l.cover_url,
         }),
       );
       ((sessions.data as any[]) || []).forEach((s) =>
@@ -93,9 +82,7 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
       setLoading(false);
     };
     void load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [businessUserId, reloadKey]);
 
   const visible = useMemo(
@@ -105,7 +92,7 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-16 rounded-xl" />
         ))}
@@ -114,69 +101,99 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-        {(["all", "live", "game", "winner", "raffle"] as const).map((k) => (
-          <Button
-            key={k}
-            size="sm"
-            variant={filter === k ? "default" : "outline"}
-            className="h-7 text-[11px] capitalize"
-            onClick={() => setFilter(k)}
-          >
-            {k === "all" ? "Everything" : `${kindMeta[k].label}s`}
-          </Button>
-        ))}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Filter className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }} />
+        {(["all", "live", "game", "winner", "raffle"] as const).map((k) => {
+          const isActive = filter === k;
+          const meta = k !== "all" ? kindMeta[k] : null;
+          return (
+            <motion.button
+              key={k}
+              onClick={() => setFilter(k)}
+              className="biz-tl-filter"
+              style={{
+                backgroundColor: isActive ? (meta ? meta.bg : "hsl(var(--primary) / 0.1)") : "transparent",
+                color: isActive ? (meta ? meta.color : "hsl(var(--primary))") : "hsl(var(--muted-foreground))",
+                border: `1px solid ${isActive ? (meta ? meta.color + "25" : "hsl(var(--primary) / 0.2)") : "hsl(var(--border))"}`,
+              }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              {k === "all" ? "Everything" : `${meta!.label}s`}
+            </motion.button>
+          );
+        })}
       </div>
 
       {visible.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="py-10 text-center">
-            <PlayCircle className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground">Nothing published in this category yet.</p>
+          <CardContent className="py-12 text-center">
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            >
+              <PlayCircle className="h-10 w-10 mx-auto mb-3" style={{ color: "hsl(var(--muted-foreground) / 0.2)" }} />
+            </motion.div>
+            <p className="text-sm" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>Nothing published in this category yet.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="relative pl-5">
-          <div className="absolute left-1.5 top-1 bottom-1 w-px bg-border" />
+        <div className="biz-tl-track">
+          <div className="biz-tl-line" />
           <div className="space-y-3">
             {visible.map((it, i) => {
               const meta = kindMeta[it.kind];
               const Icon = meta.icon;
               const body = (
-                <Card className="hover:border-primary/40 transition-colors">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    {it.image ? (
-                      <img src={it.image} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" loading="lazy" />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        <Icon className={`h-4 w-4 ${meta.color}`} />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{it.title}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {it.subtitle} · {new Date(it.at).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
-                      </p>
+                <motion.div
+                  className="biz-tl-card"
+                  initial={{ opacity: 0, y: 10, x: -8 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.4), type: "spring", stiffness: 280, damping: 28 }}
+                  whileHover={{ x: 4 }}
+                >
+                  {it.image ? (
+                    <img src={it.image} alt="" className="biz-tl-thumb" loading="lazy" />
+                  ) : (
+                    <div className="biz-tl-icon-wrap" style={{ backgroundColor: meta.bg }}>
+                      <Icon className="h-4 w-4" style={{ color: meta.color }} />
                     </div>
-                    {it.badge && (
-                      <Badge variant="secondary" className="text-[10px] shrink-0">{it.badge}</Badge>
-                    )}
-                  </CardContent>
-                </Card>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="biz-tl-title">{it.title}</p>
+                    <div className="biz-tl-subtitle">
+                      <Clock className="h-2.5 w-2.5" />
+                      <span>{it.subtitle}</span>
+                      <span className="biz-tl-sep">·</span>
+                      <span>{new Date(it.at).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
+                    </div>
+                  </div>
+                  {it.badge && (
+                    <Badge
+                      className="biz-tl-badge"
+                      style={{ backgroundColor: meta.bg, color: meta.color, border: `1px solid ${meta.color}20` }}
+                    >
+                      {it.badge}
+                    </Badge>
+                  )}
+                </motion.div>
               );
               return (
-                <motion.div
-                  key={it.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i * 0.03, 0.4) }}
-                  className="relative"
-                >
-                  <span className={`absolute -left-[18px] top-6 h-2.5 w-2.5 rounded-full bg-background ring-2 ring-border`} />
+                <div key={it.id} className="relative pl-7">
+                  <motion.div
+                    className="absolute left-0 top-4"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: Math.min(i * 0.03, 0.4) }}
+                  >
+                    <div
+                      className="biz-tl-dot"
+                      style={{ backgroundColor: meta.color, boxShadow: `0 0 8px ${meta.color}40` }}
+                    />
+                  </motion.div>
                   {it.href ? <Link to={it.href}>{body}</Link> : body}
-                </motion.div>
+                </div>
               );
             })}
           </div>

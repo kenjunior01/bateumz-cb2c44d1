@@ -206,6 +206,7 @@ export default function BusinessProfile() {
 
       // Load winners + rankings (non-blocking)
       void loadWinnersAndRankings(rafflesData, contestsData);
+      void loadGames();
     };
 
     const loadGames = async () => {
@@ -521,7 +522,7 @@ export default function BusinessProfile() {
         <AmbassadorPanel businessUserId={business.user_id} businessName={displayName} />
         <Tabs defaultValue="all">
           <div className="sticky top-14 sm:top-16 z-30 -mx-4 px-4 py-2 bg-background/85 backdrop-blur-md border-b border-border/40 mb-4 sm:mb-6">
-            <TabsList className="w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
+            <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
               <TabsTrigger value="all" className="text-[11px] sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
                 Tudo
@@ -539,9 +540,13 @@ export default function BusinessProfile() {
                 <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
                 Vencedores
               </TabsTrigger>
-            <TabsTrigger value="jogos" className="gap-1.5">
+            <TabsTrigger value="jogos" className="gap-1.5 text-[11px] sm:text-sm">
                   <Gamepad2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Jogos</span>
+                  <span className="hidden sm:inline">Games</span>
+                </TabsTrigger>
+              <TabsTrigger value="lives" className="gap-1.5 text-[11px] sm:text-sm">
+                  <Radio className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Lives</span>
                 </TabsTrigger>
               </TabsList>
           </div>
@@ -769,6 +774,10 @@ export default function BusinessProfile() {
                 <GameHistoryPanel businessId={id!} />
               </TabsContent>
 
+          <TabsContent value="lives" className="space-y-4 mt-4">
+            <BusinessLivesTab businessUserId={business.user_id} />
+          </TabsContent>
+
           <TabsContent value="winners">
             {winners.length === 0 && rankings.length === 0 ? (
               <EmptyState message="Ainda não há vencedores nem rankings publicados." />
@@ -777,6 +786,8 @@ export default function BusinessProfile() {
             )}
           </TabsContent>
         </Tabs>
+
+        <PlatformPulseWidget />
       </div>
 
       <Footer />

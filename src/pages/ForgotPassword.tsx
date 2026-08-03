@@ -4,6 +4,11 @@ import { Trophy, Mail, ArrowLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  classifyResetError,
+  logResetEvent,
+  rememberResetEmail,
+} from "@/lib/passwordResetTelemetry";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -21,10 +26,20 @@ export default function ForgotPassword() {
     setLoading(false);
     if (error) {
       setError(error.message);
+      logResetEvent({
+        stage: "failed",
+        reason: classifyResetError(error.message),
+        email,
+        errorMessage: error.message,
+        metadata: { step: "request" },
+      });
     } else {
+      rememberResetEmail(email);
       setSent(true);
+      logResetEvent({ stage: "requested", reason: "ok", email });
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

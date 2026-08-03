@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Gamepad2, Plus, Settings2, Sparkles, Radio, Clock, Trophy, Users, Zap, Eye, EyeOff, Copy, Check, Save, Trash2, ChevronRight, BarChart3, Puzzle, Timer, Target, ListOrdered, Sliders, Palette
+  Gamepad2, Plus, Settings2, Sparkles, Radio, Clock, Trophy, Users, Zap, Eye, EyeOff, Copy, Check, Save, Trash2, ChevronRight, BarChart3, Puzzle, Timer, Target, ListOrdered, Sliders, Palette, Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import ChallengeCreator, { Challenge } from '@/components/livegames/ChallengeCreator';
 
 interface LiveTemplate {
@@ -123,6 +124,7 @@ const AVAILABLE_GAMES = [
 const CompanyLiveManager = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<LiveTemplate[]>([]);
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -317,6 +319,11 @@ const CompanyLiveManager = () => {
     setTemplates((prev) => prev.map((t) => (t.id === current.id ? { ...t, [field]: value } : t)));
   };
 
+  const updateTemplateFieldDirect = (field: string, value: any) => {
+    if (!current) return;
+    setTemplates((prev) => prev.map((t) => (t.id === current.id ? { ...t, [field]: value } : t)));
+  };
+
   const exportTemplate = () => {
     if (!current) return;
     navigator.clipboard.writeText(JSON.stringify(current, null, 2));
@@ -403,6 +410,7 @@ const CompanyLiveManager = () => {
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duplicateTemplate(tpl.id); }}><Copy className="h-3 w-3" /></Button>
+                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); navigate(`/live-hub?template=${tpl.id}`); }} className="text-emerald-500"><Play className="h-3 w-3" /></Button>
                     <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteTemplate(tpl.id); }} className="text-destructive"><Trash2 className="h-3 w-3" /></Button>
                     <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" />
                   </div>
@@ -467,7 +475,11 @@ const CompanyLiveManager = () => {
                 <h3 className="font-display text-lg font-bold mb-3 flex items-center gap-2">
                   <Puzzle className="h-5 w-5 text-primary" /> Desafios Personalizados
                 </h3>
-                <ChallengeCreator liveCode={undefined} />
+                <ChallengeCreator
+                liveCode={undefined}
+                externalChallenges={current?.challenges || []}
+                onChallengesChange={(chs) => { if (current) updateTemplateFieldDirect('challenges', chs); }}
+              />
               </div>
             </div>
           )}
@@ -609,6 +621,20 @@ const CompanyLiveManager = () => {
                           <Input value={current.branding[key]} onChange={(e) => updateBranding({ [key]: e.target.value })} className="flex-1" />
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Preview do Overlay</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-[11px] text-muted-foreground">Veja como o overlay fica com as suas cores. Abra numa janela do OBS.</p>
+                  <div className="flex gap-2">
+                    {["leaderboard", "scoreboard", "minimal"].map((v: string) => (
+                      <Button key={v} size="sm" variant="outline" onClick={() => window.open(`/overlay/pro?code=LIVE&layout=${v}`, "_blank", "width=1280,height=720")}>
+                        {v}
+                      </Button>
                     ))}
                   </div>
                 </CardContent>

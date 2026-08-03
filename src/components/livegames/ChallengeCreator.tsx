@@ -31,6 +31,8 @@ interface ChallengeCreatorProps {
  liveCode?: string;
  onChallengeCreated?: (challenge: Challenge) => void;
  compact?: boolean;
+ externalChallenges?: Challenge[];
+ onChallengesChange?: (challenges: Challenge[]) => void;
 }
 
 const TYPE_CONFIG: Record<string, { icon: typeof Gamepad2; color: string; label: string }> = {
@@ -56,10 +58,20 @@ const EMPTY_CHALLENGE = (): Challenge => ({
   order: 0,
 });
 
-const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: ChallengeCreatorProps) => {
+const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false, externalChallenges, onChallengesChange }: ChallengeCreatorProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [internalChallenges, setInternalChallenges] = useState<Challenge[]>([]);
+  const isExternal = !!onChallengesChange;
+  const challenges = isExternal ? (externalChallenges || []) : internalChallenges;
+  const setChallenges = (updater: Challenge[] | ((prev: Challenge[]) => Challenge[])) => {
+    if (typeof updater === "function") {
+      const next = updater(isExternal ? (externalChallenges || []) : internalChallenges);
+      if (isExternal) { onChallengesChange(next); } else { setInternalChallenges(next); }
+    } else {
+      if (isExternal) { onChallengesChange(updater); } else { setInternalChallenges(updater); }
+    }
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -103,26 +115,31 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
     if (!user) return;
     setSaving(true);
     try {
-      const { error } = await (supabase as any).from('live_challenges').upsert(
-        challenges.map((c) => ({
-          user_id: user.id,
-          challenge_id: c.id,
-          live_code: liveCode || null,
-          title: c.title,
-          description: c.description,
-          type: c.type,
-          points: c.points,
-          time_limit: c.timeLimit,
-          difficulty: c.difficulty,
-          is_active: c.is_active,
-          sort_order: c.order,
-          options: c.options || null,
-          correct_answer: c.correctAnswer || null,
-        })),
-        { onConflict: 'user_id,challenge_id' }
-      );
-      if (error) throw error;
-      toast({ title: 'Desafios guardados com sucesso!' });
+      if (isExternal) {
+        onChallengesChange(challenges);
+        toast({ title: 'Desafios atualizados no template!' });
+      } else {
+        const { error } = await (supabase as any).from('live_challenges').upsert(
+          challenges.map((c) => ({
+            user_id: user.id,
+            challenge_id: c.id,
+            live_code: liveCode || null,
+            title: c.title,
+            description: c.description,
+            type: c.type,
+            points: c.points,
+            time_limit: c.timeLimit,
+            difficulty: c.difficulty,
+            is_active: c.is_active,
+            sort_order: c.order,
+            options: c.options || null,
+            correct_answer: c.correctAnswer || null,
+          })),
+          { onConflict: 'user_id,challenge_id' }
+        );
+        if (error) throw error;
+        toast({ title: 'Desafios guardados com sucesso!' });
+      }
     } catch (e) {
       console.error(e);
       toast({ title: 'Erro ao guardar', variant: 'destructive' });
@@ -140,6 +157,10 @@ const ChallengeCreator = ({ liveCode, onChallengeCreated, compact = false }: Cha
 
   const loadSaved = async () => {
     if (!user) return;
+    if (isExternal) {
+      toast({ title: 'Os desafios sao geridos pelo template' });
+      return;
+    }
     try {
       const { data, error } = await (supabase as any)
         .from('live_challenges')

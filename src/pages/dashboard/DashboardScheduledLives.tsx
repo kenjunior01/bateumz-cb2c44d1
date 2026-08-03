@@ -10,7 +10,7 @@ import {
 } from "@/lib/scheduledLives";
 import { toast } from "sonner";
 
-const empty = { title: "", description: "", cover_url: "", source_type: "external" as "external" | "internal", external_url: "", external_platform: "youtube", live_code: "", scheduled_at: "", ends_at: "" };
+const empty = { title: "", description: "", cover_url: "", source_type: "external" as "external" | "internal", external_url: "", external_platform: "youtube", live_code: "", scheduled_at: "", ends_at: "", template_id: "" };
 
 const DashboardScheduledLives = () => {
   const { user } = useAuth();
@@ -22,11 +22,16 @@ const DashboardScheduledLives = () => {
   const [selected, setSelected] = useState<ScheduledLive | null>(null);
   const [prizes, setPrizes] = useState<any[]>([]);
   const [newPrize, setNewPrize] = useState({ position: 1, title: "", description: "" });
+  const [templates, setTemplates] = useState<any[]>([]);
 
   const load = async () => {
     if (!user) return;
     setLoading(true);
     setItems(await listScheduledLives(user.id));
+    try {
+      const { data: tplData } = await supabase.from("live_templates").select("id,name,game_ids").eq("user_id", user.id);
+      setTemplates(tplData || []);
+    } catch(e) { /* noop */ }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user]);
@@ -59,6 +64,7 @@ const DashboardScheduledLives = () => {
         live_code: form.live_code || undefined,
         scheduled_at: new Date(form.scheduled_at).toISOString(),
         ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : undefined,
+        template_id: form.template_id || undefined,
       });
       toast.success("Live agendada!");
       setShowForm(false); setForm(empty); load();
@@ -202,6 +208,17 @@ const DashboardScheduledLives = () => {
                   <input type="datetime-local" className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
                 </div>
               </div>
+              {templates.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold">Template da Live</label>
+                  <select className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background mt-0.5" value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })}>
+                    <option value="">Sem template</option>
+                    {templates.map((t: any) => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.game_ids?.length || 0} jogos)</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button disabled={saving} onClick={submit} className="w-full px-4 py-2.5 rounded-full bg-emerald-500 text-white font-bold disabled:opacity-50">
                 {saving ? "A guardar…" : "Agendar"}
               </button>

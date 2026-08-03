@@ -15,6 +15,7 @@ export type ScheduledLive = {
   ends_at: string | null;
   status: "draft" | "scheduled" | "live" | "ended" | "cancelled";
   slug: string;
+  template_id: string | null;
 };
 
 const SLUG_FALLBACK = (title: string) =>
@@ -40,6 +41,7 @@ export const createScheduledLive = async (input: {
   external_platform?: string;
   scheduled_at: string;
   ends_at?: string;
+  template_id?: string;
 }): Promise<ScheduledLive> => {
   const slugBase = SLUG_FALLBACK(input.title);
   const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
@@ -56,6 +58,7 @@ export const createScheduledLive = async (input: {
       external_platform: input.source_type === "external" ? (input.external_platform || "other") : null,
       scheduled_at: input.scheduled_at,
       ends_at: input.ends_at || null,
+      template_id: input.template_id || null,
       status: "scheduled",
       slug,
     })

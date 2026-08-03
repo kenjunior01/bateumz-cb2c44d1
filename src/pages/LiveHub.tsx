@@ -65,6 +65,9 @@ import MexericaGame from "@/components/livegames/MexericaGame";
 import ChigogoGame from "@/components/livegames/ChigogoGame";
 import UrusseGame from "@/components/livegames/UrusseGame";
 import CapulanaQuiz from "@/components/livegames/CapulanaQuiz";
+import CarromBoard from "@/components/livegames/CarromBoard";
+import TeenPatti from "@/components/livegames/TeenPatti";
+import KabaddiRaid from "@/components/livegames/KabaddiRaid";
 import LiveLeaderboard, { LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, LiveGameConfig, CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -96,7 +99,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return this.props.children;
   }
 }
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid";
 
 interface SavedWheelGame {
   id: string;
@@ -176,6 +179,9 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "chigogo", label: "Chigogo", icon: Target, emoji: "🪨", desc: "Adivinha a Pedrinha — esconda e adivinhe! Jogo tradicional mocambicano!", grad: "from-yellow-700 to-amber-800" },
   { id: "urusse", label: "Urusse", icon: Gamepad2, emoji: "🟤", desc: "Mancala mocambicano — semeie, capture e venca! Jogo de tabuleiro classico!", grad: "from-green-700 to-amber-900" },
   { id: "capulanaquiz", label: "Capulana Quiz", icon: Brain, emoji: "👗", desc: "Quiz de cultura mocambicana: geografia, gastronomia, historia e mais!", grad: "from-yellow-500 to-green-700" },
+  { id: "carromboard", label: "Carrom", icon: Target, emoji: "🎱", desc: "Jogo classico de carrom indiano - encace as pecas!", grad: "from-amber-600 to-orange-500" },
+  { id: "teenpatti", label: "Teen Patti", icon: Target, emoji: "🃏", desc: "Poker indiano - quem tem a melhor mao?", grad: "from-emerald-600 to-green-500" },
+  { id: "kabaddiraid", label: "Kabaddi Raid", icon: Zap, emoji: "🧔", desc: "Raid epico de Kabaddi - tempo e reflexos!", grad: "from-orange-500 to-red-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1035,6 +1041,27 @@ const LiveHub = () => {
                 <motion.div key="capulanaquiz" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Capulana Quiz">
                   <CapulanaQuiz onScore={recordScore("Capulana Quiz")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "carromboard" && (
+                <motion.div key="carromboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Carrom">
+                  <CarromBoard onScore={recordScore("Carrom")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "teenpatti" && (
+                <motion.div key="teenpatti" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Teen Patti">
+                  <TeenPatti onScore={recordScore("Teen Patti")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "kabaddiraid" && (
+                <motion.div key="kabaddiraid" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Kabaddi Raid">
+                  <KabaddiRaid onScore={recordScore("Kabaddi Raid")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>
               )}

@@ -122,6 +122,7 @@ import MobileTopBar from "./components/MobileTopBar.tsx";
 import BottomTabBar from "./components/BottomTabBar.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
 import Wallet from "./pages/Wallet.tsx";
+import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
 
 // New live entertainment pages
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
@@ -216,6 +217,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <Wallet />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/regional-panel"
+            element={
+              <ProtectedRoute>
+                <RegionalManagerPanel />
               </ProtectedRoute>
             }
           />

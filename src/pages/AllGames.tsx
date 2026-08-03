@@ -2,9 +2,10 @@ import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight } from "lucide-react";
+import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { COUNTRIES } from "@/lib/regions";
 
 interface GameDef {
   id: string;
@@ -16,6 +17,7 @@ interface GameDef {
   players: string;
   icon: any;
   hasBot: boolean;
+  regions?: string[];
 }
 
 const ALL_GAMES: GameDef[] = [
@@ -78,6 +80,9 @@ const ALL_GAMES: GameDef[] = [
   { id: "chigogo", label: "Chigogo", emoji: "\ud83e\udea8", desc: "Adivinha a Pedrinha \u2014 esconda e descubra!", grad: "from-yellow-700 to-amber-800", category: "Mocambicano", players: "1v1 / Bot", icon: Target, hasBot: true },
   { id: "urusse", label: "Urusse", emoji: "\ud83e\uddf4", desc: "Mancala mocambicano \u2014 semeie, capture e venca!", grad: "from-green-700 to-amber-900", category: "Mocambicano", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
   { id: "capulanaquiz", label: "Capulana Quiz", emoji: "\ud83d\udc57", desc: "Quiz de cultura mocambicana!", grad: "from-yellow-500 to-green-700", category: "Mocambicano", players: "1v1 / Bot", icon: Brain, hasBot: true },
+  { id: "kabaddiraid", label: "Kabaddi Raid", emoji: "\uD83E\uDDD4", desc: "Raid epico de Kabaddi - tempo e reflexos!", grad: "from-orange-500 to-red-600", category: "Indiano", players: "Solo", icon: Zap, hasBot: false, regions: ["IN"] },
+  { id: "carromboard", label: "Carrom", emoji: "\uD83C\uDFB1", desc: "Jogo classico de carrom indiano - encace as pecas!", grad: "from-amber-600 to-orange-500", category: "Indiano", players: "1v1 / Bot", icon: Target, hasBot: true, regions: ["IN"] },
+  { id: "teenpatti", label: "Teen Patti", emoji: "\uD83C\uDCCF", desc: "Poker indiano - quem tem a melhor mao?", grad: "from-emerald-600 to-green-500", category: "Indiano", players: "1v1 / Bot", icon: Spade, hasBot: true, regions: ["IN"] },
 ];
 
 const CATEGORIES = [
@@ -93,6 +98,7 @@ const CATEGORIES = [
   { id: "Cartas", label: "Cartas", emoji: "\ud83c\udccf" },
   { id: "Variado", label: "Variado", emoji: "\ud83c\udfa3" },
   { id: "Mocambicano", label: "Mocambicano", emoji: "\ud83c\uddf2" },
+  { id: "Indiano", label: "Indiano", emoji: "\uD83C\uDDEE\uD83C\uDDF3" },
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
@@ -102,6 +108,7 @@ const THEME_A = "hsl(352 73% 50%)";
 const AllGames = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("todos");
+  const [regionFilter, setRegionFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "category">("name");
   const heroRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -109,6 +116,7 @@ const AllGames = () => {
   const filtered = useMemo(() => {
     let list = ALL_GAMES;
     if (category !== "todos") list = list.filter((g) => g.category === category);
+    if (regionFilter !== "all") list = list.filter((g) => !g.regions || g.regions.includes(regionFilter));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((g) => g.label.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q) || g.category.toLowerCase().includes(q));
@@ -116,7 +124,7 @@ const AllGames = () => {
     if (sortBy === "name") list = [...list].sort((a, b) => a.label.localeCompare(b.label));
     else list = [...list].sort((a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label));
     return list;
-  }, [search, category, sortBy]);
+  }, [search, category, sortBy, regionFilter]);
 
   const botGames = useMemo(() => ALL_GAMES.filter((g) => g.hasBot), []);
   const categoryCounts = useMemo(() => {
@@ -249,7 +257,7 @@ const AllGames = () => {
           })}
         </motion.div>
 
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex flex-wrap items-center gap-2 mt-3">
           <span className="text-xs text-muted-foreground">Ordenar:</span>
           {(["name", "category"] as const).map((s) => (
             <motion.button
@@ -266,6 +274,18 @@ const AllGames = () => {
               {s === "name" ? "Nome" : "Categoria"}
             </motion.button>
           ))}
+          <span className="text-xs text-muted-foreground mx-1">|</span>
+          <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-border/60 bg-background/50 font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+          >
+            <option value="all">Todos os paises</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
+            ))}
+          </select>
           <span className="text-xs text-muted-foreground ml-auto">{filtered.length} jogo{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       </div>

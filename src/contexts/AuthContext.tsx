@@ -122,11 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refCode) {
       localStorage.removeItem("sortex_ref");
       try {
-        const { data: referrer } = await supabase
-          .from("profiles_public")
-          .select("user_id")
-          .eq("referral_code", refCode)
-          .single();
+        const { data: referrerId } = await supabase.rpc("resolve_referral_code", { _code: refCode });
+        const referrer = referrerId ? { user_id: referrerId as string } : null;
         if (referrer && referrer.user_id !== userId) {
           await supabase.from("referrals").insert({
             referrer_id: referrer.user_id,

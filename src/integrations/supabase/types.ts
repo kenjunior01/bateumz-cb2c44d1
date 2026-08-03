@@ -2910,7 +2910,6 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           is_verified: boolean | null
-          referral_code: string | null
           slug: string | null
           user_id: string | null
         }
@@ -2920,7 +2919,6 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           is_verified?: boolean | null
-          referral_code?: string | null
           slug?: string | null
           user_id?: string | null
         }
@@ -2930,7 +2928,6 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           is_verified?: boolean | null
-          referral_code?: string | null
           slug?: string | null
           user_id?: string | null
         }
@@ -3114,6 +3111,7 @@ export type Database = {
         Args: { p_date?: string; p_user_id: string }
         Returns: undefined
       }
+      resolve_referral_code: { Args: { _code: string }; Returns: string }
       toggle_blog_like: { Args: { post_slug: string }; Returns: boolean }
     }
     Enums: {

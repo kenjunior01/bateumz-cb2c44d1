@@ -46,6 +46,22 @@ const TITLE_WORDS = ["Business", "Directory"];
 
 const PAGE_SIZE = 12;
 
+/** province/state value -> country code, derived from the regions catalogue. */
+const REGION_TO_COUNTRY: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const c of COUNTRIES) {
+    for (const r of getRegions(c.code)) {
+      const key = r.value.toLowerCase();
+      if (!(key in map)) map[key] = c.code;
+    }
+  }
+  return map;
+})();
+
+/** Country of a business: campaign country first, otherwise inferred from its region. */
+const resolveCountry = (b: { country: string | null; province: string | null }) =>
+  b.country || (b.province ? REGION_TO_COUNTRY[b.province.toLowerCase()] ?? null : null);
+
 /** Public profile URL — prefers the SEO slug, falls back to the user id. */
 export const businessProfilePath = (b: { slug?: string | null; user_id: string }) =>
   "/empresa/" + (b.slug || b.user_id);
@@ -345,7 +361,7 @@ export default function BusinessDirectory() {
     let list = businesses;
     if (filter === "verified") list = list.filter(b => b.is_verified);
     if (filter === "active") list = list.filter(b => b.raffle_count + b.contest_count > 0);
-    if (country) list = list.filter(b => b.country === country);
+    if (country) list = list.filter(b => resolveCountry(b) === country);
     if (region) list = list.filter(b => (b.province || "").toLowerCase() === region.toLowerCase());
     if (search.trim()) {
       const q = search.toLowerCase();

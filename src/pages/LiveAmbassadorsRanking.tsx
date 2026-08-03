@@ -77,7 +77,7 @@ const LiveAmbassadorsRanking = () => {
 
         <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-amber-500 p-6 text-white shadow-xl">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-90">
-            <Sparkles className="h-3.5 w-3.5" /> Embaixadores da Live
+            <Sparkles className="h-3.5 w-3.5" /> Live Ambassadors
           </div>
           <h1 className="font-display text-3xl font-extrabold mt-1">{code || "—"}</h1>
           <p className="text-sm opacity-90 mt-1">
@@ -85,11 +85,11 @@ const LiveAmbassadorsRanking = () => {
           </p>
           <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
-              <p className="text-[10px] uppercase opacity-80">Embaixadores</p>
+              <p className="text-[10px] uppercase opacity-80">Ambassadors</p>
               <p className="text-2xl font-extrabold">{ranking.length}{hasMore ? "+" : ""}</p>
             </div>
             <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
-              <p className="text-[10px] uppercase opacity-80">Visitas únicas</p>
+              <p className="text-[10px] uppercase opacity-80">Visits únicas</p>
               <p className="text-2xl font-extrabold">{totalVisits}</p>
             </div>
           </div>
@@ -107,10 +107,10 @@ const LiveAmbassadorsRanking = () => {
           <Users className="h-4 w-4 text-emerald-500" />
           <p className="text-[11px] flex-1 font-mono break-all text-muted-foreground">{shareUrl}</p>
           <button onClick={copy} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-bold inline-flex items-center gap-1">
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />} Copiar
+            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />} Copy
           </button>
           <button onClick={share} className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold inline-flex items-center gap-1">
-            <Share2 className="h-3 w-3" /> Partilhar
+            <Share2 className="h-3 w-3" /> Share
           </button>
         </div>
 

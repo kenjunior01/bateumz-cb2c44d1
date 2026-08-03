@@ -33,8 +33,8 @@ type Announcement = {
 const currentAnnouncement: Announcement | null = {
   id: "live-may2025",
   emoji: "🔥",
-  text: "Lives a decorrer agora — participe e ganhe prémios em tempo real!",
-  cta: { label: "Entrar Agora", href: "/lives-agora" },
+  text: "Lives happening now — join and win real-time prizes!",
+  cta: { label: "Join Now", href: "/lives-agora" },
   gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
 };
 

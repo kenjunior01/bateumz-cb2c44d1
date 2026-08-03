@@ -1714,6 +1714,7 @@ export type Database = {
           phone: string | null
           province: string | null
           referral_code: string | null
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -1729,6 +1730,7 @@ export type Database = {
           phone?: string | null
           province?: string | null
           referral_code?: string | null
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1744,6 +1746,7 @@ export type Database = {
           phone?: string | null
           province?: string | null
           referral_code?: string | null
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2866,6 +2869,7 @@ export type Database = {
           display_name: string | null
           is_verified: boolean | null
           referral_code: string | null
+          slug: string | null
           user_id: string | null
         }
         Insert: {
@@ -2875,6 +2879,7 @@ export type Database = {
           display_name?: string | null
           is_verified?: boolean | null
           referral_code?: string | null
+          slug?: string | null
           user_id?: string | null
         }
         Update: {
@@ -2884,6 +2889,7 @@ export type Database = {
           display_name?: string | null
           is_verified?: boolean | null
           referral_code?: string | null
+          slug?: string | null
           user_id?: string | null
         }
         Relationships: []

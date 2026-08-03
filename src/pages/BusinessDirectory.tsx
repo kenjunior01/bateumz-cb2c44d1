@@ -260,15 +260,13 @@ export default function BusinessDirectory() {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "business");
-        if (!roles || roles.length === 0) { setLoading(false); return; }
-        const businessIds = roles.map(r => r.user_id);
-        const [profilesRes, rafflesRes, contestsRes] = await Promise.all([
-          supabase.from("profiles_public").select("*").in("user_id", businessIds),
+        const [dirRes, rafflesRes, contestsRes] = await Promise.all([
+          supabase.rpc("get_business_directory"),
           supabase.from("raffles").select("business_user_id").eq("status", "active"),
           supabase.from("contests").select("created_by").in("status", ["active", "voting", "completed"]),
         ]);
-        const profiles = profilesRes.data || [];
+        if (dirRes.error) throw dirRes.error;
+        const profiles = dirRes.data || [];
         const rafflesByUser: Record<string, number> = {};
         (rafflesRes.data || []).forEach((r: { business_user_id: string }) => {
           rafflesByUser[r.business_user_id] = (rafflesByUser[r.business_user_id] || 0) + 1;
@@ -298,6 +296,7 @@ export default function BusinessDirectory() {
     };
     load();
   }, []);
+
 
   useEffect(() => {
     const timer = setTimeout(() => setStatsReady(true), 400);

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Settings, Palette, Gamepad2, BarChart3, Users, Globe, Save, RefreshCw,
   Plus, ToggleLeft, ToggleRight, Zap, Shield, Crown, Eye, Megaphone,
-  TrendingUp, DollarSign, Activity
+  TrendingUp, DollarSign, Activity, Radio
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -208,7 +208,7 @@ export default function RegionalManagerPanel() {
               </div>
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary">{managerRole}</span>
-                <span className="text-xs font-medium px-3 py-1 rounded-full bg-accent/10 text-accent">{countryInfo?.flag} {countryInfo?.label || region?.country_name}</span>
+                <span className="text-xs font-medium px-3 py-1 rounded-full bg-accent/10 text-accent">{countryInfo?.flag} {countryInfo?.label || region?.label}</span>
                 {managerRegions.length > 0 && (
                   <span className="text-xs px-3 py-1 rounded-full border border-border bg-card">{managerRegions.length} regiao(oes)</span>
                 )}

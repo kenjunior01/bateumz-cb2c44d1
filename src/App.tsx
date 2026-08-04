@@ -123,6 +123,12 @@ import EsportsHub from "./pages/esports/EsportsHub.tsx";
 import ChampionshipDetailPage from "./pages/esports/ChampionshipDetailPage.tsx";
 import TeamManagementPage from "./pages/esports/TeamManagementPage.tsx";
 import DashboardEsports from "./pages/dashboard/DashboardEsports.tsx";
+import DashboardEsportsAdvanced from "./pages/dashboard/DashboardEsportsAdvanced.tsx";
+import SeasonsPage from "./pages/esports/SeasonsPage.tsx";
+import BettingPage from "./pages/esports/BettingPage.tsx";
+import LeaderboardPage from "./pages/esports/LeaderboardPage.tsx";
+import TransfersPage from "./pages/esports/TransfersPage.tsx";
+import AchievementsPage from "./pages/esports/AchievementsPage.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -206,6 +212,11 @@ function AnimatedRoutes() {
           <Route path="/esports" element={<EsportsHub />} />
           <Route path="/esports/:slug" element={<ChampionshipDetailPage />} />
           <Route path="/esports/equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />
+          <Route path="/esports/seasons" element={<SeasonsPage />} />
+          <Route path="/esports/betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />
+          <Route path="/esports/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/esports/transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />
+          <Route path="/esports/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
           <Route
             path="/profile"
             element={
@@ -280,6 +291,7 @@ function AnimatedRoutes() {
             <Route path="tournaments" element={<DashboardTournaments />} />
             <Route path="leagues" element={<DashboardLeagues />} />
             <Route path="esports" element={<DashboardEsports />} />
+            <Route path="esports-advanced" element={<DashboardEsportsAdvanced />} />
             <Route path="blog" element={<DashboardBlog />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar
+  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Swords, Coins, Award, ArrowLeftRight, Target, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
   getEsportGames,
@@ -94,6 +95,7 @@ function getStatusColor(status: ChampStatus): string {
 
 export default function EsportsHub() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<EsportGame[]>([]);
   const [championships, setChampionships] = useState<Championship[]>([]);
   const [featured, setFeatured] = useState<Championship | null>(null);
@@ -241,6 +243,35 @@ export default function EsportsHub() {
                 <div className="text-xl md:text-2xl font-bold text-white">{s.value}</div>
                 <div className="text-[10px] md:text-xs text-zinc-500 uppercase tracking-wider">{s.label}</div>
               </div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-8 max-w-3xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            {[
+              { icon: Swords, label: 'Ligas', path: '/esports/seasons', color: 'from-violet-600 to-purple-600' },
+              { icon: Coins, label: 'Apostas', path: '/esports/betting', color: 'from-amber-600 to-orange-600', auth: true },
+              { icon: Target, label: 'Ranking', path: '/esports/leaderboard', color: 'from-cyan-600 to-blue-600' },
+              { icon: ArrowLeftRight, label: 'Transferencias', path: '/esports/transfers', color: 'from-emerald-600 to-green-600', auth: true },
+              { icon: Award, label: 'Conquistas', path: '/esports/achievements', color: 'from-pink-600 to-rose-600', auth: true },
+              { icon: LayoutGrid, label: 'Equipas', path: '/esports/equipas', color: 'from-indigo-600 to-violet-600', auth: true },
+            ].map((item, i) => (
+              <motion.button
+                key={i}
+                onClick={() => navigate(item.path)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${item.color} shadow-lg`}>
+                  <item.icon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">{item.label}</span>
+              </motion.button>
             ))}
           </motion.div>
         </div>

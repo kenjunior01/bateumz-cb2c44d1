@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe } from "lucide-react";
+import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -83,6 +83,12 @@ const ALL_GAMES: GameDef[] = [
   { id: "kabaddiraid", label: "Kabaddi Raid", emoji: "\uD83E\uDDD4", desc: "Raid epico de Kabaddi - tempo e reflexos!", grad: "from-orange-500 to-red-600", category: "Indiano", players: "Solo", icon: Zap, hasBot: false, regions: ["IN"] },
   { id: "carromboard", label: "Carrom", emoji: "\uD83C\uDFB1", desc: "Jogo classico de carrom indiano - encace as pecas!", grad: "from-amber-600 to-orange-500", category: "Indiano", players: "1v1 / Bot", icon: Target, hasBot: true, regions: ["IN"] },
   { id: "teenpatti", label: "Teen Patti", emoji: "\uD83C\uDCCF", desc: "Poker indiano - quem tem a melhor mao?", grad: "from-emerald-600 to-green-500", category: "Indiano", players: "1v1 / Bot", icon: Spade, hasBot: true, regions: ["IN"] },
+  { id: "rpgarena", label: "RPG Arena Battle", emoji: "\u2694\uFE0F", desc: "Combate turn-based RPG: Guerreiro, Mago, Arqueiro, Ladino!", grad: "from-red-600 to-purple-800", category: "RPG", players: "1v1 / Bot", icon: Swords, hasBot: true },
+  { id: "battleroyale", label: "Battle Royale", emoji: "\uD83C\uDFB1", desc: "Sobreviva na zona! 40 jogadores, armas, loot e zona a fechar!", grad: "from-amber-500 to-red-700", category: "Battle Royale", players: "Solo / Bot", icon: Target, hasBot: true },
+  { id: "chess", label: "Xadrez", emoji: "\u265A", desc: "Xadrez completo: roque, en passant, promocao e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estrategia", players: "1v1 / Bot", icon: Crown, hasBot: true },
+  { id: "flappybird", label: "Flappy Bird", emoji: "\uD83D\uDC26", desc: "Desvie dos canos! Classico viciante com medalhas!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: Gamepad2, hasBot: true },
+  { id: "fruitninja", label: "Fruta Ninja", emoji: "\uD83C\uDF4E", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
+  { id: "typingracer", label: "Corrida de Digitacao", emoji: "\u26A1", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
 ];
 
 const CATEGORIES = [
@@ -99,6 +105,10 @@ const CATEGORIES = [
   { id: "Variado", label: "Variado", emoji: "\ud83c\udfa3" },
   { id: "Mocambicano", label: "Mocambicano", emoji: "\ud83c\uddf2" },
   { id: "Indiano", label: "Indiano", emoji: "\uD83C\uDDEE\uD83C\uDDF3" },
+  { id: "RPG", label: "RPG", emoji: "\u2694\uFE0F" },
+  { id: "Battle Royale", label: "Battle Royale", emoji: "\uD83C\uDFB1" },
+  { id: "Acao", label: "Acao", emoji: "\uD83D\uDCA5" },
+  { id: "Digitacao", label: "Digitacao", emoji: "\u2328\uFE0F" },
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };

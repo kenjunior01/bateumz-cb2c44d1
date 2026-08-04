@@ -68,6 +68,12 @@ const CapulanaQuiz = lazy(() => import("@/components/livegames/CapulanaQuiz"));
 const CarromBoard = lazy(() => import("@/components/livegames/CarromBoard"));
 const TeenPatti = lazy(() => import("@/components/livegames/TeenPatti"));
 const KabaddiRaid = lazy(() => import("@/components/livegames/KabaddiRaid"));
+const RpgArenaBattle = lazy(() => import("@/components/livegames/RpgArenaBattle"));
+const BattleRoyaleGame = lazy(() => import("@/components/livegames/BattleRoyaleGame"));
+const ChessGame = lazy(() => import("@/components/livegames/ChessGame"));
+const FlappyBirdGame = lazy(() => import("@/components/livegames/FlappyBirdGame"));
+const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
+const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 import LiveLeaderboard, { type LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, type LiveGameConfig, type CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -100,7 +106,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return this.props.children;
   }
 }
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer";
 
 interface SavedWheelGame {
   id: string;
@@ -183,6 +189,12 @@ const GAMES: { id: GameId; label: string; icon: any; emoji: string; desc: string
   { id: "carromboard", label: "Carrom", icon: Target, emoji: "🎱", desc: "Jogo classico de carrom indiano - encace as pecas!", grad: "from-amber-600 to-orange-500" },
   { id: "teenpatti", label: "Teen Patti", icon: Target, emoji: "🃏", desc: "Poker indiano - quem tem a melhor mao?", grad: "from-emerald-600 to-green-500" },
   { id: "kabaddiraid", label: "Kabaddi Raid", icon: Zap, emoji: "🧔", desc: "Raid epico de Kabaddi - tempo e reflexos!", grad: "from-orange-500 to-red-600" },
+  { id: "rpgarena", label: "RPG Arena Battle", icon: Swords, emoji: "⚔", desc: "Combate RPG turn-based com classes e habilidades!", grad: "from-red-600 to-purple-800" },
+  { id: "battleroyale", label: "Battle Royale", icon: Target, emoji: "🎱", desc: "Sobreviva! Armas, loot e zona a fechar!", grad: "from-amber-500 to-red-700" },
+  { id: "chess", label: "Xadrez", icon: Grid3X3, emoji: "♚", desc: "Xadrez completo com IA de 3 niveis!", grad: "from-slate-700 to-zinc-900" },
+  { id: "flappybird", label: "Flappy Bird", icon: Gamepad2, emoji: "🐦", desc: "Desvie dos canos! Classico viciante!", grad: "from-sky-400 to-green-500" },
+  { id: "fruitninja", label: "Fruta Ninja", icon: Sparkles, emoji: "🍎", desc: "Corte frutas e evite bombas!", grad: "from-red-500 to-orange-500" },
+  { id: "typingracer", label: "Corrida de Digitacao", icon: Zap, emoji: "⌨", desc: "Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1111,6 +1123,42 @@ const LiveHub = () => {
                 <motion.div key="kabaddiraid" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Kabaddi Raid">
                   <KabaddiRaid onScore={recordScore("Kabaddi Raid")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "rpgarena" && (
+                <motion.div key="rpgarena" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="RPG Arena Battle">
+                  <RpgArenaBattle onScore={recordScore("RPG Arena Battle")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "battleroyale" && (
+                <motion.div key="battleroyale" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Battle Royale">
+                  <BattleRoyaleGame onScore={recordScore("Battle Royale")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "chess" && (
+                <motion.div key="chess" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Xadrez">
+                  <ChessGame onScore={recordScore("Xadrez")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "flappybird" && (
+                <motion.div key="flappybird" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Flappy Bird">
+                  <FlappyBirdGame onScore={recordScore("Flappy Bird")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "fruitninja" && (
+                <motion.div key="fruitninja" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Fruta Ninja">
+                  <FruitNinjaGame onScore={recordScore("Fruta Ninja")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "typingracer" && (
+                <motion.div key="typingracer" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Corrida de Digitacao">
+                  <TypingRacer onScore={recordScore("Corrida de Digitacao")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
               </Suspense>

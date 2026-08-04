@@ -346,9 +346,18 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
     setP2RoundPts(0);
     setPattern(new Set());
     setPhase("idle");
-    // startRound runs after setState flushes, so we schedule it
-    setTimeout(() => startRound(), 0);
-  }, [startRound]);
+    // Use round 0 config values directly instead of stale closure
+    const r0Cells = 3;
+    const r0Size = 2;
+    const pat = pickPattern(r0Cells * r0Cells, r0Size);
+    setPattern(pat);
+    setP1Taps(new Set());
+    setP2Taps(new Set());
+    setP1RoundPts(0);
+    setP2RoundPts(0);
+    setMemProgress(100);
+    setTimeout(() => setPhase("memorize"), 50);
+  }, []);
 
   /* ── tap cell ── */
   const handleTap = useCallback(

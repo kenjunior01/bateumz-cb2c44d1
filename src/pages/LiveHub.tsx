@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, Component, lazy, Suspense, type ReactNode } from "react";
+import { useEffect, useRef, useState, useCallback, Component, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -90,20 +90,21 @@ import { toast } from "sonner";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
-class GameErrorBoundary extends Component<{children: ReactNode; gameName: string}, {hasError: boolean}> {
-  constructor(props: {children: ReactNode; gameName: string}) { super(props); this.state = {hasError: false}; }
+class GameErrorBoundary extends Component<{children: ReactNode; gameName: string}, {hasError: boolean; resetKey: number}> {
+  constructor(props: {children: ReactNode; gameName: string}) { super(props); this.state = {hasError: false, resetKey: 0}; }
   static getDerivedStateFromError() { return {hasError: true}; }
   componentDidCatch(err: Error) { console.error(`[GameErrorBoundary] ${this.props.gameName}:`, err); }
+  handleRetry = () => { this.setState((s) => ({ hasError: false, resetKey: (s.resetKey || 0) + 1 })); };
   render() {
     if (this.state.hasError) return (
       <div className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl border border-dashed border-destructive/40 bg-destructive/5">
         <div className="text-4xl mb-3">🎮</div>
         <p className="text-sm font-bold mb-1">Erro ao carregar {this.props.gameName}</p>
         <p className="text-xs text-muted-foreground mb-3">Tente selecionar outro jogo</p>
-        <button onClick={() => this.setState({hasError: false})} className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Tentar novamente</button>
+        <button onClick={this.handleRetry} className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Tentar novamente</button>
       </div>
     );
-    return this.props.children;
+    return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
 type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer";
@@ -390,13 +391,13 @@ const LiveHub = () => {
     }
   }, [gameFromUrl]);
 
-  const recordScore = (game: string) => (name: string, score: number) => {
+  const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
     setLeaderboard((prev) => [
       ...prev,
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
     ]);
-  };
+  }, []);
 
   const broadcastWinner = (name: string, meta?: string) => {
     const w = { name, meta, at: Date.now() };

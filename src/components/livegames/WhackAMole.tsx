@@ -48,6 +48,18 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
   const p2ScoreRef = useRef(0);
   const phaseRef = useRef<Phase>("idle");
   const modeRef = useRef<Mode>("bot");
+  const pendingTimeoutsRef = useRef<number[]>([]);
+
+  const trackTimeout = useCallback((id: number) => {
+    pendingTimeoutsRef.current.push(id);
+  }, []);
+
+  const clearAllPendingTimeouts = useCallback(() => {
+    pendingTimeoutsRef.current.forEach(clearTimeout);
+    pendingTimeoutsRef.current = [];
+    clearTimeout(spawnRef.current);
+    clearInterval(timerRef.current);
+  }, []);
 
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
@@ -59,17 +71,18 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
       if (next[index] && next[index]!.state === "showing") {
         next[index] = { ...next[index]!, state: "missed" };
         // Reset after animation
-        setTimeout(() => {
+        const tid = window.setTimeout(() => {
           setCells((p) => {
             const n = [...p];
             if (n[index] && n[index]!.state === "missed") n[index] = null;
             return n;
           });
         }, 300);
+        trackTimeout(tid);
       }
       return next;
     });
-  }, []);
+  }, [trackTimeout]);
 
   const spawnMole = useCallback(() => {
     if (phaseRef.current !== "playing") return;
@@ -89,7 +102,8 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
 
       // Auto-hide after random duration
       const showTime = MOLE_SHOW_MIN + Math.random() * (MOLE_SHOW_MAX - MOLE_SHOW_MIN);
- setTimeout(() => hideMole(idx), showTime);
+      const tid = window.setTimeout(() => hideMole(idx), showTime);
+      trackTimeout(tid);
 
       return next;
     });
@@ -97,7 +111,7 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
     // Schedule next spawn
     const nextInterval = MOLE_INTERVAL_MIN + Math.random() * (MOLE_INTERVAL_MAX - MOLE_INTERVAL_MIN);
     spawnRef.current = window.setTimeout(spawnMole, nextInterval);
-  }, [hideMole]);
+  }, [hideMole, trackTimeout]);
 
   // Bot AI: auto-click moles with some delay and imperfection
   const botTick = useCallback(() => {
@@ -112,7 +126,7 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
         const next = [...prev];
         next[showingIdx] = { ...next[showingIdx]!, state: "hit" };
         p2ScoreRef.current += 1;
-        setTimeout(() => {
+        const tid = window.setTimeout(() => {
           setP2Score(p2ScoreRef.current);
           setCells((p) => {
             const n = [...p];
@@ -120,11 +134,12 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
             return n;
           });
         }, 300);
+        trackTimeout(tid);
         return next;
       }
       return prev;
     });
-  }, []);
+  }, [trackTimeout]);
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -156,19 +171,21 @@ const WhackAMole = ({ onScore, liveCode }: Props) => {
       }
 
       // Clear after hit animation
-      setTimeout(() => {
+      const tid = window.setTimeout(() => {
         setCells((p) => {
           const n = [...p];
           if (n[index] && n[index]!.state === "hit") n[index] = null;
           return n;
         });
       }, 300);
+      trackTimeout(tid);
 
       return next;
     });
-  }, []);
+  }, [trackTimeout]);
 
   const startGame = () => {
+    clearAllPendingTimeouts();
     setP1Score(0);
     setP2Score(0);
     setTimeLeft(GAME_DURATION);

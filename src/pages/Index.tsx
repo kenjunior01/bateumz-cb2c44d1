@@ -262,6 +262,7 @@ const Index = () => {
       {/* ===== HERO SECTION ===== */}
       <motion.section ref={heroRef} className="hero-section noise-overlay">
         <div className="hero-aurora" />
+        <div className="hero-scanlines" aria-hidden="true" />
         <ParticleField />
 
         <motion.div

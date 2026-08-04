@@ -47,6 +47,7 @@ const BottomTabBar = () => {
 
   return (
     <nav className="mob-bottom-bar lg:hidden safe-area-bottom">
+      <div className="mob-bottom-bar-glow" />
       <div className="mob-bottom-bar-inner">
         {TABS.map((tab) => {
           const active = isActive(tab.href);

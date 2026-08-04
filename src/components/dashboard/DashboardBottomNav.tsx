@@ -26,24 +26,29 @@ export function DashboardBottomNav({ onMore, variant = "dashboard" }: Props) {
   const list = variant === "admin" ? adminTabs : tabs;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border safe-area-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
-      <div className="grid grid-cols-5 px-1 pt-1 pb-1">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 safe-area-bottom">
+      <div className="dash-bottom-glow" />
+      <div className="grid grid-cols-5 px-1 pt-1.5 pb-1.5 bg-card/88 backdrop-blur-2xl border-t border-border/30 rounded-t-2xl shadow-[0_-2px_20px_rgba(0,0,0,0.05),inset_0_1px_0_0_hsl(var(--primary)/0.06)]">
         {list.map((t) => {
           const active = t.match ? t.match(pathname) : pathname === t.to;
           return (
             <NavLink key={t.to} to={t.to} end={t.to === "/dashboard" || t.to === "/admin"}
-              className="relative flex flex-col items-center gap-0.5 py-2 min-h-[56px]">
+              className="relative flex flex-col items-center gap-0.5 py-2.5 min-h-[54px]">
               {active && (
-                <motion.div layoutId={`tab-${variant}`} className="absolute -top-0.5 h-1 w-8 rounded-full bg-primary" transition={{ type: "spring", stiffness: 500, damping: 30 }} />
+                <motion.div layoutId={`tab-${variant}`} className="absolute -top-1 h-[3px] w-9 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_0_12px_hsl(var(--primary)/0.4)]" transition={{ type: "spring", stiffness: 500, damping: 30 }} />
               )}
-              <t.icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
-              <span className={`text-[10.5px] font-medium ${active ? "text-primary" : "text-muted-foreground"}`}>{t.label}</span>
+              <motion.div whileTap={{ scale: 0.85 }}>
+                <t.icon className={`h-5 w-5 transition-all duration-200 ${active ? "text-primary drop-shadow-[0_2px_6px_hsl(var(--primary)/0.3)]" : "text-muted-foreground"}`} />
+              </motion.div>
+              <span className={`text-[10.5px] font-semibold transition-colors duration-200 ${active ? "text-primary" : "text-muted-foreground"}`}>{t.label}</span>
             </NavLink>
           );
         })}
-        <button onClick={onMore} className="relative flex flex-col items-center gap-0.5 py-2 min-h-[56px]">
-          <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-          <span className="text-[10.5px] font-medium text-muted-foreground">Mais</span>
+        <button onClick={onMore} className="relative flex flex-col items-center gap-0.5 py-2.5 min-h-[54px]">
+          <motion.div whileTap={{ scale: 0.85 }} className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+            <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+          </motion.div>
+          <span className="text-[10.5px] font-semibold text-muted-foreground">Mais</span>
         </button>
       </div>
     </nav>

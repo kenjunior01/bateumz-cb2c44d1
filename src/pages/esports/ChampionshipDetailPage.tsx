@@ -241,14 +241,14 @@ export default function ChampionshipDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] text-white">
-        <Skeleton className="h-64 w-full bg-zinc-900" />
-        <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
-          <Skeleton className="h-10 w-80 bg-zinc-900" />
+      <div className="py-6 px-4 max-w-7xl mx-auto">
+        <Skeleton className="h-64 w-full bg-zinc-900 rounded-2xl" />
+        <div className="py-6 space-y-4">
+          <Skeleton className="h-10 w-80 bg-zinc-900 rounded-xl" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Skeleton className="h-96 bg-zinc-900" />
-            <Skeleton className="h-96 bg-zinc-900" />
-            <Skeleton className="h-96 bg-zinc-900" />
+            <Skeleton className="h-96 bg-zinc-900 rounded-2xl" />
+            <Skeleton className="h-96 bg-zinc-900 rounded-2xl" />
+            <Skeleton className="h-96 bg-zinc-900 rounded-2xl" />
           </div>
         </div>
       </div>
@@ -257,7 +257,7 @@ export default function ChampionshipDetailPage() {
 
   if (!champ) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="py-20 flex items-center justify-center">
         <div className="text-center">
           <Gamepad2 className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
           <h2 className="text-2xl font-bold text-zinc-300">Campeonato nao encontrado</h2>
@@ -285,9 +285,8 @@ export default function ChampionshipDetailPage() {
   const roundMatches = matches.filter(m => m.round_number === selectedRound);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Header Banner */}
-      <header className="relative overflow-hidden">
+    <div>
+      <header className="relative overflow-hidden rounded-2xl">
         <div
           className="absolute inset-0"
           style={{
@@ -295,7 +294,7 @@ export default function ChampionshipDetailPage() {
             opacity: 0.7,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#06060b] via-transparent to-transparent" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 pt-8 pb-16">
           <button onClick={() => navigate('/esports')} className="flex items-center gap-1 text-sm text-white/60 hover:text-white mb-6 transition-colors">
@@ -359,8 +358,6 @@ export default function ChampionshipDetailPage() {
               </div>
             </div>
           </div>
-
-          {/* Prize Breakdown + Registration Progress */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <h3 className="text-sm font-bold text-white/60 mb-3">Distribuicao de Premios</h3>
@@ -410,8 +407,6 @@ export default function ChampionshipDetailPage() {
           </div>
         </div>
       </header>
-
-      {/* Stream Embed */}
       {champ.stream_embed_url && (
         <div className="max-w-7xl mx-auto px-4 -mt-4 relative z-20">
           <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
@@ -424,8 +419,6 @@ export default function ChampionshipDetailPage() {
           </div>
         </div>
       )}
-
-      {/* Tabs Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-zinc-900/80 border border-zinc-800 w-full justify-start overflow-x-auto flex-wrap">
@@ -450,8 +443,6 @@ export default function ChampionshipDetailPage() {
               </TabsTrigger>
             )}
           </TabsList>
-
-          {/* Overview Tab */}
           <TabsContent value="overview" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-6">
@@ -514,8 +505,6 @@ export default function ChampionshipDetailPage() {
               </div>
             </div>
           </TabsContent>
-
-          {/* Teams Tab */}
           <TabsContent value="teams" className="mt-6">
             {teams.length === 0 ? (
               <div className="text-center py-16">
@@ -578,8 +567,6 @@ export default function ChampionshipDetailPage() {
               </div>
             )}
           </TabsContent>
-
-          {/* Bracket/Jogos Tab */}
           <TabsContent value="bracket" className="mt-6">
             {matches.length === 0 ? (
               <div className="text-center py-16">
@@ -588,7 +575,6 @@ export default function ChampionshipDetailPage() {
               </div>
             ) : (
               <>
-                {/* Round Navigation */}
                 {uniqueRounds.length > 1 && (
                   <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                     {uniqueRounds.map(r => {
@@ -610,8 +596,6 @@ export default function ChampionshipDetailPage() {
                     })}
                   </div>
                 )}
-
-                {/* BR Placement Table or Elimination Bracket */}
                 {isBR ? (
                   <Card className="border-zinc-800 bg-zinc-900/60">
                     <CardHeader>
@@ -664,8 +648,6 @@ export default function ChampionshipDetailPage() {
               </>
             )}
           </TabsContent>
-
-          {/* Standings Tab */}
           <TabsContent value="standings" className="mt-6">
             <Card className="border-zinc-800 bg-zinc-900/60 overflow-hidden">
               <CardContent className="p-0">
@@ -722,8 +704,6 @@ export default function ChampionshipDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Activity Tab */}
           <TabsContent value="activity" className="mt-6">
             <Card className="border-zinc-800 bg-zinc-900/60">
               <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
@@ -758,8 +738,6 @@ export default function ChampionshipDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Predictions Tab */}
           {champ.allow_predictions && (
             <TabsContent value="predictions" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -771,8 +749,6 @@ export default function ChampionshipDetailPage() {
           )}
         </Tabs>
       </main>
-
-      {/* Match Detail Dialog */}
       <Dialog open={!!selectedMatch} onOpenChange={() => { setSelectedMatch(null); setMatchPlacements([]); setMatchPredictions([]); }}>
         <DialogContent className="max-w-lg bg-zinc-900 border-zinc-800 text-white">
           <DialogHeader>
@@ -784,7 +760,6 @@ export default function ChampionshipDetailPage() {
 
           {selectedMatch && (
             <div className="space-y-4">
-              {/* Teams + Scores */}
               <div className="grid grid-cols-3 items-center gap-4 py-4">
                 <div className="text-center">
                   <Avatar className="w-14 h-14 mx-auto mb-2">
@@ -810,8 +785,6 @@ export default function ChampionshipDetailPage() {
               </div>
 
               <Separator className="bg-zinc-800" />
-
-              {/* Match Details */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-zinc-500">Mapa</span>
@@ -822,8 +795,6 @@ export default function ChampionshipDetailPage() {
                   <p className="text-zinc-200 font-medium">{selectedMatch.mode_name || '-'}</p>
                 </div>
               </div>
-
-              {/* Lobby Info */}
               {selectedMatch.lobby_id && (
                 <div className="bg-zinc-800/50 rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -848,8 +819,6 @@ export default function ChampionshipDetailPage() {
                   )}
                 </div>
               )}
-
-              {/* Screenshots */}
               <div className="grid grid-cols-2 gap-3">
                 {selectedMatch.team1_screenshot_url && (
                   <div>
@@ -864,13 +833,9 @@ export default function ChampionshipDetailPage() {
                   </div>
                 )}
               </div>
-
-              {/* BR Placements in dialog */}
               {matchPlacements.length > 0 && (
                 <BRRoundPlacements placements={matchPlacements} onMatchClick={() => {}} />
               )}
-
-              {/* MVP + Report */}
               <Separator className="bg-zinc-800" />
               <div className="flex gap-2">
                 {user && selectedMatch.status === 'completed' && (
@@ -895,8 +860,6 @@ export default function ChampionshipDetailPage() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Registration Dialog */}
       <Dialog open={showRegDialog} onOpenChange={setShowRegDialog}>
         <DialogContent className="max-w-md bg-zinc-900 border-zinc-800 text-white">
           <DialogHeader>

@@ -119,6 +119,10 @@ import DashboardLeagues from "./pages/dashboard/DashboardLeagues.tsx";
 import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 import LeaguesListPage from "./pages/leagues/LeaguesListPage.tsx";
 import LeagueDetailPage from "./pages/leagues/LeagueDetailPage.tsx";
+import EsportsHub from "./pages/esports/EsportsHub.tsx";
+import ChampionshipDetailPage from "./pages/esports/ChampionshipDetailPage.tsx";
+import TeamManagementPage from "./pages/esports/TeamManagementPage.tsx";
+import DashboardEsports from "./pages/dashboard/DashboardEsports.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -199,6 +203,9 @@ function AnimatedRoutes() {
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route path="/ligas" element={<LeaguesListPage />} />
           <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
+          <Route path="/esports" element={<EsportsHub />} />
+          <Route path="/esports/:slug" element={<ChampionshipDetailPage />} />
+          <Route path="/esports/equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />
           <Route
             path="/profile"
             element={
@@ -272,6 +279,7 @@ function AnimatedRoutes() {
             <Route path="live-manager" element={<CompanyLiveManager />} />
             <Route path="tournaments" element={<DashboardTournaments />} />
             <Route path="leagues" element={<DashboardLeagues />} />
+            <Route path="esports" element={<DashboardEsports />} />
             <Route path="blog" element={<DashboardBlog />} />
             <Route path="settings" element={<DashboardSettings />} />
           </Route>

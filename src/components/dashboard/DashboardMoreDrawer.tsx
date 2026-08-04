@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useEffect, useMemo, useState } from "react";
-import { Search, BarChart3, Zap, Gift, Palette, Trophy, Wallet, Radio, Sparkles, Bell, Settings, LogOut, Shield, Home, ScrollText, Clock, CreditCard, DollarSign, User, Users, Ticket } from "lucide-react";
+import { Search, BarChart3, Zap, Gift, Palette, Trophy, Wallet, Radio, Sparkles, Bell, Settings, LogOut, Shield, Home, ScrollText, Clock, CreditCard, DollarSign, User, Users, Ticket, Gamepad2, Crown, CircleDot, Swords } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; variant?: "dashboard" | "admin"; }
 
 const DASHBOARD_LINKS = [
+  { icon: Gamepad2, label: "Centro de Jogos", to: "/dashboard/games-hub" },
   { icon: BarChart3, label: "Analíticas", to: "/dashboard/analytics" },
   { icon: Zap, label: "Analíticas Sociais", to: "/dashboard/social-analytics" },
   { icon: Gift, label: "Prémios", to: "/dashboard/prizes" },
@@ -15,7 +16,11 @@ const DASHBOARD_LINKS = [
   { icon: Trophy, label: "Concursos", to: "/dashboard/contests" },
   { icon: Wallet, label: "Prestações", to: "/dashboard/prestacoes" },
   { icon: Radio, label: "Jogos de Live", to: "/dashboard/live-games" },
+  { icon: Crown, label: "Milionário", to: "/dashboard/millionaire-manager" },
+  { icon: CircleDot, label: "Roleta de Prémios", to: "/dashboard/spin-wheel-manager" },
   { icon: Trophy, label: "Histórico de Lives", to: "/dashboard/live-history" },
+  { icon: Swords, label: "Esports", to: "/dashboard/esports" },
+  { icon: Swords, label: "Esports Avançado", to: "/dashboard/esports-advanced" },
   { icon: Sparkles, label: "Embaixadores", to: "/dashboard/ambassadors" },
   { icon: Radio, label: "Lives Agendadas", to: "/dashboard/scheduled-lives" },
   { icon: Bell, label: "Notificações", to: "/dashboard/notifications" },

@@ -15,6 +15,10 @@ import {
   Radio,
   Sparkles,
   Gamepad2,
+  Crown,
+  CircleDot,
+  Swords,
+  Building2,
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import { NavLink } from "@/components/NavLink";
@@ -45,11 +49,23 @@ const mainItems = [
   { title: "Identidade de Jogo", url: "/dashboard/game-branding", icon: Brush },
   { title: "Concursos", url: "/dashboard/contests", icon: Trophy },
   { title: "Prestações", url: "/dashboard/prestacoes", icon: Wallet },
+];
+
+const gameItems = [
+  { title: "Centro de Jogos", url: "/dashboard/games-hub", icon: Gamepad2 },
   { title: "Jogos de Live", url: "/dashboard/live-games", icon: Radio },
+  { title: "Milionário", url: "/dashboard/millionaire-manager", icon: Crown },
+  { title: "Roleta de Prémios", url: "/dashboard/spin-wheel-manager", icon: CircleDot },
   { title: "Histórico de Lives", url: "/dashboard/live-history", icon: Trophy },
   { title: "Gestão de Live", url: "/dashboard/live-manager", icon: Gamepad2 },
+  { title: "Esports", url: "/dashboard/esports", icon: Swords },
+  { title: "Esports Avançado", url: "/dashboard/esports-advanced", icon: Swords },
+];
+
+const communityItems = [
   { title: "Embaixadores", url: "/dashboard/ambassadors", icon: Sparkles },
   { title: "Lives Agendadas", url: "/dashboard/scheduled-lives", icon: Radio },
+  { title: "Blog", url: "/dashboard/blog", icon: Building2 },
 ];
 
 const secondaryItems = [
@@ -97,6 +113,56 @@ export function DashboardSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/dashboard"}
+                      className="hover:bg-muted/50"
+                      activeClassName="bg-primary/10 text-primary font-medium"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Jogos</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {gameItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                  >
+                    <NavLink
+                      to={item.url}
+                      className="hover:bg-muted/50"
+                      activeClassName="bg-primary/10 text-primary font-medium"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Comunidade</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {communityItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                  >
+                    <NavLink
+                      to={item.url}
                       className="hover:bg-muted/50"
                       activeClassName="bg-primary/10 text-primary font-medium"
                     >

@@ -131,6 +131,8 @@ import LeaderboardPage from "./pages/esports/LeaderboardPage.tsx";
 import TransfersPage from "./pages/esports/TransfersPage.tsx";
 import AchievementsPage from "./pages/esports/AchievementsPage.tsx";
 import TeamProfilePage from "./pages/esports/TeamProfilePage.tsx";
+import MillionairePage from "./pages/games/MillionairePage.tsx";
+import CompanyGamesHub from "./pages/dashboard/CompanyGamesHub.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -188,7 +190,7 @@ function AnimatedRoutes() {
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
           <Route path="/jogos" element={<AllGames />} />
           <Route path="/pontos" element={<EngagementLeaderboard />} />
-          <Route path="/games/millionaire/:gameId" element={<EnhancedMillionaireGame />} />
+          <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
           <Route path="/instant-win" element={<InstantWin />} />
           <Route path="/concursos/:id" element={<ContestDetail />} />
@@ -285,6 +287,7 @@ function AnimatedRoutes() {
             <Route path="live-manager" element={<CompanyLiveManager />} />
             <Route path="tournaments" element={<DashboardTournaments />} />
             <Route path="leagues" element={<DashboardLeagues />} />
+            <Route path="games-hub" element={<CompanyGamesHub />} />
             <Route path="esports" element={<DashboardEsports />} />
             <Route path="esports-advanced" element={<DashboardEsportsAdvanced />} />
             <Route path="blog" element={<DashboardBlog />} />

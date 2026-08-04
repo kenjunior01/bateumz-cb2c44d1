@@ -297,7 +297,7 @@ export default function TransfersPage() {
   // ============================================================
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="py-6 px-4 max-w-7xl mx-auto">
       {/* HERO SECTION */}
       <section className="relative overflow-hidden py-12 md:py-16 px-4">
         {/* Background glow effects */}

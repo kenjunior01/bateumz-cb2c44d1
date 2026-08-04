@@ -119,6 +119,7 @@ import DashboardLeagues from "./pages/dashboard/DashboardLeagues.tsx";
 import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
 import LeaguesListPage from "./pages/leagues/LeaguesListPage.tsx";
 import LeagueDetailPage from "./pages/leagues/LeagueDetailPage.tsx";
+import EsportsLayout from "./pages/esports/EsportsLayout.tsx";
 import EsportsHub from "./pages/esports/EsportsHub.tsx";
 import ChampionshipDetailPage from "./pages/esports/ChampionshipDetailPage.tsx";
 import TeamManagementPage from "./pages/esports/TeamManagementPage.tsx";
@@ -209,14 +210,7 @@ function AnimatedRoutes() {
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route path="/ligas" element={<LeaguesListPage />} />
           <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
-          <Route path="/esports" element={<EsportsHub />} />
-          <Route path="/esports/:slug" element={<ChampionshipDetailPage />} />
-          <Route path="/esports/equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />
-          <Route path="/esports/seasons" element={<SeasonsPage />} />
-          <Route path="/esports/betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />
-          <Route path="/esports/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/esports/transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />
-          <Route path="/esports/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
+          <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
           <Route
             path="/profile"
             element={

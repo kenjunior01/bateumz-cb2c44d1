@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Swords, Coins, Award, ArrowLeftRight, Target, LayoutGrid
+  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Play, Flame, CircleDollarSign, Video, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -24,7 +23,6 @@ import {
   getChampMatches,
   GAME_EMOJIS,
   STATUS_LABELS,
-  FORMAT_LABELS,
   TOURNAMENT_FORMAT_LABELS,
   GENRE_LABELS,
   type EsportGame,
@@ -32,693 +30,830 @@ import {
   type EsportTeam,
   type EsportMatch,
   type EsportActivity,
-  type ChampStatus,
 } from '@/lib/esports';
 
 const sb: any = supabase;
 
-const FLOATING_ICONS = ['\uD83D\uDD25', '\u26A1', '\uD83C\uDFC6', '\uD83C\uDFAF', '\uD83D\uDCDC', '\u26BD', '\uD83C\uDFD7\uFE0F', '\uD83D\uDE80'];
+type AbaAtiva = 'live' | 'registration_open' | 'upcoming' | 'completed';
 
-function ShimmerText({ children, className }: { children: string; className?: string }) {
-  return (
-    <span className={className}>
-      {children.split('').map((char, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0.3 }}
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.06 }}
-          style={{ display: 'inline-block' }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </motion.span>
-      ))}
-    </span>
-  );
+function tempoAgo(dateStr: string): string {
+  const agora = Date.now();
+  const data = new Date(dateStr).getTime();
+  const diff = agora - data;
+  const minutos = Math.floor(diff / 60000);
+  if (minutos < 1) return 'Agora mesmo';
+  if (minutos < 60) return `${minutos}min atr\u00e1s`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `${horas}h atr\u00e1s`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 7) return `${dias}d atr\u00e1s`;
+  return new Date(dateStr).toLocaleDateString('pt-BR');
 }
 
-function FloatingIcon({ emoji, delay, x, y }: { emoji: string; delay: number; x: number; y: number }) {
-  return (
-    <motion.div
-      className="absolute text-3xl md:text-5xl opacity-10 pointer-events-none select-none"
-      style={{ left: `${x}%`, top: `${y}%` }}
-      animate={{
-        y: [0, -20, 0],
-        rotate: [0, 10, -10, 0],
-        scale: [1, 1.1, 1],
-      }}
-      transition={{ duration: 6, repeat: Infinity, delay, ease: 'easeInOut' }}
-    >
-      {emoji}
-    </motion.div>
-  );
+function formatarPremio(valor: number): string {
+  if (valor >= 1000000) return `${(valor / 1000000).toFixed(1)}M`;
+  if (valor >= 1000) return `${(valor / 1000).toFixed(1)}K`;
+  return String(valor);
 }
 
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: currency || 'BRL' }).format(value);
+function formatarHorario(dateStr: string | null): string {
+  if (!dateStr) return '--:--';
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+function getGameEmoji(slug: string): string {
+  return GAME_EMOJIS[slug] ?? '\uD83C\uDFAE';
 }
 
-function getStatusColor(status: ChampStatus): string {
-  switch (status) {
-    case 'live': return 'bg-red-500/20 text-red-400 border-red-500/40';
-    case 'registration_open': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-    case 'check_in': return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
-    case 'registration_closed': return 'bg-orange-500/20 text-orange-400 border-orange-500/40';
-    case 'completed': return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/40';
-    default: return 'bg-zinc-700/30 text-zinc-400 border-zinc-600/30';
-  }
+function getGameById(jogos: EsportGame[], id: string): EsportGame | undefined {
+  return jogos.find(g => g.id === id);
 }
+
+const ATIVIDADE_ICONS: Record<string, any> = {
+  match_started: Play,
+  match_completed: Trophy,
+  round_started: Flame,
+  registration_open: Zap,
+  check_in_started: Shield,
+  prize_distributed: CircleDollarSign,
+  stream_started: Video,
+  chat_message: MessageSquare,
+  team_joined: Users,
+  broadcast: Radio,
+};
+
+const POSICAO_CORES = [
+  'text-yellow-400',
+  'text-gray-300',
+  'text-amber-600',
+  'text-gray-500',
+  'text-gray-600',
+];
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.3 },
+};
+
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.04 } },
+};
 
 export default function EsportsHub() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [games, setGames] = useState<EsportGame[]>([]);
-  const [championships, setChampionships] = useState<Championship[]>([]);
-  const [featured, setFeatured] = useState<Championship | null>(null);
-  const [topTeams, setTopTeams] = useState<EsportTeam[]>([]);
-  const [recentMatches, setRecentMatches] = useState<EsportMatch[]>([]);
-  const [activityFeed, setActivityFeed] = useState<EsportActivity[]>([]);
-  const [selectedGame, setSelectedGame] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('live');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({ totalChamps: 0, totalTeams: 0, totalPrizes: 0 });
-  const [loading, setLoading] = useState(true);
-  const [gameCounts, setGameCounts] = useState<Record<string, number>>({});
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const [jogos, setJogos] = useState<EsportGame[]>([]);
+  const [campeonatos, setCampeonatos] = useState<Championship[]>([]);
+  const [destaque, setDestaque] = useState<Championship | null>(null);
+  const [topEquipas, setTopEquipas] = useState<EsportTeam[]>([]);
+  const [jogosRecentes, setJogosRecentes] = useState<EsportMatch[]>([]);
+  const [feedAtividade, setFeedAtividade] = useState<EsportActivity[]>([]);
+  const [jogoSelecionado, setJogoSelecionado] = useState<string | null>(null);
+  const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('live');
+  const [consultaPesquisa, setConsultaPesquisa] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [contagensJogos, setContagensJogos] = useState<Record<string, number>>({});
+
+  // Carregar dados principais
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
     try {
-      const [gamesData, allChamps, featuredChamps, teamsData] = await Promise.all([
-        getEsportGames(),
-        getChampionships({ is_published: true }),
-        getFeaturedChampionships(),
-        getTeams({ limit: 10, sort_by: 'rating', sort_dir: 'desc' }),
+      const [gamesData, champsData, featuredData, teamsData] = await Promise.all([
+        getEsportGames().catch(() => []),
+        getChampionships({ is_published: true }).catch(() => []),
+        getFeaturedChampionships().catch(() => []),
+        getTeams({ sort_by: 'rating', sort_dir: 'desc', limit: 5 }).catch(() => []),
       ]);
 
-      setGames(gamesData);
-      setChampionships(allChamps);
-      setTopTeams(teamsData);
+      setJogos(gamesData);
+      setCampeonatos(champsData);
+      setTopEquipas(teamsData);
 
-      if (featuredChamps.length > 0) {
-        setFeatured(featuredChamps[0]);
+      if (featuredData.length > 0) {
+        setDestaque(featuredData[0]);
       }
 
-      // Compute game counts
-      const counts: Record<string, number> = {};
-      for (const c of allChamps) {
-        counts[c.game_id] = (counts[c.game_id] || 0) + 1;
+      // Contar campeonatos por jogo
+      const contagens: Record<string, number> = {};
+      for (const c of champsData) {
+        contagens[c.game_id] = (contagens[c.game_id] || 0) + 1;
       }
-      setGameCounts(counts);
+      setContagensJogos(contagens);
 
-      // Stats
-      const published = allChamps.filter(c => c.is_published);
-      setStats({
-        totalChamps: published.length,
-        totalTeams: published.reduce((sum, c) => sum + (c.registered_teams || 0), 0),
-        totalPrizes: published.reduce((sum, c) => sum + (c.prize_pool || 0), 0),
-      });
-
-      // Recent matches from live/completed championships
-      const activeChampIds = allChamps.filter(c => c.status === 'live' || c.status === 'completed').map(c => c.id);
-      if (activeChampIds.length > 0) {
-        const { data: matches } = await sb.from('esport_matches')
-          .select('*')
-          .in('championship_id', activeChampIds.slice(0, 5))
-          .order('created_at', { ascending: false })
-          .limit(5);
-        setRecentMatches(matches || []);
-      }
-
-      // Activity from latest champ
-      if (featuredChamps.length > 0) {
-        const activities = await getChampActivity(featuredChamps[0].id, 5);
-        setActivityFeed(activities);
+      // Carregar jogos e atividade do primeiro campeonato relevante
+      const champAtivo = featuredData.find(c => c.status === 'live') || champsData[0];
+      if (champAtivo) {
+        const [matchesData, activityData] = await Promise.all([
+          getChampMatches(champAtivo.id).catch(() => []),
+          getChampActivity(champAtivo.id, 5).catch(() => []),
+        ]);
+        setJogosRecentes(matchesData.filter(m => m.status === 'in_progress' || m.status === 'pending').slice(0, 5));
+        setFeedAtividade(activityData);
       }
     } catch (err) {
-      console.error('Erro ao carregar dados:', err);
+      console.error('Erro ao carregar dados do hub:', err);
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    carregarDados();
+  }, [carregarDados]);
 
-  const filteredChamps = championships.filter(c => {
-    if (!c.is_published) return false;
-    if (selectedGame && c.game_id !== selectedGame) return false;
-    if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  // Campeonatos filtrados por jogo e pesquisa
+  const campeonatosFiltrados = useMemo(() => {
+    let lista = campeonatos;
+    if (jogoSelecionado) {
+      lista = lista.filter(c => c.game_id === jogoSelecionado);
+    }
+    if (consultaPesquisa.trim()) {
+      const q = consultaPesquisa.toLowerCase();
+      lista = lista.filter(c => c.name.toLowerCase().includes(q));
+    }
+    return lista;
+  }, [campeonatos, jogoSelecionado, consultaPesquisa]);
 
-  const tabFilter = (status: string) => {
-    if (status === 'live') return filteredChamps.filter(c => c.status === 'live' || c.status === 'check_in');
-    if (status === 'registration_open') return filteredChamps.filter(c => c.status === 'registration_open');
-    if (status === 'upcoming') return filteredChamps.filter(c => c.status === 'registration_closed' || c.status === 'draft');
-    if (status === 'completed') return filteredChamps.filter(c => c.status === 'completed');
-    return [];
+  // Campeonatos por aba
+  const campeonatosPorAba = useMemo(() => {
+    const agora = new Date();
+    const filtrados = campeonatosFiltrados;
+    switch (abaAtiva) {
+      case 'live':
+        return filtrados.filter(c => c.status === 'live');
+      case 'registration_open':
+        return filtrados.filter(c => c.status === 'registration_open');
+      case 'upcoming': {
+        return filtrados.filter(c => {
+          if (c.status === 'check_in') return true;
+          if (c.starts_at && new Date(c.starts_at) > agora) return true;
+          return false;
+        });
+      }
+      case 'completed':
+        return filtrados.filter(c => c.status === 'completed');
+      default:
+        return [];
+    }
+  }, [campeonatosFiltrados, abaAtiva]);
+
+  // Contagem por status para badges nas abas
+  const contagemPorAba = useMemo(() => {
+    const agora = new Date();
+    const base = jogoSelecionado
+      ? campeonatos.filter(c => c.game_id === jogoSelecionado)
+      : campeonatos;
+    return {
+      live: base.filter(c => c.status === 'live').length,
+      registration_open: base.filter(c => c.status === 'registration_open').length,
+      upcoming: base.filter(c => {
+        if (c.status === 'check_in') return true;
+        if (c.starts_at && new Date(c.starts_at) > agora) return true;
+        return false;
+      }).length,
+      completed: base.filter(c => c.status === 'completed').length,
+    };
+  }, [campeonatos, jogoSelecionado]);
+
+  const irParaCampeonato = (slug: string) => {
+    navigate(`/esports/campeonato/${slug}`);
   };
 
-  const gameEmoji = (gameId: string, gameSlug?: string) => {
-    if (gameSlug && GAME_EMOJIS[gameSlug]) return GAME_EMOJIS[gameSlug];
-    const g = games.find(g => g.id === gameId);
-    if (g && GAME_EMOJIS[g.slug]) return GAME_EMOJIS[g.slug];
-    return '\uD83C\uDFAE';
-  };
-
-  const gameName = (gameId: string) => {
-    const g = games.find(g => g.id === gameId);
-    return g?.name || 'Jogo';
-  };
-
-  return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-[#0a0a0f] to-cyan-900/30" />
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'linear-gradient(rgba(139,92,246,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.15) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }} />
-
-        {FLOATING_ICONS.map((icon, i) => (
-          <FloatingIcon key={i} emoji={icon} delay={i * 0.8} x={10 + (i * 11) % 80} y={10 + (i * 17) % 60} />
-        ))}
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 pt-16 pb-10 md:pt-24 md:pb-16">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-5 h-5 text-yellow-400" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-yellow-400">Plataforma Competitiva</span>
+  // Skeleton de carregamento
+  if (carregando) {
+    return (
+      <div>
+        <div className="bg-[#0d0d16] border-b border-white/5 py-3">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-28 rounded-full shrink-0" />
+              ))}
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-4">
-              <ShimmerText className="bg-gradient-to-r from-yellow-300 via-white to-cyan-300 bg-clip-text text-transparent">
-                Campeonatos Esports
-              </ShimmerText>
-            </h1>
-            <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-8">
-              Compete nos maiores jogos. Free Fire, CoD, PUBG, Valorant e mais.
-            </p>
-          </motion.div>
-
-          {/* Stats Bar */}
-          <motion.div
-            className="grid grid-cols-3 gap-4 max-w-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            {[
-              { icon: Trophy, label: 'Total Campeonatos', value: stats.totalChamps },
-              { icon: Users, label: 'Equipas Registadas', value: stats.totalTeams },
-              { icon: Star, label: 'Premios Distribuidos', value: formatCurrency(stats.totalPrizes, 'BRL') },
-            ].map((s, i) => (
-              <div key={i} className="text-center">
-                <s.icon className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
-                <div className="text-xl md:text-2xl font-bold text-white">{s.value}</div>
-                <div className="text-[10px] md:text-xs text-zinc-500 uppercase tracking-wider">{s.label}</div>
-              </div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-8 max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-          >
-            {[
-              { icon: Swords, label: 'Ligas', path: '/esports/seasons', color: 'from-violet-600 to-purple-600' },
-              { icon: Coins, label: 'Apostas', path: '/esports/betting', color: 'from-amber-600 to-orange-600', auth: true },
-              { icon: Target, label: 'Ranking', path: '/esports/leaderboard', color: 'from-cyan-600 to-blue-600' },
-              { icon: ArrowLeftRight, label: 'Transferencias', path: '/esports/transfers', color: 'from-emerald-600 to-green-600', auth: true },
-              { icon: Award, label: 'Conquistas', path: '/esports/achievements', color: 'from-pink-600 to-rose-600', auth: true },
-              { icon: LayoutGrid, label: 'Equipas', path: '/esports/equipas', color: 'from-indigo-600 to-violet-600', auth: true },
-            ].map((item, i) => (
-              <motion.button
-                key={i}
-                onClick={() => navigate(item.path)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${item.color} shadow-lg`}>
-                  <item.icon className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">{item.label}</span>
-              </motion.button>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Game Filter Bar */}
-      <section className="border-y border-zinc-800/60 bg-[#0d0d14]">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-3 py-4 overflow-x-auto scrollbar-hide">
-            <Filter className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-            <button
-              onClick={() => setSelectedGame(null)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                !selectedGame
-                  ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-lg shadow-purple-500/20'
-                  : 'bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-white'
-              }`}
-            >
-              Todos
-            </button>
-            {games.map((game) => {
-              const isActive = selectedGame === game.id;
-              const emoji = GAME_EMOJIS[game.slug] || '\uD83C\uDFAE';
-              return (
-                <motion.button
-                  key={game.id}
-                  onClick={() => setSelectedGame(isActive ? null : game.id)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-lg shadow-purple-500/30 ring-2 ring-purple-400/50'
-                      : 'bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-white'
-                  }`}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <span className="text-lg">{emoji}</span>
-                  <span>{game.name}</span>
-                  {(gameCounts[game.id] || 0) > 0 && (
-                    <Badge variant="secondary" className="ml-1 bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0">
-                      {gameCounts[game.id]}
-                    </Badge>
-                  )}
-                </motion.button>
-              );
-            })}
           </div>
         </div>
-      </section>
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-64 w-full rounded-2xl" />
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-72 w-full rounded-2xl" />
+              <Skeleton className="h-64 w-full rounded-2xl" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      {/* Featured Championship Banner */}
-      <AnimatePresence>
-        {featured && (
-          <motion.section
-            className="max-w-7xl mx-auto px-4 mt-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-r from-purple-900/50 via-zinc-900 to-cyan-900/40">
-              <div className="absolute inset-0 opacity-10" style={{
-                backgroundImage: `radial-gradient(circle at 20% 50%, ${featured.primary_color || '#8b5cf6'} 0%, transparent 50%), radial-gradient(circle at 80% 50%, ${featured.accent_color || '#06b6d4'} 0%, transparent 50%)`,
-              }} />
-              <CardContent className="relative z-10 p-6 md:p-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                  <div className="flex-1">
+  return (
+    <div>
+      {/* Faixa Superior com Filtro de Jogos */}
+      <div className="bg-[#0d0d16] border-b border-white/5 py-3 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-4">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar flex-1">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setJogoSelecionado(null)}
+                className={
+                  'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ' +
+                  (jogoSelecionado === null
+                    ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-lg shadow-violet-500/20'
+                    : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-gray-200')
+                }
+              >
+                <Gamepad2 size={15} />
+                <span>Todos</span>
+                <span className="text-xs opacity-70">({campeonatos.length})</span>
+              </motion.button>
+              {jogos.map(jogo => (
+                <motion.button
+                  key={jogo.id}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setJogoSelecionado(jogo.id)}
+                  className={
+                    'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ' +
+                    (jogoSelecionado === jogo.id
+                      ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-lg shadow-violet-500/20'
+                      : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-gray-200')
+                  }
+                >
+                  <span>{getGameEmoji(jogo.slug)}</span>
+                  <span>{jogo.name}</span>
+                  <span className="text-xs opacity-70">({contagensJogos[jogo.id] || 0})</span>
+                </motion.button>
+              ))}
+            </div>
+            <div className="hidden md:flex items-center relative w-56 shrink-0">
+              <Search size={14} className="absolute left-3 text-gray-500" />
+              <Input
+                placeholder="Pesquisar campeonato..."
+                value={consultaPesquisa}
+                onChange={(e) => setConsultaPesquisa(e.target.value)}
+                className="pl-9 h-9 bg-white/[0.04] border-white/[0.08] text-sm text-gray-200 placeholder:text-gray-600 focus:border-violet-500/40 rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Area de Conteudo Principal */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Coluna Principal */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Banner de Destaque */}
+            {destaque && (
+              <motion.div
+                {...fadeInUp}
+                className={
+                  'relative h-64 rounded-2xl overflow-hidden cursor-pointer group ' +
+                  (destaque.status === 'live' ? 'ring-1 ring-red-500/30' : '')
+                }
+                style={{
+                  background: `linear-gradient(135deg, ${destaque.primary_color || '#7c3aed'}, ${destaque.secondary_color || '#0891b2'})`,
+                }}
+                onClick={() => irParaCampeonato(destaque.slug)}
+              >
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                <div className="relative h-full flex items-center justify-between p-6">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
-                      <Badge className={`animate-pulse border ${getStatusColor(featured.status)}`}>
-                        <Radio className="w-3 h-3 mr-1" />
-                        {STATUS_LABELS[featured.status]}
-                      </Badge>
-                      {featured.status === 'live' && featured.total_viewers > 0 && (
-                        <Badge variant="secondary" className="bg-red-500/20 text-red-400">
-                          <Eye className="w-3 h-3 mr-1" />
-                          {featured.total_viewers} espectadores
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">{gameEmoji(featured.game_id)}</span>
-                      <span className="text-sm text-zinc-400">{gameName(featured.game_id)}</span>
-                      <Badge variant="outline" className="text-xs border-zinc-600 text-zinc-400">
-                        {FORMAT_LABELS[featured.match_format]}
-                      </Badge>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-black mb-2">{featured.name}</h2>
-                    <p className="text-zinc-400 text-sm mb-3 line-clamp-2">{featured.description}</p>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500">
-                      <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{featured.starts_at ? formatDate(featured.starts_at) : 'TBA'}</span>
-                      <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{featured.region_server?.toUpperCase() || 'Global'}</span>
-                      <span className="flex items-center gap-1"><Users className="w-4 h-4" />{featured.registered_teams}/{featured.max_teams} Equipas</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="text-center">
-                      <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Premio Total</div>
-                      <div className="text-3xl md:text-4xl font-black text-yellow-400">
-                        {formatCurrency(featured.prize_pool, featured.currency)}
+                      <span className="text-6xl">
+                        {getGameEmoji(getGameById(jogos, destaque.game_id)?.slug || '')}
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-2xl font-black text-white truncate">{destaque.name}</h2>
+                        <p className="text-sm text-white/70">
+                          {getGameById(jogos, destaque.game_id)?.name || 'Jogo'}
+                        </p>
                       </div>
                     </div>
-                    {featured.status === 'registration_open' && (
-                      <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold hover:from-yellow-400 hover:to-orange-400">
-                        Inscrever Equipa
-                      </Button>
-                    )}
-                    {featured.stream_url && (
-                      <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10">
-                        <Radio className="w-4 h-4 mr-2" />
-                        Assistir Ao Vivo
-                      </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+                        {TOURNAMENT_FORMAT_LABELS[destaque.tournament_format] || destaque.tournament_format}
+                      </Badge>
+                      <Badge
+                        className={
+                          destaque.status === 'live'
+                            ? 'bg-red-600 text-white border-0 text-xs'
+                            : 'bg-white/20 text-white border-0 text-xs'
+                        }
+                      >
+                        {STATUS_LABELS[destaque.status] || destaque.status}
+                      </Badge>
+                      <span className="text-xs text-white/60 flex items-center gap-1">
+                        <Users size={12} />
+                        {destaque.registered_teams}/{destaque.max_teams} equipas
+                      </span>
+                    </div>
+                    {destaque.status === 'live' && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                        </span>
+                        <span className="text-xs font-bold text-red-300 uppercase tracking-wider">Ao Vivo</span>
+                      </div>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.section>
-        )}
-      </AnimatePresence>
-
-      {/* Search + Main Content */}
-      <section className="max-w-7xl mx-auto px-4 mt-6 pb-20">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Main Column */}
-          <div className="flex-1 min-w-0">
-            {/* Search Bar */}
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <Input
-                placeholder="Buscar campeonatos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-900/80 border-zinc-800 focus:border-purple-500/50 text-white placeholder:text-zinc-600"
-              />
-            </div>
-
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-zinc-900/80 border border-zinc-800 w-full justify-start overflow-x-auto">
-                <TabsTrigger value="live" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400">
-                  <Radio className="w-3.5 h-3.5 mr-1.5" /> Em Curso
-                </TabsTrigger>
-                <TabsTrigger value="registration_open" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
-                  Inscricoes Abertas
-                </TabsTrigger>
-                <TabsTrigger value="upcoming" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
-                  <Clock className="w-3.5 h-3.5 mr-1.5" /> Proximos
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="data-[state=active]:bg-zinc-600/20 data-[state=active]:text-zinc-300">
-                  Finalizados
-                </TabsTrigger>
-              </TabsList>
-
-              {['live', 'registration_open', 'upcoming', 'completed'].map((tab) => (
-                <TabsContent key={tab} value={tab}>
-                  {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} className="h-48 rounded-xl bg-zinc-900" />
-                      ))}
+                  <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
+                    <div className="text-right">
+                      <p className="text-xs text-white/50 uppercase tracking-wider">Premio</p>
+                      <p className="text-3xl font-black text-white flex items-center gap-1">
+                        {formatarPremio(destaque.prize_pool)}
+                        <CircleDollarSign size={20} className="text-yellow-300" />
+                      </p>
                     </div>
-                  ) : tabFilter(tab).length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center py-16"
+                    <Button
+                      size="sm"
+                      className="bg-white/20 hover:bg-white/30 text-white border border-white/20 rounded-full text-xs font-semibold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        irParaCampeonato(destaque.slug);
+                      }}
                     >
-                      <Gamepad2 className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
-                      <p className="text-zinc-500 text-lg font-medium">Nenhum campeonato encontrado</p>
-                      <p className="text-zinc-600 text-sm mt-1">Tente outro filtro ou volte mais tarde</p>
-                    </motion.div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <AnimatePresence mode="popLayout">
-                        {tabFilter(tab).map((champ) => (
-                          <ChampionshipCard
-                            key={champ.id}
-                            champ={champ}
-                            gameEmoji={gameEmoji(champ.game_id)}
-                            gameLabel={gameName(champ.game_id)}
-                          />
-                        ))}
-                      </AnimatePresence>
+                      Ver Campeonato
+                      <ChevronRight size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Abas de Campeonatos */}
+            <motion.div {...fadeInUp} className="transition-all">
+              <Tabs
+                value={abaAtiva}
+                onValueChange={(v) => setAbaAtiva(v as AbaAtiva)}
+                className="w-full"
+              >
+                <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 h-auto w-full justify-start gap-1">
+                  <TabsTrigger
+                    value="live"
+                    className="flex items-center gap-2 rounded-lg data-[state=active]:bg-red-600/20 data-[state=active]:text-red-400 text-gray-500 text-xs font-medium px-3 py-2"
+                  >
+                    <Radio size={13} />
+                    AO VIVO
+                    {contagemPorAba.live > 0 && (
+                      <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {contagemPorAba.live}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="registration_open"
+                    className="flex items-center gap-2 rounded-lg data-[state=active]:bg-green-600/20 data-[state=active]:text-green-400 text-gray-500 text-xs font-medium px-3 py-2"
+                  >
+                    <Zap size={13} />
+                    REGISTO ABERTO
+                    {contagemPorAba.registration_open > 0 && (
+                      <span className="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {contagemPorAba.registration_open}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="upcoming"
+                    className="flex items-center gap-2 rounded-lg data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400 text-gray-500 text-xs font-medium px-3 py-2"
+                  >
+                    <Clock size={13} />
+                    BREVEMENTE
+                    {contagemPorAba.upcoming > 0 && (
+                      <span className="bg-blue-600/80 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {contagemPorAba.upcoming}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="completed"
+                    className="flex items-center gap-2 rounded-lg data-[state=active]:bg-gray-600/20 data-[state=active]:text-gray-400 text-gray-500 text-xs font-medium px-3 py-2"
+                  >
+                    <Trophy size={13} />
+                    CONCLUIDO
+                    {contagemPorAba.completed > 0 && (
+                      <span className="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {contagemPorAba.completed}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                {['live', 'registration_open', 'upcoming', 'completed'].map(aba => (
+                  <TabsContent key={aba} value={aba} className="mt-3">
+                    <AnimatePresence mode="wait">
+                      {campeonatosPorAba.length === 0 ? (
+                        <motion.div
+                          key="empty"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 text-center"
+                        >
+                          <Gamepad2 size={32} className="mx-auto text-gray-600 mb-3" />
+                          <p className="text-gray-500 text-sm">
+                            Nenhum campeonato encontrado nesta categoria.
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key={aba}
+                          variants={staggerContainer}
+                          initial="initial"
+                          animate="animate"
+                          className="space-y-2 max-h-[480px] overflow-y-auto pr-1"
+                          style={{
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(255,255,255,0.08) transparent',
+                          }}
+                        >
+                          {campeonatosPorAba.map(camp => {
+                            const jogo = getGameById(jogos, camp.game_id);
+                            const isLive = camp.status === 'live';
+                            return (
+                              <motion.div
+                                key={camp.id}
+                                variants={fadeInUp}
+                                onClick={() => irParaCampeonato(camp.slug)}
+                                className={
+                                  'relative flex items-center gap-4 h-24 px-4 rounded-xl cursor-pointer transition-all duration-200 group ' +
+                                  'bg-white/[0.03] hover:bg-white/[0.06] border ' +
+                                  (isLive
+                                    ? 'border-l-[3px] border-l-red-500 border-t-white/[0.06] border-r-white/[0.06] border-b-white/[0.06] shadow-[0_0_20px_rgba(239,68,68,0.08)]'
+                                    : 'border-white/[0.05] hover:border-white/10')
+                                }
+                              >
+                                <div className="shrink-0 flex flex-col items-center gap-1 w-12">
+                                  <span className="text-3xl">{getGameEmoji(jogo?.slug || '')}</span>
+                                  <span className="text-[10px] text-gray-600 truncate max-w-full">{jogo?.name || ''}</span>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-sm font-semibold text-gray-200 truncate group-hover:text-white transition-colors">
+                                    {camp.name}
+                                  </h3>
+                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                    <Badge
+                                      className={
+                                        'text-[10px] px-2 py-0 rounded-full border-0 font-medium ' +
+                                        (isLive
+                                          ? 'bg-red-600/20 text-red-400'
+                                          : camp.status === 'registration_open'
+                                            ? 'bg-green-600/20 text-green-400'
+                                            : camp.status === 'completed'
+                                              ? 'bg-gray-600/20 text-gray-400'
+                                              : 'bg-blue-600/20 text-blue-400')
+                                      }
+                                    >
+                                      {STATUS_LABELS[camp.status] || camp.status}
+                                    </Badge>
+                                    <span className="text-[10px] text-gray-500">
+                                      {TOURNAMENT_FORMAT_LABELS[camp.tournament_format] || camp.tournament_format}
+                                    </span>
+                                    <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                                      <Users size={10} />
+                                      {camp.registered_teams || 0}/{camp.max_teams || '?'}
+                                    </span>
+                                    {camp.registered_players > 0 && (
+                                      <span className="text-[10px] text-gray-600">
+                                        {camp.registered_players} jogadores
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="shrink-0 flex flex-col items-end gap-1.5">
+                                  <div className="flex items-center gap-1">
+                                    <CircleDollarSign size={12} className="text-yellow-500" />
+                                    <span className="text-sm font-bold text-gray-200">
+                                      {formatarPremio(camp.prize_pool)}
+                                    </span>
+                                  </div>
+                                  {camp.status === 'registration_open' && (
+                                    <Badge className="bg-green-600/20 text-green-400 border-0 text-[10px] px-2 py-0 rounded-full">
+                                      Inscrever-se
+                                    </Badge>
+                                  )}
+                                  {camp.starts_at && (camp.status === 'check_in' || camp.status === 'registration_open') && (
+                                    <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                      <Calendar size={9} />
+                                      {new Date(camp.starts_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    </span>
+                                  )}
+                                  <ChevronRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </motion.div>
+
+            {/* Feed de Atividade */}
+            {feedAtividade.length > 0 && (
+              <motion.div {...fadeInUp}>
+                <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                      <Flame size={15} className="text-orange-400" />
+                      Atividade Recente
+                    </h3>
+                    <Badge variant="secondary" className="bg-white/[0.05] text-gray-500 border-0 text-[10px]">
+                      {feedAtividade.length} eventos
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {feedAtividade.map((atividade, idx) => {
+                      const IconComp = ATIVIDADE_ICONS[atividade.type] || MessageSquare;
+                      return (
+                        <motion.div
+                          key={atividade.id}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05, duration: 0.25 }}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center">
+                            <IconComp size={13} className="text-gray-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-300 leading-relaxed">{atividade.title}</p>
+                            {atividade.description && (
+                              <p className="text-[11px] text-gray-600 mt-0.5 truncate">{atividade.description}</p>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-600 shrink-0">
+                            {tempoAgo(atividade.created_at)}
+                          </span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Coluna Lateral */}
+          <div className="space-y-6">
+            {/* Proximos Jogos */}
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                    <Play size={15} className="text-cyan-400" />
+                    Proximos Jogos
+                  </h3>
+                  {jogosRecentes.some(m => m.status === 'in_progress') && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                      </span>
+                      <span className="text-[10px] text-red-400 font-medium">LIVE</span>
                     </div>
                   )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </div>
+                </div>
+                {jogosRecentes.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Calendar size={24} className="mx-auto text-gray-700 mb-2" />
+                    <p className="text-xs text-gray-600">Sem jogos agendados.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
+                    {jogosRecentes.map((jogo, idx) => {
+                      const isLive = jogo.status === 'in_progress';
+                      return (
+                        <div
+                          key={jogo.id}
+                          className={
+                            'p-3 rounded-xl transition-colors ' +
+                            (isLive
+                              ? 'bg-red-600/[0.06] border border-red-500/10'
+                              : 'bg-white/[0.02] hover:bg-white/[0.04] border border-transparent')
+                          }
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                              <MapPin size={9} />
+                              Rodada {jogo.round_number} - Jogo {jogo.match_number}
+                            </span>
+                            {isLive ? (
+                              <Badge className="bg-red-600 text-white border-0 text-[9px] px-1.5 py-0 rounded-full font-bold">
+                                AO VIVO
+                              </Badge>
+                            ) : jogo.scheduled_at ? (
+                              <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                <Clock size={9} />
+                                {formatarHorario(jogo.scheduled_at)}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {jogo.team1_logo ? (
+                                <Avatar className="w-5 h-5">
+                                  <AvatarImage src={jogo.team1_logo} alt={jogo.team1_name || ''} />
+                                  <AvatarFallback className="text-[8px]">?</AvatarFallback>
+                                </Avatar>
+                              ) : null}
+                              <span className="text-xs text-gray-300 font-medium truncate">
+                                {jogo.team1_name || 'TBD'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-gray-600 font-bold px-2 shrink-0">VS</span>
+                            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                              <span className="text-xs text-gray-300 font-medium truncate text-right">
+                                {jogo.team2_name || 'TBD'}
+                              </span>
+                              {jogo.team2_logo ? (
+                                <Avatar className="w-5 h-5">
+                                  <AvatarImage src={jogo.team2_logo} alt={jogo.team2_name || ''} />
+                                  <AvatarFallback className="text-[8px]">?</AvatarFallback>
+                                </Avatar>
+                              ) : null}
+                            </div>
+                          </div>
+                          {isLive && (jogo.team1_score !== null || jogo.team2_score !== null) && (
+                            <div className="flex items-center justify-center gap-3 mt-1.5">
+                              <span className="text-sm font-bold text-white">{jogo.team1_score ?? 0}</span>
+                              <span className="text-[10px] text-gray-600">-</span>
+                              <span className="text-sm font-bold text-white">{jogo.team2_score ?? 0}</span>
+                            </div>
+                          )}
+                          {jogo.map_name && (
+                            <p className="text-[10px] text-gray-600 mt-1.5 truncate">
+                              <MapPin size={8} className="inline mr-1" />
+                              {jogo.map_name}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
 
-          {/* Sidebar */}
-          <aside className="w-full lg:w-80 flex-shrink-0 space-y-6">
-            <TopTeamsSection teams={topTeams} loading={loading} />
-            <NextMatchesSection matches={recentMatches} loading={loading} />
-            <ActivityFeedSection activities={activityFeed} loading={loading} />
-          </aside>
+            {/* Top Equipas */}
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.3, delay: 0.15 }}
+            >
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                    <TrendingUp size={15} className="text-emerald-400" />
+                    Top Equipas
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[10px] text-gray-500 hover:text-gray-300 h-auto p-0"
+                    onClick={() => navigate('/esports/ranking')}
+                  >
+                    Ver todos
+                    <ChevronRight size={12} />
+                  </Button>
+                </div>
+                {topEquipas.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Shield size={24} className="mx-auto text-gray-700 mb-2" />
+                    <p className="text-xs text-gray-600">Sem equipas classificadas.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {topEquipas.map((equipa, idx) => (
+                      <motion.div
+                        key={equipa.id}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.15 + idx * 0.05, duration: 0.25 }}
+                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                        onClick={() => navigate(`/esports/equipa/${equipa.slug}`)}
+                      >
+                        <span className={`text-sm font-black w-5 text-center ${POSICAO_CORES[idx] || 'text-gray-600'}`}>
+                          #{idx + 1}
+                        </span>
+                        <Avatar className="w-8 h-8 border border-white/[0.08]">
+                          <AvatarImage src={equipa.logo_url || undefined} alt={equipa.name} />
+                          <AvatarFallback className="text-[10px] bg-white/[0.06]">{equipa.tag || equipa.name.slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-gray-200 truncate group-hover:text-white transition-colors">
+                              {equipa.name}
+                            </span>
+                            {equipa.is_verified && (
+                              <Shield size={11} className="text-cyan-400 shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-600">
+                              {equipa.total_wins}V / {equipa.total_losses}D
+                            </span>
+                            <span className="text-[10px] text-gray-700">|</span>
+                            <span className="text-[10px] text-yellow-500/80 font-medium">ELO {equipa.rating}</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <Star size={10} className={idx === 0 ? 'text-yellow-400' : 'text-gray-700'} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Links Rapidos */}
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-4">
+                  <Zap size={15} className="text-yellow-400" />
+                  Links Rapidos
+                </h3>
+                <div className="space-y-1">
+                  {[
+                    { icon: Trophy, label: 'Ver Ranking Global', path: '/esports/ranking' },
+                    { icon: Gamepad2, label: 'Explorar Ligas', path: '/esports/ligas' },
+                    { icon: Users, label: 'Minha Equipa', path: '/esports/equipa' },
+                    { icon: Calendar, label: 'Calendario de Eventos', path: '/esports/calendario' },
+                    { icon: Eye, label: 'Assistir Transmissoes', path: '/esports/ao-vivo' },
+                  ].map((link) => (
+                    <button
+                      key={link.path}
+                      onClick={() => navigate(link.path)}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                          <link.icon size={13} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
+                        </div>
+                        <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors">
+                          {link.label}
+                        </span>
+                      </div>
+                      <ChevronRight size={13} className="text-gray-700 group-hover:text-gray-500 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Estatisticas rapidas */}
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.3, delay: 0.25 }}
+            >
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-4">
+                  <Filter size={15} className="text-violet-400" />
+                  Visao Geral
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/[0.03] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-gray-200">{jogos.length}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Jogos Ativos</p>
+                  </div>
+                  <div className="bg-white/[0.03] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-gray-200">{campeonatos.length}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Campeonatos</p>
+                  </div>
+                  <div className="bg-white/[0.03] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-red-400">{contagemPorAba.live}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Ao Vivo Agora</p>
+                  </div>
+                  <div className="bg-white/[0.03] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-green-400">{contagemPorAba.registration_open}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Registo Aberto</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
-  );
-}
-
-function ChampionshipCard({ champ, gameEmoji, gameLabel }: { champ: Championship; gameEmoji: string; gameLabel: string }) {
-  const progressPct = champ.max_teams > 0 ? Math.min((champ.registered_teams / champ.max_teams) * 100, 100) : 0;
-  const isLive = champ.status === 'live';
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      style={{ perspective: '800px' }}
-    >
-      <Card className={`overflow-hidden border transition-all duration-300 cursor-pointer ${
-        isLive
-          ? 'border-red-500/40 shadow-lg shadow-red-500/10 hover:shadow-red-500/20'
-          : 'border-zinc-800 hover:border-zinc-600 hover:shadow-lg hover:shadow-purple-500/5'
-      }`}>
-        {/* Cover Gradient */}
-        <div
-          className="h-24 relative"
-          style={{
-            background: `linear-gradient(135deg, ${champ.primary_color || '#7c3aed'}, ${champ.secondary_color || '#1e1b4b'}, ${champ.accent_color || '#06b6d4'})`,
-          }}
-        >
-          <div className="absolute inset-0 flex items-start justify-between p-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-sm text-xs">
-                {gameEmoji} {gameLabel}
-              </Badge>
-              <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-sm text-xs">
-                {FORMAT_LABELS[champ.match_format]}
-              </Badge>
-            </div>
-            <Badge className={`text-[10px] border backdrop-blur-sm ${getStatusColor(champ.status)} ${isLive ? 'animate-pulse' : ''}`}>
-              {STATUS_LABELS[champ.status]}
-            </Badge>
-          </div>
-          {champ.stream_url && (
-            <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-red-600 rounded text-[10px] font-bold text-white">
-              <Radio className="w-3 h-3" /> LIVE
-            </div>
-          )}
-        </div>
-
-        <CardContent className="p-4">
-          <h3 className="text-base font-bold text-white mb-2 line-clamp-1">{champ.name}</h3>
-
-          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 mb-3">
-            <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{champ.starts_at ? formatDate(champ.starts_at) : 'TBA'}</span>
-            <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{champ.region_server?.toUpperCase() || 'Global'}</span>
-          </div>
-
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-500">Premio</span>
-            <span className="text-lg font-black text-yellow-400">{formatCurrency(champ.prize_pool, champ.currency)}</span>
-          </div>
-
-          {/* Team Progress */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-zinc-500">{champ.registered_teams}/{champ.max_teams} Equipas</span>
-              <span className="text-zinc-500">{Math.round(progressPct)}%</span>
-            </div>
-            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: `linear-gradient(90deg, ${champ.primary_color || '#8b5cf6'}, ${champ.accent_color || '#06b6d4'})` }}
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPct}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function TopTeamsSection({ teams, loading }: { teams: EsportTeam[]; loading: boolean }) {
-  return (
-    <Card className="border-zinc-800 bg-zinc-900/60">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-bold flex items-center gap-2 text-zinc-200">
-          <TrendingUp className="w-4 h-4 text-yellow-400" />
-          Top Equipas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 max-h-80 overflow-y-auto">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 rounded bg-zinc-800" />)
-        ) : teams.length === 0 ? (
-          <p className="text-zinc-600 text-xs text-center py-4">Sem equipas registadas</p>
-        ) : (
-          teams.map((team, i) => (
-            <motion.div
-              key={team.id}
-              className="flex items-center gap-3"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                i === 0 ? 'bg-yellow-500/20 text-yellow-400' : i === 1 ? 'bg-zinc-400/20 text-zinc-300' : i === 2 ? 'bg-amber-700/20 text-amber-500' : 'bg-zinc-800 text-zinc-500'
-              }`}>
-                {i + 1}
-              </span>
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={team.logo_url || undefined} />
-                <AvatarFallback className="bg-zinc-800 text-xs">{team.tag || team.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-zinc-200 truncate">{team.name}</div>
-                <div className="text-[10px] text-zinc-500">{team.total_wins}V / {team.total_losses}D</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-bold text-yellow-400">{formatCurrency(team.total_earnings, 'BRL')}</div>
-                <div className="text-[10px] text-zinc-600">Rating: {team.rating}</div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function NextMatchesSection({ matches, loading }: { matches: EsportMatch[]; loading: boolean }) {
-  const activityIcon = (type: string) => {
-    switch (type) {
-      case 'in_progress': return <Radio className="w-3.5 h-3.5 text-red-400" />;
-      case 'completed': return <Shield className="w-3.5 h-3.5 text-emerald-400" />;
-      default: return <Clock className="w-3.5 h-3.5 text-zinc-400" />;
-    }
-  };
-
-  return (
-    <Card className="border-zinc-800 bg-zinc-900/60">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-bold flex items-center gap-2 text-zinc-200">
-          <Gamepad2 className="w-4 h-4 text-cyan-400" />
-          Proximos Jogos
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 max-h-80 overflow-y-auto">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded bg-zinc-800" />)
-        ) : matches.length === 0 ? (
-          <p className="text-zinc-600 text-xs text-center py-4">Sem partidas proximas</p>
-        ) : (
-          matches.map((match, i) => (
-            <motion.div
-              key={match.id}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`p-3 rounded-lg border ${
-                match.status === 'in_progress'
-                  ? 'border-red-500/30 bg-red-500/5'
-                  : 'border-zinc-800 bg-zinc-800/30'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                {activityIcon(match.status)}
-                <span className="text-[10px] text-zinc-600">{match.map_name || `Partida ${match.match_number}`}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Avatar className="w-5 h-5">
-                    <AvatarImage src={match.team1_logo || undefined} />
-                    <AvatarFallback className="text-[8px] bg-zinc-700">T1</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-zinc-300 truncate">{match.team1_name || 'TBD'}</span>
-                </div>
-                <span className="text-[10px] text-zinc-600 font-bold mx-2">VS</span>
-                <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                  <span className="text-xs text-zinc-300 truncate">{match.team2_name || 'TBD'}</span>
-                  <Avatar className="w-5 h-5">
-                    <AvatarImage src={match.team2_logo || undefined} />
-                    <AvatarFallback className="text-[8px] bg-zinc-700">T2</AvatarFallback>
-                  </Avatar>
-                </div>
-              </div>
-              {(match.team1_score !== null || match.team2_score !== null) && (
-                <div className="flex justify-center gap-3 mt-1.5">
-                  <span className={`text-sm font-bold ${match.winner_id === match.team1_id ? 'text-emerald-400' : 'text-zinc-500'}`}>{match.team1_score ?? 0}</span>
-                  <span className="text-zinc-700">-</span>
-                  <span className={`text-sm font-bold ${match.winner_id === match.team2_id ? 'text-emerald-400' : 'text-zinc-500'}`}>{match.team2_score ?? 0}</span>
-                </div>
-              )}
-            </motion.div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ActivityFeedSection({ activities, loading }: { activities: EsportActivity[]; loading: boolean }) {
-  const actIcon = (type: string) => {
-    switch (type) {
-      case 'registration': return <Users className="w-3.5 h-3.5 text-emerald-400" />;
-      case 'match_result': return <Trophy className="w-3.5 h-3.5 text-yellow-400" />;
-      case 'check_in': return <Shield className="w-3.5 h-3.5 text-cyan-400" />;
-      case 'prize_distributed': return <Star className="w-3.5 h-3.5 text-yellow-400" />;
-      default: return <Zap className="w-3.5 h-3.5 text-purple-400" />;
-    }
-  };
-
-  return (
-    <Card className="border-zinc-800 bg-zinc-900/60">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-bold flex items-center gap-2 text-zinc-200">
-          <Zap className="w-4 h-4 text-purple-400" />
-          Atividade Recente
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 max-h-80 overflow-y-auto">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded bg-zinc-800" />)
-        ) : activities.length === 0 ? (
-          <p className="text-zinc-600 text-xs text-center py-4">Sem atividade recente</p>
-        ) : (
-          activities.map((act, i) => (
-            <motion.div
-              key={act.id}
-              className="flex gap-3"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                {actIcon(act.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-zinc-300 line-clamp-1">{act.title}</p>
-                {act.description && <p className="text-[10px] text-zinc-600 line-clamp-1 mt-0.5">{act.description}</p>}
-                <p className="text-[10px] text-zinc-700 mt-1">
-                  {new Date(act.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </CardContent>
-    </Card>
   );
 }

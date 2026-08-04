@@ -688,7 +688,7 @@ export default function AchievementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="py-6 px-4 max-w-7xl mx-auto">
       {/* Shimmer gradient text style */}
       <style>{`
         .shimmer-text {

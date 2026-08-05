@@ -111,6 +111,7 @@ import CompanyLiveManager from "./pages/dashboard/CompanyLiveManager.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import NotificationBell from "./components/live/NotificationBell.tsx";
 import LivesAgora from "./pages/LivesAgora.tsx";
+import Battles from "./pages/Battles.tsx";
 import LiveParticipar from "./pages/LiveParticipar.tsx";
 import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
 import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
@@ -198,6 +199,7 @@ function AnimatedRoutes() {
           <Route path="/empresa/:id" element={<BusinessProfile />} />
           <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
           <Route path="/lives" element={<LiveHub />} />
+          <Route path="/batalhas" element={<Battles />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
           <Route path="/lives/overlay-pro" element={<OverlayPro />} />
           <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />

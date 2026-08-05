@@ -156,6 +156,7 @@ const ROUTE_META: Record<string, { icon: typeof Home; labelKey: string; grad: st
   "/my-points": { icon: Star, labelKey: "menu.points", grad: "from-amber-500 to-orange-500" },
   "/instant-win": { icon: Sparkles, labelKey: "menu.instantWin", grad: "from-violet-500 to-fuchsia-500" },
   "/tournaments": { icon: Target, labelKey: "tournament.title", grad: "from-emerald-500 to-teal-600" },
+  "/batalhas": { icon: Swords, labelKey: "Batalhas", grad: "from-red-500 to-orange-600" },
   "/referral": { icon: Users, labelKey: "menu.referral", grad: "from-fuchsia-500 to-pink-500" },
   "/historico": { icon: History, labelKey: "menu.winners", grad: "from-amber-500 to-yellow-500" },
   "/prestacoes/catalogo": { icon: CreditCard, labelKey: "menu.installments", grad: "from-rose-500 to-pink-500" },

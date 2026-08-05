@@ -87,6 +87,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
@@ -611,6 +612,7 @@ const LiveHub = () => {
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""}>
             <AnimatePresence mode="wait">
               <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
               {active === "wheel" && (
@@ -1164,6 +1166,7 @@ const LiveHub = () => {
                 </motion.div>              )}
               </Suspense>
             </AnimatePresence>
+            </GameFullscreenWrapper>
           </div>
 
           <aside className="space-y-4">

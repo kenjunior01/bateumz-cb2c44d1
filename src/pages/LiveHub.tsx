@@ -88,6 +88,8 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper";
+import EngagementBar from "@/components/engagement/EngagementBar";
+import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
@@ -1170,6 +1172,7 @@ const LiveHub = () => {
           </div>
 
           <aside className="space-y-4">
+            <LevelProgressWidget />
             <LiveControlPanel
               liveCode={liveCode}
               entries={leaderboard}
@@ -1220,6 +1223,7 @@ const LiveHub = () => {
 
       <Footer />
       <BottomTabBar />
+      <EngagementBar />
 
       <AnimatePresence>
         {endOpen && (

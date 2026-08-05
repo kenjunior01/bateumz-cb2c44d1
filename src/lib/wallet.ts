@@ -62,18 +62,27 @@ export interface WithdrawalRequest {
 export const PAYMENT_METHODS = [
   { id: "mpesa", label: "M-Pesa", icon: "phone", color: "from-red-500 to-red-600", desc: "Pagamento movel M-Pesa Moçambique" },
   { id: "emola", label: "e-Mola", icon: "phone", color: "from-orange-500 to-amber-500", desc: "Pagamento movel e-Mola (VCB)" },
+  { id: "conta_movel", label: "Conta Movel", icon: "smartphone", color: "from-orange-400 to-orange-600", desc: "Conta Movel Vodacom Moçambique" },
+  { id: "tkash", label: "Tkash", icon: "zap", color: "from-yellow-400 to-yellow-600", desc: "Tkash Moçambique" },
   { id: "pix", label: "PIX", icon: "qr-code", color: "from-teal-500 to-emerald-500", desc: "PIX instantaneo (Brasil)" },
   { id: "bank_transfer", label: "Transferencia Bancaria", icon: "landmark", color: "from-blue-500 to-indigo-600", desc: "Millennium BIM, BCI, Standard Bank" },
-  { id: "visa", label: "Visa / Mastercard", icon: "credit-card", color: "from-violet-500 to-purple-600", desc: "Cartao de credito ou debito" },
+  { id: "visa", label: "Visa", icon: "credit-card", color: "from-violet-500 to-purple-600", desc: "Cartao Visa de credito ou debito" },
+  { id: "mastercard", label: "Mastercard", icon: "credit-card", color: "from-blue-700 to-blue-900", desc: "Cartao Mastercard de credito ou debito" },
   { id: "paypal", label: "PayPal", icon: "globe", color: "from-blue-600 to-blue-700", desc: "Pagamento internacional via PayPal" },
+  { id: "crypto", label: "Bitcoin/Crypto", icon: "bitcoin", color: "from-amber-500 to-amber-700", desc: "Pagamento via Bitcoin / Criptomoeda" },
 ] as const;
 
 export const WITHDRAWAL_METHODS = [
   { id: "mpesa", label: "M-Pesa", icon: "phone", placeholder: "840000000" },
   { id: "emola", label: "e-Mola", icon: "phone", placeholder: "840000000" },
+  { id: "conta_movel", label: "Conta Movel", icon: "smartphone", placeholder: "850000000" },
+  { id: "tkash", label: "Tkash", icon: "zap", placeholder: "860000000" },
   { id: "pix", label: "PIX", icon: "qr-code", placeholder: "email@exemplo.com" },
   { id: "bank_transfer", label: "Transferencia Bancaria", icon: "landmark", placeholder: "Número da conta (NUAN)" },
+  { id: "visa", label: "Visa", icon: "credit-card", placeholder: "**** **** **** 1234" },
+  { id: "mastercard", label: "Mastercard", icon: "credit-card", placeholder: "**** **** **** 5678" },
   { id: "paypal", label: "PayPal", icon: "globe", placeholder: "email@paypal.com" },
+  { id: "crypto", label: "Bitcoin/Crypto", icon: "bitcoin", placeholder: "bc1q...endereco da carteira" },
 ] as const;
 
 export async function getWallet(userId: string): Promise<Wallet | null> {

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, QrCode, Landmark, CreditCard, Globe, ArrowLeft, ArrowRight, Upload, CheckCircle2, Loader2, X } from "lucide-react";
+import { Phone, QrCode, Landmark, CreditCard, Globe, ArrowLeft, ArrowRight, Upload, CheckCircle2, Loader2, X, Smartphone, Zap, Bitcoin, Shield, Info } from "lucide-react";
 import { PAYMENT_METHODS, createDepositRequest, formatMZN, type DepositRequest } from "@/lib/wallet";
 
 interface Props {
@@ -16,7 +16,20 @@ interface Props {
 }
 
 const ICON_MAP: Record<string, typeof Phone> = {
-  phone: Phone, "qr-code": QrCode, landmark: Landmark, "credit-card": CreditCard, globe: Globe,
+  phone: Phone, "qr-code": QrCode, landmark: Landmark, "credit-card": CreditCard, globe: Globe, smartphone: Smartphone, zap: Zap, bitcoin: Bitcoin,
+};
+
+const METHOD_INSTRUCTIONS: Record<string, { icon: typeof Phone; gradient: string; text: string }> = {
+  mpesa: { icon: Phone, gradient: "from-red-500 to-red-600", text: "Envie MZN {amount} para 841234567 via M-Pesa. Use o numero 841234567 como destinatario." },
+  emola: { icon: Phone, gradient: "from-orange-500 to-amber-500", text: "Envie MZN {amount} para 840987654 via e-Mola." },
+  conta_movel: { icon: Smartphone, gradient: "from-orange-400 to-orange-600", text: "Envie MZN {amount} para 850123456 via Conta Movel Vodacom." },
+  tkash: { icon: Zap, gradient: "from-yellow-400 to-yellow-600", text: "Envie MZN {amount} para 860123456 via Tkash." },
+  pix: { icon: QrCode, gradient: "from-teal-500 to-emerald-500", text: "Use a chave PIX: bateu@pix.co.mz para enviar MZN {amount}." },
+  bank_transfer: { icon: Landmark, gradient: "from-blue-500 to-indigo-600", text: "Transfira MZN {amount} para IBAN: MO0001234567890, Millennium BIM. Nome: Bateu SA." },
+  visa: { icon: Shield, gradient: "from-violet-500 to-purple-600", text: "Pagamento processado de forma segura via Visa." },
+  mastercard: { icon: Shield, gradient: "from-blue-700 to-blue-900", text: "Pagamento processado de forma segura via Mastercard." },
+  paypal: { icon: Globe, gradient: "from-blue-600 to-blue-700", text: "Envie o pagamento para pay@bateu.co.mz" },
+  crypto: { icon: Bitcoin, gradient: "from-amber-500 to-amber-700", text: "Envie BTC para a carteira: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" },
 };
 const PRESETS = [100, 250, 500, 1000, 2500, 5000];
 const SLIDE = {
@@ -90,7 +103,7 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
             )}
           </DialogHeader>
 
-          <div className="relative min-h-[340px] overflow-hidden">
+          <div className="relative min-h-[460px] overflow-hidden">
             <AnimatePresence mode="wait" custom={dir}>
               <motion.div key={step} custom={dir} variants={SLIDE} initial="enter" animate="center" exit="exit"
                 transition={{ type: "spring", stiffness: 300, damping: 30 }} className="px-6 pb-6">
@@ -127,6 +140,31 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
                     </div>
                     {amount && parseFloat(amount) > 0 && (
                       <p className="text-center text-emerald-400 font-bold text-lg">{formatMZN(parseFloat(amount))}</p>
+                    )}
+                    {METHOD_INSTRUCTIONS[method] && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="relative rounded-xl overflow-hidden"
+                      >
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${METHOD_INSTRUCTIONS[method].gradient}`} />
+                        <div className="ml-4 p-4 bg-white/5 rounded-r-xl border border-white/10">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 p-2 rounded-lg bg-gradient-to-br ${METHOD_INSTRUCTIONS[method].gradient} shadow-lg`}>
+                              <Info className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white/90 text-sm font-medium mb-1">
+                                {PAYMENT_METHODS.find((m) => m.id === method)?.label}
+                              </p>
+                              <p className="text-white/60 text-xs leading-relaxed">
+                                {METHOD_INSTRUCTIONS[method].text.replace("{amount}", amount && parseFloat(amount) > 0 ? formatMZN(parseFloat(amount)) : "0,00 MZN")}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
                   </div>
                 )}

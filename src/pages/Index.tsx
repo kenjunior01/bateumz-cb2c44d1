@@ -32,6 +32,9 @@ import AIRecommendations from "@/components/AIRecommendations";
 import TrustSignals from "@/components/TrustSignals";
 import LiveTicker from "@/components/LiveTicker";
 import StayInLoop from "@/components/StayInLoop";
+import EngagementBar from "@/components/engagement/EngagementBar";
+import SocialProofToasts from "@/components/engagement/SocialProofToasts";
+import UrgencyWidget from "@/components/engagement/UrgencyWidget";
 
 const SPRING_BOUNCE = { type: "spring" as const, stiffness: 300, damping: 20 };
 
@@ -398,6 +401,15 @@ const Index = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1, duration: 0.7 }}
+              >
+                <UrgencyWidget />
+              </motion.div>
+
+              <motion.div
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2, duration: 0.7 }}
               >
                 {[
                   { icon: ShieldCheck, color: "text-emerald-500", label: "Resultados verificados" },
@@ -951,6 +963,8 @@ const Index = () => {
 
       <CTASection />
       <Footer />
+      <SocialProofToasts />
+      <EngagementBar />
     </div>
   );
 };

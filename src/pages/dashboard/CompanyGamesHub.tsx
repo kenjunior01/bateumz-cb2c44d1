@@ -151,12 +151,12 @@ export default function CompanyGamesHub() {
     setLoading(true);
     const [configRes, milRes, spinRes] = await Promise.all([
       supabase.from("company_game_configs").select("*").eq("company_id", user!.id),
-      supabase.from("millionaire_games").select("*").eq("company_id", user!.id).order("created_at", { ascending: false }),
+      supabase.from("millionaire_games").select("*").eq("business_user_id", user!.id).order("created_at", { ascending: false }),
       supabase.from("spin_wheel_games").select("*").eq("business_user_id", user!.id).order("created_at", { ascending: false }),
     ]);
-    if (configRes.data) setGameConfigs(configRes.data as GameConfig[]);
-    if (milRes.data) setMillionaireGames(milRes.data as MillionaireGame[]);
-    if (spinRes.data) setSpinWheels(spinRes.data as SpinWheelGame[]);
+    if (configRes.data) setGameConfigs(configRes.data as unknown as GameConfig[]);
+    if (milRes.data) setMillionaireGames(milRes.data as unknown as MillionaireGame[]);
+    if (spinRes.data) setSpinWheels(spinRes.data as unknown as SpinWheelGame[]);
     setLoading(false);
   };
 
@@ -170,14 +170,14 @@ export default function CompanyGamesHub() {
       const { error } = await supabase.from("company_game_configs").insert({ company_id: user!.id, game_id: gameId, game_label: def?.label || gameId, is_enabled: enabled });
       if (!error) setGameConfigs(p => [...p, { id: crypto.randomUUID(), game_id: gameId, game_label: def?.label || gameId, is_enabled: enabled, is_published: false, settings: {}, play_count: 0, total_prizes_awarded: 0, created_at: new Date().toISOString() }]);
     }
-    toast.success(enabled ? "Jogo ativado" : "Jogo desativado");
+    toast.success(enabled ? "Game enabled" : "Game disabled");
   };
 
   const togglePublished = async (configId: string, published: boolean) => {
     const { error } = await supabase.from("company_game_configs").update({ is_published: published, updated_at: new Date().toISOString() }).eq("id", configId);
     if (!error) {
       setGameConfigs(p => p.map(c => c.id === configId ? { ...c, is_published: published } : c));
-      toast.success(published ? "Jogo publicado" : "Jogo despublicado");
+      toast.success(published ? "Game published" : "Game unpublished");
     }
   };
 

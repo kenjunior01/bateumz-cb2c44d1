@@ -502,6 +502,48 @@ export type Database = {
         }
         Relationships: []
       }
+      company_game_configs: {
+        Row: {
+          company_id: string
+          created_at: string
+          game_id: string
+          game_label: string
+          id: string
+          is_enabled: boolean
+          is_published: boolean
+          play_count: number
+          settings: Json
+          total_prizes_awarded: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          game_id: string
+          game_label: string
+          id?: string
+          is_enabled?: boolean
+          is_published?: boolean
+          play_count?: number
+          settings?: Json
+          total_prizes_awarded?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          game_id?: string
+          game_label?: string
+          id?: string
+          is_enabled?: boolean
+          is_published?: boolean
+          play_count?: number
+          settings?: Json
+          total_prizes_awarded?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contest_submissions: {
         Row: {
           contest_id: string
@@ -1100,6 +1142,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      live_templates: {
+        Row: {
+          branding: Json
+          challenges: Json
+          created_at: string
+          description: string | null
+          game_ids: Json
+          id: string
+          is_active: boolean
+          name: string
+          rules: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          branding?: Json
+          challenges?: Json
+          created_at?: string
+          description?: string | null
+          game_ids?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          rules?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          branding?: Json
+          challenges?: Json
+          created_at?: string
+          description?: string | null
+          game_ids?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          rules?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       luck_points: {
         Row: {
@@ -2195,6 +2279,7 @@ export type Database = {
           slug: string
           source_type: string
           status: string
+          template_id: string | null
           title: string
           updated_at: string
         }
@@ -2212,6 +2297,7 @@ export type Database = {
           slug: string
           source_type?: string
           status?: string
+          template_id?: string | null
           title: string
           updated_at?: string
         }
@@ -2229,10 +2315,19 @@ export type Database = {
           slug?: string
           source_type?: string
           status?: string
+          template_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_lives_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "live_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_participations: {
         Row: {

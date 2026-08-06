@@ -1326,6 +1326,54 @@ export type Database = {
           },
         ]
       }
+      millionaire_leaderboard: {
+        Row: {
+          created_at: string
+          game_id: string
+          highest_level: number
+          highest_prize: number
+          id: string
+          total_plays: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          highest_level?: number
+          highest_prize?: number
+          id?: string
+          total_plays?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          highest_level?: number
+          highest_prize?: number
+          id?: string
+          total_plays?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "millionaire_leaderboard_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "millionaire_leaderboard_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       millionaire_questions: {
         Row: {
           correct_answer: string

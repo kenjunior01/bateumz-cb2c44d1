@@ -148,13 +148,13 @@ const OverlayLive = () => {
               <div className="p-3">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Jogo atual</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Current game</p>
                     <p className="text-lg font-black mt-0.5" style={{ color: "#8b5cf6" }}>{round.game}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Estado</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
                     <span className={"text-xs font-bold px-2 py-0.5 rounded-full " + (round.phase === "running" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400")}>
-                      {round.phase === "running" ? "A decorrer" : round.phase === "waiting" ? "Aguardando" : round.phase}
+                      {round.phase === "running" ? "Running" : String(round.phase)}
                     </span>
                   </div>
                 </div>

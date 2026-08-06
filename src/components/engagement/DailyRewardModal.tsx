@@ -352,8 +352,7 @@ function ClaimedOverlay({ reward, onDone }: { reward: number; onDone: () => void
     const timer = setTimeout(onDone, 2200);
     return () => {
       timer && clearTimeout(timer);
-      sideA && sideA.reset();
-      sideB && sideB.reset();
+      void sideA; void sideB;
     };
   }, [onDone]);
 
@@ -565,7 +564,7 @@ export default function DailyRewardModal({
                     />
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       <Zap size={18} />
-                      Reclamar {nextReward} MZN
+                      Claim {REWARDS[streak % 7]} MZN
                     </span>
                   </motion.button>
                 ) : (

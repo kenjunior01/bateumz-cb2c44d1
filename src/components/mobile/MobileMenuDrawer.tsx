@@ -394,7 +394,7 @@ export default function MobileMenuDrawer() {
                         {[...favorites].filter((p) => ROUTE_META[p]).map((path) => {
                           const meta = ROUTE_META[path];
                           return (
-                            <button
+                            <motion.button
                               key={path}
                               whileTap={{ scale: 0.92 }}
                               onClick={() => goOrAuth(path)}
@@ -404,7 +404,7 @@ export default function MobileMenuDrawer() {
                                 <meta.icon className="h-5 w-5 text-white" strokeWidth={1.8} />
                               </div>
                               <span className="text-[10.5px] font-semibold leading-tight text-center line-clamp-2 px-0.5">{t(meta.labelKey)}</span>
-                            </button>
+                            </motion.button>
                           );
                         })}
                       </div>

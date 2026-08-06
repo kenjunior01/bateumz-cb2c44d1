@@ -139,7 +139,7 @@ export default function MillionairePage() {
 
   const loadLeaderboard = async () => {
     if (!gameId) return;
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("millionaire_leaderboard")
       .select("*, profiles!inner(display_name, avatar_url)")
       .eq("game_id", gameId)
@@ -148,7 +148,7 @@ export default function MillionairePage() {
     if (data) {
       setLeaderboard(data.map((d: any) => ({
         user_id: d.user_id,
-        display_name: d.profiles?.display_name || "Anonimo",
+        display_name: d.profiles?.display_name || "Anonymous",
         avatar_url: d.profiles?.avatar_url,
         highest_level: d.highest_level,
         highest_prize: d.highest_prize,

@@ -779,7 +779,7 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-card border rounded-lg p-3">
             <div ref={historyRef} className="max-h-60 overflow-y-auto text-xs space-y-1">
               {moveHistory.map((m, i) => {
-                const notation = moveToNotation(m, i > 0 ? applyMoveToBoard(createInitialBoard(), moveHistory.slice(0, i).reduce((b, mv) => applyMoveToBoard(b, mv), createInitialBoard())) : createInitialBoard());
+                const notation = moveToNotation(m, moveHistory.slice(0, i).reduce((b, mv) => applyMoveToBoard(b, mv), createInitialBoard()));
                 const moveNum = Math.floor(i / 2) + 1;
                 return (
                   <div key={i} className={cn("flex gap-2", i % 2 === 0 && "font-medium")}>

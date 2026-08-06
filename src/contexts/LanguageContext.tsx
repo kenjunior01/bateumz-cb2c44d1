@@ -149,9 +149,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "mob.recent": "Recent",
     "mob.favorites": "Favorites",
     "mob.hide": "Hide",
-    "mob.recent": "Recent",
-    "mob.favorites": "Favorites",
-    "mob.hide": "Hide",
 
     // FAB Mega-menu
     "fab.quickAccess": "Quick access",

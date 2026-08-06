@@ -93,18 +93,28 @@ import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
-class GameErrorBoundary extends Component<{children: ReactNode; gameName: string}, {hasError: boolean; resetKey: number}> {
-  constructor(props: {children: ReactNode; gameName: string}) { super(props); this.state = {hasError: false, resetKey: 0}; }
+class GameErrorBoundary extends Component<{children: ReactNode; gameName: string}, {hasError: boolean; resetKey: number; errorMsg: string}> {
+  constructor(props: {children: ReactNode; gameName: string}) { super(props); this.state = {hasError: false, resetKey: 0, errorMsg: ""}; }
   static getDerivedStateFromError() { return {hasError: true}; }
-  componentDidCatch(err: Error) { console.error(`[GameErrorBoundary] ${this.props.gameName}:`, err); }
-  handleRetry = () => { this.setState((s) => ({ hasError: false, resetKey: (s.resetKey || 0) + 1 })); };
+  componentDidCatch(err: Error) {
+    console.error(`[GameErrorBoundary] ${this.props.gameName}:`, err);
+    const msg = err.message || "Erro desconhecido";
+    this.setState({ errorMsg: msg.length > 120 ? msg.slice(0, 120) + "..." : msg });
+  }
+  handleRetry = () => { this.setState((s) => ({ hasError: false, resetKey: (s.resetKey || 0) + 1, errorMsg: "" })); };
+  handleSelectOther = () => {
+    window.dispatchEvent(new CustomEvent("game-error-select-other"));
+  };
   render() {
     if (this.state.hasError) return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl border border-dashed border-destructive/40 bg-destructive/5">
-        <div className="text-4xl mb-3">🎮</div>
+      <div className="flex flex-col items-center justify-center py-20 px-6 rounded-2xl border border-dashed border-destructive/30 bg-gradient-to-b from-destructive/5 to-transparent">
+        <div className="text-5xl mb-4">⚠️</div>
         <p className="text-sm font-bold mb-1">Erro ao carregar {this.props.gameName}</p>
-        <p className="text-xs text-muted-foreground mb-3">Tente selecionar outro jogo</p>
-        <button onClick={this.handleRetry} className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Tentar novamente</button>
+        <p className="text-[11px] text-muted-foreground mb-5 text-center max-w-xs">Ocorreu um problema inesperado. Tenta novamente ou escolhe outro jogo.</p>
+        <div className="flex items-center gap-2">
+          <button onClick={this.handleRetry} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-colors">Tentar novamente</button>
+          <button onClick={this.handleSelectOther} className="text-xs px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold transition-colors">Outro jogo</button>
+        </div>
       </div>
     );
     return <div key={this.state.resetKey}>{this.props.children}</div>;
@@ -724,19 +734,23 @@ const LiveHub = () => {
               )}
               {active === "keyword" && (
                 <motion.div key="keyword" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Caça à Palavra">
                   <KeywordHunt
                     liveCode={liveCode}
                     onScore={recordScore("Caça à Palavra")}
                     onWinner={(name, kw) => broadcastWinner(name, `Caça à Palavra · "${kw}"`)}
                   />
+                  </GameErrorBoundary>
                 </motion.div>
               )}
               {active === "emoji" && (
                 <motion.div key="emoji" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Batalha de Emojis">
                   <EmojiBattle
                     onScore={recordScore("Batalha de Emojis")}
                     onWinner={(label, votes) => broadcastWinner(label, `Batalha de Emojis · ${votes} votos`)}
                   />
+                  </GameErrorBoundary>
                 </motion.div>
               )}
               {active === "millionaire" && (

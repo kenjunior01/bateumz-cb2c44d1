@@ -294,7 +294,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               return ns;
             });
             return current.map((sq) =>
-              sq.id === trap.id ? { ...sq, tapped: true, tappedBy: "p2" as const } : sq
+              sq.id === trap.id ? { ...sq, tapped: true, tappedBy: "p2" as "p1" | "p2" } : sq
             );
           }
         }
@@ -322,7 +322,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           }
 
           return current.map((sq) =>
-            sq.id === target.id ? { ...sq, tapped: true, tappedBy: "p2" as const } : sq
+            sq.id === target.id ? { ...sq, tapped: true, tappedBy: "p2" as "p1" | "p2" } : sq
           );
         }
 
@@ -553,7 +553,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
     >
       <CapulanaPattern />
 
-      {/* Confetti particles */}
       <AnimatePresence>
         {particles.map((p) => (
           <motion.div
@@ -567,7 +566,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
         ))}
       </AnimatePresence>
 
-      {/* Phrase popup */}
       <AnimatePresence>
         {phrase && (
           <motion.div
@@ -582,7 +580,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
         )}
       </AnimatePresence>
 
-      {/* Sequence complete flash */}
       <AnimatePresence>
         {seqComplete && (
           <motion.div
@@ -597,7 +594,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
       </AnimatePresence>
 
       <div className="relative z-10 p-4 md:p-6">
-        {/* Header with Mozambican flag stripe */}
+
         <div className="flex items-center gap-3 mb-4">
           <div
             className="h-10 w-10 rounded-xl flex items-center justify-center"
@@ -618,7 +615,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           </div>
         </div>
 
-        {/* ============ MENU PHASE ============ */}
         {phase === "menu" && (
           <div className="space-y-4">
             <p className="text-sm text-center" style={{ color: "#DEB887" }}>
@@ -626,7 +622,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               vermelhas. {GAME_TIME} segundos de pura agilidade.
             </p>
 
-            {/* Hopscotch preview */}
             <div className="flex justify-center py-2">
               <div
                 className="grid grid-cols-3 gap-1.5"
@@ -657,7 +652,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </div>
             </div>
 
-            {/* Scoring legend */}
             <div className="flex justify-center gap-4 text-[10px]" style={{ color: "#CD853F" }}>
               <span>
                 <span style={{ color: "#009140" }}>+{CORRECT_POINTS}</span> Correcto
@@ -670,7 +664,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </span>
             </div>
 
-            {/* Mode toggle */}
             <div className="flex justify-center gap-2">
               {_MODES.map((m) => (
                 <button
@@ -693,7 +686,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               ))}
             </div>
 
-            {/* Difficulty (bot only) */}
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
                 {_DIFFS.map((d) => (
@@ -734,7 +726,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           </div>
         )}
 
-        {/* ============ COUNTDOWN PHASE ============ */}
         {phase === "countdown" && (
           <div className="flex items-center justify-center py-16">
             <AnimatePresence mode="wait">
@@ -755,12 +746,11 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           </div>
         )}
 
-        {/* ============ PLAYING PHASE ============ */}
         {phase === "playing" && (
           <>
-            {/* Score bar */}
+
             <div className="flex items-center justify-between mb-2">
-              {/* Player 1 */}
+
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ background: "#009140" }} />
                 <span className="text-xs font-bold" style={{ color: "#DEB887" }}>
@@ -774,7 +764,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
                 </span>
               </div>
 
-              {/* Timer */}
               <div className="text-center">
                 <p className="text-[9px] font-medium mb-0.5" style={{ color: "#CD853F" }}>
                   Tempo
@@ -789,7 +778,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
                 </div>
               </div>
 
-              {/* Player 2 */}
               <div className="flex items-center gap-1.5">
                 <span
                   className="text-xl font-black"
@@ -804,7 +792,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </div>
             </div>
 
-            {/* Round + Next Target indicators */}
             <div className="flex items-center justify-between mb-2 px-1">
               <div className="flex items-center gap-2">
                 <span
@@ -845,7 +832,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </span>
             </div>
 
-            {/* PvP active player toggle */}
             {mode === "pvp" && (
               <div className="flex justify-center mb-2">
                 <div
@@ -876,7 +862,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </div>
             )}
 
-            {/* Score feedback popup */}
             <div className="flex justify-center mb-1 h-6">
               <AnimatePresence>
                 {feedback && (
@@ -894,7 +879,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </AnimatePresence>
             </div>
 
-            {/* Game grid — hopscotch layout */}
             <div className="flex justify-center">
               <div
                 className="relative rounded-2xl p-3 sm:p-4"
@@ -917,7 +901,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               </div>
             </div>
 
-            {/* Pontuação label */}
             <div className="mt-3 text-center">
               <p className="text-[10px]" style={{ color: "#CD853F" }}>
                 Pontuacao: {p1Label} {score.p1} — {p2Label} {score.p2}
@@ -926,7 +909,6 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           </>
         )}
 
-        {/* ============ RESULT PHASE ============ */}
         {phase === "result" && (
           <div className="text-center py-8 space-y-4">
             <motion.div

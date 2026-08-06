@@ -338,7 +338,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
 
       <div className="relative z-10">
         <AnimatePresence mode="wait">
-          {/* =================== MENU =================== */}
+
           {phase === "menu" && (
             <motion.div
               key="menu"
@@ -347,7 +347,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
               exit={{ opacity: 0, y: -20 }}
               className="p-6 space-y-6"
             >
-              {/* Title */}
+
               <div className="text-center space-y-2">
                 <motion.h2
                   className="text-3xl font-black tracking-tight"
@@ -376,7 +376,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </div>
               </div>
 
-              {/* Mode Selection */}
               <div className="space-y-2">
                 <label className="text-xs text-stone-500 uppercase tracking-wider font-semibold">
                   Modo de Jogo
@@ -401,7 +400,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </div>
               </div>
 
-              {/* Difficulty Selection (bot only) */}
               {mode === "bot" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -439,7 +437,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </motion.div>
               )}
 
-              {/* Rules */}
               <div className="rounded-xl p-4" style={{ backgroundColor: "rgba(255,215,0,0.05)", border: "1px solid rgba(255,215,0,0.1)" }}>
                 <h3 className="text-xs font-bold mb-2" style={{ color: "#FFD700" }}>
                   Como Jogar
@@ -452,7 +449,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </ul>
               </div>
 
-              {/* Start Button */}
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
@@ -469,7 +465,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
             </motion.div>
           )}
 
-          {/* =================== COUNTDOWN =================== */}
           {phase === "countdown" && (
             <motion.div
               key="countdown"
@@ -495,7 +490,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
             </motion.div>
           )}
 
-          {/* =================== PLAYING =================== */}
           {phase === "playing" && (
             <motion.div
               key="playing"
@@ -504,7 +498,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
               exit={{ opacity: 0 }}
               className="p-4 space-y-3"
             >
-              {/* Timer bar */}
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-stone-400">
@@ -527,7 +521,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </div>
               </div>
 
-              {/* Score row */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg p-2.5 text-center" style={{ backgroundColor: "rgba(0,145,64,0.08)", border: "1px solid rgba(0,145,64,0.15)" }}>
                   <div className="text-[10px] text-stone-500 uppercase font-semibold">Jogador 1</div>
@@ -541,7 +534,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </div>
               </div>
 
-              {/* Round win message */}
               <AnimatePresence>
                 {roundWinner && (
                   <motion.div
@@ -561,9 +553,8 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 )}
               </AnimatePresence>
 
-              {/* Two columns: P1 and P2 histories */}
               <div className="grid grid-cols-2 gap-3">
-                {/* P1 History */}
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold" style={{ color: "#009140" }}>
@@ -606,7 +597,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                   </div>
                 </div>
 
-                {/* P2 History */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold" style={{ color: "#FF6B35" }}>
@@ -652,9 +642,8 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </div>
               </div>
 
-              {/* Input area */}
               <div className={mode === "pvp" ? "grid grid-cols-2 gap-3" : ""}>
-                {/* P1 Input */}
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] text-stone-500 uppercase tracking-wider font-semibold block">
                     Jogador 1
@@ -689,7 +678,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                   </div>
                 </div>
 
-                {/* P2 Input (PvP only) */}
                 {mode === "pvp" && (
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-stone-500 uppercase tracking-wider font-semibold block">
@@ -727,7 +715,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 )}
               </div>
 
-              {/* Temperature legend */}
               <div className="flex items-center justify-center gap-3 pt-1">
                 {[
                   { label: "Quente", color: "#FF0000", desc: "≤10" },
@@ -746,7 +733,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
             </motion.div>
           )}
 
-          {/* =================== RESULT =================== */}
           {phase === "result" && (
             <motion.div
               key="result"
@@ -755,7 +741,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
               exit={{ opacity: 0 }}
               className="p-6 space-y-6"
             >
-              {/* Title */}
+
               <div className="text-center space-y-2">
                 <motion.h2
                   className="text-2xl font-black"
@@ -770,7 +756,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </p>
               </div>
 
-              {/* Winner announcement */}
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -816,7 +801,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 )}
               </motion.div>
 
-              {/* Score comparison */}
               <div className="grid grid-cols-2 gap-4">
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
@@ -857,7 +841,6 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 </motion.div>
               </div>
 
-              {/* Action buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <motion.button
                   whileHover={{ scale: 1.03 }}

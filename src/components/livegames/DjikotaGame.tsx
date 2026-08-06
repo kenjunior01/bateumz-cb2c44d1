@@ -692,7 +692,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           cursor: canClick ? "pointer" : "default",
         }}
       >
-        {/* Pit number (small, in corner) */}
+
         <span
           className="absolute top-0.5 left-1 text-[8px] font-bold opacity-50"
           style={{ color: owner === "p1" ? MOZ_GREEN : MOZ_ORANGE }}
@@ -700,10 +700,8 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           {pit}
         </span>
 
-        {/* Seeds */}
         <div className="absolute inset-1">{renderSeeds(pit, count)}</div>
 
-        {/* Capture flash overlay */}
         <AnimatePresence>
           {isCaptureFlashing && (
             <motion.div
@@ -762,7 +760,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
         >
           {value}
         </motion.div>
-        {/* Mini seed stack */}
+
         <div className="flex flex-wrap justify-center gap-0.5 max-w-[44px]">
           {Array.from({ length: Math.min(value, 12) }).map((_, i) => (
             <div
@@ -792,7 +790,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
     >
       <CapulanaPattern />
 
-      {/* Phrase popup */}
       <AnimatePresence>
         {phrase && (
           <motion.div
@@ -811,7 +808,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
       </AnimatePresence>
 
       <div className="relative z-10 p-4 md:p-6">
-        {/* Header */}
+
         <div className="flex items-center gap-3 mb-4">
           <div
             className="h-10 w-10 rounded-xl flex items-center justify-center"
@@ -843,7 +840,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           )}
         </div>
 
-        {/* ============ MENU PHASE ============ */}
         {phase === "menu" && (
           <div className="space-y-4">
             <p className="text-sm text-center" style={{ color: "#DEB887" }}>
@@ -852,7 +848,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               sementes. Vence quem capturar mais sementes!
             </p>
 
-            {/* Preview board */}
             <div className="flex justify-center py-2">
               <div
                 className="flex items-stretch gap-1.5 sm:gap-2 p-2 rounded-2xl"
@@ -861,7 +856,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                     "radial-gradient(ellipse at center, rgba(139,69,19,0.18) 0%, transparent 70%)",
                 }}
               >
-                {/* Mini p2 store */}
+
                 <div
                   className="flex items-center justify-center rounded-lg px-1"
                   style={{
@@ -879,7 +874,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  {/* Top row */}
+
                   <div className="flex gap-1">
                     {previewTopPits.map((p) => (
                       <div
@@ -902,7 +897,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                       </div>
                     ))}
                   </div>
-                  {/* Bottom row */}
+
                   <div className="flex gap-1">
                     {previewBottomPits.map((p) => (
                       <div
@@ -927,7 +922,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                   </div>
                 </div>
 
-                {/* Mini p1 store */}
                 <div
                   className="flex items-center justify-center rounded-lg px-1"
                   style={{
@@ -946,7 +940,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               </div>
             </div>
 
-            {/* Scoring legend */}
             <div
               className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px]"
               style={{ color: "#CD853F" }}
@@ -962,7 +955,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               </span>
             </div>
 
-            {/* Mode toggle */}
             <div className="flex justify-center gap-2">
               {_MODES.map((m) => (
                 <button
@@ -988,7 +980,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               ))}
             </div>
 
-            {/* Difficulty (bot only) */}
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
                 {_DIFFS.map((d) => (
@@ -1031,7 +1022,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           </div>
         )}
 
-        {/* ============ COUNTDOWN PHASE ============ */}
         {phase === "countdown" && (
           <div className="flex items-center justify-center py-20">
             <AnimatePresence mode="wait">
@@ -1052,12 +1042,11 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           </div>
         )}
 
-        {/* ============ PLAYING PHASE ============ */}
         {phase === "playing" && (
           <>
-            {/* Score + turn bar */}
+
             <div className="flex items-center justify-between mb-3">
-              {/* P1 */}
+
               <div className="flex items-center gap-1.5">
                 <div
                   className="w-3 h-3 rounded-full"
@@ -1077,7 +1066,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                 </span>
               </div>
 
-              {/* Turn indicator */}
               <div className="text-center">
                 <p
                   className="text-[9px] font-medium mb-0.5"
@@ -1108,7 +1096,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                 </motion.div>
               </div>
 
-              {/* P2 */}
               <div className="flex items-center gap-1.5">
                 <span
                   className="text-xl font-black"
@@ -1129,12 +1116,10 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               </div>
             </div>
 
-            {/* The board */}
             <div className="flex items-stretch gap-2 sm:gap-3">
-              {/* P2 store (left from player's view) */}
+
               {renderStore("p2", score.p2)}
 
-              {/* Board with 2 rows of 6 pits */}
               <div
                 className="flex-1 rounded-2xl p-2 sm:p-3 relative"
                 style={{
@@ -1145,22 +1130,20 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               >
                 <CapulanaPattern />
                 <div className="relative z-10 flex flex-col gap-2">
-                  {/* Top row — pits 11,10,9,8,7,6 */}
+
                   <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                     {previewTopPits.map((p) => renderPit(p))}
                   </div>
-                  {/* Bottom row — pits 0..5 */}
+
                   <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                     {previewBottomPits.map((p) => renderPit(p))}
                   </div>
                 </div>
               </div>
 
-              {/* P1 store (right from player's view) */}
               {renderStore("p1", score.p1)}
             </div>
 
-            {/* Help text */}
             <div className="mt-3 text-center space-y-1">
               <p className="text-[10px]" style={{ color: "#CD853F" }}>
                 {mode === "bot" && currentPlayer === "p2" && !isAnimating
@@ -1185,7 +1168,6 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
           </>
         )}
 
-        {/* ============ RESULT PHASE ============ */}
         {phase === "result" && (
           <div className="text-center py-8 space-y-4">
             <motion.div

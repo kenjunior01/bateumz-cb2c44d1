@@ -812,14 +812,14 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
                   {
                     label: "Jogador 1",
                     pts: p1RoundPts,
-                    color: "cyan" as const,
+                    color: "cyan" as "cyan" | "pink",
                   },
                   {
                     label: "Jogador 2",
                     pts: p2RoundPts,
-                    color: "pink" as const,
+                    color: "pink" as "cyan" | "pink",
                   },
-                ] as const
+                ]
               ).map(({ label, pts, color }) => (
                 <motion.div
                   key={label}

@@ -329,11 +329,11 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                     </motion.button>
                   ))}
                 </div>
-                <div className="w-12 shrink-0" /> {/* spacer */}
+                <div className="w-12 shrink-0" />
               </div>
 
               <div className="flex items-center gap-1">
-                <div className="w-12 shrink-0" /> {/* spacer */}
+                <div className="w-12 shrink-0" />
                 <div className="flex-1 grid grid-cols-6 gap-1">
                   {[6, 7, 8, 9, 10, 11].map((i) => (
                     <motion.button key={i} whileTap={currentPlayer === 0 && pits[i] > 0 ? { scale: 0.9 } : {}}

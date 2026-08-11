@@ -233,6 +233,10 @@ export default function AdminRegionalManagers() {
       const payload = {
         ...regionForm,
         country_name: country?.label || regionForm.country_code,
+        label: regionForm.name,
+        flag: country?.flag || null,
+        currency: regionForm.currency_code,
+        default_language: regionForm.language_code,
       };
       if (editingRegion) {
         const { error } = await sb.from("regions").update(payload).eq("id", editingRegion.id);

@@ -106,6 +106,19 @@ export default function RegionalManagerPanel() {
     }
   }, [region]);
 
+  const loadAnnouncement = useCallback(async () => {
+    if (!region?.id) return;
+    const { data } = await sb.from("regional_announcements").select("*").eq("region_id", region.id).maybeSingle();
+    if (data) {
+      setAnnouncement({
+        enabled: data.enabled ?? false,
+        text: data.text || "",
+        cta_label: data.cta_label || "",
+        cta_url: data.cta_url || "",
+      });
+    }
+  }, [region]);
+
   const loadNativeGames = useCallback(async () => {
     if (!region?.id) return;
     const { data } = await sb.from("native_games").select("*").eq("region_id", region.id).order("created_at", { ascending: false });
@@ -118,7 +131,8 @@ export default function RegionalManagerPanel() {
     loadBranding();
     loadSettings();
     loadNativeGames();
-  }, [loadManagerData, loadRegionStats, loadBranding, loadSettings, loadNativeGames]);
+    loadAnnouncement();
+  }, [loadManagerData, loadRegionStats, loadBranding, loadSettings, loadNativeGames, loadAnnouncement]);
 
   const handleSaveBranding = async () => {
     setSaving(true);
@@ -126,9 +140,9 @@ export default function RegionalManagerPanel() {
       const payload = { ...branding, region_id: region?.id, updated_at: new Date().toISOString() };
       const { error } = await sb.from("regional_branding").upsert(payload, { onConflict: "region_id" });
       if (error) throw error;
-      toast.success("Branding actualizado com sucesso!");
+      toast.success("Branding saved successfully!");
     } catch (err) {
-      toast.error("Erro ao guardar branding");
+      toast.error("Could not save branding");
     }
     setSaving(false);
   };
@@ -139,9 +153,9 @@ export default function RegionalManagerPanel() {
       const payload = { ...settings, region_id: region?.id, updated_at: new Date().toISOString() };
       const { error } = await sb.from("regional_settings").upsert(payload, { onConflict: "region_id" });
       if (error) throw error;
-      toast.success("Configuracoes guardadas!");
+      toast.success("Settings saved!");
     } catch (err) {
-      toast.error("Erro ao guardar configuracoes");
+      toast.error("Could not save settings");
     }
     setSaving(false);
   };
@@ -152,9 +166,9 @@ export default function RegionalManagerPanel() {
       const payload = { ...announcement, region_id: region?.id, updated_by: user?.id };
       const { error } = await sb.from("regional_announcements").upsert(payload, { onConflict: "region_id" });
       if (error) throw error;
-      toast.success("Anuncio actualizado!");
+      toast.success("Announcement saved!");
     } catch (err) {
-      toast.error("Erro ao guardar anuncio");
+      toast.error("Could not save the announcement");
     }
     setSaving(false);
   };
@@ -164,7 +178,7 @@ export default function RegionalManagerPanel() {
     try {
       const newGame = {
         region_id: region?.id,
-        name: "Novo Jogo " + (nativeGames.length + 1),
+        name: "New Game " + (nativeGames.length + 1),
         type: "custom",
         is_active: false,
         config: {},
@@ -173,22 +187,41 @@ export default function RegionalManagerPanel() {
       const { data, error } = await sb.from("native_games").insert(newGame).select().single();
       if (error) throw error;
       setNativeGames((prev) => [data, ...prev]);
-      toast.success("Jogo criado! Configure abaixo.");
+      toast.success("Game created! Configure it below.");
     } catch (err) {
-      toast.error("Erro ao criar jogo");
+      toast.error("Could not create the game");
     }
     setSaving(false);
   };
 
+  const handleToggleGame = async (game: any) => {
+    const next = !game.is_active;
+    setNativeGames((prev) => prev.map((g) => (g.id === game.id ? { ...g, is_active: next } : g)));
+    const { error } = await sb.from("native_games").update({ is_active: next }).eq("id", game.id);
+    if (error) {
+      setNativeGames((prev) => prev.map((g) => (g.id === game.id ? { ...g, is_active: !next } : g)));
+      toast.error("Could not update the game");
+      return;
+    }
+    toast.success(next ? "Game activated" : "Game deactivated");
+  };
+
+  const handleRenameGame = async (game: any, name: string) => {
+    if (!name.trim() || name === game.name) return;
+    setNativeGames((prev) => prev.map((g) => (g.id === game.id ? { ...g, name } : g)));
+    const { error } = await sb.from("native_games").update({ name }).eq("id", game.id);
+    if (error) toast.error("Could not rename the game");
+  };
+
   const statCards = [
-    { icon: Users, label: "Utilizadores", value: regionStats.users, color: "from-blue-500 to-cyan-400" },
-    { icon: Gamepad2, label: "Jogos Activos", value: regionStats.games, color: "from-violet-500 to-purple-400" },
-    { icon: Radio, label: "Lives Realizadas", value: regionStats.lives, color: "from-red-500 to-orange-400" },
-    { icon: DollarSign, label: "Receita", value: regionStats.revenue, color: "from-emerald-500 to-green-400" },
+    { icon: Users, label: "Users", value: regionStats.users, color: "from-blue-500 to-cyan-400" },
+    { icon: Gamepad2, label: "Active games", value: regionStats.games, color: "from-violet-500 to-purple-400" },
+    { icon: Radio, label: "Lives hosted", value: regionStats.lives, color: "from-red-500 to-orange-400" },
+    { icon: DollarSign, label: "Revenue", value: regionStats.revenue, color: "from-emerald-500 to-green-400" },
   ];
 
   const countryInfo = COUNTRIES.find((c) => c.code === region?.country_code);
-  const managerRole = managerData?.role === "senior_manager" ? "Gestor Sénior" : "Gestor Regional";
+  const managerRole = managerData?.role === "senior_manager" ? "Senior Manager" : "Regional Manager";
   const managerRegions = managerData?.region_ids || [];
 
   return (
@@ -202,20 +235,20 @@ export default function RegionalManagerPanel() {
                   <Crown className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold font-display">Painel do Gestor Regional</h1>
-                  <p className="text-sm text-muted-foreground">Gerencie a sua regiao de forma independente</p>
+                  <h1 className="text-2xl font-bold font-display">Regional Manager Panel</h1>
+                  <p className="text-sm text-muted-foreground">Manage your region independently</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary">{managerRole}</span>
                 <span className="text-xs font-medium px-3 py-1 rounded-full bg-accent/10 text-accent">{countryInfo?.flag} {countryInfo?.label || region?.label}</span>
                 {managerRegions.length > 0 && (
-                  <span className="text-xs px-3 py-1 rounded-full border border-border bg-card">{managerRegions.length} regiao(oes)</span>
+                  <span className="text-xs px-3 py-1 rounded-full border border-border bg-card">{managerRegions.length} region(s)</span>
                 )}
               </div>
             </div>
             <Button variant="outline" className="gap-2" onClick={() => { loadRegionStats(); loadBranding(); loadSettings(); loadNativeGames(); }}>
-              <RefreshCw className="w-4 h-4" /> Atualizar
+              <RefreshCw className="w-4 h-4" /> Refresh
             </Button>
           </motion.div>
 
@@ -237,55 +270,55 @@ export default function RegionalManagerPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 bg-muted/50 p-1 h-auto flex-wrap gap-1">
             <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-background"><Palette className="w-4 h-4" /> Branding</TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-background"><Settings className="w-4 h-4" /> Configuracoes</TabsTrigger>
-            <TabsTrigger value="games" className="gap-2 data-[state=active]:bg-background"><Gamepad2 className="w-4 h-4" /> Jogos Nativos</TabsTrigger>
-            <TabsTrigger value="announcement" className="gap-2 data-[state=active]:bg-background"><Megaphone className="w-4 h-4" /> Anuncios</TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-background"><Settings className="w-4 h-4" /> Settings</TabsTrigger>
+            <TabsTrigger value="games" className="gap-2 data-[state=active]:bg-background"><Gamepad2 className="w-4 h-4" /> Native Games</TabsTrigger>
+            <TabsTrigger value="announcement" className="gap-2 data-[state=active]:bg-background"><Megaphone className="w-4 h-4" /> Announcements</TabsTrigger>
           </TabsList>
 
           <TabsContent value="branding">
             <Card className="neon-border">
-              <CardHeader><CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" /> Identidade Visual da Regiao</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" /> Regional Visual Identity</CardTitle></CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Cor Primaria</Label>
+                    <Label>Primary color</Label>
                     <div className="flex gap-2">
                       <input type="color" value={branding.primary_color} onChange={(e) => setBranding((p) => ({ ...p, primary_color: e.target.value }))} className="h-10 w-14 rounded-lg border cursor-pointer" />
                       <Input value={branding.primary_color} onChange={(e) => setBranding((p) => ({ ...p, primary_color: e.target.value }))} placeholder="hsl(220 70% 18%)" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Cor Secundaria</Label>
+                    <Label>Secondary color</Label>
                     <div className="flex gap-2">
                       <input type="color" value={branding.secondary_color} onChange={(e) => setBranding((p) => ({ ...p, secondary_color: e.target.value }))} className="h-10 w-14 rounded-lg border cursor-pointer" />
                       <Input value={branding.secondary_color} onChange={(e) => setBranding((p) => ({ ...p, secondary_color: e.target.value }))} placeholder="hsl(352 73% 50%)" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Cor de Destaque</Label>
+                    <Label>Accent color</Label>
                     <div className="flex gap-2">
                       <input type="color" value={branding.accent_color} onChange={(e) => setBranding((p) => ({ ...p, accent_color: e.target.value }))} className="h-10 w-14 rounded-lg border cursor-pointer" />
                       <Input value={branding.accent_color} onChange={(e) => setBranding((p) => ({ ...p, accent_color: e.target.value }))} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Nome do Tema</Label>
-                    <Input value={branding.theme_name} onChange={(e) => setBranding((p) => ({ ...p, theme_name: e.target.value }))} placeholder="Ex: Bateu India" />
+                    <Label>Theme name</Label>
+                    <Input value={branding.theme_name} onChange={(e) => setBranding((p) => ({ ...p, theme_name: e.target.value }))} placeholder="e.g. Bateu India" />
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>URL do Logo</Label>
+                    <Label>Logo URL</Label>
                     <Input value={branding.logo_url} onChange={(e) => setBranding((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://..." />
                   </div>
                   <div className="space-y-2">
-                    <Label>URL do Banner</Label>
+                    <Label>Banner URL</Label>
                     <Input value={branding.banner_url} onChange={(e) => setBranding((p) => ({ ...p, banner_url: e.target.value }))} placeholder="https://..." />
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={handleSaveBranding} disabled={saving} className="gap-2">
-                    <Save className="w-4 h-4" /> {saving ? "A guardar..." : "Guardar Branding"}
+                    <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save branding"}
                   </Button>
                 </div>
               </CardContent>
@@ -294,13 +327,13 @@ export default function RegionalManagerPanel() {
 
           <TabsContent value="settings">
             <Card className="neon-border">
-              <CardHeader><CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" /> Configuracoes da Regiao</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" /> Region Settings</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 {[
-                  { key: "enable_spin_wheel" as const, label: "Roda da Sorte", desc: "Permitir roda da sorte personalizada", icon: Gamepad2 },
-                  { key: "enable_millionaire_game" as const, label: "Quem Quer Ser Milionario", desc: "Jogo de quiz com premios", icon: TrendingUp },
-                  { key: "enable_challenge_games" as const, label: "Jogos de Desafio", desc: "Desafios entre utilizadores", icon: Zap },
-                  { key: "enable_live_games" as const, label: "Jogos ao Vivo", desc: "Lives interactivas com jogos", icon: Activity },
+                  { key: "enable_spin_wheel" as const, label: "Spin Wheel", desc: "Allow a customised spin wheel", icon: Gamepad2 },
+                  { key: "enable_millionaire_game" as const, label: "Millionaire Quiz", desc: "Quiz game with prizes", icon: TrendingUp },
+                  { key: "enable_challenge_games" as const, label: "Challenge Games", desc: "Challenges between players", icon: Zap },
+                  { key: "enable_live_games" as const, label: "Live Games", desc: "Interactive live shows with games", icon: Activity },
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-card/30 hover:bg-card/50 transition-colors">
                     <div className="flex items-center gap-3">
@@ -321,15 +354,15 @@ export default function RegionalManagerPanel() {
                       <Shield className="h-4 w-4 text-red-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">Modo Manutencao</p>
-                      <p className="text-xs text-muted-foreground">Desactivar temporariamente a regiao para utilizadores</p>
+                      <p className="text-sm font-semibold">Maintenance mode</p>
+                      <p className="text-xs text-muted-foreground">Temporarily disable this region for visitors</p>
                     </div>
                   </div>
                   <Switch checked={settings.maintenance_mode} onCheckedChange={(v) => setSettings((p) => ({ ...p, maintenance_mode: v }))} />
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={handleSaveSettings} disabled={saving} className="gap-2">
-                    <Save className="w-4 h-4" /> {saving ? "A guardar..." : "Guardar Configuracoes"}
+                    <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save settings"}
                   </Button>
                 </div>
               </CardContent>
@@ -340,35 +373,39 @@ export default function RegionalManagerPanel() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold">Jogos Nativos da Regiao</h3>
-                  <p className="text-sm text-muted-foreground">Crie e gerencie jogos exclusivos para a sua regiao</p>
+                  <h3 className="text-lg font-bold">Regional Native Games</h3>
+                  <p className="text-sm text-muted-foreground">Create and manage games exclusive to your region</p>
                 </div>
                 <Button onClick={handleCreateGame} disabled={saving} className="gap-2">
-                  <Plus className="w-4 h-4" /> {saving ? "..." : "Criar Jogo"}
+                  <Plus className="w-4 h-4" /> {saving ? "..." : "Create game"}
                 </Button>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {nativeGames.length === 0 && (
                   <div className="col-span-full text-center py-16">
                     <Gamepad2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">Nenhum jogo nativo criado ainda.</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Clique em "Criar Jogo" para comecar.</p>
+                    <p className="text-muted-foreground">No native games created yet.</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Click "Create game" to get started.</p>
                   </div>
                 )}
                 {nativeGames.map((game, i) => (
                   <motion.div key={game.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: i * 0.05 }} className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-5 card-glow-hover">
                     <div className="flex items-center justify-between mb-3">
-                      <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + (game.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>{game.is_active ? "Activo" : "Inactivo"}</span>
+                      <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + (game.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>{game.is_active ? "Active" : "Inactive"}</span>
                       <span className="text-[10px] text-muted-foreground">{game.type}</span>
                     </div>
                     <h4 className="font-bold mb-1">{game.name}</h4>
-                    <p className="text-xs text-muted-foreground">Criado em {new Date(game.created_at).toLocaleDateString("pt-PT")}</p>
+                    <p className="text-xs text-muted-foreground">Created {new Date(game.created_at).toLocaleDateString("en-US")}</p>
                     <div className="flex gap-2 mt-4">
-                      <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => toast.info("Editor de jogos em desenvolvimento")}>
-                        <Settings className="w-3 h-3" /> Configurar
+                      <Button size="sm" variant={game.is_active ? "secondary" : "default"} className="flex-1 gap-1 text-xs" onClick={() => handleToggleGame(game)}>
+                        {game.is_active ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
+                        {game.is_active ? "Deactivate" : "Activate"}
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => toast.info("Preview em desenvolvimento")}>
-                        <Eye className="w-3 h-3" />
+                      <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => {
+                        const name = window.prompt("Game name", game.name);
+                        if (name !== null) handleRenameGame(game, name);
+                      }}>
+                        <Settings className="w-3 h-3" /> Rename
                       </Button>
                     </div>
                   </motion.div>
@@ -379,32 +416,32 @@ export default function RegionalManagerPanel() {
 
           <TabsContent value="announcement">
             <Card className="neon-border">
-              <CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="w-5 h-5" /> Anuncio Regional</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="w-5 h-5" /> Regional Announcement</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-card/30">
                   <div>
-                    <p className="text-sm font-semibold">Anuncio activo</p>
-                    <p className="text-xs text-muted-foreground">Mostrar banner de anuncio no topo da pagina</p>
+                    <p className="text-sm font-semibold">Announcement active</p>
+                    <p className="text-xs text-muted-foreground">Show an announcement banner at the top of the page</p>
                   </div>
                   <Switch checked={announcement.enabled} onCheckedChange={(v) => setAnnouncement((p) => ({ ...p, enabled: v }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Texto do Anuncio</Label>
-                  <Textarea value={announcement.text} onChange={(e) => setAnnouncement((p) => ({ ...p, text: e.target.value }))} placeholder="Ex: Grande sorteio de Diwali!" rows={3} />
+                  <Label>Announcement text</Label>
+                  <Textarea value={announcement.text} onChange={(e) => setAnnouncement((p) => ({ ...p, text: e.target.value }))} placeholder="e.g. Big Diwali giveaway!" rows={3} />
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Texto do Botao CTA</Label>
-                    <Input value={announcement.cta_label} onChange={(e) => setAnnouncement((p) => ({ ...p, cta_label: e.target.value }))} placeholder="Participar" />
+                    <Label>CTA button label</Label>
+                    <Input value={announcement.cta_label} onChange={(e) => setAnnouncement((p) => ({ ...p, cta_label: e.target.value }))} placeholder="Join now" />
                   </div>
                   <div className="space-y-2">
-                    <Label>URL do CTA</Label>
+                    <Label>CTA URL</Label>
                     <Input value={announcement.cta_url} onChange={(e) => setAnnouncement((p) => ({ ...p, cta_url: e.target.value }))} placeholder="/marketplace" />
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={handleSaveAnnouncement} disabled={saving} className="gap-2">
-                    <Save className="w-4 h-4" /> {saving ? "A guardar..." : "Guardar Anuncio"}
+                    <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save announcement"}
                   </Button>
                 </div>
               </CardContent>

@@ -59,12 +59,13 @@ const BottomTabBar = () => {
             <button
               key={tab.labelKey}
               onClick={() => goOrAuth(tab.href, tab.requiresAuth)}
-              className={"mob-bottom-tab " + (active ? "mob-bottom-tab-active" : "")}
+              className={"btn-press mob-bottom-tab " + (active ? "mob-bottom-tab-active" : "")}
             >
               {active && (
                 <motion.div
                   layoutId="bottom-tab-glow"
-                  className="mob-bottom-tab-glow"
+                  className="breathing-glow mob-bottom-tab-glow"
+                  style={{ "--glow-color": "#22d3ee" } as React.CSSProperties}
                   transition={{ type: "spring", stiffness: 400, damping: 28 }}
                 />
               )}
@@ -85,7 +86,7 @@ const BottomTabBar = () => {
 
         <button
           onClick={toggleMenu}
-          className="mob-bottom-tab mob-bottom-tab-menu"
+          className="btn-press mob-bottom-tab mob-bottom-tab-menu"
         >
           <motion.div
             className="mob-bottom-tab-menu-icon"

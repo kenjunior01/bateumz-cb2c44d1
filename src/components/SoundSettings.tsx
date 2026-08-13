@@ -139,9 +139,10 @@ export default function SoundSettings({ compact = false, className = '' }: Sound
                     toggleHaptic();
                     sfx.toggleOn();
                   }}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${
+                  className={`toggle-enhanced${config.hapticEnabled ? ' active' : ''} relative w-10 h-5 rounded-full transition-colors ${
                     config.hapticEnabled ? 'bg-cyan-500/40' : 'bg-white/10'
                   }`}
+                  style={{ '--toggle-glow': 'cyan' } as React.CSSProperties}
                 >
                   <motion.div
                     className="absolute top-0.5 w-4 h-4 rounded-full shadow-md"

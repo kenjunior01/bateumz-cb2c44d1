@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 export type PageTransitionVariant =
   | 'default'
@@ -60,14 +61,23 @@ const variants: Record<PageTransitionVariant, any> = {
 
 export default function PageTransition({ children, variant = 'default', className = '', delay = 0 }: PageTransitionProps) {
   const v = variants[variant];
+  const location = useLocation();
+  const isGlitch = variant === 'glitch';
+  const glitchLabel = location.pathname.replace(/^\//, '').charAt(0).toUpperCase() || 'P';
+  const combinedClassName = [
+    className,
+    'text-reveal',
+    isGlitch ? 'glitch-text' : '',
+  ].filter(Boolean).join(' ');
   return (
     <motion.div
       variants={v}
       initial="initial"
       animate="animate"
       exit="exit"
-      className={className}
+      className={combinedClassName}
       style={{ animationDelay: `${delay}s` }}
+      {...(isGlitch ? { 'data-text': glitchLabel } : {})}
     >
       {children}
     </motion.div>

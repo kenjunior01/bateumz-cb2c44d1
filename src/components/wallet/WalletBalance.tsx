@@ -78,7 +78,7 @@ export default function WalletBalance({ compact = false }: WalletBalanceProps) {
         className="gap-1.5 px-2.5 rounded-full bg-secondary/60 hover:bg-secondary"
         onClick={fetchWallet}
       >
-        <Wallet className="h-3.5 w-3.5 text-primary" />
+        <Wallet className="h-3.5 w-3.5 text-primary coin-spin" />
         {loading ? (
           <RefreshCw className="h-3 w-3 animate-spin" />
         ) : (

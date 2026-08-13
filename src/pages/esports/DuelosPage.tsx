@@ -754,7 +754,7 @@ function DuelCard({ challenge, onAccept, onCopyCode, onView, copiedCode }: {
         </div>
 
         {/* VS Badge */}
-        <div className="p2p-vs-badge relative flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0">
+        <div className="p2p-vs-badge border-gradient-rotate relative flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0">
           <span className="text-xs font-black text-white relative z-10">VS</span>
         </div>
 

@@ -47,7 +47,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
       <section className="py-3">
         <div className="container mx-auto px-3">
           <div className="rounded-2xl bg-gradient-to-br from-card via-card to-secondary/30 border border-border/50 p-3 shadow-sm">
-            <div className="grid grid-cols-5 gap-x-1 gap-y-3">
+            <div className="scale-in-stagger grid grid-cols-5 gap-x-1 gap-y-3">
               {visible.map((cat) => {
                 const isActive = selected === cat.value;
                 return (
@@ -55,7 +55,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                     key={cat.value}
                     onClick={() => { onSelect?.(cat.value); sfx.tabClick(); }}
                     onMouseEnter={handleHover}
-                    className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform"
+                    className="btn-press card-hover-lift flex flex-col items-center gap-1.5 group active:scale-95 transition-transform"
                   >
                     <div
                       className={`relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${cat.grad} shadow-md ${
@@ -66,7 +66,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                     </div>
                     <span
                       className={`text-[10px] font-medium leading-tight text-center truncate w-full ${
-                        isActive ? "text-primary font-bold" : "text-foreground/85"
+                        isActive ? "underline-animate text-primary font-bold" : "text-foreground/85"
                       }`}
                     >
                       {t(cat.labelKey)}
@@ -78,7 +78,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
               <button
                 onClick={() => { onSelect?.("todos"); sfx.tabClick(); }}
                 onMouseEnter={handleHover}
-                className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+                className="btn-press card-hover-lift flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary border border-border">
                   <span className="text-base">⋯</span>
@@ -98,7 +98,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("cat.sectionTitle")}</h3>
         </div>
-        <div className="grid grid-cols-8 gap-3">
+        <div className="scale-in-stagger grid grid-cols-8 gap-3">
           {categories.slice(0, 8).map((cat) => {
             const isActive = selected === cat.value;
             return (
@@ -106,7 +106,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                 key={cat.value}
                 onClick={() => { onSelect?.(cat.value); sfx.tabClick(); }}
                 onMouseEnter={handleHover}
-                className={`flex w-full flex-col items-center gap-2 rounded-2xl p-3 transition-colors group ${
+                className={`btn-press card-hover-lift flex w-full flex-col items-center gap-2 rounded-2xl p-3 transition-colors group ${
                   isActive ? "bg-primary/10 ring-2 ring-primary/30" : "hover:bg-secondary"
                 }`}
               >
@@ -114,7 +114,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                   <cat.icon className="h-5 w-5" />
                 </div>
                 <span className={`text-[11px] font-medium text-center leading-tight ${
-                  isActive ? "text-primary font-semibold" : "text-muted-foreground group-hover:text-foreground"
+                  isActive ? "underline-animate text-primary font-semibold" : "text-muted-foreground group-hover:text-foreground"
                 }`}>
                   {t(cat.labelKey)}
                 </span>

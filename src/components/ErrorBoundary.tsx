@@ -39,7 +39,7 @@ class ErrorBoundary extends Component<Props, State> {
           className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-center"
           role="alert"
         >
-          <div className="mb-4 text-5xl">🚨</div>
+          <div className="mb-4 text-5xl neon-flicker">🚨</div>
           <h2 className="mb-2 text-xl font-bold text-foreground">
             Something went wrong
           </h2>

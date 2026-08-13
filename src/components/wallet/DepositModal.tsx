@@ -90,7 +90,7 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
               <DialogTitle className="text-white text-lg font-bold">
                 {ok ? "Deposito Enviado" : TITLES[step]}
               </DialogTitle>
-              <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 h-8 w-8" onClick={() => handleClose(false)}>
+              <Button variant="ghost" size="icon" className="btn-press text-white/60 hover:text-white hover:bg-white/10 h-8 w-8" onClick={() => handleClose(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -136,7 +136,7 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
                     </div>
                     <div>
                       <Label className="text-white/70 text-xs mb-1 block">Outro valor (MZN)</Label>
-                      <Input type="number" min={1} placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className={INP} />
+                      <Input type="number" min={1} placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${INP} input-focus-glow`} />
                     </div>
                     {amount && parseFloat(amount) > 0 && (
                       <p className="text-center text-emerald-400 font-bold text-lg">{formatMZN(parseFloat(amount))}</p>
@@ -189,11 +189,11 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
                     )}
                     <div>
                       <Label className="text-white/70 text-xs mb-1 block">Numero de referencia (opcional)</Label>
-                      <Input placeholder="Ex: TRF-2024-001" value={ref} onChange={(e) => setRef(e.target.value)} className={INP} />
+                      <Input placeholder="Ex: TRF-2024-001" value={ref} onChange={(e) => setRef(e.target.value)} className={`${INP} input-focus-glow`} />
                     </div>
                     <div>
                       <Label className="text-white/70 text-xs mb-1 block">Notas (opcional)</Label>
-                      <Textarea placeholder="Alguma informacao adicional..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={`${INP} resize-none`} />
+                      <Textarea placeholder="Alguma informacao adicional..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={`${INP} input-focus-glow resize-none`} />
                     </div>
                   </div>
                 )}
@@ -220,7 +220,7 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
                     </motion.div>
                     <h3 className="text-white text-xl font-bold">Pedido Enviado!</h3>
                     <p className="text-white/60 text-sm max-w-xs">O seu deposito de {formatMZN(parseFloat(amount) || 0)} foi registado. Sera analisado em breve.</p>
-                    <Button onClick={() => handleClose(false)} className="mt-2 bg-emerald-500 hover:bg-emerald-600 text-white">Fechar</Button>
+                    <Button onClick={() => handleClose(false)} className="btn-press mt-2 bg-emerald-500 hover:bg-emerald-600 text-white">Fechar</Button>
                   </div>
                 )}
               </motion.div>
@@ -230,15 +230,15 @@ export default function DepositModal({ open, onOpenChange, userId, onDepositComp
           {!ok && step < 4 && (
             <div className="px-6 pb-6 flex items-center justify-between gap-3">
               <Button variant="ghost" onClick={back} disabled={step === 0}
-                className="text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30">
+                className="btn-press text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               {step < 3 ? (
-                <Button onClick={next} disabled={!canGo} className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40">
+                <Button onClick={next} disabled={!canGo} className="btn-press bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40">
                   Proximo <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={loading || !canGo} className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40">
+                <Button onClick={submit} disabled={loading || !canGo} className="btn-press bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40">
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Enviar Pedido
                 </Button>
               )}

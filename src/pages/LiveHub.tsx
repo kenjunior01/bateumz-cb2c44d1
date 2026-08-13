@@ -5,6 +5,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import GlowPulse from "@/components/ui/GlowPulse";
+import ShimmerText from "@/components/ui/ShimmerText";
+import NeonBorder from "@/components/ui/NeonBorder";
+import ButtonRipple from "@/components/ui/ButtonRipple";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 const TapBattle = lazy(() => import("@/components/livegames/TapBattle"));
 const QuizBattle = lazy(() => import("@/components/livegames/QuizBattle"));
@@ -216,6 +221,7 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 const LiveHub = () => {
   const { toast: uiToast } = useToast();
   const { t } = useLanguage();
+  const { sfx } = useSoundEffects();
   const GAMES = useMemo(() => GAME_DEFS.map(g => ({
     ...g,
     label: t("livehub.game." + g.id),
@@ -518,7 +524,7 @@ const LiveHub = () => {
               {GAMES.length} {t("livehub.title")}
             </div>
             <h1 className="font-display text-3xl md:text-5xl font-bold mb-2">
-              Jogos <span className="text-primary">Online</span>
+              Jogos <ShimmerText colors={['#00d4ff', '#7b2ff7', '#fbbf24', '#00d4ff']} speed={3} className="text-primary">Online</ShimmerText>
             </h1>
             <p className="text-muted-foreground text-sm md:text-base mb-4">
               {t("livehub.title")}
@@ -528,7 +534,7 @@ const LiveHub = () => {
               {isLive ? (
                 <>
                   <div className="flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse pulse-dot" />
                     <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">AO VIVO · {fmtTime(elapsed)}</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2">
@@ -538,9 +544,11 @@ const LiveHub = () => {
                       {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
-                    <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
-                  </button>
+                  <ButtonRipple soundEffect={() => sfx.click()}>
+                    <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
+                      <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
+                    </button>
+                  </ButtonRipple>
                 </>
               ) : (
                 <>
@@ -550,9 +558,11 @@ const LiveHub = () => {
                       <span className="text-[11px] text-primary font-bold">{templateName}</span>
                     </div>
                   )}
-                  <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
-                    <Play className="h-4 w-4 fill-current" /> Iniciar Live
-                  </button>
+                  <ButtonRipple soundEffect={() => sfx.success()}>
+                    <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
+                      <Play className="h-4 w-4 fill-current" /> Iniciar Live
+                    </button>
+                  </ButtonRipple>
                   <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-muted/50 text-muted-foreground text-[11px] font-medium">
                     <Gamepad2 className="h-3 w-3" /> Modo jogo livre
                   </div>
@@ -564,15 +574,18 @@ const LiveHub = () => {
                 branding={branding}
                 onBrandingChange={setBranding}
               />
-              <Link
-                to="/dashboard/raffles/create"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
-              >
-                <Plus className="h-3.5 w-3.5" /> Criar Sorteio Vinculado
-              </Link>
+              <ButtonRipple soundEffect={() => sfx.click()}>
+                <Link
+                  to="/dashboard/raffles/create"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Criar Sorteio Vinculado
+                </Link>
+              </ButtonRipple>
             </div>
 
             {activeMeta && (
+              <NeonBorder colors={['#00d4ff', '#7b2ff7']} speed={3} borderRadius="1rem" glowIntensity={0.4}>
               <div className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-2.5">
                 <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
                 <div className="text-left">
@@ -583,6 +596,7 @@ const LiveHub = () => {
                   {isLive ? "ao vivo" : "pronto a jogar"}
                 </span>
               </div>
+              </NeonBorder>
             )}
           </motion.div>
         </div>
@@ -1215,10 +1229,11 @@ const LiveHub = () => {
               />
             )}
 
+            <GlowPulse glowColor="#fbbf24" intensity={0.3} speed={4} borderRadius="1rem">
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <h3 className="font-display text-sm font-bold">Dicas</h3>
+                <h3 className="font-display text-sm font-bold"><ShimmerText colors={['#00d4ff', '#fbbf24']} speed={4} className="font-display text-sm font-bold">Dicas</ShimmerText></h3>
               </div>
               <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
                 <li>Escolhe qualquer jogo da lista e joga imediatamente.</li>
@@ -1227,16 +1242,19 @@ const LiveHub = () => {
                 <li>Desafia os teus amigos e supera o teu recorde!</li>
               </ul>
             </div>
+            </GlowPulse>
 
+            <GlowPulse glowColor="#7b2ff7" intensity={0.3} speed={5} borderRadius="1rem">
             <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-accent/10 p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="h-4 w-4 text-primary" />
-                <h3 className="font-display text-sm font-bold">Modo Multi-jogador</h3>
+                <h3 className="font-display text-sm font-bold"><ShimmerText colors={['#7b2ff7', '#a855f7']} speed={4} className="font-display text-sm font-bold">Modo Multi-jogador</ShimmerText></h3>
               </div>
               <p className="text-xs text-muted-foreground">
                 Vários jogos suportam 1v1 ou contra bot IA — perfeito para desafiar amigos. Inicia uma live para partilhar com a audiência!
               </p>
             </div>
+            </GlowPulse>
           </aside>
         </div>
       </section>

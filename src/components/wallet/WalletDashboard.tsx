@@ -24,6 +24,11 @@ import { getTransactions, getWallet, type WalletTransaction } from "@/lib/wallet
 import DepositModal from "@/components/wallet/DepositModal";
 import WithdrawalModal from "@/components/wallet/WithdrawalModal";
 import { Link } from "react-router-dom";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
+import GlowPulse from "@/components/ui/GlowPulse";
+import ShimmerText from "@/components/ui/ShimmerText";
+import ButtonRipple from "@/components/ui/ButtonRipple";
 
 const TX_TYPE_CONFIG: Record<string, { icon: any; label: string; color: string; bgColor: string }> = {
   deposit: { icon: ArrowDownCircle, label: "Deposito", color: "text-emerald-600", bgColor: "bg-emerald-500/15" },
@@ -51,6 +56,7 @@ function formatTxDate(iso: string): string {
 export default function WalletDashboard() {
   const { user } = useAuth();
   const { format } = useCurrency();
+  const { sfx } = useSoundEffects();
   const [balance, setBalance] = useState<number>(0);
   const [currency, setCurrency] = useState<string>("MZN");
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -84,12 +90,15 @@ export default function WalletDashboard() {
 
   return (
     <div className="space-y-6 pb-24">
-      <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-primary via-primary/90 to-accent">
+      <GlowPulse glowColor="#00d4ff" intensity={0.4} speed={3} borderRadius="1rem">
+      <Card className="card-hover-lift relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-primary via-primary/90 to-accent">
         <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/5" />
         <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-white/5" />
         <CardHeader className="pb-2 relative">
           <CardTitle className="text-sm font-medium text-primary-foreground/70">
-            Saldo Disponivel
+            <ShimmerText colors={['#00d4ff', '#7b2ff7', '#a855f7']} speed={3} className="text-sm font-medium text-primary-foreground/90">
+              Saldo Disponivel
+            </ShimmerText>
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">
@@ -102,62 +111,75 @@ export default function WalletDashboard() {
               animate={{ y: 0, opacity: 1 }}
               className="text-4xl sm:text-5xl font-extrabold text-primary-foreground tabular-nums tracking-tight"
             >
-              {format(balance)}
+              <AnimatedNumber value={balance} locale="pt-MZ" decimals={2} className="text-4xl sm:text-5xl font-extrabold text-primary-foreground tabular-nums tracking-tight" />
             </motion.p>
           )}
           <p className="mt-1 text-xs text-primary-foreground/50">{currency}</p>
 
           <div className="flex flex-wrap gap-2 mt-4">
             <motion.div whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-full shadow-md gap-1.5"
-                onClick={() => setDepositOpen(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Depositar
-              </Button>
-            </motion.div>
-            <motion.div whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-full shadow-md gap-1.5"
-                onClick={() => setWithdrawOpen(true)}
-              >
-                <Minus className="h-3.5 w-3.5" />
-                Levantar
-              </Button>
-            </motion.div>
-            <motion.div whileTap={{ scale: 0.95 }}>
-              <Link to="/batalhas">
+              <ButtonRipple soundEffect={() => sfx.deposit()}>
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="rounded-full shadow-md gap-1.5"
+                  className="btn-press rounded-full shadow-md gap-1.5"
+                  onClick={() => setDepositOpen(true)}
                 >
-                  <Sword className="h-3.5 w-3.5" />
-                  Batalhas
+                  <Plus className="h-3.5 w-3.5" />
+                  Depositar
                 </Button>
-              </Link>
+              </ButtonRipple>
             </motion.div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full text-primary-foreground/70 hover:text-primary-foreground"
-              onClick={fetchData}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <ButtonRipple soundEffect={() => sfx.withdrawal()}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="btn-press rounded-full shadow-md gap-1.5"
+                  onClick={() => setWithdrawOpen(true)}
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                  Levantar
+                </Button>
+              </ButtonRipple>
+            </motion.div>
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <ButtonRipple soundEffect={() => sfx.click()}>
+                <Link to="/batalhas">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="btn-press rounded-full shadow-md gap-1.5"
+                  >
+                    <Sword className="h-3.5 w-3.5" />
+                    Batalhas
+                  </Button>
+                </Link>
+              </ButtonRipple>
+            </motion.div>
+            <ButtonRipple soundEffect={() => sfx.click()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="btn-press rounded-full text-primary-foreground/70 hover:text-primary-foreground"
+                onClick={fetchData}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+            </ButtonRipple>
           </div>
         </CardContent>
       </Card>
+      </GlowPulse>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-bold">Transacoes Recentes</CardTitle>
+            <CardTitle className="text-base font-bold">
+              <ShimmerText colors={['#00d4ff', '#fbbf24', '#00d4ff']} speed={4} className="text-base font-bold">
+                Transacoes Recentes
+              </ShimmerText>
+            </CardTitle>
             <Badge variant="secondary" className="text-[10px]">
               {filtered.length} {filtered.length === 1 ? "item" : "itens"}
             </Badge>
@@ -176,7 +198,7 @@ export default function WalletDashboard() {
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+                <Skeleton key={i} className="h-14 w-full rounded-xl skeleton-shimmer" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -200,7 +222,7 @@ export default function WalletDashboard() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 12 }}
                       transition={{ delay: idx * 0.03 }}
-                      className="flex items-center gap-3 rounded-xl p-3 hover:bg-secondary/40 transition-colors"
+                      className="flex items-center gap-3 rounded-xl p-3 hover:bg-secondary/40 transition-colors list-item-enter list-item-hover"
                     >
                       <div className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl " + cfg.bgColor}>
                         <Icon className={"h-5 w-5 " + cfg.color} />

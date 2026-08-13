@@ -27,6 +27,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import CountdownTimer from "./CountdownTimer";
+import GlowOrb from "@/components/ui/GlowOrb";
+import ParticleField from "@/components/ui/ParticleField";
+import TypingText from "@/components/ui/TypingText";
 
 const SPRING_BOUNCE = { type: "spring" as const, stiffness: 300, damping: 20 };
 const SPRING_GENTLE = { type: "spring" as const, stiffness: 200, damping: 25 };
@@ -461,6 +464,12 @@ const HeroSection = () => {
 
   return (
     <section ref={sectionRef} className="relative min-h-[90vh] overflow-hidden bg-cosmic">
+      {/* Enhanced GlowOrb behind hero title */}
+      <div className="absolute top-[15%] left-[10%] md:left-[20%] z-[2]">
+        <GlowOrb color="#00d4ff" secondaryColor="#7b2ff7" size={120} intensity={0.6} speed={6} pulseSpeed={2.5} />
+      </div>
+      {/* Interactive ParticleField background */}
+      <ParticleField count={25} speed={0.2} colors={['#00d4ff', '#7b2ff7', '#a855f7', '#fbbf24', '#00d4ff']} connectionDistance={100} enableConnections={true} enableMouseRepel={true} />
       <div className="nebula-blob nebula-blob-1" />
       <div className="nebula-blob nebula-blob-2" />
       <div className="nebula-blob nebula-blob-3" />
@@ -607,17 +616,26 @@ const HeroSection = () => {
             />
           </div>
 
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...SPRING_GENTLE, delay: 0.3 }}
             className="mb-9 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg"
           >
-            {rt(
-              "hero.subtitle",
-              "Sorteios transparentes, jogos ao vivo e prémios reais. Junte-se a milhares de moçambicanos que já estão a ganhar."
-            )}
-          </motion.p>
+            <TypingText
+              texts={[
+                rt("hero.subtitle", "Sorteios transparentes, jogos ao vivo e prémios reais. Junte-se a milhares de moçambicanos que já estão a ganhar."),
+                "Jogue, concorra e ganhe prémios reais em tempo real.",
+                "A plataforma de entretenimento mais popular de Moçambique.",
+                "Batalhas ao vivo, quizzes e muito mais.",
+              ]}
+              typingSpeed={40}
+              deleteSpeed={20}
+              pauseDuration={3000}
+              cursorColor="#fbbf24"
+              className=""
+            />
+          </motion.div>
 
           <div className="mb-9 flex flex-col gap-4 sm:flex-row sm:gap-5">
             <GlowingButton to="/marketplace" primary delay={0.4}>

@@ -234,7 +234,7 @@ const AllGames = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onFocus={() => sfx.inputFocus()}
-                  className="w-full pl-11 pr-4 py-3 rounded-full bg-white/[0.03] border-white/[0.06] text-sm focus:outline-none focus:border-hsl(220 70% 18% / 0.4) transition-all"
+                  className="w-full pl-11 pr-4 py-3 rounded-full bg-white/[0.03] border-white/[0.06] text-sm focus:outline-none focus:border-hsl(220 70% 18% / 0.4) transition-all input-focus-glow"
                 />
               </div>
             </div>
@@ -244,7 +244,7 @@ const AllGames = () => {
 
       <div className="container mx-auto px-4 pt-4 pb-2 relative z-20">
         <motion.div
-          className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide"
+          className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide custom-scrollbar"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -316,7 +316,7 @@ const AllGames = () => {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 card-appear"
           >
             {filtered.map((game, i) => (
               <motion.div
@@ -327,8 +327,8 @@ const AllGames = () => {
               >
                 <Link
                   to={`/lives?game=${game.id}`}
-                  className="game-card-v2 block cursor-pointer"
-                  style={{ border: "1px solid rgba(255,255,255,0.05)" }}
+                  className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow"
+                  style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
                   onClick={() => sfx.click()}
                 >
                   <div className={`h-1.5 bg-gradient-to-r ${game.grad}`} />

@@ -65,7 +65,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
               <DialogTitle className="text-white text-lg font-bold">
                 {ok ? "Levantamento Enviado" : TITLES[step]}
               </DialogTitle>
-              <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 h-8 w-8" onClick={() => handleClose(false)}>
+              <Button variant="ghost" size="icon" className="btn-press text-white/60 hover:text-white hover:bg-white/10 h-8 w-8" onClick={() => handleClose(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -120,7 +120,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                     </div>
                     <div>
                       <Label className="text-white/70 text-xs mb-1 block">Outro valor (MZN)</Label>
-                      <Input type="number" min={1} max={currentBalance} placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className={INP} />
+                      <Input type="number" min={1} max={currentBalance} placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${INP} input-focus-glow`} />
                     </div>
                     {amount && (
                       <p className={`text-center font-bold text-lg ${numAmount > currentBalance ? "text-red-400" : "text-amber-400"}`}>
@@ -138,7 +138,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                     </div>
                     <div>
                       <Label className="text-white/70 text-xs mb-1 block">Destino</Label>
-                      <Input placeholder={selectedMethod?.placeholder ?? ""} value={dest} onChange={(e) => setDest(e.target.value)} className={INP} />
+                      <Input placeholder={selectedMethod?.placeholder ?? ""} value={dest} onChange={(e) => setDest(e.target.value)} className={`${INP} input-focus-glow`} />
                     </div>
                     <p className="text-white/40 text-xs text-center">O levantamento sera enviado para este destino.</p>
                   </div>
@@ -162,7 +162,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                     </motion.div>
                     <h3 className="text-white text-xl font-bold">Pedido Enviado!</h3>
                     <p className="text-white/60 text-sm max-w-xs">O seu levantamento de {formatMZN(numAmount)} via {selectedMethod?.label} foi registado com sucesso.</p>
-                    <Button onClick={() => handleClose(false)} className="mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">Fechar</Button>
+                    <Button onClick={() => handleClose(false)} className="btn-press mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">Fechar</Button>
                   </div>
                 )}
               </motion.div>
@@ -172,15 +172,15 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
           {!ok && step < 4 && (
             <div className="px-6 pb-6 flex items-center justify-between gap-3">
               <Button variant="ghost" onClick={back} disabled={step === 0}
-                className="text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30">
+                className="btn-press text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               {step < 3 ? (
-                <Button onClick={next} disabled={!canGo} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40">
+                <Button onClick={next} disabled={!canGo} className="btn-press bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40">
                   Proximo <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={loading || !canGo} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40">
+                <Button onClick={submit} disabled={loading || !canGo} className="btn-press bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40">
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Confirmar
                 </Button>
               )}

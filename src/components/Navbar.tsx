@@ -593,7 +593,7 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to={role === "admin" ? "/admin" : role === "business" ? "/dashboard" : "/profile"}
-                    className="navbar-avatar-ring"
+                    className="navbar-avatar-ring avatar-ring"
                     title={profile?.display_name || t("nav.profile")}
                     aria-label={t("nav.profile")}
                   >

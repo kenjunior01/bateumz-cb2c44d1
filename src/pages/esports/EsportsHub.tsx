@@ -31,6 +31,14 @@ import {
   type EsportMatch,
   type EsportActivity,
 } from '@/lib/esports';
+import ShimmerText from '@/components/ui/ShimmerText';
+import CardTilt from '@/components/ui/CardTilt';
+import AnimatedNumber from '@/components/ui/AnimatedNumber';
+import GlowOrb from '@/components/ui/GlowOrb';
+import ParticleField from '@/components/ui/ParticleField';
+import ButtonRipple from '@/components/ui/ButtonRipple';
+import { fadeInUp, staggerContainer, neonPulse } from '@/lib/animation-utilities';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 const sb: any = supabase;
 
@@ -91,18 +99,11 @@ const POSICAO_CORES = [
   'text-gray-600',
 ];
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3 },
-};
 
-const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.04 } },
-};
 
 export default function EsportsHub() {
   const navigate = useNavigate();
+  const { sfx } = useSoundEffects();
 
   const [jogos, setJogos] = useState<EsportGame[]>([]);
   const [campeonatos, setCampeonatos] = useState<Championship[]>([]);
@@ -264,7 +265,7 @@ export default function EsportsHub() {
             <div className="flex gap-2 overflow-x-auto no-scrollbar flex-1">
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setJogoSelecionado(null)}
+                onClick={() => { sfx.click(); setJogoSelecionado(null); }}
                 className={
                   'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ' +
                   (jogoSelecionado === null
@@ -280,7 +281,7 @@ export default function EsportsHub() {
                 <motion.button
                   key={jogo.id}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setJogoSelecionado(jogo.id)}
+                  onClick={() => { sfx.click(); setJogoSelecionado(jogo.id); }}
                   className={
                     'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ' +
                     (jogoSelecionado === jogo.id
@@ -314,8 +315,11 @@ export default function EsportsHub() {
           <div className="lg:col-span-2 space-y-6">
             {/* Banner de Destaque */}
             {destaque && (
+              <CardTilt borderGlow="cyan" className="rounded-2xl">
               <motion.div
-                {...fadeInUp}
+                variants={fadeInUp}
+                initial="hidden"
+                animate="visible"
                 className={
                   'relative h-64 rounded-2xl overflow-hidden cursor-pointer group ' +
                   (destaque.status === 'live' ? 'ring-1 ring-red-500/30' : '')
@@ -323,8 +327,9 @@ export default function EsportsHub() {
                 style={{
                   background: `linear-gradient(135deg, ${destaque.primary_color || '#7c3aed'}, ${destaque.secondary_color || '#0891b2'})`,
                 }}
-                onClick={() => irParaCampeonato(destaque.slug)}
+                onClick={() => { sfx.click(); irParaCampeonato(destaque.slug); }}
               >
+                <ParticleField colors={["#00d4ff", "#7b2ff7"]} count={30} particleSize={1.5} speed={0.2} enableConnections={false} enableMouseRepel={false} />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                 <div className="relative h-full flex items-center justify-between p-6">
                   <div className="flex-1 min-w-0">
@@ -332,8 +337,9 @@ export default function EsportsHub() {
                       <span className="text-6xl">
                         {getGameEmoji(getGameById(jogos, destaque.game_id)?.slug || '')}
                       </span>
-                      <div className="min-w-0">
-                        <h2 className="text-2xl font-black text-white truncate">{destaque.name}</h2>
+                      <div className="min-w-0 relative">
+                        <GlowOrb color="#00d4ff" secondaryColor="#7b2ff7" size={100} intensity={0.5} speed={12} orbitRadius={30} className="absolute -left-12 -top-8 opacity-60 pointer-events-none" />
+                        <h2 className="text-2xl font-black text-white truncate relative z-10">{destaque.name}</h2>
                         <p className="text-sm text-white/70">
                           {getGameById(jogos, destaque.game_id)?.name || 'Jogo'}
                         </p>
@@ -375,24 +381,26 @@ export default function EsportsHub() {
                         <CircleDollarSign size={20} className="text-yellow-300" />
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-white/20 hover:bg-white/30 text-white border border-white/20 rounded-full text-xs font-semibold"
-                      onClick={(e) => {
+                    <ButtonRipple
+                      rippleColor="rgba(255,255,255,0.3)"
+                      soundEffect={() => sfx.click()}
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         irParaCampeonato(destaque.slug);
                       }}
+                      className="inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white border border-white/20 rounded-full text-xs font-semibold px-3 py-1.5 transition-colors"
                     >
                       Ver Campeonato
                       <ChevronRight size={14} />
-                    </Button>
+                    </ButtonRipple>
                   </div>
                 </div>
               </motion.div>
+              </CardTilt>
             )}
 
             {/* Abas de Campeonatos */}
-            <motion.div {...fadeInUp} className="transition-all">
+            <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="transition-all">
               <Tabs
                 value={abaAtiva}
                 onValueChange={(v) => setAbaAtiva(v as AbaAtiva)}
@@ -469,8 +477,8 @@ export default function EsportsHub() {
                         <motion.div
                           key={aba}
                           variants={staggerContainer}
-                          initial="initial"
-                          animate="animate"
+                          initial="hidden"
+                          animate="visible"
                           className="space-y-2 max-h-[480px] overflow-y-auto pr-1"
                           style={{
                             scrollbarWidth: 'thin',
@@ -484,7 +492,7 @@ export default function EsportsHub() {
                               <motion.div
                                 key={camp.id}
                                 variants={fadeInUp}
-                                onClick={() => irParaCampeonato(camp.slug)}
+                                onClick={() => { sfx.click(); irParaCampeonato(camp.slug); }}
                                 className={
                                   'relative flex items-center gap-4 h-24 px-4 rounded-xl cursor-pointer transition-all duration-200 group ' +
                                   'bg-white/[0.03] hover:bg-white/[0.06] border ' +
@@ -565,12 +573,12 @@ export default function EsportsHub() {
 
             {/* Feed de Atividade */}
             {feedAtividade.length > 0 && (
-              <motion.div {...fadeInUp}>
+              <motion.div variants={fadeInUp} initial="hidden" animate="visible">
                 <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                       <Flame size={15} className="text-orange-400" />
-                      Atividade Recente
+                      <ShimmerText colors={["#f97316", "#ef4444", "#fbbf24", "#f97316"]} speed={3}>Atividade Recente</ShimmerText>
                     </h3>
                     <Badge variant="secondary" className="bg-white/[0.05] text-gray-500 border-0 text-[10px]">
                       {feedAtividade.length} eventos
@@ -612,14 +620,17 @@ export default function EsportsHub() {
           <div className="space-y-6">
             {/* Proximos Jogos */}
             <motion.div
-              {...fadeInUp}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
               transition={{ duration: 0.3, delay: 0.1 }}
             >
+              <CardTilt borderGlow="cyan" className="rounded-2xl">
               <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                     <Play size={15} className="text-cyan-400" />
-                    Proximos Jogos
+                    <ShimmerText colors={["#00d4ff", "#7b2ff7", "#00d4ff"]} speed={3}>Proximos Jogos</ShimmerText>
                   </h3>
                   {jogosRecentes.some(m => m.status === 'in_progress') && (
                     <div className="flex items-center gap-1.5">
@@ -710,24 +721,28 @@ export default function EsportsHub() {
                   </div>
                 )}
               </div>
+              </CardTilt>
             </motion.div>
 
             {/* Top Equipas */}
             <motion.div
-              {...fadeInUp}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
               transition={{ duration: 0.3, delay: 0.15 }}
             >
+              <CardTilt borderGlow="emerald" className="rounded-2xl">
               <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                     <TrendingUp size={15} className="text-emerald-400" />
-                    Top Equipas
+                    <ShimmerText colors={["#10b981", "#00d4ff", "#a855f7", "#10b981"]} speed={3}>Top Equipas</ShimmerText>
                   </h3>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-[10px] text-gray-500 hover:text-gray-300 h-auto p-0"
-                    onClick={() => navigate('/esports/ranking')}
+                    onClick={() => { sfx.whoosh(); navigate('/esports/ranking'); }}
                   >
                     Ver todos
                     <ChevronRight size={12} />
@@ -747,7 +762,7 @@ export default function EsportsHub() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.15 + idx * 0.05, duration: 0.25 }}
                         className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
-                        onClick={() => navigate(`/esports/equipa/${equipa.slug}`)}
+                        onClick={() => { sfx.click(); navigate(`/esports/equipa/${equipa.slug}`); }}
                       >
                         <span className={`text-sm font-black w-5 text-center ${POSICAO_CORES[idx] || 'text-gray-600'}`}>
                           #{idx + 1}
@@ -781,11 +796,14 @@ export default function EsportsHub() {
                   </div>
                 )}
               </div>
+              </CardTilt>
             </motion.div>
 
             {/* Links Rapidos */}
             <motion.div
-              {...fadeInUp}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
               transition={{ duration: 0.3, delay: 0.2 }}
             >
               <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
@@ -803,7 +821,7 @@ export default function EsportsHub() {
                   ].map((link) => (
                     <button
                       key={link.path}
-                      onClick={() => navigate(link.path)}
+                      onClick={() => { sfx.whoosh(); navigate(link.path); }}
                       className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group"
                     >
                       <div className="flex items-center gap-3">
@@ -823,33 +841,37 @@ export default function EsportsHub() {
 
             {/* Estatisticas rapidas */}
             <motion.div
-              {...fadeInUp}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
               transition={{ duration: 0.3, delay: 0.25 }}
             >
+              <CardTilt borderGlow="violet" className="rounded-2xl">
               <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
                 <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-4">
                   <Filter size={15} className="text-violet-400" />
-                  Visao Geral
+                  <ShimmerText colors={["#a855f7", "#00d4ff", "#ec4899", "#a855f7"]} speed={3}>Visao Geral</ShimmerText>
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/[0.03] rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-gray-200">{jogos.length}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Jogos Ativos</p>
+                    <p className="text-lg font-bold text-gray-200"><AnimatedNumber value={jogos.length} className="text-lg font-bold text-gray-200" /></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5"><ShimmerText colors={["#00d4ff", "#7b2ff7", "#00d4ff"]} speed={4}>Jogos Ativos</ShimmerText></p>
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-gray-200">{campeonatos.length}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Campeonatos</p>
+                    <p className="text-lg font-bold text-gray-200"><AnimatedNumber value={campeonatos.length} className="text-lg font-bold text-gray-200" /></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5"><ShimmerText colors={["#7b2ff7", "#00d4ff", "#7b2ff7"]} speed={4}>Campeonatos</ShimmerText></p>
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-red-400">{contagemPorAba.live}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Ao Vivo Agora</p>
+                    <p className="text-lg font-bold text-red-400"><AnimatedNumber value={contagemPorAba.live} className="text-lg font-bold text-red-400" /></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5"><ShimmerText colors={["#ef4444", "#f97316", "#ef4444"]} speed={4}>Ao Vivo Agora</ShimmerText></p>
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-green-400">{contagemPorAba.registration_open}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Registo Aberto</p>
+                    <p className="text-lg font-bold text-green-400"><AnimatedNumber value={contagemPorAba.registration_open} className="text-lg font-bold text-green-400" /></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5"><ShimmerText colors={["#22c55e", "#10b981", "#22c55e"]} speed={4}>Registo Aberto</ShimmerText></p>
                   </div>
                 </div>
               </div>
+              </CardTilt>
             </motion.div>
           </div>
         </div>

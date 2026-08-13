@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BottomTabBar from "@/components/BottomTabBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { privacyContent, resolveLegalLang } from "@/lib/legal-content";
 
@@ -26,7 +25,6 @@ export default function Privacy() {
         </div>
       </main>
       <Footer />
-      <BottomTabBar />
     </div>
   );
 }

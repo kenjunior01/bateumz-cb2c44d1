@@ -1,9 +1,11 @@
+import { useRef, useCallback } from "react";
 import {
   Smartphone, Car, Home, Plane, Gamepad2, ShoppingBag, Gift, Sparkles,
   Trophy, Heart, Utensils, Baby,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 const categories = [
   { icon: Sparkles,    labelKey: "cat.all",         value: "todos",       grad: "from-primary to-accent" },
@@ -28,6 +30,16 @@ interface CategoryNavProps {
 const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
+  const { sfx } = useSoundEffects();
+  const lastHoverRef = useRef(0);
+
+  const handleHover = useCallback(() => {
+    const now = Date.now();
+    if (now - lastHoverRef.current >= 200) {
+      lastHoverRef.current = now;
+      sfx.hover();
+    }
+  }, [sfx]);
 
   if (isMobile) {
     const visible = categories.slice(0, 10);
@@ -41,7 +53,8 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                 return (
                   <button
                     key={cat.value}
-                    onClick={() => onSelect?.(cat.value)}
+                    onClick={() => { onSelect?.(cat.value); sfx.tabClick(); }}
+                    onMouseEnter={handleHover}
                     className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform"
                   >
                     <div
@@ -58,11 +71,13 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                     >
                       {t(cat.labelKey)}
                     </span>
+                    {isActive && <div className="micro-pulse h-1 w-4 rounded-full bg-primary" />}
                   </button>
                 );
               })}
               <button
-                onClick={() => onSelect?.("todos")}
+                onClick={() => { onSelect?.("todos"); sfx.tabClick(); }}
+                onMouseEnter={handleHover}
                 className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary border border-border">
@@ -89,7 +104,8 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
             return (
               <button
                 key={cat.value}
-                onClick={() => onSelect?.(cat.value)}
+                onClick={() => { onSelect?.(cat.value); sfx.tabClick(); }}
+                onMouseEnter={handleHover}
                 className={`flex w-full flex-col items-center gap-2 rounded-2xl p-3 transition-colors group ${
                   isActive ? "bg-primary/10 ring-2 ring-primary/30" : "hover:bg-secondary"
                 }`}
@@ -102,6 +118,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
                 }`}>
                   {t(cat.labelKey)}
                 </span>
+                {isActive && <div className="micro-pulse h-0.5 w-5 rounded-full bg-primary mt-0.5" />}
               </button>
             );
           })}

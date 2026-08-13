@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import SoundSettings from "@/components/SoundSettings";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   NavigationMenu,
@@ -45,6 +47,7 @@ const Navbar = () => {
   const navRef = useRef<HTMLDivElement>(null);
   const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
+  const { sfx } = useSoundEffects();
 
   const currentAnnouncement: Announcement | null = {
     id: "live-may2025",
@@ -306,14 +309,14 @@ const Navbar = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     to={currentAnnouncement.cta.href}
-                    onClick={dismissAnnouncement}
+                    onClick={() => { dismissAnnouncement(); sfx.dismiss(); }}
                     className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-[11px] font-bold text-primary-foreground backdrop-blur-sm transition-all hover:bg-white/25 hover:scale-105 active:scale-95"
                   >
                     {currentAnnouncement.cta.label}
                     <ArrowRight className="h-3 w-3" />
                   </Link>
                   <button
-                    onClick={dismissAnnouncement}
+                    onClick={() => { dismissAnnouncement(); sfx.dismiss(); }}
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-primary-foreground/70 transition-colors hover:bg-white/30 hover:text-primary-foreground"
                     aria-label="Fechar anúncio"
                   >
@@ -429,7 +432,7 @@ const Navbar = () => {
                           {g.items.some(i => i.trending) && (
                             <span className="hidden xl:inline-flex items-center gap-1 ml-1 rounded-md bg-accent/12 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
                               <Flame className="h-2.5 w-2.5" />
-                              <span className="hidden 2xl:inline">Trending</span>
+                              <span className="hidden 2xl:inline">{t("nav.trending")}</span>
                             </span>
                           )}
                         </span>
@@ -476,13 +479,13 @@ const Navbar = () => {
                                       {item.trending && (
                                         <span className="flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                                           <Flame className="h-2.5 w-2.5" />
-                                          <span>Trending</span>
+                                          <span>{t("nav.trending")}</span>
                                         </span>
                                       )}
                                       {item.live && (
                                         <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
                                           <span className="h-1.5 w-1.5 rounded-full bg-accent pulse-live" />
-                                          AO VIVO
+                                          {t("nav.live")}
                                         </span>
                                       )}
                                       {item.badge && !item.live && !item.trending && (
@@ -538,6 +541,7 @@ const Navbar = () => {
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">
                 <RegionCountrySwitcher compact />
                 <LanguageSwitcher />
+                <SoundSettings compact />
                 <ThemeToggle />
               </div>
 
@@ -650,11 +654,12 @@ const Navbar = () => {
                 <Search className="h-5 w-5" />
               </Link>
               <LanguageSwitcher />
+              <SoundSettings compact />
               <ThemeToggle />
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 className="relative flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
-                onClick={() => setOpen(!open)}
+                onClick={() => { setOpen(!open); open ? sfx.modalClose() : sfx.modalOpen(); }}
                 aria-label="Menu"
               >
                 <AnimatePresence mode="wait" initial={false}>
@@ -695,7 +700,7 @@ const Navbar = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); sfx.tabClick(); }}
             />
 
             <motion.div
@@ -716,7 +721,7 @@ const Navbar = () => {
                   </Link>
                   <motion.button
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => setOpen(false)}
+                    onClick={() => { setOpen(false); sfx.tabClick(); }}
                     className="flex h-9 w-9 items-center justify-center rounded-xl text-foreground hover:bg-secondary/50 transition-colors"
                   >
                     <X className="h-5 w-5" />
@@ -734,7 +739,7 @@ const Navbar = () => {
                       <Link
                         key={qa.label}
                         to={qa.href}
-                        onClick={() => setOpen(false)}
+                        onClick={() => { setOpen(false); sfx.tabClick(); }}
                         className="navbar-quick-action"
                       >
                         <span className="navbar-quick-action-icon relative">
@@ -751,7 +756,7 @@ const Navbar = () => {
                   <div className="mb-3 flex items-center gap-2 px-1">
                     <Link
                       to="/lives-agora"
-                      onClick={() => setOpen(false)}
+                      onClick={() => { setOpen(false); sfx.tabClick(); }}
                       className="navbar-mobile-live"
                     >
                       <span className="navbar-live-orb-ring" aria-hidden="true" />
@@ -760,7 +765,7 @@ const Navbar = () => {
                     </Link>
                     <Link
                       to="/marketplace"
-                      onClick={() => setOpen(false)}
+                      onClick={() => { setOpen(false); sfx.tabClick(); }}
                       className="navbar-search-trigger flex flex-1 items-center gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
                     >
                       <Search className="h-3.5 w-3.5" />
@@ -771,7 +776,7 @@ const Navbar = () => {
                   {!user && (
                     <Link
                       to="/register"
-                      onClick={() => setOpen(false)}
+                      onClick={() => { setOpen(false); sfx.tabClick(); }}
                       className="navbar-hero-cta mb-3 flex items-center gap-3 rounded-2xl p-4"
                     >
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -805,7 +810,7 @@ const Navbar = () => {
                           <Link
                             key={item.label}
                             to={item.href}
-                            onClick={() => setOpen(false)}
+                            onClick={() => { setOpen(false); sfx.tabClick(); }}
                             className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-foreground transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]"
                           >
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-accent/5 text-primary group-hover:from-primary/20 group-hover:to-accent/10 transition-all">
@@ -815,13 +820,13 @@ const Navbar = () => {
                             {item.trending && (
                               <span className="flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
                                 <Flame className="h-3 w-3" />
-                                <span>Trending</span>
+                                <span>{t("nav.trending")}</span>
                               </span>
                             )}
                             {item.live && (
                               <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent">
                                 <span className="h-1.5 w-1.5 rounded-full bg-accent pulse-live" />
-                                AO VIVO
+                                {t("nav.live")}
                               </span>
                             )}
                             {item.badge && !item.live && !item.trending && (
@@ -834,7 +839,7 @@ const Navbar = () => {
                       </div>
                       <Link
                         to={g.spotlight.href}
-                        onClick={() => setOpen(false)}
+                        onClick={() => { setOpen(false); sfx.tabClick(); }}
                         className="navbar-spotlight-card group/spotlight mt-1 mb-2 flex items-center gap-3"
                       >
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
@@ -859,14 +864,14 @@ const Navbar = () => {
                       <div className="grid grid-cols-2 gap-2 px-1">
                         <Link
                           to="/login"
-                          onClick={() => setOpen(false)}
+                          onClick={() => { setOpen(false); sfx.tabClick(); }}
                           className="hover-lift flex items-center justify-center rounded-xl border border-border bg-secondary/50 py-2.5 text-sm font-semibold transition-all hover:bg-secondary"
                         >
                           {t("nav.signin")}
                         </Link>
                         <Link
                           to="/register"
-                          onClick={() => setOpen(false)}
+                          onClick={() => { setOpen(false); sfx.tabClick(); }}
                           className="btn-premium glow-primary hover-lift flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-primary-foreground"
                         >
                           <Zap className="h-4 w-4" />
@@ -878,7 +883,7 @@ const Navbar = () => {
                         {walletBalance !== null && (
                           <Link
                             to="/wallet"
-                            onClick={() => setOpen(false)}
+                            onClick={() => { setOpen(false); sfx.tabClick(); }}
                             className="navbar-wallet-pill group relative w-full justify-center py-2.5"
                           >
                             <span className="navbar-wallet-shine" aria-hidden="true" />
@@ -888,14 +893,14 @@ const Navbar = () => {
                         )}
                         <Link
                           to="/my-points"
-                          onClick={() => setOpen(false)}
+                          onClick={() => { setOpen(false); sfx.tabClick(); }}
                           className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-primary/5 transition-colors"
                         >
                           <Star className="h-4 w-4 text-accent fill-accent/30" />
                           <span className="text-gradient-primary font-semibold">{t("nav.points")}</span>
                         </Link>
                         <button
-                          onClick={() => { setOpen(false); signOut(); }}
+                          onClick={() => { setOpen(false); signOut(); sfx.success(); }}
                           className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
                         >
                           <LifeBuoy className="h-4 w-4" />

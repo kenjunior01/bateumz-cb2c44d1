@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Shield, Lock, CheckCircle2 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
+import ResponsibleGaming from "@/components/ResponsibleGaming";
 
 const regionIconStyle = { color: "var(--region-primary, hsl(var(--primary)))" } as const;
 
@@ -49,6 +51,10 @@ const Footer = () => {
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Visa</span>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Mastercard</span>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">Amex</span>
+        </div>
+
+        <div className="mb-8 flex justify-center">
+          <ResponsibleGaming />
         </div>
 
         <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">

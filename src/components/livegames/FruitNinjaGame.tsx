@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -110,6 +108,8 @@ export default function FruitNinjaGame({ onScore, liveCode }: Props) {
   const prevMouseRef = useRef<{ x: number; y: number } | null>(null);
   const phaseRef = useRef<GamePhase>('menu');
   const botIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onScoreRef = useRef(onScore);
+  useEffect(() => { onScoreRef.current = onScore; }, [onScore]);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -452,10 +452,10 @@ export default function FruitNinjaGame({ onScore, liveCode }: Props) {
 
   // Report score on game over
   useEffect(() => {
-    if (phase === 'gameover' && onScore) {
-      onScore('Fruit Ninja', scoreRef.current);
+    if (phase === 'gameover') {
+      onScoreRef.current?.('Fruit Ninja', scoreRef.current);
     }
-  }, [phase, onScore]);
+  }, [phase]);
 
   // Canvas mouse/touch handlers
   const handlePointerDown = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {

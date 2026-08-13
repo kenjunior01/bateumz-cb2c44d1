@@ -12,6 +12,7 @@ import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CompanyBranding } from './LiveGameSettings';
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { PRESET_THEMES, type WheelTheme } from "@/lib/themes";
 import {
   computeFinalRotation,
@@ -185,6 +186,7 @@ const PrizeWheel = ({
   const { user } = useAuth();
   const { region } = useRegionalTheme();
   const { t } = useLanguage();
+  const { sfx } = useSoundEffects();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -339,13 +341,16 @@ const PrizeWheel = ({
 
     if (gameId && !user) {
       toast.error(t("wheel.loginToSpin"));
+      sfx.error();
       return;
     }
     if (gameId && user && !region?.id) {
       toast.error(t("error"));
+      sfx.error();
       return;
     }
 
+    sfx.battleStart();
     setSpinning(true);
     setResult(null);
     setLoading(true);
@@ -400,9 +405,7 @@ const PrizeWheel = ({
         if (soundEnabled) {
           const currentSeg = getCurrentSegment(currentRot);
           if (currentSeg !== lastSegment && lastSegment !== -1) {
-            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3");
-            audio.volume = 0.1;
-            audio.play().catch(() => {});
+            sfx.pop();
           }
           lastSegment = currentSeg;
         }
@@ -414,6 +417,13 @@ const PrizeWheel = ({
           setSpinning(false);
           setResult(winner);
           onWin?.(winner);
+
+          // Sound feedback based on result
+          if (isNoWinLabel(winner.label) || winner.rewardType === "none") {
+            sfx.lose();
+          } else {
+            sfx.win();
+          }
 
           const landed = getSegmentAtPointer(finalRotation, prizes.length);
           if (landed !== winningIndex) {
@@ -430,6 +440,7 @@ const PrizeWheel = ({
     } catch (error) {
       console.error("Erro ao girar roda:", error);
       setSpinning(false);
+      sfx.error();
       toast.error(t("wheel.errorSpin"));
     } finally {
       setLoading(false);

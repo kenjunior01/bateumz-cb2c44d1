@@ -20,6 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
 import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
+import ProvablyFair from "@/components/ProvablyFair";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -569,6 +570,9 @@ const Marketplace = () => {
           </div>
         )}
       </div>
+      <div className="max-w-4xl mx-auto px-4 py-12 md:py-16">
+          <ProvablyFair />
+        </div>
       <div className="hidden md:block"><Footer /></div>
     </div>
   );

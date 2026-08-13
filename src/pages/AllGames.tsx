@@ -6,6 +6,9 @@ import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles,
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
+import { useSoundEffects } from '@/hooks/useSoundEffects';
+import ShimmerText from '@/components/ui/ShimmerText';
+import AnimatedNumber from '@/components/ui/AnimatedNumber';
 
 interface GameDef {
   id: string;
@@ -112,10 +115,13 @@ const CATEGORIES = [
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
-const THEME_P = "hsl(220 70% 18%)";
-const THEME_A = "hsl(352 73% 50%)";
+// Steam/CrazyGames inspired green theme
+const THEME_P = "#2ea043";
+const THEME_S = "#58a6ff";
+const THEME_A = "#f78166";
 
 const AllGames = () => {
+  const { sfx } = useSoundEffects();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("todos");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -150,19 +156,24 @@ const AllGames = () => {
   };
 
   return (
-    <div className="min-h-screen bg-mesh-soft bg-noise pb-20 lg:pb-0">
+    <div className="min-h-screen pb-20 lg:pb-0" style={{ background: 'var(--area-bg, #0d1117)', color: 'var(--area-text, #e6edf3)' }}>
       <Helmet>
-        <title>50+ Jogos Online Gratis \u2014 Bateu</title>
-        <meta name="description" content="Jogue mais de 50 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
-        <meta property="og:title" content="50+ Jogos Online Gratis \u2014 Bateu" />
-        <meta property="og:description" content="Jogue mais de 50 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
+        <title>90+ Jogos Online Gratis \u2014 Bateu</title>
+        <meta name="description" content="Jogue mais de 90 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
+        <meta property="og:title" content="90+ Jogos Online Gratis \u2014 Bateu" />
+        <meta property="og:description" content="Jogue mais de 90 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href={`${window.location.origin}/jogos`} />
       </Helmet>
-
-      <Navbar />
-      <div className="floating-stars"><span /><span /><span /><span /><span /><span /><span /><span /></div>
-      <div className="ambient-glow" />
+      {/* Grid pattern background - Steam feel */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `linear-gradient(${THEME_P} 1px, transparent 1px),
+                            linear-gradient(90deg, ${THEME_P} 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
 
       <div
         ref={heroRef}
@@ -171,14 +182,14 @@ const AllGames = () => {
         style={{ minHeight: "380px" }}
       >
         <div className="aurora-hero">
-          <div className="aurora-blob aurora-blob-1" style={{ background: "hsl(220 70% 18% / 0.25)" }} />
-          <div className="aurora-blob aurora-blob-2" style={{ background: "hsl(352 73% 50% / 0.15)" }} />
-          <div className="aurora-blob aurora-blob-3" style={{ background: "hsl(42 95% 52% / 0.12)" }} />
+          <div className="aurora-blob aurora-blob-1" style={{ background: 'rgba(46, 160, 67, 0.2)' }} />
+          <div className="aurora-blob aurora-blob-2" style={{ background: 'rgba(88, 166, 255, 0.12)' }} />
+          <div className="aurora-blob aurora-blob-3" style={{ background: 'rgba(247, 129, 102, 0.1)' }} />
         </div>
         <div className="hero-grid-overlay" style={{ "--grid-color": "rgba(255,255,255,0.5)" } as any} />
         <div
           className="hero-mouse-light"
-          style={{ background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, hsl(220 70% 18% / 0.06), transparent 40%)` }}
+          style={{ background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(46,160,67,0.06), transparent 40%)` }}
         />
         <div className="hero-bottom-fade" />
 
@@ -192,27 +203,24 @@ const AllGames = () => {
               transition={{ ...SPRING, delay: 0.15 }}
             >
               <Gamepad2 className="h-4 w-4" style={{ color: THEME_P }} />
-              <span className="text-xs font-bold text-muted-foreground">{ALL_GAMES.length} JOGOS DISPONIVEIS</span>
+              <span className="text-xs font-bold" style={{ color: '#7d8590' }}><AnimatedNumber value={ALL_GAMES.length} /> JOGOS DISPONIVEIS</span>
             </motion.div>
 
-            <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3">
-              <span className="text-shimmer" style={{
-                "--shimmer-c1": "hsl(var(--foreground))",
-                "--shimmer-c2": "hsl(220 70% 18% / 0.6)",
-              } as React.CSSProperties}>Todos os Jogos</span>
+            <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3 jogos-glow-green">
+              <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Todos os Jogos</ShimmerText>
             </h1>
-            <p className="text-base text-muted-foreground mb-6 max-w-xl">
-              Mais de 50 jogos online gratis. Estrategia, arcade, puzzle, quiz, reflexos e muito mais \u2014 jogue contra amigos ou contra o computador!
+            <p className="text-base mb-6 max-w-xl" style={{ color: '#7d8590' }}>
+              Mais de 90 jogos online gratis. Estrategia, arcade, puzzle, quiz, reflexos e muito mais \u2014 jogue contra amigos ou contra o computador!
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "hsl(220 70% 18% / 0.1)", color: "hsl(220 70% 18%)" }}>
-                <Users className="h-3.5 w-3.5" /> {botGames.length} jogos com Bot IA
+              <span className="jogos-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold">
+                <Users className="h-3.5 w-3.5" /> <AnimatedNumber value={botGames.length} /> jogos com Bot IA
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "hsl(352 73% 50% / 0.1)", color: "hsl(352 73% 50%)" }}>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(247,129,102,0.1)', color: '#f78166', border: '1px solid rgba(247,129,102,0.15)' }}>
                 <Zap className="h-3.5 w-3.5" /> Jogo instantaneo
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "hsl(42 95% 52% / 0.1)", color: "hsl(42 95% 52%)" }}>
+              <span className="jogos-badge-players inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold">
                 <Radio className="h-3.5 w-3.5" /> Modo Live
               </span>
             </div>
@@ -225,6 +233,7 @@ const AllGames = () => {
                   placeholder="Procurar jogo..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => sfx.inputFocus()}
                   className="w-full pl-11 pr-4 py-3 rounded-full bg-white/[0.03] border-white/[0.06] text-sm focus:outline-none focus:border-hsl(220 70% 18% / 0.4) transition-all"
                 />
               </div>
@@ -245,7 +254,7 @@ const AllGames = () => {
             return (
               <motion.button
                 key={c.id}
-                onClick={() => setCategory(c.id)}
+                onClick={() => { sfx.tabClick(); setCategory(c.id); }}
                 className={"section-tab-v2 relative flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap " + (isActive ? "active" : "")}
                 style={{
                   backgroundColor: isActive ? "hsl(220 70% 18% / 0.12)" : "rgba(255,255,255,0.03)",
@@ -261,7 +270,7 @@ const AllGames = () => {
                 <div className="tab-glow rounded-full" style={{ background: "radial-gradient(ellipse at center, hsl(220 70% 18% / 0.08), transparent 70%)" }} />
                 <span className="relative z-10">{c.emoji}</span>
                 <span className="relative z-10">{c.label}</span>
-                <span className="relative z-10 text-[10px] opacity-50 ml-0.5">({categoryCounts[c.id] || 0})</span>
+                <span className="relative z-10 text-[10px] opacity-50 ml-0.5">(<AnimatedNumber value={categoryCounts[c.id] || 0} />)</span>
               </motion.button>
             );
           })}
@@ -272,7 +281,7 @@ const AllGames = () => {
           {(["name", "category"] as const).map((s) => (
             <motion.button
               key={s}
-              onClick={() => setSortBy(s)}
+              onClick={() => { sfx.click(); setSortBy(s); }}
               className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
               style={{
                 backgroundColor: sortBy === s ? "hsl(220 70% 18% / 0.1)" : "transparent",
@@ -296,7 +305,7 @@ const AllGames = () => {
               <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
             ))}
           </select>
-          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} jogo{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-xs text-muted-foreground ml-auto"><AnimatedNumber value={filtered.length} /> jogo{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       </div>
 
@@ -320,6 +329,7 @@ const AllGames = () => {
                   to={`/lives?game=${game.id}`}
                   className="game-card-v2 block cursor-pointer"
                   style={{ border: "1px solid rgba(255,255,255,0.05)" }}
+                  onClick={() => sfx.click()}
                 >
                   <div className={`h-1.5 bg-gradient-to-r ${game.grad}`} />
                   <div className="p-3 md:p-4">
@@ -385,7 +395,7 @@ const AllGames = () => {
                 <div className="flex-1">
                   <h2 className="text-xl font-black font-display mb-1">Jogue contra o Computador</h2>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {botGames.length} jogos tem inteligencia artificial integrada com 3 niveis de dificuldade. Nao precisa de parceiro \u2014 jogue quando quiser!
+                    <AnimatedNumber value={botGames.length} /> jogos tem inteligencia artificial integrada com 3 niveis de dificuldade. Nao precisa de parceiro \u2014 jogue quando quiser!
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {botGames.slice(0, 8).map((g) => (
@@ -394,6 +404,7 @@ const AllGames = () => {
                         to={`/lives?game=${g.id}`}
                         className="game-card-v2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
                         style={{ border: "1px solid rgba(255,255,255,0.05)" }}
+                        onClick={() => sfx.click()}
                       >
                         <span>{g.emoji}</span> <span>{g.label}</span>
                       </Link>

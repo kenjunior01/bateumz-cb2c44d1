@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BottomTabBar from "@/components/BottomTabBar";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -452,7 +451,6 @@ export default function PrestacoesProduto() {
         </div>
       </main>
       <Footer />
-      <BottomTabBar />
 
       <Dialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen}>
         <DialogContent className="sm:max-w-md">

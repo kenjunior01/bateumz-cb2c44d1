@@ -42,6 +42,9 @@ import {
   BET_STATUS_LABELS,
 } from '@/lib/esports-advanced';
 import { supabase } from '@/integrations/supabase/client';
+import FairPlayShield from '@/components/FairPlayShield';
+import PredictionArenaHero from '@/components/esports/PredictionArenaHero';
+import SocialPredictionChallenge from '@/components/esports/SocialPredictionChallenge';
 
 // ============================================================
 // TIPOS LOCAIS
@@ -343,7 +346,7 @@ export default function BettingPage() {
       return;
     }
     if (amount < 10) {
-      setBetError('Aposta minima: 10 moedas');
+      setBetError('Previsao minima: 10 moedas');
       return;
     }
 
@@ -361,13 +364,13 @@ export default function BettingPage() {
         odds: selectedOption.odds,
         amount_wagered: amount,
       });
-      showToast('Aposta colocada com sucesso!', 'success');
+      showToast('Previsao colocada com sucesso!', 'success');
       handleCloseBetDialog();
       fetchWallet();
       fetchBets();
       fetchTransactions();
     } catch (err: any) {
-      setBetError(err?.message || 'Erro ao colocar aposta');
+      setBetError(err?.message || 'Erro ao colocar previsao');
     } finally {
       setBetting(false);
     }
@@ -509,7 +512,7 @@ export default function BettingPage() {
           </div>
           <p className="text-white/60 text-lg font-semibold mb-2">Nenhum mercado aberto no momento</p>
           <p className="text-white/30 text-sm text-center max-w-sm leading-relaxed">
-            Volta quando houver jogos ao vivo! Novos mercados de apostas serao disponibilizados em breve.
+            Volta quando houver jogos ao vivo! Novos mercados de previsoes serao disponibilizados em breve.
           </p>
         </motion.div>
       );
@@ -537,7 +540,7 @@ export default function BettingPage() {
                     <div className="flex items-center gap-3 text-xs text-white/35">
                       <span className="flex items-center gap-1">
                         <Flame className="h-3 w-3" />
-                        {market.total_bettors} apostadores
+                        {market.total_bettors} previsores
                       </span>
                       <span className="flex items-center gap-1">
                         <Coins className="h-3 w-3" />
@@ -603,7 +606,7 @@ export default function BettingPage() {
                           </div>
                           <div className="mt-2.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Zap className="h-3 w-3 text-emerald-400" />
-                            <span className="text-[10px] text-emerald-400 font-semibold tracking-wide">APOSTAR AGORA</span>
+                            <span className="text-[10px] text-emerald-400 font-semibold tracking-wide">PREVER AGORA</span>
                           </div>
                         </div>
                       </button>
@@ -653,9 +656,9 @@ export default function BettingPage() {
           <div className="h-20 w-20 rounded-2xl bg-emerald-950/30 border border-emerald-500/10 flex items-center justify-center mb-5">
             <Target className="h-10 w-10 text-emerald-500/30" />
           </div>
-          <p className="text-white/60 text-lg font-semibold mb-2">Nenhuma aposta ainda</p>
+          <p className="text-white/60 text-lg font-semibold mb-2">Nenhuma previsao ainda</p>
           <p className="text-white/30 text-sm text-center max-w-sm leading-relaxed">
-            Explore os mercados abertos e faca a tua primeira aposta!
+            Explore os mercados abertos e faca a tua primeira previsao!
           </p>
         </motion.div>
       );
@@ -735,7 +738,7 @@ export default function BettingPage() {
                         <span className="text-white/60 font-medium">
                           {bet.amount_wagered.toLocaleString('pt-BR')}
                         </span>
-                        {' '}apostado
+                        {' '}previsto
                       </div>
                     </div>
                   </div>
@@ -786,7 +789,7 @@ export default function BettingPage() {
           </div>
           <p className="text-white/60 text-lg font-semibold mb-2">Sem historico</p>
           <p className="text-white/30 text-sm text-center max-w-sm leading-relaxed">
-            As tuas transaccoes aparecerao aqui assim que comecares a apostar.
+            As tuas transaccoes aparecerao aqui assim que comecares a prever.
           </p>
         </motion.div>
       );
@@ -854,7 +857,7 @@ export default function BettingPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Target className="h-5 w-5 text-emerald-400" />
-              Colocar Aposta
+              Fazer Previsao
             </DialogTitle>
           </DialogHeader>
 
@@ -872,7 +875,7 @@ export default function BettingPage() {
 
             <div>
               <label className="text-[10px] text-emerald-400/60 uppercase tracking-widest font-medium mb-2 block">
-                Valor da aposta (min: 10)
+                Valor da previsao (min: 10)
               </label>
               <div className="relative">
                 <Coins className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500/40" />
@@ -986,7 +989,7 @@ export default function BettingPage() {
                 ) : (
                   <Zap className="h-4 w-4 mr-2" />
                 )}
-                {betting ? 'Apostando...' : 'Confirmar Aposta'}
+                {betting ? 'A processar...' : 'Confirmar Previsao'}
               </Button>
             </div>
           </div>
@@ -1028,7 +1031,7 @@ export default function BettingPage() {
                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                   <Target className="h-4 w-4 text-emerald-400" />
                 </div>
-                <span className="text-xs text-white/50">Total Apostado</span>
+                <span className="text-xs text-white/50">Total Previsto</span>
               </div>
               <span className="text-sm font-semibold text-white">
                 {walletLoading ? '...' : totalWagered.toLocaleString('pt-BR')}
@@ -1122,7 +1125,7 @@ export default function BettingPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-black/20 rounded-lg p-3 text-center border border-emerald-500/5">
               <p className="text-lg font-bold text-white">{userBets.length}</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">Apostas</p>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">Previsoes</p>
             </div>
             <div className="bg-black/20 rounded-lg p-3 text-center border border-emerald-500/5">
               <p className="text-lg font-bold text-emerald-400">{openMarkets.length}</p>
@@ -1150,7 +1153,15 @@ export default function BettingPage() {
     <div className="text-white">
       {renderWalletHeader()}
 
+      <PredictionArenaHero />
+
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <FairPlayShield variant="banner" className="mb-6" />
+
+        <div className="mb-8">
+          <SocialPredictionChallenge />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Tabs defaultValue="markets" className="w-full">
@@ -1167,14 +1178,14 @@ export default function BettingPage() {
                   className="flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-600/20 text-white/40 py-2.5 transition-all"
                 >
                   <Target className="h-4 w-4 mr-1.5" />
-                  Minhas Apostas
+                  Minhas Previsões
                 </TabsTrigger>
                 <TabsTrigger
                   value="history"
                   className="flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-600/20 text-white/40 py-2.5 transition-all"
                 >
                   <History className="h-4 w-4 mr-1.5" />
-                  Historico
+                  Histórico
                 </TabsTrigger>
               </TabsList>
 

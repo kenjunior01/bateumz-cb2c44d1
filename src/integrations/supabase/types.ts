@@ -1478,50 +1478,6 @@ export type Database = {
           },
         ]
       }
-      native_games: {
-        Row: {
-          config: Json
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          name: string
-          region_id: string
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          config?: Json
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          region_id: string
-          type?: string
-          updated_at?: string
-        }
-        Update: {
-          config?: Json
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          region_id?: string
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "native_games_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: false
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       newsletter_signups: {
         Row: {
           country: string | null
@@ -2149,145 +2105,6 @@ export type Database = {
         }
         Relationships: []
       }
-      region_managers: {
-        Row: {
-          created_at: string
-          id: string
-          manager_id: string
-          region_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          manager_id: string
-          region_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          manager_id?: string
-          region_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "region_managers_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "regional_managers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "region_managers_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: false
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regional_announcements: {
-        Row: {
-          created_at: string
-          cta_label: string | null
-          cta_url: string | null
-          enabled: boolean
-          id: string
-          region_id: string
-          text: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          created_at?: string
-          cta_label?: string | null
-          cta_url?: string | null
-          enabled?: boolean
-          id?: string
-          region_id: string
-          text?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          created_at?: string
-          cta_label?: string | null
-          cta_url?: string | null
-          enabled?: boolean
-          id?: string
-          region_id?: string
-          text?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_announcements_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: true
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regional_branding: {
-        Row: {
-          accent_color: string | null
-          background_color: string | null
-          banner_url: string | null
-          created_at: string
-          custom_css: string | null
-          font_family: string | null
-          id: string
-          logo_url: string | null
-          primary_color: string | null
-          region_id: string
-          secondary_color: string | null
-          text_color: string | null
-          theme_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          accent_color?: string | null
-          background_color?: string | null
-          banner_url?: string | null
-          created_at?: string
-          custom_css?: string | null
-          font_family?: string | null
-          id?: string
-          logo_url?: string | null
-          primary_color?: string | null
-          region_id: string
-          secondary_color?: string | null
-          text_color?: string | null
-          theme_name?: string | null
-          updated_at?: string
-        }
-        Update: {
-          accent_color?: string | null
-          background_color?: string | null
-          banner_url?: string | null
-          created_at?: string
-          custom_css?: string | null
-          font_family?: string | null
-          id?: string
-          logo_url?: string | null
-          primary_color?: string | null
-          region_id?: string
-          secondary_color?: string | null
-          text_color?: string | null
-          theme_name?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_branding_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: true
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       regional_commissions: {
         Row: {
           commission_percentage: number
@@ -2329,221 +2146,65 @@ export type Database = {
           },
         ]
       }
-      regional_managers: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          id: string
-          is_active: boolean
-          last_login: string | null
-          region_ids: string[]
-          role: string
-          updated_at: string
-          user_email: string | null
-          user_id: string | null
-          user_name: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_login?: string | null
-          region_ids?: string[]
-          role?: string
-          updated_at?: string
-          user_email?: string | null
-          user_id?: string | null
-          user_name?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_login?: string | null
-          region_ids?: string[]
-          role?: string
-          updated_at?: string
-          user_email?: string | null
-          user_id?: string | null
-          user_name?: string | null
-        }
-        Relationships: []
-      }
-      regional_settings: {
-        Row: {
-          created_at: string
-          enable_challenge_games: boolean
-          enable_live_games: boolean
-          enable_millionaire_game: boolean
-          enable_spin_wheel: boolean
-          id: string
-          maintenance_mode: boolean
-          region_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          enable_challenge_games?: boolean
-          enable_live_games?: boolean
-          enable_millionaire_game?: boolean
-          enable_spin_wheel?: boolean
-          id?: string
-          maintenance_mode?: boolean
-          region_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          enable_challenge_games?: boolean
-          enable_live_games?: boolean
-          enable_millionaire_game?: boolean
-          enable_spin_wheel?: boolean
-          id?: string
-          maintenance_mode?: boolean
-          region_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_settings_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: true
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regional_translations: {
-        Row: {
-          created_at: string
-          id: string
-          is_custom: boolean
-          language_code: string
-          region_id: string
-          translation_key: string
-          translation_value: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_custom?: boolean
-          language_code?: string
-          region_id: string
-          translation_key: string
-          translation_value: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_custom?: boolean
-          language_code?: string
-          region_id?: string
-          translation_key?: string
-          translation_value?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_translations_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: false
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       regions: {
         Row: {
           accent_color: string | null
           banner_url: string | null
           country_code: string
-          country_name: string | null
           created_at: string
           currency: string
-          currency_code: string | null
           custom_css: string | null
           default_language: string | null
-          description: string | null
           flag: string | null
           id: string
           is_active: boolean
           label: string
-          language_code: string | null
           logo_url: string | null
-          manager_id: string | null
           name: string | null
           primary_color: string | null
           secondary_color: string | null
           tagline: string | null
-          timezone: string | null
           updated_at: string
-          user_count: number
         }
         Insert: {
           accent_color?: string | null
           banner_url?: string | null
           country_code: string
-          country_name?: string | null
           created_at?: string
           currency?: string
-          currency_code?: string | null
           custom_css?: string | null
           default_language?: string | null
-          description?: string | null
           flag?: string | null
           id?: string
           is_active?: boolean
           label: string
-          language_code?: string | null
           logo_url?: string | null
-          manager_id?: string | null
           name?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           tagline?: string | null
-          timezone?: string | null
           updated_at?: string
-          user_count?: number
         }
         Update: {
           accent_color?: string | null
           banner_url?: string | null
           country_code?: string
-          country_name?: string | null
           created_at?: string
           currency?: string
-          currency_code?: string | null
           custom_css?: string | null
           default_language?: string | null
-          description?: string | null
           flag?: string | null
           id?: string
           is_active?: boolean
           label?: string
-          language_code?: string | null
           logo_url?: string | null
-          manager_id?: string | null
           name?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           tagline?: string | null
-          timezone?: string | null
           updated_at?: string
-          user_count?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "regions_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "regional_managers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       rewards: {
         Row: {
@@ -2662,7 +2323,6 @@ export type Database = {
           external_url: string | null
           id: string
           live_code: string | null
-          region_id: string | null
           scheduled_at: string
           slug: string
           source_type: string
@@ -2681,7 +2341,6 @@ export type Database = {
           external_url?: string | null
           id?: string
           live_code?: string | null
-          region_id?: string | null
           scheduled_at: string
           slug: string
           source_type?: string
@@ -2700,7 +2359,6 @@ export type Database = {
           external_url?: string | null
           id?: string
           live_code?: string | null
-          region_id?: string | null
           scheduled_at?: string
           slug?: string
           source_type?: string
@@ -2710,13 +2368,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "scheduled_lives_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: false
-            referencedRelation: "regions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "scheduled_lives_template_id_fkey"
             columns: ["template_id"]
@@ -3568,15 +3219,6 @@ export type Database = {
         Args: { p_scheduled_live_id: string }
         Returns: Json
       }
-      get_my_managed_regions: {
-        Args: never
-        Returns: {
-          country_code: string
-          id: string
-          is_active: boolean
-          label: string
-        }[]
-      }
       get_prestacao_whatsapp: {
         Args: { p_product_id: string }
         Returns: string
@@ -3643,11 +3285,6 @@ export type Database = {
         Args: { _product_id: string }
         Returns: undefined
       }
-      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
-      is_regional_manager_for_region: {
-        Args: { p_region_id: string }
-        Returns: boolean
-      }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
@@ -3674,12 +3311,7 @@ export type Database = {
       toggle_blog_like: { Args: { post_slug: string }; Returns: boolean }
     }
     Enums: {
-      app_role:
-        | "admin"
-        | "business"
-        | "user"
-        | "superadmin"
-        | "regional_manager"
+      app_role: "admin" | "business" | "regional_manager" | "user" | "superadmin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3807,7 +3439,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "business", "user", "superadmin", "regional_manager"],
+      app_role: ["admin", "business", "regional_manager", "user", "superadmin"],
     },
   },
 } as const

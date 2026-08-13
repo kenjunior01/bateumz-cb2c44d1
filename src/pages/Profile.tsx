@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle, Heart, Target, Gamepad2, Coins, Star, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatMZN } from "@/lib/currency";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import ResponsibleGaming from "@/components/ResponsibleGaming";
+import { Progress } from "@/components/ui/progress";
 
 interface Participation {
   id: string;
@@ -238,16 +240,24 @@ const Profile = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="all">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">Histórico de Participações</h2>
-              <TabsList className="glass border border-border self-start sm:self-auto">
-                <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
-                <TabsTrigger value="confirmed" className="text-xs">Confirmados</TabsTrigger>
-                <TabsTrigger value="pending" className="text-xs">Pendentes</TabsTrigger>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">Área do Perfil</h2>
+              <TabsList className="glass border border-border self-start sm:auto overflow-x-auto flex-nowrap">
+                <div className="flex items-center gap-0.5 pr-1.5 border-r border-border/60 mr-1.5">
+                  <span className="text-[10px] text-muted-foreground px-1 hidden lg:inline select-none">Histórico</span>
+                  <TabsTrigger value="all" className="text-xs whitespace-nowrap">Todos</TabsTrigger>
+                  <TabsTrigger value="confirmed" className="text-xs whitespace-nowrap">Confirmados</TabsTrigger>
+                  <TabsTrigger value="pending" className="text-xs whitespace-nowrap">Pendentes</TabsTrigger>
+                </div>
+                <TabsTrigger value="responsible" className="text-xs whitespace-nowrap gap-1">
+                  <Heart className="h-3 w-3" />Responsável
+                </TabsTrigger>
+                <TabsTrigger value="stats" className="text-xs whitespace-nowrap">Estatísticas</TabsTrigger>
               </TabsList>
             </div>
 
             {["all", "confirmed", "pending"].map((tab) => (
               <TabsContent key={tab} value={tab}>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Histórico de Participações</h3>
                 {participations.length === 0 ? (
                   <Card className="glass">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -332,6 +342,96 @@ const Profile = () => {
                 )}
               </TabsContent>
             ))}
+
+            {/* Tab: Jogo Responsável */}
+            <TabsContent value="responsible">
+              <ResponsibleGaming />
+            </TabsContent>
+
+            {/* Tab: Estatísticas */}
+            <TabsContent value="stats">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {([
+                  {
+                    label: "Nível",
+                    value: "12",
+                    sub: "65% para o próximo nível",
+                    icon: Star,
+                    color: "bg-amber-500/15 text-amber-500",
+                    progress: 65,
+                  },
+                  {
+                    label: "XP Total",
+                    value: "4,280 XP",
+                    sub: "Experiência acumulada",
+                    icon: TrendingUp,
+                    color: "bg-primary/15 text-primary",
+                  },
+                  {
+                    label: "Previsões",
+                    value: "47",
+                    sub: "Precisão: 68%",
+                    icon: Target,
+                    color: "bg-cyan-500/15 text-cyan-500",
+                  },
+                  {
+                    label: "Sorteios",
+                    value: "23 bilhetes",
+                    sub: "2 vitórias",
+                    icon: Ticket,
+                    color: "bg-purple-500/15 text-purple-500",
+                  },
+                  {
+                    label: "Jogos",
+                    value: "156 jogos",
+                    sub: "89 vitórias",
+                    icon: Gamepad2,
+                    color: "bg-emerald-500/15 text-emerald-500",
+                  },
+                  {
+                    label: "Moedas",
+                    value: "2,450",
+                    sub: "Saldo disponível",
+                    icon: Coins,
+                    color: "bg-yellow-500/15 text-yellow-500",
+                  },
+                ] as const).map((stat, i) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: i * 0.07, type: "spring", stiffness: 260, damping: 20 }}
+                  >
+                    <Card className="glass hover:border-primary/20 transition-all">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.color}`}>
+                            <stat.icon className="h-5 w-5" />
+                          </div>
+                          {stat.label === "Nível" && (
+                            <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground border-border/60">
+                              <Trophy className="h-3 w-3 mr-0.5 text-amber-500" />
+                              Rank B
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-0.5">{stat.label}</p>
+                        <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                        {stat.sub && (
+                          <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>
+                        )}
+                        {"progress" in stat && stat.progress && (
+                          <div className="mt-3 space-y-1">
+                            <Progress value={stat.progress} className="h-2" />
+                            <p className="text-[10px] text-muted-foreground text-right">{stat.progress}%</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
           </Tabs>
         </motion.div>
       </div>

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BottomTabBar from "@/components/BottomTabBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -417,7 +416,6 @@ export default function PrestacoesCatalogo() {
       <div className="hidden md:block">
         <Footer />
       </div>
-      <BottomTabBar />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Bell, Menu, Star, Radio } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,7 @@ const MobileTopBar = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
   const { toggleMenu } = useMobileNav();
   const [unread, setUnread] = useState(0);
   const [liveCount, setLiveCount] = useState(0);
@@ -29,9 +30,11 @@ const MobileTopBar = () => {
 
   useEffect(() => {
     const loadLive = async () => {
-      const { count } = await (supabase as any)
-        .from("lives").select("id", { count: "exact", head: true }).eq("status", "active");
-      setLiveCount(count || 0);
+      try {
+        const { count } = await (supabase as any)
+          .from("lives").select("id", { count: "exact", head: true }).eq("status", "active");
+        setLiveCount(count || 0);
+      } catch { setLiveCount(0); }
     };
     loadLive();
     const ch = supabase
@@ -61,7 +64,7 @@ const MobileTopBar = () => {
           if (payload.eventType === "INSERT" && payload.new) {
             const n = payload.new;
             const fn = n.type === "success" ? toast.success : n.type === "error" ? toast.error : toast;
-            (fn as any)(n.title || "New notification", { description: n.message });
+            (fn as any)(n.title || t("nav.notifications"), { description: n.message });
           }
         }
       )
@@ -111,7 +114,7 @@ const MobileTopBar = () => {
           <RegionCountrySwitcher compact />
           <ThemeToggle />
           <button
-            onClick={() => { if (user) window.location.href = "/dashboard/notifications"; else window.location.href = "/login"; }}
+            onClick={() => { if (user) navigate("/dashboard/notifications"); else navigate("/login"); }}
             className="mob-topbar-icon-btn relative"
             aria-label={t("nav.notifications")}
           >

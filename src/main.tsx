@@ -4,6 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import App from "./App.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import "./index.css";
+import "./micro-interactions.css";
 
 // PWA: Unregister service workers in preview/iframe contexts
 const isInIframe = (() => {

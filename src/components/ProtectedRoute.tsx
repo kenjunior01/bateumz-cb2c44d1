@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   children: React.ReactNode;
-  requiredRole?: "business" | "admin";
+  requiredRole?: "business" | "admin" | "regional_manager";
   blockRoles?: string[];
 }
 
@@ -35,6 +35,10 @@ export default function ProtectedRoute({ children, requiredRole, blockRoles = []
   }
 
   if (requiredRole === "business" && role !== "business") {
+    return <Navigate to="/profile" replace />;
+  }
+
+  if (requiredRole === "regional_manager" && role !== "regional_manager" && role !== "admin" && role !== "superadmin") {
     return <Navigate to="/profile" replace />;
   }
 

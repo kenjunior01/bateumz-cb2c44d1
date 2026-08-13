@@ -8,7 +8,6 @@ import { ensureAmbassador, buildShareLink, type ShareChannel } from "@/lib/ambas
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileTopBar from "@/components/MobileTopBar";
-import BottomTabBar from "@/components/BottomTabBar";
 
 const platformIcon = (p?: string | null) => {
   switch (p) {
@@ -287,7 +286,6 @@ const ScheduledLivePage = () => {
           )}
         </div>
       </main>
-      <BottomTabBar />
     </div>
   );
 };

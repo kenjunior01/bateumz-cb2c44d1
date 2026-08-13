@@ -18,7 +18,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BottomTabBar from "@/components/BottomTabBar";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["Todos", "Sorteio", "Quiz", "Bingo", "Esportes", "Música", "Festa", "Talk"];
@@ -481,7 +480,6 @@ const LivesAgora = () => {
       </div>
 
       <Footer />
-      <BottomTabBar />
     </div>
   );
 };

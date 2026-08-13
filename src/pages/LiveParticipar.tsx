@@ -24,7 +24,6 @@ import FloatingReactions from "@/components/live/FloatingReactions";
 import LiveChat from "@/components/live/LiveChat";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import BottomTabBar from "@/components/BottomTabBar";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
@@ -619,7 +618,6 @@ const LiveParticipar = () => {
         </div>
       </div>
 
-      <BottomTabBar />
     </div>
   );
 };

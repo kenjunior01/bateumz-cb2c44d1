@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -124,6 +122,8 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
   const gameOverTriggered = useRef(false);
   const botIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef<GamePhase>('menu');
+  const onScoreRef = useRef(onScore);
+  useEffect(() => { onScoreRef.current = onScore; }, [onScore]);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -315,7 +315,7 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
         setTimeout(() => {
           if (phaseRef.current === 'playing') {
             setPhase('gameover');
-            onScore?.('Flappy Bird', scoreRef.current);
+            onScoreRef.current?.('Flappy Bird', scoreRef.current);
           }
         }, 600);
       }
@@ -507,7 +507,7 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
 
     animRef.current = requestAnimationFrame(loop);
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, [phase, onScore, spawnParticles, initBackground]);
+  }, [phase, spawnParticles, initBackground]);
 
   const startGame = useCallback(() => {
     setPhase('playing');

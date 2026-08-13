@@ -32,13 +32,12 @@ const SPRING_BOUNCE = { type: "spring" as const, stiffness: 300, damping: 20 };
 const SPRING_GENTLE = { type: "spring" as const, stiffness: 200, damping: 25 };
 const SPRING_SNAP = { type: "spring" as const, stiffness: 400, damping: 15 };
 
-const ROTATING_WORDS = ["Jogos Ao Vivo", "Sorteios Épicos", "Prémios Reais", "Lives Inesquecíveis"];
-
+const STATS_KEYS = ["participants", "prizes", "games", "countries"] as const;
 const STATS_CONFIG = [
-  { key: "participants", icon: Users, suffix: "+", label: "Participantes" },
-  { key: "prizes", icon: Gift, suffix: "+", label: "Prémios Entregues" },
-  { key: "games", icon: Gamepad2, suffix: "+", label: "Jogos ao Vivo" },
-  { key: "countries", icon: Globe, suffix: "", label: "Países" },
+  { key: "participants", icon: Users, suffix: "+", label: "Participants" },
+  { key: "prizes", icon: Gift, suffix: "+", label: "Prizes Delivered" },
+  { key: "games", icon: Gamepad2, suffix: "+", label: "Live Games" },
+  { key: "countries", icon: Globe, suffix: "", label: "Countries" },
 ];
 
 const TRUST_ITEMS = [
@@ -416,7 +415,8 @@ const HeroSection = () => {
   const [featuredRaffle, setFeaturedRaffle] = useState<FeaturedRaffle | null>(null);
   const [countdownEnabled, setCountdownEnabled] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const rotatingWord = useRotatingText(ROTATING_WORDS, 2500);
+  const rotatingWords = [t("hero.rotating.live"), t("hero.rotating.raffles"), t("hero.rotating.prizes"), t("hero.rotating.lives")];
+  const rotatingWord = useRotatingText(rotatingWords, 2500);
   const sectionRef = useRef<HTMLElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const statsInView = useInView(statsRef, { once: true, margin: "-80px" });

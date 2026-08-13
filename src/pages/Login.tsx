@@ -328,7 +328,7 @@ export default function Login() {
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-3 text-muted-foreground">ou</span>
+              <span className="bg-card px-3 text-muted-foreground">or</span>
             </div>
           </motion.div>
 
@@ -421,7 +421,7 @@ export default function Login() {
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
                     />
-                    A entrar...
+                    Signing in...
                   </>
                 ) : (
                   <>
@@ -437,7 +437,7 @@ export default function Login() {
             className="mt-5 text-center space-y-2"
           >
             <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              Esqueceu a senha? 🔑
+              Forgot password? 🔑
             </Link>
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
@@ -453,7 +453,7 @@ export default function Login() {
           className="mt-4 text-center"
         >
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-3 w-3" /> Voltar ao site
+            <ArrowLeft className="h-3 w-3" /> Back to site
           </Link>
         </motion.div>
       </motion.div>

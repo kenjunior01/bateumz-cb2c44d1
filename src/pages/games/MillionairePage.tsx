@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { fetchTriviaQuestions, decodeHTMLEntities, shuffleAnswers } from "@/lib/openTriviaDB";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface PrizeLevel {
   level: number;
@@ -93,6 +94,7 @@ export default function MillionairePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { region } = useRegionalTheme();
+  const { sfx } = useSoundEffects();
 
   const [screen, setScreen] = useState<Screen>("lobby");
   const [phase, setPhase] = useState<Phase>("question-in");
@@ -207,21 +209,25 @@ export default function MillionairePage() {
     setSelectedAnswer(choice);
     setAnswered(true);
     setPhase("thinking");
+    sfx.confirm();
 
     setTimeout(() => {
       setPhase("reveal");
       const isCorrect = choice === currentQuestion.correct_answer;
 
       if (isCorrect) {
+        sfx.success();
         fireCorrectEffects();
         if (currentLevel === totalQuestions) {
           setTimeout(() => {
+            sfx.victoryFanfare();
             fireWinEffects();
             setScreen("won");
             saveSession("completed", currentPrize.amount);
           }, 2000);
         } else {
           setTimeout(() => {
+            sfx.countdown(3);
             setPhase("transition");
             setTimeout(() => {
               setCurrentLevel(p => p + 1);
@@ -237,8 +243,10 @@ export default function MillionairePage() {
           }, 2000);
         }
       } else {
+        sfx.error();
         fireWrongEffects();
         setTimeout(() => {
+          sfx.lose();
           setScreen("lost");
           saveSession("abandoned", calculateSafePrize());
         }, 2500);
@@ -270,6 +278,7 @@ export default function MillionairePage() {
   const handle5050 = () => {
     if (lifelinesUsed["50_50"] || answered) return;
     setLifelinesUsed(p => ({ ...p, "50_50": true }));
+    sfx.shieldUp();
     const wrong = ["A", "B", "C", "D"].filter(l => l !== currentQuestion.correct_answer);
     const toDisable = wrong.sort(() => 0.5 - Math.random()).slice(0, 2);
     setDisabledOptions(toDisable);
@@ -279,6 +288,7 @@ export default function MillionairePage() {
   const handleAudience = () => {
     if (lifelinesUsed.audience || answered) return;
     setLifelinesUsed(p => ({ ...p, audience: true }));
+    sfx.notification();
     setShowAudience(true);
     const correct = currentQuestion.correct_answer.charCodeAt(0) - 65;
     const votes = [0, 0, 0, 0].map((_, i) => {
@@ -294,6 +304,8 @@ export default function MillionairePage() {
   const handlePhone = () => {
     if (lifelinesUsed.phone || answered) return;
     setLifelinesUsed(p => ({ ...p, phone: true }));
+    sfx.sendMessage();
+    sfx.receiveMessage();
     setShowPhone(true);
     const friends = ["Ana (Professora)", "Carlos (Engenheiro)", "Maria (Medica)", "Joao (Programador)"];
     const friend = friends[Math.floor(Math.random() * friends.length)];

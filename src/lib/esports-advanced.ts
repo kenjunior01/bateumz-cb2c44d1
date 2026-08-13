@@ -1700,6 +1700,1016 @@ export async function canClaimDailyBonus(userId: string): Promise<boolean> {
 }
 
 // ============================================================
+// P2P CHALLENGE SYSTEM (Duelos Entre Usuarios)
+// 3 Metodos: Duelo Direto (1v1) | Desafio de Grupo (2-8) | Liga de Amigos
+// Moeda virtual com escrow — sem dinheiro real
+// ============================================================
+
+export type P2PChallengeType = 'duel' | 'group' | 'friend_league';
+export type P2PChallengeStatus = 'pending' | 'waiting_opponent' | 'active' | 'scoring' | 'completed' | 'cancelled' | 'expired';
+export type P2PChallengeFormat = 'best_of_3' | 'best_of_5' | 'best_of_7' | 'single_match';
+export type P2PBetSide = 'team1' | 'team2' | 'draw' | 'custom';
+
+export interface P2PChallenge {
+  id: string;
+  challenge_type: P2PChallengeType;
+  status: P2PChallengeStatus;
+  // Creator
+  creator_id: string;
+  creator_display_name: string;
+  creator_avatar_url?: string;
+  creator_prediction?: string;
+  creator_score: number;
+  // Opponent(s)
+  opponent_id?: string;
+  opponent_display_name?: string;
+  opponent_avatar_url?: string;
+  opponent_prediction?: string;
+  opponent_score: number;
+  // Group fields
+  participants?: P2PParticipant[];
+  max_participants?: number;
+  // Match/Event reference
+  match_id?: string;
+  season_match_id?: string;
+  championship_id?: string;
+  championship_name?: string;
+  match_label?: string;
+  market_type: PredictionMarketType;
+  // Wager & Prize
+  wager_amount: number;
+  prize_pool: number;
+  platform_fee: number;
+  winner_id?: string;
+  winner_display_name?: string;
+  // Timing
+  format: P2PChallengeFormat;
+  total_rounds: number;
+  current_round: number;
+  expires_at: string;
+  started_at?: string;
+  completed_at?: string;
+  // Social
+  is_public: boolean;
+  spectator_count: number;
+  chat_enabled: boolean;
+  trash_talk?: string;
+  // Metadata
+  invite_code?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface P2PParticipant {
+  user_id: string;
+  display_name: string;
+  avatar_url?: string;
+  prediction?: string;
+  score: number;
+  wager_paid: boolean;
+  joined_at: string;
+}
+
+export interface P2PChallengeMessage {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  username: string;
+  user_avatar?: string;
+  message: string;
+  message_type: 'trash_talk' | 'chat' | 'system';
+  created_at: string;
+}
+
+export interface P2PDuelStats {
+  user_id: string;
+  total_duels: number;
+  duels_won: number;
+  duels_lost: number;
+  duels_draw: number;
+  win_rate: number;
+  current_streak: number;
+  best_streak: number;
+  total_wagered: number;
+  total_won: number;
+  total_profit: number;
+  biggest_win: number;
+  nemesis_id?: string;
+  nemesis_name?: string;
+  rival_id?: string;
+  rival_name?: string;
+}
+
+export interface CreateP2PDuelData {
+  creator_id: string;
+  creator_display_name: string;
+  creator_avatar_url?: string;
+  opponent_username: string;
+  match_id?: string;
+  season_match_id?: string;
+  championship_id?: string;
+  championship_name?: string;
+  match_label?: string;
+  market_type: PredictionMarketType;
+  creator_prediction: string;
+ wager_amount: number;
+  format?: P2PChallengeFormat;
+  expires_in_hours?: number;
+  is_public?: boolean;
+  trash_talk?: string;
+}
+
+export interface CreateP2PGroupData {
+  creator_id: string;
+  creator_display_name: string;
+  creator_avatar_url?: string;
+  match_id?: string;
+  season_match_id?: string;
+  championship_id?: string;
+  championship_name?: string;
+  match_label?: string;
+  market_type: PredictionMarketType;
+  creator_prediction: string;
+  wager_amount: number;
+  max_participants?: number;
+  expires_in_hours?: number;
+  is_public?: boolean;
+}
+
+export interface CreateFriendLeagueData {
+  creator_id: string;
+  creator_display_name: string;
+  creator_avatar_url?: string;
+  championship_id?: string;
+  championship_name?: string;
+  league_name: string;
+  wager_per_match: number;
+  total_matches: number;
+  max_participants?: number;
+  is_public?: boolean;
+}
+
+export const P2P_CHALLENGE_TYPE_LABELS: Record<P2PChallengeType, string> = {
+  duel: 'Duelo 1v1',
+  group: 'Desafio de Grupo',
+  friend_league: 'Liga de Amigos',
+};
+
+export const P2P_CHALLENGE_STATUS_LABELS: Record<P2PChallengeStatus, string> = {
+  pending: 'Pendente',
+  waiting_opponent: 'A Esperar Oponente',
+  active: 'Em Curso',
+  scoring: 'A Pontuar',
+  completed: 'Concluido',
+  cancelled: 'Cancelado',
+  expired: 'Expirado',
+};
+
+export const P2P_FORMAT_LABELS: Record<P2PChallengeFormat, string> = {
+  single_match: 'Jogo Unico',
+  best_of_3: 'Melhor de 3',
+  best_of_5: 'Melhor de 5',
+  best_of_7: 'Melhor de 7',
+};
+
+export const P2P_WAGER_PRESETS = [25, 50, 100, 250, 500, 1000];
+
+const P2P_PLATFORM_FEE_RATE = 0.05; // 5% platform fee
+
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// ============================================================
+// P2P DUEL (1v1)
+// ============================================================
+
+export async function createP2PDuel(data: CreateP2PDuelData): Promise<P2PChallenge> {
+  // Check creator wallet
+  const wallet = await getOrCreateWallet(data.creator_id);
+  if (wallet.balance < data.wager_amount) {
+    throw new Error('Saldo insuficiente para criar duelo');
+  }
+
+  const platformFee = Math.floor(data.wager_amount * P2P_PLATFORM_FEE_RATE);
+ const expiresAt = new Date(Date.now() + (data.expires_in_hours || 24) * 3600000).toISOString();
+
+  // Deduct wager from creator (escrow)
+  const newBalance = wallet.balance - data.wager_amount;
+  await sb.from('user_wallets').update({
+    balance: newBalance,
+    total_wagered: wallet.total_wagered + data.wager_amount,
+  }).eq('user_id', data.creator_id);
+
+  const { data: challenge, error } = await sb
+    .from('p2p_challenges')
+    .insert({
+      challenge_type: 'duel',
+      status: 'waiting_opponent',
+      creator_id: data.creator_id,
+      creator_display_name: data.creator_display_name,
+      creator_avatar_url: data.creator_avatar_url,
+      creator_prediction: data.creator_prediction,
+      creator_score: 0,
+      opponent_score: 0,
+      match_id: data.match_id,
+      season_match_id: data.season_match_id,
+      championship_id: data.championship_id,
+      championship_name: data.championship_name,
+      match_label: data.match_label,
+      market_type: data.market_type,
+      wager_amount: data.wager_amount,
+      prize_pool: data.wager_amount,
+      platform_fee: platformFee,
+      format: data.format || 'single_match',
+      total_rounds: data.format === 'single_match' ? 1 : parseInt(data.format?.split('_').pop() || '3'),
+      current_round: 0,
+      expires_at: expiresAt,
+      is_public: data.is_public ?? true,
+      spectator_count: 0,
+      chat_enabled: true,
+      trash_talk: data.trash_talk,
+      invite_code: generateInviteCode(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Refund if insert fails
+    await sb.from('user_wallets').update({ balance: wallet.balance }).eq('user_id', data.creator_id);
+    throw new Error('Erro ao criar duelo: ' + error.message);
+  }
+
+  // Record escrow transaction
+  await addWalletTransaction({
+    user_id: data.creator_id,
+    type: 'p2p_escrow',
+    amount: -data.wager_amount,
+    balance_after: newBalance,
+    description: `Escrow duelo P2P #${challenge.id.slice(0, 8)}`,
+    reference_id: challenge.id,
+  });
+
+  return challenge;
+}
+
+export async function acceptP2PDuel(
+  challengeId: string,
+  opponentId: string,
+  opponentDisplayName: string,
+  opponentAvatarUrl?: string,
+  opponentPrediction?: string,
+): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Duelo nao encontrado');
+  if (challenge.status !== 'waiting_opponent') throw new Error('Duelo nao esta a espera de oponente');
+  if (challenge.creator_id === opponentId) throw new Error('Nao podes aceitar o teu proprio duelo');
+
+  // Check opponent wallet
+  const wallet = await getOrCreateWallet(opponentId);
+  if (wallet.balance < challenge.wager_amount) {
+    throw new Error('Saldo insuficiente para aceitar o duelo');
+  }
+
+  // Deduct wager from opponent (escrow)
+  const newBalance = wallet.balance - challenge.wager_amount;
+  await sb.from('user_wallets').update({
+    balance: newBalance,
+    total_wagered: wallet.total_wagered + challenge.wager_amount,
+  }).eq('user_id', opponentId);
+
+  const newPrizePool = challenge.prize_pool + challenge.wager_amount;
+  const newPlatformFee = Math.floor(newPrizePool * P2P_PLATFORM_FEE_RATE);
+
+  const { data: updated, error } = await sb
+    .from('p2p_challenges')
+    .update({
+      status: 'active',
+      opponent_id: opponentId,
+      opponent_display_name: opponentDisplayName,
+      opponent_avatar_url: opponentAvatarUrl,
+      opponent_prediction: opponentPrediction,
+      prize_pool: newPrizePool,
+      platform_fee: newPlatformFee,
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', challengeId)
+    .select()
+    .single();
+
+  if (error) {
+    await sb.from('user_wallets').update({ balance: wallet.balance }).eq('user_id', opponentId);
+    throw new Error('Erro ao aceitar duelo: ' + error.message);
+  }
+
+  await addWalletTransaction({
+    user_id: opponentId,
+    type: 'p2p_escrow',
+    amount: -challenge.wager_amount,
+    balance_after: newBalance,
+    description: `Escrow duelo P2P #${challengeId.slice(0, 8)}`,
+    reference_id: challengeId,
+  });
+
+  return updated;
+}
+
+export async function declineP2PDuel(challengeId: string): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Duelo nao encontrado');
+  if (challenge.status !== 'waiting_opponent') throw new Error('Duelo nao pode ser recusado');
+
+  // Refund creator
+  const wallet = await getOrCreateWallet(challenge.creator_id);
+  const newBalance = wallet.balance + challenge.wager_amount;
+  await sb.from('user_wallets').update({ balance: newBalance }).eq('user_id', challenge.creator_id);
+  await addWalletTransaction({
+    user_id: challenge.creator_id,
+    type: 'p2p_refund',
+    amount: challenge.wager_amount,
+    balance_after: newBalance,
+    description: `Reembolso duelo recusado #${challengeId.slice(0, 8)}`,
+    reference_id: challengeId,
+  });
+
+  const { data: updated, error } = await sb
+    .from('p2p_challenges')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', challengeId)
+    .select()
+    .single();
+  if (error) throw new Error('Erro ao recusar duelo: ' + error.message);
+  return updated;
+}
+
+export async function cancelP2PChallenge(challengeId: string, userId: string): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Desafio nao encontrado');
+  if (challenge.creator_id !== userId) throw new Error('So o criador pode cancelar');
+  if (!['pending', 'waiting_opponent'].includes(challenge.status)) {
+    throw new Error('Desafio ja esta em curso e nao pode ser cancelado');
+  }
+
+  // Refund all escrowed amounts
+  if (challenge.status === 'waiting_opponent') {
+    const wallet = await getOrCreateWallet(challenge.creator_id);
+    const newBalance = wallet.balance + challenge.wager_amount;
+    await sb.from('user_wallets').update({ balance: newBalance }).eq('user_id', challenge.creator_id);
+    await addWalletTransaction({
+      user_id: challenge.creator_id,
+      type: 'p2p_refund',
+      amount: challenge.wager_amount,
+      balance_after: newBalance,
+      description: `Cancelamento duelo #${challengeId.slice(0, 8)}`,
+      reference_id: challengeId,
+    });
+  }
+
+  // For group challenges, refund all participants
+  if (challenge.participants && challenge.participants.length > 0) {
+    for (const p of challenge.participants) {
+      if (p.wager_paid) {
+        const w = await getOrCreateWallet(p.user_id);
+        const nb = w.balance + challenge.wager_amount;
+        await sb.from('user_wallets').update({ balance: nb }).eq('user_id', p.user_id);
+        await addWalletTransaction({
+          user_id: p.user_id,
+          type: 'p2p_refund',
+          amount: challenge.wager_amount,
+          balance_after: nb,
+          description: `Cancelamento desafio #${challengeId.slice(0, 8)}`,
+          reference_id: challengeId,
+        });
+      }
+    }
+  }
+
+  const { data: updated, error } = await sb
+    .from('p2p_challenges')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', challengeId)
+    .select()
+    .single();
+  if (error) throw new Error('Erro ao cancelar: ' + error.message);
+  return updated;
+}
+
+// ============================================================
+// SETTLE P2P DUEL
+// ============================================================
+
+export async function settleP2PDuel(
+  challengeId: string,
+  winnerId: string,
+  isDraw: boolean = false,
+): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Duelo nao encontrado');
+  if (challenge.status !== 'active') throw new Error('Duelo nao esta ativo');
+
+  const winnerIsCreator = winnerId === challenge.creator_id;
+  const winnerName = winnerIsCreator ? challenge.creator_display_name : (challenge.opponent_display_name || 'Oponente');
+  const loserId = winnerIsCreator ? challenge.opponent_id : challenge.creator_id;
+
+  let winnerPayout = 0;
+
+  if (isDraw) {
+    // Refund both
+    for (const uid of [challenge.creator_id, challenge.opponent_id!]) {
+      if (!uid) continue;
+      const w = await getOrCreateWallet(uid);
+      const nb = w.balance + challenge.wager_amount;
+      await sb.from('user_wallets').update({ balance: nb }).eq('user_id', uid);
+      await addWalletTransaction({
+        user_id: uid,
+        type: 'p2p_draw',
+        amount: challenge.wager_amount,
+        balance_after: nb,
+        description: `Empate no duelo #${challengeId.slice(0, 8)} — reembolsado`,
+        reference_id: challengeId,
+      });
+    }
+  } else {
+    // Winner takes prize pool minus platform fee
+    winnerPayout = challenge.prize_pool - challenge.platform_fee;
+    const w = await getOrCreateWallet(winnerId!);
+    const nb = w.balance + winnerPayout;
+    await sb.from('user_wallets').update({
+      balance: nb,
+      total_earned: w.total_earned + winnerPayout,
+      total_won: w.total_won + winnerPayout,
+    }).eq('user_id', winnerId!);
+    await addWalletTransaction({
+      user_id: winnerId!,
+      type: 'p2p_won',
+      amount: winnerPayout,
+      balance_after: nb,
+      description: `Vitória no duelo! +${winnerPayout} moedas vs ${winnerIsCreator ? challenge.opponent_display_name : challenge.creator_display_name}`,
+      reference_id: challengeId,
+    });
+
+    // Record loss for loser
+    if (loserId) {
+      const lw = await getOrCreateWallet(loserId);
+      await sb.from('user_wallets').update({
+        total_lost: lw.total_lost + challenge.wager_amount,
+      }).eq('user_id', loserId);
+      await addWalletTransaction({
+        user_id: loserId,
+        type: 'p2p_lost',
+        amount: 0,
+        balance_after: lw.balance,
+        description: `Derrota no duelo vs ${winnerName}`,
+        reference_id: challengeId,
+      });
+    }
+  }
+
+  const { data: settled, error } = await sb
+    .from('p2p_challenges')
+    .update({
+      status: 'completed',
+      winner_id: isDraw ? null : winnerId,
+      winner_display_name: isDraw ? null : winnerName,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', challengeId)
+    .select()
+    .single();
+  if (error) throw new Error('Erro ao resolver duelo: ' + error.message);
+  return settled;
+}
+
+// ============================================================
+// P2P GROUP CHALLENGE (2-8 players)
+// ============================================================
+
+export async function createP2PGroupChallenge(data: CreateP2PGroupData): Promise<P2PChallenge> {
+  const wallet = await getOrCreateWallet(data.creator_id);
+  if (wallet.balance < data.wager_amount) {
+    throw new Error('Saldo insuficiente');
+  }
+
+  const maxP = data.max_participants || 8;
+  const expiresAt = new Date(Date.now() + (data.expires_in_hours || 48) * 3600000).toISOString();
+  const platformFee = Math.floor(data.wager_amount * P2P_PLATFORM_FEE_RATE);
+
+  // Deduct creator wager
+  const newBalance = wallet.balance - data.wager_amount;
+  await sb.from('user_wallets').update({
+    balance: newBalance,
+    total_wagered: wallet.total_wagered + data.wager_amount,
+  }).eq('user_id', data.creator_id);
+
+  const creatorParticipant: P2PParticipant = {
+    user_id: data.creator_id,
+    display_name: data.creator_display_name,
+    avatar_url: data.creator_avatar_url,
+    prediction: data.creator_prediction,
+    score: 0,
+    wager_paid: true,
+    joined_at: new Date().toISOString(),
+  };
+
+  const { data: challenge, error } = await sb
+    .from('p2p_challenges')
+    .insert({
+      challenge_type: 'group',
+      status: 'active',
+      creator_id: data.creator_id,
+      creator_display_name: data.creator_display_name,
+      creator_avatar_url: data.creator_avatar_url,
+      creator_prediction: data.creator_prediction,
+      creator_score: 0,
+      opponent_score: 0,
+      participants: [creatorParticipant],
+      max_participants: maxP,
+      match_id: data.match_id,
+      season_match_id: data.season_match_id,
+      championship_id: data.championship_id,
+      championship_name: data.championship_name,
+      match_label: data.match_label,
+      market_type: data.market_type,
+      wager_amount: data.wager_amount,
+      prize_pool: data.wager_amount,
+      platform_fee: platformFee,
+      format: 'single_match',
+      total_rounds: 1,
+      current_round: 1,
+      expires_at: expiresAt,
+      is_public: data.is_public ?? true,
+      spectator_count: 0,
+      chat_enabled: true,
+      invite_code: generateInviteCode(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    await sb.from('user_wallets').update({ balance: wallet.balance }).eq('user_id', data.creator_id);
+    throw new Error('Erro ao criar desafio de grupo: ' + error.message);
+  }
+
+  await addWalletTransaction({
+    user_id: data.creator_id,
+    type: 'p2p_escrow',
+    amount: -data.wager_amount,
+    balance_after: newBalance,
+    description: `Escrow desafio de grupo #${challenge.id.slice(0, 8)}`,
+    reference_id: challenge.id,
+  });
+
+  return challenge;
+}
+
+export async function joinP2PGroupChallenge(
+  challengeId: string,
+  userId: string,
+  displayName: string,
+  avatarUrl?: string,
+  prediction?: string,
+): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Desafio nao encontrado');
+  if (challenge.challenge_type !== 'group') throw new Error('Este desafio nao e de grupo');
+  if (challenge.status !== 'active') throw new Error('Desafio nao esta ativo');
+  if (!challenge.participants) throw new Error('Dados do desafio invalidos');
+
+  const currentParticipants = challenge.participants as unknown as P2PParticipant[];
+  if (currentParticipants.some(p => p.user_id === userId)) {
+    throw new Error('Ja estas neste desafio');
+  }
+  if (currentParticipants.length >= (challenge.max_participants || 8)) {
+    throw new Error('Desafio esta cheio');
+  }
+
+  // Check & deduct wallet
+  const wallet = await getOrCreateWallet(userId);
+  if (wallet.balance < challenge.wager_amount) {
+    throw new Error('Saldo insuficiente para entrar');
+  }
+  const newBalance = wallet.balance - challenge.wager_amount;
+  await sb.from('user_wallets').update({
+    balance: newBalance,
+    total_wagered: wallet.total_wagered + challenge.wager_amount,
+  }).eq('user_id', userId);
+
+  const newParticipant: P2PParticipant = {
+    user_id: userId,
+    display_name: displayName,
+    avatar_url: avatarUrl,
+    prediction: prediction,
+    score: 0,
+    wager_paid: true,
+    joined_at: new Date().toISOString(),
+  };
+
+  const updatedParticipants = [...currentParticipants, newParticipant];
+  const newPrizePool = challenge.prize_pool + challenge.wager_amount;
+  const newPlatformFee = Math.floor(newPrizePool * P2P_PLATFORM_FEE_RATE);
+
+  const { data: updated, error } = await sb
+    .from('p2p_challenges')
+    .update({
+      participants: updatedParticipants,
+      prize_pool: newPrizePool,
+      platform_fee: newPlatformFee,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', challengeId)
+    .select()
+    .single();
+
+  if (error) {
+    await sb.from('user_wallets').update({ balance: wallet.balance }).eq('user_id', userId);
+    throw new Error('Erro ao entrar no desafio: ' + error.message);
+  }
+
+  await addWalletTransaction({
+    user_id: userId,
+    type: 'p2p_escrow',
+    amount: -challenge.wager_amount,
+    balance_after: newBalance,
+    description: `Entrada no desafio de grupo #${challengeId.slice(0, 8)}`,
+    reference_id: challengeId,
+  });
+
+  return updated;
+}
+
+export async function settleP2PGroupChallenge(
+  challengeId: string,
+  winnerId: string,
+): Promise<P2PChallenge> {
+  const { data: challenge } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  if (!challenge) throw new Error('Desafio nao encontrado');
+  if (challenge.status !== 'active') throw new Error('Desafio nao esta ativo');
+
+  const payout = challenge.prize_pool - challenge.platform_fee;
+  const w = await getOrCreateWallet(winnerId);
+  const nb = w.balance + payout;
+  await sb.from('user_wallets').update({
+    balance: nb,
+    total_earned: w.total_earned + payout,
+    total_won: w.total_won + payout,
+  }).eq('user_id', winnerId);
+
+  const participants = (challenge.participants || []) as unknown as P2PParticipant[];
+  const winnerName = participants.find(p => p.user_id === winnerId)?.display_name || 'Vencedor';
+
+  await addWalletTransaction({
+    user_id: winnerId,
+    type: 'p2p_won',
+    amount: payout,
+    balance_after: nb,
+    description: `Venceste o desafio de grupo! +${payout} moedas`,
+    reference_id: challengeId,
+  });
+
+  // Record losses
+  for (const p of participants) {
+    if (p.user_id === winnerId) continue;
+    const lw = await getOrCreateWallet(p.user_id);
+    await sb.from('user_wallets').update({
+      total_lost: lw.total_lost + challenge.wager_amount,
+    }).eq('user_id', p.user_id);
+  }
+
+  const { data: settled, error } = await sb
+    .from('p2p_challenges')
+    .update({
+      status: 'completed',
+      winner_id: winnerId,
+      winner_display_name: winnerName,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', challengeId)
+    .select()
+    .single();
+  if (error) throw new Error('Erro ao resolver desafio: ' + error.message);
+  return settled;
+}
+
+// ============================================================
+// P2P QUERIES
+// ============================================================
+
+export async function getOpenDuels(limit = 20): Promise<P2PChallenge[]> {
+  const { data, error } = await sb
+    .from('p2p_challenges')
+    .select('*')
+    .eq('challenge_type', 'duel')
+    .eq('status', 'waiting_opponent')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return data || [];
+}
+
+export async function getOpenGroupChallenges(limit = 20): Promise<P2PChallenge[]> {
+  const { data, error } = await sb
+    .from('p2p_challenges')
+    .select('*')
+    .eq('challenge_type', 'group')
+    .eq('status', 'active')
+    .eq('is_public', true)
+    .order('prize_pool', { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return data || [];
+}
+
+export async function getUserP2PChallenges(
+  userId: string,
+  filters?: {
+    status?: P2PChallengeStatus;
+    challenge_type?: P2PChallengeType;
+    limit?: number;
+  },
+): Promise<P2PChallenge[]> {
+  // Query where user is creator or opponent
+  let query = sb
+    .from('p2p_challenges')
+    .select('*')
+    .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+
+  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.challenge_type) query = query.eq('challenge_type', filters.challenge_type);
+  if (filters?.limit) query = query.limit(filters.limit);
+
+  const { data, error } = await query;
+  if (error) return [];
+
+  // Also check group challenges where user is in participants
+  const groupQuery = sb
+    .from('p2p_challenges')
+    .select('*')
+    .eq('challenge_type', 'group')
+    .neq('creator_id', userId);
+
+  const { data: groupData } = await groupQuery;
+  const userGroups = (groupData || []).filter((c: any) => {
+    const parts = (c.participants || []) as unknown as P2PParticipant[];
+    return parts.some(p => p.user_id === userId);
+  });
+
+  const all = [...(data || []), ...userGroups];
+  // Remove duplicates
+  const seen = new Set<string>();
+  return all.filter((c: any) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    if (filters?.status && c.status !== filters.status) return false;
+    if (filters?.challenge_type && c.challenge_type !== filters.challenge_type) return false;
+    return true;
+  });
+}
+
+export async function getP2PChallengeById(challengeId: string): Promise<P2PChallenge | null> {
+  const { data } = await sb.from('p2p_challenges').select('*').eq('id', challengeId).single();
+  return data;
+}
+
+export async function getP2PChallengeByInviteCode(code: string): Promise<P2PChallenge | null> {
+  const { data } = await sb.from('p2p_challenges').select('*').eq('invite_code', code.toUpperCase()).single();
+  return data;
+}
+
+// ============================================================
+// P2P DUEL STATS
+// ============================================================
+
+export async function getUserP2PStats(userId: string): Promise<P2PDuelStats> {
+  const challenges = await getUserP2PChallenges(userId, { status: 'completed' });
+
+  let wins = 0, losses = 0, draws = 0, totalWagered = 0, totalWon = 0;
+  let currentStreak = 0, bestStreak = 0, biggestWin = 0;
+  const lossMap: Record<string, number> = {};
+  const rivalMap: Record<string, number> = {};
+
+  for (const c of challenges) {
+    totalWagered += c.wager_amount;
+    if (c.winner_id === userId) {
+      wins++;
+      currentStreak++;
+      bestStreak = Math.max(bestStreak, currentStreak);
+      const payout = c.prize_pool - c.platform_fee;
+      totalWon += payout;
+      biggestWin = Math.max(biggestWin, payout);
+      // Track rival (most played against)
+      const oppId = c.creator_id === userId ? c.opponent_id : c.creator_id;
+      if (oppId) rivalMap[oppId] = (rivalMap[oppId] || 0) + 1;
+    } else if (c.winner_id) {
+      losses++;
+      currentStreak = 0;
+      const oppId = c.winner_id;
+      if (oppId) lossMap[oppId] = (lossMap[oppId] || 0) + 1;
+    } else {
+      draws++;
+    }
+  }
+
+  // Find nemesis (most losses against)
+  let nemesisId: string | undefined, nemesisName: string | undefined;
+  let maxLosses = 0;
+  for (const [uid, count] of Object.entries(lossMap)) {
+    if (count > maxLosses) {
+      maxLosses = count;
+      nemesisId = uid;
+    }
+  }
+  if (nemesisId) {
+    const nChallenge = challenges.find(c => c.creator_id === nemesisId || c.opponent_id === nemesisId);
+    nemesisName = nChallenge?.creator_id === nemesisId ? nChallenge.creator_display_name : nChallenge?.opponent_display_name;
+  }
+
+  // Find rival (most matches against)
+  let rivalId: string | undefined, rivalName: string | undefined;
+  let maxMatches = 0;
+  for (const [uid, count] of Object.entries(rivalMap)) {
+    if (count > maxMatches) {
+      maxMatches = count;
+      rivalId = uid;
+    }
+  }
+  if (rivalId) {
+    const rChallenge = challenges.find(c => c.creator_id === rivalId || c.opponent_id === rivalId);
+    rivalName = rChallenge?.creator_id === rivalId ? rChallenge.creator_display_name : rChallenge?.opponent_display_name;
+  }
+
+  const total = wins + losses + draws;
+  return {
+    user_id: userId,
+    total_duels: total,
+    duels_won: wins,
+    duels_lost: losses,
+    duels_draw: draws,
+    win_rate: total > 0 ? Math.round((wins / total) * 100) : 0,
+    current_streak: currentStreak,
+    best_streak: bestStreak,
+    total_wagered: totalWagered,
+    total_won: totalWon,
+    total_profit: totalWon - totalWagered,
+    biggest_win: biggestWin,
+    nemesis_id: nemesisId,
+    nemesis_name: nemesisName,
+    rival_id: rivalId,
+    rival_name: rivalName,
+  };
+}
+
+export async function getTopP2PDuelers(limit = 50): Promise<P2PDuelStats[]> {
+  // Get all completed challenges to compute leaderboard
+  const { data: completed } = await sb
+    .from('p2p_challenges')
+    .select('*')
+    .eq('status', 'completed')
+    .order('prize_pool', { ascending: false });
+
+  if (!completed || completed.length === 0) return [];
+
+  const userWINS: Record<string, { wins: number; total: number; won: number; wagered: number; streak: number; bestStreak: number; name: string; avatar: string }> = {};
+
+  for (const c of completed) {
+    for (const uid of [c.creator_id, c.opponent_id]) {
+      if (!uid) continue;
+      if (!userWINS[uid]) {
+        const name = c.creator_id === uid ? c.creator_display_name : (c.opponent_display_name || 'Anonimo');
+        const avatar = c.creator_id === uid ? (c.creator_avatar_url || '') : (c.opponent_avatar_url || '');
+        userWINS[uid] = { wins: 0, total: 0, won: 0, wagered: 0, streak: 0, bestStreak: 0, name, avatar };
+      }
+      userWINS[uid].total++;
+      userWINS[uid].wagered += c.wager_amount;
+      if (c.winner_id === uid) {
+        userWINS[uid].wins++;
+        userWINS[uid].won += c.prize_pool - c.platform_fee;
+        userWINS[uid].streak++;
+        userWINS[uid].bestStreak = Math.max(userWINS[uid].bestStreak, userWINS[uid].streak);
+      } else {
+        userWINS[uid].streak = 0;
+      }
+    }
+  }
+
+  return Object.entries(userWINS)
+    .map(([uid, s]) => ({
+      user_id: uid,
+      total_duels: s.total,
+      duels_won: s.wins,
+      duels_lost: s.total - s.wins,
+      duels_draw: 0,
+      win_rate: s.total > 0 ? Math.round((s.wins / s.total) * 100) : 0,
+      current_streak: s.streak,
+      best_streak: s.bestStreak,
+      total_wagered: s.wagered,
+      total_won: s.won,
+      total_profit: s.won - s.wagered,
+      biggest_win: 0,
+    }))
+    .sort((a, b) => b.win_rate - a.win_rate || b.total_won - a.total_won)
+    .slice(0, limit);
+}
+
+// ============================================================
+// P2P TRASH TALK & MESSAGES
+// ============================================================
+
+export async function sendP2PMessage(data: {
+  challenge_id: string;
+  user_id: string;
+  username: string;
+  user_avatar?: string;
+  message: string;
+  message_type?: 'trash_talk' | 'chat' | 'system';
+}): Promise<P2PChallengeMessage> {
+  const { data: msg, error } = await sb
+    .from('p2p_challenge_messages')
+    .insert({
+      ...data,
+      message_type: data.message_type || 'chat',
+    })
+    .select()
+    .single();
+  if (error) throw new Error('Erro ao enviar mensagem: ' + error.message);
+  return msg;
+}
+
+export async function getP2PMessages(challengeId: string, limit = 50): Promise<P2PChallengeMessage[]> {
+  const { data, error } = await sb
+    .from('p2p_challenge_messages')
+    .select('*')
+    .eq('challenge_id', challengeId)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+  if (error) return [];
+  return data || [];
+}
+
+// ============================================================
+// P2P EXPIRY CHECK (call from cron/scheduler)
+// ============================================================
+
+export async function expireP2PChallenges(): Promise<number> {
+  const now = new Date().toISOString();
+  const { data: expired } = await sb
+    .from('p2p_challenges')
+    .select('*')
+    .in('status', ['waiting_opponent', 'pending'])
+    .lt('expires_at', now);
+
+  if (!expired || expired.length === 0) return 0;
+
+  let count = 0;
+  for (const c of expired) {
+    // Refund creator
+    const wallet = await getOrCreateWallet(c.creator_id);
+    const nb = wallet.balance + c.wager_amount;
+    await sb.from('user_wallets').update({ balance: nb }).eq('user_id', c.creator_id);
+    await addWalletTransaction({
+      user_id: c.creator_id,
+      type: 'p2p_refund',
+      amount: c.wager_amount,
+      balance_after: nb,
+      description: `Duelo expirado #${c.id.slice(0, 8)} — reembolsado`,
+      reference_id: c.id,
+    });
+
+    // For group challenges, refund all participants
+    if (c.participants) {
+      const parts = (c.participants || []) as unknown as P2PParticipant[];
+      for (const p of parts) {
+        if (p.wager_paid && p.user_id !== c.creator_id) {
+          const pw = await getOrCreateWallet(p.user_id);
+          const pnb = pw.balance + c.wager_amount;
+          await sb.from('user_wallets').update({ balance: pnb }).eq('user_id', p.user_id);
+          await addWalletTransaction({
+            user_id: p.user_id,
+            type: 'p2p_refund',
+            amount: c.wager_amount,
+            balance_after: pnb,
+            description: `Desafio expirado #${c.id.slice(0, 8)} — reembolsado`,
+            reference_id: c.id,
+          });
+        }
+      }
+    }
+
+    await sb.from('p2p_challenges').update({ status: 'expired' }).eq('id', c.id);
+    count++;
+  }
+
+  return count;
+}
+
+// ============================================================
 // GLOBAL ELO LEADERBOARD
 // ============================================================
 

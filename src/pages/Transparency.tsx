@@ -4,7 +4,6 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Shield, Lock, Cpu, FileCheck, Users, Eye, ChevronRight, CheckCircle2, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BottomTabBar from "@/components/BottomTabBar";
 import BlockchainVerification from "@/components/BlockchainVerification";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { transparencyContent, resolveLegalLang } from "@/lib/legal-content";
@@ -157,7 +156,6 @@ const Transparency = () => {
       </section>
 
       <Footer />
-      <BottomTabBar />
     </div>
   );
 };

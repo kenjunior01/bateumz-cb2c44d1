@@ -16,6 +16,7 @@ import BolaoModal from "@/components/BolaoModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { getOneClick, saveOneClick } from "@/lib/oneClick";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -106,6 +107,7 @@ const RaffleDetail = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { currency } = useCurrency();
+  const { sfx } = useSoundEffects();
   const fmt = (v: number) => formatMoney(v, currency);
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
@@ -146,7 +148,9 @@ const RaffleDetail = () => {
 
   const toggleNumber = (num: number) => {
     if (soldNumbers.includes(num)) return;
+    const wasAdded = !selectedNumbers.includes(num);
     setSelectedNumbers((prev) => prev.includes(num) ? prev.filter((n) => n !== num) : prev.length < 10 ? [...prev, num] : prev);
+    if (wasAdded && selectedNumbers.length < 10) sfx.click();
   };
 
   const totalPrice = useMemo(() => {
@@ -165,6 +169,7 @@ const RaffleDetail = () => {
       try { await supabase.functions.invoke("check-ticket-threshold", { body: { raffle_id: raffle.id } }); } catch (e) { console.error("Threshold check error:", e); }
     }
     goToStep(4);
+    sfx.win();
     toast.success("Pagamento confirmado — bilhetes sao seus!");
     setTimeout(() => {
       setCheckoutStep(0); setPaid(false); setSelectedNumbers([]);
@@ -268,7 +273,7 @@ const RaffleDetail = () => {
 
             <motion.div className="flex gap-3" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.2 }}>
               <BlockchainVerification raffleId={raffle.id} raffleTitle={raffle.title} />
-              <motion.button className="rd-bolao-btn" onClick={() => setBolaoOpen(true)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <motion.button className="rd-bolao-btn" onClick={() => { sfx.modalOpen(); setBolaoOpen(true); }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Users className="h-4 w-4" /> Bolao
               </motion.button>
             </motion.div>
@@ -372,7 +377,7 @@ const RaffleDetail = () => {
                           </div>
                         </div>
                         <motion.button
-                          onClick={() => goToStep(1)} className="rd-buy-btn w-full"
+                          onClick={() => { sfx.wagerPlace(); goToStep(1); }} className="rd-buy-btn w-full"
                           style={{ background: whiteLabelConfig ? whiteLabelConfig.primary_color : "linear-gradient(135deg, " + C_PRIMARY + ", " + C_ACCENT + ")" }}
                           whileHover={{ scale: 1.03, boxShadow: "0 8px 30px " + C_PRIMARY + "40" }} whileTap={{ scale: 0.97 }}
                         >
@@ -403,7 +408,7 @@ const RaffleDetail = () => {
                   <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4 md:hidden" />
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-display text-lg font-bold">Checkout Seguro</h3>
-                    <motion.button onClick={() => goToStep(0)} className="rd-close-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}><X className="h-4 w-4" /></motion.button>
+                    <motion.button onClick={() => { sfx.modalClose(); goToStep(0); }} className="rd-close-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}><X className="h-4 w-4" /></motion.button>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <ShieldCheck className="h-3.5 w-3.5" style={{ color: C_PRIMARY }} />

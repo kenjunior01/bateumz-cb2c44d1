@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
 import CountryLanguageSync from "@/components/CountryLanguageSync";
-import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, Navigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -25,6 +25,7 @@ import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
 import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
 import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
+import WorldSwitcher from "@/components/WorldSwitcher";
 import RegionalCEODashboard from "@/components/RegionalCEODashboard";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -128,12 +129,15 @@ import DashboardEsports from "./pages/dashboard/DashboardEsports.tsx";
 import DashboardEsportsAdvanced from "./pages/dashboard/DashboardEsportsAdvanced.tsx";
 import SeasonsPage from "./pages/esports/SeasonsPage.tsx";
 import BettingPage from "./pages/esports/BettingPage.tsx";
+import DuelosPage from "./pages/esports/DuelosPage.tsx";
 import LeaderboardPage from "./pages/esports/LeaderboardPage.tsx";
 import TransfersPage from "./pages/esports/TransfersPage.tsx";
 import AchievementsPage from "./pages/esports/AchievementsPage.tsx";
 import TeamProfilePage from "./pages/esports/TeamProfilePage.tsx";
 import MillionairePage from "./pages/games/MillionairePage.tsx";
 import CompanyGamesHub from "./pages/dashboard/CompanyGamesHub.tsx";
+import SorteiosLayout from "./pages/sorteios/SorteiosLayout.tsx";
+import JogosLayout from "./pages/jogos/JogosLayout.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -150,7 +154,6 @@ import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
 import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
-import { useParams } from "react-router-dom";
 import { useState, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -174,7 +177,7 @@ function AnimatedRoutes() {
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/marketplace" element={<SorteiosLayout />}>            <Route index element={<Marketplace />} />          </Route>
           <Route path="/raffle/:slug" element={<RaffleDetail />} />
           <Route path="/raffle/:slug/live" element={<LiveDraw />} />
           <Route path="/install" element={<Install />} />
@@ -186,19 +189,19 @@ function AnimatedRoutes() {
           <Route path="/como-funciona" element={<HowItWorks />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/historico" element={<RaffleHistory />} />
-          <Route path="/concursos" element={<Contests />} />
+          <Route path="/concursos" element={<SorteiosLayout />}>            <Route index element={<Contests />} />          </Route>
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPostDetail />} />
-          <Route path="/jogos" element={<AllGames />} />
+          <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
           <Route path="/pontos" element={<EngagementLeaderboard />} />
           <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
           <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
-          <Route path="/instant-win" element={<InstantWin />} />
+          <Route path="/instant-win" element={<SorteiosLayout />}>            <Route index element={<InstantWin />} />          </Route>
           <Route path="/concursos/:id" element={<ContestDetail />} />
           <Route path="/empresas" element={<BusinessDirectory />} />
           <Route path="/empresa/:id" element={<BusinessProfile />} />
           <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
-          <Route path="/lives" element={<LiveHub />} />
+          <Route path="/lives" element={<JogosLayout />}>            <Route index element={<LiveHub />} />          </Route>
           <Route path="/batalhas" element={<Battles />} />
           <Route path="/lives/overlay" element={<LiveOverlay />} />
           <Route path="/lives/overlay-pro" element={<OverlayPro />} />
@@ -215,7 +218,7 @@ function AnimatedRoutes() {
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route path="/ligas" element={<LeaguesListPage />} />
           <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
-          <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
+          <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
           <Route
             path="/profile"
             element={
@@ -251,7 +254,7 @@ function AnimatedRoutes() {
           <Route
             path="/regional-panel"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="regional_manager">
                 <RegionalManagerPanel />
               </ProtectedRoute>
             }
@@ -338,16 +341,8 @@ const AppContent = () => {
   const [showLoading, setShowLoading] = useState(true);
   const { loading: configLoading } = useRegionalContext();
   const { user, loading: authLoading } = useAuth();
-  const [isOverlay, setIsOverlay] = useState(false);
-  useEffect(() => {
-    const check = () => {
-      const p = window.location.pathname;
-      setIsOverlay(p.startsWith("/lives/overlay") || p.startsWith("/overlay/"));
-    };
-    check();
-    const id = setInterval(check, 300);
-    return () => clearInterval(id);
-  }, []);
+  const location = useLocation();
+  const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -386,7 +381,8 @@ const AppContent = () => {
         {!isOverlay && <><MascotBuddy />
         <SupportChatbot />
         <NotificationBell />
-        <RegionalPreviewBar /></>}
+        <RegionalPreviewBar />
+        <WorldSwitcher /></>}
       </BrowserRouter>
     </TooltipProvider>
   );
@@ -413,14 +409,14 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
           >
             ⚠️
           </motion.div>
-          <h2 className="text-2xl font-display font-bold">Algo correu mal</h2>
-          <p className="text-muted-foreground text-sm">Ocorreu um erro inesperado. Tente recarregar a página.</p>
+          <h2 className="text-2xl font-display font-bold">Something went wrong</h2>
+          <p className="text-muted-foreground text-sm">An unexpected error occurred. Try reloading the page.</p>
           <div className="flex gap-3 justify-center">
             <Button onClick={() => this.setState({ hasError: false, error: null })} variant="outline" className="gap-2 rounded-full px-6">
-              Tentar novamente
+              Try again
             </Button>
             <Button onClick={() => window.location.reload()} className="gap-2 rounded-full px-6">
-              Recarregar Página
+              Reload page
           </Button>
           </div>
         </motion.div>

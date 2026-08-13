@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Search, Trophy, Wallet, LayoutGrid, Radio } from "lucide-react";
+import { Home, Search, Trophy, Wallet, LayoutGrid, Radio, Gamepad2, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileNav } from "@/contexts/MobileNavigationContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 type TabDef = {
   icon: typeof Home;
@@ -14,9 +15,9 @@ type TabDef = {
 
 const TABS: TabDef[] = [
   { icon: Home, labelKey: "tab.home", href: "/" },
-  { icon: Search, labelKey: "tab.explore", href: "/marketplace" },
-  { icon: Radio, labelKey: "tab.live", href: "/lives-agora" },
-  { icon: Trophy, labelKey: "tab.contests", href: "/concursos" },
+  { icon: Gamepad2, labelKey: "tab.explore", href: "/jogos" },
+  { icon: Crown, labelKey: "tab.live", href: "/marketplace" },
+  { icon: Trophy, labelKey: "tab.contests", href: "/esports" },
   { icon: Wallet, labelKey: "tab.wallet", href: "/wallet", requiresAuth: true },
 ];
 
@@ -26,11 +27,14 @@ const BottomTabBar = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { toggleMenu } = useMobileNav();
+  const { sfx } = useSoundEffects();
 
   if (
     location.pathname.startsWith("/dashboard") ||
     location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/overlay")
+    location.pathname.startsWith("/overlay") ||
+    location.pathname.startsWith("/esports") ||
+    location.pathname.startsWith("/jogos")
   ) {
     return null;
   }
@@ -41,8 +45,8 @@ const BottomTabBar = () => {
   };
 
   const goOrAuth = (href: string, requiresAuth?: boolean) => {
-    if (requiresAuth && !user) navigate("/login");
-    else navigate(href);
+    if (requiresAuth && !user) { sfx.alert(); navigate("/login"); }
+    else { sfx.tabClick(); navigate(href); }
   };
 
   return (

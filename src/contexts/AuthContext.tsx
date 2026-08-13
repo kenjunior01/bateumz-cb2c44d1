@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const roles = roleData?.map((r: any) => r.role) || [];
     if (roles.includes("superadmin")) setRole("superadmin");
     else if (roles.includes("admin")) setRole("admin");
+    else if (roles.includes("regional_manager")) setRole("regional_manager");
     else if (roles.includes("business")) setRole("business");
     else setRole(roles[0] ?? "user");
 

@@ -41,10 +41,10 @@ class ErrorBoundary extends Component<Props, State> {
         >
           <div className="mb-4 text-5xl">🚨</div>
           <h2 className="mb-2 text-xl font-bold text-foreground">
-            Algo correu mal
+            Something went wrong
           </h2>
           <p className="mb-1 max-w-md text-sm text-muted-foreground">
-            Ocorreu um erro inesperado. Tenta recarregar a pagina.
+            An unexpected error occurred. Try reloading the page.
           </p>
           {this.state.error && (
             <pre className="mt-3 max-w-lg overflow-auto rounded-lg bg-destructive/10 p-3 text-left text-xs text-destructive">
@@ -56,13 +56,13 @@ class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Tentar novamente
+              Try again
             </button>
             <button
               onClick={() => window.location.reload()}
               className="rounded-lg border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
             >
-              Recarregar
+              Reload
             </button>
           </div>
         </div>

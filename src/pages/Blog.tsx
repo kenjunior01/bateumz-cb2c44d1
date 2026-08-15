@@ -27,7 +27,35 @@ import {
   Loader2,
   Sparkles,
   Zap,
+  Lightbulb,
+  DollarSign,
+  Goal,
+  Gamepad2,
+  Trophy,
+  Cpu,
+  type LucideProps,
 } from 'lucide-react';
+
+const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
+  sparkles: Sparkles,
+  lightbulb: Lightbulb,
+  'dollar-sign': DollarSign,
+  goal: Goal,
+  'gamepad-2': Gamepad2,
+  trophy: Trophy,
+  cpu: Cpu,
+  flame: Flame,
+  zap: Zap,
+  star: Star,
+  book: BookOpen,
+  newspaper: Newspaper,
+};
+
+function CategoryIcon({ name, size = 14 }: { name: string; size?: number }) {
+  const Icon = ICON_MAP[name?.toLowerCase()];
+  if (Icon) return <Icon size={size} className="shrink-0" />;
+  return null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -197,7 +225,7 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
                   color: catColor,
                 }}
               >
-                {post.category?.icon && <span className="mr-1">{post.category.icon}</span>}
+                <CategoryIcon name={post.category?.icon || ''} />
                 {post.category?.name || 'Geral'}
               </Badge>
               <span className="text-[11px] text-muted-foreground flex items-center gap-1 whitespace-nowrap">
@@ -597,7 +625,7 @@ export default function Blog() {
                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: dotColor }}
                       />
-                      {cat.icon && <span>{cat.icon}</span>}
+                      <CategoryIcon name={cat.icon || ''} />
                       {cat.name}
                     </button>
                   );
@@ -687,9 +715,7 @@ export default function Blog() {
                               color: featuredPost.category?.color || 'hsl(var(--primary))',
                             }}
                           >
-                            {featuredPost.category?.icon && (
-                              <span className="mr-1">{featuredPost.category.icon}</span>
-                            )}
+                            <CategoryIcon name={featuredPost.category?.icon || ''} />
                             {featuredPost.category?.name || 'Geral'}
                           </Badge>
                           <h2 className="text-2xl md:text-4xl font-black text-white mb-3 leading-tight max-w-2xl group-hover:text-yellow-200 transition-colors">

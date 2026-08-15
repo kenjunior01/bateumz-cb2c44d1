@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gift } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -36,10 +36,9 @@ const MysteryBox = ({ highChance = 0.25, lowChance = 0.4, noneChance = 0.35, onS
   const [boxes, setBoxes] = useState(() => buildBoxes(highChance, lowChance, noneChance));
 
   // Rebuild when chances change and game is idle
-  useMemo(() => {
+  useEffect(() => {
     if (picked === null) setBoxes(buildBoxes(highChance, lowChance, noneChance));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highChance, lowChance, noneChance]);
+  }, [highChance, lowChance, noneChance, picked]);
 
   const pick = (i: number) => {
     if (picked !== null) return;

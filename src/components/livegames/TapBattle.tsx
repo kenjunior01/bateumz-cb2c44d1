@@ -44,22 +44,21 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (botRef.current) clearInterval(botRef.current);
     setPhase("done");
-    setP1Taps((t1) => {
-      setP2Taps((t2) => {
-        if (t1 > t2) {
-          confetti({ particleCount: 100, spread: 70, origin: { x: 0.3, y: 0.7 } });
-          onScore?.(p1Name, t1);
-        } else if (t2 > t1) {
-          if (mode === "vs") {
-            confetti({ particleCount: 100, spread: 70, origin: { x: 0.7, y: 0.7 } });
-            onScore?.(p2Name, t2);
-          }
-        }
-        return t2;
-      });
-      return t1;
-    });
   };
+
+  // Determine winner reactively when phase changes to done
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (p1Taps > p2Taps) {
+      confetti({ particleCount: 100, spread: 70, origin: { x: 0.3, y: 0.7 } });
+      onScore?.(p1Name, p1Taps);
+    } else if (p2Taps > p1Taps) {
+      if (mode === "vs") {
+        confetti({ particleCount: 100, spread: 70, origin: { x: 0.7, y: 0.7 } });
+        onScore?.(p2Name, p2Taps);
+      }
+    }
+  }, [phase]);
 
   useEffect(() => () => {
     if (intervalRef.current) clearInterval(intervalRef.current);

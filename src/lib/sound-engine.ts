@@ -438,6 +438,23 @@ export const sfx = {
     sweep(400, 800, 0.2, 'triangle', vol('ambient', 0.04), 0.25);
     haptic([10, 40, 10]);
   },
+
+  // ===================== BACKWARDS COMPAT (old game sounds) =====================
+  hit: () => { tone(300, 0.08, 'square', vol('game', 0.08)); noise(0.04, vol('game', 0.04)); haptic(20); },
+  enemyHit: () => { tone(200, 0.1, 'sawtooth', vol('game', 0.07)); noise(0.06, vol('game', 0.05)); haptic(25); },
+  enemyShoot: () => { sweep(1200, 300, 0.12, 'sawtooth', vol('game', 0.05)); noise(0.03, vol('game', 0.02)); },
+  shoot: () => { sweep(800, 2000, 0.08, 'square', vol('game', 0.06)); noise(0.02, vol('game', 0.02)); haptic(10); },
+  explosion: () => { noise(0.3, vol('game', 0.1)); sweep(200, 50, 0.4, 'sine', vol('game', 0.08)); haptic([40, 60, 40]); },
+  victory: () => sfx.victoryFanfare(),
+  defeat: () => sfx.lose(),
+  equip: () => { tone(600, 0.08, 'triangle', vol('game', 0.06)); tone(900, 0.1, 'sine', vol('game', 0.05), 0.06); haptic(15); },
+  coin: () => sfx.coinClink(),
+  ultimate: () => {
+    noise(0.2, vol('game', 0.06));
+    sweep(200, 2000, 0.6, 'sawtooth', vol('game', 0.07));
+    chord([523, 659, 784, 1047], 0.8, 'sine', vol('game', 0.05), 0.3);
+    haptic([20, 30, 40, 50, 60, 80]);
+  },
 };
 
 // ---- Coin helpers (used internally) ----

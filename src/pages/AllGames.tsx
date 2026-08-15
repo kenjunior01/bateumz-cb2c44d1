@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard } from "lucide-react";
+import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -92,6 +92,7 @@ const ALL_GAMES: GameDef[] = [
   { id: "flappybird", label: "Flappy Bird", emoji: "\uD83D\uDC26", desc: "Desvie dos canos! Classico viciante com medalhas!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: Gamepad2, hasBot: true },
   { id: "fruitninja", label: "Fruta Ninja", emoji: "\uD83C\uDF4E", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
   { id: "typingracer", label: "Corrida de Digitacao", emoji: "\u26A1", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
+  { id: "campaignrpg", label: "Campanha RPG", emoji: "\u2694\uFE0F", desc: "5 mundos epicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!", grad: "from-yellow-600 to-red-700", category: "RPG", players: "Solo / PVP", icon: Shield, hasBot: true },
 ];
 
 const CATEGORIES = [
@@ -112,6 +113,7 @@ const CATEGORIES = [
   { id: "Battle Royale", label: "Battle Royale", emoji: "\uD83C\uDFB1" },
   { id: "Acao", label: "Acao", emoji: "\uD83D\uDCA5" },
   { id: "Digitacao", label: "Digitacao", emoji: "\u2328\uFE0F" },
+  { id: "Campanha", label: "Campanha", emoji: "\uD83C\uDFD5\uFE0F" },
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };

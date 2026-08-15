@@ -79,6 +79,7 @@ const ChessGame = lazy(() => import("@/components/livegames/ChessGame"));
 const FlappyBirdGame = lazy(() => import("@/components/livegames/FlappyBirdGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
+const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
 import LiveLeaderboard, { type LeaderEntry } from "@/components/livegames/LiveLeaderboard";
 import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, type LiveGameConfig, type CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
@@ -125,7 +126,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer";
+type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg";
 
 interface SavedWheelGame {
   id: string;
@@ -214,6 +215,7 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
   { id: "fruitninja", icon: Sparkles, emoji: "🍎", grad: "from-red-500 to-orange-500" },
   { id: "typingracer", icon: Zap, emoji: "⌨", grad: "from-cyan-500 to-blue-600" },
+  { id: "campaignrpg", icon: Swords, emoji: "⚔️", grad: "from-yellow-600 to-red-700" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1198,6 +1200,12 @@ const LiveHub = () => {
                 <motion.div key="typingracer" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Corrida de Digitacao">
                   <TypingRacer onScore={recordScore("Corrida de Digitacao")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "campaignrpg" && (
+                <motion.div key="campaignrpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Campanha RPG">
+                  <CampaignRPGGame onScore={recordScore("Campanha RPG")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
               </Suspense>

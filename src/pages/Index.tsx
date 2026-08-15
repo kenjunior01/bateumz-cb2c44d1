@@ -156,6 +156,7 @@ const TICKER_ITEMS = [
   { type: "live", text: "🔴 AO VIVO: Final do Campeonato League of Legends", color: CYAN },
   { type: "win", text: "PedroHenrique conquistou 1º lugar no Torneio de Xadrez", color: GOLD },
   { type: "game", text: "Novo jogo lançado: Corrida de Digitação", color: GREEN },
+  { type: "game", text: "MMORPG Bateu já disponivel — cria o teu heroi!", color: PURPLE },
   { type: "win", text: "MariaSilva ganhou um PlayStation 5!", color: GOLD },
   { type: "live", text: "🔴 AO VIVO: Valorant — Semifinal Brasileira", color: CYAN },
   { type: "game", text: "3.891 partidas jogadas nas últimas 24h", color: GREEN },
@@ -371,6 +372,98 @@ export default function Index() {
         {/* Confetti burst on CTA click */}
         <ConfettiBurst active={confettiActive} colors={[CYAN, PURPLE, GOLD, GREEN, DEEP_PURPLE]} particleCount={60} />
       </motion.section>
+
+      {/* ═══════════ MMORPG FEATURED BANNER ═══════════ */}
+      <AnimatedSection className="relative overflow-hidden py-10 sm:py-16" style={{ background: `linear-gradient(180deg, #050508 0%, #0a0520 50%, #050508 100%)` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="relative rounded-3xl overflow-hidden cursor-pointer"
+            style={{
+              background: `linear-gradient(135deg, #0a0520 0%, #150a30 30%, #0d1a3a 60%, #0a0520 100%)`,
+              border: `1px solid ${PURPLE}25`,
+              boxShadow: `0 0 60px ${PURPLE}15, 0 0 120px ${CYAN}08, 0 20px 60px rgba(0,0,0,0.5)`,
+            }}
+            onClick={() => { sfx.buttonClick(); navigate("/mmorpg"); }}
+          >
+            {/* Animated glow border */}
+            <motion.div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ border: `2px solid ${PURPLE}` }} animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 3, repeat: Infinity }} />
+            <motion.div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ border: `1px solid ${CYAN}` }} animate={{ opacity: [0, 0.2, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 1 }} />
+
+            {/* Background orbs */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <motion.div className="absolute rounded-full blur-[80px]" style={{ background: `${PURPLE}20`, width: 300, height: 300, left: "-5%", top: "-20%" }} animate={{ y: [0, -30, 0], scale: [1, 1.2, 1] }} transition={{ duration: 8, repeat: Infinity }} />
+              <motion.div className="absolute rounded-full blur-[80px]" style={{ background: `${CYAN}15`, width: 250, height: 250, right: "-5%", bottom: "-20%" }} animate={{ y: [0, 20, 0], scale: [1, 1.15, 1] }} transition={{ duration: 10, repeat: Infinity, delay: 2 }} />
+              <motion.div className="absolute rounded-full blur-[60px]" style={{ background: `${GOLD}10`, width: 200, height: 200, left: "50%", top: "50%" }} animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 6, repeat: Infinity, delay: 1 }} />
+            </div>
+
+            <div className="relative z-10 p-6 sm:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
+              {/* Left: Icon & Text */}
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
+                  <span className="text-[10px] font-black tracking-widest px-3 py-1 rounded-full animate-pulse" style={{ background: `linear-gradient(135deg, ${PURPLE}30, ${CYAN}30)`, color: PURPLE, border: `1px solid ${PURPLE}40` }}>NOVO</span>
+                  <span className="text-[10px] font-black tracking-widest px-3 py-1 rounded-full" style={{ background: `${GREEN}20`, color: GREEN, border: `1px solid ${GREEN}30` }}>MULTIPLAYER</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mb-3 leading-tight">
+                  <span style={{ background: `linear-gradient(135deg, #fff, ${PURPLE}, ${CYAN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>MMORPG Bateu</span>
+                </h2>
+                <p className="text-sm sm:text-base text-zinc-400 max-w-lg mb-5 leading-relaxed">
+                  Cria o teu heroi, explora zonas perigosas, luta contra monstros e outros jogadores. Economia P2P, chat global, world boss e muito mais. O mundo persiste mesmo depois de saires.
+                </p>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mb-5">
+                  {[
+                    { icon: Users, label: "6 Classes", color: CYAN },
+                    { icon: Swords, label: "PVP Duelos", color: PURPLE },
+                    { icon: Coins, label: "Economia P2P", color: GOLD },
+                    { icon: Globe, label: "Mundo Persistente", color: GREEN },
+                  ].map((f) => {
+                    const FIcon = f.icon;
+                    return (
+                      <div key={f.label} className="flex items-center gap-1.5">
+                        <FIcon className="h-3.5 w-3.5" style={{ color: f.color }} />
+                        <span className="text-xs font-semibold text-zinc-300">{f.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button size="lg" className="font-bold rounded-xl h-auto px-8 py-4 text-base transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${PURPLE}, ${CYAN})`, boxShadow: `0 0 30px ${PURPLE}30, 0 8px 32px rgba(0,0,0,0.4)` }}>
+                  <Rocket className="mr-2 h-5 w-5" /> Entrar no Mundo
+                </Button>
+              </div>
+
+              {/* Right: Visual showcase */}
+              <div className="relative shrink-0">
+                <motion.div
+                  className="text-8xl sm:text-9xl md:text-[10rem] select-none"
+                  animate={{ y: [0, -10, 0], rotate: [0, 2, -2, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  🌍
+                </motion.div>
+                {/* Floating class icons */}
+                {[
+                  { emoji: "⚔️", x: "-20px", y: "-10px", delay: 0 },
+                  { emoji: "🔮", x: "60px", y: "-30px", delay: 0.5 },
+                  { emoji: "🏹", x: "-40px", y: "40px", delay: 1 },
+                  { emoji: "🗡️", x: "50px", y: "50px", delay: 1.5 },
+                  { emoji: "🛡️", x: "-10px", y: "70px", delay: 2 },
+                  { emoji: "💪", x: "70px", y: "20px", delay: 2.5 },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute text-2xl sm:text-3xl select-none"
+                    style={{ left: item.x, top: item.y }}
+                    animate={{ y: [0, -8, 0], opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
+                    transition={{ duration: 3, repeat: Infinity, delay: item.delay, ease: "easeInOut" }}
+                  >
+                    {item.emoji}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </AnimatedSection>
 
       {/* ═══════════ LIVE ACTIVITY TICKER ═══════════ */}
       <div className="relative overflow-hidden py-3 border-y" style={{ background: "linear-gradient(90deg, #050508, #0a0a14, #050508)", borderColor: "rgba(255,255,255,0.05)" }}>
@@ -595,6 +688,13 @@ export default function Index() {
 
             {/* Featured Games */}
             <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-4"} gap-3 sm:gap-4`}>
+              {/* MMORPG - Featured First */}
+              <motion.div custom={0} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true }} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.97 }} className="relative rounded-xl p-4 cursor-pointer overflow-hidden transition-all duration-300 col-span-1 sm:col-span-1" style={{ background: `linear-gradient(135deg, ${PURPLE}25, ${CYAN}15)`, border: `2px solid ${PURPLE}30`, boxShadow: `0 0 25px ${PURPLE}15` }} onClick={() => { sfx.whoosh(); navigate("/mmorpg"); }}>
+                <span className="absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse" style={{ background: `${PURPLE}30`, color: PURPLE, border: `1px solid ${PURPLE}50` }}>NOVO</span>
+                <span className="text-3xl block mb-3">🌍</span>
+                <p className="text-sm font-bold text-white mb-1 leading-tight">MMORPG Bateu</p>
+                <div className="flex items-center gap-1"><Users className="h-3 w-3" style={{ color: GREEN }} /><span className="text-[11px] font-semibold" style={{ color: GREEN }}>Multiplayer ao Vivo</span></div>
+              </motion.div>
               {[
                 { name: "Batalha de Cobras", players: "3.1k", emoji: "🐍", grad: `linear-gradient(135deg, ${GREEN}20, ${BLUE}10)`, hot: true, border: GREEN },
                 { name: "Galo PRO", players: "2.4k", emoji: "✖", grad: `linear-gradient(135deg, ${CYAN}15, ${DEEP_PURPLE}10)`, hot: true, border: CYAN },
@@ -603,7 +703,6 @@ export default function Index() {
                 { name: "Ligar 4", players: "1.8k", emoji: "🔴", grad: `linear-gradient(135deg, ${CYAN}10, ${GREEN}15)`, hot: false, border: CYAN },
                 { name: "Memória VS", players: "2.0k", emoji: "🃏", grad: `linear-gradient(135deg, ${PURPLE}15, ${CYAN}10)`, hot: false, border: PURPLE },
                 { name: "Pong VS", players: "980", emoji: "🏓", grad: `linear-gradient(135deg, ${BLUE}20, ${CYAN}10)`, hot: false, border: BLUE },
-                { name: "Bate o Alvo", players: "1.5k", emoji: "🎯", grad: `linear-gradient(135deg, ${GREEN}20, ${GOLD}10)`, hot: false, border: GREEN },
               ].map((game, i) => (
                 <motion.div key={game.name} custom={i} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true }} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.97 }} className="relative rounded-xl p-4 cursor-pointer overflow-hidden transition-all duration-300" style={{ background: game.grad, border: `1px solid ${game.border}15` }} onClick={() => { sfx.whoosh(); navigate("/jogos"); }}>
                   {game.hot && <span className="absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: `${GREEN}20`, color: GREEN }}><Flame className="h-2.5 w-2.5 inline mr-0.5" />HOT</span>}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -225,6 +225,7 @@ const Navbar = () => {
         cta: t("nav.spotlight.cta.live"),
       },
       items: [
+        { label: "MMORPG Bateu", href: "/mmorpg", icon: Globe, desc: "Mundo persistente multiplayer — cria o teu heroi", badge: "NOVO" },
         { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
         { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
         { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },

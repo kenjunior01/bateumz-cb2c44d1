@@ -875,16 +875,16 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
 
   if (screen === "create") {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg mx-auto p-3 sm:p-4 pb-28 sm:pb-6">
         <div className="text-center mb-6">
           <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity }}>
             <Globe className="h-10 w-10 text-blue-400 mx-auto mb-2" />
           </motion.div>
-          <h3 className="font-display text-xl font-bold text-foreground">MMORPG Bateu</h3>
-          <p className="text-xs text-muted-foreground mt-1">Mundo persistente. Duelos PVP. Economia P2P. Todos jogam juntos.</p>
+          <h3 className="font-display text-lg sm:text-xl font-bold text-foreground">MMORPG Bateu</h3>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Mundo persistente. Duelos PVP. Economia P2P.</p>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <label className="text-xs text-muted-foreground block mb-1">Nome do personagem</label>
           <input
             value={charNameInput} onChange={e => setCharNameInput(e.target.value.slice(0, 16))}
@@ -895,17 +895,17 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         </div>
 
         <p className="text-xs text-muted-foreground mb-2 font-medium">Escolhe a tua classe:</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 sm:gap-3">
           {CLASSES.map((c, i) => (
             <motion.button
               key={i} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               onClick={() => createCharacter(i, charNameInput)}
-              className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/50 transition-all"
+              className="rounded-xl border border-border bg-card p-2.5 sm:p-4 text-left hover:border-primary/50 transition-all"
             >
-              <span className="text-3xl">{c.emoji}</span>
-              <p className="font-bold text-sm mt-1" style={{ color: c.color }}>{c.name}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{c.desc}</p>
-              <div className="flex gap-2 mt-2 text-[9px] text-muted-foreground">
+              <span className="text-2xl sm:text-3xl">{c.emoji}</span>
+              <p className="font-bold text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: c.color }}>{c.name}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{c.desc}</p>
+              <div className="flex gap-1 sm:gap-2 mt-1.5 sm:mt-2 text-[8px] sm:text-[9px] text-muted-foreground">
                 <span>\u2764\uFE0F{c.baseHp}</span><span>\u2694\uFE0F{c.baseAtk}</span><span>\uD83D\uDEE1\uFE0F{c.baseDef}</span><span>\uD83D\uDCA8{c.baseSpd}</span>
               </div>
             </motion.button>

@@ -148,6 +148,7 @@ interface SavedWheelGame {
 }
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
+  { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-blue-600 to-purple-700" },
   { id: "wheel", icon: RotateCcw, emoji: "🎰", grad: "from-violet-500 to-fuchsia-500" },
   { id: "keyword", icon: Search, emoji: "🔎", grad: "from-amber-500 to-orange-500" },
   { id: "emoji", icon: Vote, emoji: "💥", grad: "from-pink-500 to-rose-500" },
@@ -217,7 +218,6 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "fruitninja", icon: Sparkles, emoji: "🍎", grad: "from-red-500 to-orange-500" },
   { id: "typingracer", icon: Zap, emoji: "⌨", grad: "from-cyan-500 to-blue-600" },
   { id: "campaignrpg", icon: Swords, emoji: "⚔️", grad: "from-yellow-600 to-red-700" },
-  { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-blue-600 to-purple-700" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -407,9 +407,9 @@ const LiveHub = () => {
         setActive(evt.payload as GameId);
       }
     });
-    // Hydrate latest from bus
+    // Hydrate latest from bus — but URL param takes priority
     const latest = readLatest<string>("activeGame");
-    if (latest && latest !== active) setActive(latest as GameId);
+    if (latest && latest !== active && !gameFromUrl) setActive(latest as GameId);
     return unsub;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

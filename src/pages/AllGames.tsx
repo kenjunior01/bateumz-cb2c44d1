@@ -67,6 +67,7 @@ const ALL_GAMES: GameDef[] = [
   { id: "emoji", label: "Batalha de Emojis", emoji: "\ud83d\udca5", desc: "Vote ao vivo, vencedores entram no sorteio!", grad: "from-pink-500 to-rose-500", category: "Social", players: "Multi", icon: Vote, hasBot: false },
   { id: "keyword", label: "Caca a Palavra", emoji: "\ud83d\udd0e", desc: "Audiencia adivinha a palavra-chave secreta!", grad: "from-amber-500 to-orange-500", category: "Social", players: "Multi", icon: Search, hasBot: false },
   { id: "truthordare", label: "Verdade ou Desafio", emoji: "\ud83d\udd25", desc: "Verdades picantes e desafios engracados!", grad: "from-rose-500 to-red-600", category: "Social", players: "Multi", icon: Heart, hasBot: false },
+  { id: "mmorpg", label: "MMORPG Bateu", emoji: "\uD83C\uDF0D", desc: "Mundo persistente multijogador! Duelos PVP reais, economia P2P, chat global, ranking e World Boss!", grad: "from-blue-600 to-purple-700", category: "MMORPG", players: "Multiplayer", icon: Globe, hasBot: false },
   { id: "punishment", label: "Roleta de Castigos", emoji: "\ud83d\udc80", desc: "Gire a roleta e cumpra o castigo!", grad: "from-red-600 to-rose-700", category: "Social", players: "Multi", icon: Skull, hasBot: false },
   { id: "guessEmoji", label: "Adivinhe o Emoji", emoji: "\ud83d\ude0e", desc: "Decifre a frase a partir dos emojis!", grad: "from-yellow-500 to-amber-600", category: "Quiz", players: "Multi", icon: SmilePlus, hasBot: false },
   { id: "quickdraw", label: "Desenho Rapido", emoji: "\ud83c\udfa8", desc: "Desenhe e deixe o publico adivinhar!", grad: "from-emerald-500 to-teal-600", category: "Social", players: "Multi", icon: Pencil, hasBot: false },
@@ -94,7 +95,6 @@ const ALL_GAMES: GameDef[] = [
   { id: "fruitninja", label: "Fruta Ninja", emoji: "\uD83C\uDF4E", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
   { id: "typingracer", label: "Corrida de Digitacao", emoji: "\u26A1", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
   { id: "campaignrpg", label: "Campanha RPG", emoji: "\u2694\uFE0F", desc: "5 mundos epicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!", grad: "from-yellow-600 to-red-700", category: "RPG", players: "Solo / PVP", icon: Shield, hasBot: true },
-  { id: "mmorpg", label: "MMORPG Bateu", emoji: "\uD83C\uDF0D", desc: "Mundo persistente multijogador! Duelos PVP reais, economia P2P, chat global, ranking e World Boss!", grad: "from-blue-600 to-purple-700", category: "RPG", players: "Multiplayer", icon: Globe, hasBot: false },
 ];
 
 const CATEGORIES = [

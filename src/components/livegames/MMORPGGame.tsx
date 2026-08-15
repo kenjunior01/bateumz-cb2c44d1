@@ -1081,9 +1081,9 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       </AnimatePresence>
 
       {/* Top Bar */}
-      <div className="p-3 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-30">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">{cl.emoji}</span>
+      <div className="px-3 pt-2 pb-2 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-30">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="text-xl sm:text-2xl">{cl.emoji}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-bold text-sm truncate" style={{ color: cl.color }}>{char.name}</p>
@@ -1105,13 +1105,13 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         {/* Daily Reward */}
         {!dailyCollected && (
           <motion.button whileTap={{ scale: 0.95 }} onClick={collectDaily}
-            className="w-full py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold mb-2">
+            className="w-full py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold mb-1.5">
             \uD83C\uDF81 Recompensa Diaria - Clica para reclamar!
           </motion.button>
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${

@@ -94,6 +94,7 @@ const ALL_GAMES: GameDef[] = [
   { id: "fruitninja", label: "Fruta Ninja", emoji: "\uD83C\uDF4E", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
   { id: "typingracer", label: "Corrida de Digitacao", emoji: "\u26A1", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
   { id: "campaignrpg", label: "Campanha RPG", emoji: "\u2694\uFE0F", desc: "5 mundos epicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!", grad: "from-yellow-600 to-red-700", category: "RPG", players: "Solo / PVP", icon: Shield, hasBot: true },
+  { id: "mmorpg", label: "MMORPG Bateu", emoji: "\uD83C\uDF0D", desc: "Mundo persistente multijogador! Duelos PVP reais, economia P2P, chat global, ranking e World Boss!", grad: "from-blue-600 to-purple-700", category: "RPG", players: "Multiplayer", icon: Globe, hasBot: false },
 ];
 
 const CATEGORIES = [
@@ -115,6 +116,7 @@ const CATEGORIES = [
   { id: "Acao", label: "Acao", emoji: "\uD83D\uDCA5" },
   { id: "Digitacao", label: "Digitacao", emoji: "\u2328\uFE0F" },
   { id: "Campanha", label: "Campanha", emoji: "\uD83C\uDFD5\uFE0F" },
+  { id: "MMORPG", label: "MMORPG", emoji: "\uD83C\uDF0D" },
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };

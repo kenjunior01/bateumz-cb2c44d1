@@ -807,6 +807,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.fruitninja.desc": "Slice fruits and avoid bombs!",
     "livehub.game.typingracer": "Typing Racer",
     "livehub.game.typingracer.desc": "Car race with WPM!",
+    "livehub.game.mmorpg": "MMORPG Bateu",
+    "livehub.game.mmorpg.desc": "Mundo persistente! Duelos PVP, economia P2P, chat global!",
 
     // Common / App
     "app.errorTitle": "Something went wrong",
@@ -1781,6 +1783,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.fruitninja.desc": "Corte frutas e evite bombas!",
     "livehub.game.typingracer": "Corrida de Digitacao",
     "livehub.game.typingracer.desc": "Corrida de carros com WPM!",
+    "livehub.game.mmorpg": "MMORPG Bateu",
+    "livehub.game.mmorpg.desc": "Mundo persistente! Duelos PVP, economia P2P, chat global!",
 
     // Common / App
     "app.errorTitle": "Algo correu mal",
@@ -2631,6 +2635,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.fruitninja.desc": "Corte frutas e evite bombas!",
     "livehub.game.typingracer": "Corrida de Digitação",
     "livehub.game.typingracer.desc": "Corrida de carros com WPM!",
+    "livehub.game.mmorpg": "MMORPG Bateu",
+    "livehub.game.mmorpg.desc": "Mundo persistente! Duelos PVP, economia P2P, chat global!",
 
     // Common / App
     "app.errorTitle": "Algo correu mal",

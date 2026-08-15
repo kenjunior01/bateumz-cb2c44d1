@@ -420,6 +420,15 @@ const LiveHub = () => {
     }
   }, [gameFromUrl]);
 
+  // Auto-scroll to game content on mobile when game changes
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setTimeout(() => {
+        document.getElementById('game-content-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [active]);
+
   const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
     setLeaderboard((prev) => [
@@ -646,7 +655,7 @@ const LiveHub = () => {
           })}
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
+        <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
             <GameFullscreenWrapper gameName={activeMeta?.label ?? ""}>
             <AnimatePresence mode="wait">

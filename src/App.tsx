@@ -339,52 +339,10 @@ function AnimatedRoutes() {
 }
 
 const AppContent = () => {
-  const [showLoading, setShowLoading] = useState(true);
-  const { loading: configLoading } = useRegionalContext();
-  const { user, loading: authLoading } = useAuth();
-  const location = useLocation();
-  const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoading(false);
-    }, 4000);
-
-    if (!configLoading) {
-      const quickTimer = setTimeout(() => {
-        setShowLoading(false);
-      }, 1800);
-      return () => { clearTimeout(timer); clearTimeout(quickTimer); };
-    }
-
-
-    return () => clearTimeout(timer);
-  }, [configLoading]);
-
-  if (showLoading && !isOverlay) {
-    return <LoadingScreen />;
-  }
-
   return (
     <TooltipProvider>
-      {!isOverlay && <><Toaster /><Sonner /><BackgroundDecorations /></>}
       <BrowserRouter>
-        {!isOverlay && <>
-          {!authLoading && user && <PushNotificationBanner />}
-          <MobileNavProvider>
-            <MobileTopBar />
-            <MobileMenuDrawer />
-            <BottomTabBar />
-            <RecentPagesTracker />
-          </MobileNavProvider>
-        </>}
-        <AnimatedRoutes />
-        {!isOverlay && <><MascotBuddy />
-        <SupportChatbot />
-        <NotificationBell />
-        <RegionalPreviewBar />
-        <WorldSwitcher />
-        <LivePulseBar /></>}
+        <AppShell />
       </BrowserRouter>
     </TooltipProvider>
   );
@@ -427,6 +385,48 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
     }
     return this.props.children;
   }
+}
+
+// Inside BrowserRouter — safe to use useLocation, useAuth, etc.
+function AppShell() {
+  const location = useLocation();
+  const [showLoading, setShowLoading] = useState(true);
+  const { loading: configLoading } = useRegionalContext();
+  const { user, loading: authLoading } = useAuth();
+  const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoading(false), 4000);
+    if (!configLoading) {
+      const quickTimer = setTimeout(() => setShowLoading(false), 1800);
+      return () => { clearTimeout(timer); clearTimeout(quickTimer); };
+    }
+    return () => clearTimeout(timer);
+  }, [configLoading]);
+
+  if (showLoading && !isOverlay) return <LoadingScreen />;
+
+  return (
+    <>
+      {!isOverlay && <><Toaster /><Sonner /><BackgroundDecorations /></>}
+      {!isOverlay && <>
+        {!authLoading && user && <PushNotificationBanner />}
+        <MobileNavProvider>
+          <MobileTopBar />
+          <MobileMenuDrawer />
+          <BottomTabBar />
+          <RecentPagesTracker />
+        </MobileNavProvider>
+      </>}
+      <AnimatedRoutes />
+      {!isOverlay && <><MascotBuddy />
+      <SupportChatbot />
+      <NotificationBell />
+      <RegionalPreviewBar />
+      <WorldSwitcher />
+      <LivePulseBar /></>}
+    </>
+  );
 }
 
 const App = () => (

@@ -13,6 +13,7 @@ import GlowOrb from '@/components/ui/GlowOrb';
 import ParticleTrail from '@/components/ui/ParticleTrail';
 import ButtonRipple from '@/components/ui/ButtonRipple';
 import ShimmerText from '@/components/ui/ShimmerText';
+import ScrollReveal from '@/components/ui/ScrollReveal';
 
 const NAV_ITEMS = [
   { icon: Ticket, label: 'Sorteios', path: '/marketplace' },
@@ -239,9 +240,11 @@ export default function SorteiosLayout() {
         spread={20}
       />
       <div className="h-14" />
+      <ScrollReveal direction='up' delay={100}>
       <main className="relative z-10">
         <Outlet />
       </main>
+      </ScrollReveal>
     </div>
   );
 }

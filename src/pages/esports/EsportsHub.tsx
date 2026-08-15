@@ -39,6 +39,7 @@ import ParticleField from '@/components/ui/ParticleField';
 import ButtonRipple from '@/components/ui/ButtonRipple';
 import { fadeInUp, staggerContainer, neonPulse } from '@/lib/animation-utilities';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+import ScrollReveal from '@/components/ui/ScrollReveal';
 
 const sb: any = supabase;
 
@@ -312,6 +313,7 @@ export default function EsportsHub() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Coluna Principal */}
+          <ScrollReveal direction='left' delay={50}>
           <div className="lg:col-span-2 space-y-6">
             {/* Banner de Destaque */}
             {destaque && (
@@ -615,8 +617,10 @@ export default function EsportsHub() {
               </motion.div>
             )}
           </div>
+          </ScrollReveal>
 
           {/* Coluna Lateral */}
+          <ScrollReveal direction='right' delay={150}>
           <div className="space-y-6">
             {/* Proximos Jogos */}
             <motion.div
@@ -874,6 +878,7 @@ export default function EsportsHub() {
               </CardTilt>
             </motion.div>
           </div>
+          </ScrollReveal>
         </div>
       </div>
     </div>

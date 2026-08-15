@@ -13,6 +13,7 @@ import GlowOrb from '@/components/ui/GlowOrb';
 import ParticleField from '@/components/ui/ParticleField';
 import CardTilt from '@/components/ui/CardTilt';
 import ShimmerText from '@/components/ui/ShimmerText';
+import ScrollReveal from '@/components/ui/ScrollReveal';
 
 const NAV_ITEMS = [
   { icon: Gamepad2, label: 'Todos os Jogos', path: '/jogos' },
@@ -242,6 +243,7 @@ export default function JogosLayout() {
       />
 
       <div className="h-14" />
+      <ScrollReveal direction='up' delay={100}>
       <main className="relative z-10">
         <CardTilt
           className="w-full"
@@ -253,6 +255,7 @@ export default function JogosLayout() {
           <Outlet />
         </CardTilt>
       </main>
+      </ScrollReveal>
     </div>
   );
 }

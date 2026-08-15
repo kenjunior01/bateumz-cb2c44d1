@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { sfx } from "@/lib/sound-engine";
 
 export type PageTransitionVariant =
   | 'default'
@@ -64,11 +65,26 @@ export default function PageTransition({ children, variant = 'default', classNam
   const location = useLocation();
   const isGlitch = variant === 'glitch';
   const glitchLabel = location.pathname.replace(/^\//, '').charAt(0).toUpperCase() || 'P';
+  const hasPlayedSound = useRef(false);
   const combinedClassName = [
     className,
     'text-reveal',
     isGlitch ? 'glitch-text' : '',
   ].filter(Boolean).join(' ');
+
+  // Play subtle transition sound on page enter
+  useEffect(() => {
+    if (!hasPlayedSound.current) {
+      hasPlayedSound.current = true;
+      try { sfx.transition(); } catch {}
+      // Slightly louder pageLoad for hero-type transitions
+      if (variant === 'hero') {
+        setTimeout(() => { try { sfx.pageLoad(); } catch {} }, 150);
+      }
+    }
+    return () => { hasPlayedSound.current = false; };
+  }, [location.pathname, variant]);
+
   return (
     <motion.div
       variants={v}
@@ -77,6 +93,9 @@ export default function PageTransition({ children, variant = 'default', classNam
       exit="exit"
       className={combinedClassName}
       style={{ animationDelay: `${delay}s` }}
+      onAnimationStart={() => {
+        try { sfx.sectionReveal(); } catch {}
+      }}
       {...(isGlitch ? { 'data-text': glitchLabel } : {})}
     >
       {children}

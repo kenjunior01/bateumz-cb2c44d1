@@ -33,6 +33,7 @@ import GlowOrb from '@/components/ui/GlowOrb';
 import ParticleField from '@/components/ui/ParticleField';
 import TypingText from '@/components/ui/TypingText';
 import NeonBorder from '@/components/ui/NeonBorder';
+import ScrollReveal from '@/components/ui/ScrollReveal';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
 import { fadeInUp, staggerContainer, cardHover, microShake } from '@/lib/animation-utilities';
 
@@ -671,6 +672,7 @@ export default function Index() {
         <AnimatedSection className="relative py-16 sm:py-24" style={{ background: `radial-gradient(ellipse 50% 40% at 50% 50%, rgba(251,191,36,0.04), transparent), linear-gradient(180deg, #050508, #080810, #050508)` }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             {/* Stats Row */}
+            <ScrollReveal direction='up' blur={4} scale={0.98}>
             <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-4"} gap-4 mb-12`}>
               {[
                 { icon: Users, value: 48500, suffix: "+", label: "Utilizadores Registados", color: CYAN },
@@ -688,10 +690,13 @@ export default function Index() {
                 );
               })}
             </div>
+            </ScrollReveal>
 
+            <ScrollReveal direction='left' delay={0}>
             <WinnersSection />
             <div className="mt-8"><LiveFeed /></div>
             <div className="mt-8"><TrustSignals /></div>
+            </ScrollReveal>
           </div>
         </AnimatedSection>
 
@@ -760,19 +765,25 @@ export default function Index() {
       </main>
 
       {/* ═══════════ CATEGORY NAV ═══════════ */}
+      <ScrollReveal direction='up' delay={100}>
       <CategoryNav />
+      </ScrollReveal>
 
       {/* ═══════════ ACTIVE RAFFLES (existing component) ═══════════ */}
       <AnimatedSection className="py-12 sm:py-16" style={{ background: `linear-gradient(180deg, #050508, #08060f)` }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <ScrollReveal direction='right' delay={0}>
           <ActiveRaffles />
+          </ScrollReveal>
         </div>
       </AnimatedSection>
 
       {/* ═══════════ POPULAR LEADERBOARD ═══════════ */}
       <AnimatedSection className="py-12 sm:py-16" style={{ background: `linear-gradient(180deg, #08060f, #050508)` }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <ScrollReveal direction='up' delay={200}>
           <PopularLeaderboard />
+          </ScrollReveal>
         </div>
       </AnimatedSection>
 

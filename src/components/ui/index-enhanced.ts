@@ -16,3 +16,4 @@ export { default as ShimmerText } from './ShimmerText';
 export { default as NeonBorder } from './NeonBorder';
 export { default as TypingText } from './TypingText';
 export { default as EnergyWave } from './EnergyWave';
+export { default as ScrollReveal, ScrollRevealGroup } from './ScrollReveal';

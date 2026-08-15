@@ -9,6 +9,7 @@ import { COUNTRIES } from "@/lib/regions";
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
+import HolographicCard from '@/components/ui/HolographicCard';
 
 interface GameDef {
   id: string;
@@ -327,37 +328,43 @@ const AllGames = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ ...SPRING, delay: Math.min(i, 18) * 0.03 }}
               >
-                <Link
-                  to={`/lives?game=${game.id}`}
-                  className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow"
-                  style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
-                  onClick={() => sfx.click()}
+                <HolographicCard
+                  glowColor="#2ea043"
+                  intensity="medium"
+                  className="block"
                 >
-                  <div className={`h-1.5 bg-gradient-to-r ${game.grad}`} />
-                  <div className="p-3 md:p-4">
-                    <div className={`game-visual inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${game.grad} mb-3 text-xl shadow-lg`}>
-                      {game.emoji}
-                    </div>
-                    <h3 className="text-sm font-bold leading-tight mb-1 line-clamp-1">{game.label}</h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{game.desc}</p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
-                        {game.players}
-                      </span>
-                      {game.hasBot && (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "hsl(220 60% 40% / 0.15)", color: "hsl(220 60% 40%)" }}>
-                          Bot IA
+                  <Link
+                    to={`/lives?game=${game.id}`}
+                    className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl"
+                    style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
+                    onClick={() => sfx.click()}
+                  >
+                    <div className={`h-1.5 bg-gradient-to-r ${game.grad} rounded-t-xl`} />
+                    <div className="p-3 md:p-4">
+                      <div className={`game-visual inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${game.grad} mb-3 text-xl shadow-lg`}>
+                        {game.emoji}
+                      </div>
+                      <h3 className="text-sm font-bold leading-tight mb-1 line-clamp-1">{game.label}</h3>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{game.desc}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
+                          {game.players}
                         </span>
-                      )}
+                        {game.hasBot && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "hsl(220 60% 40% / 0.15)", color: "hsl(220 60% 40%)" }}>
+                            Bot IA
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-3 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <span className="text-[10px] text-muted-foreground/50">{game.category}</span>
+                        <motion.span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: THEME_P }}>
+                          Jogar <ChevronRight className="h-3 w-3" />
+                        </motion.span>
+                      </div>
                     </div>
-                    <div className="mt-3 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                      <span className="text-[10px] text-muted-foreground/50">{game.category}</span>
-                      <motion.span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: THEME_P }}>
-                        Jogar <ChevronRight className="h-3 w-3" />
-                      </motion.span>
-                    </div>
-                  </div>
-                </Link>
+                  </Link>
+                </HolographicCard>
               </motion.div>
             ))}
           </motion.div>

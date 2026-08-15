@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useState, useEffect, useRef, useCallback } from "react";
 import bateuLogo from "@/assets/bateu-logo.png";
+import { sfx } from "@/lib/sound-engine";
 
 const SHAPES = ["\u25C6", "\u25C7", "\u25B2", "\u25B3", "\u25CF", "\u25CB", "\u25A0", "\u25A1"] as const;
 const COLORS = ["#009140", "#FFD700", "#D7263D", "#6366f1", "#06b6d4", "#f59e0b"];
@@ -198,13 +199,92 @@ const LoadingScreen = () => {
   const progressWidth = useTransform(progressMotion, [0, 100], ["0%", "100%"]);
 
   const TIPS = [
-    "Preparing the games...",
-    "Loading 60+ interactive games...",
-    "Connecting to the server...",
-    "Setting up your experience...",
-    "Almost ready...",
-    "Starting the game engine...",
+    "Preparando os jogos...",
+    "Carregando 68+ jogos interativos...",
+    "Conectando ao servidor...",
+    "Preparando sua experiencia...",
+    "Quase pronto...",
+    "Iniciando o motor de jogos...",
   ];
+
+  // Energy burst effect when near completion
+  const burstCanvasRef = useRef<HTMLCanvasElement>(null);
+  const burstActiveRef = useRef(false);
+  const burstParticlesRef = useRef<Array<{x:number;y:number;vx:number;vy:number;size:number;color:string;life:number;maxLife:number}>>([]);
+
+  const triggerBurst = useCallback(() => {
+    if (burstActiveRef.current) return;
+    burstActiveRef.current = true;
+    try { sfx.levelUp(); } catch {}
+
+    const canvas = burstCanvasRef.current;
+    if (!canvas) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    for (let i = 0; i < 80; i++) {
+      const angle = (i / 80) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 3 + Math.random() * 8;
+      burstParticlesRef.current.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 4,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        life: 0,
+        maxLife: 40 + Math.random() * 40,
+      });
+    }
+
+    const burstLoop = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const pts = burstParticlesRef.current;
+      let alive = false;
+      for (let i = pts.length - 1; i >= 0; i--) {
+        const p = pts[i];
+        p.life++;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        const ratio = 1 - p.life / p.maxLife;
+        if (ratio <= 0) { pts.splice(i, 1); continue; }
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = ratio;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * ratio, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (alive) requestAnimationFrame(burstLoop);
+      else burstActiveRef.current = false;
+    };
+    requestAnimationFrame(burstLoop);
+  }, []);
+
+  useEffect(() => {
+    if (progress >= 98 && !burstActiveRef.current) {
+      triggerBurst();
+    }
+  }, [progress, triggerBurst]);
+
+  // Resize burst canvas
+  useEffect(() => {
+    const canvas = burstCanvasRef.current;
+    if (!canvas) return;
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
 
   useEffect(() => {
@@ -232,6 +312,7 @@ const LoadingScreen = () => {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }} />
+      <canvas ref={burstCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 8 }} />
 
       <GridOverlay />
 

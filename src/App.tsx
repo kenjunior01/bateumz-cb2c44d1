@@ -149,6 +149,7 @@ import RecentPagesTracker from "./components/mobile/RecentPagesTracker.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
 import Wallet from "./pages/Wallet.tsx";
 import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
+import LivePulseBar from "./components/LivePulseBar.tsx";
 
 // New live entertainment pages
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
@@ -382,7 +383,8 @@ const AppContent = () => {
         <SupportChatbot />
         <NotificationBell />
         <RegionalPreviewBar />
-        <WorldSwitcher /></>}
+        <WorldSwitcher />
+        <LivePulseBar /></>}
       </BrowserRouter>
     </TooltipProvider>
   );

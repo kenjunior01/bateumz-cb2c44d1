@@ -180,21 +180,21 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
   const phaseRef = useRef<GamePhase>("idle");
   const modeRef = useRef<GameMode>("bot");
   const difficultyRef = useRef<BotDifficulty>("medio");
+  const onScoreRef = useRef(onScore);
+  const p1NameRef = useRef(p1Name);
+  const p2NameRef = useRef(p2Name);
 
   // Bot AI refs
   const botTargetRef = useRef<number>(CANVAS_H / 2);
   const botLastUpdateRef = useRef<number>(0);
   const botMovingRef = useRef<boolean>(true);
 
-  useEffect(() => {
-    modeRef.current = mode;
-  }, [mode]);
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-  useEffect(() => {
-    difficultyRef.current = difficulty;
-  }, [difficulty]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
+  useEffect(() => { onScoreRef.current = onScore; }, [onScore]);
+  useEffect(() => { p1NameRef.current = p1Name; }, [p1Name]);
+  useEffect(() => { p2NameRef.current = p2Name; }, [p2Name]);
 
   const resetBall = useCallback((direction: 1 | -1) => {
     const b = ballRef.current;
@@ -405,10 +405,10 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       p2.score++;
       setP2Score(p2.score);
       if (p2.score >= WIN_SCORE) {
-        const w = modeRef.current === "bot" ? "Adversário IA" : p2Name;
+        const w = modeRef.current === "bot" ? "Adversário IA" : p2NameRef.current;
         setWinner(w);
         setPhase("done");
-        onScore?.(w, p2.score);
+        onScoreRef.current?.(w, p2.score);
         confetti({
           particleCount: 100,
           spread: 70,
@@ -422,9 +422,10 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       p1.score++;
       setP1Score(p1.score);
       if (p1.score >= WIN_SCORE) {
-        setWinner(p1Name);
+        const n = p1NameRef.current;
+        setWinner(n);
         setPhase("done");
-        onScore?.(p1Name, p1.score);
+        onScoreRef.current?.(n, p1.score);
         confetti({
           particleCount: 100,
           spread: 70,
@@ -434,7 +435,7 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         resetBall(-1);
       }
     }
-  }, [botAI, onScore, p1Name, p2Name, resetBall]);
+  }, [botAI, resetBall]);
 
   const gameLoop = useCallback(() => {
     const canvas = canvasRef.current;

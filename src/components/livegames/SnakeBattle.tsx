@@ -86,13 +86,21 @@ function randomFood(snake1: Snake, snake2: Snake): Point {
   const occupied = new Set<string>();
   for (const p of snake1.body) occupied.add(`${p.x},${p.y}`);
   for (const p of snake2.body) occupied.add(`${p.x},${p.y}`);
+  const totalCells = GRID_SIZE * GRID_SIZE;
+  if (occupied.size >= totalCells) {
+    // Board is full — return a fallback position (will cause game over naturally)
+    return { x: 0, y: 0 };
+  }
   let pt: Point;
+  let attempts = 0;
+  const maxAttempts = totalCells * 2;
   do {
     pt = {
       x: Math.floor(Math.random() * GRID_SIZE),
       y: Math.floor(Math.random() * GRID_SIZE),
     };
-  } while (occupied.has(`${pt.x},${pt.y}`));
+    attempts++;
+  } while (occupied.has(`${pt.x},${pt.y}`) && attempts < maxAttempts);
   return pt;
 }
 

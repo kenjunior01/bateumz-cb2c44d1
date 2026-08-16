@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard, Shield } from "lucide-react";
+import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard, Shield, Coins } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -95,6 +95,11 @@ const ALL_GAMES: GameDef[] = [
   { id: "fruitninja", label: "Fruta Ninja", emoji: "\uD83C\uDF4E", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
   { id: "typingracer", label: "Corrida de Digitacao", emoji: "\u26A1", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
   { id: "campaignrpg", label: "Campanha RPG", emoji: "\u2694\uFE0F", desc: "5 mundos epicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!", grad: "from-yellow-600 to-red-700", category: "RPG", players: "Solo / PVP", icon: Shield, hasBot: true },
+  { id: "p2pbet", label: "Arena de Apostas P2P", emoji: "\uD83D\uDCB0", desc: "Aposta contra outros jogadores! Estacas, desafios e grandes vitorias!", grad: "from-amber-500 to-yellow-400", category: "Apostas", players: "P2P / Bot", icon: Coins, hasBot: true },
+  { id: "ntchuva", label: "Ntchuva", emoji: "\u270B", desc: "Jogo tradicional mocambicano de reacao! Sera o mais rapido?", grad: "from-amber-600 to-red-700", category: "Mocambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
+  { id: "djikota", label: "Djikota", emoji: "\uD83C\uDFAF", desc: "Jogo de estrategia tradicional! Desafia os teus amigos.", grad: "from-green-600 to-teal-700", category: "Mocambicano", players: "1v1 / Bot", icon: Target, hasBot: true },
+  { id: "bicho", label: "Jogo do Bicho", emoji: "\uD83E\uDD8E", desc: "Classico jogo de apostas brasileiro! Adivinha o animal!", grad: "from-emerald-500 to-green-600", category: "Apostas", players: "1v1 / Bot", icon: Dices, hasBot: true },
+  { id: "uri", label: "Uri", emoji: "\uD83D\uDC46", desc: "Desafio rapido de reacao! Sera o mais veloz?", grad: "from-orange-500 to-red-600", category: "Mocambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
 ];
 
 const CATEGORIES = [
@@ -109,6 +114,7 @@ const CATEGORIES = [
   { id: "Palavras", label: "Palavras", emoji: "\ud83d\udc24" },
   { id: "Cartas", label: "Cartas", emoji: "\ud83c\udccf" },
   { id: "Variado", label: "Variado", emoji: "\ud83c\udfa3" },
+  { id: "Apostas", label: "Apostas", emoji: "\uD83D\uDCB0" },
   { id: "Mocambicano", label: "Mocambicano", emoji: "\ud83c\uddf2" },
   { id: "Indiano", label: "Indiano", emoji: "\uD83C\uDDEE\uD83C\uDDF3" },
   { id: "RPG", label: "RPG", emoji: "\u2694\uFE0F" },

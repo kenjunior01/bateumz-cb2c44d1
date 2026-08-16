@@ -134,7 +134,7 @@ const computeProbMap = (attack: Board): number[][] => {
   return prob;
 };
 
-const pickHighestProb = (prob: number[][]): [number, number] => {
+const pickHighestProb = (prob: number[][], attack: Board): [number, number] | undefined => {
   let maxVal = -1;
   let bestCells: [number, number][] = [];
   for (let r = 0; r < GRID; r++) {
@@ -147,7 +147,12 @@ const pickHighestProb = (prob: number[][]): [number, number] => {
       }
     }
   }
-  return bestCells[Math.floor(Math.random() * bestCells.length)];
+  if (bestCells.length > 0) {
+    return bestCells[Math.floor(Math.random() * bestCells.length)];
+  }
+  // Fallback: pick a random empty cell
+  const empty = getEmptyCells(attack);
+  return empty.length > 0 ? empty[Math.floor(Math.random() * empty.length)] : undefined;
 };
 
 /* ===== End AI Helpers ===== */
@@ -170,6 +175,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
   const [botThinking, setBotThinking] = useState(false);
   const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const botTargetRef = useRef<{ stack: [number, number][] }>({ stack: [] });
+  const botActiveRef = useRef(false);
 
   const countShips = (b: Board) => {
     let total = 0, hits = 0;
@@ -219,92 +225,100 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
 
   /* Bot AI effect */
   useEffect(() => {
-    if (!vsComputer || current !== 2 || gameOver || !gameStarted || botThinking) return;
+    if (!vsComputer || current !== 2 || gameOver || !gameStarted || botActiveRef.current) return;
+    botActiveRef.current = true;
     setBotThinking(true);
     botTimeoutRef.current = setTimeout(() => {
-      const attack = p2Attack.map(r => [...r]) as Board;
-      const enemy = p1Board.map(r => [...r]) as Board;
-      const target = botTargetRef.current;
+      try {
+        const attack = p2Attack.map(r => [...r]) as Board;
+        const enemy = p1Board.map(r => [...r]) as Board;
+        const target = botTargetRef.current;
 
-      let targetR: number, targetC: number;
+        let targetR: number, targetC: number;
 
-      if (difficulty === "facil") {
-        /* Random shot */
-        const empty = getEmptyCells(attack);
-        if (empty.length === 0) { setBotThinking(false); return; }
-        const pick = empty[Math.floor(Math.random() * empty.length)];
-        targetR = pick[0];
-        targetC = pick[1];
-      } else if (difficulty === "medio") {
-        /* Hunt / Target mode */
-        let found = false;
-        /* Try targets from stack first */
-        while (target.stack.length > 0) {
-          const [sr, sc] = target.stack[target.stack.length - 1];
-          if (attack[sr][sc] === "empty") {
-            targetR = sr;
-            targetC = sc;
-            found = true;
-            break;
-          }
-          target.stack.pop();
-        }
-        if (!found) {
-          /* Hunt mode: checkerboard parity */
+        if (difficulty === "facil") {
+          /* Random shot */
           const empty = getEmptyCells(attack);
-          if (empty.length === 0) { setBotThinking(false); return; }
-          const checker = empty.filter(([r, c]) => (r + c) % 2 === 0);
-          const pool = checker.length > 0 ? checker : empty;
-          const pick = pool[Math.floor(Math.random() * pool.length)];
+          if (empty.length === 0) { botActiveRef.current = false; setBotThinking(false); return; }
+          const pick = empty[Math.floor(Math.random() * empty.length)];
+          targetR = pick[0];
+          targetC = pick[1];
+        } else if (difficulty === "medio") {
+          /* Hunt / Target mode */
+          let found = false;
+          /* Try targets from stack first */
+          while (target.stack.length > 0) {
+            const [sr, sc] = target.stack[target.stack.length - 1];
+            if (attack[sr][sc] === "empty") {
+              targetR = sr;
+              targetC = sc;
+              found = true;
+              break;
+            }
+            target.stack.pop();
+          }
+          if (!found) {
+            /* Hunt mode: checkerboard parity */
+            const empty = getEmptyCells(attack);
+            if (empty.length === 0) { botActiveRef.current = false; setBotThinking(false); return; }
+            const checker = empty.filter(([r, c]) => (r + c) % 2 === 0);
+            const pool = checker.length > 0 ? checker : empty;
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+            targetR = pick[0];
+            targetC = pick[1];
+          }
+        } else {
+          /* Difícil: probability density map */
+          const prob = computeProbMap(attack);
+          const pick = pickHighestProb(prob, attack);
+          if (!pick) { botActiveRef.current = false; setBotThinking(false); return; }
           targetR = pick[0];
           targetC = pick[1];
         }
-      } else {
-        /* Difícil: probability density map */
-        const prob = computeProbMap(attack);
-        const pick = pickHighestProb(prob);
-        if (!pick) { setBotThinking(false); return; }
-        targetR = pick[0];
-        targetC = pick[1];
-      }
 
-      /* Resolve the shot */
-      const isHit = enemy[targetR][targetC] === "ship";
-      attack[targetR][targetC] = isHit ? "hit" : "miss";
-      if (isHit) enemy[targetR][targetC] = "hit";
+        /* Resolve the shot */
+        const isHit = enemy[targetR][targetC] === "ship";
+        attack[targetR][targetC] = isHit ? "hit" : "miss";
+        if (isHit) enemy[targetR][targetC] = "hit";
 
-      setP2Attack(attack);
-      setP1Board(enemy);
+        setP2Attack(attack);
+        setP1Board(enemy);
 
-      /* Update targeting for Médio */
-      if (difficulty === "medio" && isHit) {
-        const adj = getAdjacentEmpty(attack, targetR, targetC);
-        for (const cell of adj) {
-          target.stack.push(cell);
+        /* Update targeting for Médio */
+        if (difficulty === "medio" && isHit) {
+          const adj = getAdjacentEmpty(attack, targetR, targetC);
+          for (const cell of adj) {
+            target.stack.push(cell);
+          }
         }
-      }
 
-      /* Check game over */
-      const remaining = countShips(enemy).remaining;
-      if (remaining === 0) {
-        setGameOver(true);
-        setWinner(2);
-        setBotThinking(false);
-        setShowEnemy(true);
-        const winScore = 200 + (bet || 0);
-        onScore?.("Computador", winScore);
-        setScores(s => ({ ...s, p2: s.p2 + winScore }));
-        return;
-      }
+        /* Check game over */
+        const remaining = countShips(enemy).remaining;
+        if (remaining === 0) {
+          setGameOver(true);
+          setWinner(2);
+          botActiveRef.current = false;
+          setBotThinking(false);
+          setShowEnemy(true);
+          const winScore = 200 + (bet || 0);
+          onScore?.("Computador", winScore);
+          setScores(s => ({ ...s, p2: s.p2 + winScore }));
+          return;
+        }
 
-      setCurrent(1);
-      setTurnCount(t => t + 1);
+        setCurrent(1);
+        setTurnCount(t => t + 1);
+      } catch {
+        // Safety fallback: if AI throws, end turn
+        console.warn("Battleship bot error");
+      }
+      botActiveRef.current = false;
       setBotThinking(false);
     }, 500);
     return () => {
       if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
     };
-  }, [vsComputer, current, gameOver, gameStarted, botThinking, p1Board, p2Attack, difficulty, bet, onScore]);
+  }, [vsComputer, current, gameOver, gameStarted, p1Board, p2Attack, difficulty, bet, onScore]);
 
   const reset = () => {
     if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current);
@@ -314,6 +328,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
     setCurrent(1); setGameOver(false); setWinner(null);
     setTurnCount(0); setShowEnemy(false); setBet(0);
     setBotThinking(false);
+    botActiveRef.current = false;
     botTargetRef.current = { stack: [] };
   };
 

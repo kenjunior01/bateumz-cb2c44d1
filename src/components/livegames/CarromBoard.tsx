@@ -198,16 +198,44 @@ const CarromBoard = ({ onScore, liveCode }: Props) => {
   useEffect(() => {
     if (turn !== "bot" || gameOver) return;
     const timer = setTimeout(() => {
-      const targetCoin = coins.filter(c => !c.pocketed && c.color === botColor)[0]
-        || coins.filter(c => !c.pocketed)[0];
-      if (!targetCoin) return;
-      const sx = HALF + (Math.random() - 0.5) * 60;
-      const dx = targetCoin.x - sx;
-      const dy = targetCoin.y - (HALF + 130);
+      // Bot aiming: pick the best target coin
+      const availableCoins = coins.filter(c => !c.pocketed);
+      if (availableCoins.length === 0) return;
+
+      // Prefer queen first (high value), then own color
+      const queen = availableCoins.find(c => c.color === "queen");
+      const ownCoins = availableCoins.filter(c => c.color === botColor);
+      const targetCoin = queen || ownCoins[0] || availableCoins[0];
+
+      // Pick striker position: aim for a line from striker through target toward nearest pocket
+      const sx = HALF + (Math.random() - 0.5) * 40;
+      const strikerY = HALF + 130;
+
+      // Find the nearest pocket to the target coin for aiming through
+      let nearestPocket = POCKET_POS[0];
+      let minDist = Infinity;
+      for (const p of POCKET_POS) {
+        const d = dist(targetCoin, p);
+        if (d < minDist) { minDist = d; nearestPocket = p; }
+      }
+
+      // Calculate aim direction: toward a point slightly past the target in the pocket direction
+      const toPocketX = nearestPocket.x - targetCoin.x;
+      const toPocketY = nearestPocket.y - targetCoin.y;
+      const toPocketLen = Math.sqrt(toPocketX * toPocketX + toPocketY * toPocketY) || 1;
+      const aimX = targetCoin.x + (toPocketX / toPocketLen) * 15;
+      const aimY = targetCoin.y + (toPocketY / toPocketLen) * 15;
+
+      const dx = aimX - sx;
+      const dy = aimY - strikerY;
       const d = Math.sqrt(dx * dx + dy * dy);
-      const power = 4 + Math.random() * 3;
-      const jitter = 0.15;
-      setStriker({ x: sx, y: HALF + 130, vx: (dx / d) * power * (1 + (Math.random() - 0.5) * jitter), vy: (dy / d) * power * (1 + (Math.random() - 0.5) * jitter), active: true });
+      if (d === 0) return;
+
+      // Power based on distance (closer = less power needed)
+      const distToTarget = dist({ x: sx, y: strikerY }, targetCoin);
+      const power = Math.min(Math.max(distToTarget / 40, 3), 7);
+      const jitter = 0.08;
+      setStriker({ x: sx, y: strikerY, vx: (dx / d) * power * (1 + (Math.random() - 0.5) * jitter), vy: (dy / d) * power * (1 + (Math.random() - 0.5) * jitter), active: true });
     }, 800);
     return () => clearTimeout(timer);
   }, [turn, gameOver, coins]);

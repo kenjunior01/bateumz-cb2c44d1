@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import {
   Settings, Palette, Gamepad2, BarChart3, Users, Globe, Save, RefreshCw,
   Plus, ToggleLeft, ToggleRight, Zap, Shield, Crown, Eye, Megaphone,
-  TrendingUp, DollarSign, Activity, Radio
+  TrendingUp, DollarSign, Activity, Radio, Coins, Dices, Banknote, Percent
 } from "lucide-react";
+import { formatMoney, type SupportedCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,52 @@ import { supabase } from "@/integrations/supabase/client";
 const sb: any = supabase;
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
+
+const regionalGameData: Record<string, { games: { name: string; emoji: string; desc: string }[]; emoji: string; label: string }> = {
+  IN: { games: [
+    { name: 'Teen Patti', emoji: '🃏', desc: 'Jogo de cartas indiano popular, também conhecido como Flash' },
+    { name: 'Carrom', emoji: '⚪', desc: 'Jogo de tabuleiro de precisão com discos' },
+    { name: 'Kabaddi Raid', emoji: '🤼', desc: 'Simulação do desporto tradicional Kabaddi' },
+    { name: 'Ludo', emoji: '🎲', desc: 'Jogo de tabuleiro clássico para toda a família' },
+    { name: 'Uruse (Mancala)', emoji: '🫘', desc: 'Jogo de sementes tradicional indiano e africano' },
+  ], emoji: '🇮🇳', label: 'Jogos Indianos' },
+  BR: { games: [
+    { name: 'Bicho (Jogo do Bicho)', emoji: '🦎', desc: 'Jogo de sorteio popular brasileiro desde 1892' },
+    { name: 'Dominó', emoji: '♟️', desc: 'Jogo de dominó clássico brasileiro' },
+    { name: 'Truco', emoji: '🃏', desc: 'Jogo de cartas de bluff e estratégia' },
+  ], emoji: '🇧🇷', label: 'Jogos Brasileiros' },
+  MZ: { games: [
+    { name: 'Ntchuva', emoji: '🌧️', desc: 'Jogo de pedra e adivinhação moçambicano' },
+    { name: 'Chigogo', emoji: '🥥', desc: 'Jogo de tabuleiro com sementes tradicionais' },
+    { name: 'Urusse', emoji: '🫘', desc: 'Variante moçambicana do Mancala' },
+    { name: 'Mexerica', emoji: '🍊', desc: 'Jogo popular das ruas de Maputo' },
+    { name: 'Uri', emoji: '🧶', desc: 'Jogo tradicional de cordas e agilidade' },
+    { name: 'Capulana Quiz', emoji: '🧠', desc: 'Quiz sobre cultura e tradições moçambicanas' },
+    { name: 'Djikota', emoji: '🎯', desc: 'Jogo de mira e precisão tradicional' },
+  ], emoji: '🇲🇿', label: 'Jogos Moçambicanos' },
+  AO: { games: [
+    { name: 'Urusse', emoji: '🫘', desc: 'Variante angolana do jogo de sementes' },
+    { name: 'Dominó', emoji: '♟️', desc: 'Dominó clássico jogado em todo Angola' },
+    { name: 'Quimbar', emoji: '🥁', desc: 'Jogo de ritmo e tradição angolana' },
+  ], emoji: '🇦🇴', label: 'Jogos Angolanos' },
+  PT: { games: [
+    { name: 'Dominó', emoji: '♟️', desc: 'Dominó tradicional português' },
+    { name: 'Cartas', emoji: '🃏', desc: 'Jogos de cartas populares portugueses' },
+    { name: 'Bingo', emoji: '🎰', desc: 'Bingo clássico com estilo português' },
+  ], emoji: '🇵🇹', label: 'Jogos Portugueses' },
+  US: { games: [
+    { name: 'Chess', emoji: '♔', desc: 'Xadrez clássico' },
+    { name: 'Checkers', emoji: '♟️', desc: 'Damas tradicionais' },
+    { name: 'Battleship', emoji: '🚢', desc: 'Batalha Naval' },
+    { name: 'Connect 4', emoji: '🔴', desc: 'Liga 4 - estratégia e sorte' },
+  ], emoji: '🇺🇸', label: 'Classic Games' },
+  CA: { games: [
+    { name: 'Chess', emoji: '♔', desc: 'Xadrez clássico' },
+    { name: 'Checkers', emoji: '♟️', desc: 'Damas tradicionais' },
+    { name: 'Battleship', emoji: '🚢', desc: 'Batalha Naval' },
+    { name: 'Connect 4', emoji: '🔴', desc: 'Liga 4 - estratégia e sorte' },
+  ], emoji: '🇨🇦', label: 'Classic Games' },
+};
 
 export default function RegionalManagerPanel() {
   const { user, profile } = useAuth();
@@ -57,6 +104,25 @@ export default function RegionalManagerPanel() {
   });
 
   const [nativeGames, setNativeGames] = useState<any[]>([]);
+
+  const [betConfig, setBetConfig] = useState({
+    min_bet: 10,
+    max_bet: 10000,
+    default_bet: 50,
+    enable_p2p_betting: true,
+    enable_bot_betting: true,
+    commission_percent: 5,
+    regional_games_enabled: true,
+    featured_games: [] as string[],
+    min_withdrawal: 100,
+    auto_cashout_threshold: 5000,
+  });
+
+  const cc = (region?.country_code || 'MZ') as SupportedCurrency;
+  const countryGameData = regionalGameData[region?.country_code || ''];
+  const [regionalGames, setRegionalGames] = useState(
+    countryGameData?.games.map(g => ({ ...g, active: true })) || []
+  );
 
   const loadManagerData = useCallback(async () => {
     if (!user) return;
@@ -114,13 +180,52 @@ export default function RegionalManagerPanel() {
     setNativeGames(data || []);
   }, [region]);
 
+  const loadBetConfig = useCallback(async () => {
+    if (!region?.id) return;
+    try {
+      const { data } = await sb.from("regional_bet_config").select("*").eq("region_id", region.id).maybeSingle();
+      if (data) {
+        setBetConfig({
+          min_bet: data.min_bet ?? 10,
+          max_bet: data.max_bet ?? 10000,
+          default_bet: data.default_bet ?? 50,
+          enable_p2p_betting: data.enable_p2p_betting ?? true,
+          enable_bot_betting: data.enable_bot_betting ?? true,
+          commission_percent: data.commission_percent ?? 5,
+          regional_games_enabled: data.regional_games_enabled ?? true,
+          featured_games: data.featured_games ?? [],
+          min_withdrawal: data.min_withdrawal ?? 100,
+          auto_cashout_threshold: data.auto_cashout_threshold ?? 5000,
+        });
+      }
+    } catch {
+      const saved = localStorage.getItem(`bet_config_${region.id}`);
+      if (saved) setBetConfig(JSON.parse(saved));
+    }
+  }, [region]);
+
+  const loadRegionalGames = useCallback(async () => {
+    if (!region?.id) return;
+    try {
+      const { data } = await sb.from("regional_games_config").select("*").eq("region_id", region.id).maybeSingle();
+      if (data?.games) {
+        setRegionalGames(typeof data.games === 'string' ? JSON.parse(data.games) : data.games);
+      }
+    } catch {
+      const saved = localStorage.getItem(`regional_games_${region.id}`);
+      if (saved) setRegionalGames(JSON.parse(saved));
+    }
+  }, [region]);
+
   useEffect(() => {
     loadManagerData();
     loadRegionStats();
     loadBranding();
     loadSettings();
     loadNativeGames();
-  }, [loadManagerData, loadRegionStats, loadBranding, loadSettings, loadNativeGames]);
+    loadBetConfig();
+    loadRegionalGames();
+  }, [loadManagerData, loadRegionStats, loadBranding, loadSettings, loadNativeGames, loadBetConfig, loadRegionalGames]);
 
   const handleSaveBranding = async () => {
     setSaving(true);
@@ -182,11 +287,44 @@ export default function RegionalManagerPanel() {
     setSaving(false);
   };
 
+  const handleSaveBetConfig = async () => {
+    setSaving(true);
+    try {
+      const payload = { ...betConfig, region_id: region?.id, updated_at: new Date().toISOString() };
+      const { error } = await sb.from("regional_bet_config").upsert(payload, { onConflict: "region_id" });
+      if (error) throw error;
+      localStorage.setItem(`bet_config_${region?.id}`, JSON.stringify(betConfig));
+      toast.success("Configuração de apostas salva com sucesso");
+    } catch {
+      localStorage.setItem(`bet_config_${region?.id}`, JSON.stringify(betConfig));
+      toast.success("Configuração de apostas salva localmente");
+    }
+    setSaving(false);
+  };
+
+  const handleSaveRegionalGames = async () => {
+    setSaving(true);
+    try {
+      const payload = { region_id: region?.id, games: regionalGames, updated_at: new Date().toISOString() };
+      const { error } = await sb.from("regional_games_config").upsert(payload, { onConflict: "region_id" });
+      if (error) throw error;
+      localStorage.setItem(`regional_games_${region?.id}`, JSON.stringify(regionalGames));
+      toast.success("Jogos regionais salvos com sucesso");
+    } catch {
+      localStorage.setItem(`regional_games_${region?.id}`, JSON.stringify(regionalGames));
+      toast.success("Jogos regionais salvos localmente");
+    }
+    setSaving(false);
+  };
+
+  const activeBetsCount = regionalGames.filter(g => g.active).length;
+
   const statCards = [
     { icon: Users, label: t("regional.users"), value: regionStats.users, color: "from-blue-500 to-cyan-400" },
     { icon: Gamepad2, label: t("regional.totalGames"), value: regionStats.games, color: "from-violet-500 to-purple-400" },
     { icon: Radio, label: t("regional.activeLives"), value: regionStats.lives, color: "from-red-500 to-orange-400" },
     { icon: DollarSign, label: t("regional.revenue"), value: regionStats.revenue, color: "from-emerald-500 to-green-400" },
+    { icon: Coins, label: "Apostas Activas", value: activeBetsCount, color: "from-amber-500 to-yellow-400" },
   ];
 
   const countryInfo = COUNTRIES.find((c) => c.code === region?.country_code);
@@ -216,12 +354,12 @@ export default function RegionalManagerPanel() {
                 )}
               </div>
             </div>
-            <Button variant="outline" className="gap-2" onClick={() => { loadRegionStats(); loadBranding(); loadSettings(); loadNativeGames(); }}>
+            <Button variant="outline" className="gap-2" onClick={() => { loadRegionStats(); loadBranding(); loadSettings(); loadNativeGames(); loadBetConfig(); loadRegionalGames(); }}>
               <RefreshCw className="w-4 h-4" /> {t("regional.panel.refresh")}
             </Button>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
             {statCards.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...SPRING, delay: 0.15 + i * 0.05 }} className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4">
                 <div className={"flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br " + s.color + " mb-2"}>
@@ -242,6 +380,8 @@ export default function RegionalManagerPanel() {
             <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-background"><Settings className="w-4 h-4" /> {t("regional.panel.settings")}</TabsTrigger>
             <TabsTrigger value="games" className="gap-2 data-[state=active]:bg-background"><Gamepad2 className="w-4 h-4" /> {t("regional.panel.nativeGames")}</TabsTrigger>
             <TabsTrigger value="announcement" className="gap-2 data-[state=active]:bg-background"><Megaphone className="w-4 h-4" /> {t("regional.panel.announcements")}</TabsTrigger>
+            <TabsTrigger value="apostas" className="gap-2 data-[state=active]:bg-background"><Coins className="w-4 h-4" /> Apostas</TabsTrigger>
+            <TabsTrigger value="regional_games" className="gap-2 data-[state=active]:bg-background"><Dices className="w-4 h-4" /> Jogos Regionais</TabsTrigger>
           </TabsList>
 
           <TabsContent value="branding">
@@ -411,6 +551,155 @@ export default function RegionalManagerPanel() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="apostas">
+            <div className="space-y-6">
+              <Card className="neon-border">
+                <CardHeader><CardTitle className="flex items-center gap-2"><Coins className="w-5 h-5" /> Configuração de Apostas</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label>Aposta Mínima</Label>
+                      <div className="relative">
+                        <Input type="number" value={betConfig.min_bet} onChange={(e) => setBetConfig((p) => ({ ...p, min_bet: Number(e.target.value) }))} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{formatMoney(betConfig.min_bet, cc)}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Aposta Máxima</Label>
+                      <div className="relative">
+                        <Input type="number" value={betConfig.max_bet} onChange={(e) => setBetConfig((p) => ({ ...p, max_bet: Number(e.target.value) }))} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{formatMoney(betConfig.max_bet, cc)}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Aposta Padrão</Label>
+                      <div className="relative">
+                        <Input type="number" value={betConfig.default_bet} onChange={(e) => setBetConfig((p) => ({ ...p, default_bet: Number(e.target.value) }))} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{formatMoney(betConfig.default_bet, cc)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Saque Mínimo</Label>
+                      <div className="relative">
+                        <Input type="number" value={betConfig.min_withdrawal} onChange={(e) => setBetConfig((p) => ({ ...p, min_withdrawal: Number(e.target.value) }))} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{formatMoney(betConfig.min_withdrawal, cc)}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Auto Cashout (limite)</Label>
+                      <div className="relative">
+                        <Input type="number" value={betConfig.auto_cashout_threshold} onChange={(e) => setBetConfig((p) => ({ ...p, auto_cashout_threshold: Number(e.target.value) }))} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{formatMoney(betConfig.auto_cashout_threshold, cc)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {[
+                    { key: "enable_p2p_betting" as const, label: "Apostas P2P", desc: "Permitir apostas entre utilizadores directamente" },
+                    { key: "enable_bot_betting" as const, label: "Apostas com Bots", desc: "Bots preenchem mesas quando necessário" },
+                    { key: "regional_games_enabled" as const, label: "Jogos Regionais", desc: "Activar jogos tradicionais da região" },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-card/30 hover:bg-card/50 transition-colors">
+                      <div>
+                        <p className="text-sm font-semibold">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
+                      </div>
+                      <Switch checked={betConfig[item.key]} onCheckedChange={(v) => setBetConfig((p) => ({ ...p, [item.key]: v }))} />
+                    </div>
+                  ))}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2"><Percent className="w-4 h-4" /> Comissão ({betConfig.commission_percent}%)</Label>
+                      <span className="text-xs text-muted-foreground">0% – 20%</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="20" step="0.5"
+                      value={betConfig.commission_percent}
+                      onChange={(e) => setBetConfig((p) => ({ ...p, commission_percent: Number(e.target.value) }))}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary bg-muted"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}>
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+                  <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Banknote className="w-5 h-5" /> Pré-visualização da Aposta</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-card/50">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Aposta de exemplo</p>
+                        <p className="text-2xl font-bold">{formatMoney(betConfig.default_bet, cc)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground mb-1">Comissão ({betConfig.commission_percent}%)</p>
+                        <p className="text-lg font-semibold text-amber-500">-{formatMoney(betConfig.default_bet * (betConfig.commission_percent / 100), cc)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                      <span>Mín: {formatMoney(betConfig.min_bet, cc)}</span>
+                      <span>•</span>
+                      <span>Máx: {formatMoney(betConfig.max_bet, cc)}</span>
+                      <span>•</span>
+                      <span>Cashout auto: {formatMoney(betConfig.auto_cashout_threshold, cc)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveBetConfig} disabled={saving} className="gap-2">
+                  <Save className="w-4 h-4" /> {saving ? "A guardar..." : "Guardar Configuração de Apostas"}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="regional_games">
+            <div className="space-y-6">
+              {countryGameData ? (
+                <>
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-3xl">{countryGameData.emoji}</span>
+                      <div>
+                        <h3 className="text-lg font-bold">{countryGameData.label}</h3>
+                        <p className="text-sm text-muted-foreground">Popular em {countryInfo?.label || region?.label}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">Active ou desactive os jogos regionais disponíveis para a sua região.</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {regionalGames.map((game, i) => (
+                      <motion.div key={game.name} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: i * 0.05 }} className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-5 card-glow-hover">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{game.emoji}</span>
+                            <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + (game.active ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground")}>{game.active ? "Activo" : "Inactivo"}</span>
+                          </div>
+                          <Switch checked={game.active} onCheckedChange={(v) => setRegionalGames((prev) => prev.map((g: any) => g.name === game.name ? { ...g, active: v } : g))} />
+                        </div>
+                        <h4 className="font-bold mb-1">{game.name}</h4>
+                        <p className="text-xs text-muted-foreground">{game.desc}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-16">
+                  <Dices className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Sem jogos regionais configurados para esta região</p>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button onClick={handleSaveRegionalGames} disabled={saving} className="gap-2">
+                  <Save className="w-4 h-4" /> {saving ? "A guardar..." : "Guardar Jogos Regionais"}
+                </Button>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

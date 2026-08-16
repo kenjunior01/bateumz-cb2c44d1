@@ -173,6 +173,7 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
   const [botThinking, setBotThinking] = useState(false);
   const boardRef = useRef(board);
   boardRef.current = board;
+  const movesRef = useRef(0);
 
   const checkWin = (b: Board, row: number, col: number, player: 1 | 2): [number, number][] | null => {
     const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
@@ -199,7 +200,9 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
     newBoard[row][col] = player;
     setBoard(newBoard);
     setLastCol(col);
-    setMoves(m => m + 1);
+    const newMoves = movesRef.current + 1;
+    movesRef.current = newMoves;
+    setMoves(newMoves);
     const win = checkWin(newBoard, row, col, player);
     if (win) {
       setGameOver(true);
@@ -213,14 +216,14 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
       setScores(s => player === 1 ? { ...s, p1: s.p1 + winScore } : { ...s, p2: s.p2 + winScore });
       return newBoard;
     }
-    if (moves + 1 >= ROWS * COLS) {
+    if (newMoves >= ROWS * COLS) {
       setGameOver(true);
       setDraw(true);
       return newBoard;
     }
     setCurrent(player === 1 ? 2 : 1);
     return newBoard;
-  }, [gameMode, bet, moves, onScore]);
+  }, [gameMode, bet, onScore]);
 
   const dropPiece = (col: number) => {
     if (gameOver || botThinking) return;
@@ -248,7 +251,7 @@ const ConnectFourGame = ({ onScore, liveCode }: Props) => {
   const reset = () => {
     setBoard(Array.from({ length: ROWS }, () => Array(COLS).fill(0)));
     setCurrent(1); setGameOver(false); setWinner(null); setWinCells([]);
-    setDraw(false); setMoves(0); setLastCol(null); setBotThinking(false);
+    setDraw(false); setMoves(0); setLastCol(null); setBotThinking(false); movesRef.current = 0;
   };
 
   const switchMode = (mode: GameMode) => {

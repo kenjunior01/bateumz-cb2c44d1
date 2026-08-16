@@ -128,35 +128,49 @@ const chooseBotMove = (b: Board, difficulty: Difficulty): FullMove => {
   const allMoves = getAllMovesForPlayer(b, 2);
   if (allMoves.length === 0) throw new Error("no_moves");
 
-  if (difficulty === "facil" && Math.random() < 0.3) {
+  // Validate that the board state is sane (has bot pieces)
+  let hasBotPieces = false;
+  for (let r = 0; r < 8 && !hasBotPieces; r++)
+    for (let c = 0; c < 8 && !hasBotPieces; c++)
+      if (b[r]?.[c]?.player === 2) hasBotPieces = true;
+  if (!hasBotPieces) throw new Error("no_pieces");
+
+  try {
+    if (difficulty === "facil" && Math.random() < 0.3) {
+      return allMoves[Math.floor(Math.random() * allMoves.length)];
+    }
+
+    if (difficulty === "dificil") {
+      /* Look-ahead 1 move with positional evaluation */
+      const scored = allMoves.map(move => {
+        try {
+          const b1 = simulateMove(b, move);
+          const oppMoves = getAllMovesForPlayer(b1, 1);
+          if (oppMoves.length === 0) return { move, score: 10000 };
+          const oppMobility = oppMoves.length;
+          const boardScore = evaluateBoardFor(b1, 2);
+          const mobilityBonus = Math.max(0, 12 - oppMobility) * 3;
+          return { move, score: boardScore + mobilityBonus };
+        } catch {
+          return { move, score: 0 };
+        }
+      });
+      scored.sort((a, b) => b.score - a.score);
+      return scored[0].move;
+    }
+
+    /* Médio (or Fácil 70% of time): basic evaluation */
+    const scored = allMoves.map(move => ({ move, score: evaluateSingleMove(b, move) }));
+    scored.sort((a, b) => b.score - a.score);
+    if (difficulty === "facil") {
+      const top = scored.slice(0, Math.min(3, scored.length));
+      return top[Math.floor(Math.random() * top.length)].move;
+    }
+    return scored[0].move;
+  } catch {
+    // Fallback: return a random valid move if anything goes wrong
     return allMoves[Math.floor(Math.random() * allMoves.length)];
   }
-
-  if (difficulty === "dificil") {
-    /* Look-ahead 1 move with positional evaluation */
-    const scored = allMoves.map(move => {
-      const b1 = simulateMove(b, move);
-      const oppMoves = getAllMovesForPlayer(b1, 1);
-      if (oppMoves.length === 0) return { move, score: 10000 };
-      // Evaluate how many opponent moves are available (fewer = better for bot)
-      const oppMobility = oppMoves.length;
-      const boardScore = evaluateBoardFor(b1, 2);
-      // Bonus for limiting opponent mobility
-      const mobilityBonus = Math.max(0, 12 - oppMobility) * 3;
-      return { move, score: boardScore + mobilityBonus };
-    });
-    scored.sort((a, b) => b.score - a.score);
-    return scored[0].move;
-  }
-
-  /* Médio (or Fácil 70% of time): basic evaluation */
-  const scored = allMoves.map(move => ({ move, score: evaluateSingleMove(b, move) }));
-  scored.sort((a, b) => b.score - a.score);
-  if (difficulty === "facil") {
-    const top = scored.slice(0, Math.min(3, scored.length));
-    return top[Math.floor(Math.random() * top.length)].move;
-  }
-  return scored[0].move;
 };
 /* ===== End AI Helpers ===== */
 
@@ -286,7 +300,9 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
         if (!checkGameOver(newBoard, 1)) {
           setCurrent(1);
         }
-      } catch {
+      } catch (err) {
+        // Bot has no valid moves or encountered an error — player wins
+        console.warn("Bot move error:", err);
         setBotThinking(false);
         setGameOver(true);
         setWinner(1);

@@ -5570,7 +5570,55 @@ select:focus-visible {
   animation: micro-badge-pop 0.3s ease-out;
 }
 
-/* Cursor glow follow (applied via JS) */
+@property --nb-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes neon-border-spin {
+  to { --nb-angle: 360deg; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.neon-border-rotate {
+  background: conic-gradient(from var(--nb-angle), var(--nb-colors), var(--nb-color-0));
+}
+
+/* CSS-only ticker animation — no JS setState per frame */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-css-scroll {
+  animation: ticker-scroll 60s linear infinite;
+}
+.ticker-css-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Performance: force GPU layers on animated elements */
+.will-optimize {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Skip rendering off-screen sections until they're near viewport */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Disable all heavy transitions for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}/* Cursor glow follow (applied via JS) */
 .cursor-glow {
   pointer-events: none;
   position: fixed;
@@ -5583,3 +5631,6 @@ select:focus-visible {
   transition: left 0.3s ease-out, top 0.3s ease-out;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .cursor-glow { display: none; }
+}

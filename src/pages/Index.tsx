@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -6,14 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import StatsBar from "@/components/StatsBar";
 import CategoryNav from "@/components/CategoryNav";
-import ActiveRaffles from "@/components/ActiveRaffles";
-import WinnersSection from "@/components/WinnersSection";
 import Footer from "@/components/Footer";
-import TrustSignals from "@/components/TrustSignals";
-import LiveFeed from "@/components/LiveFeed";
-import PopularLeaderboard from "@/components/PopularLeaderboard";
-import WhyDifferent from "@/components/WhyDifferent";
-import ProvablyFair from "@/components/ProvablyFair";
+const ActiveRaffles = lazy(() => import("@/components/ActiveRaffles").then(m => ({ default: m.default })));
+const WinnersSection = lazy(() => import("@/components/WinnersSection").then(m => ({ default: m.default })));
+const TrustSignals = lazy(() => import("@/components/TrustSignals").then(m => ({ default: m.default })));
+const LiveFeed = lazy(() => import("@/components/LiveFeed").then(m => ({ default: m.default })));
+const PopularLeaderboard = lazy(() => import("@/components/PopularLeaderboard").then(m => ({ default: m.default })));
+const WhyDifferent = lazy(() => import("@/components/WhyDifferent").then(m => ({ default: m.default })));
+const ProvablyFair = lazy(() => import("@/components/ProvablyFair").then(m => ({ default: m.default })));
+
 import { Button } from "@/components/ui/button";
 import {
   Gamepad2, ArrowRight, Users, Brain,
@@ -22,7 +23,7 @@ import {
   Coins, Heart, Swords, Gift, Monitor, Globe,
   CheckCircle2,
 } from "lucide-react";
-import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import bateuLogo from "@/assets/bateu-logo.png";
 import ShimmerText from '@/components/ui/ShimmerText';
@@ -103,37 +104,48 @@ function CountingNumber({ target, suffix = "", duration = 2 }: { target: number;
 /* ─── Hero Particle Field ─── */
 function HeroParticles() {
   const colors = [CYAN, PURPLE, GREEN, GOLD];
+  const particles = useRef(
+    Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      color: colors[i % colors.length],
+      w: Math.random() * 3 + 1.5,
+      h: Math.random() * 3 + 1.5,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      dur: Math.random() * 5 + 4,
+      delay: Math.random() * 4,
+      yRange: Math.random() * 60 + 20,
+      xRange: Math.random() * 30 - 15,
+    }))
+  ).current;
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 30 }).map((_, i) => {
-        const color = colors[i % colors.length];
-        return (
-          <motion.div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              width: Math.random() * 4 + 1.5 + "px",
-              height: Math.random() * 4 + 1.5 + "px",
-              left: Math.random() * 100 + "%",
-              top: Math.random() * 100 + "%",
-              background: color,
-              boxShadow: `0 0 ${Math.random() * 8 + 4}px ${color}40`,
-            }}
-            animate={{
-              y: [0, -(Math.random() * 80 + 30), 0],
-              x: [0, (Math.random() * 50 - 25), 0],
-              opacity: [0, 0.8, 0],
-              scale: [0.3, 1.2, 0.3],
-            }}
-            transition={{
-              duration: Math.random() * 5 + 4,
-              repeat: Infinity,
-              delay: Math.random() * 4,
-              ease: "easeInOut",
-            }}
-          />
-        );
-      })}
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full will-optimize"
+          style={{
+            width: p.w + "px",
+            height: p.h + "px",
+            left: p.left + "%",
+            top: p.top + "%",
+            background: p.color,
+            boxShadow: `0 0 6px ${p.color}40`,
+          }}
+          animate={{
+            y: [0, -p.yRange, 0],
+            x: [0, p.xRange, 0],
+            opacity: [0, 0.7, 0],
+            scale: [0.3, 1.1, 0.3],
+          }}
+          transition={{
+            duration: p.dur,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -221,20 +233,10 @@ export default function Index() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { sfx } = useSoundEffects();
-  const [tickerOffset, setTickerOffset] = useState(0);
+
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const [confettiActive, setConfettiActive] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.92]);
-  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, -60]);
 
-  /* auto-scroll ticker */
-  useEffect(() => {
-    const interval = setInterval(() => setTickerOffset((p) => p - 1), 30);
-    return () => clearInterval(interval);
-  }, []);
 
   /* fetch live session count */
   const [liveNowCount, setLiveNowCount] = useState(0);
@@ -250,7 +252,7 @@ export default function Index() {
     return () => clearInterval(interval);
   }, []);
 
-  const doubledTicker = [...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS];
+  const quadrupledTicker = [...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS];
 
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ background: "#050508" }}>
@@ -259,7 +261,6 @@ export default function Index() {
 
       {/* ═══════════ HERO ═══════════ */}
       <motion.section
-        ref={heroRef}
         className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
         style={{
           background: `radial-gradient(ellipse 80% 60% at 20% 30%, ${CYAN}12 0%, transparent 60%),
@@ -284,18 +285,22 @@ export default function Index() {
         <HeroParticles />
 
         {/* Interactive Particle Field — mouse-reactive background */}
-        <ParticleField colors={[CYAN, PURPLE, DEEP_PURPLE, GREEN]} count={30} speed={0.2} enableConnections={false} enableMouseRepel={true} className="z-[1]" />
+        {!isMobile && (
+          <>
+            <ParticleField colors={[CYAN, PURPLE, DEEP_PURPLE, GREEN]} count={30} speed={0.2} enableConnections={false} enableMouseRepel={true} className="z-[1]" />
 
-        {/* Glow Orb — signature energy orb behind hero title */}
-        <div className="absolute top-[15%] left-1/2 -translate-x-1/2 z-[2] pointer-events-none">
-          <GlowOrb color={CYAN} secondaryColor={PURPLE} size={100} speed={10} intensity={0.5} orbitRadius={20} />
-        </div>
-        <div className="absolute top-[25%] right-[10%] z-[2] pointer-events-none">
-          <GlowOrb color={PURPLE} secondaryColor={CYAN} size={70} speed={14} intensity={0.4} orbitRadius={15} />
-        </div>
+            {/* Glow Orb — signature energy orb behind hero title */}
+            <div className="absolute top-[15%] left-1/2 -translate-x-1/2 z-[2] pointer-events-none">
+              <GlowOrb color={CYAN} secondaryColor={PURPLE} size={100} speed={10} intensity={0.5} orbitRadius={20} />
+            </div>
+            <div className="absolute top-[25%] right-[10%] z-[2] pointer-events-none">
+              <GlowOrb color={PURPLE} secondaryColor={CYAN} size={70} speed={14} intensity={0.4} orbitRadius={15} />
+            </div>
+          </>
+        )}
 
         {/* Hero content */}
-        <motion.div style={{ opacity: heroOpacity, scale: heroScale, y: heroY }} className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 text-center pt-24 pb-8">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 text-center pt-24 pb-8">
           {/* Logo */}
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="mb-6">
             <img src={bateuLogo} alt="Bateu" className="h-14 sm:h-18 mx-auto mb-4" style={{ filter: `drop-shadow(0 0 30px ${CYAN}30)` }} />
@@ -330,31 +335,32 @@ export default function Index() {
           <div className={`grid gap-4 sm:gap-6 ${isMobile ? "grid-cols-1 max-w-sm mx-auto" : "grid-cols-3"}`}>
             {GATEWAY_CARDS.map((card, i) => {
               const Icon = card.icon;
+              const cardContent = (
+                <Link to={card.href} className="group relative block rounded-2xl p-5 sm:p-6 overflow-hidden cursor-pointer transition-all duration-500" onClick={() => sfx.whoosh()} style={{
+                  background: card.gradient,
+                  border: `1px solid ${card.borderGlow}20`,
+                  boxShadow: activePillar === card.title ? `0 0 40px ${card.borderGlow}25, 0 20px 60px rgba(0,0,0,0.5)` : `0 8px 32px rgba(0,0,0,0.3)`,
+                }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${card.accentColor}15, transparent 70%)` }} />
+                  <span className="absolute top-3 right-3 text-[10px] font-black tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${card.accentColor}20`, color: card.accentColor, border: `1px solid ${card.accentColor}30` }}>{card.badge}</span>
+                  <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-500 group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${card.accentColor}20, ${card.secondaryColor}15)`, border: `1px solid ${card.accentColor}30`, boxShadow: `0 0 20px ${card.accentColor}15` }}>
+                    <Icon className="h-6 w-6" style={{ color: card.accentColor }} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-1 tracking-tight" style={{ color: card.accentColor }}>{card.title}</h3>
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">{card.subtitle}</p>
+                  <p className="text-sm text-zinc-400 leading-relaxed mb-4">{card.desc}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-zinc-500">{card.statLabel}</span>
+                    <div className="flex items-center gap-1 text-xs font-bold transition-all duration-300 group-hover:gap-2" style={{ color: card.accentColor }}>
+                      Explorar <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                  {!isMobile && <motion.div className="absolute inset-0 rounded-2xl pointer-events-none will-optimize" style={{ border: `1px solid ${card.accentColor}` }} animate={{ opacity: [0, 0.3, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.5 }} />}
+                </Link>
+              );
               return (
                 <motion.div key={card.title} custom={i} variants={scaleIn} initial="hidden" animate="visible" onHoverStart={() => setActivePillar(card.title)} onHoverEnd={() => setActivePillar(null)}>
-                  <CardTilt maxTilt={8} scaleOnHover={1.02} borderGlow={card.accentColor}>
-                  <Link to={card.href} className="group relative block rounded-2xl p-5 sm:p-6 overflow-hidden cursor-pointer transition-all duration-500" onClick={() => sfx.whoosh()} style={{
-                    background: card.gradient,
-                    border: `1px solid ${card.borderGlow}20`,
-                    boxShadow: activePillar === card.title ? `0 0 40px ${card.borderGlow}25, 0 20px 60px rgba(0,0,0,0.5)` : `0 8px 32px rgba(0,0,0,0.3)`,
-                  }}>
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${card.accentColor}15, transparent 70%)` }} />
-                    <span className="absolute top-3 right-3 text-[10px] font-black tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${card.accentColor}20`, color: card.accentColor, border: `1px solid ${card.accentColor}30` }}>{card.badge}</span>
-                    <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-500 group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${card.accentColor}20, ${card.secondaryColor}15)`, border: `1px solid ${card.accentColor}30`, boxShadow: `0 0 20px ${card.accentColor}15` }}>
-                      <Icon className="h-6 w-6" style={{ color: card.accentColor }} />
-                    </div>
-                    <h3 className="text-lg font-bold mb-1 tracking-tight" style={{ color: card.accentColor }}>{card.title}</h3>
-                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">{card.subtitle}</p>
-                    <p className="text-sm text-zinc-400 leading-relaxed mb-4">{card.desc}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-zinc-500">{card.statLabel}</span>
-                      <div className="flex items-center gap-1 text-xs font-bold transition-all duration-300 group-hover:gap-2" style={{ color: card.accentColor }}>
-                        Explorar <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-                      </div>
-                    </div>
-                    <motion.div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ border: `1px solid ${card.accentColor}` }} animate={{ opacity: [0, 0.3, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.5 }} />
-                  </Link>
-                  </CardTilt>
+                  {isMobile ? cardContent : <CardTilt maxTilt={8} scaleOnHover={1.02} borderGlow={card.accentColor}>{cardContent}</CardTilt>}
                 </motion.div>
               );
             })}
@@ -367,7 +373,7 @@ export default function Index() {
               <ChevronRight className="h-5 w-5 text-zinc-600 rotate-90" />
             </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
 
         {/* Confetti burst on CTA click */}
         <ConfettiBurst active={confettiActive} colors={[CYAN, PURPLE, GOLD, GREEN, DEEP_PURPLE]} particleCount={60} />
@@ -441,7 +447,7 @@ export default function Index() {
                   🌍
                 </motion.div>
                 {/* Floating class icons */}
-                {[
+                {!isMobile && [
                   { emoji: "⚔️", x: "-20px", y: "-10px", delay: 0 },
                   { emoji: "🔮", x: "60px", y: "-30px", delay: 0.5 },
                   { emoji: "🏹", x: "-40px", y: "40px", delay: 1 },
@@ -451,7 +457,7 @@ export default function Index() {
                 ].map((item, i) => (
                   <motion.div
                     key={i}
-                    className="absolute text-2xl sm:text-3xl select-none"
+                    className="absolute text-2xl sm:text-3xl select-none will-optimize"
                     style={{ left: item.x, top: item.y }}
                     animate={{ y: [0, -8, 0], opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
                     transition={{ duration: 3, repeat: Infinity, delay: item.delay, ease: "easeInOut" }}
@@ -469,8 +475,8 @@ export default function Index() {
       <div className="relative overflow-hidden py-3 border-y" style={{ background: "linear-gradient(90deg, #050508, #0a0a14, #050508)", borderColor: "rgba(255,255,255,0.05)" }}>
         <div className="absolute left-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(90deg, #050508, transparent)" }} />
         <div className="absolute right-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(-90deg, #050508, transparent)" }} />
-        <div className="flex whitespace-nowrap" style={{ transform: `translateX(${tickerOffset}px)` }}>
-          {doubledTicker.map((item, i) => (
+        <div className="flex whitespace-nowrap ticker-css-scroll">
+          {quadrupledTicker.map((item, i) => (
             <div key={i} className="flex items-center gap-2 mx-6 shrink-0">
               {item.type === "win" && <Trophy className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />}
               {item.type === "live" && <Radio className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />}
@@ -792,9 +798,9 @@ export default function Index() {
             </ScrollReveal>
 
             <ScrollReveal direction='left' delay={0}>
-            <WinnersSection />
-            <div className="mt-8"><LiveFeed /></div>
-            <div className="mt-8"><TrustSignals /></div>
+            <Suspense fallback={<div className="h-40" />}><WinnersSection /></Suspense>
+            <div className="mt-8"><Suspense fallback={<div className="h-40" />}><LiveFeed /></Suspense></div>
+            <div className="mt-8"><Suspense fallback={<div className="h-40" />}><TrustSignals /></Suspense></div>
             </ScrollReveal>
           </div>
         </AnimatedSection>
@@ -802,14 +808,14 @@ export default function Index() {
         {/* ═══════════ WHY DIFFERENT ═══════════ */}
         <AnimatedSection className="py-12 sm:py-20" style={{ background: `linear-gradient(180deg, #050508, #060610, #050508)` }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <WhyDifferent />
+            <Suspense fallback={<div className="h-40" />}><WhyDifferent /></Suspense>
           </div>
         </AnimatedSection>
 
         {/* ═══════════ PROVABLY FAIR ═══════════ */}
         <AnimatedSection className="py-12 sm:py-20" style={{ background: `linear-gradient(180deg, #050508, #08060f, #050508)` }}>
           <div className="max-w-4xl mx-auto px-4 sm:px-6">
-            <ProvablyFair />
+            <Suspense fallback={<div className="h-40" />}><ProvablyFair /></Suspense>
           </div>
         </AnimatedSection>
 
@@ -872,7 +878,7 @@ export default function Index() {
       <AnimatedSection className="py-12 sm:py-16" style={{ background: `linear-gradient(180deg, #050508, #08060f)` }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <ScrollReveal direction='right' delay={0}>
-          <ActiveRaffles />
+          <Suspense fallback={<div className="h-40" />}><ActiveRaffles /></Suspense>
           </ScrollReveal>
         </div>
       </AnimatedSection>
@@ -881,7 +887,7 @@ export default function Index() {
       <AnimatedSection className="py-12 sm:py-16" style={{ background: `linear-gradient(180deg, #08060f, #050508)` }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <ScrollReveal direction='up' delay={200}>
-          <PopularLeaderboard />
+          <Suspense fallback={<div className="h-40" />}><PopularLeaderboard /></Suspense>
           </ScrollReveal>
         </div>
       </AnimatedSection>

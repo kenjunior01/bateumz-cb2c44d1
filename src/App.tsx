@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import BackgroundDecorations from "@/components/BackgroundDecorations";
 import CountryLanguageSync from "@/components/CountryLanguageSync";
-import { BrowserRouter, Route, Routes, useLocation, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, Navigate, useParams, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,129 +15,19 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegionalThemeProvider } from "@/contexts/RegionalThemeContext";
 import { RegionalConfigProvider, useRegionalContext } from "@/hooks/useRegionalConfig.tsx";
-import AdminRegionalBranding from "./pages/admin/AdminRegionalBranding.tsx";
-import AdminRegionalDashboard from "./pages/admin/AdminRegionalDashboard.tsx";
-import AdminSuperDashboard from "./pages/admin/AdminSuperDashboard.tsx";
-import EngagementLeaderboard from "./pages/EngagementLeaderboard.tsx";
+import { useSwipeBack } from "@/hooks/useSwipeBack";
 import EnhancedMillionaireGame from "./components/livegames/EnhancedMillionaireGame.tsx";
 import PrizeWheel from "./components/livegames/PrizeWheel.tsx";
 import { DEFAULT_WHEEL_PRIZES } from "./components/livegames/PrizeWheel.tsx";
-import AdminMillionaireManager from "./pages/admin/AdminMillionaireManager.tsx";
-import AdminSpinWheelManager from "./pages/admin/AdminSpinWheelManager.tsx";
 import RegionalPreviewBar from "@/components/admin/RegionalPreviewBar";
 import WorldSwitcher from "@/components/WorldSwitcher";
 import RegionalCEODashboard from "@/components/RegionalCEODashboard";
 import PayPalProvider from "@/components/payments/PayPalProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Login from "./pages/Login.tsx";
-import Register from "./pages/Register.tsx";
-import OAuthConsent from "./pages/OAuthConsent.tsx";
-import ForgotPassword from "./pages/ForgotPassword.tsx";
-import ResetPassword from "./pages/ResetPassword.tsx";
-import Marketplace from "./pages/Marketplace.tsx";
-import RaffleDetail from "./pages/RaffleDetail.tsx";
-import UserDashboard from "./pages/UserDashboard.tsx";
 import DashboardLayout from "./layouts/DashboardLayout.tsx";
-import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
-import DashboardRaffles from "./pages/dashboard/DashboardRaffles.tsx";
-import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics.tsx";
-import SocialAnalytics from "./pages/dashboard/SocialAnalytics.tsx";
-import DashboardParticipants from "./pages/dashboard/DashboardParticipants.tsx";
-import DashboardSettings from "./pages/dashboard/DashboardSettings.tsx";
-import CreateRaffle from "./pages/dashboard/CreateRaffle.tsx";
-import LiveDraw from "./pages/LiveDraw.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
-import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
-import AdminUsers from "./pages/admin/AdminUsers.tsx";
-import AdminRaffles from "./pages/admin/AdminRaffles.tsx";
-import AdminRevenue from "./pages/admin/AdminRevenue.tsx";
-import AdminPayments from "./pages/admin/AdminPayments.tsx";
-import AdminSettings from "./pages/admin/AdminSettings.tsx";
-import AdminGameManager from "./pages/admin/AdminGameManager.tsx";
-import AdminAuditLogs from "./pages/admin/AdminAuditLogs.tsx";
-import Contests from "./pages/Contests.tsx";
-import ContestDetail from "./pages/ContestDetail.tsx";
-import AdminCronJobs from "./pages/admin/AdminCronJobs.tsx";
-import AdminCoFounders from "./pages/admin/AdminCoFounders.tsx";
-import AdminRegionalRevenue from "./pages/admin/AdminRegionalRevenue.tsx";
-import AdminRegionalManagers from "./pages/admin/AdminRegionalManagers.tsx";
-import AdminPlans from "./pages/admin/AdminPlans.tsx";
-import AdminVouchers from "./pages/admin/AdminVouchers.tsx";
-import Install from "./pages/Install.tsx";
-import Referral from "./pages/Referral.tsx";
-import Community from "./pages/Community.tsx";
-import WhiteLabelConfig from "./pages/dashboard/WhiteLabelConfig.tsx";
-import GameBrandingConfig from "./pages/dashboard/GameBrandingConfig.tsx";
-import DashboardPrizes from "./pages/dashboard/DashboardPrizes.tsx";
-import DashboardNotifications from "./pages/dashboard/DashboardNotifications.tsx";
-import Profile from "./pages/Profile.tsx";
-import Terms from "./pages/Terms.tsx";
-import Privacy from "./pages/Privacy.tsx";
-import HowItWorks from "./pages/HowItWorks.tsx";
-import FAQ from "./pages/FAQ.tsx";
-import RaffleHistory from "./pages/RaffleHistory.tsx";
-import MyTickets from "./pages/MyTickets.tsx";
-import EditRaffle from "./pages/dashboard/EditRaffle.tsx";
-import SocialRaffleManager from "./pages/dashboard/SocialRaffleManager.tsx";
-import Blog from "./pages/Blog.tsx";
-import BlogPostDetail from "./pages/BlogPostDetail.tsx";
-import AllGames from "./pages/AllGames.tsx";
-import AdminContests from "./pages/admin/AdminContests.tsx";
-import DashboardContests from "./pages/dashboard/DashboardContests.tsx";
-import BusinessProfile from "./pages/BusinessProfile.tsx";
-import BusinessDirectory from "./pages/BusinessDirectory.tsx";
-import LiveHub from "./pages/LiveHub.tsx";
-import LiveOverlay from "./pages/LiveOverlay.tsx";
-import InstantWin from "./pages/InstantWin.tsx";
-import Transparency from "./pages/Transparency.tsx";
-import Prestacoes from "./pages/Prestacoes.tsx";
-import PrestacoesCatalogo from "./pages/PrestacoesCatalogo.tsx";
-import PrestacoesProduto from "./pages/PrestacoesProduto.tsx";
-import DashboardPrestacoes from "./pages/dashboard/DashboardPrestacoes.tsx";
-import DashboardLiveGames from "./pages/dashboard/DashboardLiveGames.tsx";
-import DashboardLiveHistory from "./pages/dashboard/DashboardLiveHistory.tsx";
-import DashboardLiveStats from "./pages/dashboard/DashboardLiveStats.tsx";
-import CompanyPublicProfile from "./pages/CompanyPublicProfile.tsx";
-import DashboardAmbassadors from "./pages/dashboard/DashboardAmbassadors.tsx";
-import AmbassadorRedirect from "./pages/AmbassadorRedirect.tsx";
-import LiveAmbassadorsRanking from "./pages/LiveAmbassadorsRanking.tsx";
-import ScheduledLivePage from "./pages/ScheduledLivePage.tsx";
-import DashboardScheduledLives from "./pages/dashboard/DashboardScheduledLives.tsx";
-import LiveStudio from "./pages/dashboard/LiveStudio.tsx";
-import OverlayLive from "./pages/OverlayLive.tsx";
-import OverlayPro from "./pages/OverlayPro.tsx";
-import CompanyLiveManager from "./pages/dashboard/CompanyLiveManager.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import NotificationBell from "./components/live/NotificationBell.tsx";
-import LivesAgora from "./pages/LivesAgora.tsx";
-import Battles from "./pages/Battles.tsx";
-import LiveParticipar from "./pages/LiveParticipar.tsx";
-import TournamentsList from "./pages/tournaments/TournamentsList.tsx";
-import TournamentDetail from "./pages/tournaments/TournamentDetail.tsx";
-import DashboardTournaments from "./pages/dashboard/DashboardTournaments.tsx";
-import DashboardLeagues from "./pages/dashboard/DashboardLeagues.tsx";
-import DashboardBlog from "./pages/dashboard/DashboardBlog.tsx";
-import LeaguesListPage from "./pages/leagues/LeaguesListPage.tsx";
-import LeagueDetailPage from "./pages/leagues/LeagueDetailPage.tsx";
-import EsportsLayout from "./pages/esports/EsportsLayout.tsx";
-import EsportsHub from "./pages/esports/EsportsHub.tsx";
-import ChampionshipDetailPage from "./pages/esports/ChampionshipDetailPage.tsx";
-import TeamManagementPage from "./pages/esports/TeamManagementPage.tsx";
-import DashboardEsports from "./pages/dashboard/DashboardEsports.tsx";
-import DashboardEsportsAdvanced from "./pages/dashboard/DashboardEsportsAdvanced.tsx";
-import SeasonsPage from "./pages/esports/SeasonsPage.tsx";
-import BettingPage from "./pages/esports/BettingPage.tsx";
-import DuelosPage from "./pages/esports/DuelosPage.tsx";
-import LeaderboardPage from "./pages/esports/LeaderboardPage.tsx";
-import TransfersPage from "./pages/esports/TransfersPage.tsx";
-import AchievementsPage from "./pages/esports/AchievementsPage.tsx";
-import TeamProfilePage from "./pages/esports/TeamProfilePage.tsx";
-import MillionairePage from "./pages/games/MillionairePage.tsx";
-import CompanyGamesHub from "./pages/dashboard/CompanyGamesHub.tsx";
-import SorteiosLayout from "./pages/sorteios/SorteiosLayout.tsx";
-import JogosLayout from "./pages/jogos/JogosLayout.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import SupportChatbot from "./components/SupportChatbot.tsx";
@@ -147,18 +37,141 @@ import MobileMenuDrawer from "./components/mobile/MobileMenuDrawer.tsx";
 import { MobileNavProvider } from "./contexts/MobileNavigationContext.tsx";
 import RecentPagesTracker from "./components/mobile/RecentPagesTracker.tsx";
 import PushNotificationBanner from "./components/notifications/PushNotificationBanner.tsx";
-import Wallet from "./pages/Wallet.tsx";
-import RegionalManagerPanel from "./pages/RegionalManagerPanel.tsx";
 import LivePulseBar from "./components/LivePulseBar.tsx";
 
 // New live entertainment pages
 import KahootMultiplayerQuiz from "./components/livegames/KahootMultiplayerQuiz.tsx";
 import LiveBingo from "./components/livegames/LiveBingo.tsx";
 import ChallengeRoulette from "./components/livegames/ChallengeRoulette.tsx";
-import { useState, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
+import { useState, useEffect, useRef, Component, lazy, Suspense, type ReactNode, type ErrorInfo } from "react";
 import { Button } from "@/components/ui/button";
 
+// Layout components (used as route wrappers, NOT lazy-loaded)
+import EsportsLayout from "./pages/esports/EsportsLayout.tsx";
+import SorteiosLayout from "./pages/sorteios/SorteiosLayout.tsx";
+import JogosLayout from "./pages/jogos/JogosLayout.tsx";
+
+// ============================================================
+// Lazy-loaded page components (~110 pages)
+// ============================================================
+const AdminRegionalBranding = lazy(() => import("./pages/admin/AdminRegionalBranding.tsx"));
+const AdminRegionalDashboard = lazy(() => import("./pages/admin/AdminRegionalDashboard.tsx"));
+const AdminSuperDashboard = lazy(() => import("./pages/admin/AdminSuperDashboard.tsx"));
+const EngagementLeaderboard = lazy(() => import("./pages/EngagementLeaderboard.tsx"));
+const AdminMillionaireManager = lazy(() => import("./pages/admin/AdminMillionaireManager.tsx"));
+const AdminSpinWheelManager = lazy(() => import("./pages/admin/AdminSpinWheelManager.tsx"));
+const Index = lazy(() => import("./pages/Index.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const Login = lazy(() => import("./pages/Login.tsx"));
+const Register = lazy(() => import("./pages/Register.tsx"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent.tsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
+const Marketplace = lazy(() => import("./pages/Marketplace.tsx"));
+const RaffleDetail = lazy(() => import("./pages/RaffleDetail.tsx"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard.tsx"));
+const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview.tsx"));
+const DashboardRaffles = lazy(() => import("./pages/dashboard/DashboardRaffles.tsx"));
+const DashboardAnalytics = lazy(() => import("./pages/dashboard/DashboardAnalytics.tsx"));
+const SocialAnalytics = lazy(() => import("./pages/dashboard/SocialAnalytics.tsx"));
+const DashboardParticipants = lazy(() => import("./pages/dashboard/DashboardParticipants.tsx"));
+const DashboardSettings = lazy(() => import("./pages/dashboard/DashboardSettings.tsx"));
+const CreateRaffle = lazy(() => import("./pages/dashboard/CreateRaffle.tsx"));
+const LiveDraw = lazy(() => import("./pages/LiveDraw.tsx"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers.tsx"));
+const AdminRaffles = lazy(() => import("./pages/admin/AdminRaffles.tsx"));
+const AdminRevenue = lazy(() => import("./pages/admin/AdminRevenue.tsx"));
+const AdminPayments = lazy(() => import("./pages/admin/AdminPayments.tsx"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings.tsx"));
+const AdminGameManager = lazy(() => import("./pages/admin/AdminGameManager.tsx"));
+const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs.tsx"));
+const Contests = lazy(() => import("./pages/Contests.tsx"));
+const ContestDetail = lazy(() => import("./pages/ContestDetail.tsx"));
+const AdminCronJobs = lazy(() => import("./pages/admin/AdminCronJobs.tsx"));
+const AdminCoFounders = lazy(() => import("./pages/admin/AdminCoFounders.tsx"));
+const AdminRegionalRevenue = lazy(() => import("./pages/admin/AdminRegionalRevenue.tsx"));
+const AdminRegionalManagers = lazy(() => import("./pages/admin/AdminRegionalManagers.tsx"));
+const AdminPlans = lazy(() => import("./pages/admin/AdminPlans.tsx"));
+const AdminVouchers = lazy(() => import("./pages/admin/AdminVouchers.tsx"));
+const Install = lazy(() => import("./pages/Install.tsx"));
+const Referral = lazy(() => import("./pages/Referral.tsx"));
+const Community = lazy(() => import("./pages/Community.tsx"));
+const WhiteLabelConfig = lazy(() => import("./pages/dashboard/WhiteLabelConfig.tsx"));
+const GameBrandingConfig = lazy(() => import("./pages/dashboard/GameBrandingConfig.tsx"));
+const DashboardPrizes = lazy(() => import("./pages/dashboard/DashboardPrizes.tsx"));
+const DashboardNotifications = lazy(() => import("./pages/dashboard/DashboardNotifications.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const Terms = lazy(() => import("./pages/Terms.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
+const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
+const FAQ = lazy(() => import("./pages/FAQ.tsx"));
+const RaffleHistory = lazy(() => import("./pages/RaffleHistory.tsx"));
+const MyTickets = lazy(() => import("./pages/MyTickets.tsx"));
+const EditRaffle = lazy(() => import("./pages/dashboard/EditRaffle.tsx"));
+const SocialRaffleManager = lazy(() => import("./pages/dashboard/SocialRaffleManager.tsx"));
+const Blog = lazy(() => import("./pages/Blog.tsx"));
+const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail.tsx"));
+const AllGames = lazy(() => import("./pages/AllGames.tsx"));
+const AdminContests = lazy(() => import("./pages/admin/AdminContests.tsx"));
+const DashboardContests = lazy(() => import("./pages/dashboard/DashboardContests.tsx"));
+const BusinessProfile = lazy(() => import("./pages/BusinessProfile.tsx"));
+const BusinessDirectory = lazy(() => import("./pages/BusinessDirectory.tsx"));
+const LiveHub = lazy(() => import("./pages/LiveHub.tsx"));
+const LiveOverlay = lazy(() => import("./pages/LiveOverlay.tsx"));
+const InstantWin = lazy(() => import("./pages/InstantWin.tsx"));
+const Transparency = lazy(() => import("./pages/Transparency.tsx"));
+const Prestacoes = lazy(() => import("./pages/Prestacoes.tsx"));
+const PrestacoesCatalogo = lazy(() => import("./pages/PrestacoesCatalogo.tsx"));
+const PrestacoesProduto = lazy(() => import("./pages/PrestacoesProduto.tsx"));
+const DashboardPrestacoes = lazy(() => import("./pages/dashboard/DashboardPrestacoes.tsx"));
+const DashboardLiveGames = lazy(() => import("./pages/dashboard/DashboardLiveGames.tsx"));
+const DashboardLiveHistory = lazy(() => import("./pages/dashboard/DashboardLiveHistory.tsx"));
+const DashboardLiveStats = lazy(() => import("./pages/dashboard/DashboardLiveStats.tsx"));
+const CompanyPublicProfile = lazy(() => import("./pages/CompanyPublicProfile.tsx"));
+const DashboardAmbassadors = lazy(() => import("./pages/dashboard/DashboardAmbassadors.tsx"));
+const AmbassadorRedirect = lazy(() => import("./pages/AmbassadorRedirect.tsx"));
+const LiveAmbassadorsRanking = lazy(() => import("./pages/LiveAmbassadorsRanking.tsx"));
+const ScheduledLivePage = lazy(() => import("./pages/ScheduledLivePage.tsx"));
+const DashboardScheduledLives = lazy(() => import("./pages/dashboard/DashboardScheduledLives.tsx"));
+const LiveStudio = lazy(() => import("./pages/dashboard/LiveStudio.tsx"));
+const OverlayLive = lazy(() => import("./pages/OverlayLive.tsx"));
+const OverlayPro = lazy(() => import("./pages/OverlayPro.tsx"));
+const CompanyLiveManager = lazy(() => import("./pages/dashboard/CompanyLiveManager.tsx"));
+const LivesAgora = lazy(() => import("./pages/LivesAgora.tsx"));
+const Battles = lazy(() => import("./pages/Battles.tsx"));
+const LiveParticipar = lazy(() => import("./pages/LiveParticipar.tsx"));
+const TournamentsList = lazy(() => import("./pages/tournaments/TournamentsList.tsx"));
+const TournamentDetail = lazy(() => import("./pages/tournaments/TournamentDetail.tsx"));
+const DashboardTournaments = lazy(() => import("./pages/dashboard/DashboardTournaments.tsx"));
+const DashboardLeagues = lazy(() => import("./pages/dashboard/DashboardLeagues.tsx"));
+const DashboardBlog = lazy(() => import("./pages/dashboard/DashboardBlog.tsx"));
+const LeaguesListPage = lazy(() => import("./pages/leagues/LeaguesListPage.tsx"));
+const LeagueDetailPage = lazy(() => import("./pages/leagues/LeagueDetailPage.tsx"));
+const EsportsHub = lazy(() => import("./pages/esports/EsportsHub.tsx"));
+const ChampionshipDetailPage = lazy(() => import("./pages/esports/ChampionshipDetailPage.tsx"));
+const TeamManagementPage = lazy(() => import("./pages/esports/TeamManagementPage.tsx"));
+const DashboardEsports = lazy(() => import("./pages/dashboard/DashboardEsports.tsx"));
+const DashboardEsportsAdvanced = lazy(() => import("./pages/dashboard/DashboardEsportsAdvanced.tsx"));
+const SeasonsPage = lazy(() => import("./pages/esports/SeasonsPage.tsx"));
+const BettingPage = lazy(() => import("./pages/esports/BettingPage.tsx"));
+const DuelosPage = lazy(() => import("./pages/esports/DuelosPage.tsx"));
+const LeaderboardPage = lazy(() => import("./pages/esports/LeaderboardPage.tsx"));
+const TransfersPage = lazy(() => import("./pages/esports/TransfersPage.tsx"));
+const AchievementsPage = lazy(() => import("./pages/esports/AchievementsPage.tsx"));
+const TeamProfilePage = lazy(() => import("./pages/esports/TeamProfilePage.tsx"));
+const MillionairePage = lazy(() => import("./pages/games/MillionairePage.tsx"));
+const CompanyGamesHub = lazy(() => import("./pages/dashboard/CompanyGamesHub.tsx"));
+const Wallet = lazy(() => import("./pages/Wallet.tsx"));
+const RegionalManagerPanel = lazy(() => import("./pages/RegionalManagerPanel.tsx"));
+
 const queryClient = new QueryClient();
+
+const MinimalPageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function PrizeWheelWrapper() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -167,174 +180,178 @@ function PrizeWheelWrapper() {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const pageRef = useRef<HTMLDivElement>(null);
+  useSwipeBack(pageRef);
   return (
     <AnimatePresence mode="wait">
       <PageTransition key={location.pathname}>
-        <Routes location={location}>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-          <Route path="/register" element={<Register />} />
+        <Suspense fallback={<MinimalPageLoader />}>
+          <Routes location={location}>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+            <Route path="/register" element={<Register />} />
 
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/marketplace" element={<SorteiosLayout />}>            <Route index element={<Marketplace />} />          </Route>
-          <Route path="/raffle/:slug" element={<RaffleDetail />} />
-          <Route path="/raffle/:slug/live" element={<LiveDraw />} />
-          <Route path="/install" element={<Install />} />
-          <Route path="/referral" element={<Referral />} />
-          <Route path="/community" element={<Community />} />
-          <Route path="/termos" element={<Terms />} />
-          <Route path="/privacidade" element={<Privacy />} />
-          <Route path="/privacy" element={<Navigate to="/privacidade" replace />} />
-          <Route path="/como-funciona" element={<HowItWorks />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/historico" element={<RaffleHistory />} />
-          <Route path="/concursos" element={<SorteiosLayout />}>            <Route index element={<Contests />} />          </Route>
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<BlogPostDetail />} />
-          <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
-          <Route path="/pontos" element={<EngagementLeaderboard />} />
-          <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
-          <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
-          <Route path="/instant-win" element={<SorteiosLayout />}>            <Route index element={<InstantWin />} />          </Route>
-          <Route path="/concursos/:id" element={<ContestDetail />} />
-          <Route path="/empresas" element={<BusinessDirectory />} />
-          <Route path="/empresa/:id" element={<BusinessProfile />} />
-          <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
-          <Route path="/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
-          <Route path="/jogos/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
-          <Route path="/lives" element={<JogosLayout />}>            <Route index element={<LiveHub />} />          </Route>
-          <Route path="/batalhas" element={<Battles />} />
-          <Route path="/lives/overlay" element={<LiveOverlay />} />
-          <Route path="/lives/overlay-pro" element={<OverlayPro />} />
-          <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
-          <Route path="/transparencia" element={<Transparency />} />
-          <Route path="/prestacoes" element={<Prestacoes />} />
-          <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />
-          <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
-          <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
-          <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
-          <Route path="/lives-agora" element={<LivesAgora />} />
-          <Route path="/participar" element={<LiveParticipar />} />
-          <Route path="/tournaments" element={<TournamentsList />} />
-          <Route path="/tournaments/:id" element={<TournamentDetail />} />
-          <Route path="/ligas" element={<LeaguesListPage />} />
-          <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
-          <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute blockRoles={["business", "admin"]}>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-tickets"
-            element={
-              <ProtectedRoute>
-                <MyTickets />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-points"
-            element={
-              <ProtectedRoute>
-                <UserDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/wallet"
-            element={
-              <ProtectedRoute>
-                <Wallet />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/regional-panel"
-            element={
-              <ProtectedRoute requiredRole="regional_manager">
-                <RegionalManagerPanel />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute requiredRole="business">
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardOverview />} />
-            <Route path="raffles" element={<DashboardRaffles />} />
-            <Route path="raffles/create" element={<CreateRaffle />} />
-            <Route path="raffles/:id/edit" element={<EditRaffle />} />
-            <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
-            <Route path="analytics" element={<DashboardAnalytics />} />
-            <Route path="social-analytics" element={<SocialAnalytics />} />
-            <Route path="participants" element={<DashboardParticipants />} />
-            <Route path="prizes" element={<DashboardPrizes />} />
-            <Route path="notifications" element={<DashboardNotifications />} />
-            <Route path="white-label" element={<WhiteLabelConfig />} />
-            <Route path="game-branding" element={<GameBrandingConfig />} />
-            <Route path="contests" element={<DashboardContests />} />
-            <Route path="prestacoes" element={<DashboardPrestacoes />} />
-            <Route path="live-games" element={<DashboardLiveGames />} />
-            <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
-            <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
-            <Route path="live-history" element={<DashboardLiveHistory />} />
-            <Route path="live-stats" element={<DashboardLiveStats />} />
-            <Route path="ambassadors" element={<DashboardAmbassadors />} />
-            <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
-            <Route path="live-studio/:id" element={<LiveStudio />} />
-            <Route path="live-manager" element={<CompanyLiveManager />} />
-            <Route path="tournaments" element={<DashboardTournaments />} />
-            <Route path="leagues" element={<DashboardLeagues />} />
-            <Route path="games-hub" element={<CompanyGamesHub />} />
-            <Route path="esports" element={<DashboardEsports />} />
-            <Route path="esports-advanced" element={<DashboardEsportsAdvanced />} />
-            <Route path="blog" element={<DashboardBlog />} />
-            <Route path="settings" element={<DashboardSettings />} />
-          </Route>
-          <Route path="/overlay/live/:id" element={<OverlayLive />} />
-          <Route path="/overlay/pro" element={<OverlayPro />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="raffles" element={<AdminRaffles />} />
-            <Route path="revenue" element={<AdminRevenue />} />
-            <Route path="payments" element={<AdminPayments />} />
-            <Route path="audit" element={<AdminAuditLogs />} />
-            <Route path="cron" element={<AdminCronJobs />} />
-            <Route path="settings" element={<AdminSettings />} />
-            <Route path="games" element={<AdminGameManager />} />
-            <Route path="contests" element={<AdminContests />} />
-            <Route path="co-founders" element={<AdminCoFounders />} />
-            <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
-            <Route path="regional-branding" element={<AdminRegionalBranding />} />
-            <Route path="regional-dashboard" element={<AdminRegionalDashboard />} />
-            <Route path="super-dashboard" element={<AdminSuperDashboard />} />
-            <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
-            <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
-            <Route path="plans" element={<AdminPlans />} />
-            <Route path="regional-config" element={<RegionalCEODashboard />} />
-            <Route path="regional-managers" element={<AdminRegionalManagers />} />
-            <Route path="vouchers" element={<AdminVouchers />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/marketplace" element={<SorteiosLayout />}>            <Route index element={<Marketplace />} />          </Route>
+            <Route path="/raffle/:slug" element={<RaffleDetail />} />
+            <Route path="/raffle/:slug/live" element={<LiveDraw />} />
+            <Route path="/install" element={<Install />} />
+            <Route path="/referral" element={<Referral />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacy />} />
+            <Route path="/privacy" element={<Navigate to="/privacidade" replace />} />
+            <Route path="/como-funciona" element={<HowItWorks />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/historico" element={<RaffleHistory />} />
+            <Route path="/concursos" element={<SorteiosLayout />}>            <Route index element={<Contests />} />          </Route>
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPostDetail />} />
+            <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
+            <Route path="/pontos" element={<EngagementLeaderboard />} />
+            <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
+            <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
+            <Route path="/instant-win" element={<SorteiosLayout />}>            <Route index element={<InstantWin />} />          </Route>
+            <Route path="/concursos/:id" element={<ContestDetail />} />
+            <Route path="/empresas" element={<BusinessDirectory />} />
+            <Route path="/empresa/:id" element={<BusinessProfile />} />
+            <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
+            <Route path="/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
+            <Route path="/jogos/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
+            <Route path="/lives" element={<JogosLayout />}>            <Route index element={<LiveHub />} />          </Route>
+            <Route path="/batalhas" element={<Battles />} />
+            <Route path="/lives/overlay" element={<LiveOverlay />} />
+            <Route path="/lives/overlay-pro" element={<OverlayPro />} />
+            <Route path="/lives/:liveCode/ranking" element={<LiveAmbassadorsRanking />} />
+            <Route path="/transparencia" element={<Transparency />} />
+            <Route path="/prestacoes" element={<Prestacoes />} />
+            <Route path="/prestacoes/catalogo" element={<PrestacoesCatalogo />} />
+            <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
+            <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
+            <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
+            <Route path="/lives-agora" element={<LivesAgora />} />
+            <Route path="/participar" element={<LiveParticipar />} />
+            <Route path="/tournaments" element={<TournamentsList />} />
+            <Route path="/tournaments/:id" element={<TournamentDetail />} />
+            <Route path="/ligas" element={<LeaguesListPage />} />
+            <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
+            <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute blockRoles={["business", "admin"]}>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-tickets"
+              element={
+                <ProtectedRoute>
+                  <MyTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-points"
+              element={
+                <ProtectedRoute>
+                  <UserDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet"
+              element={
+                <ProtectedRoute>
+                  <Wallet />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/regional-panel"
+              element={
+                <ProtectedRoute requiredRole="regional_manager">
+                  <RegionalManagerPanel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute requiredRole="business">
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardOverview />} />
+              <Route path="raffles" element={<DashboardRaffles />} />
+              <Route path="raffles/create" element={<CreateRaffle />} />
+              <Route path="raffles/:id/edit" element={<EditRaffle />} />
+              <Route path="raffles/:id/social" element={<SocialRaffleManager />} />
+              <Route path="analytics" element={<DashboardAnalytics />} />
+              <Route path="social-analytics" element={<SocialAnalytics />} />
+              <Route path="participants" element={<DashboardParticipants />} />
+              <Route path="prizes" element={<DashboardPrizes />} />
+              <Route path="notifications" element={<DashboardNotifications />} />
+              <Route path="white-label" element={<WhiteLabelConfig />} />
+              <Route path="game-branding" element={<GameBrandingConfig />} />
+              <Route path="contests" element={<DashboardContests />} />
+              <Route path="prestacoes" element={<DashboardPrestacoes />} />
+              <Route path="live-games" element={<DashboardLiveGames />} />
+              <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
+              <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
+              <Route path="live-history" element={<DashboardLiveHistory />} />
+              <Route path="live-stats" element={<DashboardLiveStats />} />
+              <Route path="ambassadors" element={<DashboardAmbassadors />} />
+              <Route path="scheduled-lives" element={<DashboardScheduledLives />} />
+              <Route path="live-studio/:id" element={<LiveStudio />} />
+              <Route path="live-manager" element={<CompanyLiveManager />} />
+              <Route path="tournaments" element={<DashboardTournaments />} />
+              <Route path="leagues" element={<DashboardLeagues />} />
+              <Route path="games-hub" element={<CompanyGamesHub />} />
+              <Route path="esports" element={<DashboardEsports />} />
+              <Route path="esports-advanced" element={<DashboardEsportsAdvanced />} />
+              <Route path="blog" element={<DashboardBlog />} />
+              <Route path="settings" element={<DashboardSettings />} />
+            </Route>
+            <Route path="/overlay/live/:id" element={<OverlayLive />} />
+            <Route path="/overlay/pro" element={<OverlayPro />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="raffles" element={<AdminRaffles />} />
+              <Route path="revenue" element={<AdminRevenue />} />
+              <Route path="payments" element={<AdminPayments />} />
+              <Route path="audit" element={<AdminAuditLogs />} />
+              <Route path="cron" element={<AdminCronJobs />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="games" element={<AdminGameManager />} />
+              <Route path="contests" element={<AdminContests />} />
+              <Route path="co-founders" element={<AdminCoFounders />} />
+              <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
+              <Route path="regional-branding" element={<AdminRegionalBranding />} />
+              <Route path="regional-dashboard" element={<AdminRegionalDashboard />} />
+              <Route path="super-dashboard" element={<AdminSuperDashboard />} />
+              <Route path="millionaire-manager" element={<AdminMillionaireManager />} />
+              <Route path="spin-wheel-manager" element={<AdminSpinWheelManager />} />
+              <Route path="plans" element={<AdminPlans />} />
+              <Route path="regional-config" element={<RegionalCEODashboard />} />
+              <Route path="regional-managers" element={<AdminRegionalManagers />} />
+              <Route path="vouchers" element={<AdminVouchers />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </PageTransition>
     </AnimatePresence>
   );

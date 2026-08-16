@@ -213,6 +213,93 @@
 .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 /* =============================================
+   NATIVE APP BEHAVIOR — Mobile Optimization
+   ============================================= */
+
+/* Eliminate 300ms tap delay on all interactive elements */
+button, a, [role="button"], .btn-press, input, select, textarea, label[for],
+[onclick], [data-radix-collection-item], [data-state] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on game UI elements */
+.game-area, .game-board, .game-cell, .game-piece,
+[data-game-area], [data-no-select] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Prevent overscroll / rubber-banding globally */
+html, body, #root {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Allow vertical overscroll only in scrollable containers */
+.scroll-container, [data-scrollable], main, .overflow-y-auto, .overflow-auto {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling with reduced motion respect */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Prevent pull-to-refresh in standalone PWA mode */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior: none; }
+}
+
+/* Safe area support for notched devices */
+.safe-area-top { padding-top: env(safe-area-inset-top); }
+.safe-area-left { padding-left: env(safe-area-inset-left); }
+.safe-area-right { padding-right: env(safe-area-inset-right); }
+.safe-area-all {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Fast tappable targets - minimum 44px for iOS */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* App-like page transition helpers */
+.page-enter { opacity: 0; transform: translateX(8px); }
+.page-enter-active { opacity: 1; transform: translateX(0); transition: opacity 200ms ease, transform 200ms ease; }
+.page-exit { opacity: 1; }
+.page-exit-active { opacity: 0; transition: opacity 150ms ease; }
+
+/* Standalone mode adjustments */
+@media (display-mode: standalone) {
+  .hide-in-standalone { display: none !important; }
+}
+
+/* Prevent iOS bounce on fixed elements */
+@media (display-mode: standalone) and (platform: ios) {
+  .ios-no-bounce {
+    position: fixed;
+    overflow: hidden;
+  }
+}
+
+/* =============================================
    MOBILE NAVIGATION SYSTEM — Gaming Aesthetic
    ============================================= */
 

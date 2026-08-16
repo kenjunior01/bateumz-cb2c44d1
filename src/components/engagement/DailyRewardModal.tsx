@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, type JSX } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Lock, Gift, Flame, Sparkles, Star, Coins, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const REWARDS = [5, 10, 15, 25, 40, 60, 100];
 const STORAGE_KEY = 'bateu_daily_rewards';
@@ -404,6 +405,7 @@ export default function DailyRewardModal({
   onOpenChange: (v: boolean) => void;
 }): JSX.Element {
   const { canClaim, streak, claimReward, daysClaimed, totalEarned, setShowDailyModal } = useDailyReward();
+  const { formatMoney } = useCurrency();
   const [justClaimed, setJustClaimed] = useState(false);
   const [claimedReward, setClaimedReward] = useState(0);
 
@@ -511,7 +513,7 @@ export default function DailyRewardModal({
                   transition={{ delay: 0.3 }}
                 >
                   <Coins className="text-yellow-400" size={14} />
-                  <span className="text-sm font-bold text-white">{totalEarned} MZN</span>
+                  <span className="text-sm font-bold text-white">{formatMoney(totalEarned)}</span>
                   <span className="text-xs text-white/40">total</span>
                 </motion.div>
               </div>
@@ -564,7 +566,7 @@ export default function DailyRewardModal({
                     />
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       <Zap size={18} />
-                      Claim {REWARDS[streak % 7]} MZN
+                      Claim {formatMoney(REWARDS[streak % 7])}
                     </span>
                   </motion.button>
                 ) : (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Crown, Gamepad2, X, ChevronRight, Sparkles, Zap } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const WORLDS = [
   {
@@ -50,12 +51,18 @@ const WORLDS = [
   },
 ];
 
+const HIDDEN_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/dashboard', '/admin'];
+
 export default function WorldSwitcher() {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const [currentWorld, setCurrentWorld] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
+
+  // Hide on auth/admin pages
+  const isHidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
   useEffect(() => {
     const path = location.pathname;
@@ -87,6 +94,8 @@ export default function WorldSwitcher() {
   // Find current world data for the FAB
   const activeWorld = WORLDS.find(w => w.id === currentWorld);
 
+  if (isHidden) return null;
+
   return (
     <>
       {/* Floating Action Button */}
@@ -111,7 +120,7 @@ export default function WorldSwitcher() {
                 ? `0 8px 32px ${activeWorld.glow}, 0 0 0 1px ${activeWorld.border}`
                 : '0 8px 32px rgba(0,0,0,0.3)',
             }}
-            aria-label="Mudar de mundo"
+            aria-label="Switch world"
           >
             {/* Spinning border effect */}
             <div className="absolute inset-0 rounded-2xl overflow-hidden">
@@ -168,10 +177,10 @@ export default function WorldSwitcher() {
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div>
                   <h3 className="text-sm font-black text-white/90 tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>
-                    MUNDOS
+                    {t('worlds.title') || 'WORLDS'}
                   </h3>
                   <p className="text-[10px] text-white/30 tracking-widest uppercase mt-0.5">
-                    Tres experiencias. Uma plataforma.
+                    {t('worlds.subtitle') || 'Three experiences. One platform.'}
                   </p>
                 </div>
                 <button
@@ -263,7 +272,7 @@ export default function WorldSwitcher() {
                                   border: `1px solid ${world.color}25`,
                                 }}
                               >
-                                ATUAL
+                                {t('worlds.current') || 'CURRENT'}
                               </span>
                             )}
                           </div>
@@ -331,7 +340,7 @@ export default function WorldSwitcher() {
                 border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               }}
-              aria-label="Fechar"
+              aria-label="Close"
             >
               <X className="w-5 h-5 text-white/50" />
             </motion.button>

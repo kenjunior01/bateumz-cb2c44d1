@@ -4,6 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide Lovable editor banner on any hosting */
+[id*="lovable"], [class*="lovable-badge"], [class*="lovable-editor"], a[href*="lovable"] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 @layer base {
   :root {
     /* North American palette: deep navy + patriotic red + crisp white, gold for prizes */

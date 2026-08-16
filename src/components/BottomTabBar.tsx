@@ -34,7 +34,11 @@ const BottomTabBar = () => {
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/overlay") ||
     location.pathname.startsWith("/esports") ||
-    location.pathname.startsWith("/jogos")
+    location.pathname.startsWith("/jogos") ||
+    location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/register") ||
+    location.pathname.startsWith("/forgot-password") ||
+    location.pathname.startsWith("/reset-password")
   ) {
     return null;
   }

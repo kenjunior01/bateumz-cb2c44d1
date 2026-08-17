@@ -1,5 +1,5 @@
 // Multi-country regions for Bateu (global, English-default).
-// Supports US, CA, MZ, AO, BR, PT, IN.
+// Supports US, CA, MZ, AO, BR, PT, IN, ES, FR, GB, DE, IT.
 
 export const COUNTRIES = [
   { code: "US", label: "United States", flag: "🇺🇸", currency: "USD", dial: "+1" },
@@ -9,7 +9,11 @@ export const COUNTRIES = [
   { code: "MZ", label: "Mozambique", flag: "🇲🇿", currency: "MZN", dial: "+258" },
   { code: "AO", label: "Angola", flag: "🇦🇴", currency: "AOA", dial: "+244" },
   { code: "IN", label: "India", flag: "🇮🇳", currency: "INR", dial: "+91" },
-
+  { code: "ES", label: "Spain", flag: "🇪🇸", currency: "EUR", dial: "+34" },
+  { code: "FR", label: "France", flag: "🇫🇷", currency: "EUR", dial: "+33" },
+  { code: "GB", label: "United Kingdom", flag: "🇬🇧", currency: "GBP", dial: "+44" },
+  { code: "DE", label: "Germany", flag: "🇩🇪", currency: "EUR", dial: "+49" },
+  { code: "IT", label: "Italy", flag: "🇮🇹", currency: "EUR", dial: "+39" },
 ] as const;
 
 export type CountryCode = typeof COUNTRIES[number]["code"];
@@ -105,11 +109,16 @@ export const CITIES_BY_PROVINCE: Record<string, string[]> = {};
 
 // Standard payment methods per country (used by checkout UI to pick options).
 export const PAYMENT_METHODS_BY_COUNTRY: Record<string, string[]> = {
-  US: ["paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt", "bank_transfer"],
-  CA: ["paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt", "bank_transfer"],
-  PT: ["mbway", "multibanco", "pt_transfer", "paypal", "visa", "mastercard"],
-  BR: ["pix", "boleto", "mercadopago", "paypal", "visa", "mastercard"],
-  MZ: ["mpesa", "emola", "conta_movel", "tkash", "mzn_bank_transfer", "bci_transfer", "standard_bank_mz", "visa", "mastercard", "paypal"],
-  AO: ["multicaixa", "unitel_money", "africell_money", "bai_transfer", "bfa_transfer", "paypal", "visa", "mastercard"],
-  IN: ["upi", "paytm", "phonepe", "gpay", "in_bank_transfer", "paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt"],
+  US: ["paypal", "visa", "mastercard", "apple_pay", "google_pay_intl", "crypto_btc", "crypto_usdt", "crypto_eth", "crypto_usdc", "bank_transfer", "western_union", "moneygram"],
+  CA: ["paypal", "visa", "mastercard", "apple_pay", "google_pay_intl", "crypto_btc", "crypto_usdt", "crypto_eth", "crypto_usdc", "bank_transfer", "western_union", "moneygram"],
+  PT: ["mbway", "multibanco", "payshop_pt", "pt_transfer", "paypal", "visa", "mastercard", "apple_pay", "crypto_btc", "crypto_usdt"],
+  BR: ["pix", "picpay", "nubank", "boleto", "mercadopago", "paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt"],
+  MZ: ["mpesa", "emola", "conta_movel", "tkash", "sapec_mz", "mzn_bank_transfer", "bci_transfer", "standard_bank_mz", "bac_mz", "visa", "mastercard", "paypal", "crypto_usdt"],
+  AO: ["multicaixa", "unitel_money", "africell_money", "keya_ao", "bai_transfer", "bfa_transfer", "paypal", "visa", "mastercard", "crypto_usdt"],
+  IN: ["upi", "paytm", "phonepe", "gpay", "razorpay", "in_bank_transfer", "paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt", "crypto_eth"],
+  ES: ["bizum", "es_transfer", "paypal_es", "visa", "mastercard", "apple_pay", "crypto_btc", "crypto_usdt"],
+  FR: ["carte_bancaire", "paypal_fr", "fr_transfer", "visa", "mastercard", "apple_pay", "crypto_btc", "crypto_usdt"],
+  GB: ["faster_payments", "paypal_gb", "gb_transfer", "visa", "mastercard", "apple_pay", "google_pay_intl", "crypto_btc", "crypto_usdt"],
+  DE: ["sofort", "paypal_de", "de_transfer", "visa", "mastercard", "apple_pay", "google_pay_intl", "crypto_btc", "crypto_usdt", "crypto_eth"],
+  IT: ["satispay", "paypal_it", "it_transfer", "postepay", "visa", "mastercard", "apple_pay", "crypto_btc", "crypto_usdt"],
 };

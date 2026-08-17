@@ -3,7 +3,7 @@
  * Supports MZN (Mozambique), EUR (Portugal), BRL (Brazil), AOA (Angola), USD and CAD.
  */
 
-export type SupportedCurrency = "USD" | "CAD" | "MZN" | "EUR" | "BRL" | "AOA" | "INR";
+export type SupportedCurrency = "USD" | "CAD" | "MZN" | "EUR" | "BRL" | "AOA" | "INR" | "GBP";
 
 export function formatMoney(amount: number, currency: SupportedCurrency = "MZN"): string {
   const locales: Record<SupportedCurrency, string> = {
@@ -14,6 +14,7 @@ export function formatMoney(amount: number, currency: SupportedCurrency = "MZN")
     BRL: "pt-BR",
     AOA: "pt-AO",
     INR: "en-IN",
+    GBP: "en-GB",
   };
 
   return new Intl.NumberFormat(locales[currency] || "pt-MZ", {
@@ -48,4 +49,8 @@ export function formatCAD(amount: number): string {
 
 export function formatINR(amount: number): string {
   return formatMoney(amount, "INR");
+}
+
+export function formatGBP(amount: number): string {
+  return formatMoney(amount, "GBP");
 }

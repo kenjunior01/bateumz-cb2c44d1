@@ -443,6 +443,16 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   useEffect(() => { battleLogRef.current?.scrollIntoView({ behavior: "smooth" }); }, [battleLog]);
   useEffect(() => { grindLogRef.current?.scrollIntoView({ behavior: "smooth" }); }, [grindLog]);
 
+  // ---- Periodic DB Sync ----
+  useEffect(() => {
+    if (!char || !guestId) return;
+    const iv = setInterval(() => {
+      saveLocalChar(char);
+      dbUpsertChar(char, guestId);
+    }, 30000); // sync every 30s
+    return () => clearInterval(iv);
+  }, [char, guestId]);
+
   // ---- World Boss Auto-Spawn ----
   useEffect(() => {
     if (!char || screen !== "world") return;

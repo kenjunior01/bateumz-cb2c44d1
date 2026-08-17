@@ -64,8 +64,14 @@ export default function WorldSwitcher() {
   // Hide on auth/admin pages
   const isHidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
+  const HIDDEN_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/dashboard', '/admin', '/empresa', '/overlay'];
+
   useEffect(() => {
     const path = location.pathname;
+    if (HIDDEN_PATHS.some(p => path.startsWith(p))) {
+      setVisible(false);
+      return;
+    }
     if (path.startsWith('/esports')) setCurrentWorld('esports');
     else if (path.startsWith('/marketplace') || path.startsWith('/concursos') || path.startsWith('/instant-win') || path.startsWith('/historico')) setCurrentWorld('sorteios');
     else if (path.startsWith('/jogos') || path.startsWith('/lives') || path.startsWith('/batalhas') || path.startsWith('/participar') || path.startsWith('/tournaments')) setCurrentWorld('jogos');

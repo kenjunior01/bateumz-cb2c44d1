@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -8,14 +8,20 @@ import {
   CheckCircle2, Copy, Check, ArrowRight, Heart, Play,
   Music, UtensilsCrossed, Dumbbell, GraduationCap, ShoppingBag,
   Palette, Mic2, Sparkles, TrendingUp, Eye, Crown, Radio,
-  Gift, Target, BarChart3
+  Gift, Target, BarChart3, Ticket, Building2, ArrowLeft
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
 import Footer from "@/components/Footer";
+import BusinessLivesTab from "@/components/business/BusinessLivesTab";
+import BusinessTimeline from "@/components/business/BusinessTimeline";
 
 /* ─── Types ──────────────────────────────────────────── */
 interface CompanyInfo {
@@ -74,6 +80,38 @@ interface LiveSession {
   players_count: number;
   games_count: number;
   winners: string[];
+}
+
+interface Raffle {
+  id: string;
+  title: string;
+  prize_title: string;
+  prize_value: number;
+  ticket_price: number;
+  total_tickets: number;
+  sold_tickets: number;
+  status: string;
+  image_url: string | null;
+  slug: string | null;
+  end_date: string | null;
+  category: string | null;
+}
+
+interface Contest {
+  id: string;
+  title: string;
+  description: string | null;
+  prize_description: string | null;
+  image_url: string | null;
+  status: string;
+  end_date: string | null;
+}
+
+interface RaffleWinner {
+  raffle_title: string;
+  prize_title: string;
+  display_name: string | null;
+  slug: string | null;
 }
 
 /* ─── Niche System ──────────────────────────────────── */
@@ -181,13 +219,24 @@ const StatCard = ({ icon: Icon, label, value, sub, color, delay }: { icon: any; 
 /* ═══════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════ */
+const sb: any = supabase;
+
+const isUuid = (v: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
 const CompanyPublicProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { formatMoney } = useCurrency();
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
   const [games, setGames] = useState<GameItem[]>([]);
   const [sessions, setSessions] = useState<LiveSession[]>([]);
+  const [raffles, setRaffles] = useState<Raffle[]>([]);
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [winners, setWinners] = useState<RaffleWinner[]>([]);
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [playerName, setPlayerName] = useState("");
@@ -199,22 +248,40 @@ const CompanyPublicProfile = () => {
   const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
 
-  /* ─── Data Loading ─────────────────────────────────── */
+  /* ─── Slug Resolution + Data Loading ─────────────── */
   useEffect(() => {
     if (!id) return;
     const load = async () => {
       setLoading(true);
       try {
-        const [profileRes, brandRes, wheelsRes, milsRes, livesRes] = await Promise.all([
-          supabase.from("profiles").select("*").eq("id", id).single(),
-          supabase.from("company_branding").select("*").eq("user_id", id).single(),
-          supabase.from("spin_wheel_games").select("*").eq("business_user_id", id).order("created_at", { ascending: false }),
-          supabase.from("millionaire_games").select("*").eq("business_user_id", id).order("created_at", { ascending: false }),
-          supabase.from("scheduled_lives").select("*").eq("business_user_id", id).neq("status", "draft").order("scheduled_at", { ascending: false }).limit(20),
+        let bizId = id;
+        if (!isUuid(id)) {
+          const { data: bySlug } = await sb
+            .from("profiles_public")
+            .select("user_id")
+            .eq("slug", id)
+            .maybeSingle();
+          if (!bySlug) {
+            setCompany(null);
+            setLoading(false);
+            return;
+          }
+          bizId = bySlug.user_id;
+        }
+        setResolvedId(bizId);
+
+        const [profileRes, brandRes, wheelsRes, milsRes, livesRes, rafflesRes, contestsRes] = await Promise.all([
+          sb.from("profiles_public").select("*").eq("user_id", bizId).single(),
+          sb.from("company_branding").select("*").eq("user_id", bizId).single(),
+          sb.from("spin_wheel_games").select("*").eq("business_user_id", bizId).order("created_at", { ascending: false }),
+          sb.from("millionaire_games").select("*").eq("business_user_id", bizId).order("created_at", { ascending: false }),
+          sb.from("scheduled_lives").select("*").eq("business_user_id", bizId).neq("status", "draft").order("scheduled_at", { ascending: false }).limit(20),
+          sb.from("raffles").select("*").eq("business_user_id", bizId).in("status", ["active", "completed", "drawn"]).order("created_at", { ascending: false }),
+          sb.from("contests").select("*").eq("created_by", bizId).in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
         ]);
         if (profileRes.data) {
           const p = profileRes.data;
-          setCompany({ user_id: p.id, display_name: p.display_name, company_name: p.company_name, avatar_url: p.avatar_url, is_verified: p.is_verified, city: p.city, province: p.province, created_at: p.created_at, phone: p.phone });
+          setCompany({ user_id: p.user_id, display_name: p.display_name, company_name: p.company_name, avatar_url: p.avatar_url, is_verified: p.is_verified, city: p.city, province: p.province, created_at: p.created_at, phone: p.phone });
         }
         if (brandRes.data) setBranding(brandRes.data as any);
         const allGames: GameItem[] = [];
@@ -222,7 +289,25 @@ const CompanyPublicProfile = () => {
         (milsRes.data || []).forEach((m: any) => allGames.push({ id: m.id, name: m.name || "Quem Quer Ser Milionário", type: "millionaire", is_published: m.is_active, created_at: m.created_at, is_active: m.is_active }));
         setGames(allGames);
         if (livesRes.data) {
-          setSessions(livesRes.data.map((l: any) => ({ code: l.live_code || l.slug || l.id, title: l.title, started_at: new Date(l.scheduled_at).getTime(), ended_at: l.ends_at ? new Date(l.ends_at).getTime() : Date.now(), duration_sec: l.ends_at ? Math.round((new Date(l.ends_at).getTime() - new Date(l.scheduled_at).getTime()) / 1000) : 0, players_count: 0, games_count: 0, winners: [] })));
+          setSessions((livesRes.data || []).map((l: any) => ({ code: l.slug || l.id, title: l.title, started_at: new Date(l.scheduled_at).getTime(), ended_at: l.ends_at ? new Date(l.ends_at).getTime() : Date.now(), duration_sec: l.ends_at ? Math.round((new Date(l.ends_at).getTime() - new Date(l.scheduled_at).getTime()) / 1000) : 0, players_count: 0, games_count: 0, winners: [] })));
+        }
+        setRaffles((rafflesRes.data as Raffle[]) || []);
+        setContests((contestsRes.data as Contest[]) || []);
+
+        // Load winners from finished raffles
+        const finishedIds = ((rafflesRes.data as Raffle[]) || []).filter(r => r.status === "completed" || r.status === "drawn").map(r => r.id);
+        if (finishedIds.length > 0) {
+          const { data: winnerRows } = await sb.from("participants").select("raffle_id, user_id").in("raffle_id", finishedIds).eq("status", "winner");
+          if (winnerRows && winnerRows.length > 0) {
+            const raffleMap = new Map(((rafflesRes.data as Raffle[]) || []).map((r: any) => [r.id, r]));
+            const userIds = [...new Set(winnerRows.map((w: any) => w.user_id))];
+            const { data: profs } = await sb.from("profiles_public").select("user_id, display_name").in("user_id", userIds);
+            const profMap = new Map((profs || []).map((p: any) => [p.user_id, p.display_name]));
+            setWinners(winnerRows.map((w: any) => {
+              const r = raffleMap.get(w.raffle_id);
+              return { raffle_title: r?.title || "Sorteio", prize_title: r?.prize_title || "Prémio", display_name: profMap.get(w.user_id) || null, slug: r?.slug || null };
+            }));
+          }
         }
       } catch (e) { console.error(e); }
       setLoading(false);
@@ -265,6 +350,10 @@ const CompanyPublicProfile = () => {
   const totalGames = games.length;
   const publishedGames = games.filter((g) => g.is_published || g.is_active).length;
   const totalLives = sessions.length;
+  const totalRaffles = raffles.length;
+  const totalWinners = winners.length;
+  const totalContests = contests.length;
+  const activeRaffles = raffles.filter(r => r.status === "active").length;
   const heroTitle = branding?.hero_title || niche.defaultTitle;
   const heroSubtitle = branding?.hero_subtitle || branding?.company_slogan || `Descobre os jogos e lives de ${companyName}`;
   const ctaText = branding?.hero_cta_text || niche.defaultCta;
@@ -422,9 +511,9 @@ const CompanyPublicProfile = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard icon={Gamepad2} label="Jogos" value={totalGames} sub={`${publishedGames} ativos`} color={primary} delay={0} />
-            <StatCard icon={Radio} label="Lives" value={totalLives} color={secondary} delay={0.05} />
-            <StatCard icon={Users} label="Seguidores" value="-" color={accent} delay={0.1} />
-            <StatCard icon={Zap} label="Estado" value="Ativo" color="#10b981" delay={0.15} />
+            <StatCard icon={Ticket} label="Sorteios" value={totalRaffles} sub={`${activeRaffles} abertos`} color={secondary} delay={0.05} />
+            <StatCard icon={Trophy} label="Vencedores" value={totalWinners} color={accent} delay={0.1} />
+            <StatCard icon={Radio} label="Lives" value={totalLives} color="#10b981" delay={0.15} />
           </div>
         </div>
       </div>
@@ -477,17 +566,21 @@ const CompanyPublicProfile = () => {
 
       <div className="container mx-auto px-4 mt-10 pb-16">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full h-12 rounded-2xl bg-muted/50 p-1">
+          <TabsList className="w-full h-12 rounded-2xl bg-muted/50 p-1 overflow-x-auto">
             <TabsTrigger value="games" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all" style={{ "--tw-shadow-color": `${primary}30` } as any}>
               <Gamepad2 className="h-4 w-4" /> Jogos
               <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{totalGames}</span>
             </TabsTrigger>
-            <TabsTrigger value="lives" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all" style={{ "--tw-shadow-color": `${secondary}30` } as any}>
+            <TabsTrigger value="raffles" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all" style={{ "--tw-shadow-color": `${secondary}30` } as any}>
+              <Ticket className="h-4 w-4" /> Sorteios
+              <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{totalRaffles}</span>
+            </TabsTrigger>
+            <TabsTrigger value="lives" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all" style={{ "--tw-shadow-color": `${accent}30` } as any}>
               <Radio className="h-4 w-4" /> Lives
               <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{totalLives}</span>
             </TabsTrigger>
-            <TabsTrigger value="style" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all" style={{ "--tw-shadow-color": `${accent}30` } as any}>
-              <Palette className="h-4 w-4" /> Estilo
+            <TabsTrigger value="activity" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
+              <Clock className="h-4 w-4" /> Actividade
             </TabsTrigger>
           </TabsList>
 
@@ -534,88 +627,76 @@ const CompanyPublicProfile = () => {
 
           
           <TabsContent value="lives" className="mt-6">
-            {sessions.length > 0 ? (
-              <div className="space-y-3">
-                {sessions.map((s, i) => (
-                  <motion.div key={`${s.code}-${i}`} initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ ...springUp, delay: i * 0.03 }}>
-                    <Card className="border-border/40 hover:border-border/80 transition-all group cursor-pointer hover:shadow-md">
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-2xl flex flex-col items-center justify-center shrink-0 relative overflow-hidden" style={{ backgroundColor: `${primary}12` }}>
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/5" />
-                          <Radio className="h-5 w-5 relative" style={{ color: primary }} />
-                          <span className="text-[8px] font-black mt-0.5 text-muted-foreground relative">LIVE</span>
+            {resolvedId ? <BusinessLivesTab businessUserId={resolvedId} /> : (
+              <div className="text-center py-16">
+                <Radio className="h-10 w-10 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">Nenhuma live realizada ainda</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="raffles" className="mt-6">
+            {raffles.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {raffles.map((r, i) => (
+                  <motion.div key={r.id} initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ ...springUp, delay: i * 0.04 }}>
+                    <Card className="group border-border/40 hover:border-border/80 transition-all overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1">
+                      {r.image_url && <div className="h-28 bg-muted"><img src={r.image_url} alt={r.title} className="w-full h-full object-cover" loading="lazy" /></div>}
+                      <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }} />
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm leading-tight line-clamp-2">{r.title}</h4>
+                          <Badge className="shrink-0 text-[9px] font-bold" style={{ backgroundColor: r.status === "active" ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.05)", color: r.status === "active" ? "#22c55e" : "hsl(var(--muted-foreground))" }}>
+                            {r.status === "active" ? "Aberto" : r.status === "drawn" ? "Sorteado" : "Encerrado"}
+                          </Badge>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate group-hover:text-primary transition-colors">{s.title || `Live ${s.code}`}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(s.started_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                          {s.duration_sec > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round(s.duration_sec / 60)} min</p>}
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-1">{r.prize_title}</p>
+                        <div className="flex items-center justify-between mt-3 text-[10px] text-muted-foreground">
+                          <span>{formatMoney(r.ticket_price)}/bilhete</span>
+                          <span>{r.sold_tickets}/{r.total_tickets} vendidos</span>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                        {r.slug && (
+                          <Link to={`/raffle/${r.slug}`} className="mt-3 block w-full text-center py-2 rounded-xl text-xs font-bold transition-colors" style={{ backgroundColor: `${primary}12`, color: primary }}>
+                            Ver Sorteio <ArrowRight className="h-3 w-3 inline ml-1" />
+                          </Link>
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
                 ))}
               </div>
             ) : (
-              <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center py-16">
-                <div className="h-20 w-20 mx-auto mb-4 rounded-3xl bg-muted/30 flex items-center justify-center">
-                  <Radio className="h-10 w-10 text-muted-foreground/20" />
+              <div className="text-center py-16">
+                <Ticket className="h-10 w-10 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">Nenhum sorteio disponivel</p>
+              </div>
+            )}
+            {winners.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-bold text-base flex items-center gap-2 mb-4"><Trophy className="h-4 w-4" style={{ color: "#fbbf24" }} /> Vencedores Recentes</h3>
+                <div className="space-y-2">
+                  {winners.slice(0, 10).map((w, i) => (
+                    <motion.div key={i} initial={{ x: -10, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.03 }} className="flex items-center gap-3 p-3 rounded-xl border border-border/30 bg-card/30">
+                      <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-500 font-black text-xs">{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{w.display_name || "Participante"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{w.prize_title} — {w.raffle_title}</p>
+                      </div>
+                      {w.slug && <Link to={`/raffle/${w.slug}`} className="text-[10px] font-bold" style={{ color: primary }}>Ver</Link>}
+                    </motion.div>
+                  ))}
                 </div>
-                <p className="text-sm text-muted-foreground">Nenhuma live realizada ainda</p>
-              </motion.div>
+              </div>
             )}
           </TabsContent>
 
-          
-          <TabsContent value="style" className="mt-6">
-            <div className="space-y-4">
-              
-              <motion.div initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} className="rounded-2xl border border-border/40 bg-card/40 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Palette className="h-4 w-4" style={{ color: primary }} />
-                  <h3 className="font-bold">Identidade Visual</h3>
-                </div>
-                {branding ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                      {[["Principal", primary], ["Secundária", secondary], ["Acento", accent], ["Fundo", branding.background_color], ["Texto", branding.text_color]].map(([label, color]) => (
-                        <div key={label as string} className="text-center">
-                          <motion.div className="h-14 rounded-xl border border-border/50 shadow-inner mb-1.5" style={{ backgroundColor: color as string }} whileHover={{ scale: 1.05 }} />
-                          <p className="text-[9px] text-muted-foreground font-medium">{label as string}</p>
-                          <p className="text-[8px] text-muted-foreground/50 font-mono">{color as string}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="h-3 rounded-full overflow-hidden" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary}, ${accent})` }} />
-                  </div>
-                ) : <p className="text-xs text-muted-foreground">Sem identidade visual configurada</p>}
-              </motion.div>
-
-              
-              <motion.div initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} className="rounded-2xl border border-border/40 bg-card/40 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <NicheIcon className="h-4 w-4" style={{ color: primary }} />
-                  <h3 className="font-bold">Configuração do Perfil</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2"><span className="text-muted-foreground text-xs">Nicho:</span><span className="font-bold text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${primary}15`, color: primary }}>{niche.label}</span></div>
-                  <div className="flex items-center gap-2"><span className="text-muted-foreground text-xs">Layout:</span><span className="font-bold text-xs capitalize">{layout}</span></div>
-                </div>
-              </motion.div>
-
-              
-              <motion.div initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} className="rounded-2xl border border-border/40 bg-card/40 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-bold">Informações</h3>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground"><Globe className="h-4 w-4" />{company.display_name || company.company_name}</div>
-                  {(company.city || company.province) && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{[company.city, company.province].filter(Boolean).join(", ")}</div>}
-                  {company.created_at && <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" />{new Date(company.created_at).toLocaleDateString("pt-PT", { month: "long", year: "numeric" })}</div>}
-                </div>
-              </motion.div>
-            </div>
+          <TabsContent value="activity" className="mt-6">
+            {resolvedId ? <BusinessTimeline businessUserId={resolvedId} /> : (
+              <div className="text-center py-16">
+                <Clock className="h-10 w-10 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">Sem atividade ainda</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

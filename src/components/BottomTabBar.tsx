@@ -38,7 +38,8 @@ const BottomTabBar = () => {
     location.pathname.startsWith("/login") ||
     location.pathname.startsWith("/register") ||
     location.pathname.startsWith("/forgot-password") ||
-    location.pathname.startsWith("/reset-password")
+    location.pathname.startsWith("/reset-password") ||
+    location.pathname.startsWith("/empresa")
   ) {
     return null;
   }

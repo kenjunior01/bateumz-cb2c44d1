@@ -388,14 +388,22 @@ export default function BusinessProfile() {
   }, [pendingGame, navigate]);
 
   const handleShare = async () => {
-    const url = window.location.href;
+    // Always share the slug-based URL (cleaner for public sharing)
+    let url: string;
+    if (business?.slug) {
+      url = `${getPublicBaseUrl()}/empresa/${business.slug}`;
+    } else if (resolvedId) {
+      url = `${getPublicBaseUrl()}/empresa/${resolvedId}/publico`;
+    } else {
+      url = window.location.href;
+    }
     const title = business?.company_name || business?.display_name || "Empresa";
     try {
       if (navigator.share) {
         await navigator.share({ title: `${title} • Bateu`, url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success("Profile link copied!");
+        toast.success("Link do perfil copiado!");
       }
     } catch {
       // user cancelled

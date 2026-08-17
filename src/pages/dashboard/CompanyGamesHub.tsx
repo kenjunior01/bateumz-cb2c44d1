@@ -40,6 +40,7 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface GameConfig {
   id: string;
@@ -135,6 +136,7 @@ const ICON_MAP: Record<string, any> = {
 export default function CompanyGamesHub() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { formatMoney } = useCurrency();
   const [gameConfigs, setGameConfigs] = useState<GameConfig[]>([]);
   const [millionaireGames, setMillionaireGames] = useState<MillionaireGame[]>([]);
   const [spinWheels, setSpinWheels] = useState<SpinWheelGame[]>([]);
@@ -192,7 +194,7 @@ export default function CompanyGamesHub() {
       { label: "Jogos Ativos", value: enabledGames, icon: Gamepad2, color: "#22c55e", trend: "+2 esta semana" },
       { label: "Publicados", value: publishedGames, icon: Eye, color: "#3b82f6" },
       { label: "Total de Jogadas", value: totalPlays.toLocaleString(), icon: Users, color: "#a855f7" },
-      { label: "Premios Distribuidos", value: `${totalPrizes.toLocaleString()} MZN`, icon: DollarSign, color: "#fbbf24" },
+      { label: "Premios Distribuidos", value: formatMoney(totalPrizes), icon: DollarSign, color: "#fbbf24" },
     ];
   }, [gameConfigs]);
 
@@ -438,7 +440,7 @@ export default function CompanyGamesHub() {
                             {wheel.is_published ? "Publicado" : "Rascunho"}
                           </Badge>
                           <Badge variant="secondary" className="text-[10px]">{wheel.segment_count} segmentos</Badge>
-                          {wheel.spin_cost > 0 && <Badge variant="secondary" className="text-[10px]">{wheel.spin_cost} MZN</Badge>}
+                          {wheel.spin_cost > 0 && <Badge variant="secondary" className="text-[10px]">{formatMoney(wheel.spin_cost)}</Badge>}
                         </div>
                       </div>
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => copyGameLink(wheel.id, e)}>
@@ -487,7 +489,7 @@ export default function CompanyGamesHub() {
                           <h3 className="font-semibold text-sm truncate">{config.game_label}</h3>
                           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                             <span>{config.play_count} jogadas</span>
-                            <span>{(config.total_prizes_awarded || 0).toLocaleString()} MZN</span>
+                            <span>{formatMoney(config.total_prizes_awarded || 0)}</span>
                           </div>
                         </div>
                         <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-[10px]">ATIVO</Badge>

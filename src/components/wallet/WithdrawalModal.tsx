@@ -1,11 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, QrCode, Landmark, Globe, ArrowLeft, ArrowRight, CheckCircle2, Loader2, X, Wallet } from "lucide-react";
-import { WITHDRAWAL_METHODS, createWithdrawalRequest, getBalance, formatMZN } from "@/lib/wallet";
+import { Phone, QrCode, Landmark, Globe, ArrowLeft, ArrowRight, CheckCircle2, Loader2, X, Wallet, Smartphone, Zap, Bitcoin, MoreHorizontal, FileText, ShoppingBag } from "lucide-react";
+import { getWithdrawalMethodsForCountry, groupMethodsByCategory, PAYMENT_CATEGORY_LABELS, createWithdrawalRequest } from "@/lib/wallet";
+import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Props {
   open: boolean;
@@ -17,6 +19,8 @@ interface Props {
 
 const ICON_MAP: Record<string, typeof Phone> = {
   phone: Phone, "qr-code": QrCode, landmark: Landmark, globe: Globe,
+  smartphone: Smartphone, zap: Zap, bitcoin: Bitcoin, wallet: Wallet,
+  "file-text": FileText, "shopping-bag": ShoppingBag, "more-horizontal": MoreHorizontal,
 };
 const PRESETS = [100, 250, 500, 1000, 2500];
 const TITLES = ["Metodo de Levantamento", "Valor a Levantar", "Destino", "Confirmacao"];
@@ -28,6 +32,8 @@ const SLIDE = {
 const INP = "bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400";
 
 export default function WithdrawalModal({ open, onOpenChange, userId, currentBalance, onWithdrawalComplete }: Props) {
+  const { region } = useRegionalTheme();
+  const { format } = useCurrency();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [method, setMethod] = useState("");
@@ -35,6 +41,11 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
   const [dest, setDest] = useState("");
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
+
+  const countryCode = region?.country_code || "MZ";
+  const methodsForCountry = useMemo(() => getWithdrawalMethodsForCountry(countryCode), [countryCode]);
+  const grouped = useMemo(() => groupMethodsByCategory(methodsForCountry), [methodsForCountry]);
+  const selectedMethod = methodsForCountry.find((m) => m.id === method);
 
   const reset = useCallback(() => {
     setStep(0); setDir(1); setMethod(""); setAmount(""); setDest(""); setLoading(false); setOk(false);
@@ -44,7 +55,6 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
   const next = () => { setDir(1); setStep((s) => Math.min(s + 1, 4)); };
   const back = () => { setDir(-1); setStep((s) => Math.max(s - 1, 0)); };
 
-  const selectedMethod = WITHDRAWAL_METHODS.find((m) => m.id === method);
   const numAmount = parseFloat(amount) || 0;
   const canGo = step === 0 ? !!method : step === 1 ? numAmount > 0 && numAmount <= currentBalance : step === 2 ? dest.trim().length > 0 : true;
 
@@ -78,24 +88,41 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
             )}
           </DialogHeader>
 
-          <div className="relative min-h-[340px] overflow-hidden">
+          <div className="relative min-h-[340px] overflow-y-auto max-h-[70vh]">
             <AnimatePresence mode="wait" custom={dir}>
               <motion.div key={step} custom={dir} variants={SLIDE} initial="enter" animate="center" exit="exit"
                 transition={{ type: "spring", stiffness: 300, damping: 30 }} className="px-6 pb-6">
 
                 {step === 0 && (
-                  <div className="mt-4 space-y-2">
-                    {WITHDRAWAL_METHODS.map((wm) => {
-                      const Ic = ICON_MAP[wm.icon] ?? Globe;
-                      const active = method === wm.id;
+                  <div className="mt-4 space-y-3">
+                    {Object.entries(grouped).map(([cat, methods]) => {
+                      const catInfo = PAYMENT_CATEGORY_LABELS[cat];
+                      const CatIcon = ICON_MAP[catInfo?.icon] ?? MoreHorizontal;
                       return (
-                        <button key={wm.id} onClick={() => setMethod(wm.id)}
-                          className={`flex items-center gap-4 w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer ${active ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-400/60 ring-2 ring-amber-400/20" : "bg-white/5 border-white/10 hover:bg-white/10"}`}>
-                          <div className={`p-2.5 rounded-lg bg-gradient-to-br ${active ? "from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30" : "from-white/10 to-white/5"}`}>
-                            <Ic className="h-5 w-5 text-white" />
+                        <div key={cat}>
+                          <div className="flex items-center gap-2 mb-2 mt-1">
+                            <CatIcon className="w-3.5 h-3.5 text-white/40" />
+                            <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">{catInfo?.label || cat}</span>
                           </div>
-                          <span className={`text-sm font-semibold ${active ? "text-amber-300" : "text-white/80"}`}>{wm.label}</span>
-                        </button>
+                          <div className="space-y-2">
+                            {methods.map((wm) => {
+                              const Ic = ICON_MAP[wm.icon] ?? Globe;
+                              const active = method === wm.id;
+                              return (
+                                <button key={wm.id} onClick={() => setMethod(wm.id)}
+                                  className={`flex items-center gap-4 w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer ${active ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-400/60 ring-2 ring-amber-400/20" : "bg-white/5 border-white/10 hover:bg-white/10"}`}>
+                                  <div className={`p-2.5 rounded-lg bg-gradient-to-br ${active ? "from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30" : "from-white/10 to-white/5"}`}>
+                                    <Ic className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-sm font-semibold block ${active ? "text-amber-300" : "text-white/80"}`}>{wm.label}</span>
+                                    <span className="text-[11px] text-white/40">{wm.desc || wm.placeholder || ""}</span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -108,23 +135,23 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                         <Wallet className="h-4 w-4" />
                         <span>Disponivel</span>
                       </div>
-                      <span className="text-amber-400 font-bold text-sm">{formatMZN(currentBalance)}</span>
+                      <span className="text-amber-400 font-bold text-sm">{format(currentBalance)}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {PRESETS.map((v) => (
                         <button key={v} onClick={() => setAmount(String(v))}
                           className={`py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${amount === String(v) ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30" : "bg-white/10 text-white/80 hover:bg-white/20"}`}>
-                          {formatMZN(v)}
+                          {format(v)}
                         </button>
                       ))}
                     </div>
                     <div>
-                      <Label className="text-white/70 text-xs mb-1 block">Outro valor (MZN)</Label>
+                      <Label className="text-white/70 text-xs mb-1 block">Outro valor</Label>
                       <Input type="number" min={1} max={currentBalance} placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${INP} input-focus-glow`} />
                     </div>
                     {amount && (
                       <p className={`text-center font-bold text-lg ${numAmount > currentBalance ? "text-red-400" : "text-amber-400"}`}>
-                        {numAmount > currentBalance ? "Saldo insuficiente" : formatMZN(numAmount)}
+                        {numAmount > currentBalance ? "Saldo insuficiente" : format(numAmount)}
                       </p>
                     )}
                   </div>
@@ -148,7 +175,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                   <div className="mt-4 space-y-3">
                     <div className="bg-white/5 rounded-xl p-4 space-y-3">
                       <Row label="Metodo" value={selectedMethod?.label ?? method} />
-                      <Row label="Valor" value={formatMZN(numAmount)} highlight />
+                      <Row label="Valor" value={format(numAmount)} highlight />
                       <Row label="Destino" value={dest} />
                     </div>
                     <p className="text-white/40 text-xs text-center">O pedido sera processado em 1-3 dias uteis.</p>
@@ -161,7 +188,7 @@ export default function WithdrawalModal({ open, onOpenChange, userId, currentBal
                       <CheckCircle2 className="h-20 w-20 text-amber-400" />
                     </motion.div>
                     <h3 className="text-white text-xl font-bold">Pedido Enviado!</h3>
-                    <p className="text-white/60 text-sm max-w-xs">O seu levantamento de {formatMZN(numAmount)} via {selectedMethod?.label} foi registado com sucesso.</p>
+                    <p className="text-white/60 text-sm max-w-xs">O seu levantamento de {format(numAmount)} via {selectedMethod?.label} foi registado com sucesso.</p>
                     <Button onClick={() => handleClose(false)} className="btn-press mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">Fechar</Button>
                   </div>
                 )}

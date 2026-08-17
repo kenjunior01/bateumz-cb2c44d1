@@ -104,13 +104,12 @@ export const PROVINCES = REGIONS_BY_COUNTRY.US;
 export const CITIES_BY_PROVINCE: Record<string, string[]> = {};
 
 // Standard payment methods per country (used by checkout UI to pick options).
-// PayPal is the real gateway; locals route to the existing manual receipt flow.
 export const PAYMENT_METHODS_BY_COUNTRY: Record<string, string[]> = {
-  US: ["paypal"],
-  CA: ["paypal"],
-  PT: ["paypal", "mbway", "bank_transfer"],
-  BR: ["paypal", "pix", "boleto"],
-  MZ: ["mpesa", "emola", "bank_transfer"],
-  AO: ["multicaixa", "unitel_money", "bai_transfer"],
-  IN: ["upi", "paytm", "phonepe", "gpay", "rupay", "paypal", "bank_transfer"],
+  US: ["paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt", "bank_transfer"],
+  CA: ["paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt", "bank_transfer"],
+  PT: ["mbway", "multibanco", "pt_transfer", "paypal", "visa", "mastercard"],
+  BR: ["pix", "boleto", "mercadopago", "paypal", "visa", "mastercard"],
+  MZ: ["mpesa", "emola", "conta_movel", "tkash", "mzn_bank_transfer", "bci_transfer", "standard_bank_mz", "visa", "mastercard", "paypal"],
+  AO: ["multicaixa", "unitel_money", "africell_money", "bai_transfer", "bfa_transfer", "paypal", "visa", "mastercard"],
+  IN: ["upi", "paytm", "phonepe", "gpay", "in_bank_transfer", "paypal", "visa", "mastercard", "crypto_btc", "crypto_usdt"],
 };

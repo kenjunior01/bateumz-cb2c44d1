@@ -196,10 +196,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.games.desc": "Win prizes playing",
     "menu.millionaire": "Millionaire",
     "menu.spinWheel": "Spin Wheel",
-    "menu.liveHub": "Live Hub",
-    "menu.blog": "Blog",
-    "livehub.game.campaignrpg": "Campaign RPG",
-    "livehub.game.campaignrpg.desc": "5 epic worlds, 6 classes, devastating bosses. Full campaign with equipment!",
 
     // Search
     "search.location": "Location",
@@ -824,11 +820,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.uri": "Uri",
     "livehub.game.uri.desc": "Fast reaction challenge!",
 
-    // World Switcher
-    "worlds.title": "WORLDS",
-    "worlds.subtitle": "Three experiences. One platform.",
-    "worlds.current": "CURRENT",
-
     // Common / App
     "app.errorTitle": "Something went wrong",
     "app.errorSubtitle": "An unexpected error occurred.",
@@ -1270,10 +1261,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.games.desc": "Ganha prémios a jogar",
     "menu.millionaire": "Milionário",
     "menu.spinWheel": "Roda da Sorte",
-    "menu.liveHub": "Hub Ao Vivo",
-    "menu.blog": "Blog",
-    "livehub.game.campaignrpg": "Campanha RPG",
-    "livehub.game.campaignrpg.desc": "5 mundos épicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!",
 
     // ===== Search =====
     "search.location": "Localização",
@@ -1819,11 +1806,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.uri": "Uri",
     "livehub.game.uri.desc": "Desafio rapido de reacao!",
 
-    // World Switcher
-    "worlds.title": "MUNDOS",
-    "worlds.subtitle": "Tres experiencias. Uma plataforma.",
-    "worlds.current": "ATUAL",
-
     // Common / App
     "app.errorTitle": "Algo correu mal",
     "app.errorSubtitle": "Ocorreu um erro inesperado.",
@@ -2091,10 +2073,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.games.desc": "Ganhe prêmios jogando",
     "menu.millionaire": "Milionário",
     "menu.spinWheel": "Roleta da Sorte",
-    "menu.liveHub": "Hub Ao Vivo",
-    "menu.blog": "Blog",
-    "livehub.game.campaignrpg": "Campanha RPG",
-    "livehub.game.campaignrpg.desc": "5 mundos épicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!",
 
     // ===== Search =====
     "search.location": "Localização",
@@ -2689,11 +2667,6 @@ const translations: Partial<Record<Lang, Dict>> = {
     "livehub.game.bicho.desc": "Clássico jogo de apostas brasileiro!",
     "livehub.game.uri": "Uri",
     "livehub.game.uri.desc": "Desafio rápido de reacção!",
-
-    // World Switcher
-    "worlds.title": "MUNDOS",
-    "worlds.subtitle": "Três experiências. Uma plataforma.",
-    "worlds.current": "ATUAL",
 
     // Common / App
     "app.errorTitle": "Algo correu mal",

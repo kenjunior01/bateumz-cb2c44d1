@@ -8,6 +8,7 @@ import { Trophy, Calendar, Eye, ThumbsUp, ArrowRight, Flame, Search, Zap, Crown,
 import { Input } from "@/components/ui/input";
 import ContestCountdown from "@/components/ContestCountdown";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import { useSEO } from "@/hooks/useSEO";
 import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
 
 interface Contest {
@@ -35,6 +36,7 @@ const statusMap: Record<string, { label: string; color: string; bgColor: string 
 };
 
 export default function Contests() {
+  useSEO({ title: 'Concursos e Promoções', description: 'Participe nos concursos e promoções da Bateu. Prémios exclusivos, desafios especiais e oportunidades únicas.', canonicalPath: '/concursos' });
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

@@ -8,10 +8,12 @@ import BlockchainVerification from "@/components/BlockchainVerification";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { transparencyContent, resolveLegalLang } from "@/lib/legal-content";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
 
 const SECTION_ICONS = [Cpu, Shield, Lock, FileCheck, Users, Eye];
 
 const Transparency = () => {
+  useSEO({ title: 'Transparência e Verificação', description: 'Saiba como a Bateu garante transparência total. Sorteios verificáveis, resultados auditáveis e sistema provably fair.', canonicalPath: '/transparencia' });
   const { lang } = useLanguage();
   const content = transparencyContent[resolveLegalLang(lang)];
   const [searchParams] = useSearchParams();

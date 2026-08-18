@@ -102,6 +102,7 @@ import { toast } from "sonner";
 import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper";
 import EngagementBar from "@/components/engagement/EngagementBar";
 import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
+import { useSEO } from "@/hooks/useSEO";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
@@ -235,6 +236,7 @@ const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 const LiveHub = () => {
   const { toast: uiToast } = useToast();
   const { t } = useLanguage();
+  useSEO({ title: 'Lives ao Vivo', description: 'Assista e participe em lives ao vivo na Bateu. Sorteios em direto, interação em tempo real e a oportunidade de ganhar prémios exclusivos.', canonicalPath: '/lives' });
   const { sfx } = useSoundEffects();
   const GAMES = useMemo(() => GAME_DEFS.map(g => ({
     ...g,

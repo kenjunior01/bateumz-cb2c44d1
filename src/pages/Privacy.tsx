@@ -2,9 +2,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { privacyContent, resolveLegalLang } from "@/lib/legal-content";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Privacy() {
   const { lang } = useLanguage();
+  useSEO({ title: 'Política de Privacidade', description: 'Política de privacidade da Bateu. Saiba como protegemos os seus dados pessoais e informações de pagamento.', canonicalPath: '/privacidade', noindex: true });
   const content = privacyContent[resolveLegalLang(lang)];
 
   return (

@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
+import { useSEO } from "@/hooks/useSEO";
 
 const CATEGORIES = ["Todos", "Sorteio", "Quiz", "Bingo", "Esportes", "Música", "Festa", "Talk"];
 
@@ -228,6 +229,7 @@ const ClipCard = ({ clip, index }: { clip: LiveClip; index: number }) => (
 );
 
 const LivesAgora = () => {
+  useSEO({ title: 'Lives Agora', description: 'Lives acontecendo agora na Bateu. Assista e participe em sorteios ao vivo em tempo real.', canonicalPath: '/lives-agora' });
   const { user } = useAuth();
   const [lives, setLives] = useState<any[]>([]);
   const [creators, setCreators] = useState<CreatorStat[]>([]);

@@ -5,10 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Inbox } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import { getTournaments, type Tournament } from "@/lib/tournaments";
 
 export default function TournamentsList() {
+  useSEO({ title: 'Torneios', description: 'Participe em torneios competitivos na Bateu. Classificações em tempo real, prémios em dinheiro e competição justa.', canonicalPath: '/tournaments' });
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);

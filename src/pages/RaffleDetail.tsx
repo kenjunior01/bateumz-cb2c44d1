@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Users, Ticket, ShoppingCart, Check, Star, ArrowLeft, Share2, Heart, Sparkles, X, ChevronRight, PartyPopper, ShieldCheck, Zap, Trophy, Flame, Eye, Gift } from "lucide-react";
 import SocialRaffleEntry from "@/components/SocialRaffleEntry";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { getOneClick, saveOneClick } from "@/lib/oneClick";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 interface Raffle {
   id: string;
@@ -104,6 +105,7 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: React.Elem
 const RaffleDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { currency } = useCurrency();
@@ -145,6 +147,29 @@ const RaffleDetail = () => {
     };
     fetchData();
   }, [slug]);
+
+  useSEO({
+    title: raffle?.title ? `${raffle.title} — Sorteio` : 'Sorteio',
+    description: raffle?.description?.substring(0, 160) || 'Participe neste sorteio na Bateu e concorra a prémios reais com verificação justa.',
+    canonicalPath: location.pathname,
+    ogImage: raffle?.image_url || undefined,
+    ogType: 'product.item',
+    structuredData: raffle ? {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: raffle.title,
+      description: raffle.description?.substring(0, 300),
+      image: raffle.image_url,
+      url: `https://bateu.online/raffle/${raffle.slug}`,
+      offers: {
+        '@type': 'Offer',
+        price: raffle.ticket_price,
+        priceCurrency: 'MZN',
+        availability: raffle.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+        seller: { '@type': 'Organization', name: 'Bateu' }
+      }
+    } : undefined
+  });
 
   const toggleNumber = (num: number) => {
     if (soldNumbers.includes(num)) return;

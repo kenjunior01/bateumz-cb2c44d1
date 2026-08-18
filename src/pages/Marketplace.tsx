@@ -23,6 +23,7 @@ import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
 import ProvablyFair from "@/components/ProvablyFair";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const sb: any = supabase;
 
@@ -73,6 +74,19 @@ const Marketplace = () => {
   const [contentType, setContentType] = useState<ContentType>((searchParams.get("tab") as ContentType) || "all");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  useSEO({
+    title: 'Sorteios e Rifas Online',
+    description: 'Explore todos os sorteios ativos na Bateu. Rifas de prémios reais, bilhetes acessíveis, sorteios ao vivo com verificação justa. Novos sorteios adicionados diariamente.',
+    canonicalPath: '/marketplace',
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Sorteios Ativos — Bateu',
+      description: 'Todos os sorteios e rifas ativas na plataforma Bateu',
+      url: 'https://bateu.online/marketplace'
+    }
+  });
 
   useEffect(() => {
     const tab = searchParams.get("tab") as ContentType;

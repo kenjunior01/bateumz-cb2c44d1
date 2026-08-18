@@ -8,6 +8,7 @@ import {
   Gamepad2, Brain, Target, Layers, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSEO } from '@/hooks/useSEO';
 import {
   BATTLE_GAMES, createBattle, getOpenBattles, getMyBattles, acceptBattle,
   type UserBattle,
@@ -140,6 +141,7 @@ function EmptyStateEmojiArt() {
 }
 
 export default function Battles() {
+  useSEO({ title: 'Batalhas P2P', description: 'Desafie outros jogadores em batalhas cara a cara na Bateu. Aposte, jogue e ganhe com o sistema P2P mais transparente.', canonicalPath: '/batalhas' });
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>('open');

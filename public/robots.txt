@@ -1,14 +1,62 @@
+# Bateu Robots — Atualizado para SEO otimizado
+
 User-agent: Googlebot
 Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /wallet
+Disallow: /profile
+Disallow: /my-tickets
+Disallow: /referral
+Disallow: /lives/overlay
+Disallow: /lives/overlay-pro
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /wallet
+Disallow: /profile
+Disallow: /my-tickets
+Disallow: /referral
+Disallow: /lives/overlay
+Disallow: /lives/overlay-pro
+Crawl-delay: 2
 
 User-agent: Twitterbot
 Allow: /
+Allow: /marketplace
+Allow: /blog
+Allow: /empresas
+Allow: /jogos
+Allow: /lives
+Allow: /concursos
+Allow: /tournaments
+Allow: /como-funciona
+Allow: /faq
 
 User-agent: facebookexternalhit
 Allow: /
+Allow: /marketplace
+Allow: /blog
+Allow: /empresas
+Allow: /jogos
+Allow: /lives
+Allow: /concursos
+Allow: /tournaments
 
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /wallet
+Disallow: /profile
+Disallow: /my-tickets
+Disallow: /referral
+Disallow: /lives/overlay
+Disallow: /lives/overlay-pro
+Crawl-delay: 5
+
+# Sitemaps
+Sitemap: https://bateu.online/sitemap.xml

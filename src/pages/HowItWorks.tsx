@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import { UserPlus, Search, Ticket, Trophy, ShieldCheck, CreditCard } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const steps = [
   { icon: UserPlus, title: "Cria a tua conta", desc: "Regista-te gratuitamente em menos de 1 minuto com o teu e-mail e número de telefone." },
@@ -13,6 +14,8 @@ const steps = [
 ];
 
 export default function HowItWorks() {
+  useSEO({ title: 'Como Funciona', description: 'Descubra como funciona a plataforma Bateu: crie conta, carregue a carteira, participe em sorteios ao vivo, jogue jogos exclusivos e levante prémios reais.', canonicalPath: '/como-funciona' });
+
   return (
     <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
       <Navbar />

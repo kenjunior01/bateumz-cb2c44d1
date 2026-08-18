@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 type GameCard = {
   id: string;
@@ -19,6 +20,7 @@ type GameCard = {
 };
 
 export default function InstantWin() {
+  useSEO({ title: 'Jogos Instantâneos', description: 'Jogue jogos instantâneos na Bateu. Resultados imediatos, prémios a verificar e diversão sem espera. Disponível em vários formatos.', canonicalPath: '/instant-win' });
   const { t } = useLanguage();
   const [games, setGames] = useState<GameCard[]>([]);
   const [loading, setLoading] = useState(true);

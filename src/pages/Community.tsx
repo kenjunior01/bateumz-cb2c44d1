@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import { useSEO } from "@/hooks/useSEO";
 
 interface Message {
   id: string;
@@ -31,6 +32,7 @@ const MESSAGE_TYPES = [
 ];
 
 export default function Community() {
+  useSEO({ title: 'Comunidade Bateu', description: 'Junte-se à comunidade Bateu. Conecte-se com outros jogadores, partilhe estratégias, acompanhe resultados e esteja por dentro das novidades.', canonicalPath: '/community' });
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMsg, setNewMsg] = useState("");

@@ -25,6 +25,7 @@ import LiveChat from "@/components/live/LiveChat";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
+import { useSEO } from "@/hooks/useSEO";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
@@ -286,6 +287,7 @@ const SpectatorTapBattle = ({ liveCode }: { liveCode?: string }) => {
 
 // ==================== MAIN COMPONENT ====================
 const LiveParticipar = () => {
+  useSEO({ title: 'Participar na Live', description: 'Participe ativamente nas lives ao vivo da Bateu. Interaja, concorra a prémios e faça parte da ação.', canonicalPath: '/participar' });
   const { slug } = useParams();
   const [params] = useSearchParams();
   const { user } = useAuth();

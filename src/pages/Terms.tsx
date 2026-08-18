@@ -2,9 +2,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { termsContent, resolveLegalLang } from "@/lib/legal-content";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Terms() {
   const { lang } = useLanguage();
+  useSEO({ title: 'Termos e Condições', description: 'Termos de uso e condições gerais da plataforma Bateu. Leia os termos antes de utilizar os nossos serviços de jogos e sorteios online.', canonicalPath: '/termos', noindex: true });
   const content = termsContent[resolveLegalLang(lang)];
 
   return (

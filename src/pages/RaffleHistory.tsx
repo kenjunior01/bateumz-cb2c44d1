@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MeituanSkeleton from "@/components/meituan/MeituanSkeleton";
+import { useSEO } from "@/hooks/useSEO";
 
 interface CompletedRaffle {
   id: string;
@@ -28,6 +29,7 @@ interface CompletedRaffle {
 }
 
 export default function RaffleHistory() {
+  useSEO({ title: 'Histórico de Sorteios', description: 'Consulte o histórico completo de todos os sorteios realizados na Bateu. Resultados transparentes e verificáveis.', canonicalPath: '/historico' });
   const [raffles, setRaffles] = useState<CompletedRaffle[]>([]);
   const [loading, setLoading] = useState(true);
 

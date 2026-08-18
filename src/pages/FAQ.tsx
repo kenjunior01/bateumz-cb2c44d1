@@ -3,6 +3,7 @@ import { HelpCircle, ChevronDown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useSEO } from "@/hooks/useSEO";
 
 const faqs = [
   {
@@ -56,6 +57,8 @@ const faqs = [
 ];
 
 export default function FAQ() {
+  useSEO({ title: 'Perguntas Frequentes (FAQ)', description: 'Respostas às perguntas mais comuns sobre a plataforma Bateu. Saiba como funcionam sorteios, depósitos, saques, apostas e muito mais.', canonicalPath: '/faq' });
+
   return (
     <div className="min-h-screen bg-background bg-mesh-soft bg-noise">
       <Navbar />

@@ -14,6 +14,7 @@ import {
   Crown, Swords, Gamepad2, ScrollText,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getLeagues,
@@ -241,6 +242,7 @@ function FeaturedCarousel({ leagues }: { leagues: League[] }) {
 }
 
 export default function LeaguesListPage() {
+  useSEO({ title: 'Ligas Competitivas', description: 'Compita em ligas organizadas na Bateu. Suba na classificação, ganhe recompensas e prove o seu valor.', canonicalPath: '/ligas' });
   const { t } = useLanguage();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [featured, setFeatured] = useState<League[]>([]);

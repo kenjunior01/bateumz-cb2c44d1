@@ -36,7 +36,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatMoney } from "@/lib/currency";
 import { PROVINCES } from "@/lib/provinces";
 import { toast } from "sonner";
 import {
@@ -133,6 +134,7 @@ function emptyForm(category: PrestacaoCategory = "outros"): FormState {
 
 export default function DashboardPrestacoes() {
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -381,7 +383,7 @@ export default function DashboardPrestacoes() {
                           {p.featured && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Destaque</Badge>}
                         </div>
                         <div className="text-[11px] sm:text-xs text-muted-foreground flex gap-2 sm:gap-3 flex-wrap mt-1">
-                          <span>{formatMZN(Number(p.total_price))}</span>
+                          <span>{formatMoney(Number(p.total_price))}</span>
                           <span>Stock: {p.stock}</span>
                           <span className="inline-flex items-center gap-1">
                             <Eye className="h-3 w-3" />
@@ -784,8 +786,8 @@ function LeadsPanel({ leads, products }: LeadsPanelProps) {
                     <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">
                       {l.visitor_name && <span>{l.visitor_name} · </span>}
                       {l.visitor_whatsapp && <span>{l.visitor_whatsapp} · </span>}
-                      Entrada {formatMZN(Number(l.down_payment))} · {l.months}m · ~
-                      {formatMZN(Number(l.monthly_estimate))}/mês
+                      Entrada {formatMoney(Number(l.down_payment))} · {l.months}m · ~
+                      {formatMoney(Number(l.monthly_estimate))}/mês
                     </p>
                     {l.notes && (
                       <p className="text-[11px] text-muted-foreground mt-1 italic line-clamp-2">

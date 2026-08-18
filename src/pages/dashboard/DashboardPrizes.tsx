@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Gift, Star, Users, Eye, Plus, Crown, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ interface RaffleWinner {
 
 export default function DashboardPrizes() {
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const navigate = useNavigate();
   const [raffles, setRaffles] = useState<RaffleWinner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ export default function DashboardPrizes() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { label: "Valor Total em Prémios", value: formatMZN(totalPrizeValue), icon: Trophy, color: "text-primary bg-primary/10" },
+          { label: "Valor Total em Prémios", value: formatMoney(totalPrizeValue), icon: Trophy, color: "text-primary bg-primary/10" },
           { label: "Sorteios Ativos", value: active.length, icon: Sparkles, color: "text-accent bg-accent/10" },
           { label: "Vencedores Escolhidos", value: completed.length, icon: Crown, color: "text-yellow-500 bg-yellow-500/10" },
         ].map((s, i) => (
@@ -122,7 +123,7 @@ export default function DashboardPrizes() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground truncate">{r.title}</p>
-                    <p className="text-xs text-muted-foreground">{r.prize_title} · {formatMZN(Number(r.prize_value))}</p>
+                    <p className="text-xs text-muted-foreground">{r.prize_title} · {formatMoney(Number(r.prize_value))}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
@@ -173,7 +174,7 @@ export default function DashboardPrizes() {
                         <p className="font-medium text-foreground text-sm truncate">{r.title}</p>
                         <p className="text-xs text-muted-foreground">{r.prize_title}</p>
                       </div>
-                      <span className="font-display font-bold text-primary text-sm">{formatMZN(Number(r.prize_value))}</span>
+                      <span className="font-display font-bold text-primary text-sm">{formatMoney(Number(r.prize_value))}</span>
                     </div>
                   </motion.div>
                 ))}

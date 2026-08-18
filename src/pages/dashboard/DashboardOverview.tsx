@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   active: { label: "Ativo", color: "text-primary", icon: CheckCircle2 },
@@ -19,6 +19,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 export default function DashboardOverview() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const [raffles, setRaffles] = useState<any[]>([]);
   const [participantCount, setParticipantCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,7 @@ export default function DashboardOverview() {
   const stats = [
     { label: "Sorteios Ativos", value: String(activeCount), change: "+3", up: true, icon: Ticket },
     { label: "Participantes", value: participantCount.toLocaleString(), change: "+18%", up: true, icon: Users },
-    { label: "Receita Total", value: formatMZN(totalRevenue), change: "+24%", up: true, icon: DollarSign },
+    { label: "Receita Total", value: formatMoney(totalRevenue), change: "+24%", up: true, icon: DollarSign },
     { label: "Taxa de Conversão", value: "4.2%", change: "-0.3%", up: false, icon: TrendingUp },
   ];
 
@@ -127,7 +128,7 @@ export default function DashboardOverview() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-semibold text-foreground">{formatMZN(raffle.sold_tickets * Number(raffle.ticket_price))}</p>
+                          <p className="text-sm font-semibold text-foreground">{formatMoney(raffle.sold_tickets * Number(raffle.ticket_price))}</p>
                           <div className="mt-1 flex items-center gap-2">
                             <div className="h-1.5 w-20 rounded-full bg-secondary">
                               <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />

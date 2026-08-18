@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
 
 type RaffleStatus = "active" | "draft" | "completed" | "cancelled";
@@ -33,6 +33,7 @@ const filterTabs: { label: string; value: RaffleStatus | "all" }[] = [
 export default function DashboardRaffles() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const [raffles, setRaffles] = useState<any[]>([]);
   const [filter, setFilter] = useState<RaffleStatus | "all">("all");
   const [search, setSearch] = useState("");
@@ -164,7 +165,7 @@ export default function DashboardRaffles() {
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatMZN(Number(raffle.ticket_price))}/bilhete
+                            {formatMoney(Number(raffle.ticket_price))}/bilhete
                             {raffle.end_date && ` · Encerra ${new Date(raffle.end_date).toLocaleDateString("pt-MZ")}`}
                           </p>
                         </div>
@@ -179,7 +180,7 @@ export default function DashboardRaffles() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-semibold text-foreground">{formatMZN(revenue)}</p>
+                            <p className="text-sm font-semibold text-foreground">{formatMoney(revenue)}</p>
                             <p className="text-[10px] text-muted-foreground">Receita</p>
                           </div>
                         </div>

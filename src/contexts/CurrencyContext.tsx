@@ -6,6 +6,7 @@ interface CurrencyContextValue {
   currency: SupportedCurrency;
   setCurrency: (c: SupportedCurrency) => void;
   format: (value: number) => string;
+  formatMoney: (value: number) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
@@ -28,10 +29,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, currency);
   }, [currency]);
 
+  const fmt = (v: number) => formatMoney(v, currency);
   const value: CurrencyContextValue = {
     currency,
     setCurrency: (c) => setCurrencyState(c),
-    format: (v) => formatMoney(v, currency),
+    format: fmt,
+    formatMoney: fmt,
   };
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
@@ -40,10 +43,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 export function useCurrency() {
   const ctx = useContext(CurrencyContext);
   if (!ctx) {
+    const fallback = (v: number) => formatMoney(v, "MZN");
     return {
       currency: "MZN" as SupportedCurrency,
       setCurrency: () => {},
-      format: (v: number) => formatMoney(v, "MZN"),
+      format: fallback,
+      formatMoney: fallback,
     };
   }
   return ctx;

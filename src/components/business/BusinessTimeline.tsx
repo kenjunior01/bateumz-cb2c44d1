@@ -26,10 +26,10 @@ interface FeedItem {
 }
 
 const kindMeta: Record<Kind, { icon: typeof Trophy; label: string; color: string; bg: string }> = {
-  game: { icon: Gamepad2, label: "Game", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)" },
+  game: { icon: Gamepad2, label: "Jogo", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)" },
   live: { icon: Radio, label: "Live", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
-  winner: { icon: Trophy, label: "Winner", color: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
-  raffle: { icon: Ticket, label: "Raffle", color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
+  winner: { icon: Trophy, label: "Vencedor", color: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
+  raffle: { icon: Ticket, label: "Sorteio", color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
 };
 
 interface Props {
@@ -57,24 +57,24 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
 
       const feed: FeedItem[] = [];
       ((spins.data as any[]) || []).forEach((g) =>
-        feed.push({ id: `sp-${g.id}`, kind: "game", title: g.name || "Spin wheel", subtitle: "Spin the wheel", badge: g.is_active ? "Active" : "Paused", at: g.created_at, href: `/games/spin-wheel/${g.id}` }),
+        feed.push({ id: `sp-${g.id}`, kind: "game", title: g.name || "Roda de Prémios", subtitle: "Roda a roda", badge: g.is_active ? "Ativo" : "Pausado", at: g.created_at, href: `/games/spin-wheel/${g.id}` }),
       );
       ((mills.data as any[]) || []).forEach((g) =>
-        feed.push({ id: `mi-${g.id}`, kind: "game", title: g.name || "Millionaire", subtitle: "Quiz game", badge: g.is_active ? "Active" : "Paused", at: g.created_at, href: `/games/millionaire/${g.id}` }),
+        feed.push({ id: `mi-${g.id}`, kind: "game", title: g.name || "Millionário", subtitle: "Jogo de perguntas", badge: g.is_active ? "Ativo" : "Pausado", at: g.created_at, href: `/games/millionaire/${g.id}` }),
       );
       ((lives.data as any[]) || []).forEach((l) =>
         feed.push({
           id: `lv-${l.id}`, kind: "live", title: l.title,
-          subtitle: l.status === "live" ? "Streaming now" : l.status === "scheduled" ? "Upcoming live" : "Replay available",
-          badge: l.status === "live" ? "Live now" : l.status === "scheduled" ? "Upcoming" : "Replay",
+          subtitle: l.status === "live" ? "Em direto agora" : l.status === "scheduled" ? "Live agendada" : "Replay disponível",
+          badge: l.status === "live" ? "Em direto" : l.status === "scheduled" ? "Agendada" : "Replay",
           at: l.scheduled_at, href: `/live-evento/${l.slug}`, image: l.cover_url,
         }),
       );
       ((sessions.data as any[]) || []).forEach((s) =>
-        feed.push({ id: `wn-${s.id}`, kind: "winner", title: `${s.player_name || "Player"} won${s.prize ? ` ${s.prize}` : ""}`, subtitle: s.game_name, badge: "Winner", at: s.created_at }),
+        feed.push({ id: `wn-${s.id}`, kind: "winner", title: `${s.player_name || "Jogador"} ganhou${s.prize ? ` ${s.prize}` : ""}`, subtitle: s.game_name, badge: "Vencedor", at: s.created_at }),
       );
       ((raffles.data as any[]) || []).forEach((r) =>
-        feed.push({ id: `rf-${r.id}`, kind: "raffle", title: r.title, subtitle: r.prize_title, badge: r.status === "active" ? "Open" : "Closed", at: r.created_at, href: r.slug ? `/sorteio/${r.slug}` : undefined }),
+        feed.push({ id: `rf-${r.id}`, kind: "raffle", title: r.title, subtitle: r.prize_title, badge: r.status === "active" ? "Aberto" : "Encerrado", at: r.created_at, href: r.slug ? `/sorteio/${r.slug}` : undefined }),
       );
 
       feed.sort((a, b) => +new Date(b.at) - +new Date(a.at));
@@ -120,7 +120,7 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
             >
-              {k === "all" ? "Everything" : `${meta!.label}s`}
+              {k === "all" ? "Tudo" : meta!.label}
             </motion.button>
           );
         })}
@@ -135,7 +135,7 @@ export default function BusinessTimeline({ businessUserId, reloadKey = 0 }: Prop
             >
               <PlayCircle className="h-10 w-10 mx-auto mb-3" style={{ color: "hsl(var(--muted-foreground) / 0.2)" }} />
             </motion.div>
-            <p className="text-sm" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>Nothing published in this category yet.</p>
+            <p className="text-sm" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>Nada publicado nesta categoria ainda.</p>
           </CardContent>
         </Card>
       ) : (

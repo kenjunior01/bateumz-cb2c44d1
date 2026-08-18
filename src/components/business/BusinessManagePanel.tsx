@@ -25,18 +25,18 @@ interface Props {
 }
 
 const quickLinks = [
-  { label: "Games", to: "/dashboard/live-games", icon: Gamepad2, color: "#8b5cf6" },
-  { label: "Scheduled lives", to: "/dashboard/scheduled-lives", icon: Radio, color: "#ef4444" },
-  { label: "Live history", to: "/dashboard/live-history", icon: Trophy, color: "#fbbf24" },
-  { label: "Raffles", to: "/dashboard/raffles", icon: Ticket, color: "#3b82f6" },
-  { label: "Prizes", to: "/dashboard/prizes", icon: Gift, color: "#10b981" },
+  { label: "Jogos", to: "/dashboard/live-games", icon: Gamepad2, color: "#8b5cf6" },
+  { label: "Lives Agendadas", to: "/dashboard/scheduled-lives", icon: Radio, color: "#ef4444" },
+  { label: "Histórico de Lives", to: "/dashboard/live-history", icon: Trophy, color: "#fbbf24" },
+  { label: "Sorteios", to: "/dashboard/raffles", icon: Ticket, color: "#3b82f6" },
+  { label: "Prémios", to: "/dashboard/prizes", icon: Gift, color: "#10b981" },
 ];
 
 const statItems = [
-  { key: "games" as const, label: "Games", icon: Gamepad2, color: "#8b5cf6" },
-  { key: "raffles" as const, label: "Raffles", icon: Ticket, color: "#3b82f6" },
-  { key: "contests" as const, label: "Contests", icon: Trophy, color: "#fbbf24" },
-  { key: "winners" as const, label: "Winners", icon: Sparkles, color: "#10b981" },
+  { key: "games" as const, label: "Jogos", icon: Gamepad2, color: "#8b5cf6" },
+  { key: "raffles" as const, label: "Sorteios", icon: Ticket, color: "#3b82f6" },
+  { key: "contests" as const, label: "Concursos", icon: Trophy, color: "#fbbf24" },
+  { key: "winners" as const, label: "Vencedores", icon: Sparkles, color: "#10b981" },
 ];
 
 export default function BusinessManagePanel({
@@ -63,7 +63,7 @@ export default function BusinessManagePanel({
   const copy = async () => {
     await navigator.clipboard.writeText(publicUrl);
     setCopied(true);
-    toast.success("Public profile link copied");
+    toast.success("Link do perfil público copiado");
     setTimeout(() => setCopied(false), 1800);
   };
 
@@ -73,9 +73,9 @@ export default function BusinessManagePanel({
     try {
       await saveCompanySlug(userId, slug);
       onSlugSaved(slug);
-      toast.success("Public link updated");
+      toast.success("Link público atualizado");
     } catch {
-      toast.error("Could not save this link. Try another one.");
+      toast.error("Não foi possível guardar. Tente outro.");
     } finally {
       setSaving(false);
     }
@@ -89,11 +89,11 @@ export default function BusinessManagePanel({
             <div className="biz-panel-icon">
               <Settings2 className="h-4 w-4" />
             </div>
-            <span className="text-sm font-bold">Manage your profile</span>
-            <Badge variant="secondary" className="biz-panel-badge">Only you see this</Badge>
+            <span className="text-sm font-bold">Gerir o seu perfil</span>
+            <Badge variant="secondary" className="biz-panel-badge">Apenas visível para si</Badge>
           </div>
           <Button size="sm" variant="outline" className="biz-panel-refresh gap-1.5" onClick={onRefresh}>
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" /> Atualizar
           </Button>
         </div>
 
@@ -136,7 +136,7 @@ export default function BusinessManagePanel({
 
         <div className="biz-slug-section">
           <p className="biz-slug-label">
-            <Link2 className="h-3.5 w-3.5" /> Public profile link
+            <Link2 className="h-3.5 w-3.5" /> Link do perfil público
           </p>
           <div className="biz-slug-input-row">
             <div className="biz-slug-input-wrap">
@@ -150,15 +150,15 @@ export default function BusinessManagePanel({
               {checking && <Loader2 className="h-3.5 w-3.5 animate-spin biz-slug-status" />}
               {!checking && available === true && <Check className="h-3.5 w-3.5 biz-slug-ok" />}
               {!checking && available === false && (
-                <span className="biz-slug-taken">taken</span>
+                <span className="biz-slug-taken">ocupado</span>
               )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" className="biz-slug-save" onClick={save} disabled={saving || available === false || !slug}>
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Guardar"}
               </Button>
               <Button size="sm" variant="outline" className="biz-slug-copy gap-1.5" onClick={copy}>
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Copy
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Copiar
               </Button>
             </div>
           </div>

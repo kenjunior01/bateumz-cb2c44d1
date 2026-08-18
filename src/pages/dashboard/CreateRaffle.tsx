@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Calendar, Ticket, Info, Image, X, MapPin, Eye, EyeOff, Timer, Zap, Trophy, Users } from "lucide-react";
 import { PROVINCES, CITIES_BY_PROVINCE } from "@/lib/provinces";
 import { COUNTRIES, getRegions } from "@/lib/regions";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 export default function CreateRaffle() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -454,7 +455,7 @@ export default function CreateRaffle() {
             <div className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/10 p-3">
               <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground leading-relaxed">
-                <p>Receita estimada: <span className="font-semibold text-foreground">{formatMZN(estimatedRevenue)}</span></p>
+                <p>Receita estimada: <span className="font-semibold text-foreground">{formatMoney(estimatedRevenue)}</span></p>
                 <p className="mt-1">A plataforma cobra uma comissão de 5% sobre o valor total arrecadado.</p>
               </div>
             </div>

@@ -46,7 +46,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { formatMZN } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 const sb: any = supabase;
 
@@ -440,9 +441,9 @@ export default function BusinessProfile() {
         <Navbar />
         <div className="container mx-auto px-4 py-20 text-center">
           <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Company not found</h1>
+          <h1 className="text-2xl font-bold mb-2">Empresa não encontrada</h1>
           <Button variant="outline" onClick={() => navigate("/empresas")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to directory
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar ao diretório
           </Button>
         </div>
         <Footer />
@@ -455,7 +456,7 @@ export default function BusinessProfile() {
 
   const isOwner = !!user && user.id === business.user_id;
   const canonical = `${getPublicBaseUrl()}/empresa/${business.slug || business.user_id}`;
-  const metaDescription = `${displayName} on Bateu — live shows, interactive games, raffles and verified winners. Follow everything in one place.`;
+  const metaDescription = `${displayName} na Bateu — lives, jogos interativos, sorteios e vencedores verificados. Tudo num só lugar.`;
 
   const goToCatalogForBusiness = () =>
     navigate(`/prestacoes/catalogo?business=${business.user_id}`);
@@ -463,16 +464,16 @@ export default function BusinessProfile() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{`${displayName} — Games, Lives & Winners | Bateu`}</title>
+        <title>{`${displayName} — Jogos, Lives e Vencedores | Bateu`}</title>
         <meta name="description" content={metaDescription} />
         <link rel="canonical" href={canonical} />
         <meta property="og:type" content="profile" />
-        <meta property="og:title" content={`${displayName} on Bateu`} />
+        <meta property="og:title" content={`${displayName} na Bateu`} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:url" content={canonical} />
         {business.avatar_url && <meta property="og:image" content={business.avatar_url} />}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${displayName} on Bateu`} />
+        <meta name="twitter:title" content={`${displayName} na Bateu`} />
         <meta name="twitter:description" content={metaDescription} />
         <script type="application/ld+json">
           {JSON.stringify({
@@ -508,7 +509,7 @@ export default function BusinessProfile() {
             onClick={() => navigate("/empresas")}
             className="absolute top-3 left-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
           </Button>
           <Button
             variant="secondary"
@@ -516,7 +517,7 @@ export default function BusinessProfile() {
             onClick={handleShare}
             className="absolute top-3 right-3 h-8 gap-1 bg-background/80 backdrop-blur hover:bg-background/95"
           >
-            <Share2 className="h-3.5 w-3.5" /> Share
+            <Share2 className="h-3.5 w-3.5" /> Partilhar
           </Button>
         </div>
 
@@ -548,7 +549,7 @@ export default function BusinessProfile() {
                   <h1 className="text-xl sm:text-2xl font-bold truncate">{displayName}</h1>
                   {business.is_verified && (
                     <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/20 text-[10px]">
-                      Verified
+                      Verificado
                     </Badge>
                   )}
                 </div>
@@ -559,9 +560,9 @@ export default function BusinessProfile() {
                 )}
                 <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Member since{" "}
+                  Membro desde{" "}
                   {business.created_at
-                    ? new Date(business.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })
+                    ? new Date(business.created_at).toLocaleDateString("pt-PT", { month: "long", year: "numeric" })
                     : "—"}
                 </p>
               </div>
@@ -569,10 +570,10 @@ export default function BusinessProfile() {
 
             <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-4 sm:mt-6">
               {[
-                { icon: Ticket, label: "Raffles", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
-                { icon: Trophy, label: "Contests", value: stats.contests, color: "text-accent", bg: "bg-accent/10" },
-                { icon: ShoppingBag, label: "Installments", value: stats.products, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                { icon: TrendingUp, label: "Sold", value: stats.totalSold, color: "text-amber-500", bg: "bg-amber-500/10" },
+                { icon: Ticket, label: "Sorteios", value: stats.activeRaffles, color: "text-primary", bg: "bg-primary/10" },
+                { icon: Trophy, label: "Concursos", value: stats.contests, color: "text-accent", bg: "bg-accent/10" },
+                { icon: ShoppingBag, label: "Prestações", value: stats.products, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                { icon: TrendingUp, label: "Vendidos", value: stats.totalSold, color: "text-amber-500", bg: "bg-amber-500/10" },
               ].map((s, i) => (
                 <motion.div
                   key={s.label}
@@ -622,24 +623,24 @@ export default function BusinessProfile() {
               </TabsTrigger>
               <TabsTrigger value="all" className="text-[11px] sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-                Everything
+                Tudo
               </TabsTrigger>
               <TabsTrigger value="raffles" className="text-[11px] sm:text-sm">
-                Raffles
+                Sorteios
               </TabsTrigger>
               <TabsTrigger value="contests" className="text-[11px] sm:text-sm">
-                Contests
+                Concursos
               </TabsTrigger>
               <TabsTrigger value="products" className="text-[11px] sm:text-sm">
-                Installments
+                Prestações
               </TabsTrigger>
               <TabsTrigger value="winners" className="text-[11px] sm:text-sm">
                 <Crown className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-                Winners
+                Vencedores
               </TabsTrigger>
             <TabsTrigger value="jogos" className="gap-1.5 text-[11px] sm:text-sm">
                   <Gamepad2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Games</span>
+                  <span className="hidden sm:inline">Jogos</span>
                 </TabsTrigger>
               <TabsTrigger value="lives" className="gap-1.5 text-[11px] sm:text-sm">
                   <Radio className="h-3.5 w-3.5" />
@@ -827,11 +828,11 @@ export default function BusinessProfile() {
                 return 0;
               }}
               formatScore={(p, sort) => {
-                if (sort === "popular") return `${p.views_count || 0} views`;
-                if (sort === "price-asc" || sort === "price-desc") return formatMZN(p.total_price);
+                if (sort === "popular") return `${p.views_count || 0} visualizações`;
+                if (sort === "price-asc" || sort === "price-desc") return formatMoney(p.total_price);
                 if (sort === "monthly-asc" || sort === "monthly-desc") {
                   const monthly = Math.max(0, (p.total_price - p.min_down_payment) / Math.max(1, p.max_months));
-                  return `${formatMZN(monthly)}/mês`;
+                  return `${formatMoney(monthly)}/mês`;
                 }
                 if (sort === "recent" && p.created_at)
                   return new Date(p.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
@@ -845,10 +846,10 @@ export default function BusinessProfile() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Gamepad2 className="h-5 w-5 text-primary" />
-                    <h3 className="font-bold text-lg">Interactive games</h3>
+                    <h3 className="font-bold text-lg">Jogos interativos</h3>
                   </div>
                   <Badge variant="secondary" className="text-[10px]">
-                    {stats.totalGames} games
+                    {stats.totalGames} jogos
                   </Badge>
                 </div>
 
@@ -856,7 +857,7 @@ export default function BusinessProfile() {
                   <Card className="border-dashed">
                     <CardContent className="py-10 text-center">
                       <Gamepad2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                      <p className="text-sm text-muted-foreground">No games configured yet</p>
+                      <p className="text-sm text-muted-foreground">Nenhum jogo configurado ainda</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -881,7 +882,7 @@ export default function BusinessProfile() {
 
           <TabsContent value="winners">
             {winners.length === 0 && rankings.length === 0 ? (
-              <EmptyState message="No winners or rankings published yet." />
+              <EmptyState message="Ainda sem vencedores ou rankings publicados." />
             ) : (
               <WinnersAndRankings winners={winners} rankings={rankings} navigate={navigate} full />
             )}
@@ -1067,7 +1068,7 @@ function RaffleCard({
         </div>
         <div className="mt-2 text-[11px] sm:text-xs">
           <span className="text-muted-foreground">Bilhete:</span>{" "}
-          <span className="font-semibold text-foreground">{formatMZN(raffle.ticket_price)}</span>
+          <span className="font-semibold text-foreground">{formatMoney(raffle.ticket_price)}</span>
         </div>
         <Button
           size="sm"
@@ -1214,7 +1215,7 @@ function ProductCard({
         <div className="mt-2 flex items-baseline gap-1 flex-wrap">
           <span className="text-[10px] sm:text-xs text-muted-foreground">desde</span>
           <span className="text-sm sm:text-base font-bold text-primary">
-            {formatMZN(monthly)}
+            {formatMoney(monthly)}
           </span>
           <span className="text-[10px] text-muted-foreground">/mês</span>
         </div>
@@ -1222,14 +1223,14 @@ function ProductCard({
         <div className="mt-1.5 flex flex-col sm:grid sm:grid-cols-2 gap-y-1 sm:gap-x-2 text-[10px] sm:text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1 min-w-0">
             <Wallet className="h-3 w-3 shrink-0 text-primary/70" />
-            <span className="truncate">Entrada {formatMZN(product.min_down_payment)}</span>
+            <span className="truncate">Entrada {formatMoney(product.min_down_payment)}</span>
           </span>
           <span className="flex items-center gap-1 min-w-0">
             <Clock className="h-3 w-3 shrink-0 text-primary/70" />
             <span className="truncate">até {product.max_months}m</span>
           </span>
           <span className="sm:col-span-2 text-foreground/80 font-medium truncate">
-            Total: {formatMZN(product.total_price)}
+            Total: {formatMoney(product.total_price)}
           </span>
         </div>
 

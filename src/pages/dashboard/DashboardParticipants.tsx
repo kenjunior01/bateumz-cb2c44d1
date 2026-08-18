@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 

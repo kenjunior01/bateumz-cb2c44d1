@@ -113,8 +113,8 @@ export default function BusinessLivesTab({ businessUserId }: Props) {
           >
             <Radio className="h-10 w-10 mx-auto mb-3" style={{ color: "hsl(var(--muted-foreground) / 0.25)" }} />
           </motion.div>
-          <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>No lives published yet.</p>
-          <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground) / 0.3)" }}>Create your first scheduled live from the dashboard.</p>
+          <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>Nenhuma live publicada ainda.</p>
+          <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground) / 0.3)" }}>Cria a tua primeira live agendada no dashboard.</p>
         </CardContent>
       </Card>
     );
@@ -163,7 +163,7 @@ export default function BusinessLivesTab({ businessUserId }: Props) {
                   border: `1px solid ${isLive ? "rgba(239,68,68,0.2)" : isEnded ? "rgba(255,255,255,0.06)" : "rgba(52,211,153,0.2)"}`,
                 }}
               >
-                {isLive ? "Live now" : l.status === "scheduled" ? "Upcoming" : "Replay"}
+                {isLive ? "Em direto" : l.status === "scheduled" ? "Agendada" : "Replay"}
               </Badge>
             </div>
 
@@ -237,9 +237,9 @@ export default function BusinessLivesTab({ businessUserId }: Props) {
 
   return (
     <div className="space-y-10">
-      <Section title="Live now" items={liveNow} icon={Radio} />
-      <Section title="Upcoming" items={upcoming} icon={Calendar} />
-      <Section title="Recordings & past lives" items={past} icon={Eye} />
+      <Section title="Em direto" items={liveNow} icon={Radio} />
+      <Section title="Próximas" items={upcoming} icon={Calendar} />
+      <Section title="Gravações e lives passadas" items={past} icon={Eye} />
     </div>
   );
 }

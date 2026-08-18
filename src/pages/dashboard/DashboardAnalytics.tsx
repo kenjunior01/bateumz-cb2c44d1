@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMZN } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
 
 const CHART_COLORS = ["#fbbf24", "#3b82f6", "#8b5cf6", "#10b981", "#f43f5e", "#06b6d4", "#f97316", "#84cc16"];
@@ -121,6 +121,7 @@ const tickLine = false;
 
 export default function DashboardAnalytics() {
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const [dateRange, setDateRange] = useState<DateRange>("30d");
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [snapshots, setSnapshots] = useState<AnalyticsSnapshot[]>([]);
@@ -401,7 +402,7 @@ export default function DashboardAnalytics() {
                   </div>
                   <div className="mt-3">
                     <span className="text-2xl font-bold tabular-nums text-foreground">
-                      {card.format ? formatMZN(card.value) : card.value.toLocaleString("pt-MZ")}
+                      {card.format ? formatMoney(card.value) : card.value.toLocaleString("pt-MZ")}
                       {card.suffix && !card.format ? card.suffix : ""}
                     </span>
                   </div>
@@ -615,7 +616,7 @@ export default function DashboardAnalytics() {
                         <td className="px-4 py-3 text-center tabular-nums font-mono">{s.score ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{s.prize || "—"}</td>
                         <td className="px-4 py-3 text-right tabular-nums font-mono">
-                          {s.prize_value ? formatMZN(Number(s.prize_value)) : "—"}
+                          {s.prize_value ? formatMoney(Number(s.prize_value)) : "—"}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {s.is_winner ? (
@@ -663,7 +664,7 @@ export default function DashboardAnalytics() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(240, 4%, 16%)" />
                       <XAxis dataKey="month" tick={axisTick} axisLine={axisLine} tickLine={tickLine} />
                       <YAxis tick={axisTick} axisLine={axisLine} tickLine={tickLine} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatMZN(value), "Receita"]} />
+                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatMoney(value), "Receita"]} />
                       <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} fill="url(#raffleRevGrad)" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -693,7 +694,7 @@ export default function DashboardAnalytics() {
                         <span className="text-sm font-medium truncate max-w-[180px]">{r.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-primary">{formatMZN(r.revenue)}</span>
+                        <span className="text-sm font-semibold text-primary">{formatMoney(r.revenue)}</span>
                         <span className="ml-2 text-xs text-muted-foreground">{r.pct}%</span>
                       </div>
                     </div>

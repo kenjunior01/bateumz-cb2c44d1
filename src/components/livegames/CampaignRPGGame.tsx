@@ -461,31 +461,36 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
     const alive = battleEnemies.filter(e => e.hp > 0);
     if (alive.length === 0) return;
 
-    setStats(prev => {
-      let newHp = prev.hp;
-      let newMp = Math.min(prev.maxMp, prev.mp + 3); // regen 3 MP per turn
+    let totalDamage = 0;
 
-      alive.forEach(enemy => {
-        const rawDmg = Math.max(1, enemy.atk - (prev.def * defBuff) * 0.5);
-        const dmg = Math.round(rawDmg * (0.85 + Math.random() * 0.3));
-        newHp = Math.max(0, newHp - dmg);
-        setDamageTaken(prev => prev + dmg);
-        shakeRef.current = 4;
-        setAnimatingHit(0);
-        setTimeout(() => setAnimatingHit(-1), 200);
-        spawnParticles(-120, 40, "#ef4444", 5);
-        addLog(`${enemy.emoji} ${enemy.name} ataca por ${dmg}!`);
-      });
-
-      if (newHp <= 0) {
-        setBattleOver(true);
-        setBattleWon(false);
-        addLog("Foste derrotado...");
-        setTimeout(() => setScreen("gameOver"), 1000);
-      }
-
-      return { ...prev, hp: newHp, mp: newMp };
+    // Compute damage outside setState updater to avoid stale closure and side-effect issues
+    alive.forEach(enemy => {
+      const rawDmg = Math.max(1, enemy.atk - (stats.def * defBuff) * 0.5);
+      const dmg = Math.round(rawDmg * (0.85 + Math.random() * 0.3));
+      totalDamage += dmg;
+      setDamageTaken(prev => prev + dmg);
+      shakeRef.current = 4;
+      setAnimatingHit(0);
+      setTimeout(() => setAnimatingHit(-1), 200);
+      spawnParticles(-120, 40, "#ef4444", 5);
+      addLog(`${enemy.emoji} ${enemy.name} ataca por ${dmg}!`);
     });
+
+    // Apply HP/MP changes
+    const playerDied = stats.hp - totalDamage <= 0;
+    setStats(prev => ({
+      ...prev,
+      hp: Math.max(0, prev.hp - totalDamage),
+      mp: Math.min(prev.maxMp, prev.mp + 3),
+    }));
+
+    // Side effects outside setState updater
+    if (playerDied) {
+      setBattleOver(true);
+      setBattleWon(false);
+      addLog("Foste derrotado...");
+      setTimeout(() => setScreen("gameOver"), 1000);
+    }
 
     // Check if all enemies dead
     const allDead = battleEnemies.every(e => e.hp <= 0);
@@ -505,8 +510,8 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
       if (p.currentWorld < WORLDS.length && p.currentLevel < WORLDS[p.currentWorld].levels.length) {
         const levelData = WORLDS[p.currentWorld].levels[p.currentLevel];
         let stars = 0;
-        if (damageTaken <= (levelData.stars[0] || 999)) stars = 3;
-        else if (damageTaken <= (levelData.stars[1] || 999)) stars = 2;
+        if (totalDamage <= (levelData.stars[0] || 999)) stars = 3;
+        else if (totalDamage <= (levelData.stars[1] || 999)) stars = 2;
         else stars = 1;
         setEarnedStars(stars);
 
@@ -521,9 +526,8 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
         newP.gold += totalGold;
 
         // Level up check
-        const xpNeeded = newP.level * 50 + 50;
-        while (newP.xp >= xpNeeded) {
-          newP.xp -= xpNeeded;
+        while (newP.xp >= newP.level * 50 + 50) {
+          newP.xp -= newP.level * 50 + 50;
           newP.level++;
           addLog(`⬆️ Nivel ${newP.level}!`);
         }
@@ -546,7 +550,7 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
     } else {
       setIsPlayerTurn(true);
     }
-  }, [battleEnemies, defBuff, damageTaken, spawnParticles, addLog, recalcStats, onScore]);
+  }, [battleEnemies, defBuff, stats, spawnParticles, addLog, recalcStats, onScore]);
 
   // ---- Class Selection ----
   const selectClass = useCallback((classId: number) => {

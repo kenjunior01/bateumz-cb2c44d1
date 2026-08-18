@@ -320,6 +320,8 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const channelRef = useRef<any>(null);
   const battleLogRef = useRef<HTMLDivElement>(null);
   const grindLogRef = useRef<HTMLDivElement>(null);
+  const onlineCountRef = useRef(onlinePlayers.length);
+  onlineCountRef.current = onlinePlayers.length;
 
   const notify = useCallback((msg: string) => { setNotification(msg); setTimeout(() => setNotification(""), 3000); }, []);
 
@@ -478,7 +480,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const poolIdx = Math.min(Math.floor(Math.random() * BOSS_POOL.length), BOSS_POOL.length - 1);
       const boss = BOSS_POOL[poolIdx];
       const scaledHp = boss.hp + char.level * 100;
-      const newBoss = { name: boss.name, emoji: boss.emoji, hp: scaledHp, maxHp: scaledHp, rewardsPool: boss.gold + onlinePlayers.length * 100, isActive: true };
+      const newBoss = { name: boss.name, emoji: boss.emoji, hp: scaledHp, maxHp: scaledHp, rewardsPool: boss.gold + onlineCountRef.current * 100, isActive: true };
       setWorldBoss(newBoss);
       setBossTimer(3600);
       localStorage.setItem("bateu_mmorpg_boss", JSON.stringify({ ...newBoss, spawnedAt: Date.now() }));
@@ -499,7 +501,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     }, 1000);
 
     return () => { clearInterval(spawnInterval); clearInterval(timerInterval); };
-  }, [char, screen, worldBoss?.isActive, onlinePlayers.length, notify]);
+  }, [char, screen, worldBoss?.isActive, notify]);
 
   // ---- Time Events ----
   useEffect(() => {
@@ -569,8 +571,10 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
 
           let nc = { ...prev, xp: prev.xp + xpG, gold: prev.gold + goldG, totalKills: prev.totalKills + 1, totalEarned: prev.totalEarned + goldG };
-          const needed = xpForLevel(nc.level);
-          if (nc.xp >= needed) { nc.xp -= needed; nc.level++; }
+          while (nc.xp >= xpForLevel(nc.level)) {
+            nc.xp -= xpForLevel(nc.level);
+            nc.level++;
+          }
           saveLocalChar(nc);
 
           setGrindStats(gs => ({ ...gs, kills: gs.kills + 1, gold: gs.gold + goldG, xp: gs.xp + xpG }));
@@ -601,6 +605,11 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const recalcAndSet = useCallback((c: CharacterData) => {
     setStats(calcStats(c));
   }, []);
+
+  // Recalculate stats whenever equipment changes (e.g. after equipItem)
+  useEffect(() => {
+    if (char) recalcAndSet(char);
+  }, [char?.equipment]);
 
   const createCharacter = useCallback((classId: number, name: string) => {
     const newChar: CharacterData = {
@@ -768,9 +777,10 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     setTimeout(() => {
       if (newEHp <= 0) {
         setPvpOver(true); setPvpWon(true);
-        setPvpLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 Venceste o duelo! +${pvpStake * 2} ouro!`]);
+        // TODO: Implement server-side PVP with real stakes via Supabase RPC
+        setPvpLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 Venceste o duelo! +${pvpStake} ouro!`]);
         confetti({ particleCount: 100, spread: 70 });
-        updateChar(c => ({ ...c, gold: c.gold + pvpStake, duelsWon: c.duelsWon + 1, totalEarned: c.totalEarned + pvpStake }));
+        updateChar(c => ({ ...c, gold: c.gold + pvpStake, wins: (c.wins || 0) + 1, duelsWon: c.duelsWon + 1, totalEarned: c.totalEarned + pvpStake }));
         dbSendTransfer(guestId, char!.name, pvpOpponent!.charId, pvpOpponent!.name, pvpStake, `Duelo PVP - aposta`);
         onScore?.("PVP Win", pvpStake * 2);
         return;
@@ -799,6 +809,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     if (!char || char.gold < amount || amount <= 0) { notify("Transferencia invalida!"); return; }
     updateChar(c => ({ ...c, gold: c.gold - amount }));
     dbSendTransfer(guestId, char.name, targetId, targetName, amount, "Transferencia P2P");
+    // TODO: Add recipient gold via Supabase RPC — currently only logs the transfer
     notify(`\u2705 Enviaste ${amount} ouro para ${targetName}`);
     onScore?.("P2P Transfer", amount);
   }, [char, guestId, updateChar, notify, onScore]);
@@ -824,8 +835,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const newEq = [...c.equipment]; newEq[slot] = item;
       return { ...c, inventory: newInv, equipment: newEq };
     });
-    recalcAndSet(char);
-  }, [char, updateChar, recalcAndSet]);
+  }, [char, updateChar]);
 
   const sellItem = useCallback((invIdx: number) => {
     if (!char) return;

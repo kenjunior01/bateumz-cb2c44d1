@@ -420,7 +420,7 @@ export default function ContestDetail() {
                     <Card className="border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 overflow-hidden">
                       {w.photo_url && (
                         <div className="relative">
-                          <img src={w.photo_url} alt={w.participant_name} className="w-full aspect-video object-cover" />
+                          <img loading="lazy" src={w.photo_url} alt={w.participant_name} className="w-full aspect-video object-cover" />
                           <div className="absolute top-3 right-3">
                             <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
                               <Badge className="bg-accent text-accent-foreground shadow-lg">🏆 Vencedor</Badge>
@@ -478,7 +478,7 @@ export default function ContestDetail() {
                     <Card className={`overflow-hidden glass transition-all ${sub.is_winner ? "ring-2 ring-accent" : ""} ${rank <= 3 ? "border-primary/20" : ""}`}>
                       {sub.photo_url && (
                         <div className="aspect-video overflow-hidden cursor-pointer relative group" onClick={() => setSelectedMedia({ url: sub.photo_url!, type: "photo" })}>
-                          <img src={sub.photo_url} alt={sub.participant_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          <img loading="lazy" src={sub.photo_url} alt={sub.participant_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                             <ImageIcon className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
@@ -559,7 +559,7 @@ export default function ContestDetail() {
         <DialogContent className="max-w-4xl p-2">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
             {selectedMedia?.type === "photo" ? (
-              <img src={selectedMedia.url} alt="Submissão" className="w-full rounded-lg" />
+              <img loading="lazy" src={selectedMedia.url} alt="Submissão" className="w-full rounded-lg" />
             ) : selectedMedia?.type === "video" ? (
               isVideoLink(selectedMedia.url) ? (
                 <SocialVideoEmbed url={selectedMedia.url} />

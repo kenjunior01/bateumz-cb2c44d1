@@ -270,7 +270,7 @@ const RaffleDetail = () => {
           <div className="lg:col-span-3 space-y-6">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rd-image-wrap">
               {raffle.image_url ? (
-                <img src={raffle.image_url} alt={raffle.title} className="w-full h-full object-cover" />
+                <img loading="lazy" src={raffle.image_url} alt={raffle.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, " + C_ACCENT + "08, " + C_PRIMARY + "05)" }}>
                   <Gift className="h-20 w-20" style={{ color: C_ACCENT, opacity: 0.15 }} />

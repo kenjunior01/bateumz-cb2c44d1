@@ -180,7 +180,7 @@ function FeaturedMarquee({ businesses }: { businesses: BusinessItem[] }) {
           >
             <div className="dirv2-marquee-avatar">
               {b.avatar_url ? (
-                <img src={b.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                <img loading="lazy" src={b.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
               ) : (
                 <span className="text-sm font-black" style={{ color: C_PRIMARY }}>
                   {(b.company_name || b.display_name || "E").charAt(0).toUpperCase()}
@@ -824,7 +824,7 @@ export default function BusinessDirectory() {
                       <div className="flex items-center gap-2.5 mb-3">
                         <div className="dirv2-mobile-avatar">
                           {b.avatar_url ? (
-                            <img src={b.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                            <img loading="lazy" src={b.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
                           ) : (
                             <span className="text-sm font-black" style={{ color: C_PRIMARY }}>
                               {(b.company_name || b.display_name || "E").charAt(0).toUpperCase()}
@@ -880,7 +880,7 @@ export default function BusinessDirectory() {
                             <div className="flex items-start gap-4 mb-4">
                               <div className="dirv2-card-avatar">
                                 {b.avatar_url ? (
-                                  <img src={b.avatar_url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                                  <img loading="lazy" src={b.avatar_url} alt="" className="w-full h-full rounded-2xl object-cover" />
                                 ) : (
                                   <span className="text-2xl font-black" style={{ color: C_PRIMARY }}>
                                     {(b.company_name || b.display_name || "E").charAt(0).toUpperCase()}
@@ -979,7 +979,7 @@ export default function BusinessDirectory() {
                         <div className="relative z-10 p-4 flex items-center gap-5">
                           <div className="dirv2-list-avatar">
                             {b.avatar_url ? (
-                              <img src={b.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                              <img loading="lazy" src={b.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
                             ) : (
                               <span className="text-xl font-black" style={{ color: C_PRIMARY }}>
                                 {(b.company_name || b.display_name || "E").charAt(0).toUpperCase()}

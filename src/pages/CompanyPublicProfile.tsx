@@ -8,7 +8,8 @@ import {
   CheckCircle2, Copy, Check, ArrowRight, Heart, Play,
   Music, UtensilsCrossed, Dumbbell, GraduationCap, ShoppingBag,
   Palette, Mic2, Sparkles, TrendingUp, Eye, Crown, Radio,
-  Gift, Target, BarChart3, Ticket, Building2, ArrowLeft
+  Gift, Target, BarChart3, Ticket, Building2, ArrowLeft,
+  Phone, CalendarDays, GiftIcon, Megaphone
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -501,11 +502,17 @@ const CompanyPublicProfile = () => {
             )}
 
             
-            {(company.city || company.province) && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex items-center justify-center gap-2 mt-4 text-white/40 text-xs">
-                <MapPin className="h-3 w-3" /> {[company.city, company.province].filter(Boolean).join(", ")}
-              </motion.div>
-            )}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex flex-wrap items-center justify-center gap-4 mt-4 text-white/40 text-xs">
+              {(company.city || company.province) && (
+                <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {[company.city, company.province].filter(Boolean).join(", ")}</span>
+              )}
+              {company.phone && (
+                <span className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {company.phone}</span>
+              )}
+              {company.created_at && (
+                <span className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3" /> Membro desde {new Date(company.created_at).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}</span>
+              )}
+            </motion.div>
           </div>
         </div>
 
@@ -589,6 +596,10 @@ const CompanyPublicProfile = () => {
               <Radio className="h-4 w-4" /> Lives
               <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{totalLives}</span>
             </TabsTrigger>
+            <TabsTrigger value="contests" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
+              <GiftIcon className="h-4 w-4" /> Concursos
+              <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{contests.length}</span>
+            </TabsTrigger>
             <TabsTrigger value="activity" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
               <Clock className="h-4 w-4" /> Actividade
             </TabsTrigger>
@@ -665,6 +676,16 @@ const CompanyPublicProfile = () => {
                           <span>{formatMoney(r.ticket_price)}/bilhete</span>
                           <span>{r.sold_tickets}/{r.total_tickets} vendidos</span>
                         </div>
+                        <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }}
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${Math.min((r.sold_tickets / r.total_tickets) * 100, 100)}%` }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                          />
+                        </div>
                         {r.slug && (
                           <Link to={`/raffle/${r.slug}`} className="mt-3 block w-full text-center py-2 rounded-xl text-xs font-bold transition-colors" style={{ backgroundColor: `${primary}12`, color: primary }}>
                             Ver Sorteio <ArrowRight className="h-3 w-3 inline ml-1" />
@@ -696,6 +717,51 @@ const CompanyPublicProfile = () => {
                     </motion.div>
                   ))}
                 </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="contests" className="mt-6">
+            {contests.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {contests.map((c, i) => (
+                  <motion.div key={c.id} initial={{ y: 15, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ ...springUp, delay: i * 0.04 }}>
+                    <Card className="group border-border/40 hover:border-border/80 transition-all overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1">
+                      {c.image_url && <div className="h-28 bg-muted"><img src={c.image_url} alt={c.title} className="w-full h-full object-cover" loading="lazy" /></div>}
+                      <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${primary}, ${accent})` }} />
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm leading-tight line-clamp-2">{c.title}</h4>
+                          <Badge className="shrink-0 text-[9px] font-bold" style={{ backgroundColor: c.status === "active" ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.05)", color: c.status === "active" ? "#22c55e" : "hsl(var(--muted-foreground))" }}>
+                            {c.status === "active" ? "Ativo" : c.status === "ended" ? "Encerrado" : c.status}
+                          </Badge>
+                        </div>
+                        {c.description && <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{c.description}</p>}
+                        {c.prize_description && (
+                          <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: primary }}>
+                            <Gift className="h-3 w-3" /> <span className="line-clamp-1">{c.prize_description}</span>
+                          </div>
+                        )}
+                        {c.end_date && (
+                          <div className="flex items-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
+                            <Calendar className="h-3 w-3" /> Termina {new Date(c.end_date).toLocaleDateString("pt-PT")}
+                          </div>
+                        )}
+                        {c.id && (
+                          <Link to={`/concursos/${c.id}`} className="mt-3 block w-full text-center py-2 rounded-xl text-xs font-bold transition-colors" style={{ backgroundColor: `${primary}12`, color: primary }}>
+                            Ver Concurso <ArrowRight className="h-3 w-3 inline ml-1" />
+                          </Link>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Megaphone className="h-10 w-10 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">Nenhum concurso disponivel</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Esta empresa ainda nao criou concursos</p>
               </div>
             )}
           </TabsContent>

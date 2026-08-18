@@ -377,7 +377,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "rpg_chat" }, (payload: any) => {
         const m = payload.new;
         // Avoid duplicate for sender (optimistic add already added it)
-        if (m.guest_id === guestId) return;
+        if (m.char_id === guestId) return;
         setChatMessages(prev => [...prev.slice(-49), {
           id: m.id, charName: m.char_name, classId: m.class_id, message: m.message, time: m.created_at,
         }]);

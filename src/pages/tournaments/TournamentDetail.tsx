@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   Medal, Flame,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import TournamentLeaderboard from "@/components/tournaments/TournamentLeaderboard";
 import {
@@ -29,6 +30,7 @@ export default function TournamentDetail() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [standings, setStandings] = useState<TournamentStanding[]>([]);
   const [participantCount, setParticipantCount] = useState(0);
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +48,14 @@ export default function TournamentDetail() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
+
+  useSEO({
+    title: tournament?.name ? `${tournament.name} — Torneio` : 'Torneio',
+    description: tournament
+      ? `Participe no torneio ${tournament.name}. ${tournament.prize_description ? `Prémio: ${tournament.prize_description}.` : ''} ${tournament.description || ''}`.trim().slice(0, 160)
+      : 'Descubra e participe em torneios na Bateu.',
+    canonicalPath: location.pathname,
+  });
 
   if (loading) {
     return (

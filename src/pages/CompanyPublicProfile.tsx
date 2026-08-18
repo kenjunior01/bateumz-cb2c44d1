@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { getPublicBaseUrl } from "@/lib/publicUrl";
 import Footer from "@/components/Footer";
@@ -227,6 +228,7 @@ const isUuid = (v: string) =>
 const CompanyPublicProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { formatMoney } = useCurrency();
   const [company, setCompany] = useState<CompanyInfo | null>(null);
@@ -361,6 +363,14 @@ const CompanyPublicProfile = () => {
   const aboutText = branding?.about_text || null;
   const socialLinks = branding?.social_links || {};
   const layout = branding?.homepage_layout || "showcase";
+
+  useSEO({
+    title: companyName !== 'Empresa' ? `${companyName}` : 'Empresa',
+    description: branding?.about_text
+      ? branding.about_text.slice(0, 160)
+      : `Perfil da empresa ${companyName} na Bateu. Jogos, sorteios, lives e muito mais.`,
+    canonicalPath: location.pathname,
+  });
 
   /* ─── Loading State ────────────────────────────────── */
   if (loading) {

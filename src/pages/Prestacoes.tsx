@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 import { formatMZN } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -146,6 +147,11 @@ function simulate(categoryId: string, value: number, downPayment: number, months
 
 export default function Prestacoes() {
   const { toast } = useToast();
+  useSEO({
+    title: 'Prestações',
+    description: 'Adquira produtos e serviços através de prestações acessíveis na Bateu. Pagamentos parciais, prazos flexíveis e checkout seguro.',
+    canonicalPath: '/prestacoes',
+  });
 
   // Simulator state
   const [productType, setProductType] = useState<CategoryId>("viaturas");

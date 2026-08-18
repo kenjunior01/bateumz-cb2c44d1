@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -28,6 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatMZN } from "@/lib/currency";
+import { useSEO } from "@/hooks/useSEO";
 import { supabase } from "@/integrations/supabase/client";
 import {
   buildWhatsAppMessage,
@@ -67,6 +68,7 @@ type Seller = {
 
 export default function PrestacoesProduto() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -190,6 +192,14 @@ export default function PrestacoesProduto() {
       "noopener,noreferrer",
     );
   }
+
+  useSEO({
+    title: product?.title ? `${product.title} — Prestações` : 'Produto em Prestações',
+    description: product
+      ? `${product.title}${product.brand ? ` · ${product.brand}` : ''}${product.model ? ` ${product.model}` : ''} — Disponível em prestações até ${product.max_months}x na Bateu.`.slice(0, 160)
+      : 'Veja detalhes do produto e simule as suas prestações na Bateu.',
+    canonicalPath: location.pathname,
+  });
 
   if (loading) {
     return (

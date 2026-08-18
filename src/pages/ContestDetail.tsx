@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 import { Trophy, ThumbsUp, Eye, Calendar, Send, Video, Image as ImageIcon, Heart, ArrowLeft, Flame, Clock, Users, Share2, Crown, Link2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import ContestCountdown from "@/components/ContestCountdown";
@@ -52,6 +53,7 @@ interface Submission {
 
 export default function ContestDetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [contest, setContest] = useState<Contest | null>(null);
@@ -192,6 +194,14 @@ export default function ContestDetail() {
     const hours = Math.floor(diff / 3600000);
     return `${hours}h restantes`;
   };
+
+  useSEO({
+    title: contest?.title ? `${contest.title} — Concurso` : 'Concurso',
+    description: contest
+      ? `Concurso ${contest.title}${contest.prize_description ? ` — Prémio: ${contest.prize_description}` : ''}${contest.description ? `. ${contest.description}` : ''}`.trim().slice(0, 160)
+      : 'Descubra e participe em concursos na Bateu.',
+    canonicalPath: location.pathname,
+  });
 
   if (loading) {
     return (

@@ -29,6 +29,7 @@ import { formatMZN } from "@/lib/currency";
 import { PROVINCES } from "@/lib/provinces";
 import { supabase } from "@/integrations/supabase/client";
 import { monthlyInstallment } from "@/lib/prestacoes";
+import { useSEO } from "@/hooks/useSEO";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
 import ProductCardMeituan from "@/components/meituan/ProductCardMeituan";
@@ -64,6 +65,11 @@ const categoryMeta: Record<string, { label: string; icon: typeof Car; emoji: str
 type SortKey = "recent" | "price-asc" | "price-desc" | "monthly-asc" | "popular";
 
 export default function PrestacoesCatalogo() {
+  useSEO({
+    title: 'Catálogo de Prestações',
+    description: 'Navegue o catálogo completo de produtos disponíveis em prestações na Bateu.',
+    canonicalPath: '/prestacoes/catalogo',
+  });
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
   TrendingUp, AlertCircle, LogOut, UserPlus, Share2, Zap,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -81,6 +82,7 @@ export default function LeagueDetailPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const location = useLocation();
   const [league, setLeague] = useState<League | null>(null);
   const [participants, setParticipants] = useState<LeagueParticipant[]>([]);
   const [matches, setMatches] = useState<LeagueMatch[]>([]);
@@ -89,6 +91,14 @@ export default function LeagueDetailPage() {
   const [isParticipant, setIsParticipant] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  useSEO({
+    title: league?.name ? `${league.name} — Liga` : 'Liga',
+    description: league
+      ? `Liga ${league.name} — ${league.game_category || 'Jogo'} ${league.prize_description ? `· Prémio: ${league.prize_description}` : ''} ${league.description || ''}`.trim().slice(0, 160)
+      : 'Descubra ligas e compita na Bateu.',
+    canonicalPath: location.pathname,
+  });
 
   const loadData = async () => {
     if (!slug) return;

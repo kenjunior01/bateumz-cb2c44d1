@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Swords, Heart, Zap, Crown, RotateCcw, Star, Lock,
@@ -298,6 +298,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const [stakeInput, setStakeInput] = useState("");
   const [selectedOpponent, setSelectedOpponent] = useState<OnlinePlayer | null>(null);
   const [charNameInput, setCharNameInput] = useState("");
+  const placeholderName = useMemo(() => "Heroi " + Math.floor(Math.random() * 9999), []);
   const [notification, setNotification] = useState("");
   const [dailyCollected, setDailyCollected] = useState(false);
 
@@ -375,6 +376,8 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       .channel("rpg_chat_realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "rpg_chat" }, (payload: any) => {
         const m = payload.new;
+        // Avoid duplicate for sender (optimistic add already added it)
+        if (m.guest_id === guestId) return;
         setChatMessages(prev => [...prev.slice(-49), {
           id: m.id, charName: m.char_name, classId: m.class_id, message: m.message, time: m.created_at,
         }]);
@@ -609,7 +612,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   // Recalculate stats whenever equipment changes (e.g. after equipItem)
   useEffect(() => {
     if (char) recalcAndSet(char);
-  }, [char?.equipment]);
+  }, [char?.equipment, char?.level]);
 
   const createCharacter = useCallback((classId: number, name: string) => {
     const newChar: CharacterData = {
@@ -673,8 +676,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
         updateChar(c => {
           let nc = { ...c, xp: c.xp + xpG, gold: c.gold + goldG, totalKills: c.totalKills + 1, totalEarned: c.totalEarned + goldG };
-          const needed = xpForLevel(nc.level);
-          if (nc.xp >= needed) { nc.xp -= needed; nc.level++; }
+          while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; }
           return nc;
         });
         onScore?.("PVE Kill", xpG + goldG);
@@ -717,13 +719,15 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           setBattleOver(true); setBattleWon(true);
           setBattleLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 Vitoria!`]);
           confetti({ particleCount: 60, spread: 50 });
+          let xpG = battleEnemy.xpReward; let goldG = battleEnemy.goldReward;
+          if (eventBonus?.type === "gold") goldG = Math.round(goldG * eventBonus.multiplier);
+          if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
           updateChar(c => {
-            let nc = { ...c, xp: c.xp + battleEnemy.xpReward, gold: c.gold + battleEnemy.goldReward, totalKills: c.totalKills + 1, totalEarned: c.totalEarned + battleEnemy.goldReward };
-            const needed = xpForLevel(nc.level);
-            if (nc.xp >= needed) { nc.xp -= needed; nc.level++; }
+            let nc = { ...c, xp: c.xp + xpG, gold: c.gold + goldG, totalKills: c.totalKills + 1, totalEarned: c.totalEarned + goldG };
+            while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; }
             return nc;
           });
-          onScore?.("PVE Skill Kill", battleEnemy.xpReward + battleEnemy.goldReward);
+          onScore?.("PVE Skill Kill", xpG + goldG);
           return;
         }
         const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
@@ -738,12 +742,34 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const heal = Math.round(stats.maxHp * skill.power);
       setBattleHp(prev => Math.min(stats.maxHp, prev + heal));
       setBattleLog(prev => [...prev.slice(-6), `${skill.emoji} ${skill.name}! +${heal} HP`]);
-      setTimeout(() => { setIsPlayerTurn(true); }, 400);
+      // Enemy still attacks after heal
+      setTimeout(() => {
+        if (battleEnemy) {
+          const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
+          const newHp = Math.max(0, battleHp + heal - eDmg);
+          setBattleHp(newHp);
+          setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} contra-ataca por ${eDmg}!`]);
+          if (newHp <= 0) { setBattleOver(true); setBattleWon(false); updateChar(c => ({ ...c, totalDeaths: c.totalDeaths + 1 })); return; }
+        }
+        setIsPlayerTurn(true);
+        setBattleMp(prev => Math.min(stats.maxMp, prev + 2));
+      }, 400);
     } else {
       if (skill.name.includes("Defesa") || char.classId === 4) setDefBuff(prev => prev * skill.power);
       else setAtkBuff(prev => prev * skill.power);
       setBattleLog(prev => [...prev.slice(-6), `${skill.emoji} ${skill.name}! Buff ativado!`]);
-      setTimeout(() => { setIsPlayerTurn(true); }, 400);
+      // Enemy still attacks after buff
+      setTimeout(() => {
+        if (battleEnemy) {
+          const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
+          const newHp = Math.max(0, battleHp - eDmg);
+          setBattleHp(newHp);
+          setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} contra-ataca por ${eDmg}!`]);
+          if (newHp <= 0) { setBattleOver(true); setBattleWon(false); updateChar(c => ({ ...c, totalDeaths: c.totalDeaths + 1 })); return; }
+        }
+        setIsPlayerTurn(true);
+        setBattleMp(prev => Math.min(stats.maxMp, prev + 2));
+      }, 400);
     }
   }, [char, battleEnemy, isPlayerTurn, battleOver, stats, defBuff, atkBuff, battleHp, battleMp, updateChar, onScore, notify]);
 
@@ -780,7 +806,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         // TODO: Implement server-side PVP with real stakes via Supabase RPC
         setPvpLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 Venceste o duelo! +${pvpStake} ouro!`]);
         confetti({ particleCount: 100, spread: 70 });
-        updateChar(c => ({ ...c, gold: c.gold + pvpStake, wins: (c.wins || 0) + 1, duelsWon: c.duelsWon + 1, totalEarned: c.totalEarned + pvpStake }));
+        updateChar(c => ({ ...c, gold: c.gold + pvpStake, duelsWon: c.duelsWon + 1, totalEarned: c.totalEarned + pvpStake }));
         dbSendTransfer(guestId, char!.name, pvpOpponent!.charId, pvpOpponent!.name, pvpStake, `Duelo PVP - aposta`);
         onScore?.("PVP Win", pvpStake * 2);
         return;
@@ -885,6 +911,8 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     if (!confirm("Tens a certeza? Todo o progresso sera perdido!")) return;
     localStorage.removeItem(SAVE_KEY);
     localStorage.removeItem("bateu_mmorpg_guestid");
+    localStorage.removeItem("bateu_mmorpg_daily");
+    localStorage.removeItem("bateu_mmorpg_boss");
     (async () => { try { await (supabase as any).from("rpg_characters").delete().eq("guest_id", guestId); } catch {} })();
     setChar(null); setScreen("create");
   }, [guestId]);
@@ -908,7 +936,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           <label className="text-xs text-muted-foreground block mb-1">Nome do personagem</label>
           <input
             value={charNameInput} onChange={e => setCharNameInput(e.target.value.slice(0, 16))}
-            placeholder={"Heroi " + Math.floor(Math.random() * 9999)}
+            placeholder={placeholderName}
             className="w-full px-3 py-2 rounded-lg bg-card border border-border text-sm focus:outline-none focus:border-primary"
             maxLength={16}
           />
@@ -1058,7 +1086,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           <div className="text-center p-4 rounded-xl bg-card border border-border">
             <span className="text-5xl">{pvpWon ? "\uD83C\uDFC6" : "\uD83D\uDC80"}</span>
             <p className="font-bold text-lg mt-2">{pvpWon ? "Venceste!" : "Perdeste!"}</p>
-            <p className="text-sm text-yellow-400">{pvpWon ? `+${pvpStake * 2} \uD83D\uDCB0` : `-${pvpStake} \uD83D\uDCB0`}</p>
+            <p className="text-sm text-yellow-400">{pvpWon ? `+${pvpStake} \uD83D\uDCB0` : `-${pvpStake} \uD83D\uDCB0`}</p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => setScreen("world")}
               className="mt-3 px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold">
               Continuar
@@ -1111,7 +1139,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
               {onlinePlayers.length > 0 && <span className="flex items-center gap-0.5 text-[10px] text-green-400"><Users className="h-3 w-3" />{onlinePlayers.length}</span>}
             </div>
             <div className="flex gap-3 text-[10px] text-muted-foreground">
-              <span>\u2B50{char.totalKills} kills</span>
+              <span>\u2B50{char.totalKills} abates</span>
               <span>\uD83C\uDFC6{char.duelsWon}W</span>
               <span>\uD83D\uDCB5{char.duelsLost}L</span>
             </div>
@@ -1664,7 +1692,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
                         onClick={() => {
                           updateChar(c => ({ ...c, gold: c.gold - listing.price, inventory: [...c.inventory, { ...listing.item }] }));
                           setMarketListings(prev => prev.filter(l => l.id !== listing.id));
-                          notify(`\u2705 Compraste {listing.item.name}!`);
+                          notify(`\u2705 Compraste ${listing.item.name}!`);
                           dbSendTransfer(guestId, char!.name, listing.sellerId, listing.sellerName, listing.price, `Mercado: ${listing.item.name}`);
                         }}
                         className="mt-1 px-3 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold disabled:opacity-30">

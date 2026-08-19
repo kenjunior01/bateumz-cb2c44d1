@@ -59,34 +59,43 @@ export default function DashboardRaffles() {
   const handleDraw = async (raffle: any) => {
     setDrawingRaffle(raffle.id);
     setOpenMenu(null);
-    const { data: participants } = await supabase.from("participants").select("*").eq("raffle_id", raffle.id).eq("status", "active");
-    if (!participants || participants.length === 0) {
-      toast.error("Nenhum participante ativo para sortear!");
+    try {
+      const { data: participants } = await supabase.from("participants").select("*").eq("raffle_id", raffle.id).eq("status", "active");
+      if (!participants || participants.length === 0) {
+        toast.error("Nenhum participante ativo para sortear!");
+        setDrawingRaffle(null);
+        return;
+      }
+      const numWinners = Math.min(raffle.max_winners || 1, participants.length);
+      const pool = [...participants];
+      const winners = [];
+      for (let i = 0; i < numWinners; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        winners.push(pool.splice(idx, 1)[0]);
+      }
+      // Marcar todos os vencedores primeiro
+      const winnerIds = winners.map(w => w.id);
+      const { error: updateErr } = await supabase.from("participants").update({ status: "winner" }).in("id", winnerIds);
+      if (updateErr) throw updateErr;
+      // Atribuir pontos de sorte (melhor esforço — erros aqui não bloqueiam o sorteio)
+      await Promise.allSettled(
+        winners.map(w => supabase.from("luck_points").insert({
+          user_id: w.user_id, points: 500, action: "bonus",
+          description: `Vencedor do sorteio: ${raffle.title}`, raffle_id: raffle.id,
+        }))
+      );
+      // Finalizar o sorteio
+      const { error: raffleErr } = await supabase.from("raffles").update({ status: "completed" }).eq("id", raffle.id);
+      if (raffleErr) throw raffleErr;
+      const winnerNums = winners.map(w => `#${w.ticket_number}`).join(", ");
+      toast.success(`Sorteio realizado! Vencedor${numWinners > 1 ? "es" : ""}: Bilhete ${winnerNums}`);
+      fetchRaffles();
+    } catch (err: any) {
+      console.error("Erro no sorteio:", err);
+      toast.error(`Erro ao realizar sorteio: ${err.message || "erro desconhecido"}`);
+    } finally {
       setDrawingRaffle(null);
-      return;
     }
-    const numWinners = Math.min(raffle.max_winners || 1, participants.length);
-    const pool = [...participants];
-    const winners = [];
-    for (let i = 0; i < numWinners; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      winners.push(pool.splice(idx, 1)[0]);
-    }
-    for (const winner of winners) {
-      await supabase.from("participants").update({ status: "winner" }).eq("id", winner.id);
-      await supabase.from("luck_points").insert({
-        user_id: winner.user_id,
-        points: 500,
-        action: "bonus",
-        description: `Vencedor do sorteio: ${raffle.title}`,
-        raffle_id: raffle.id,
-      });
-    }
-    await supabase.from("raffles").update({ status: "completed" }).eq("id", raffle.id);
-    const winnerNums = winners.map(w => `#${w.ticket_number}`).join(", ");
-    toast.success(`Sorteio realizado! Vencedor${numWinners > 1 ? "es" : ""}: Bilhete ${winnerNums}`);
-    setDrawingRaffle(null);
-    fetchRaffles();
   };
 
   const handleStatusToggle = async (raffle: any) => {

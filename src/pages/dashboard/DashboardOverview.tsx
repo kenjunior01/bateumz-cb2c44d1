@@ -54,11 +54,14 @@ export default function DashboardOverview() {
   const totalRevenue = raffles.reduce((s, r) => s + r.sold_tickets * Number(r.ticket_price), 0);
   const activeCount = raffles.filter((r) => r.status === "active").length;
 
+  const completedCount = raffles.filter((r) => r.status === "completed").length;
+  const conversionRate = participantCount > 0 ? ((participantCount / Math.max(1, raffles.reduce((s, r) => s + r.total_tickets, 0))) * 100).toFixed(1) : "0.0";
+
   const stats = [
-    { label: "Sorteios Ativos", value: String(activeCount), change: "+3", up: true, icon: Ticket },
-    { label: "Participantes", value: participantCount.toLocaleString(), change: "+18%", up: true, icon: Users },
-    { label: "Receita Total", value: formatMoney(totalRevenue), change: "+24%", up: true, icon: DollarSign },
-    { label: "Taxa de Conversão", value: "4.2%", change: "-0.3%", up: false, icon: TrendingUp },
+    { label: "Sorteios Ativos", value: String(activeCount), change: null, icon: Ticket },
+    { label: "Participantes", value: participantCount.toLocaleString(), change: null, icon: Users },
+    { label: "Receita Total", value: formatMoney(totalRevenue), change: null, icon: DollarSign },
+    { label: "Taxa de Conversão", value: `${conversionRate}%`, change: null, icon: TrendingUp },
   ];
 
   return (
@@ -84,10 +87,12 @@ export default function DashboardOverview() {
                   <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <stat.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <span className={`flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${stat.up ? "text-primary" : "text-destructive"}`}>
-                    {stat.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                    {stat.change}
-                  </span>
+                  {stat.change && (
+                    <span className={`flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${stat.up ? "text-primary" : "text-destructive"}`}> 
+                      {stat.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {stat.change}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-2 sm:mt-3 font-display text-lg sm:text-2xl font-bold text-foreground leading-tight truncate">{stat.value}</p>
                 <p className="text-[10.5px] sm:text-xs text-muted-foreground">{stat.label}</p>

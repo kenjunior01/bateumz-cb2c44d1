@@ -51,7 +51,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
     if (!user) return;
     setLoadingMine(true);
     try {
-      const a = await ensureAmbassador(businessUserId, user.id, user.email?.split("@")[0] || null as any);
+      const a = await ensureAmbassador(businessUserId, user.id, user.email?.split("@")[0] || undefined);
       setRefCode(a.ref_code);
       toast.success("És agora embaixador desta empresa! Partilha o teu link.");
     } catch (e: any) {
@@ -105,7 +105,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
     <div className={`rounded-3xl border border-border bg-card overflow-hidden ${compact ? "" : "shadow-lg"}`}>
       <div className="px-4 py-3 bg-gradient-to-r from-emerald-500/10 to-amber-500/10 border-b border-border flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-emerald-600" />
-        <h3 className="font-display text-sm font-bold flex-1">Live Ambassadors</h3>
+        <h3 className="font-display text-sm font-bold flex-1">Embaixadores ao Vivo</h3>
         {liveCode && (
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-bold uppercase">
             {liveCode}
@@ -116,7 +116,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
       <div className="p-4 space-y-4">
         {!user ? (
           <Link to="/login" className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold">
-            <LogIn className="h-4 w-4" /> Sign in to become an ambassador
+            <LogIn className="h-4 w-4" /> Inicia sessão para ser embaixador
           </Link>
         ) : !refCode ? (
           <button onClick={becomeAmbassador} disabled={loadingMine}
@@ -127,7 +127,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
         ) : (
           <div className="space-y-2">
             <div className="rounded-xl bg-muted/40 border border-border px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Your link de embaixador</p>
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">O teu link de embaixador</p>
               <p className="text-[11px] font-mono break-all text-foreground/80">{myUrl}</p>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -141,7 +141,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
             <button onClick={copyLink}
               className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-full bg-secondary text-foreground text-xs font-medium">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-              Copy link
+              Copiar link
             </button>
             {myRank && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
@@ -176,7 +176,7 @@ const AmbassadorPanel = ({ businessUserId, businessName, liveCode, compact }: Pr
               <Loader2 className="h-3 w-3 animate-spin" /> A carregar…
             </p>
           ) : ranking.length === 0 ? (
-            <p className="text-center text-xs text-muted-foreground py-4">No invites counted yet.</p>
+            <p className="text-center text-xs text-muted-foreground py-4">Ainda sem convites contabilizados.</p>
           ) : (
             <ul className="space-y-1.5">
               <AnimatePresence initial={false}>

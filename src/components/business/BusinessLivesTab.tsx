@@ -196,7 +196,7 @@ export default function BusinessLivesTab({ businessUserId }: Props) {
                 animate={{ opacity: 1, height: "auto" }}
               >
                 <p className="biz-live-winners-title">
-                  <Trophy className="h-3 w-3" style={{ color: "#fbbf24" }} /> Winners
+                  <Trophy className="h-3 w-3" style={{ color: "#fbbf24" }} /> Vencedores
                 </p>
                 {w.slice(0, 3).map((x, wi) => (
                   <p key={wi} className="biz-live-winner-name">
@@ -211,7 +211,7 @@ export default function BusinessLivesTab({ businessUserId }: Props) {
             <Button asChild size="sm" className="biz-live-cta gap-1.5 w-full">
               <Link to={`/live-evento/${l.slug}`}>
                 <PlayCircle className="h-3.5 w-3.5" />
-                {isEnded ? "Watch recap" : "Open live page"}
+                {isEnded ? "Ver gravação" : "Abrir página da live"}
                 <ArrowRight className="h-3 w-3 ml-auto" />
               </Link>
             </Button>

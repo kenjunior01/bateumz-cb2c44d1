@@ -102,8 +102,11 @@ export default function DashboardParticipants() {
     else setSelectedIds(new Set(filtered.map((p) => p.id)));
   };
 
+  const [sending, setSending] = useState(false);
+
   const exportCSV = () => {
-    const rows = filtered.map((p) => [p.user_name, p.raffle_title, p.ticket_number, p.status, p.payment_status, new Date(p.created_at).toLocaleDateString("pt-MZ")].join(","));
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}`;
+    const rows = filtered.map((p) => [esc(p.user_name), esc(p.raffle_title), p.ticket_number, p.status, p.payment_status, new Date(p.created_at).toLocaleDateString("pt-MZ")].join(","));
     const csv = ["Nome,Sorteio,Bilhete,Status,Pagamento,Data", ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -300,9 +303,42 @@ export default function DashboardParticipants() {
               <div className="flex justify-end gap-3 mt-4">
                 <button onClick={() => setShowMessageModal(false)} className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancelar</button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => { setShowMessageModal(false); setMessageText(""); setSelectedIds(new Set()); }}
-                  className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground glow-primary">
-                  <Send className="h-4 w-4" /> Enviar
+                  onClick={async () => {
+                    if (!messageText.trim()) { toast.error("Escreva uma mensagem antes de enviar"); return; }
+                    setSending(true);
+                    try {
+                      // Buscar emails dos participantes selecionados
+                      const selParts = participants.filter(p => selectedIds.has(p.id));
+                      const userIds = [...new Set(selParts.map(p => p.user_id))];
+                      const { data: profs } = await supabase.from("profiles").select("id, email").in("id", userIds);
+                      const emails = (profs || []).map((p: any) => p.email).filter(Boolean);
+                      if (emails.length === 0) { toast.error("Nenhum email encontrado para os participantes selecionados"); return; }
+                      // Inserir notificações na base de dados
+                      const { error } = await supabase.from("notifications").insert(
+                        emails.map(email => ({
+                          user_id: selParts.find(p => {
+                            const prof = (profs || []).find((pr: any) => pr.email === email);
+                            return prof && pr.id === p.user_id;
+                          })?.user_id,
+                          title: `Mensagem de ${user?.email?.split("@")[0] || "Empresa"}`,
+                          message: messageText.trim(),
+                          type: "business_message",
+                        })).filter((n: any) => n.user_id)
+                      );
+                      if (error) throw error;
+                      toast.success(`Mensagem enviada para ${emails.length} participante(s)!`);
+                      setShowMessageModal(false); setMessageText(""); setSelectedIds(new Set());
+                    } catch (err: any) {
+                      console.error("Erro ao enviar mensagem:", err);
+                      toast.error("Erro ao enviar mensagem. Tente novamente.");
+                    } finally {
+                      setSending(false);
+                    }
+                  }}
+                  disabled={sending}
+                  className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50">
+                  {sending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : <Send className="h-4 w-4" />}
+                  {sending ? "A enviar..." : "Enviar"}
                 </motion.button>
               </div>
             </motion.div>

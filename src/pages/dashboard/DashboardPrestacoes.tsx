@@ -37,7 +37,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { formatMoney } from "@/lib/currency";
 import { PROVINCES } from "@/lib/provinces";
 import { toast } from "sonner";
 import {

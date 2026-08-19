@@ -234,18 +234,18 @@ async function dbSetOffline(guestId: string) {
   try { await (supabase as any).from("rpg_characters").update({ is_online: false }).eq("guest_id", guestId); } catch {}
 }
 
-async function dbSendChat(charId: string, charName: string, classId: number, message: string, zone: number) {
+async function dbSendChat(guestId: string, charName: string, classId: number, message: string, zone: number) {
   try {
-    await (supabase as any).from("rpg_chat").insert({ char_id: charId, char_name: charName, class_id: classId, message, zone });
-  } catch {}
+    await (supabase as any).from("rpg_chat").insert({ guest_id: guestId, char_name: charName, class_id: classId, message, zone });
+  } catch (e) { console.warn("Chat insert failed:", e); }
 }
 
 async function dbSendTransfer(fromId: string, fromName: string, toId: string, toName: string, amount: number, desc: string) {
   try {
     await (supabase as any).from("rpg_transactions").insert({
-      from_char_id: fromId, from_name: fromName, to_char_id: toId, to_name: toName, amount, type: "transfer", description: desc,
+      from_guest_id: fromId, from_name: fromName, to_guest_id: toId, to_name: toName, amount, type: "transfer", description: desc,
     });
-  } catch {}
+  } catch (e) { console.warn("Transfer insert failed:", e); }
 }
 
 // ============================================================
@@ -377,7 +377,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "rpg_chat" }, (payload: any) => {
         const m = payload.new;
         // Avoid duplicate for sender (optimistic add already added it)
-        if (m.char_id === guestId) return;
+        if (m.guest_id === guestId) return;
         setChatMessages(prev => [...prev.slice(-49), {
           id: m.id, charName: m.char_name, classId: m.class_id, message: m.message, time: m.created_at,
         }]);
@@ -544,13 +544,15 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     if (!zone || char.level < zone.minLevel) { setAutoGrind(false); return; }
 
     const s = calcStats(char);
-    const enemyTemplate = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-    const scale = 1 + (char.level - zone.minLevel) * 0.05;
-    const eHp = Math.round(enemyTemplate.hp * scale);
-    const eAtk = Math.round(enemyTemplate.atk * scale);
-    const eDef = Math.round(enemyTemplate.def * scale);
 
     autoGrindRef.current = setInterval(() => {
+      // Pick a fresh random enemy each fight
+      const freshTemplate = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
+      const scale = 1 + (char.level - zone.minLevel) * 0.05;
+      const eHp = Math.round(freshTemplate.hp * scale);
+      const eAtk = Math.round(freshTemplate.atk * scale);
+      const eDef = Math.round(freshTemplate.def * scale);
+
       setChar(prev => {
         if (!prev) return prev;
         const ps = calcStats(prev);
@@ -568,8 +570,8 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         }
 
         if (eCurrentHp <= 0) {
-          let goldG = enemyTemplate.gold;
-          let xpG = enemyTemplate.xp;
+          let goldG = freshTemplate.gold;
+          let xpG = freshTemplate.xp;
           if (eventBonus?.type === "gold") goldG = Math.round(goldG * eventBonus.multiplier);
           if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
 
@@ -581,11 +583,11 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           saveLocalChar(nc);
 
           setGrindStats(gs => ({ ...gs, kills: gs.kills + 1, gold: gs.gold + goldG, xp: gs.xp + xpG }));
-          setGrindLog(gl => [...gl.slice(-19), `\u2705 ${enemyTemplate.emoji} ${enemyTemplate.name}: +${xpG}XP +${goldG}\uD83D\uDCB0`]);
+          setGrindLog(gl => [...gl.slice(-19), `\u2705 ${freshTemplate.emoji} ${freshTemplate.name}: +${xpG}XP +${goldG}\uD83D\uDCB0`]);
           return nc;
         } else {
           setGrindStats(gs => ({ ...gs, deaths: gs.deaths + 1 }));
-          setGrindLog(gl => [...gl.slice(-19), `\uD83D\uDC80 ${enemyTemplate.emoji} ${enemyTemplate.name}: Derrotado!`]);
+          setGrindLog(gl => [...gl.slice(-19), `\uD83D\uDC80 ${freshTemplate.emoji} ${freshTemplate.name}: Derrotado!`]);
           return { ...prev, totalDeaths: prev.totalDeaths + 1 };
         }
       });
@@ -746,7 +748,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       setTimeout(() => {
         if (battleEnemy) {
           const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
-          const newHp = Math.max(0, battleHp + heal - eDmg);
+          const newHp = Math.min(stats.maxHp, Math.max(0, battleHp + heal - eDmg));
           setBattleHp(newHp);
           setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} contra-ataca por ${eDmg}!`]);
           if (newHp <= 0) { setBattleOver(true); setBattleWon(false); updateChar(c => ({ ...c, totalDeaths: c.totalDeaths + 1 })); return; }

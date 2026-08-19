@@ -9,7 +9,8 @@ import {
   Music, UtensilsCrossed, Dumbbell, GraduationCap, ShoppingBag,
   Palette, Mic2, Sparkles, TrendingUp, Eye, Crown, Radio,
   Gift, Target, BarChart3, Ticket, Building2, ArrowLeft,
-  Phone, CalendarDays, GiftIcon, Megaphone
+  Phone, CalendarDays, GiftIcon, Megaphone, Wallet, Calculator,
+  Medal, Instagram, Facebook, Youtube, Twitter
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,35 @@ interface RaffleWinner {
   prize_title: string;
   display_name: string | null;
   slug: string | null;
+}
+
+interface PrestacaoProduct {
+  id: string;
+  title: string;
+  brand: string | null;
+  model: string | null;
+  category: string;
+  total_price: number;
+  min_down_payment: number;
+  max_months: number;
+  images: any;
+  city: string | null;
+  province: string | null;
+  views_count: number | null;
+  status: string;
+}
+
+interface ContestRanking {
+  contest_id: string;
+  contest_title: string;
+  evaluation_type: string;
+  status: string;
+  top: {
+    submission_id: string;
+    name: string;
+    photo_url: string | null;
+    score: number;
+  }[];
 }
 
 /* ─── Niche System ──────────────────────────────────── */
@@ -223,6 +253,10 @@ const StatCard = ({ icon: Icon, label, value, sub, color, delay }: { icon: any; 
    ═══════════════════════════════════════════════════════ */
 const sb: any = supabase;
 
+const SOCIAL_ICONS: Record<string, any> = {
+  instagram: Instagram, facebook: Facebook, youtube: Youtube, tiktok: Play, twitter: Twitter, x: Twitter, whatsapp: Phone, website: Globe,
+};
+
 const isUuid = (v: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
@@ -239,6 +273,8 @@ const CompanyPublicProfile = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
   const [winners, setWinners] = useState<RaffleWinner[]>([]);
+  const [products, setProducts] = useState<PrestacaoProduct[]>([]);
+  const [rankings, setRankings] = useState<ContestRanking[]>([]);
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -273,14 +309,16 @@ const CompanyPublicProfile = () => {
         }
         setResolvedId(bizId);
 
-        const [profileRes, brandRes, wheelsRes, milsRes, livesRes, rafflesRes, contestsRes] = await Promise.all([
+        const [profileRes, brandRes, wheelsRes, milsRes, roulettesRes, livesRes, rafflesRes, contestsRes, productsRes] = await Promise.all([
           sb.from("profiles_public").select("*").eq("user_id", bizId).single(),
           sb.from("company_branding").select("*").eq("user_id", bizId).single(),
           sb.from("spin_wheel_games").select("*").eq("business_user_id", bizId).order("created_at", { ascending: false }),
           sb.from("millionaire_games").select("*").eq("business_user_id", bizId).order("created_at", { ascending: false }),
+          sb.from("challenge_roulettes").select("id, title, is_published, created_at").eq("business_user_id", bizId).order("created_at", { ascending: false }).limit(20),
           sb.from("scheduled_lives").select("*").eq("business_user_id", bizId).neq("status", "draft").order("scheduled_at", { ascending: false }).limit(20),
           sb.from("raffles").select("*").eq("business_user_id", bizId).in("status", ["active", "completed", "drawn"]).order("created_at", { ascending: false }),
           sb.from("contests").select("*").eq("created_by", bizId).in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
+          sb.from("prestacao_products").select("*").eq("business_user_id", bizId).eq("status", "active").order("created_at", { ascending: false }),
         ]);
         if (profileRes.data) {
           const p = profileRes.data;
@@ -290,7 +328,9 @@ const CompanyPublicProfile = () => {
         const allGames: GameItem[] = [];
         (wheelsRes.data || []).forEach((w: any) => allGames.push({ id: w.id, name: w.name, type: "wheel", is_published: w.is_published, segment_count: w.segment_count, created_at: w.created_at, is_active: w.is_active }));
         (milsRes.data || []).forEach((m: any) => allGames.push({ id: m.id, name: m.name || "Quem Quer Ser Milionário", type: "millionaire", is_published: m.is_active, created_at: m.created_at, is_active: m.is_active }));
+        (roulettesRes.data || []).forEach((r: any) => allGames.push({ id: r.id, name: r.title || "Roleta de Desafios", type: "custom", is_published: r.is_published, created_at: r.created_at }));
         setGames(allGames);
+        setProducts((productsRes.data as PrestacaoProduct[]) || []);
         if (livesRes.data) {
           setSessions((livesRes.data || []).map((l: any) => ({ code: l.slug || l.id, title: l.title, started_at: new Date(l.scheduled_at).getTime(), ended_at: l.ends_at ? new Date(l.ends_at).getTime() : Date.now(), duration_sec: l.ends_at ? Math.round((new Date(l.ends_at).getTime() - new Date(l.scheduled_at).getTime()) / 1000) : 0, players_count: 0, games_count: 0, winners: [] })));
         }
@@ -298,11 +338,13 @@ const CompanyPublicProfile = () => {
         setContests((contestsRes.data as Contest[]) || []);
 
         // Load winners from finished raffles
-        const finishedIds = ((rafflesRes.data as Raffle[]) || []).filter(r => r.status === "completed" || r.status === "drawn").map(r => r.id);
+        const rafflesData = (rafflesRes.data as Raffle[]) || [];
+        const contestsData = (contestsRes.data as Contest[]) || [];
+        const finishedIds = rafflesData.filter(r => r.status === "completed" || r.status === "drawn").map(r => r.id);
         if (finishedIds.length > 0) {
-          const { data: winnerRows } = await sb.from("participants").select("raffle_id, user_id").in("raffle_id", finishedIds).eq("status", "winner");
+          const { data: winnerRows } = await sb.from("participants").select("raffle_id, ticket_number, user_id").in("raffle_id", finishedIds).eq("status", "winner");
           if (winnerRows && winnerRows.length > 0) {
-            const raffleMap = new Map(((rafflesRes.data as Raffle[]) || []).map((r: any) => [r.id, r]));
+            const raffleMap = new Map(rafflesData.map((r: any) => [r.id, r]));
             const userIds = [...new Set(winnerRows.map((w: any) => w.user_id))];
             const { data: profs } = await sb.from("profiles_public").select("user_id, display_name").in("user_id", userIds);
             const profMap = new Map((profs || []).map((p: any) => [p.user_id, p.display_name]));
@@ -311,6 +353,21 @@ const CompanyPublicProfile = () => {
               return { raffle_title: r?.title || "Sorteio", prize_title: r?.prize_title || "Prémio", display_name: profMap.get(w.user_id) || null, slug: r?.slug || null };
             }));
           }
+        }
+
+        // Load contest rankings (top 3 per active/voting contest)
+        const liveContests = contestsData.filter(c => c.status === "active" || c.status === "voting");
+        if (liveContests.length > 0) {
+          const rankResults: ContestRanking[] = [];
+          await Promise.all(liveContests.map(async (c) => {
+            const orderCol = c.evaluation_type === "views" ? "views_count" : "votes_count";
+            const { data } = await sb.from("contest_submissions").select("id, participant_name, photo_url, votes_count, views_count").eq("contest_id", c.id).eq("status", "approved").order(orderCol, { ascending: false }).limit(3);
+            rankResults.push({
+              contest_id: c.id, contest_title: c.title, evaluation_type: c.evaluation_type, status: c.status,
+              top: (data || []).map((s: any) => ({ submission_id: s.id, name: s.participant_name, photo_url: s.photo_url, score: c.evaluation_type === "views" ? s.views_count : s.votes_count })),
+            });
+          }));
+          setRankings(rankResults.filter(r => r.top.length > 0));
         }
       } catch (e) { console.error(e); }
       setLoading(false);
@@ -357,6 +414,7 @@ const CompanyPublicProfile = () => {
   const totalWinners = winners.length;
   const totalContests = contests.length;
   const activeRaffles = raffles.filter(r => r.status === "active").length;
+  const totalSold = raffles.reduce((acc, r) => acc + (r.sold_tickets || 0), 0);
   const heroTitle = branding?.hero_title || niche.defaultTitle;
   const heroSubtitle = branding?.hero_subtitle || branding?.company_slogan || `Descobre os jogos e lives de ${companyName}`;
   const ctaText = branding?.hero_cta_text || niche.defaultCta;
@@ -365,12 +423,16 @@ const CompanyPublicProfile = () => {
   const socialLinks = branding?.social_links || {};
   const layout = branding?.homepage_layout || "showcase";
 
+  const ogImage = branding?.company_logo_url || company?.avatar_url || undefined;
+
   useSEO({
-    title: companyName !== 'Empresa' ? `${companyName}` : 'Empresa',
+    title: `${companyName} — Jogos, Lives e Sorteios | Bateu`,
     description: branding?.about_text
       ? branding.about_text.slice(0, 160)
-      : `Perfil da empresa ${companyName} na Bateu. Jogos, sorteios, lives e muito mais.`,
+      : `Descobre os jogos interativos, sorteios, lives e prémios de ${companyName} na Bateu. Entra e participa!`,
     canonicalPath: location.pathname,
+    ogType: "profile",
+    ogImage,
   });
 
   /* ─── Loading State ────────────────────────────────── */
@@ -493,11 +555,14 @@ const CompanyPublicProfile = () => {
             
             {Object.keys(socialLinks).length > 0 && (
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ ...springUp, delay: 0.65 }} className="flex items-center justify-center gap-3 mt-8">
-                {Object.entries(socialLinks).map(([platform, url]) => (
-                  <a key={platform} href={url as string} target="_blank" rel="noreferrer" className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all">
-                    <span className="text-xs font-bold uppercase">{platform.slice(0, 2)}</span>
-                  </a>
-                ))}
+                {Object.entries(socialLinks).map(([platform, url]) => {
+                  const SocIcon = SOCIAL_ICONS[platform.toLowerCase()];
+                  return (
+                    <a key={platform} href={url as string} target="_blank" rel="noreferrer" className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover:scale-110" title={platform}>
+                      {SocIcon ? <SocIcon className="h-4 w-4" /> : <span className="text-xs font-bold uppercase">{platform.slice(0, 2)}</span>}
+                    </a>
+                  );
+                })}
               </motion.div>
             )}
 
@@ -526,11 +591,13 @@ const CompanyPublicProfile = () => {
 
       <div className="relative z-10 -mt-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             <StatCard icon={Gamepad2} label="Jogos" value={totalGames} sub={`${publishedGames} ativos`} color={primary} delay={0} />
             <StatCard icon={Ticket} label="Sorteios" value={totalRaffles} sub={`${activeRaffles} abertos`} color={secondary} delay={0.05} />
             <StatCard icon={Trophy} label="Vencedores" value={totalWinners} color={accent} delay={0.1} />
             <StatCard icon={Radio} label="Lives" value={totalLives} color="#10b981" delay={0.15} />
+            <StatCard icon={ShoppingBag} label="Prestações" value={products.length} color="#f59e0b" delay={0.2} />
+            <StatCard icon={Flame} label="Bilhetes" value={totalSold} color="#ef4444" delay={0.25} />
           </div>
         </div>
       </div>
@@ -600,6 +667,14 @@ const CompanyPublicProfile = () => {
               <GiftIcon className="h-4 w-4" /> Concursos
               <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{contests.length}</span>
             </TabsTrigger>
+            <TabsTrigger value="prestacoes" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
+              <ShoppingBag className="h-4 w-4" /> Prestações
+              <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{products.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="winners" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
+              <Crown className="h-4 w-4" /> Vencedores
+              <span className="hidden sm:inline ml-1 text-xs bg-muted px-2 py-0.5 rounded-full">{totalWinners}</span>
+            </TabsTrigger>
             <TabsTrigger value="activity" className="flex-1 gap-2 rounded-xl data-[state=active]:shadow-md transition-all">
               <Clock className="h-4 w-4" /> Actividade
             </TabsTrigger>
@@ -616,18 +691,18 @@ const CompanyPublicProfile = () => {
                       <CardContent className="p-5">
                         <div className="flex items-start gap-4">
                           <motion.div className="h-14 w-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: `linear-gradient(135deg, ${primary}25, ${accent}15)` }} whileHover={{ rotate: [0, -5, 5, 0] }} transition={{ duration: 0.4 }}>
-                            {game.type === "wheel" ? <span className="text-2xl">🎰</span> : <span className="text-2xl">💰</span>}
+                            {game.type === "wheel" ? <span className="text-2xl">🎰</span> : game.type === "millionaire" ? <span className="text-2xl">💰</span> : <span className="text-2xl">🎯</span>}
                           </motion.div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm group-hover:text-primary transition-colors truncate">{game.name}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{game.type === "wheel" ? "Roda de Prémios" : "Quem Quer Ser Milionário"}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{game.type === "wheel" ? "Roda de Prémios" : game.type === "millionaire" ? "Quem Quer Ser Milionário" : "Roleta de Desafios"}</p>
                           </div>
                           <span className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-bold ${game.is_published || game.is_active ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground"}`}>
                             {game.is_published || game.is_active ? "Ativo" : "Rascunho"}
                           </span>
                         </div>
                         <div className="mt-4 flex items-center justify-between text-[10px] text-muted-foreground">
-                          <span>{game.segment_count ? `${game.segment_count} segmentos` : "Configurado"}</span>
+                          <span>{game.type === "wheel" ? (game.segment_count ? `${game.segment_count} segmentos` : "Configurado") : game.type === "millionaire" ? "Perguntas & Prémios" : "Desafios personalizados"}</span>
                           <span>{new Date(game.created_at).toLocaleDateString("pt-PT")}</span>
                         </div>
                       </CardContent>

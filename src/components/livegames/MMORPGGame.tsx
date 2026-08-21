@@ -161,6 +161,92 @@ const RAID_BOSSES = [
 ];
 
 // ============================================================
+// QUEST SYSTEM
+// ============================================================
+
+interface Quest {
+  id: string; name: string; desc: string; emoji: string;
+  target: number; progress: number; reward: number; rewardType: "gold" | "xp";
+  type: "kill" | "gold_earn" | "duel_win" | "level_up";
+  completed: boolean;
+}
+
+const DAILY_QUESTS: Omit<Quest, "id" | "progress" | "completed">[] = [
+  { name: "Cacador Iniciante", desc: "Derrota 5 inimigos", emoji: "\u2694\uFE0F", target: 5, reward: 100, rewardType: "gold", type: "kill" },
+  { name: "Colecionador de Ouro", desc: "Ganha 300 ouro", emoji: "\uD83D\uDCB0", target: 300, reward: 50, rewardType: "xp", type: "gold_earn" },
+  { name: "Guerreiro do Dia", desc: "Vence 1 duelo PVP", emoji: "\uD83C\uDFC6", target: 1, reward: 200, rewardType: "gold", type: "duel_win" },
+  { name: "Ascensao", desc: "Sobe 1 nivel", emoji: "\u2B50", target: 1, reward: 150, rewardType: "xp", type: "level_up" },
+];
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+
+interface Achievement {
+  id: string; name: string; desc: string; emoji: string; unlocked: boolean;
+}
+
+const ACHIEVEMENT_DEFS: Omit<Achievement, "id" | "unlocked">[] = [
+  { name: "Primeiro Sangue", desc: "Derrota o teu primeiro inimigo", emoji: "\uD83C\uDFA5" },
+  { name: "Colecionador", desc: "Compra 3 itens na loja", emoji: "\uD83D\uDCE6" },
+  { name: "Duelista", desc: "Vence o teu primeiro duelo PVP", emoji: "\u2694\uFE0F" },
+  { name: "Cacador de Boss", desc: "Contribui para derrotar um Boss Mundial", emoji: "\uD83D\uDC80" },
+  { name: "Rico", desc: "Acumula 5000 ouro", emoji: "\uD83D\uDC51" },
+  { name: "Veterano", desc: "Alcana nivel 10", emoji: "\uD83C\uDF96\uFE0F" },
+  { name: "Lendario", desc: "Alcana nivel 25", emoji: "\uD83D\uDC51" },
+  { name: "Matador de 100", desc: "Derrota 100 inimigos", emoji: "\uD83D\uDCAF" },
+];
+
+// ============================================================
+// LOOT DROP SYSTEM
+// ============================================================
+
+interface LootDrop {
+  item: Equipment; rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
+}
+
+const LOOT_RARITY: Record<string, { label: string; color: string; glow: string; chance: number }> = {
+  common: { label: "Comum", color: "#9ca3af", glow: "", chance: 0.6 },
+  uncommon: { label: "Incomum", color: "#22c55e", glow: "shadow-[0_0_8px_#22c55e40]", chance: 0.25 },
+  rare: { label: "Raro", color: "#3b82f6", glow: "shadow-[0_0_12px_#3b82f640]", chance: 0.1 },
+  epic: { label: "Epico", color: "#a855f7", glow: "shadow-[0_0_16px_#a855f740]", chance: 0.04 },
+  legendary: { label: "Lendario", color: "#f59e0b", glow: "shadow-[0_0_20px_#f59e0b60]", chance: 0.01 },
+};
+
+const LOOT_ITEMS: Equipment[] = [
+  { id: "lw1", name: "Lamina Velha", type: "weapon", atk: 3, price: 80, icon: "\uD83D\uDDE1\uFE0F" },
+  { id: "lw2", name: "Espada Encantada", type: "weapon", atk: 8, price: 250, icon: "\u2694\uFE0F" },
+  { id: "lw3", name: "Cajado Sombrio", type: "weapon", atk: 13, mp: 15, price: 450, icon: "\uD83D\uDD2E" },
+  { id: "la1", name: "Tunica de Couro", type: "armor", def: 3, hp: 15, price: 60, icon: "\uD83D\uDEE1\uFE0F" },
+  { id: "la2", name: "Armadura de Titio", type: "armor", def: 8, hp: 40, price: 200, icon: "\uD83D\uDEE1\uFE0F" },
+  { id: "lac1", name: "Anel Sorte", type: "accessory", spd: 5, hp: 20, price: 150, icon: "\uD83D\uDC8D" },
+  { id: "lac2", name: "Pendente de Forca", type: "accessory", atk: 7, def: 3, price: 350, icon: "\uD83D\uDCFF" },
+];
+
+function rollLoot(): LootDrop | null {
+  const roll = Math.random();
+  let cumulative = 0;
+  let rarity = "common";
+  for (const [key, val] of Object.entries(LOOT_RARITY)) {
+    cumulative += val.chance;
+    if (roll < cumulative) { rarity = key; break; }
+  }
+  // Only drop 35% of the time
+  if (Math.random() > 0.35) return null;
+  const item = { ...LOOT_ITEMS[Math.floor(Math.random() * LOOT_ITEMS.length)] };
+  // Boost stats based on rarity
+  const mult = rarity === "legendary" ? 3 : rarity === "epic" ? 2.2 : rarity === "rare" ? 1.6 : rarity === "uncommon" ? 1.3 : 1;
+  if (item.atk) item.atk = Math.round(item.atk * mult);
+  if (item.def) item.def = Math.round(item.def * mult);
+  if (item.hp) item.hp = Math.round(item.hp * mult);
+  if (item.mp) item.mp = Math.round(item.mp * mult);
+  if (item.spd) item.spd = Math.round(item.spd * mult);
+  item.price = Math.round(item.price * mult);
+  item.id += "_" + rarity;
+  return { item, rarity };
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
@@ -253,7 +339,7 @@ async function dbSendTransfer(fromId: string, fromName: string, toId: string, to
 // ============================================================
 
 type Screen = "create" | "world" | "battle" | "pvpBattle" | "pvpResult";
-type Tab = "map" | "arena" | "economy" | "shop" | "chat" | "rank" | "profile" | "market";
+type Tab = "map" | "arena" | "economy" | "shop" | "chat" | "rank" | "profile" | "market" | "quests";
 
 export default function MMORPGGame({ onScore, liveCode }: Props) {
   // Core
@@ -302,6 +388,15 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const [notification, setNotification] = useState("");
   const [dailyCollected, setDailyCollected] = useState(false);
 
+  // Quest & Achievement State
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [lootDrop, setLootDrop] = useState<LootDrop | null>(null);
+  const [showLoot, setShowLoot] = useState(false);
+  const [floatingDmg, setFloatingDmg] = useState<{ id: number; value: number; type: "player" | "enemy" | "heal" | "gold" | "xp"; x: number; y: number }[]>([]);
+  const floatIdRef = useRef(0);
+  const [levelUpEffect, setLevelUpEffect] = useState(false);
+
   // Auto-grind
   const [autoGrind, setAutoGrind] = useState(false);
   const [grindLog, setGrindLog] = useState<string[]>([]);
@@ -325,6 +420,81 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   onlineCountRef.current = onlinePlayers.length;
 
   const notify = useCallback((msg: string) => { setNotification(msg); setTimeout(() => setNotification(""), 3000); }, []);
+
+  // Floating damage numbers
+  const spawnFloating = useCallback((value: number, type: "player" | "enemy" | "heal" | "gold" | "xp") => {
+    const id = ++floatIdRef.current;
+    setFloatingDmg(prev => [...prev, { id, value, type, x: 40 + Math.random() * 20, y: 30 + Math.random() * 20 }]);
+    setTimeout(() => setFloatingDmg(prev => prev.filter(d => d.id !== id)), 1200);
+  }, []);
+
+  // ---- Quest System ----
+  useEffect(() => {
+    if (!char) return;
+    const saved = localStorage.getItem("bateu_mmorpg_quests");
+    if (saved) { try { setQuests(JSON.parse(saved)); } catch {} }
+    else {
+      setQuests(DAILY_QUESTS.map((q, i) => ({ ...q, id: `q_${i}`, progress: 0, completed: false })));
+    }
+  }, [char]);
+
+  useEffect(() => {
+    if (quests.length > 0) localStorage.setItem("bateu_mmorpg_quests", JSON.stringify(quests));
+  }, [quests]);
+
+  const advanceQuest = useCallback((type: Quest["type"], amount: number = 1) => {
+    setQuests(prev => prev.map(q => {
+      if (q.completed || q.type !== type) return q;
+      const np = Math.min(q.target, q.progress + amount);
+      const nc = np >= q.target;
+      if (nc && !q.completed) {
+        const rewardLabel = q.rewardType === "gold" ? `+${q.reward} \uD83D\uDCB0` : `+${q.reward} XP`;
+        setTimeout(() => notify(`\uD83C\uDF89 Quest completa: ${q.name}! ${rewardLabel}`), 500);
+      }
+      return { ...q, progress: np, completed: nc };
+    }));
+  }, [notify]);
+
+  // ---- Achievement System ----
+  useEffect(() => {
+    const saved = localStorage.getItem("bateu_mmorpg_achievements");
+    if (saved) { try { setAchievements(JSON.parse(saved)); } catch {} }
+    else { setAchievements(ACHIEVEMENT_DEFS.map((a, i) => ({ ...a, id: `ach_${i}`, unlocked: false }))); }
+  }, []);
+
+  useEffect(() => {
+    if (achievements.length > 0) localStorage.setItem("bateu_mmorpg_achievements", JSON.stringify(achievements));
+  }, [achievements]);
+
+  const unlockAchievement = useCallback((name: string) => {
+    setAchievements(prev => prev.map(a => {
+      if (a.unlocked || a.name !== name) return a;
+      setTimeout(() => { notify(`\uD83C\uDFC5 Conquista desbloqueada: ${a.emoji} ${a.name}!`); confetti({ particleCount: 80, spread: 60 }); }, 300);
+      return { ...a, unlocked: true };
+    }));
+  }, [notify]);
+
+  // Check achievements
+  useEffect(() => {
+    if (!char) return;
+    if (char.totalKills >= 1) unlockAchievement("Primeiro Sangue");
+    if (char.totalKills >= 100) unlockAchievement("Matador de 100");
+    if (char.duelsWon >= 1) unlockAchievement("Duelista");
+    if (char.gold >= 5000) unlockAchievement("Rico");
+    if (char.level >= 10) unlockAchievement("Veterano");
+    if (char.level >= 25) unlockAchievement("Lendario");
+    if (char.inventory.length + char.equipment.filter(Boolean).length >= 3) unlockAchievement("Colecionador");
+  }, [char, unlockAchievement]);
+
+  // ---- Reset daily quests at midnight ----
+  useEffect(() => {
+    const lastReset = localStorage.getItem("bateu_mmorpg_quest_reset");
+    const today = new Date().toDateString();
+    if (lastReset !== today) {
+      localStorage.setItem("bateu_mmorpg_quest_reset", today);
+      setQuests(DAILY_QUESTS.map((q, i) => ({ ...q, id: `q_${i}`, progress: 0, completed: false })));
+    }
+  }, []);
 
   // ---- Load Character ----
   useEffect(() => {
@@ -666,6 +836,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     const dmg = Math.max(1, Math.round((stats.atk * atkBuff - battleEnemy.def * 0.5) * (0.9 + Math.random() * 0.2)));
     const newEnemyHp = Math.max(0, battleEnemy.hp - dmg);
     setBattleEnemy(prev => prev ? { ...prev, hp: newEnemyHp } : null);
+    spawnFloating(dmg, "player");
     setBattleLog(prev => [...prev.slice(-6), `${CLASSES[char.classId].emoji} Atacas ${battleEnemy.emoji} por ${dmg}!`]);
 
     setTimeout(() => {
@@ -676,11 +847,24 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         let xpG = battleEnemy.xpReward; let goldG = battleEnemy.goldReward;
         if (eventBonus?.type === "gold") goldG = Math.round(goldG * eventBonus.multiplier);
         if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
+        const prevLevel = char.level;
+        const loot = rollLoot();
         updateChar(c => {
           let nc = { ...c, xp: c.xp + xpG, gold: c.gold + goldG, totalKills: c.totalKills + 1, totalEarned: c.totalEarned + goldG };
-          while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; }
+          if (loot) nc = { ...nc, inventory: [...nc.inventory, loot.item] };
+          let leveledUp = false;
+          while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; leveledUp = true; }
+          if (leveledUp) { setLevelUpEffect(true); setTimeout(() => setLevelUpEffect(false), 2000); }
           return nc;
         });
+        advanceQuest("kill", 1);
+        advanceQuest("gold_earn", goldG);
+        if (char.level < prevLevel + 1) advanceQuest("level_up", 1);
+        if (loot) {
+          setLootDrop(loot);
+          setShowLoot(true);
+          if (loot.rarity === "legendary" || loot.rarity === "epic") confetti({ particleCount: 150, spread: 80 });
+        }
         onScore?.("PVE Kill", xpG + goldG);
         return;
       }
@@ -688,6 +872,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
       const newHp = Math.max(0, battleHp - eDmg);
       setBattleHp(newHp);
+      spawnFloating(eDmg, "enemy");
       setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} ${battleEnemy.name} ataca por ${eDmg}!`]);
 
       if (newHp <= 0) {
@@ -714,6 +899,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const dmg = Math.max(1, Math.round((stats.atk * skill.power - battleEnemy.def * 0.3) * (0.9 + Math.random() * 0.2)));
       const newEnemyHp = Math.max(0, battleEnemy.hp - dmg);
       setBattleEnemy(prev => prev ? { ...prev, hp: newEnemyHp } : null);
+      spawnFloating(dmg, "player");
       setBattleLog(prev => [...prev.slice(-6), `${skill.emoji} ${skill.name}! ${dmg} dano!`]);
 
       setTimeout(() => {
@@ -724,17 +910,30 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           let xpG = battleEnemy.xpReward; let goldG = battleEnemy.goldReward;
           if (eventBonus?.type === "gold") goldG = Math.round(goldG * eventBonus.multiplier);
           if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
+          const loot = rollLoot();
+          const prevLevel = char.level;
           updateChar(c => {
             let nc = { ...c, xp: c.xp + xpG, gold: c.gold + goldG, totalKills: c.totalKills + 1, totalEarned: c.totalEarned + goldG };
-            while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; }
+            if (loot) nc = { ...nc, inventory: [...nc.inventory, loot.item] };
+            let leveledUp = false;
+            while (nc.xp >= xpForLevel(nc.level)) { nc.xp -= xpForLevel(nc.level); nc.level++; leveledUp = true; }
+            if (leveledUp) { setLevelUpEffect(true); setTimeout(() => setLevelUpEffect(false), 2000); }
             return nc;
           });
+          advanceQuest("kill", 1);
+          advanceQuest("gold_earn", goldG);
+          if (char.level < prevLevel + 1) advanceQuest("level_up", 1);
+          if (loot) {
+            setLootDrop(loot); setShowLoot(true);
+            if (loot.rarity === "legendary" || loot.rarity === "epic") confetti({ particleCount: 150, spread: 80 });
+          }
           onScore?.("PVE Skill Kill", xpG + goldG);
           return;
         }
         const eDmg = Math.max(1, Math.round((battleEnemy.atk - (stats.def * defBuff) * 0.5) * (0.85 + Math.random() * 0.3)));
         const newHp = Math.max(0, battleHp - eDmg);
         setBattleHp(newHp);
+        spawnFloating(eDmg, "enemy");
         setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} contra-ataca por ${eDmg}!`]);
         if (newHp <= 0) { setBattleOver(true); setBattleWon(false); updateChar(c => ({ ...c, totalDeaths: c.totalDeaths + 1 })); return; }
         setIsPlayerTurn(true);
@@ -809,6 +1008,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         setPvpLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 Venceste o duelo! +${pvpStake} ouro!`]);
         confetti({ particleCount: 100, spread: 70 });
         updateChar(c => ({ ...c, gold: c.gold + pvpStake, duelsWon: c.duelsWon + 1, totalEarned: c.totalEarned + pvpStake }));
+        advanceQuest("duel_win", 1);
         dbSendTransfer(guestId, char!.name, pvpOpponent!.charId, pvpOpponent!.name, pvpStake, `Duelo PVP - aposta`);
         onScore?.("PVP Win", pvpStake * 2);
         return;
@@ -924,14 +1124,27 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   // ============================================================
 
   if (screen === "create") {
+    const [hoveredClass, setHoveredClass] = useState<number | null>(null);
+    const hc = hoveredClass !== null ? CLASSES[hoveredClass] : null;
     return (
       <div className="max-w-lg mx-auto p-3 sm:p-4 pb-28 sm:pb-6">
-        <div className="text-center mb-6">
-          <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity }}>
-            <Globe className="h-10 w-10 text-blue-400 mx-auto mb-2" />
+        {/* Epic Header */}
+        <div className="text-center mb-5 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent rounded-2xl" />
+          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 3, -3, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+            <span className="text-6xl block mb-2">\uD83C\uDF0D</span>
           </motion.div>
-          <h3 className="font-display text-lg sm:text-xl font-bold text-foreground">MMORPG Bateu</h3>
-          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Mundo persistente. Duelos PVP. Economia P2P.</p>
+          <motion.h3 className="font-display text-xl sm:text-2xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative"
+            animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }} transition={{ duration: 3, repeat: Infinity }}>
+            MMORPG Bateu
+          </motion.h3>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Mundo persistente \u2022 Duelos PVP \u2022 Loot \u2022 Economia P2P</p>
+          <div className="flex justify-center gap-4 mt-2 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">\uD83C\uDF1F 8 Zonas</span>
+            <span className="flex items-center gap-1">\u2694\uFE0F PVP</span>
+            <span className="flex items-center gap-1">\uD83D\uDC7A 5 Bosses</span>
+            <span className="flex items-center gap-1">\uD83C\uDF81 Loot</span>
+          </div>
         </div>
 
         <div className="mb-3 sm:mb-4">
@@ -939,18 +1152,42 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           <input
             value={charNameInput} onChange={e => setCharNameInput(e.target.value.slice(0, 16))}
             placeholder={placeholderName}
-            className="w-full px-3 py-2 rounded-lg bg-card border border-border text-sm focus:outline-none focus:border-primary"
+            className="w-full px-3 py-2.5 rounded-lg bg-card border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
             maxLength={16}
           />
         </div>
+
+        {/* Class Preview */}
+        <AnimatePresence>
+          {hc && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="mb-3 p-3 rounded-xl bg-card border border-border overflow-hidden">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{hc.emoji}</span>
+                <div className="flex-1">
+                  <p className="font-bold text-sm" style={{ color: hc.color }}>{hc.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{hc.desc}</p>
+                  <div className="grid grid-cols-5 gap-2 mt-1.5 text-[9px]">
+                    <div className="text-center"><p className="text-red-400 font-bold">\u2764\uFE0F {hc.baseHp}</p><p className="text-muted-foreground">Vida</p></div>
+                    <div className="text-center"><p className="text-orange-400 font-bold">\u2694\uFE0F {hc.baseAtk}</p><p className="text-muted-foreground">Ataque</p></div>
+                    <div className="text-center"><p className="text-blue-400 font-bold">\uD83D\uDEE1\uFE0F {hc.baseDef}</p><p className="text-muted-foreground">Defesa</p></div>
+                    <div className="text-center"><p className="text-green-400 font-bold">\uD83D\uDCA8 {hc.baseSpd}</p><p className="text-muted-foreground">Veloc.</p></div>
+                    <div className="text-center"><p className="text-indigo-400 font-bold">\uD83D\uDD2E {hc.baseMp}</p><p className="text-muted-foreground">Mana</p></div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <p className="text-xs text-muted-foreground mb-2 font-medium">Escolhe a tua classe:</p>
         <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 sm:gap-3">
           {CLASSES.map((c, i) => (
             <motion.button
-              key={i} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+              onHoverStart={() => setHoveredClass(i)} onHoverEnd={() => setHoveredClass(null)}
               onClick={() => createCharacter(i, charNameInput)}
-              className="rounded-xl border border-border bg-card p-2.5 sm:p-4 text-left hover:border-primary/50 transition-all"
+              className={`rounded-xl border p-2.5 sm:p-4 text-left transition-all ${hoveredClass === i ? "border-primary/60 bg-primary/5 shadow-lg" : "border-border bg-card hover:border-primary/30"}`}
             >
               <span className="text-2xl sm:text-3xl">{c.emoji}</span>
               <p className="font-bold text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: c.color }}>{c.name}</p>
@@ -975,7 +1212,65 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
 
   if (screen === "battle" && battleEnemy) {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg mx-auto p-4 relative">
+        {/* Floating Damage Numbers */}
+        <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+          <AnimatePresence>
+            {floatingDmg.map(d => (
+              <motion.div key={d.id} initial={{ opacity: 1, y: 0, scale: 1.2 }} animate={{ opacity: 0, y: -60, scale: 0.8 }} exit={{ opacity: 0 }}
+                className="absolute font-black text-xl sm:text-2xl"
+                style={{ left: `${d.x}%`, top: `${d.y}%`, color: d.type === "player" ? "#fbbf24" : d.type === "heal" ? "#34d399" : "#f87171", textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>
+                {d.type === "heal" ? "+" : "-"}{d.value}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {/* Level Up Effect */}
+        <AnimatePresence>
+          {levelUpEffect && (
+            <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.5 }}
+              className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <p className="text-5xl font-black bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-500 bg-clip-text text-transparent animate-pulse">LEVEL UP!</p>
+                <p className="text-2xl mt-1">\u2B50 Nivel {char.level + 1} \u2B50</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loot Drop Modal */}
+        <AnimatePresence>
+          {showLoot && lootDrop && (
+            <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowLoot(false)}>
+              <div className={`p-5 rounded-2xl bg-card border-2 text-center max-w-xs mx-4 ${LOOT_RARITY[lootDrop.rarity]?.glow || ""}`}
+                style={{ borderColor: LOOT_RARITY[lootDrop.rarity]?.color || "#9ca3af" }}
+                onClick={e => e.stopPropagation()}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: LOOT_RARITY[lootDrop.rarity]?.color }}>
+                  {LOOT_RARITY[lootDrop.rarity]?.label}
+                </p>
+                <motion.span className="text-5xl block mb-2" animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.5 }}>
+                  {lootDrop.item.icon}
+                </motion.span>
+                <p className="font-bold text-sm" style={{ color: LOOT_RARITY[lootDrop.rarity]?.color }}>{lootDrop.item.name}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {lootDrop.item.atk ? `\u2694\uFE0F+${lootDrop.item.atk} ` : ""}
+                  {lootDrop.item.def ? `\uD83D\uDEE1\uFE0F+${lootDrop.item.def} ` : ""}
+                  {lootDrop.item.hp ? `\u2764\uFE0F+${lootDrop.item.hp} ` : ""}
+                  {lootDrop.item.spd ? `\uD83D\uDCA8+${lootDrop.item.spd} ` : ""}
+                  {lootDrop.item.mp ? `\uD83D\uDD2E+${lootDrop.item.mp}` : ""}
+                </p>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowLoot(false)}
+                  className="mt-3 px-5 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                  Recolher!
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center gap-2 mb-3">
           <button onClick={() => setScreen("world")} className="p-1.5 rounded-lg hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button>
           <span className="font-bold text-sm">Combate - {ZONES[char.currentZone]?.name}</span>
@@ -985,8 +1280,9 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         <motion.div className={`text-center p-4 rounded-xl bg-card border border-border mb-3 ${battleEnemy.hp <= 0 ? "opacity-40" : ""}`} animate={battleEnemy.hp > 0 ? { x: [0, -3, 3, 0] } : {}} transition={{ duration: 0.3 }}>
           <span className="text-5xl">{battleEnemy.emoji}</span>
           <p className="font-bold text-sm mt-1" style={{ color: battleEnemy.color }}>{battleEnemy.name}</p>
-          <div className="w-40 mx-auto mt-2 h-2.5 rounded-full bg-gray-800 overflow-hidden">
-            <div className="h-full transition-all duration-300" style={{ width: `${(battleEnemy.hp / battleEnemy.maxHp) * 100}%`, backgroundColor: battleEnemy.color }} />
+          <div className="w-40 mx-auto mt-2 h-3 rounded-full bg-gray-800 overflow-hidden border border-gray-700">
+            <motion.div className="h-full rounded-full" style={{ width: `${(battleEnemy.hp / battleEnemy.maxHp) * 100}%`, backgroundColor: battleEnemy.color }}
+              animate={{ width: `${(battleEnemy.hp / battleEnemy.maxHp) * 100}%` }} transition={{ duration: 0.3 }} />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1">{Math.ceil(battleEnemy.hp)}/{battleEnemy.maxHp} HP</p>
         </motion.div>
@@ -1107,13 +1403,14 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   // RENDER: World Hub
   // ============================================================
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
+  const tabs: { id: Tab; label: string; icon: any; badge?: number }[] = [
     { id: "map", label: "Mundo", icon: MapIcon },
     { id: "arena", label: "Arena", icon: Swords },
-    { id: "economy", label: "Economia", icon: Coins },
+    { id: "quests", label: "Quests", icon: Star, badge: quests.filter(q => !q.completed).length },
     { id: "shop", label: "Loja", icon: ShoppingBag },
     { id: "chat", label: "Chat", icon: MessageCircle },
     { id: "rank", label: "Ranking", icon: Trophy },
+    { id: "economy", label: "Economia", icon: Coins },
     { id: "profile", label: "Perfil", icon: Shield },
     { id: "market", label: "Mercado", icon: TrendingUp },
   ];
@@ -1148,7 +1445,10 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           </div>
           <div className="text-right">
             <p className="text-sm font-bold text-yellow-400">{char.gold} \uD83D\uDCB0</p>
-            <p className="text-[10px] text-muted-foreground">{char.xp}/{xpForLevel(char.level)} XP</p>
+            <div className="w-20 h-1.5 rounded-full bg-gray-800 overflow-hidden mt-0.5">
+              <motion.div className="h-full bg-blue-400 rounded-full" animate={{ width: `${(char.xp / xpForLevel(char.level)) * 100}%` }} transition={{ duration: 0.5 }} />
+            </div>
+            <p className="text-[9px] text-muted-foreground">{char.xp}/{xpForLevel(char.level)} XP</p>
           </div>
         </div>
 
@@ -1164,10 +1464,11 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all relative ${
                 tab === t.id ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted"
               }`}>
               <t.icon className="h-3.5 w-3.5" />{t.label}
+              {t.badge && t.badge > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-black text-white flex items-center justify-center">{t.badge}</span>}
             </button>
           ))}
         </div>
@@ -1265,6 +1566,61 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ---- QUESTS TAB ---- */}
+        {tab === "quests" && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="h-4 w-4 text-amber-400" />
+              <span className="font-bold text-sm">Missoes Diarias</span>
+              <span className="ml-auto text-[10px] text-muted-foreground">{quests.filter(q => q.completed).length}/{quests.length} completas</span>
+            </div>
+
+            {/* Quest Progress Bar */}
+            <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
+              <motion.div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
+                animate={{ width: `${(quests.filter(q => q.completed).length / Math.max(1, quests.length)) * 100}%` }} />
+            </div>
+
+            {quests.length === 0 && <p className="text-center text-xs text-muted-foreground py-8">A carregar missoes...</p>}
+
+            {quests.map((q, i) => (
+              <motion.div key={q.id} whileTap={{ scale: 0.98 }}
+                className={`p-3 rounded-xl border transition-all ${q.completed ? "bg-green-500/5 border-green-500/20" : "bg-card border-border"}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{q.completed ? "\u2705" : q.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-bold ${q.completed ? "text-green-400" : ""}`}>{q.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{q.desc}</p>
+                    <div className="w-full h-1.5 rounded-full bg-gray-800 overflow-hidden mt-1.5">
+                      <motion.div className="h-full rounded-full" style={{ backgroundColor: q.completed ? "#22c55e" : "#f59e0b" }}
+                        animate={{ width: `${Math.min(100, (q.progress / q.target) * 100)}%` }} />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">{q.progress}/{q.target} • Recompensa: {q.reward} {q.rewardType === "gold" ? "\uD83D\uDCB0" : "XP"}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Achievements Section */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Crown className="h-4 w-4 text-amber-400" />
+                <span className="font-bold text-sm">Conquistas</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">{achievements.filter(a => a.unlocked).length}/{achievements.length}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {achievements.map((a, i) => (
+                  <div key={a.id} className={`p-2 rounded-lg border text-center transition-all ${a.unlocked ? "bg-amber-500/10 border-amber-500/30" : "bg-card/50 border-border opacity-50"}`}>
+                    <span className="text-lg">{a.unlocked ? a.emoji : "\uD83D\uDD12"}</span>
+                    <p className="text-[9px] font-bold mt-0.5">{a.name}</p>
+                    <p className="text-[8px] text-muted-foreground">{a.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

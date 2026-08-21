@@ -650,23 +650,36 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
   if (screen === "classSelect") {
     return (
       <div className="max-w-lg mx-auto p-4">
-        <div className="text-center mb-6">
-        <Sparkles className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
-        <h3 className="font-display text-xl font-bold text-foreground">Campanha RPG</h3>
-        <p className="text-xs text-muted-foreground">Escolhe a tua classe e conquista 5 mundos!</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+        <div className="text-center mb-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-indigo-500/5 to-transparent rounded-2xl" />
+          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+            <span className="text-6xl block mb-2">🌍</span>
+          </motion.div>
+          <motion.h3 className="font-display text-xl sm:text-2xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative">
+            Campanha RPG
+          </motion.h3>
+          <p className="text-[11px] text-muted-foreground mt-1">Escolhe a tua classe e conquista 5 mundos!</p>
+          <div className="flex justify-center gap-4 mt-2 text-[10px] text-muted-foreground">
+            <span>🌟 5 Mundos</span>
+            <span>👺 Bosses</span>
+            <span>⭐ 3 Estrelas</span>
+          </div>
+        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {CLASSES.map((c, i) => (
           <motion.button
-            key={i} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
             onClick={() => selectClass(i)}
-            className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/50 transition-all"
+            className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/50 transition-all hover:shadow-lg"
           >
             <span className="text-3xl">{c.emoji}</span>
             <p className="font-bold text-sm mt-1" style={{ color: c.color }}>{c.name}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">{c.desc}</p>
-            <div className="flex gap-2 mt-2 text-[9px] text-muted-foreground">
-              <span>❤️{c.baseHp}</span><span>⚔️{c.baseAtk}</span><span>🛡️{c.baseDef}</span><span>💨{c.baseSpd}</span>
+            <div className="grid grid-cols-2 gap-1 mt-2 text-[9px]">
+              <span className="text-red-400">❤️ {c.baseHp}</span>
+              <span className="text-orange-400">⚔️ {c.baseAtk}</span>
+              <span className="text-blue-400">🛡️ {c.baseDef}</span>
+              <span className="text-green-400">💨 {c.baseSpd}</span>
             </div>
           </motion.button>
         ))}
@@ -933,23 +946,34 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
   // ---- Level Complete Screen ----
   if (screen === "levelComplete") {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+      <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
         className="max-w-sm mx-auto p-6 text-center">
-        <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-          <span className="text-6xl">🏆</span>
+        <motion.div animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+          <span className="text-7xl">🏆</span>
         </motion.div>
-        <h3 className="font-display text-xl font-bold mt-4">Nivel Completo!</h3>
-        <div className="flex justify-center gap-1 mt-2">
-          {[0,1,2].map(s => (
-            <Star key={s} className={`h-6 w-6 ${s < earnedStars ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}`} />
+        <h3 className="font-display text-2xl font-black mt-4 bg-gradient-to-r from-yellow-300 to-amber-500 bg-clip-text text-transparent">Nivel Completo!</h3>
+        <div className="flex justify-center gap-2 mt-3">
+          {[0,1,2].map((s, i) => (
+            <motion.span key={s} initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.3 + i * 0.2, type: "spring" }}
+              className={`text-3xl ${s < earnedStars ? "" : "opacity-30"}`}>
+              ⭐
+            </motion.span>
           ))}
         </div>
-        <div className="flex justify-center gap-6 mt-4 text-sm">
-          <span className="text-blue-400">+{earnedXp} XP</span>
-          <span className="text-yellow-400">+{earnedGold} 💰</span>
+        <div className="flex justify-center gap-6 mt-5">
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }}
+            className="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+            <p className="text-lg font-bold text-blue-400">+{earnedXp}</p>
+            <p className="text-[10px] text-muted-foreground">XP</p>
+          </motion.div>
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }}
+            className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <p className="text-lg font-bold text-yellow-400">+{earnedGold}</p>
+            <p className="text-[10px] text-muted-foreground">💰 Ouro</p>
+          </motion.div>
         </div>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setScreen("worldMap")}
-          className="mt-6 px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+          className="mt-6 px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-lg">
           Continuar <ChevronRight className="h-4 w-4 inline" />
         </motion.button>
       </motion.div>
@@ -959,10 +983,10 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
   // ---- Game Over Screen ----
   if (screen === "gameOver") {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="max-w-sm mx-auto p-6 text-center">
-        <span className="text-6xl">💀</span>
-        <h3 className="font-display text-xl font-bold mt-4">Derrotado!</h3>
+        <motion.span className="text-7xl block" animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>💀</motion.span>
+        <h3 className="font-display text-xl font-bold mt-4 text-red-400">Derrotado!</h3>
         <p className="text-sm text-muted-foreground mt-2">Melhora o teu equipamento e tenta novamente.</p>
         <div className="flex gap-3 justify-center mt-6">
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setScreen("worldMap")}
@@ -976,7 +1000,7 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
               startLevel(player.currentWorld, player.currentLevel);
             }
           }}
-            className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium text-sm">
+            className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium text-sm shadow-lg">
             Tentar Outra Vez
           </motion.button>
         </div>

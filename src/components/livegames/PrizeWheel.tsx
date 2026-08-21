@@ -51,10 +51,16 @@ export const DEFAULT_WHEEL_PRIZES: WheelPrize[] = [
 
 const palette = ["#22c55e", "#eab308", "#8b5cf6", "#ef4444", "#0ea5e9", "#f97316", "#ec4899", "#14b8a6"];
 
-const fireConfetti = (type: string = "confetti") => {
-  const duration = 3 * 1000;
+const getPrizeTier = (prize: WheelPrize): number => {
+  if (prize.rewardType === "grand_prize") return 3;
+  if (prize.rewardType === "prize") return 2;
+  return 1;
+};
+
+const fireConfetti = (type: string = "confetti", tier: number = 1) => {
+  const duration = (2 + tier) * 1000;
   const animationEnd = Date.now() + duration;
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+  const defaults = { startVelocity: 25 + tier * 5, spread: 360, ticks: 60 + tier * 10, zIndex: 0 };
 
   const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -64,7 +70,7 @@ const fireConfetti = (type: string = "confetti") => {
       return clearInterval(interval);
     }
 
-    const particleCount = 50 * (timeLeft / duration);
+    const particleCount = (40 + tier * 20) * (timeLeft / duration);
 
     switch (type) {
       case "fireworks":
@@ -431,7 +437,7 @@ const PrizeWheel = ({
           }
 
           if (particleEffects && !isNoWinLabel(winner.label) && winner.rewardType !== "none") {
-            fireConfetti(winner.effectType || defaultEffect || "confetti");
+            fireConfetti(winner.effectType || defaultEffect || "confetti", getPrizeTier(winner));
           }
         }
       };
@@ -469,7 +475,15 @@ const PrizeWheel = ({
            color: currentTheme.textColor
          }}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-      
+
+      <style>{`
+        @keyframes winner-spotlight-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3), 0 25px 50px -12px rgba(0,0,0,0.5); }
+          50% { box-shadow: 0 0 50px rgba(255,215,0,0.6), 0 0 100px rgba(255,215,0,0.15), 0 25px 50px -12px rgba(0,0,0,0.5); }
+        }
+        .winner-spotlight { animation: winner-spotlight-glow 1.5s ease-in-out infinite; }
+      `}</style>
+
       <div className={`relative z-10 w-full max-w-7xl px-4 py-8 flex ${mode === "horizontal" ? "flex-col md:flex-row" : "flex-col"} items-center gap-8`}>
         {editable && (
           <div className="absolute top-4 left-4 z-50 flex gap-3">
@@ -559,7 +573,20 @@ const PrizeWheel = ({
             </div>
           </div>
 
-          <div className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm shadow-[0_0_80px_rgba(0,0,0,0.6)]" style={{ borderColor: `${currentTheme.primaryColor}40` }}>
+          <motion.div
+            className="relative p-6 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-sm"
+            style={{ borderColor: `${currentTheme.primaryColor}40` }}
+            animate={spinning ? {
+              boxShadow: [
+                `0 0 40px ${currentTheme.primaryColor}30, 0 0 80px rgba(0,0,0,0.6)`,
+                `0 0 80px ${currentTheme.primaryColor}60, 0 0 120px ${currentTheme.primaryColor}20, 0 0 80px rgba(0,0,0,0.6)`,
+                `0 0 40px ${currentTheme.primaryColor}30, 0 0 80px rgba(0,0,0,0.6)`,
+              ],
+            } : {
+              boxShadow: `0 0 80px rgba(0,0,0,0.6)`,
+            }}
+            transition={spinning ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.3 }}
+          >
             <canvas
               ref={canvasRef}
               width="600"
@@ -571,27 +598,69 @@ const PrizeWheel = ({
               }}
             />
             
-            <button
-                onClick={spin}
-                disabled={spinning || loading}
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full 
-                flex flex-col items-center justify-center font-black text-sm transition-all duration-300 z-20
-                ${spinning || loading ? 'bg-gray-500 scale-95 opacity-50 cursor-not-allowed' : 'bg-white hover:scale-110 shadow-2xl active:scale-90 cursor-pointer'}`}
-                style={{ color: wheelConfig?.wheel_background_color || currentTheme.primaryColor }}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+              <motion.button
+                  onClick={spin}
+                  disabled={spinning || loading}
+                  className={`w-24 h-24 rounded-full 
+                  flex flex-col items-center justify-center font-black text-sm
+                  ${spinning || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  style={!spinning && !loading ? {
+                    background: `linear-gradient(135deg, #FFFFFF, ${currentTheme.primaryColor}22)`,
+                    color: wheelConfig?.wheel_background_color || currentTheme.primaryColor,
+                  } : {
+                    background: '#6b7280',
+                    color: '#fff',
+                  }}
+                  animate={!spinning && !loading ? {
+                    scale: [1, 1.06, 1],
+                    boxShadow: [
+                      `0 4px 15px rgba(0,0,0,0.2)`,
+                      `0 8px 32px ${currentTheme.primaryColor}30, 0 0 0 12px ${currentTheme.primaryColor}08`,
+                      `0 4px 15px rgba(0,0,0,0.2)`,
+                    ],
+                  } : {
+                    scale: 0.95,
+                  }}
+                  transition={!spinning && !loading ? {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  } : {
+                    duration: 0.3,
+                  }}
+                >
+                  {loading || spinning ? (
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="w-6 h-6 animate-spin" />
+                      {t("wheel.spinning")}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <PartyPopper className="w-6 h-6" />
+                      {t("wheel.spin")}
+                    </span>
+                  )}
+                </motion.button>
+            </div>
+          </motion.div>
+
+          {/* Floating prize name animation */}
+          <AnimatePresence>
+            {result && result.rewardType !== "none" && !isNoWinLabel(result.label) && (
+              <motion.span
+                key={`floating-${result.id}`}
+                initial={{ y: 0, opacity: 1, scale: 1 }}
+                animate={{ y: -120, opacity: 0, scale: 1.3 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 2.5, ease: "easeOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 whitespace-nowrap font-black text-4xl drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]"
+                style={{ color: currentTheme.primaryColor }}
               >
-                {loading || spinning ? (
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 animate-spin" />
-                    {t("wheel.spinning")}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <PartyPopper className="w-6 h-6" />
-                    {t("wheel.spin")}
-                  </span>
-                )}
-              </button>
-          </div>
+                {result.rewardValue || result.label}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className={`${mode === "horizontal" ? "w-full md:w-96" : "w-full max-w-md"} space-y-6`}>
@@ -602,10 +671,10 @@ const PrizeWheel = ({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.3, y: -100 }}
                 transition={{ type: "spring", bounce: 0.6, duration: 0.8 }}
-                className={`rounded-3xl p-8 text-center space-y-4 shadow-2xl border-2 ${
+                className={`rounded-3xl p-8 text-center space-y-4 border-2 ${
                   result.rewardType === "none" || isNoWinLabel(result.label)
-                    ? "bg-secondary/90 text-muted-foreground border-white/20"
-                    : "border-white/20"
+                    ? "bg-secondary/90 text-muted-foreground border-white/20 shadow-2xl"
+                    : "border-yellow-400/50 winner-spotlight"
                 }`}
                 style={
                   result.rewardType !== "none" && !isNoWinLabel(result.label)

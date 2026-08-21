@@ -237,6 +237,39 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
 
   const currentPrize = useMemo(() => prizeStructure[currentLevel - 1], [prizeStructure, currentLevel]);
 
+  // Ratio 0..1 for visual intensity (low stakes → high stakes)
+  const prizeRatio = useMemo(() => {
+    const total = prizeStructure.length;
+    return Math.min(1, Math.max(0, (currentLevel - 1) / (total - 1)));
+  }, [currentLevel, prizeStructure.length]);
+
+  // Dynamic background gradient colors based on prize level
+  const bgGradientStyle = useMemo(() => {
+    const r = prizeRatio;
+    // Blue (low) → Deep purple (mid) → Gold/Red (high)
+    const bgAngle = 135;
+    const innerColor = `rgba(${Math.round(10 + r * 60)}, ${Math.round(14 + (1 - r) * 30)}, ${Math.round(50 + (1 - r) * 60)}, 0.7)`;
+    const midColor = `rgba(${Math.round(20 + r * 80)}, ${Math.round(10 + (1 - r) * 20)}, ${Math.round(40 + (1 - r) * 50)}, 0.5)`;
+    const outerColor = r > 0.7
+      ? 'rgba(120, 20, 20, 0.4)'
+      : r > 0.4
+        ? 'rgba(60, 20, 80, 0.4)'
+        : 'rgba(10, 30, 80, 0.4)';
+    return {
+      background: `linear-gradient(${bgAngle}deg, ${outerColor}, ${midColor}, ${innerColor})`,
+      transition: 'background 1.5s ease',
+    };
+  }, [prizeRatio]);
+
+  // Timer bar color based on time remaining
+  const timerBarColor = useMemo(() => {
+    const maxTime = game?.time_per_question || 30;
+    const ratio = timeLeft / maxTime;
+    if (ratio <= 0.2) return { bg: 'linear-gradient(90deg, #dc2626, #ef4444, #f87171)', glow: '0 0 20px rgba(239,68,68,0.6), 0 0 40px rgba(239,68,68,0.3)', pulse: true };
+    if (ratio <= 0.4) return { bg: 'linear-gradient(90deg, #d97706, #f59e0b, #fbbf24)', glow: '0 0 12px rgba(251,191,36,0.4)', pulse: false };
+    return { bg: 'linear-gradient(90deg, #059669, #10b981, #34d399)', glow: '0 0 8px rgba(16,185,129,0.3)', pulse: false };
+  }, [timeLeft, game?.time_per_question]);
+
   const handleAnswer = async (choice: string) => {
     if (answered || status !== 'playing') return;
     setSelectedAnswer(choice);
@@ -379,7 +412,20 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
         backgroundPosition: 'center'
       }}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e17]/80 via-[#0a0e17]/60 to-[#0a0e17]/95"></div>
+      <motion.div
+        className="absolute inset-0 z-[1]"
+        style={bgGradientStyle}
+        animate={{ opacity: [0.85, 1, 0.85] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      />
+      {/* Radial glow at center that intensifies with prize level */}
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse at 50% 40%, ${prizeRatio > 0.7 ? 'rgba(251,191,36,0.15)' : prizeRatio > 0.4 ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.08)'} 0%, transparent 70%)`,
+          transition: 'background 1.5s ease',
+        }}
+      />
       {flashClass && <div className={`fixed inset-0 z-[100] pointer-events-none ${flashClass}`} />}
       {showCelebrationRays && <div className="celebration-rays" />}
       <div className="game-particle game-particle-1" style={{ top: '15%', left: '10%' }} />
@@ -431,14 +477,21 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
         </div>
       </div>
 
-      <div className="absolute top-[72px] left-0 right-0 h-1 bg-white/5 z-20">
-        <div
-          className="h-full transition-colors duration-1000"
-          style={{
+      <div className="absolute top-[72px] left-0 right-0 h-[6px] bg-white/5 z-20">
+        <motion.div
+          className="h-full rounded-r-full"
+          animate={{
             width: status === 'playing' && !answered ? `${(timeLeft / (game?.time_per_question || 30)) * 100}%` : '0%',
-            background: timeLeft <= 5 ? 'linear-gradient(90deg, #ef4444, #f87171)' : timeLeft <= 10 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, hsl(var(--primary)), #fbbf24)',
-            transition: 'width 1s linear, background 1s ease',
-            boxShadow: timeLeft <= 5 ? '0 0 15px rgba(239, 68, 68, 0.5)' : timeLeft <= 10 ? '0 0 10px rgba(251, 191, 36, 0.3)' : '0 0 5px rgba(251, 191, 36, 0.2)'
+            scale: timerBarColor.pulse ? [1, 1.08, 1] : 1,
+          }}
+          transition={{
+            width: { duration: 1, ease: 'linear' },
+            scale: { duration: 0.5, repeat: Infinity, ease: 'easeInOut' },
+          }}
+          style={{
+            background: timerBarColor.bg,
+            boxShadow: timerBarColor.glow,
+            transition: 'background 0.8s ease, box-shadow 0.8s ease',
           }}
         />
       </div>
@@ -498,15 +551,31 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
               if (answered && isSelected && !isCorrect) stateClass = "border-red-500 bg-red-500/20 text-red-500 option-reveal-wrong";
               if (isDisabled) stateClass = "opacity-20 pointer-events-none grayscale";
 
+              // Framer-motion reveal animations
+              const isRevealCorrect = answered && isCorrect;
+              const isRevealWrong = answered && isSelected && !isCorrect;
+
               return (
                 <motion.button
                   key={`${questionKey}-${letter}`}
                   initial={{ opacity: 0, x: letter < 'C' ? -30 : 30, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={{ delay: 0.1 + (letter.charCodeAt(0) - 'A'.charCodeAt(0)) * 0.08, type: "spring", stiffness: 180, damping: 20 }}
+                  animate={isRevealCorrect
+                    ? { opacity: 1, x: 0, scale: [1, 1.06, 1] }
+                    : isRevealWrong
+                      ? { opacity: 1, x: [0, -8, 8, -6, 6, -3, 3, 0], scale: 1 }
+                      : { opacity: 1, x: 0, scale: 1 }
+                  }
+                  transition={isRevealCorrect
+                    ? { duration: 0.8, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }
+                    : isRevealWrong
+                      ? { duration: 0.5, ease: 'easeInOut' }
+                      : { delay: 0.1 + (letter.charCodeAt(0) - 'A'.charCodeAt(0)) * 0.08, type: 'spring', stiffness: 180, damping: 20 }
+                  }
                   onClick={() => handleAnswer(letter)}
                   disabled={answered || isDisabled || status !== 'playing'}
                   className={`relative group flex items-center p-1 rounded-full border-2 transition-all duration-300 ${stateClass}`}
+                  {...(isRevealCorrect ? { style: { boxShadow: '0 0 25px rgba(34,197,94,0.4), 0 0 50px rgba(34,197,94,0.15)', animation: 'correctPulseGlow 1.2s ease-in-out infinite' } } : {})}
+                  {...(isRevealWrong ? { style: { animation: 'wrongShake 0.5s ease-in-out' } } : {})}
                 >
                   <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center font-black text-primary group-hover:bg-primary group-hover:text-black group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)] transition-all duration-200 text-sm md:text-base">
                     {letter}
@@ -524,22 +593,53 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
             <CardContent className="p-6">
               <h3 className="text-xs font-black uppercase tracking-widest opacity-50 mb-4">Ajudas Disponíveis</h3>
               <div className="grid grid-cols-3 gap-3">
-                <button 
+                {/* 50:50 lifeline with cooldown feedback */}
+                <motion.button 
                   onClick={() => handleLifeline('50_50')}
                   disabled={lifelinesUsed['50_50'] || answered}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${lifelinesUsed['50_50'] ? 'opacity-30 grayscale border-white/10' : 'border-primary/30 bg-primary/5 hover:bg-primary/20'}`}
+                  whileHover={!lifelinesUsed['50_50'] && !answered ? { scale: 1.08, boxShadow: '0 0 20px rgba(251,191,36,0.3)' } : {}}
+                  whileTap={!lifelinesUsed['50_50'] && !answered ? { scale: 0.92 } : {}}
+                  animate={lifelinesUsed['50_50'] 
+                    ? { scale: [1, 0.85, 1], opacity: [0.3, 0.15, 0.3] } 
+                    : {}}
+                  transition={lifelinesUsed['50_50'] 
+                    ? { duration: 0.6, ease: 'easeInOut' } 
+                    : { type: 'spring', stiffness: 300, damping: 20 }}
+                  className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all overflow-hidden ${lifelinesUsed['50_50'] ? 'opacity-30 grayscale border-white/10' : 'border-primary/30 bg-primary/5 hover:bg-primary/20'}`}
                 >
-                  <Lightbulb className="w-6 h-6 text-primary" />
-                  <span className="text-[10px] font-bold">50:50</span>
-                </button>
-                <button disabled className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 opacity-30 grayscale">
+                  {lifelinesUsed['50_50'] && (
+                    <motion.div 
+                      className="absolute inset-0 bg-white/10"
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    />
+                  )}
+                  <Lightbulb className="w-6 h-6 text-primary relative z-10" />
+                  <span className="text-[10px] font-bold relative z-10">50:50</span>
+                </motion.button>
+                {/* Audience lifeline with cooldown feedback */}
+                <motion.button 
+                  disabled
+                  whileHover={{} }
+                  animate={{ opacity: 0.3 }}
+                  className="relative flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 grayscale"
+                >
                   <Users className="w-6 h-6" />
                   <span className="text-[10px] font-bold">PÚBLICO</span>
-                </button>
-                <button disabled className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 opacity-30 grayscale">
+                  <div className="absolute inset-0 bg-white/5 rounded-xl" />
+                </motion.button>
+                {/* Phone lifeline with cooldown feedback */}
+                <motion.button 
+                  disabled
+                  whileHover={{} }
+                  animate={{ opacity: 0.3 }}
+                  className="relative flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 grayscale"
+                >
                   <Phone className="w-6 h-6" />
                   <span className="text-[10px] font-bold">LIGAR</span>
-                </button>
+                  <div className="absolute inset-0 bg-white/5 rounded-xl" />
+                </motion.button>
               </div>
             </CardContent>
           </Card>
@@ -560,8 +660,25 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0, scale: isCurrent ? 1.05 : 1 }}
                       transition={{ delay: (prizeStructure.length - i) * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-                      className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all ${isCurrent ? 'bg-primary text-black font-black shadow-lg prize-glow' : isPast ? 'opacity-40 line-through' : 'hover:bg-white/5'}`}
+                      className={`relative flex items-center gap-4 px-4 py-2 rounded-lg transition-all ${isCurrent ? 'bg-primary text-black font-black' : isPast ? 'opacity-40 line-through' : 'hover:bg-white/5'}`}
                     >
+                      {/* Glowing indicator for current level */}
+                      {isCurrent && (
+                        <>
+                          <motion.div 
+                            className="absolute inset-0 rounded-lg bg-primary/30"
+                            animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.02, 1] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ boxShadow: '0 0 15px rgba(251,191,36,0.5), 0 0 30px rgba(251,191,36,0.2)' }}
+                          />
+                          <motion.div
+                            className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white"
+                            animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ boxShadow: '0 0 8px rgba(255,255,255,0.8)' }}
+                          />
+                        </>
+                      )}
                       <span className={`text-xs w-6 font-bold ${isCurrent ? 'text-black/60' : 'text-primary'}`}>{p.level}</span>
                       <span className="flex-1 text-sm">{p.amount.toLocaleString()} {p.currency}</span>
                       {p.is_safe_haven && <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isCurrent ? 'text-black/60' : 'text-primary'}`} />}

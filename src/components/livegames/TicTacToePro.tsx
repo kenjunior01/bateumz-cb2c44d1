@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Grid3X3, HelpCircle, Trophy, Clock, Bot, Users } from "lucide-react";
+import { RotateCcw, Grid3X3, HelpCircle, Trophy, Clock, Bot, Users, Zap, Target, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,55 @@ const DIFFICULTY_CONFIG: Record<Difficulty, { label: string; randomChance: numbe
   facil:  { label: "Fácil",   randomChance: 0.3, depth: 2, desc: "30% jogadas aleatórias" },
   medio:  { label: "Médio",   randomChance: 0.1, depth: 3, desc: "10% jogadas aleatórias" },
   dificil: { label: "Difícil", randomChance: 0,   depth: 4, desc: "Minimax puro — imbatível" },
+};
+
+/* ------------------------------------------------------------------ */
+/*  SVG Mark Components (animated draw effect)                         */
+/* ------------------------------------------------------------------ */
+
+const XMarkSvg = ({ size = 16, color = "currentColor" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.8} strokeLinecap="round">
+    <motion.path
+      d="M5 5L19 19"
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: 1, opacity: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    />
+    <motion.path
+      d="M19 5L5 19"
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: 1, opacity: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut", delay: 0.12 }}
+    />
+  </svg>
+);
+
+const OMarkSvg = ({ size = 16, color = "currentColor" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.8} strokeLinecap="round">
+    <motion.circle
+      cx={12} cy={12} r={8}
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: 1, opacity: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    />
+  </svg>
+);
+
+const MiniMarkSvg = ({ player, size = 28 }: { player: Player; size?: number }) => {
+  const color = player === "X" ? "rgba(34,211,238,0.9)" : "rgba(244,114,182,0.9)";
+  return player === "X" ? <XMarkSvg size={size} color={color} /> : <OMarkSvg size={size} color={color} />;
+};
+
+const boardToPercent = (idx: number): { x: number; y: number } => {
+  const col = idx % 3;
+  const row = Math.floor(idx / 3);
+  return { x: (col * 2 + 1) / 6 * 100, y: (row * 2 + 1) / 6 * 100 };
+};
+
+const formatTime = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`;
 };
 
 /* ------------------------------------------------------------------ */
@@ -333,13 +382,14 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
   const [lastMiniWinBoard, setLastMiniWinBoard] = useState<number | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [moveCount, setMoveCount] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const startTimeRef = useRef<number>(Date.now());
 
   /* ---- Derived player name ---- */
   const getPlayerName = useCallback(
     (p: Player): string => {
-      if (gameMode === "bot" && p === "O") return "🤖 Bot";
+      if (gameMode === "bot" && p === "O") return "Bot";
       return playerNameBase(p);
     },
     [gameMode]
@@ -409,7 +459,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
           const winScore = 100 + timeBonus + moveBonus;
           const winnerName =
             gameMode === "bot" && bigResult.winner === "O"
-              ? "🤖 Bot"
+              ? "Bot"
               : playerNameBase(bigResult.winner);
           onScore?.(winnerName, winScore);
           setScores((s) =>
@@ -453,6 +503,22 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
     [canPlayCell, cells, currentPlayer, miniResults, moveCount, onScore, gameOver, targetBoard, gameMode]
   );
 
+  /* ---- Elapsed time timer ---- */
+  useEffect(() => {
+    if (gameOver || gameMode === "menu") {
+      return;
+    }
+    const interval = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [gameOver, gameMode]);
+
+  /* ---- Computed stats ---- */
+  const boardsWonX = useMemo(() => miniResults.filter((r) => r === "X").length, [miniResults]);
+  const boardsWonO = useMemo(() => miniResults.filter((r) => r === "O").length, [miniResults]);
+  const boardsDrawn = useMemo(() => miniResults.filter((r) => r === "draw").length, [miniResults]);
+
   /* ---- Bot AI effect ---- */
   useEffect(() => {
     if (gameMode !== "bot" || currentPlayer !== "O" || gameOver) {
@@ -488,6 +554,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
     setIsDraw(false);
     setLastMiniWinBoard(null);
     setMoveCount(0);
+    setElapsedTime(0);
     setIsBotThinking(false);
     startTimeRef.current = Date.now();
   }, []);
@@ -694,16 +761,17 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
     <div className="space-y-3">
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20">
         <div className="text-center flex-1">
-          <span
+          <div
             className={cn(
-              "text-xl font-black transition-colors duration-300",
-              currentPlayer === "X" && !gameOver
-                ? "text-cyan-400"
-                : "text-slate-500"
+              "inline-flex transition-all duration-300",
+              currentPlayer === "X" && !gameOver && "drop-shadow-[0_0_6px_rgba(34,211,238,0.5)]"
             )}
           >
-            ✕
-          </span>
+            <XMarkSvg
+              size={26}
+              color={currentPlayer === "X" && !gameOver ? "#22d3ee" : "#64748b"}
+            />
+          </div>
           <p className="text-xs font-bold text-white">
             {gameMode === "bot" ? "Jogador" : "Jogador 1"}
           </p>
@@ -719,25 +787,30 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
             )}
           </Badge>
           <p className="text-[10px] text-slate-500 mt-1">Round {round}</p>
-          <div className="flex items-center justify-center gap-1 mt-0.5">
-            <Clock className="h-2.5 w-2.5 text-slate-500" />
-            <span className="text-[10px] text-slate-500">
-              {moveCount} jogadas
-            </span>
+          <div className="flex items-center justify-center gap-2 mt-0.5">
+            <div className="flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5 text-slate-500" />
+              <span className="text-[10px] text-slate-500">{moveCount}</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Timer className="h-2.5 w-2.5 text-slate-500" />
+              <span className="text-[10px] text-slate-500">{formatTime(elapsedTime)}</span>
+            </div>
           </div>
         </div>
 
         <div className="text-center flex-1">
-          <span
+          <div
             className={cn(
-              "text-xl font-black transition-colors duration-300",
-              currentPlayer === "O" && !gameOver
-                ? "text-pink-400"
-                : "text-slate-500"
+              "inline-flex transition-all duration-300",
+              currentPlayer === "O" && !gameOver && "drop-shadow-[0_0_6px_rgba(244,114,182,0.5)]"
             )}
           >
-            ○
-          </span>
+            <OMarkSvg
+              size={26}
+              color={currentPlayer === "O" && !gameOver ? "#f472b6" : "#64748b"}
+            />
+          </div>
           <div className="flex items-center justify-center gap-1">
             <p className="text-xs font-bold text-white">
               {gameMode === "bot" ? "Bot" : "Jogador 2"}
@@ -758,33 +831,113 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="text-center py-1.5 px-3 rounded-xl bg-slate-800/60 border border-slate-700/50"
+            className="relative text-center py-2 px-4 rounded-xl border overflow-hidden"
+            style={{
+              background: currentPlayer === "X"
+                ? "linear-gradient(135deg, rgba(8,145,178,0.12), rgba(15,23,42,0.6))"
+                : "linear-gradient(135deg, rgba(190,18,60,0.12), rgba(15,23,42,0.6))",
+              borderColor: currentPlayer === "X" ? "rgba(34,211,238,0.25)" : "rgba(244,114,182,0.25)",
+            }}
           >
-            <p className="text-xs font-medium">
-              <span
-                className={cn("font-bold", playerColor(currentPlayer))}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              animate={{
+                background: currentPlayer === "X"
+                  ? "radial-gradient(ellipse at center, rgba(34,211,238,0.08) 0%, transparent 70%)"
+                  : "radial-gradient(ellipse at center, rgba(244,114,182,0.08) 0%, transparent 70%)",
+              }}
+              transition={{ duration: 0.4 }}
+            />
+            <div className="relative flex items-center justify-center gap-2">
+              <motion.div
+                className="flex-shrink-0"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
               >
-                {playerMark(currentPlayer)}
-              </span>{" "}
-              <span className={cn(playerColor(currentPlayer))}>
-                {getPlayerName(currentPlayer)} {turnText}
-              </span>
+                {currentPlayer === "X"
+                  ? <XMarkSvg size={18} color="#22d3ee" />
+                  : <OMarkSvg size={18} color="#f472b6" />
+                }
+              </motion.div>
+              <p className="text-xs font-medium">
+                <span className={cn("font-bold", playerColor(currentPlayer))}>
+                  {getPlayerName(currentPlayer)}
+                </span>
+                <span className={cn("ml-1 text-slate-400", playerColor(currentPlayer))}>
+                  {turnText}
+                </span>
+              </p>
               {isBotThinking && (
-                <motion.span
-                  className="inline-block ml-1"
-                  animate={{ opacity: [0.3, 1, 0.3] }}
+                <motion.div
+                  className="flex gap-0.5"
+                  animate={{ opacity: [0.4, 1, 0.4] }}
                   transition={{ repeat: Infinity, duration: 1.2 }}
                 >
-                  🤖
-                </motion.span>
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1 h-1 rounded-full bg-pink-400"
+                      animate={{ y: [0, -3, 0] }}
+                      transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.15 }}
+                    />
+                  ))}
+                </motion.div>
               )}
-            </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="flex justify-center">
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
+        <div
+          className={cn(
+            "relative grid grid-cols-3 gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl border transition-all duration-500",
+            "bg-slate-900/70 border-slate-700/50",
+            gameOver && bigWinLine
+              ? "shadow-[0_0_30px_rgba(250,204,21,0.15),0_0_60px_rgba(250,204,21,0.05)] border-yellow-500/30"
+              : gameOver && isDraw
+                ? "shadow-[0_0_20px_rgba(100,116,139,0.15)]"
+                : activeTarget !== null
+                  ? currentPlayer === "X"
+                    ? "shadow-[0_0_25px_rgba(34,211,238,0.08)] border-cyan-500/20"
+                    : "shadow-[0_0_25px_rgba(244,114,182,0.08)] border-pink-500/20"
+                  : "shadow-[0_0_15px_rgba(15,23,42,0.3)]"
+          )}
+        >
+          {bigWinLine && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="winLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#facc15" stopOpacity="0.9" />
+                  <stop offset="50%" stopColor="#fde68a" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#facc15" stopOpacity="0.9" />
+                </linearGradient>
+                <filter id="winGlow">
+                  <feGaussianBlur stdDeviation="1.5" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              {(() => {
+                const start = boardToPercent(bigWinLine[0]);
+                const end = boardToPercent(bigWinLine[2]);
+                return (
+                  <motion.line
+                    x1={start.x} y1={start.y}
+                    initial={{ x2: start.x, y2: start.y, opacity: 0 }}
+                    animate={{ x2: end.x, y2: end.y, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+                    stroke="url(#winLineGrad)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    filter="url(#winGlow)"
+                  />
+                );
+              })()}
+            </svg>
+          )}
           {([0, 1, 2, 3, 4, 5, 6, 7, 8]).map((boardIdx) => {
             const miniResult = miniResults[boardIdx];
             const isActiveTarget = activeTarget === boardIdx;
@@ -822,29 +975,30 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                     "bg-pink-500/10 border border-pink-500/30",
                   isActiveTarget &&
                     miniResult === null &&
-                    "ring-2 ring-yellow-400/60 ring-offset-1 ring-offset-slate-950",
+                    currentPlayer === "X" &&
+                    "ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.15)]",
+                  isActiveTarget &&
+                    miniResult === null &&
+                    currentPlayer === "O" &&
+                    "ring-2 ring-pink-400/60 ring-offset-1 ring-offset-slate-950 shadow-[0_0_12px_rgba(244,114,182,0.15)]",
                   bigWinLine?.includes(boardIdx) &&
                     boardIsWon &&
-                    "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/20"
+                    "ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.3)]"
                 )}
               >
                 {boardIsWon && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
+                    initial={{ opacity: 0, scale: 0.4 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 22 }}
                     className="absolute inset-0 flex items-center justify-center z-10 rounded-lg"
+                    style={{
+                      background: miniResult === "X"
+                        ? "radial-gradient(circle, rgba(34,211,238,0.1) 0%, transparent 70%)"
+                        : "radial-gradient(circle, rgba(244,114,182,0.1) 0%, transparent 70%)",
+                    }}
                   >
-                    <span
-                      className={cn(
-                        "text-2xl sm:text-3xl font-black drop-shadow-lg",
-                        miniResult === "X"
-                          ? "text-cyan-400"
-                          : "text-pink-400"
-                      )}
-                    >
-                      {playerMark(miniResult as Player)}
-                    </span>
+                    <MiniMarkSvg player={miniResult as Player} size={30} />
                   </motion.div>
                 )}
 
@@ -860,6 +1014,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                     const cellValue = cells[globalIdx];
                     const isValid = canPlayCell(boardIdx, cellIdx);
                     const isInTargetBoard = activeTarget === boardIdx;
+                    const cellSize = 14;
 
                     let cellClasses = "w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-md flex items-center justify-center text-xs sm:text-sm md:text-base font-black transition-all border relative ";
 
@@ -897,26 +1052,29 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
                         className={cn(cellClasses)}
                       >
                         {cellValue && (
-                          <motion.span
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
+                          <motion.div
+                            initial={{ scale: 0.2, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             transition={{
                               type: "spring",
                               stiffness: 500,
-                              damping: 20,
+                              damping: 18,
                             }}
                           >
-                            {cellValue}
-                          </motion.span>
+                            {cellValue === "X"
+                              ? <XMarkSvg size={cellSize} color="#22d3ee" />
+                              : <OMarkSvg size={cellSize} color="#f472b6" />
+                            }
+                          </motion.div>
                         )}
 
                         {isValid && !cellValue && isInTargetBoard && (
                           <motion.div
                             className="absolute inset-0 rounded-md pointer-events-none"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                             style={{
-                              boxShadow: `inset 0 0 8px ${playerGlowColor(currentPlayer)}`,
+                              boxShadow: `inset 0 0 10px ${playerGlowColor(currentPlayer)}, 0 0 4px ${playerGlowColor(currentPlayer)}`,
                             }}
                           />
                         )}
@@ -1041,46 +1199,104 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
       <AnimatePresence>
         {gameOver && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25 }}
-            className="text-center space-y-3 py-2"
+            transition={{ duration: 0.3 }}
+            className="text-center space-y-3 py-3"
           >
-            <div className="text-4xl">
+            <motion.div
+              initial={{ scale: 0, rotate: -30 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            >
               {isDraw ? (
-                "🤝"
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-slate-800/80 border border-slate-700">
+                  <Users className="h-7 w-7 text-slate-400" />
+                </div>
               ) : (
-                <motion.div
-                  initial={{ scale: 0, rotate: -30 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                >
-                  <Trophy className="h-10 w-10 inline text-yellow-400" />
-                </motion.div>
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-yellow-500/10 border border-yellow-500/30 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+                  <Trophy className="h-7 w-7 text-yellow-400" />
+                </div>
               )}
-            </div>
+            </motion.div>
+
             {bigWinner && (
               <motion.h3
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15 }}
                 className={cn("text-lg font-black", playerColor(bigWinner))}
               >
                 {getPlayerName(bigWinner)} Venceu o jogo!
               </motion.h3>
             )}
             {isDraw && (
-              <h3 className="text-lg font-black text-slate-400">Empate!</h3>
+              <motion.h3
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="text-lg font-black text-slate-400"
+              >
+                Empate!
+              </motion.h3>
             )}
+
+            {/* Stats panel */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.3 }}
+              className="grid grid-cols-4 gap-1.5 max-w-xs mx-auto"
+            >
+              <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 p-2 text-center">
+                <Timer className="h-3.5 w-3.5 text-slate-500 mx-auto mb-0.5" />
+                <p className="text-xs font-bold text-white">{formatTime(elapsedTime)}</p>
+                <p className="text-[9px] text-slate-500">Tempo</p>
+              </div>
+              <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 p-2 text-center">
+                <Target className="h-3.5 w-3.5 text-slate-500 mx-auto mb-0.5" />
+                <p className="text-xs font-bold text-white">{moveCount}</p>
+                <p className="text-[9px] text-slate-500">Jogadas</p>
+              </div>
+              <div className="rounded-lg bg-cyan-500/5 border border-cyan-500/20 p-2 text-center">
+                <XMarkSvg size={14} color="#22d3ee" />
+                <p className="text-xs font-bold text-cyan-400 mt-0.5">{boardsWonX}</p>
+                <p className="text-[9px] text-slate-500">Tab. X</p>
+              </div>
+              <div className="rounded-lg bg-pink-500/5 border border-pink-500/20 p-2 text-center">
+                <OMarkSvg size={14} color="#f472b6" />
+                <p className="text-xs font-bold text-pink-400 mt-0.5">{boardsWonO}</p>
+                <p className="text-[9px] text-slate-500">Tab. O</p>
+              </div>
+            </motion.div>
+
+            {/* Score breakdown */}
             {bigWinner && (
-              <p className="text-xs text-slate-500">
-                +100 pontos base • {moveCount} jogadas
-              </p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="flex items-center justify-center gap-1.5 text-xs text-slate-500"
+              >
+                <Zap className="h-3 w-3 text-yellow-400" />
+                <span>
+                  100 base
+                  {elapsedTime < 50 && <span className="text-green-400"> +{50 - elapsedTime} tempo</span>}
+                  {moveCount < 50 && <span className="text-green-400"> +{Math.max(0, 200 - moveCount * 2)} eficiencia</span>}
+                </span>
+              </motion.div>
             )}
-            <div className="flex gap-2 justify-center">
+
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.25 }}
+              className="flex gap-2 justify-center pt-1"
+            >
               <Button
                 onClick={reset}
-                className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white rounded-xl text-xs"
+                className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white rounded-xl text-xs shadow-lg shadow-pink-500/10"
               >
                 Próximo Round
               </Button>
@@ -1098,7 +1314,7 @@ const TicTacToePro = ({ onScore, liveCode }: Props) => {
               >
                 Menu
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

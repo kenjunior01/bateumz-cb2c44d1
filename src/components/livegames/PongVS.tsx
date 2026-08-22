@@ -46,6 +46,12 @@ interface Paddle {
   score: number;
 }
 
+interface TrailPoint {
+  x: number;
+  y: number;
+  age: number;
+}
+
 interface BotConfig {
   speed: number;
   reactionMs: number;
@@ -146,6 +152,8 @@ function predictBallY(ball: Ball, targetX: number): number {
   return ball.y;
 }
 
+const TRAIL_MAX = 18;
+
 const PongVS = ({ onScore, liveCode }: PongVSProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -158,6 +166,10 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
   const [winner, setWinner] = useState("");
   const [p1Name, setP1Name] = useState("Jogador 1");
   const [p2Name, setP2Name] = useState("Jogador 2");
+  const [shakeX, setShakeX] = useState(0);
+  const [shakeY, setShakeY] = useState(0);
+  const [scorePopP1, setScorePopP1] = useState(false);
+  const [scorePopP2, setScorePopP2] = useState(false);
 
   const ballRef = useRef<Ball>({
     x: CANVAS_W / 2,
@@ -189,6 +201,13 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
   const botLastUpdateRef = useRef<number>(0);
   const botMovingRef = useRef<boolean>(true);
 
+  // Visual effect refs
+  const trailRef = useRef<TrailPoint[]>([]);
+  const p1FlashRef = useRef<number>(0);
+  const p2FlashRef = useRef<number>(0);
+  const shakeFramesRef = useRef<number>(0);
+  const shakeActiveRef = useRef<boolean>(false);
+
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
@@ -204,6 +223,7 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     const angle = Math.random() * (Math.PI / 3) - Math.PI / 6;
     b.vx = Math.cos(angle) * b.speed * direction;
     b.vy = Math.sin(angle) * b.speed;
+    trailRef.current = [];
   }, []);
 
   const botAI = useCallback(() => {
@@ -267,29 +287,140 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     const b = ballRef.current;
     const p1 = p1Ref.current;
     const p2 = p2Ref.current;
+    const trail = trailRef.current;
+    const p1Flash = p1FlashRef.current;
+    const p2Flash = p2FlashRef.current;
 
-    // Background
-    ctx.fillStyle = "#0f172a";
+    // -- Background: dark gradient with subtle radial glow at center --
+    const bgGrad = ctx.createRadialGradient(
+      CANVAS_W / 2, CANVAS_H / 2, 0,
+      CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
+    );
+    bgGrad.addColorStop(0, "#111833");
+    bgGrad.addColorStop(1, "#070b1a");
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Center line
-    ctx.setLineDash([8, 8]);
-    ctx.strokeStyle = "rgba(255,255,255,0.15)";
-    ctx.lineWidth = 2;
+    // -- Grid pattern --
+    ctx.strokeStyle = "rgba(100, 140, 255, 0.04)";
+    ctx.lineWidth = 1;
+    const gridSize = 30;
+    for (let gx = gridSize; gx < CANVAS_W; gx += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, CANVAS_H);
+      ctx.stroke();
+    }
+    for (let gy = gridSize; gy < CANVAS_H; gy += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(CANVAS_W, gy);
+      ctx.stroke();
+    }
+
+    // -- Center line with glow --
+    // Outer glow pass
+    ctx.save();
+    ctx.shadowColor = "rgba(100, 160, 255, 0.5)";
+    ctx.shadowBlur = 16;
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "rgba(100, 160, 255, 0.25)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_W / 2, 0);
+    ctx.lineTo(CANVAS_W / 2, CANVAS_H);
+    ctx.stroke();
+    ctx.restore();
+    // Inner bright pass
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "rgba(140, 180, 255, 0.12)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(CANVAS_W / 2, 0);
     ctx.lineTo(CANVAS_W / 2, CANVAS_H);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Center circle
+    // -- Center circle with glow --
+    ctx.save();
+    ctx.shadowColor = "rgba(100, 160, 255, 0.35)";
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(CANVAS_W / 2, CANVAS_H / 2, 40, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 2;
+    ctx.arc(CANVAS_W / 2, CANVAS_H / 2, 45, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(100, 160, 255, 0.1)";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
+    ctx.restore();
 
-    // Paddles
+    // -- Ball trail --
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i];
+      const ratio = 1 - i / trail.length;
+      const alpha = ratio * 0.45;
+      const r = Math.max(1, BALL_R * ratio * 0.8);
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180, 200, 255, ${alpha})`;
+      ctx.fill();
+    }
+    // Trail connecting line (subtle)
+    if (trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      for (let i = 0; i < trail.length; i++) {
+        ctx.lineTo(trail[i].x, trail[i].y);
+      }
+      ctx.strokeStyle = "rgba(160, 190, 255, 0.08)";
+      ctx.lineWidth = BALL_R * 1.2;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    // -- Ball: multi-layer glow --
+    // Outer glow
+    ctx.save();
+    const ballSpeed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    const glowIntensity = Math.min(1, ballSpeed / 8);
+    ctx.shadowColor = `rgba(150, 180, 255, ${0.6 + glowIntensity * 0.4})`;
+    ctx.shadowBlur = 20 + glowIntensity * 15;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, BALL_R + 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(180, 200, 255, ${0.15 + glowIntensity * 0.15})`;
+    ctx.fill();
+    ctx.restore();
+    // Core
+    ctx.save();
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 12;
+    const ballGrad = ctx.createRadialGradient(
+      b.x - 2, b.y - 2, 0,
+      b.x, b.y, BALL_R
+    );
+    ballGrad.addColorStop(0, "#ffffff");
+    ballGrad.addColorStop(0.7, "#c8d8ff");
+    ballGrad.addColorStop(1, "#8098cc");
+    ctx.fillStyle = ballGrad;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // -- Paddles with flash effect --
+    // Paddle 1
+    ctx.save();
+    if (p1Flash > 0) {
+      const flashAlpha = p1Flash / 12;
+      ctx.shadowColor = `rgba(100, 160, 255, ${flashAlpha})`;
+      ctx.shadowBlur = 25 * flashAlpha;
+      const flashGrad = ctx.createLinearGradient(p1.x, p1.y, p1.x + PADDLE_W, p1.y);
+      flashGrad.addColorStop(0, `rgba(200, 220, 255, ${flashAlpha * 0.9})`);
+      flashGrad.addColorStop(1, `rgba(180, 200, 255, ${flashAlpha * 0.9})`);
+      ctx.fillStyle = flashGrad;
+      ctx.beginPath();
+      ctx.roundRect(p1.x - 3, p1.y - 3, PADDLE_W + 6, PADDLE_H + 6, 9);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
     const grad1 = ctx.createLinearGradient(p1.x, p1.y, p1.x + PADDLE_W, p1.y);
     grad1.addColorStop(0, "#3b82f6");
     grad1.addColorStop(1, "#6366f1");
@@ -297,7 +428,23 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     ctx.beginPath();
     ctx.roundRect(p1.x, p1.y, PADDLE_W, PADDLE_H, 6);
     ctx.fill();
+    ctx.restore();
 
+    // Paddle 2
+    ctx.save();
+    if (p2Flash > 0) {
+      const flashAlpha = p2Flash / 12;
+      ctx.shadowColor = `rgba(255, 160, 60, ${flashAlpha})`;
+      ctx.shadowBlur = 25 * flashAlpha;
+      const flashGrad = ctx.createLinearGradient(p2.x, p2.y, p2.x + PADDLE_W, p2.y);
+      flashGrad.addColorStop(0, `rgba(255, 220, 180, ${flashAlpha * 0.9})`);
+      flashGrad.addColorStop(1, `rgba(255, 200, 160, ${flashAlpha * 0.9})`);
+      ctx.fillStyle = flashGrad;
+      ctx.beginPath();
+      ctx.roundRect(p2.x - 3, p2.y - 3, PADDLE_W + 6, PADDLE_H + 6, 9);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
     const grad2 = ctx.createLinearGradient(p2.x, p2.y, p2.x + PADDLE_W, p2.y);
     grad2.addColorStop(0, "#f59e0b");
     grad2.addColorStop(1, "#ef4444");
@@ -305,23 +452,34 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     ctx.beginPath();
     ctx.roundRect(p2.x, p2.y, PADDLE_W, PADDLE_H, 6);
     ctx.fill();
+    ctx.restore();
 
-    // Ball glow
-    ctx.shadowColor = "#ffffff";
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Scores
+    // -- Scores with glow --
+    ctx.save();
     ctx.font = "bold 48px monospace";
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(59,130,246,0.3)";
+    // P1 score glow
+    ctx.shadowColor = "rgba(59, 130, 246, 0.6)";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "rgba(59, 130, 246, 0.25)";
     ctx.fillText(String(p1.score), CANVAS_W / 4, 60);
-    ctx.fillStyle = "rgba(245,158,11,0.3)";
+    ctx.shadowBlur = 0;
+    // P2 score glow
+    ctx.shadowColor = "rgba(245, 158, 11, 0.6)";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "rgba(245, 158, 11, 0.25)";
     ctx.fillText(String(p2.score), (CANVAS_W * 3) / 4, 60);
+    ctx.restore();
+
+    // -- Vignette overlay --
+    const vigGrad = ctx.createRadialGradient(
+      CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.35,
+      CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.72
+    );
+    vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+    vigGrad.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }, []);
 
   const update = useCallback(() => {
@@ -331,6 +489,21 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     const p1 = p1Ref.current;
     const p2 = p2Ref.current;
     const keys = keysRef.current;
+
+    // Decay visual effects
+    if (p1FlashRef.current > 0) p1FlashRef.current -= 1;
+    if (p2FlashRef.current > 0) p2FlashRef.current -= 1;
+    if (shakeFramesRef.current > 0) {
+      shakeFramesRef.current -= 1;
+      const intensity = shakeFramesRef.current * 0.8;
+      setShakeX((Math.random() - 0.5) * intensity);
+      setShakeY((Math.random() - 0.5) * intensity);
+      shakeActiveRef.current = true;
+    } else if (shakeActiveRef.current) {
+      shakeActiveRef.current = false;
+      setShakeX(0);
+      setShakeY(0);
+    }
 
     // Player 1 controls: W/S or ArrowUp/ArrowDown (only in bot mode)
     if (modeRef.current === "bot") {
@@ -358,6 +531,12 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     b.x += b.vx;
     b.y += b.vy;
 
+    // Update trail
+    trailRef.current.unshift({ x: b.x, y: b.y, age: 0 });
+    if (trailRef.current.length > TRAIL_MAX) {
+      trailRef.current.length = TRAIL_MAX;
+    }
+
     // Top/bottom bounce
     if (b.y - BALL_R <= 0) {
       b.y = BALL_R;
@@ -382,6 +561,7 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       b.speed = Math.min(b.speed + BALL_SPEED_INC, 10);
       b.vx = Math.cos(angle) * b.speed;
       b.vy = Math.sin(angle) * b.speed;
+      p1FlashRef.current = 12;
     }
 
     // Paddle 2 collision (right)
@@ -398,12 +578,16 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       b.speed = Math.min(b.speed + BALL_SPEED_INC, 10);
       b.vx = -Math.cos(angle) * b.speed;
       b.vy = Math.sin(angle) * b.speed;
+      p2FlashRef.current = 12;
     }
 
     // Score detection
     if (b.x < -BALL_R * 2) {
       p2.score++;
       setP2Score(p2.score);
+      shakeFramesRef.current = 10;
+      setScorePopP2(true);
+      setTimeout(() => setScorePopP2(false), 400);
       if (p2.score >= WIN_SCORE) {
         const w = modeRef.current === "bot" ? "Adversário IA" : p2NameRef.current;
         setWinner(w);
@@ -421,6 +605,9 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     if (b.x > CANVAS_W + BALL_R * 2) {
       p1.score++;
       setP1Score(p1.score);
+      shakeFramesRef.current = 10;
+      setScorePopP1(true);
+      setTimeout(() => setScorePopP1(false), 400);
       if (p1.score >= WIN_SCORE) {
         const n = p1NameRef.current;
         setWinner(n);
@@ -509,6 +696,16 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
     botTargetRef.current = CANVAS_H / 2;
     botLastUpdateRef.current = 0;
     botMovingRef.current = true;
+    // Reset visual effects
+    trailRef.current = [];
+    p1FlashRef.current = 0;
+    p2FlashRef.current = 0;
+    shakeFramesRef.current = 0;
+    shakeActiveRef.current = false;
+    setShakeX(0);
+    setShakeY(0);
+    setScorePopP1(false);
+    setScorePopP2(false);
     setPhase("countdown");
     setCountdown(3);
   };
@@ -753,17 +950,29 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
             <span className="text-xs font-bold text-muted-foreground">
               {p1Name}
             </span>
-            <span className="font-display text-xl font-bold text-foreground">
+            <motion.span
+              key={p1Score}
+              initial={scorePopP1 ? { scale: 1.8, color: "#60a5fa" } : false}
+              animate={{ scale: 1, color: "inherit" }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              className="font-display text-xl font-bold text-foreground inline-block"
+            >
               {p1Score}
-            </span>
+            </motion.span>
           </div>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
             vs
           </span>
           <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold text-foreground">
+            <motion.span
+              key={p2Score}
+              initial={scorePopP2 ? { scale: 1.8, color: "#fbbf24" } : false}
+              animate={{ scale: 1, color: "inherit" }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              className="font-display text-xl font-bold text-foreground inline-block"
+            >
               {p2Score}
-            </span>
+            </motion.span>
             <span className="text-xs font-bold text-muted-foreground">
               {mode === "bot" ? `IA (${BOT_CONFIGS[difficulty].label})` : p2Name}
             </span>
@@ -772,12 +981,18 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         </div>
       )}
 
-      <div className="relative w-full" style={{ maxWidth: CANVAS_W }}>
+      <div
+        className="relative w-full"
+        style={{
+          maxWidth: CANVAS_W,
+          transform: `translate(${shakeX}px, ${shakeY}px)`,
+        }}
+      >
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="w-full rounded-2xl border-2 border-border shadow-xl"
+          className="w-full rounded-2xl border-2 border-blue-500/20 shadow-xl shadow-blue-500/5"
           tabIndex={0}
         />
 
@@ -785,12 +1000,13 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
           {phase === "countdown" && (
             <motion.div
               key={countdown}
-              initial={{ scale: 2, opacity: 0 }}
+              initial={{ scale: 2.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl"
+              exit={{ scale: 0.3, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl backdrop-blur-sm"
             >
-              <span className="font-display text-7xl font-bold text-white">
+              <span className="font-display text-7xl font-bold text-white drop-shadow-[0_0_20px_rgba(100,160,255,0.6)]">
                 {countdown > 0 ? countdown : "GO!"}
               </span>
             </motion.div>
@@ -800,29 +1016,58 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
         <AnimatePresence>
           {phase === "done" && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-2xl gap-3"
+              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              animate={{ opacity: 1, backdropFilter: "blur(6px)" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-2xl gap-4"
             >
-              <Trophy className="h-10 w-10 text-yellow-400" />
-              <p className="font-display text-2xl font-bold text-white">
+              <motion.div
+                initial={{ scale: 0, rotate: -30 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.1 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 blur-xl bg-yellow-400/40 rounded-full" />
+                <Trophy className="h-14 w-14 text-yellow-400 relative drop-shadow-[0_0_16px_rgba(250,204,21,0.5)]" />
+              </motion.div>
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.25, duration: 0.4 }}
+                className="font-display text-2xl font-bold text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]"
+              >
                 {winner} venceu!
-              </p>
-              <p className="text-sm text-white/70">
-                {p1Score} - {p2Score}
-              </p>
-              <button
-                onClick={startGame}
-                className="mt-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+              </motion.p>
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.4, type: "spring", stiffness: 300, damping: 20 }}
+                className="flex items-center gap-3 text-lg font-bold"
               >
-                <RotateCcw className="h-4 w-4" /> Jogar Novamente
-              </button>
-              <button
-                onClick={() => setPhase("idle")}
-                className="px-4 py-2 rounded-full bg-white/10 text-white/80 text-xs font-medium hover:bg-white/20 transition cursor-pointer"
+                <span className="text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">{p1Score}</span>
+                <span className="text-white/40 text-sm">-</span>
+                <span className="text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]">{p2Score}</span>
+              </motion.div>
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.55, duration: 0.35 }}
+                className="flex flex-col items-center gap-2 mt-1"
               >
-                Voltar ao Menu
-              </button>
+                <button
+                  onClick={startGame}
+                  className="px-7 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="h-4 w-4" /> Jogar Novamente
+                </button>
+                <button
+                  onClick={() => setPhase("idle")}
+                  className="px-4 py-2 rounded-full bg-white/10 text-white/80 text-xs font-medium hover:bg-white/20 transition cursor-pointer"
+                >
+                  Voltar ao Menu
+                </button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

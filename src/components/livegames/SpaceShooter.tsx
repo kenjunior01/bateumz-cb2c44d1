@@ -88,33 +88,44 @@ const createStars = (): Star[] =>
     brightness: 0.3 + Math.random() * 0.7,
   }));
 
-const createExplosion = (x: number, y: number, color: string): Particle[] =>
-  Array.from({ length: 14 }, () => {
+interface FloatingText {
+  x: number; y: number; text: string; color: string; life: number; maxLife: number; vy: number; }
+
+const createExplosion = (x: number, y: number, color: string, isBonus: boolean = false): Particle[] => {
+  const count = isBonus ? 30 : 14;
+  return Array.from({ length: count }, () => {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 1 + Math.random() * 3.5;
+    const speed = (isBonus ? 2 : 1) + Math.random() * (isBonus ? 5 : 3.5);
     return {
-      x,
-      y,
+      x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 20 + Math.random() * 20,
-      maxLife: 40,
-      color,
-      size: 1.5 + Math.random() * 2.5,
+      life: (isBonus ? 30 : 20) + Math.random() * 20,
+      maxLife: isBonus ? 50 : 40,
+      color: isBonus ? (Math.random() < 0.5 ? '#fbbf24' : '#fef08a') : color,
+      size: (isBonus ? 2 : 1.5) + Math.random() * (isBonus ? 4 : 2.5),
     };
   });
+};
+
+const createScoreText = (x: number, y: number, points: number, isBonus: boolean): FloatingText => ({
+  x, y, text: `+${points}`, color: isBonus ? '#fbbf24' : '#ffffff', life: 40, maxLife: 40, vy: -1.5,
+});
 
 interface GameState {
   players: PlayerState[];
   bullets: Bullet[];
   enemies: Enemy[];
   particles: Particle[];
+  floatingTexts: FloatingText[];
   stars: Star[];
   keys: Set<string>;
   frame: number;
   wave: number;
   waveFrame: number;
   running: boolean;
+  screenFlash: number;
+  killStreaks: [number, number];
   animId: number;
 }
 
@@ -271,10 +282,18 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             bulletsToRemove.add(bi);
             if (e.hp <= 0) {
               enemiesToRemove.add(ei);
-              const pts = e.bonus ? POINTS_BONUS : POINTS_NORMAL;
-              if (b.owner === 1) p1.score += pts;
-              else p2.score += pts;
-              g.particles.push(...createExplosion(e.x, e.y, e.color));
+              const isBonus = e.bonus;
+              const pts = isBonus ? POINTS_BONUS : POINTS_NORMAL;
+              const streakIdx = b.owner === 1 ? 0 : 1;
+              g.killStreaks[streakIdx]++;
+              const streak = g.killStreaks[streakIdx];
+              const streakBonus = streak >= 10 ? 3 : streak >= 5 ? 2 : 0;
+              const totalPts = pts + streakBonus * 5;
+              if (b.owner === 1) p1.score += totalPts;
+              else p2.score += totalPts;
+              g.particles.push(...createExplosion(e.x, e.y, e.color, isBonus));
+              g.floatingTexts.push(createScoreText(e.x, e.y - 10, totalPts, isBonus));
+              if (isBonus) g.screenFlash = 8;
               scoreChanged = true;
             }
             break;
@@ -293,9 +312,18 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p.x += p.vx;
         p.y += p.vy;
         p.vy += 0.05;
+        p.vx *= 0.98;
         p.life--;
         return p.life > 0;
       });
+
+      g.floatingTexts = g.floatingTexts.filter((ft) => {
+        ft.y += ft.vy;
+        ft.life--;
+        return ft.life > 0;
+      });
+
+      if (g.screenFlash > 0) g.screenFlash--;
 
       g.stars.forEach((s) => {
         s.y += s.speed;
@@ -313,6 +341,12 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
 
       ctx.fillStyle = "#05080f";
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Screen flash
+      if (g.screenFlash > 0) {
+        ctx.fillStyle = `rgba(251, 191, 36, ${g.screenFlash * 0.03})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
 
       g.stars.forEach((s) => {
         const twinkle = 0.6 + 0.4 * Math.sin(g.frame * 0.03 + s.x);
@@ -465,8 +499,31 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, pt.size * alpha, 0, Math.PI * 2);
         ctx.fill();
+        // Glow for larger particles
+        if (pt.size > 3) {
+          ctx.globalAlpha = alpha * 0.3;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.size * alpha * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
       ctx.globalAlpha = 1;
+
+      // Floating score texts
+      g.floatingTexts.forEach((ft) => {
+        const alpha = ft.life / ft.maxLife;
+        const scale = 0.8 + (1 - alpha) * 0.5;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${Math.round(14 * scale)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
 
       const drawDangerZone = (leftX: number, rightX: number, color: string) => {
         const grad = ctx.createLinearGradient(leftX, CANVAS_H - 30, leftX, CANVAS_H);
@@ -513,12 +570,15 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         bullets: [],
         enemies: [],
         particles: [],
+        floatingTexts: [],
         stars: createStars(),
         keys: new Set<string>(),
         frame: 0,
         wave: startWave,
         waveFrame: 0,
         running: true,
+        screenFlash: 0,
+        killStreaks: [0, 0],
         animId: 0,
       };
       gameRef.current = g;

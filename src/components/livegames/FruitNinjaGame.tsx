@@ -504,40 +504,60 @@ export default function FruitNinjaGame({ onScore, liveCode }: Props) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col items-center gap-4 p-6 rounded-xl bg-gradient-to-b from-slate-900 to-slate-800 border border-slate-700 w-full"
+            className="flex flex-col items-center gap-4 p-6 rounded-xl bg-gradient-to-b from-slate-900 to-slate-800 border border-slate-700 w-full relative overflow-hidden"
           >
-            <div className="text-5xl">🍉</div>
-            <h2 className="text-2xl font-bold text-white">Fruit Ninja</h2>
-            <p className="text-sm text-slate-400 text-center">Corte as frutas e evite as bombas!</p>
+            {/* Animated bg particles */}
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(8)].map((_, i) => (
+                <motion.div key={i}
+                  animate={{ y: [0, -20, 0], opacity: [0.1, 0.25, 0.1], x: [0, Math.sin(i) * 10, 0] }}
+                  transition={{ duration: 3 + i * 0.4, repeat: Infinity, delay: i * 0.3 }}
+                  className="absolute w-1 h-1 rounded-full bg-emerald-400/40"
+                  style={{ left: `${10 + (i * 12) % 80}%`, top: `${15 + (i * 15) % 70}%` }} />
+              ))}
+            </div>
+
+            <div className="relative z-10 text-center">
+              <motion.div animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
+                <span className="text-6xl block mb-2 drop-shadow-lg">🍉</span>
+              </motion.div>
+              <h2 className="text-2xl font-black bg-gradient-to-r from-emerald-300 via-green-400 to-lime-500 bg-clip-text text-transparent">Fruit Ninja</h2>
+              <p className="text-sm text-slate-400 text-center mt-1">Corte as frutas e evite as bombas!</p>
+              <div className="flex justify-center gap-3 mt-2 text-[10px] text-slate-500">
+                <span className="flex items-center gap-1">🔥 Combos</span>
+                <span className="flex items-center gap-1">💣 Bombas</span>
+                <span className="flex items-center gap-1">⚡ Multiplicador</span>
+              </div>
+            </div>
 
             {highScore > 0 && (
-              <Badge variant="outline" className="text-yellow-400 border-yellow-500">
+              <Badge variant="outline" className="text-yellow-400 border-yellow-500 relative z-10">
                 <Trophy className="w-3 h-3 mr-1" />
                 Recorde: {highScore}
               </Badge>
             )}
 
-            <div className="flex gap-2 w-full">
+            <div className="flex gap-2 w-full relative z-10">
               <Button
                 onClick={() => { setBotMode(false); startGame(); }}
-                className={cn('flex-1', !botMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700')}
+                className={cn('flex-1 shadow-lg', !botMode ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-slate-700')}
               >
                 <Play className="w-4 h-4 mr-2" />
                 Jogar
               </Button>
               <Button
                 onClick={() => { setBotMode(true); startGame(); }}
-                className={cn('flex-1', botMode ? 'bg-violet-600 hover:bg-violet-700' : 'bg-slate-700')}
+                className={cn('flex-1 shadow-lg', botMode ? 'bg-violet-600 hover:bg-violet-500 shadow-violet-500/20' : 'bg-slate-700')}
               >
                 <Bot className="w-4 h-4 mr-2" />
                 Bot
               </Button>
             </div>
 
-            <div className="text-xs text-slate-500 text-center space-y-1">
+            <div className="text-xs text-slate-500 text-center space-y-1 relative z-10">
               <p>Deslize para cortar frutas</p>
               <p>❤️ 3 vidas | 💣 Bomba = fim</p>
-              <p>Combo para multiplicador de pontos!</p>
+              <p>🔥 Combo rapido = multiplicador de pontos!</p>
             </div>
           </motion.div>
         )}

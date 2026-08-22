@@ -203,6 +203,7 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
   const [animatingHit, setAnimatingHit] = useState(-1); // -1=none, 0=player, 1+=enemy idx
   const [defBuff, setDefBuff] = useState(1);
   const [atkBuff, setAtkBuff] = useState(1);
+  const [criticalHit, setCriticalHit] = useState(false);
 
   // ---- Level Complete ----
   const [earnedStars, setEarnedStars] = useState(0);
@@ -388,8 +389,11 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
 
     setIsPlayerTurn(false);
     const s = calcStats(player);
+    const isCrit = Math.random() < 0.15;
+    const critMult = isCrit ? 2.0 : 1.0;
     const rawDmg = Math.max(1, s.atk * atkBuff - enemy.def * 0.5);
-    const dmg = Math.round(rawDmg * (0.9 + Math.random() * 0.2));
+    const dmg = Math.round(rawDmg * (0.9 + Math.random() * 0.2) * critMult);
+    if (isCrit) { setCriticalHit(true); setTimeout(() => setCriticalHit(false), 600); shakeRef.current = 6; }
 
     setBattleEnemies(prev => {
       const next = [...prev];
@@ -398,8 +402,8 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
     });
     setAnimatingHit(targetIdx + 1);
     setTimeout(() => setAnimatingHit(-1), 200);
-    spawnParticles(120 + targetIdx * 60, -20, CLASSES[player.classId].color, 8);
-    addLog(`${CLASSES[player.classId].emoji} Atacas ${enemy.emoji} ${enemy.name} por ${dmg}!`);
+    spawnParticles(120 + targetIdx * 60, -20, isCrit ? '#fbbf24' : CLASSES[player.classId].color, isCrit ? 20 : 8);
+    addLog(`${CLASSES[player.classId].emoji} ${isCrit ? '💀 CRITICO! ' : ''}Atacas ${enemy.emoji} ${enemy.name} por ${dmg}!`);
 
     // Check if enemy died
     if (enemy.hp - dmg <= 0) {
@@ -649,30 +653,42 @@ export default function CampaignRPGGame({ onScore, liveCode }: Props) {
   // ---- Class Select Screen ----
   if (screen === "classSelect") {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg mx-auto p-4 relative overflow-hidden">
+        {/* Animated Background Particles */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(8)].map((_, i) => (
+            <motion.div key={i}
+              animate={{ y: [0, -25, 0], opacity: [0.1, 0.25, 0.1] }}
+              transition={{ duration: 3 + i * 0.4, repeat: Infinity, delay: i * 0.3 }}
+              className="absolute w-1 h-1 rounded-full bg-purple-400/30"
+              style={{ left: `${10 + (i * 11) % 80}%`, top: `${15 + (i * 14) % 75}%` }} />
+          ))}
+        </div>
         <div className="text-center mb-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-indigo-500/5 to-transparent rounded-2xl" />
-          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }}>
-            <span className="text-6xl block mb-2">🌍</span>
+          <div className="absolute inset-0 bg-gradient-to-b from-purple-500/15 via-indigo-500/10 to-transparent rounded-2xl" />
+          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }} transition={{ duration: 4, repeat: Infinity }}>
+            <span className="text-7xl block mb-2 filter drop-shadow-lg">⚔️</span>
           </motion.div>
-          <motion.h3 className="font-display text-xl sm:text-2xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative">
+          <motion.h3 className="font-display text-2xl sm:text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative">
             Campanha RPG
           </motion.h3>
           <p className="text-[11px] text-muted-foreground mt-1">Escolhe a tua classe e conquista 5 mundos!</p>
-          <div className="flex justify-center gap-4 mt-2 text-[10px] text-muted-foreground">
-            <span>🌟 5 Mundos</span>
-            <span>👺 Bosses</span>
-            <span>⭐ 3 Estrelas</span>
+          <div className="flex justify-center gap-3 mt-2 text-[10px] text-muted-foreground">
+            <motion.span animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="flex items-center gap-1">🌟 5 Mundos</motion.span>
+            <span className="flex items-center gap-1">👹 Bosses</span>
+            <span className="flex items-center gap-1">⭐ 3 Estrelas</span>
+            <span className="flex items-center gap-1">💀 Criticos</span>
           </div>
         </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {CLASSES.map((c, i) => (
           <motion.button
-            key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+            key={i} whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}
             onClick={() => selectClass(i)}
-            className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/50 transition-all hover:shadow-lg"
+            className="rounded-xl border-2 border-border bg-card p-4 text-left hover:border-primary/50 transition-all hover:shadow-lg relative overflow-hidden"
+            style={{ borderColor: undefined }}
           >
-            <span className="text-3xl">{c.emoji}</span>
+            <motion.span className="text-3xl block" animate={{ rotate: [0, -3, 3, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.2 }}>{c.emoji}</motion.span>
             <p className="font-bold text-sm mt-1" style={{ color: c.color }}>{c.name}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">{c.desc}</p>
             <div className="grid grid-cols-2 gap-1 mt-2 text-[9px]">

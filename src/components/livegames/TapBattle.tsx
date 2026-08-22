@@ -68,7 +68,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
   const winnerLabel = p1Taps === p2Taps ? "🤝 Empate!" : (p1Taps > p2Taps ? `🏆 ${p1Name} venceu!` : `🏆 ${mode === "vs" ? p2Name : "Adversário"} venceu!`);
 
   return (
-    <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+    <div className="max-w-md mx-auto flex flex-col items-center gap-4 relative">
       {phase === "idle" && (
         <div className="flex gap-2 w-full">
           <button
@@ -118,7 +118,12 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
 
       <div className="w-full text-center">
         <p className="text-xs text-muted-foreground">Tempo restante</p>
-        <p className="font-display text-2xl font-bold text-primary">{time}s</p>
+        <motion.p
+          className="font-display text-4xl font-black"
+          style={{ color: time <= 2 ? '#ef4444' : time <= 3.5 ? '#f59e0b' : '#3b82f6' }}
+          animate={phase === 'running' && time <= 3 ? { scale: [1, 1.15, 1] } : {}}
+          transition={{ duration: 0.3 }}
+        >{time.toFixed(1)}s</motion.p>
       </div>
 
       {phase === "idle" && (
@@ -135,7 +140,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
           <motion.button
             whileTap={{ scale: 0.92 }}
             onClick={() => setP1Taps((t) => t + 1)}
-            className="w-40 h-40 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-lg shadow-2xl border-4 border-primary-foreground/20 select-none touch-none"
+            className="w-40 h-40 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-lg shadow-2xl shadow-blue-500/30 border-4 border-white/20 select-none touch-none active:shadow-blue-400/50"
           >
             {p1Name.split(" ")[0]} 👆
           </motion.button>
@@ -143,7 +148,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
             <motion.button
               whileTap={{ scale: 0.92 }}
               onClick={() => setP2Taps((t) => t + 1)}
-              className="w-40 h-40 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white font-bold text-lg shadow-2xl border-4 border-white/20 select-none touch-none"
+              className="w-40 h-40 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold text-lg shadow-2xl shadow-amber-500/30 border-4 border-white/20 select-none touch-none active:shadow-orange-400/50"
             >
               {p2Name.split(" ")[0]} 👆
             </motion.button>
@@ -156,7 +161,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full text-center px-6 py-4 rounded-2xl bg-primary/10 text-primary"
+            className="w-full text-center px-6 py-4 rounded-2xl bg-gradient-to-r from-primary/10 to-amber-500/10 border border-primary/20"
           >
             <Trophy className="h-6 w-6 mx-auto mb-1" />
             <p className="font-bold text-lg">{winnerLabel}</p>

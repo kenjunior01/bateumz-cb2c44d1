@@ -393,9 +393,16 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [lootDrop, setLootDrop] = useState<LootDrop | null>(null);
   const [showLoot, setShowLoot] = useState(false);
+  const [lootAnimKey, setLootAnimKey] = useState(0);
   const [floatingDmg, setFloatingDmg] = useState<{ id: number; value: number; type: "player" | "enemy" | "heal" | "gold" | "xp"; x: number; y: number }[]>([]);
   const floatIdRef = useRef(0);
   const [levelUpEffect, setLevelUpEffect] = useState(false);
+  const [criticalHit, setCriticalHit] = useState(false);
+
+  // Combo system
+  const [combo, setCombo] = useState(0);
+  const [screenShake, setScreenShake] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<number | null>(null);
 
   // Auto-grind
   const [autoGrind, setAutoGrind] = useState(false);
@@ -824,7 +831,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
     setBattleEnemy(enemy);
     setBattleLog([`\uD83E\uDD16 Entraste em ${zone.name}!`]);
     setIsPlayerTurn(true); setBattleOver(false); setBattleWon(false);
-    setDefBuff(1); setAtkBuff(1);
+    setDefBuff(1); setAtkBuff(1); setCombo(0);
     const s = calcStats(char);
     setBattleHp(s.maxHp); setBattleMp(s.maxMp);
     setScreen("battle");
@@ -833,18 +840,25 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   const pveAttack = useCallback(() => {
     if (!char || !battleEnemy || !isPlayerTurn || battleOver) return;
     setIsPlayerTurn(false);
-    const dmg = Math.max(1, Math.round((stats.atk * atkBuff - battleEnemy.def * 0.5) * (0.9 + Math.random() * 0.2)));
+    const isCrit = Math.random() < 0.15;
+    const critMult = isCrit ? 2.0 : 1.0;
+    const dmg = Math.max(1, Math.round((stats.atk * atkBuff - battleEnemy.def * 0.5) * (0.9 + Math.random() * 0.2) * critMult));
     const newEnemyHp = Math.max(0, battleEnemy.hp - dmg);
     setBattleEnemy(prev => prev ? { ...prev, hp: newEnemyHp } : null);
-    spawnFloating(dmg, "player");
-    setBattleLog(prev => [...prev.slice(-6), `${CLASSES[char.classId].emoji} Atacas ${battleEnemy.emoji} por ${dmg}!`]);
+    spawnFloating(dmg, isCrit ? "player" : "player");
+    if (isCrit) { setCriticalHit(true); setTimeout(() => setCriticalHit(false), 600); setScreenShake(true); setTimeout(() => setScreenShake(false), 300); }
+    const newCombo = newEnemyHp > 0 ? combo + 1 : 0;
+    setCombo(newCombo);
+    setBattleLog(prev => [...prev.slice(-6), `${CLASSES[char.classId].emoji} ${isCrit ? "\uD83D\uDC80 CRITICO! " : ""}Atacas ${battleEnemy.emoji} por ${dmg}!${newCombo > 1 ? ` (Combo x${newCombo})` : ""}`]);
 
     setTimeout(() => {
       if (newEnemyHp <= 0) {
         setBattleOver(true); setBattleWon(true);
-        setBattleLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 ${battleEnemy.emoji} ${battleEnemy.name} derrotado!`]);
-        confetti({ particleCount: 60, spread: 50 });
+        setBattleLog(prev => [...prev.slice(-6), `\uD83C\uDFC6 ${battleEnemy.emoji} ${battleEnemy.name} derrotado!${newCombo >= 3 ? ` Combo final: x${newCombo}!` : ""}`]);
+        confetti({ particleCount: 60 + newCombo * 15, spread: 50 });
         let xpG = battleEnemy.xpReward; let goldG = battleEnemy.goldReward;
+        // Combo bonus
+        if (newCombo >= 3) { const bonus = 1 + newCombo * 0.1; xpG = Math.round(xpG * bonus); goldG = Math.round(goldG * bonus); }
         if (eventBonus?.type === "gold") goldG = Math.round(goldG * eventBonus.multiplier);
         if (eventBonus?.type === "xp") xpG = Math.round(xpG * eventBonus.multiplier);
         const prevLevel = char.level;
@@ -861,10 +875,10 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         advanceQuest("gold_earn", goldG);
         if (char.level < prevLevel + 1) advanceQuest("level_up", 1);
         if (loot) {
-          setLootDrop(loot);
-          setShowLoot(true);
+          setLootDrop(loot); setShowLoot(true); setLootAnimKey(k => k + 1);
           if (loot.rarity === "legendary" || loot.rarity === "epic") confetti({ particleCount: 150, spread: 80 });
         }
+        setCombo(0);
         onScore?.("PVE Kill", xpG + goldG);
         return;
       }
@@ -873,18 +887,21 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
       const newHp = Math.max(0, battleHp - eDmg);
       setBattleHp(newHp);
       spawnFloating(eDmg, "enemy");
+      if (eDmg > stats.maxHp * 0.3) { setScreenShake(true); setTimeout(() => setScreenShake(false), 300); }
+      setCombo(0);
       setBattleLog(prev => [...prev.slice(-6), `${battleEnemy.emoji} ${battleEnemy.name} ataca por ${eDmg}!`]);
 
       if (newHp <= 0) {
         setBattleOver(true); setBattleWon(false);
         setBattleLog(prev => [...prev.slice(-6), "\uD83D\uDC80 Foste derrotado!"]);
+        setCombo(0);
         updateChar(c => ({ ...c, totalDeaths: c.totalDeaths + 1 }));
         return;
       }
       setIsPlayerTurn(true);
       setBattleMp(prev => Math.min(stats.maxMp, prev + 3));
     }, 600);
-  }, [char, battleEnemy, isPlayerTurn, battleOver, stats, atkBuff, defBuff, battleHp, eventBonus, updateChar, onScore]);
+  }, [char, battleEnemy, isPlayerTurn, battleOver, stats, atkBuff, defBuff, battleHp, eventBonus, updateChar, onScore, combo]);
 
   const pveSkill = useCallback((skillIdx: number) => {
     if (!char || !battleEnemy || !isPlayerTurn || battleOver) return;
@@ -1126,24 +1143,41 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
   if (screen === "create") {
     const [hoveredClass, setHoveredClass] = useState<number | null>(null);
     const hc = hoveredClass !== null ? CLASSES[hoveredClass] : null;
+    const sc = selectedClass !== null ? CLASSES[selectedClass] : null;
+    const activePreview = sc || hc;
+    const classSkills = activePreview ? SKILLS[CLASSES.indexOf(activePreview)] : null;
     return (
-      <div className="max-w-lg mx-auto p-3 sm:p-4 pb-28 sm:pb-6">
+      <div className="max-w-lg mx-auto p-3 sm:p-4 pb-28 sm:pb-6 relative overflow-hidden">
+        {/* Animated Background Particles */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(12)].map((_, i) => (
+            <motion.div key={i}
+              animate={{ y: [0, -30, 0], opacity: [0.1, 0.3, 0.1], x: [0, Math.sin(i) * 15, 0] }}
+              transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 0.3 }}
+              className="absolute w-1 h-1 rounded-full bg-indigo-400/40"
+              style={{ left: `${8 + (i * 8) % 85}%`, top: `${10 + (i * 13) % 80}%` }} />
+          ))}
+        </div>
+
         {/* Epic Header */}
         <div className="text-center mb-5 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent rounded-2xl" />
-          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 3, -3, 0] }} transition={{ duration: 4, repeat: Infinity }}>
-            <span className="text-6xl block mb-2">\uD83C\uDF0D</span>
+          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/15 via-purple-500/10 to-transparent rounded-2xl" />
+          <motion.div animate={{ y: [0, -8, 0], rotate: [0, 3, -3, 0], scale: [1, 1.05, 1] }} transition={{ duration: 4, repeat: Infinity }}>
+            <span className="text-7xl block mb-2 filter drop-shadow-lg">
+              <span className="inline-block animate-spin" style={{ animationDuration: '8s' }}>⚔️</span>
+            </span>
           </motion.div>
-          <motion.h3 className="font-display text-xl sm:text-2xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative"
+          <motion.h3 className="font-display text-2xl sm:text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent relative"
             animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }} transition={{ duration: 3, repeat: Infinity }}>
             MMORPG Bateu
           </motion.h3>
           <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Mundo persistente \u2022 Duelos PVP \u2022 Loot \u2022 Economia P2P</p>
-          <div className="flex justify-center gap-4 mt-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">\uD83C\uDF1F 8 Zonas</span>
-            <span className="flex items-center gap-1">\u2694\uFE0F PVP</span>
-            <span className="flex items-center gap-1">\uD83D\uDC7A 5 Bosses</span>
-            <span className="flex items-center gap-1">\uD83C\uDF81 Loot</span>
+          <div className="flex justify-center gap-3 mt-2 text-[10px] text-muted-foreground">
+            <motion.span animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="flex items-center gap-1">🌟 8 Zonas</motion.span>
+            <span className="flex items-center gap-1">⚔️ PVP</span>
+            <span className="flex items-center gap-1">👺 5 Bosses</span>
+            <span className="flex items-center gap-1">🎁 Loot</span>
+            <span className="flex items-center gap-1">🏅 Quests</span>
           </div>
         </div>
 
@@ -1152,27 +1186,47 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
           <input
             value={charNameInput} onChange={e => setCharNameInput(e.target.value.slice(0, 16))}
             placeholder={placeholderName}
-            className="w-full px-3 py-2.5 rounded-lg bg-card border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+            className="w-full px-3 py-2.5 rounded-lg bg-card border border-border text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             maxLength={16}
           />
         </div>
 
-        {/* Class Preview */}
+
+        {/* Enhanced Class Preview */}
         <AnimatePresence>
-          {hc && (
+          {activePreview && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="mb-3 p-3 rounded-xl bg-card border border-border overflow-hidden">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{hc.emoji}</span>
-                <div className="flex-1">
-                  <p className="font-bold text-sm" style={{ color: hc.color }}>{hc.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{hc.desc}</p>
-                  <div className="grid grid-cols-5 gap-2 mt-1.5 text-[9px]">
-                    <div className="text-center"><p className="text-red-400 font-bold">\u2764\uFE0F {hc.baseHp}</p><p className="text-muted-foreground">Vida</p></div>
-                    <div className="text-center"><p className="text-orange-400 font-bold">\u2694\uFE0F {hc.baseAtk}</p><p className="text-muted-foreground">Ataque</p></div>
-                    <div className="text-center"><p className="text-blue-400 font-bold">\uD83D\uDEE1\uFE0F {hc.baseDef}</p><p className="text-muted-foreground">Defesa</p></div>
-                    <div className="text-center"><p className="text-green-400 font-bold">\uD83D\uDCA8 {hc.baseSpd}</p><p className="text-muted-foreground">Veloc.</p></div>
-                    <div className="text-center"><p className="text-indigo-400 font-bold">\uD83D\uDD2E {hc.baseMp}</p><p className="text-muted-foreground">Mana</p></div>
+              className="mb-3 rounded-xl overflow-hidden"
+              style={{ border: `1.5px solid ${activePreview.color}40` }}>
+              <div className="p-3 bg-gradient-to-br from-card to-muted/30">
+                <div className="flex items-center gap-3">
+                  <motion.span className="text-4xl" animate={{ rotate: [0, -5, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+                    {activePreview.emoji}
+                  </motion.span>
+                  <div className="flex-1">
+                    <p className="font-bold text-sm" style={{ color: activePreview.color }}>{activePreview.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{activePreview.desc}</p>
+                    <div className="grid grid-cols-5 gap-1.5 mt-2 text-[9px]">
+                      <div className="text-center p-1 rounded bg-red-500/10"><p className="text-red-400 font-bold">❤️ {activePreview.baseHp}</p><p className="text-muted-foreground">Vida</p></div>
+                      <div className="text-center p-1 rounded bg-orange-500/10"><p className="text-orange-400 font-bold">⚔️ {activePreview.baseAtk}</p><p className="text-muted-foreground">Ataque</p></div>
+                      <div className="text-center p-1 rounded bg-blue-500/10"><p className="text-blue-400 font-bold">🛡️ {activePreview.baseDef}</p><p className="text-muted-foreground">Defesa</p></div>
+                      <div className="text-center p-1 rounded bg-green-500/10"><p className="text-green-400 font-bold">💨 {activePreview.baseSpd}</p><p className="text-muted-foreground">Veloc.</p></div>
+                      <div className="text-center p-1 rounded bg-indigo-500/10"><p className="text-indigo-400 font-bold">🔮 {activePreview.baseMp}</p><p className="text-muted-foreground">Mana</p></div>
+                    </div>
+                    {classSkills && classSkills.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="text-[9px] text-muted-foreground mb-1 font-medium">Habilidades:</p>
+                        <div className="flex gap-2">
+                          {classSkills.map((sk, si) => (
+                            <div key={si} className="flex-1 p-1.5 rounded-lg bg-background/50 border border-border text-center">
+                              <span className="text-sm">{sk.emoji}</span>
+                              <p className="text-[8px] font-bold mt-0.5">{sk.name}</p>
+                              <p className="text-[7px] text-muted-foreground">{sk.mpCost} MP • {sk.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1184,16 +1238,25 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
         <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 sm:gap-3">
           {CLASSES.map((c, i) => (
             <motion.button
-              key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-              onHoverStart={() => setHoveredClass(i)} onHoverEnd={() => setHoveredClass(null)}
-              onClick={() => createCharacter(i, charNameInput)}
-              className={`rounded-xl border p-2.5 sm:p-4 text-left transition-all ${hoveredClass === i ? "border-primary/60 bg-primary/5 shadow-lg" : "border-border bg-card hover:border-primary/30"}`}
-            >
-              <span className="text-2xl sm:text-3xl">{c.emoji}</span>
-              <p className="font-bold text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: c.color }}>{c.name}</p>
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{c.desc}</p>
-              <div className="flex gap-1 sm:gap-2 mt-1.5 sm:mt-2 text-[8px] sm:text-[9px] text-muted-foreground">
-                <span>\u2764\uFE0F{c.baseHp}</span><span>\u2694\uFE0F{c.baseAtk}</span><span>\uD83D\uDEE1\uFE0F{c.baseDef}</span><span>\uD83D\uDCA8{c.baseSpd}</span>
+              key={i}
+              whileHover={{ scale: 1.05, y: -3 }}
+              whileTap={{ scale: 0.95 }}
+              onHoverStart={() => { setHoveredClass(i); setSelectedClass(i); }}
+              onHoverEnd={() => setHoveredClass(null)}
+              onClick={() => { setSelectedClass(i); createCharacter(i, charNameInput); }}
+              className={`rounded-xl border-2 p-2.5 sm:p-4 text-left transition-all relative overflow-hidden ${
+                selectedClass === i ? `bg-gradient-to-br from-background to-muted/50 shadow-lg` : hoveredClass === i ? "border-primary/60 bg-primary/5 shadow-lg" : "border-border bg-card hover:border-primary/30"
+              }`}
+              style={selectedClass === i ? { borderColor: c.color } : {}}>
+              {selectedClass === i && (
+                <motion.div className="absolute inset-0 opacity-20 rounded-xl" style={{ background: `radial-gradient(circle at 50% 0%, ${c.color}, transparent 70%)` }}
+                  animate={{ opacity: [0.15, 0.25, 0.15] }} transition={{ duration: 2, repeat: Infinity }} />
+              )}
+              <span className="text-2xl sm:text-3xl relative z-10">{c.emoji}</span>
+              <p className="font-bold text-xs sm:text-sm mt-0.5 sm:mt-1 relative z-10" style={{ color: c.color }}>{c.name}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 line-clamp-2 relative z-10">{c.desc}</p>
+              <div className="flex gap-1 sm:gap-2 mt-1.5 sm:mt-2 text-[8px] sm:text-[9px] text-muted-foreground relative z-10">
+                <span>❤️{c.baseHp}</span><span>⚔️{c.baseAtk}</span><span>🛡️{c.baseDef}</span><span>💨{c.baseSpd}</span>
               </div>
             </motion.button>
           ))}
@@ -1212,7 +1275,7 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
 
   if (screen === "battle" && battleEnemy) {
     return (
-      <div className="max-w-lg mx-auto p-4 relative">
+      <div className={`max-w-lg mx-auto p-4 relative ${screenShake ? "animate-pulse" : ""}`}>
         {/* Floating Damage Numbers */}
         <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
           <AnimatePresence>
@@ -1235,6 +1298,29 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
                 <p className="text-5xl font-black bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-500 bg-clip-text text-transparent animate-pulse">LEVEL UP!</p>
                 <p className="text-2xl mt-1">\u2B50 Nivel {char.level + 1} \u2B50</p>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Critical Hit Flash */}
+        <AnimatePresence>
+          {criticalHit && (
+            <motion.div initial={{ opacity: 0.8 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-45 pointer-events-none bg-yellow-400/15 rounded-xl" />
+          )}
+        </AnimatePresence>
+
+        {/* Combo Counter */}
+        <AnimatePresence>
+          {combo >= 2 && (
+            <motion.div initial={{ opacity: 0, scale: 0.5, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5 }}
+              className="absolute top-16 right-4 z-40 text-right pointer-events-none">
+              <p className="text-3xl font-black bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent"
+                style={{ textShadow: "0 0 20px rgba(249,115,22,0.5)" }}>
+                x{combo}
+              </p>
+              <p className="text-[10px] font-bold text-orange-400">COMBO</p>
+              {combo >= 5 && <motion.p animate={{ opacity: [0.5, 1, 0.5] }} className="text-[9px] text-amber-300">+{(combo * 10)}% bonus!</motion.p>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1554,11 +1640,15 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
                   {unlocked && isCurrent && (
                     <div className="grid grid-cols-3 gap-2 mb-2">
                       {zone.enemies.map((enemy, ei) => (
-                        <motion.button key={ei} whileTap={{ scale: 0.95 }} onClick={() => startPVE(zi, ei)}
-                          className="p-2.5 rounded-xl bg-card border border-border hover:border-primary/40 text-center transition-all">
-                          <span className="text-2xl">{enemy.emoji}</span>
-                          <p className="text-[10px] font-medium mt-1 truncate">{enemy.name}</p>
-                          <p className="text-[9px] text-muted-foreground">+{enemy.xp}XP +{enemy.gold}\uD83D\uDCB0</p>
+                        <motion.button key={ei} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => startPVE(zi, ei)}
+                          className="p-3 rounded-xl bg-card border border-border hover:border-primary/40 text-center transition-all relative overflow-hidden group">
+                          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/5" />
+                          <motion.span className="text-3xl block relative z-10" animate={{ y: [0, -3, 0] }} transition={{ duration: 2, repeat: Infinity, delay: ei * 0.4 }}>{enemy.emoji}</motion.span>
+                          <p className="text-[10px] font-bold mt-1 truncate relative z-10" style={{ color: enemy.color }}>{enemy.name}</p>
+                          <div className="flex justify-center gap-1.5 mt-1 text-[8px] relative z-10">
+                            <span className="text-blue-400">+{enemy.xp}XP</span>
+                            <span className="text-yellow-400">+{enemy.gold}💰</span>
+                          </div>
                         </motion.button>
                       ))}
                     </div>
@@ -1575,49 +1665,63 @@ export default function MMORPGGame({ onScore, liveCode }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <Star className="h-4 w-4 text-amber-400" />
               <span className="font-bold text-sm">Missoes Diarias</span>
-              <span className="ml-auto text-[10px] text-muted-foreground">{quests.filter(q => q.completed).length}/{quests.length} completas</span>
+              <span className="ml-auto text-[10px] text-amber-400 font-medium">⏰ Reset em {new Date(new Date().setHours(24,0,0,0)).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
             </div>
 
             {/* Quest Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
-              <motion.div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
+            <div className="relative w-full h-3 rounded-full bg-gray-800 overflow-hidden">
+              <motion.div className="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 rounded-full"
                 animate={{ width: `${(quests.filter(q => q.completed).length / Math.max(1, quests.length)) * 100}%` }} />
+              <p className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white drop-shadow">{quests.filter(q => q.completed).length}/{quests.length}</p>
             </div>
 
             {quests.length === 0 && <p className="text-center text-xs text-muted-foreground py-8">A carregar missoes...</p>}
 
-            {quests.map((q, i) => (
-              <motion.div key={q.id} whileTap={{ scale: 0.98 }}
-                className={`p-3 rounded-xl border transition-all ${q.completed ? "bg-green-500/5 border-green-500/20" : "bg-card border-border"}`}>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">{q.completed ? "\u2705" : q.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-bold ${q.completed ? "text-green-400" : ""}`}>{q.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{q.desc}</p>
-                    <div className="w-full h-1.5 rounded-full bg-gray-800 overflow-hidden mt-1.5">
-                      <motion.div className="h-full rounded-full" style={{ backgroundColor: q.completed ? "#22c55e" : "#f59e0b" }}
-                        animate={{ width: `${Math.min(100, (q.progress / q.target) * 100)}%` }} />
+            {quests.map((q, i) => {
+              const pct = Math.min(100, (q.progress / q.target) * 100);
+              return (
+                <motion.div key={q.id} whileTap={{ scale: 0.98 }}
+                  className={`p-3 rounded-xl border transition-all relative overflow-hidden ${q.completed ? "bg-green-500/5 border-green-500/30" : "bg-card border-border"}`}>
+                  {q.completed && <div className="absolute top-0 right-0 px-2 py-0.5 bg-green-500 text-[8px] font-bold text-white rounded-bl-lg">COMPLETA</div>}
+                  <div className="flex items-center gap-2.5">
+                    <motion.span className="text-2xl" animate={q.completed ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.5 }}>{q.completed ? "✅" : q.emoji}</motion.span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold ${q.completed ? "text-green-400" : ""}`}>{q.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{q.desc}</p>
+                      <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden mt-1.5">
+                        <motion.div className="h-full rounded-full" style={{ backgroundColor: q.completed ? "#22c55e" : pct > 70 ? "#f59e0b" : "#3b82f6" }}
+                          animate={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[9px] text-muted-foreground">{q.progress}/{q.target}</p>
+                        <p className="text-[9px] font-bold" style={{ color: q.rewardType === "gold" ? "#fbbf24" : "#60a5fa" }}>{q.reward} {q.rewardType === "gold" ? "💰" : "✨"}</p>
+                      </div>
                     </div>
-                    <p className="text-[9px] text-muted-foreground mt-0.5">{q.progress}/{q.target} • Recompensa: {q.reward} {q.rewardType === "gold" ? "\uD83D\uDCB0" : "XP"}</p>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
 
             {/* Achievements Section */}
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-6 pt-4 border-t border-border">
               <div className="flex items-center gap-2 mb-3">
                 <Crown className="h-4 w-4 text-amber-400" />
                 <span className="font-bold text-sm">Conquistas</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">{achievements.filter(a => a.unlocked).length}/{achievements.length}</span>
+                <div className="ml-auto flex items-center gap-1">
+                  <div className="w-16 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(achievements.filter(a => a.unlocked).length / Math.max(1, achievements.length)) * 100}%` }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{achievements.filter(a => a.unlocked).length}/{achievements.length}</span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {achievements.map((a, i) => (
-                  <div key={a.id} className={`p-2 rounded-lg border text-center transition-all ${a.unlocked ? "bg-amber-500/10 border-amber-500/30" : "bg-card/50 border-border opacity-50"}`}>
-                    <span className="text-lg">{a.unlocked ? a.emoji : "\uD83D\uDD12"}</span>
-                    <p className="text-[9px] font-bold mt-0.5">{a.name}</p>
-                    <p className="text-[8px] text-muted-foreground">{a.desc}</p>
-                  </div>
+                  <motion.div key={a.id} whileHover={a.unlocked ? { scale: 1.03 } : {}}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${a.unlocked ? "bg-amber-500/10 border-amber-500/30 shadow-sm" : "bg-card/50 border-border opacity-40"}`}>
+                    <motion.span className="text-2xl block" animate={a.unlocked ? { rotate: [0, -10, 10, 0] } : {}} transition={{ duration: 3, repeat: Infinity, delay: i * 0.3 }}>{a.unlocked ? a.emoji : "🔒"}</motion.span>
+                    <p className="text-[9px] font-bold mt-1">{a.name}</p>
+                    <p className="text-[8px] text-muted-foreground leading-tight">{a.desc}</p>
+                  </motion.div>
                 ))}
               </div>
             </div>

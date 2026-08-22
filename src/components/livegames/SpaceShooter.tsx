@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Coins } from "lucide-react";
+import { RotateCcw, Coins, Zap, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,16 @@ interface Star {
   speed: number;
   size: number;
   brightness: number;
+  layer: number;
+}
+
+interface Nebula {
+  x: number;
+  y: number;
+  radius: number;
+  color: string;
+  speed: number;
+  phase: number;
 }
 
 interface Bullet {
@@ -23,6 +33,7 @@ interface Bullet {
   y: number;
   speed: number;
   owner: 1 | 2;
+  trail: Array<{ x: number; y: number }>;
 }
 
 interface Enemy {
@@ -38,6 +49,8 @@ interface Enemy {
   rotSpeed: number;
   wobble: number;
   wobbleSpeed: number;
+  prevX: number;
+  prevY: number;
 }
 
 interface Particle {
@@ -51,6 +64,16 @@ interface Particle {
   size: number;
 }
 
+interface Shockwave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
+
 interface PlayerState {
   x: number;
   y: number;
@@ -61,6 +84,7 @@ interface PlayerState {
   shootCooldown: number;
   invincible: number;
   name: string;
+  damageFlash: number;
 }
 
 const CANVAS_W = 600;
@@ -69,7 +93,7 @@ const SHIP_SIZE = 18;
 const BULLET_SPEED = 7;
 const BULLET_COOLDOWN = 12;
 const PLAYER_SPEED = 5;
-const STAR_COUNT = 120;
+const STAR_COUNT = 180;
 const INITIAL_ENEMY_INTERVAL = 60;
 const MIN_ENEMY_INTERVAL = 15;
 const INITIAL_ENEMY_SPEED = 1.5;
@@ -79,34 +103,61 @@ const WAVE_DURATION = 900;
 const POINTS_NORMAL = 10;
 const POINTS_BONUS = 30;
 
-const createStars = (): Star[] =>
-  Array.from({ length: STAR_COUNT }, () => ({
-    x: Math.random() * CANVAS_W,
-    y: Math.random() * CANVAS_H,
-    speed: 0.2 + Math.random() * 1.2,
-    size: 0.5 + Math.random() * 1.8,
-    brightness: 0.3 + Math.random() * 0.7,
-  }));
+const createStars = (): Star[] => {
+  const stars: Star[] = [];
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const layer = i < 60 ? 0 : i < 120 ? 1 : 2;
+    stars.push({
+      x: Math.random() * CANVAS_W,
+      y: Math.random() * CANVAS_H,
+      speed: (0.1 + Math.random() * 0.4) + layer * 0.5,
+      size: 0.3 + layer * 0.5 + Math.random() * (0.5 + layer * 0.4),
+      brightness: 0.2 + layer * 0.2 + Math.random() * (0.4 + layer * 0.15),
+      layer,
+    });
+  }
+  return stars;
+};
+
+const createNebulae = (): Nebula[] => [
+  { x: CANVAS_W * 0.2, y: CANVAS_H * 0.3, radius: 120, color: "30, 64, 175", speed: 0.15, phase: 0 },
+  { x: CANVAS_W * 0.75, y: CANVAS_H * 0.6, radius: 100, color: "147, 51, 234", speed: 0.1, phase: 2 },
+  { x: CANVAS_W * 0.5, y: CANVAS_H * 0.15, radius: 80, color: "6, 182, 212", speed: 0.12, phase: 4 },
+];
 
 interface FloatingText {
   x: number; y: number; text: string; color: string; life: number; maxLife: number; vy: number; }
 
 const createExplosion = (x: number, y: number, color: string, isBonus: boolean = false): Particle[] => {
-  const count = isBonus ? 30 : 14;
+  const count = isBonus ? 40 : 18;
   return Array.from({ length: count }, () => {
     const angle = Math.random() * Math.PI * 2;
     const speed = (isBonus ? 2 : 1) + Math.random() * (isBonus ? 5 : 3.5);
+    const isSpark = Math.random() < 0.3;
     return {
       x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: (isBonus ? 30 : 20) + Math.random() * 20,
-      maxLife: isBonus ? 50 : 40,
-      color: isBonus ? (Math.random() < 0.5 ? '#fbbf24' : '#fef08a') : color,
-      size: (isBonus ? 2 : 1.5) + Math.random() * (isBonus ? 4 : 2.5),
+      vx: Math.cos(angle) * speed * (isSpark ? 1.5 : 1),
+      vy: Math.sin(angle) * speed * (isSpark ? 1.5 : 1),
+      life: (isBonus ? 35 : 20) + Math.random() * 25,
+      maxLife: isBonus ? 60 : 45,
+      color: isBonus
+        ? ["#fbbf24", "#fef08a", "#f59e0b", "#ffffff"][Math.floor(Math.random() * 4)]
+        : isSpark
+          ? "#ffffff"
+          : color,
+      size: isSpark ? 1 : (isBonus ? 2 : 1.5) + Math.random() * (isBonus ? 4 : 2.5),
     };
   });
 };
+
+const createShockwave = (x: number, y: number, color: string, isBonus: boolean): Shockwave => ({
+  x, y,
+  radius: 0,
+  maxRadius: isBonus ? 60 : 35,
+  life: isBonus ? 25 : 15,
+  maxLife: isBonus ? 25 : 15,
+  color,
+});
 
 const createScoreText = (x: number, y: number, points: number, isBonus: boolean): FloatingText => ({
   x, y, text: `+${points}`, color: isBonus ? '#fbbf24' : '#ffffff', life: 40, maxLife: 40, vy: -1.5,
@@ -118,7 +169,9 @@ interface GameState {
   enemies: Enemy[];
   particles: Particle[];
   floatingTexts: FloatingText[];
+  shockwaves: Shockwave[];
   stars: Star[];
+  nebulae: Nebula[];
   keys: Set<string>;
   frame: number;
   wave: number;
@@ -127,10 +180,15 @@ interface GameState {
   screenFlash: number;
   killStreaks: [number, number];
   animId: number;
+  shakeX: number;
+  shakeY: number;
+  shakeMagnitude: number;
+  vignettePulse: number;
 }
 
 const SpaceShooter = ({ onScore, liveCode }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameState | null>(null);
   const touchRef = useRef<Record<string, boolean>>({});
 
@@ -140,6 +198,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
   const [wave, setWave] = useState(1);
   const [winner, setWinner] = useState<string | null>(null);
   const [forceTick, setForceTick] = useState(0);
+  const [shakeStyle, setShakeStyle] = useState({ x: 0, y: 0 });
 
   const triggerUI = () => setForceTick((t) => t + 1);
 
@@ -151,6 +210,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       setWinner(w);
       onScore?.("Jogador 1", p1Score);
       onScore?.("Jogador 2", p2Score);
+      setShakeStyle({ x: 0, y: 0 });
     },
     [onScore]
   );
@@ -174,6 +234,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       rotSpeed: (Math.random() - 0.5) * 0.06,
       wobble: Math.random() * Math.PI * 2,
       wobbleSpeed: 0.02 + Math.random() * 0.03,
+      prevX: 30 + Math.random() * (CANVAS_W - 60),
+      prevY: -20,
     });
   }, []);
 
@@ -215,10 +277,11 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p1.shootCooldown <= 0 &&
         p1.lives > 0
       ) {
-        g.bullets.push({ x: p1.x, y: p1.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 1 });
+        g.bullets.push({ x: p1.x, y: p1.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 1, trail: [] });
         p1.shootCooldown = BULLET_COOLDOWN;
       }
       if (p1.invincible > 0) p1.invincible--;
+      if (p1.damageFlash > 0) p1.damageFlash--;
 
       if (keys.has("ArrowLeft")) p2.x = Math.max(SHIP_SIZE, p2.x - PLAYER_SPEED);
       if (keys.has("ArrowRight")) p2.x = Math.min(CANVAS_W - SHIP_SIZE, p2.x + PLAYER_SPEED);
@@ -228,17 +291,36 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p2.shootCooldown <= 0 &&
         p2.lives > 0
       ) {
-        g.bullets.push({ x: p2.x, y: p2.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 2 });
+        g.bullets.push({ x: p2.x, y: p2.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 2, trail: [] });
         p2.shootCooldown = BULLET_COOLDOWN;
       }
       if (p2.invincible > 0) p2.invincible--;
+      if (p2.damageFlash > 0) p2.damageFlash--;
+
+      // Screen shake decay
+      if (g.shakeMagnitude > 0.3) {
+        g.shakeX = (Math.random() - 0.5) * g.shakeMagnitude * 2;
+        g.shakeY = (Math.random() - 0.5) * g.shakeMagnitude * 2;
+        g.shakeMagnitude *= 0.88;
+      } else {
+        g.shakeX = 0;
+        g.shakeY = 0;
+        g.shakeMagnitude = 0;
+      }
+      if (g.shakeMagnitude > 0.5) {
+        setShakeStyle({ x: g.shakeX, y: g.shakeY });
+      }
 
       g.bullets = g.bullets.filter((b) => {
+        b.trail.push({ x: b.x, y: b.y });
+        if (b.trail.length > 5) b.trail.shift();
         b.y -= b.speed;
         return b.y > -10;
       });
 
       g.enemies = g.enemies.filter((e) => {
+        e.prevX = e.x;
+        e.prevY = e.y;
         e.y += e.speed;
         e.rotation += e.rotSpeed;
         e.wobble += e.wobbleSpeed;
@@ -251,12 +333,16 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             if (p1.lives > 0 && p1.invincible <= 0) {
               p1.lives--;
               p1.invincible = 60;
+              p1.damageFlash = 12;
+              g.shakeMagnitude = 6;
               setLives({ p1: p1.lives, p2: p2.lives });
             }
           } else {
             if (p2.lives > 0 && p2.invincible <= 0) {
               p2.lives--;
               p2.invincible = 60;
+              p2.damageFlash = 12;
+              g.shakeMagnitude = 6;
               setLives({ p1: p1.lives, p2: p2.lives });
             }
           }
@@ -292,8 +378,12 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
               if (b.owner === 1) p1.score += totalPts;
               else p2.score += totalPts;
               g.particles.push(...createExplosion(e.x, e.y, e.color, isBonus));
+              g.shockwaves.push(createShockwave(e.x, e.y, e.color, isBonus));
               g.floatingTexts.push(createScoreText(e.x, e.y - 10, totalPts, isBonus));
-              if (isBonus) g.screenFlash = 8;
+              if (isBonus) {
+                g.screenFlash = 10;
+                g.vignettePulse = 15;
+              }
               scoreChanged = true;
             }
             break;
@@ -317,6 +407,12 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         return p.life > 0;
       });
 
+      g.shockwaves = g.shockwaves.filter((sw) => {
+        sw.radius += (sw.maxRadius - sw.radius) * 0.15;
+        sw.life--;
+        return sw.life > 0;
+      });
+
       g.floatingTexts = g.floatingTexts.filter((ft) => {
         ft.y += ft.vy;
         ft.life--;
@@ -324,12 +420,22 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       });
 
       if (g.screenFlash > 0) g.screenFlash--;
+      if (g.vignettePulse > 0) g.vignettePulse--;
 
       g.stars.forEach((s) => {
         s.y += s.speed;
         if (s.y > CANVAS_H) {
-          s.y = 0;
+          s.y = -2;
           s.x = Math.random() * CANVAS_W;
+        }
+      });
+
+      g.nebulae.forEach((n) => {
+        n.y += n.speed;
+        n.phase += 0.005;
+        if (n.y > CANVAS_H + n.radius) {
+          n.y = -n.radius;
+          n.x = Math.random() * CANVAS_W;
         }
       });
 
@@ -339,151 +445,285 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         return;
       }
 
-      ctx.fillStyle = "#05080f";
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      // === RENDERING ===
+      ctx.save();
+      ctx.translate(g.shakeX, g.shakeY);
 
-      // Screen flash
-      if (g.screenFlash > 0) {
-        ctx.fillStyle = `rgba(251, 191, 36, ${g.screenFlash * 0.03})`;
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      }
+      // Background
+      ctx.fillStyle = "#030712";
+      ctx.fillRect(-10, -10, CANVAS_W + 20, CANVAS_H + 20);
 
-      g.stars.forEach((s) => {
-        const twinkle = 0.6 + 0.4 * Math.sin(g.frame * 0.03 + s.x);
-        const alpha = s.brightness * twinkle;
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      // Nebulae
+      g.nebulae.forEach((n) => {
+        const pulseFactor = 1 + Math.sin(n.phase) * 0.15;
+        const r = n.radius * pulseFactor;
+        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r);
+        grad.addColorStop(0, `rgba(${n.color}, 0.06)`);
+        grad.addColorStop(0.5, `rgba(${n.color}, 0.03)`);
+        grad.addColorStop(1, `rgba(${n.color}, 0)`);
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.setLineDash([4, 8]);
+      // Stars with parallax layers
+      const layerColors = ["#94a3b8", "#cbd5e1", "#ffffff"];
+      g.stars.forEach((s) => {
+        const twinkle = 0.6 + 0.4 * Math.sin(g.frame * 0.02 * (s.layer + 1) + s.x * 0.1);
+        const alpha = s.brightness * twinkle;
+        const col = layerColors[s.layer];
+        ctx.fillStyle = col;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+        // Star glow for brighter/larger stars
+        if (s.size > 1.2 && s.layer === 2) {
+          ctx.globalAlpha = alpha * 0.15;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      // Center divider
+      ctx.strokeStyle = "rgba(255,255,255,0.04)";
+      ctx.setLineDash([4, 12]);
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(CANVAS_W / 2, 0);
       ctx.lineTo(CANVAS_W / 2, CANVAS_H);
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // Enemy afterimage trails + enemies
       g.enemies.forEach((e) => {
+        ctx.save();
+        // Afterimage trail
+        ctx.globalAlpha = 0.12;
+        ctx.translate(e.prevX, e.prevY);
+        ctx.rotate(e.rotation);
+        ctx.fillStyle = e.color;
+        drawEnemyShape(ctx, e);
+        ctx.restore();
+
         ctx.save();
         ctx.translate(e.x, e.y);
         ctx.rotate(e.rotation);
 
         if (e.bonus) {
-          const glowSize = e.size + 6 + Math.sin(g.frame * 0.1) * 3;
-          const glow = ctx.createRadialGradient(0, 0, e.size * 0.3, 0, 0, glowSize);
-          glow.addColorStop(0, "rgba(251, 191, 36, 0.4)");
+          const glowSize = e.size + 8 + Math.sin(g.frame * 0.1) * 4;
+          const glow = ctx.createRadialGradient(0, 0, e.size * 0.2, 0, 0, glowSize);
+          glow.addColorStop(0, "rgba(251, 191, 36, 0.5)");
+          glow.addColorStop(0.5, "rgba(251, 191, 36, 0.15)");
           glow.addColorStop(1, "rgba(251, 191, 36, 0)");
           ctx.fillStyle = glow;
           ctx.beginPath();
           ctx.arc(0, 0, glowSize, 0, Math.PI * 2);
           ctx.fill();
 
+          // Rotating sparkle ring
           const sparkleAngle = g.frame * 0.15;
-          for (let i = 0; i < 4; i++) {
-            const a = sparkleAngle + (i * Math.PI) / 2;
-            const sx = Math.cos(a) * (e.size + 8);
-            const sy = Math.sin(a) * (e.size + 8);
-            ctx.fillStyle = "rgba(255, 255, 200, 0.8)";
+          for (let i = 0; i < 6; i++) {
+            const a = sparkleAngle + (i * Math.PI) / 3;
+            const dist = e.size + 10 + Math.sin(g.frame * 0.2 + i) * 3;
+            const sx = Math.cos(a) * dist;
+            const sy = Math.sin(a) * dist;
+            const sparkSize = 1 + Math.sin(g.frame * 0.3 + i * 1.5) * 0.5;
+            ctx.fillStyle = "rgba(255, 255, 200, 0.9)";
             ctx.beginPath();
-            ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+            ctx.arc(sx, sy, sparkSize, 0, Math.PI * 2);
             ctx.fill();
           }
+        } else {
+          // Subtle inner glow for normal enemies
+          const innerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, e.size * 1.2);
+          innerGlow.addColorStop(0, e.color + "30");
+          innerGlow.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = innerGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, e.size * 1.2, 0, Math.PI * 2);
+          ctx.fill();
         }
 
         ctx.fillStyle = e.color;
-        ctx.strokeStyle = e.bonus ? "#fef08a" : "#fca5a5";
+        ctx.strokeStyle = e.bonus ? "#fef08a" : "rgba(255,200,200,0.6)";
         ctx.lineWidth = 1.5;
+        drawEnemyShape(ctx, e);
 
-        if (e.type === "triangle") {
-          ctx.beginPath();
-          ctx.moveTo(0, -e.size);
-          ctx.lineTo(-e.size * 0.8, e.size * 0.7);
-          ctx.lineTo(e.size * 0.8, e.size * 0.7);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(0, -e.size);
-          ctx.lineTo(e.size * 0.7, 0);
-          ctx.lineTo(0, e.size);
-          ctx.lineTo(-e.size * 0.7, 0);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        }
+        // Inner highlight
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        ctx.beginPath();
+        ctx.arc(-e.size * 0.2, -e.size * 0.2, e.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
       });
 
+      // Shockwaves
+      g.shockwaves.forEach((sw) => {
+        const alpha = sw.life / sw.maxLife;
+        ctx.strokeStyle = sw.color;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.lineWidth = 2 * alpha;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner ring
+        ctx.globalAlpha = alpha * 0.2;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+
+      // Bullets with trails
       g.bullets.forEach((b) => {
         const player = b.owner === 1 ? p1 : p2;
-        const bGlow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 6);
-        bGlow.addColorStop(0, player.bulletColor);
+        // Trail
+        b.trail.forEach((t, i) => {
+          const a = (i / b.trail.length) * 0.3;
+          ctx.globalAlpha = a;
+          ctx.fillStyle = player.bulletColor;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Outer glow
+        const bGlow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 8);
+        bGlow.addColorStop(0, player.bulletColor + "80");
+        bGlow.addColorStop(0.5, player.bulletColor + "20");
         bGlow.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = bGlow;
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 8, 0, Math.PI * 2);
         ctx.fill();
 
+        // Elongated bullet core
         ctx.fillStyle = "#fff";
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
+        ctx.ellipse(b.x, b.y, 1.5, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = player.bulletColor;
-        ctx.globalAlpha = 0.3;
         ctx.beginPath();
-        ctx.arc(b.x, b.y + 4, 1.5, 0, Math.PI * 2);
+        ctx.ellipse(b.x, b.y, 2.5, 3, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
       });
 
       const drawShip = (p: PlayerState) => {
         if (p.lives <= 0) return;
-        if (p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0) return;
+        if (p.invincible > 0 && Math.floor(p.invincible / 3) % 2 === 0) return;
 
         ctx.save();
         ctx.translate(p.x, p.y);
 
-        const engineGlow = ctx.createRadialGradient(0, SHIP_SIZE * 0.6, 0, 0, SHIP_SIZE * 0.6, SHIP_SIZE);
-        engineGlow.addColorStop(0, p.color + "60");
+        // Damage flash overlay
+        const isFlashing = p.damageFlash > 0;
+
+        // Shield bubble when invincible
+        if (p.invincible > 0) {
+          const shieldAlpha = 0.15 + Math.sin(g.frame * 0.3) * 0.1;
+          const shieldGrad = ctx.createRadialGradient(0, 0, SHIP_SIZE * 0.5, 0, 0, SHIP_SIZE * 1.6);
+          shieldGrad.addColorStop(0, p.color + "00");
+          shieldGrad.addColorStop(0.7, p.color + "00");
+          shieldGrad.addColorStop(0.85, p.color + Math.round(shieldAlpha * 255).toString(16).padStart(2, "0"));
+          shieldGrad.addColorStop(1, p.color + "00");
+          ctx.fillStyle = shieldGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, SHIP_SIZE * 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Engine glow
+        const engineGlow = ctx.createRadialGradient(0, SHIP_SIZE * 0.5, 0, 0, SHIP_SIZE * 0.5, SHIP_SIZE * 1.2);
+        engineGlow.addColorStop(0, p.color + (isFlashing ? "a0" : "60"));
         engineGlow.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = engineGlow;
         ctx.beginPath();
-        ctx.arc(0, SHIP_SIZE * 0.6, SHIP_SIZE, 0, Math.PI * 2);
+        ctx.arc(0, SHIP_SIZE * 0.5, SHIP_SIZE * 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        const flameH = 8 + Math.sin(g.frame * 0.4) * 4;
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(-5, SHIP_SIZE * 0.4);
-        ctx.lineTo(0, SHIP_SIZE * 0.4 + flameH);
-        ctx.lineTo(5, SHIP_SIZE * 0.4);
-        ctx.closePath();
-        ctx.fill();
+        // Dual engine flames
+        const flameH1 = 10 + Math.sin(g.frame * 0.5) * 5;
+        const flameH2 = 8 + Math.cos(g.frame * 0.6 + 1) * 4;
+        [-4, 4].forEach((offsetX, idx) => {
+          const fh = idx === 0 ? flameH1 : flameH2;
+          // Outer flame
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = 0.4;
+          ctx.beginPath();
+          ctx.moveTo(offsetX - 3, SHIP_SIZE * 0.35);
+          ctx.quadraticCurveTo(offsetX, SHIP_SIZE * 0.35 + fh * 1.1, offsetX + 3, SHIP_SIZE * 0.35);
+          ctx.closePath();
+          ctx.fill();
+          // Inner flame (white-hot)
+          ctx.fillStyle = "#ffffff";
+          ctx.globalAlpha = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(offsetX - 1.5, SHIP_SIZE * 0.35);
+          ctx.quadraticCurveTo(offsetX, SHIP_SIZE * 0.35 + fh * 0.6, offsetX + 1.5, SHIP_SIZE * 0.35);
+          ctx.closePath();
+          ctx.fill();
+        });
         ctx.globalAlpha = 1;
 
-        ctx.fillStyle = p.color;
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 1;
+        // Ship body
+        ctx.fillStyle = isFlashing ? "#ff4444" : p.color;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
         ctx.moveTo(0, -SHIP_SIZE);
-        ctx.lineTo(-SHIP_SIZE * 0.8, SHIP_SIZE * 0.5);
+        ctx.lineTo(-SHIP_SIZE * 0.85, SHIP_SIZE * 0.5);
         ctx.lineTo(-SHIP_SIZE * 0.3, SHIP_SIZE * 0.3);
         ctx.lineTo(0, SHIP_SIZE * 0.45);
         ctx.lineTo(SHIP_SIZE * 0.3, SHIP_SIZE * 0.3);
-        ctx.lineTo(SHIP_SIZE * 0.8, SHIP_SIZE * 0.5);
+        ctx.lineTo(SHIP_SIZE * 0.85, SHIP_SIZE * 0.5);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        // Wing detail lines
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.arc(0, -SHIP_SIZE * 0.15, 3, 0, Math.PI * 2);
+        ctx.moveTo(-SHIP_SIZE * 0.1, -SHIP_SIZE * 0.5);
+        ctx.lineTo(-SHIP_SIZE * 0.6, SHIP_SIZE * 0.35);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(SHIP_SIZE * 0.1, -SHIP_SIZE * 0.5);
+        ctx.lineTo(SHIP_SIZE * 0.6, SHIP_SIZE * 0.35);
+        ctx.stroke();
+
+        // Cockpit glow
+        const cockpitGrad = ctx.createRadialGradient(0, -SHIP_SIZE * 0.2, 0, 0, -SHIP_SIZE * 0.2, 5);
+        cockpitGrad.addColorStop(0, "rgba(255,255,255,0.8)");
+        cockpitGrad.addColorStop(0.5, p.color + "aa");
+        cockpitGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = cockpitGrad;
+        ctx.beginPath();
+        ctx.arc(0, -SHIP_SIZE * 0.2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cockpit center
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath();
+        ctx.arc(0, -SHIP_SIZE * 0.2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wing tip lights
+        const wingTipAlpha = 0.5 + Math.sin(g.frame * 0.15) * 0.5;
+        ctx.fillStyle = `rgba(255,255,255,${wingTipAlpha})`;
+        ctx.beginPath();
+        ctx.arc(-SHIP_SIZE * 0.8, SHIP_SIZE * 0.45, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(SHIP_SIZE * 0.8, SHIP_SIZE * 0.45, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -492,18 +732,20 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       drawShip(p1);
       drawShip(p2);
 
+      // Particles with glow
       g.particles.forEach((pt) => {
         const alpha = pt.life / pt.maxLife;
         ctx.globalAlpha = alpha;
         ctx.fillStyle = pt.color;
+        const sz = pt.size * alpha;
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, pt.size * alpha, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, sz, 0, Math.PI * 2);
         ctx.fill();
         // Glow for larger particles
-        if (pt.size > 3) {
-          ctx.globalAlpha = alpha * 0.3;
+        if (pt.size > 2.5) {
+          ctx.globalAlpha = alpha * 0.25;
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, pt.size * alpha * 2, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, sz * 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
       });
@@ -516,8 +758,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.font = `bold ${Math.round(14 * scale)}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.textAlign = "center";
+        ctx.strokeStyle = "rgba(0,0,0,0.9)";
         ctx.lineWidth = 3;
         ctx.strokeText(ft.text, ft.x, ft.y);
         ctx.fillStyle = ft.color;
@@ -525,15 +767,52 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.restore();
       });
 
-      const drawDangerZone = (leftX: number, rightX: number, color: string) => {
-        const grad = ctx.createLinearGradient(leftX, CANVAS_H - 30, leftX, CANVAS_H);
+      // Danger zone indicators
+      const drawDangerZone = (leftX: number, rightX: number, color: string, player: PlayerState) => {
+        const grad = ctx.createLinearGradient(leftX, CANVAS_H - 40, leftX, CANVAS_H);
+        const baseAlpha = player.lives <= 1 ? "25" : "12";
         grad.addColorStop(0, "rgba(0,0,0,0)");
-        grad.addColorStop(1, color + "15");
+        grad.addColorStop(1, color + baseAlpha);
         ctx.fillStyle = grad;
-        ctx.fillRect(leftX, CANVAS_H - 30, rightX - leftX, 30);
+        ctx.fillRect(leftX, CANVAS_H - 40, rightX - leftX, 40);
+        // Critical warning pulse
+        if (player.lives <= 1 && player.lives > 0) {
+          const pulse = Math.sin(g.frame * 0.15) * 0.5 + 0.5;
+          ctx.globalAlpha = pulse * 0.08;
+          ctx.fillStyle = color;
+          ctx.fillRect(leftX, 0, rightX - leftX, CANVAS_H);
+          ctx.globalAlpha = 1;
+        }
       };
-      drawDangerZone(0, CANVAS_W / 2, "#22d3ee");
-      drawDangerZone(CANVAS_W / 2, CANVAS_W, "#f472b6");
+      drawDangerZone(0, CANVAS_W / 2, "#22d3ee", p1);
+      drawDangerZone(CANVAS_W / 2, CANVAS_W, "#f472b6", p2);
+
+      // Screen flash
+      if (g.screenFlash > 0) {
+        ctx.fillStyle = `rgba(251, 191, 36, ${g.screenFlash * 0.025})`;
+        ctx.fillRect(-10, -10, CANVAS_W + 20, CANVAS_H + 20);
+      }
+
+      // Vignette
+      const vignetteIntensity = g.vignettePulse > 0 ? 0.4 + (g.vignettePulse / 15) * 0.3 : 0.3;
+      const vignette = ctx.createRadialGradient(
+        CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
+        CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.75
+      );
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, `rgba(0,0,0,${vignetteIntensity})`);
+      ctx.fillStyle = vignette;
+      ctx.fillRect(-10, -10, CANVAS_W + 20, CANVAS_H + 20);
+
+      // Scanlines (subtle)
+      ctx.globalAlpha = 0.015;
+      ctx.fillStyle = "#000";
+      for (let y = 0; y < CANVAS_H; y += 3) {
+        ctx.fillRect(0, y, CANVAS_W, 1);
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
 
       g.animId = requestAnimationFrame(() => gameLoop(g));
     },
@@ -554,6 +833,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             shootCooldown: 0,
             invincible: 0,
             name: "Jogador 1",
+            damageFlash: 0,
           },
           {
             x: CANVAS_W * 0.7,
@@ -565,13 +845,16 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             shootCooldown: 0,
             invincible: 0,
             name: "Jogador 2",
+            damageFlash: 0,
           },
         ],
         bullets: [],
         enemies: [],
         particles: [],
         floatingTexts: [],
+        shockwaves: [],
         stars: createStars(),
+        nebulae: createNebulae(),
         keys: new Set<string>(),
         frame: 0,
         wave: startWave,
@@ -580,11 +863,16 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         screenFlash: 0,
         killStreaks: [0, 0],
         animId: 0,
+        shakeX: 0,
+        shakeY: 0,
+        shakeMagnitude: 0,
+        vignettePulse: 0,
       };
       gameRef.current = g;
       setLives({ p1: 3, p2: 3 });
       setWave(startWave);
       setGameStatus("playing");
+      setShakeStyle({ x: 0, y: 0 });
       return g;
     },
     []
@@ -613,6 +901,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
     setWave(1);
     setWinner(null);
     setGameStatus("idle");
+    setShakeStyle({ x: 0, y: 0 });
   }, []);
 
   useEffect(() => {
@@ -639,20 +928,23 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
     };
   }, []);
 
-  const renderLives = (count: number, color: string) =>
+  const renderLives = (count: number, color: "cyan" | "pink") =>
     Array.from({ length: 3 }, (_, i) => (
-      <span
+      <motion.span
         key={i}
+        initial={i < count ? { scale: 0 } : { scale: 1 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 25, delay: i * 0.05 }}
         className={cn(
-          "inline-block w-3 h-3 rounded-full border transition-all",
+          "inline-block w-3.5 h-3.5 rounded-full border-2 transition-colors duration-300",
           i < count
             ? cn(
                 "border-transparent",
                 color === "cyan"
-                  ? "bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"
-                  : "bg-pink-400 shadow-[0_0_6px_rgba(244,114,182,0.6)]"
+                  ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]"
+                  : "bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.7)]"
               )
-            : "border-zinc-600 bg-transparent"
+            : "border-zinc-700 bg-zinc-900/50"
         )}
       />
     ));
@@ -667,58 +959,110 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-[620px] mx-auto">
+      {/* Score Panel */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-3"
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="w-full rounded-2xl bg-gradient-to-r from-cyan-950/50 via-zinc-900/80 to-pink-950/50 border border-white/[0.08] p-4 shadow-xl shadow-black/30 backdrop-blur-sm"
       >
         <div className="flex items-center justify-between">
-          <div className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-cyan-400 text-sm font-bold tracking-wide">Jogador 1</span>
+          {/* Player 1 */}
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+              <span className="text-cyan-400 text-sm font-bold tracking-wider uppercase">Jogador 1</span>
+            </div>
             <div className="flex items-center gap-2">
               <Coins className="w-4 h-4 text-cyan-400" />
-              <span className="text-cyan-300 text-xl font-mono font-bold">{scores.p1}</span>
+              <motion.span
+                key={scores.p1}
+                initial={{ scale: 1.3, color: "#fff" }}
+                animate={{ scale: 1, color: "#a5f3fc" }}
+                transition={{ duration: 0.3 }}
+                className="text-cyan-300 text-2xl font-mono font-bold tabular-nums"
+              >
+                {scores.p1}
+              </motion.span>
             </div>
-            <div className="flex gap-1">{renderLives(lives.p1, "cyan")}</div>
-            <span className="text-[10px] text-zinc-500">A/D mover · W atirar</span>
+            <div className="flex gap-1.5 mt-0.5">{renderLives(lives.p1, "cyan")}</div>
+            <span className="text-[10px] text-zinc-500 font-mono">A/D mover \u00B7 W atirar</span>
           </div>
 
-          <div className="flex flex-col items-center gap-1 px-3">
-            <Badge
-              variant="outline"
-              className="border-amber-500/40 text-amber-400 text-xs bg-amber-500/10"
+          {/* Wave Center */}
+          <div className="flex flex-col items-center gap-1.5 px-4">
+            <motion.div
+              key={wave}
+              initial={{ scale: 1.4, rotate: -5 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              Onda {wave}
-            </Badge>
-            <div className="w-16 h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 text-amber-400 text-xs bg-amber-500/10 px-3 py-0.5 font-bold tracking-wide"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Onda {wave}
+              </Badge>
+            </motion.div>
+            <div className="w-20 h-1.5 bg-zinc-800/80 rounded-full mt-1 overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-cyan-500 to-pink-500 rounded-full"
+                className="h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-full"
                 animate={{ x: ["-100%", "100%"] }}
                 transition={{ duration: WAVE_DURATION / 60, ease: "linear", repeat: Infinity }}
                 style={{ width: "50%" }}
               />
             </div>
+            {gameStatus === "playing" && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-[10px] text-zinc-500"
+              >
+                <Shield className="w-2.5 h-2.5" />
+                Co-op
+              </motion.div>
+            )}
           </div>
 
-          <div className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-pink-400 text-sm font-bold tracking-wide">Jogador 2</span>
-            <div className="flex items-center gap-2">
-              <Coins className="w-4 h-4 text-pink-400" />
-              <span className="text-pink-300 text-xl font-mono font-bold">{scores.p2}</span>
+          {/* Player 2 */}
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-pink-400 text-sm font-bold tracking-wider uppercase">Jogador 2</span>
+              <div className="w-2 h-2 rounded-full bg-pink-400 shadow-[0_0_6px_rgba(244,114,182,0.8)]" />
             </div>
-            <div className="flex gap-1">{renderLives(lives.p2, "pink")}</div>
-            <span className="text-[10px] text-zinc-500">
-              ← → mover · ↑ atirar
+            <div className="flex items-center gap-2">
+              <motion.span
+                key={scores.p2}
+                initial={{ scale: 1.3, color: "#fff" }}
+                animate={{ scale: 1, color: "#f9a8d4" }}
+                transition={{ duration: 0.3 }}
+                className="text-pink-300 text-2xl font-mono font-bold tabular-nums"
+              >
+                {scores.p2}
+              </motion.span>
+              <Coins className="w-4 h-4 text-pink-400" />
+            </div>
+            <div className="flex gap-1.5 mt-0.5">{renderLives(lives.p2, "pink")}</div>
+            <span className="text-[10px] text-zinc-500 font-mono">
+              {"\u2190"}{"\u2192"} mover \u00B7 {"\u2191"} atirar
             </span>
           </div>
         </div>
       </motion.div>
 
+      {/* Canvas Container */}
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="relative rounded-xl overflow-hidden border border-zinc-800 shadow-lg shadow-black/50"
+        animate={{ 
+          opacity: 1, 
+          scale: 1, 
+          x: shakeStyle.x, 
+          y: shakeStyle.y 
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
+        className="relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-black/60"
         style={{ maxWidth: CANVAS_W, width: "100%" }}
       >
         <canvas
@@ -729,118 +1073,209 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
           style={{ imageRendering: "auto" }}
         />
 
-        <AnimatePresence>
+        {/* Idle Overlay */}
+        <AnimatePresence mode="wait">
           {gameStatus === "idle" && (
             <motion.div
               key="idle-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm"
+              exit={{ opacity: 0, scale: 1.05 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md"
             >
               <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                className="mb-4"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
               >
-                <span className="text-5xl">🚀</span>
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  className="mb-4 text-center"
+                >
+                  <span className="text-6xl">{"\uD83D\uDE80"}</span>
+                </motion.div>
               </motion.div>
-              <h2 className="text-white text-xl font-bold mb-2">Space Shooter</h2>
-              <p className="text-zinc-400 text-sm mb-6 text-center px-4">
-                Destrua os inimigos e acumule pontos!
-                <br />
-                Inimigos dourados valem mais!
-              </p>
-              <Button
-                onClick={startGame}
-                className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8"
+              <motion.h2
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.25, type: "spring", stiffness: 200 }}
+                className="text-white text-2xl font-bold mb-1 tracking-tight"
               >
-                Iniciar Jogo
-              </Button>
+                Space Shooter
+              </motion.h2>
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
+                className="text-zinc-400 text-sm mb-6 text-center px-8 leading-relaxed"
+              >
+                Destrua os inimigos e acumule pontos!{"\n"}
+                Inimigos dourados valem mais!
+              </motion.p>
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.45, type: "spring", stiffness: 200 }}
+              >
+                <Button
+                  onClick={startGame}
+                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-10 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-shadow duration-300"
+                >
+                  Iniciar Jogo
+                </Button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
+        {/* Game Over Overlay */}
+        <AnimatePresence mode="wait">
           {gameStatus === "over" && (
             <motion.div
               key="over-overlay"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-lg"
             >
+              {/* Trophy */}
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1, rotate: [0, -5, 5, 0] }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="mb-2"
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 15 }}
+                className="mb-3"
               >
-                <span className="text-4xl">🏆</span>
+                <span className="text-5xl">{"\uD83C\uDFC6"}</span>
               </motion.div>
-              <h2 className="text-white text-2xl font-bold mb-1">Fim de Jogo!</h2>
-              {winner && (
-                <p
-                  className={cn(
-                    "text-lg font-bold mb-3",
-                    winner === "Jogador 1" ? "text-cyan-400" : "text-pink-400"
-                  )}
-                >
-                  {winner} venceu!
-                </p>
-              )}
-              {!winner && <p className="text-amber-400 text-lg font-bold mb-3">Empate!</p>}
-              <div className="flex gap-6 mb-5">
-                <div className="text-center">
-                  <p className="text-cyan-400 text-sm">Jogador 1</p>
-                  <p className="text-white text-2xl font-mono font-bold">{scores.p1}</p>
+
+              {/* Title */}
+              <motion.h2
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4, type: "spring", stiffness: 200, damping: 20 }}
+                className="text-white text-3xl font-bold mb-2 tracking-tight"
+              >
+                Fim de Jogo!
+              </motion.h2>
+
+              {/* Winner text */}
+              <AnimatePresence>
+                {winner && (
+                  <motion.p
+                    initial={{ y: 20, opacity: 0, scale: 0.8 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.55, type: "spring", stiffness: 300 }}
+                    className={cn(
+                      "text-xl font-bold mb-4 px-4 py-1 rounded-full",
+                      winner === "Jogador 1"
+                        ? "text-cyan-300 bg-cyan-500/10 border border-cyan-500/20"
+                        : "text-pink-300 bg-pink-500/10 border border-pink-500/20"
+                    )}
+                  >
+                    {winner} venceu!
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {!winner && (
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.55 }}
+                    className="text-amber-400 text-xl font-bold mb-4"
+                  >
+                    Empate!
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              {/* Score Cards */}
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7, type: "spring", stiffness: 200, damping: 20 }}
+                className="flex gap-4 mb-6"
+              >
+                <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-xl px-6 py-3 text-center min-w-[110px]">
+                  <p className="text-cyan-400 text-xs font-bold uppercase tracking-wider mb-1">Jogador 1</p>
+                  <motion.p
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.9, type: "spring", stiffness: 400, damping: 15 }}
+                    className="text-white text-3xl font-mono font-bold"
+                  >
+                    {scores.p1}
+                  </motion.p>
                 </div>
-                <div className="text-zinc-600 text-2xl font-light">vs</div>
-                <div className="text-center">
-                  <p className="text-pink-400 text-sm">Jogador 2</p>
-                  <p className="text-white text-2xl font-mono font-bold">{scores.p2}</p>
+
+                <div className="flex items-center">
+                  <span className="text-zinc-600 text-lg font-light italic">vs</span>
                 </div>
-              </div>
-              <div className="flex gap-3">
+
+                <div className="bg-pink-950/30 border border-pink-500/20 rounded-xl px-6 py-3 text-center min-w-[110px]">
+                  <p className="text-pink-400 text-xs font-bold uppercase tracking-wider mb-1">Jogador 2</p>
+                  <motion.p
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 1.0, type: "spring", stiffness: 400, damping: 15 }}
+                    className="text-white text-3xl font-mono font-bold"
+                  >
+                    {scores.p2}
+                  </motion.p>
+                </div>
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 1.1, type: "spring", stiffness: 200 }}
+                className="flex gap-3"
+              >
                 <Button
                   onClick={nextRound}
                   variant="outline"
-                  className="border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
+                  className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/50 rounded-xl px-5 transition-all duration-200"
                 >
-                  Próximo Round
+                  Pr\u00f3ximo Round
                 </Button>
                 <Button
                   onClick={resetAll}
                   variant="outline"
-                  className="border-zinc-600 text-zinc-400 hover:bg-zinc-700"
+                  className="border-zinc-600/50 text-zinc-400 hover:bg-zinc-700/50 hover:border-zinc-500/50 rounded-xl px-5 transition-all duration-200"
                 >
-                  <RotateCcw className="w-4 h-4 mr-1" />
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
                   Reiniciar Tudo
                 </Button>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
+      {/* Touch Controls */}
       <AnimatePresence>
         {gameStatus === "playing" && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
             className="w-full max-w-[620px] grid grid-cols-2 gap-4 mt-1"
           >
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2.5">
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("a", true); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleTouch("a", false); }}
                 onMouseDown={() => handleTouch("a", true)}
                 onMouseUp={() => handleTouch("a", false)}
                 onMouseLeave={() => handleTouch("a", false)}
-                className="w-14 h-14 rounded-xl bg-cyan-900/40 border border-cyan-500/30 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-cyan-950/50 border border-cyan-500/20 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 active:border-cyan-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                ◀
+                {"\u25C0"}
               </button>
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("p1shoot", true); }}
@@ -848,9 +1283,9 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
                 onMouseDown={() => handleTouch("p1shoot", true)}
                 onMouseUp={() => handleTouch("p1shoot", false)}
                 onMouseLeave={() => handleTouch("p1shoot", false)}
-                className="w-14 h-14 rounded-xl bg-cyan-900/40 border border-cyan-500/30 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-cyan-950/50 border border-cyan-500/20 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 active:border-cyan-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                🔫
+                {"\uD83D\uDD2B"}
               </button>
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("d", true); }}
@@ -858,22 +1293,22 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
                 onMouseDown={() => handleTouch("d", true)}
                 onMouseUp={() => handleTouch("d", false)}
                 onMouseLeave={() => handleTouch("d", false)}
-                className="w-14 h-14 rounded-xl bg-cyan-900/40 border border-cyan-500/30 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-cyan-950/50 border border-cyan-500/20 text-cyan-400 text-xl font-bold active:bg-cyan-800/50 active:border-cyan-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                ▶
+                {"\u25B6"}
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2.5">
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("ArrowLeft", true); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleTouch("ArrowLeft", false); }}
                 onMouseDown={() => handleTouch("ArrowLeft", true)}
                 onMouseUp={() => handleTouch("ArrowLeft", false)}
                 onMouseLeave={() => handleTouch("ArrowLeft", false)}
-                className="w-14 h-14 rounded-xl bg-pink-900/40 border border-pink-500/30 text-pink-400 text-xl font-bold active:bg-pink-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-pink-950/50 border border-pink-500/20 text-pink-400 text-xl font-bold active:bg-pink-800/50 active:border-pink-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                ◀
+                {"\u25C0"}
               </button>
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("p2shoot", true); }}
@@ -881,9 +1316,9 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
                 onMouseDown={() => handleTouch("p2shoot", true)}
                 onMouseUp={() => handleTouch("p2shoot", false)}
                 onMouseLeave={() => handleTouch("p2shoot", false)}
-                className="w-14 h-14 rounded-xl bg-pink-900/40 border border-pink-500/30 text-pink-400 text-xl font-bold active:bg-pink-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-pink-950/50 border border-pink-500/20 text-pink-400 text-xl font-bold active:bg-pink-800/50 active:border-pink-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                🔫
+                {"\uD83D\uDD2B"}
               </button>
               <button
                 onTouchStart={(e) => { e.preventDefault(); handleTouch("ArrowRight", true); }}
@@ -891,29 +1326,31 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
                 onMouseDown={() => handleTouch("ArrowRight", true)}
                 onMouseUp={() => handleTouch("ArrowRight", false)}
                 onMouseLeave={() => handleTouch("ArrowRight", false)}
-                className="w-14 h-14 rounded-xl bg-pink-900/40 border border-pink-500/30 text-pink-400 text-xl font-bold active:bg-pink-800/50 select-none touch-none"
+                className="w-14 h-14 rounded-2xl bg-pink-950/50 border border-pink-500/20 text-pink-400 text-xl font-bold active:bg-pink-800/50 active:border-pink-500/40 active:scale-95 select-none touch-none transition-all duration-100"
               >
-                ▶
+                {"\u25B6"}
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Instructions */}
       <AnimatePresence>
         {gameStatus === "idle" && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-center text-zinc-500 text-xs space-y-1 mt-1"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="text-center text-zinc-500 text-xs space-y-1.5 mt-1"
           >
             <p>
-              <span className="inline-block w-2.5 h-2.5 bg-cyan-400 rounded-sm mr-1" />
-              Triângulos / Diamantes = {POINTS_NORMAL} pts
+              <span className="inline-block w-2.5 h-2.5 bg-cyan-400 rounded-sm mr-1.5 opacity-70" />
+              Tri\u00e2ngulos / Diamantes = {POINTS_NORMAL} pts
             </p>
             <p>
-              <span className="inline-block w-2.5 h-2.5 bg-amber-400 rounded-sm mr-1" />
+              <span className="inline-block w-2.5 h-2.5 bg-amber-400 rounded-sm mr-1.5 opacity-70" />
               Inimigo Dourado = {POINTS_BONUS} pts
             </p>
             <p className="text-zinc-600">
@@ -925,5 +1362,26 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
     </div>
   );
 };
+
+function drawEnemyShape(ctx: CanvasRenderingContext2D, e: Enemy) {
+  if (e.type === "triangle") {
+    ctx.beginPath();
+    ctx.moveTo(0, -e.size);
+    ctx.lineTo(-e.size * 0.8, e.size * 0.7);
+    ctx.lineTo(e.size * 0.8, e.size * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(0, -e.size);
+    ctx.lineTo(e.size * 0.7, 0);
+    ctx.lineTo(0, e.size);
+    ctx.lineTo(-e.size * 0.7, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
 
 export default SpaceShooter;

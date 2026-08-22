@@ -82,6 +82,79 @@ const DIRECTION_DELTA: Record<Direction, Point> = {
 
 const ALL_DIRECTIONS: Direction[] = ["up", "down", "left", "right"];
 
+// ─── Particle System ──────────────────────────────────────────────
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
+
+function spawnParticles(
+  particles: Particle[],
+  gx: number,
+  gy: number,
+  cell: number,
+  color: string,
+  count: number = 8
+) {
+  const cx = gx * cell + cell / 2;
+  const cy = gy * cell + cell / 2;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
+    const speed = 1.5 + Math.random() * 3;
+    particles.push({
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      maxLife: 1,
+      color,
+      size: 2 + Math.random() * 3,
+    });
+  }
+}
+
+function updateAndDrawParticles(
+  ctx: CanvasRenderingContext2D,
+  particles: Particle[],
+  dt: number
+) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= dt * 2.5;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    const alpha = p.life;
+    const size = p.size * p.life;
+    // Glow
+    const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
+    glow.addColorStop(0, p.color.replace('1)', `${alpha * 0.4})`).replace('rgb', 'rgba'));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size * 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Core
+    ctx.fillStyle = p.color.replace('1)', `${alpha})`).replace('rgb', 'rgba');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function randomFood(snake1: Snake, snake2: Snake): Point {
   const occupied = new Set<string>();
   for (const p of snake1.body) occupied.add(`${p.x},${p.y}`);
@@ -305,6 +378,9 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
   const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
+  const particlesRef = useRef<Particle[]>([]);
+  const lastFrameTimeRef = useRef<number>(performance.now());
+  const foodPulseRef = useRef<number>(0);
 
   const [gameState, setGameState] = useState<GameState>("waiting");
   const [speed, setSpeed] = useState<SpeedLevel>("normal");
@@ -316,6 +392,8 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
   const [winner, setWinner] = useState<"Jogador 1" | "Jogador 2" | "Computador" | "empate" | null>(null);
   const [canvasSize, setCanvasSize] = useState(500);
   const [flashScore, setFlashScore] = useState<1 | 2 | null>(null);
+  const [score1Display, setScore1Display] = useState(0);
+  const [score2Display, setScore2Display] = useState(0);
   const [gameMode, setGameMode] = useState<GameMode>("jogador");
   const [difficulty, setDifficulty] = useState<Difficulty>("medio");
 
@@ -493,6 +571,7 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       setLength1((l) => l + 1);
       setFlashScore(1);
       setTimeout(() => setFlashScore(null), 400);
+      spawnParticles(particlesRef.current, food.x, food.y, 500 / GRID_SIZE, 'rgba(34, 211, 238, 1)', 12);
       foodRef.current = randomFood(s1, s2);
     } else {
       s1.body.pop();
@@ -502,6 +581,8 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       setLength2((l) => l + 1);
       setFlashScore(2);
       setTimeout(() => setFlashScore(null), 400);
+      const p2Color = gameModeRef.current === "computador" ? 'rgba(52, 211, 153, 1)' : 'rgba(244, 114, 182, 1)';
+      spawnParticles(particlesRef.current, food.x, food.y, 500 / GRID_SIZE, p2Color, 12);
       foodRef.current = randomFood(s1, s2);
     } else {
       s2.body.pop();
@@ -517,16 +598,25 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
     const w = canvas.width;
     const h = canvas.height;
     const cell = w / GRID_SIZE;
+    const now = performance.now();
+    const dt = Math.min((now - lastFrameTimeRef.current) / 1000, 0.1);
+    lastFrameTimeRef.current = now;
+    foodPulseRef.current += dt * 3;
 
-    ctx.clearRect(0, 0, w, h);
-
-    ctx.fillStyle = "#0f172a";
+    // ── Background with radial gradient ──
+    const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.75);
+    bgGrad.addColorStop(0, "#1e293b");
+    bgGrad.addColorStop(1, "#0f172a");
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
-    ctx.lineWidth = 0.5;
+    // ── Grid with glow ──
     for (let i = 0; i <= GRID_SIZE; i++) {
       const pos = i * cell;
+      const distFromCenter = Math.abs(i - GRID_SIZE / 2) / (GRID_SIZE / 2);
+      const alpha = 0.04 + 0.04 * (1 - distFromCenter);
+      ctx.strokeStyle = `rgba(148, 163, 184, ${alpha})`;
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(pos, 0);
       ctx.lineTo(pos, h);
@@ -537,43 +627,114 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       ctx.stroke();
     }
 
+    // Subtle glow dots at grid intersections near center
+    for (let x = 0; x < GRID_SIZE; x += 5) {
+      for (let y = 0; y < GRID_SIZE; y += 5) {
+        const gx = x * cell + cell / 2;
+        const gy = y * cell + cell / 2;
+        const dist = Math.hypot(gx - w / 2, gy - h / 2) / (w / 2);
+        if (dist < 0.7) {
+          const dotAlpha = 0.08 * (1 - dist);
+          ctx.fillStyle = `rgba(99, 102, 241, ${dotAlpha})`;
+          ctx.beginPath();
+          ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // ── Food with pulsing glow ──
     const food = foodRef.current;
     const fx = food.x * cell + cell / 2;
     const fy = food.y * cell + cell / 2;
     const foodRadius = cell * 0.35;
+    const pulse = Math.sin(foodPulseRef.current) * 0.15 + 1;
 
-    const glowRadius = cell * 0.9;
+    // Outer animated glow ring
+    const ringRadius = cell * (1.0 + Math.sin(foodPulseRef.current * 1.3) * 0.3);
+    const ringAlpha = 0.08 + Math.sin(foodPulseRef.current) * 0.04;
+    const ringGlow = ctx.createRadialGradient(fx, fy, ringRadius * 0.5, fx, fy, ringRadius);
+    ringGlow.addColorStop(0, `rgba(251, 191, 36, ${ringAlpha})`);
+    ringGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
+    ctx.fillStyle = ringGlow;
+    ctx.beginPath();
+    ctx.arc(fx, fy, ringRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner glow
+    const glowRadius = cell * 0.9 * pulse;
     const glow = ctx.createRadialGradient(fx, fy, 0, fx, fy, glowRadius);
-    glow.addColorStop(0, "rgba(251, 191, 36, 0.35)");
+    glow.addColorStop(0, "rgba(251, 191, 36, 0.4)");
+    glow.addColorStop(0.5, "rgba(251, 191, 36, 0.15)");
     glow.addColorStop(1, "rgba(251, 191, 36, 0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(fx, fy, glowRadius, 0, Math.PI * 2);
     ctx.fill();
 
+    // Food body with highlight
     const foodGrad = ctx.createRadialGradient(
       fx - foodRadius * 0.3,
       fy - foodRadius * 0.3,
       0,
       fx,
       fy,
-      foodRadius
+      foodRadius * pulse
     );
-    foodGrad.addColorStop(0, "#fde68a");
-    foodGrad.addColorStop(0.6, "#fbbf24");
+    foodGrad.addColorStop(0, "#fef3c7");
+    foodGrad.addColorStop(0.4, "#fde68a");
+    foodGrad.addColorStop(0.7, "#fbbf24");
     foodGrad.addColorStop(1, "#d97706");
     ctx.fillStyle = foodGrad;
     ctx.beginPath();
-    ctx.arc(fx, fy, foodRadius, 0, Math.PI * 2);
+    ctx.arc(fx, fy, foodRadius * pulse, 0, Math.PI * 2);
     ctx.fill();
 
+    // Specular highlight on food
+    const specGrad = ctx.createRadialGradient(
+      fx - foodRadius * 0.25,
+      fy - foodRadius * 0.25,
+      0,
+      fx - foodRadius * 0.25,
+      fy - foodRadius * 0.25,
+      foodRadius * 0.5
+    );
+    specGrad.addColorStop(0, "rgba(255, 255, 255, 0.6)");
+    specGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = specGrad;
+    ctx.beginPath();
+    ctx.arc(fx - foodRadius * 0.2, fy - foodRadius * 0.2, foodRadius * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Draw Snakes ──
     const drawSnake = (
       snake: Snake,
       color1: string,
       color2: string,
-      glowColor: string
+      glowColor: string,
+      trailColor: string
     ) => {
       const body = snake.body;
+
+      // Draw connecting trail/glow between segments
+      if (body.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = cell * 0.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 0.15;
+        ctx.shadowColor = trailColor;
+        ctx.shadowBlur = cell * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(body[0].x * cell + cell / 2, body[0].y * cell + cell / 2);
+        for (let i = 1; i < body.length; i++) {
+          ctx.lineTo(body[i].x * cell + cell / 2, body[i].y * cell + cell / 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
       for (let i = body.length - 1; i >= 0; i--) {
         const seg = body[i];
         const t = i / Math.max(body.length - 1, 1);
@@ -584,15 +745,18 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
         const segSize = isHead ? cell * 0.45 : cell * 0.38 - t * cell * 0.08;
 
         if (isHead) {
-          const headGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * 0.7);
+          // Large head glow
+          const headGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * 1.0);
           headGlow.addColorStop(0, glowColor);
+          headGlow.addColorStop(0.5, glowColor.replace(/[\d.]+\)$/, "0.08)"));
           headGlow.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = headGlow;
           ctx.beginPath();
-          ctx.arc(cx, cy, cell * 0.7, 0, Math.PI * 2);
+          ctx.arc(cx, cy, cell * 1.0, 0, Math.PI * 2);
           ctx.fill();
         }
 
+        // Segment body with inner highlight
         const segGrad = ctx.createRadialGradient(
           cx - segSize * 0.3,
           cy - segSize * 0.3,
@@ -602,6 +766,7 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
           segSize
         );
         segGrad.addColorStop(0, color1);
+        segGrad.addColorStop(0.7, color2);
         segGrad.addColorStop(1, color2);
         ctx.fillStyle = segGrad;
 
@@ -614,6 +779,30 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
           isHead ? segSize * 0.4 : segSize * 0.35
         );
         ctx.fill();
+
+        // Inner specular on each segment
+        if (isHead || i % 2 === 0) {
+          const spec = ctx.createRadialGradient(
+            cx - segSize * 0.2,
+            cy - segSize * 0.2,
+            0,
+            cx,
+            cy,
+            segSize * 0.6
+          );
+          spec.addColorStop(0, "rgba(255,255,255,0.15)");
+          spec.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = spec;
+          ctx.beginPath();
+          ctx.roundRect(
+            seg.x * cell + (cell - segSize * 2) / 2,
+            seg.y * cell + (cell - segSize * 2) / 2,
+            segSize * 2,
+            segSize * 2,
+            isHead ? segSize * 0.4 : segSize * 0.35
+          );
+          ctx.fill();
+        }
 
         if (isHead) {
           const dir = snake.direction;
@@ -636,6 +825,10 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
             e2 = { x: cx + eyeOffset, y: cy + eyeOffset * 0.5 };
           }
 
+          // Eye whites with glow
+          ctx.save();
+          ctx.shadowColor = "rgba(255,255,255,0.3)";
+          ctx.shadowBlur = 3;
           ctx.fillStyle = "#ffffff";
           ctx.beginPath();
           ctx.arc(e1.x, e1.y, eyeRadius, 0, Math.PI * 2);
@@ -643,6 +836,7 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
           ctx.beginPath();
           ctx.arc(e2.x, e2.y, eyeRadius, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
 
           const pupilShift = cell * 0.03;
           const pd = DIRECTION_DELTA[dir];
@@ -662,27 +856,47 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       snake1Ref.current,
       "#22d3ee",
       "#0891b2",
-      "rgba(34, 211, 238, 0.2)"
+      "rgba(34, 211, 238, 0.25)",
+      "rgba(34, 211, 238, 0.5)"
     );
 
     // Player 2 / AI Bot — different color based on mode
     if (gameModeRef.current === "computador") {
-      // AI Bot — emerald/green theme
       drawSnake(
         snake2Ref.current,
         "#34d399",
         "#059669",
-        "rgba(52, 211, 153, 0.2)"
+        "rgba(52, 211, 153, 0.25)",
+        "rgba(52, 211, 153, 0.5)"
       );
     } else {
-      // Player 2 — pink
       drawSnake(
         snake2Ref.current,
         "#f472b6",
         "#c026d3",
-        "rgba(244, 114, 182, 0.2)"
+        "rgba(244, 114, 182, 0.25)",
+        "rgba(244, 114, 182, 0.5)"
       );
     }
+
+    // ── Particles ──
+    updateAndDrawParticles(ctx, particlesRef.current, dt);
+
+    // ── Vignette overlay ──
+    const vigGrad = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w * 0.72);
+    vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+    vigGrad.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // ── Subtle border glow ──
+    ctx.save();
+    ctx.strokeStyle = "rgba(99, 102, 241, 0.12)";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "rgba(99, 102, 241, 0.15)";
+    ctx.shadowBlur = 10;
+    ctx.strokeRect(1, 1, w - 2, h - 2);
+    ctx.restore();
   }, []);
 
   const gameLoop = useCallback(() => {

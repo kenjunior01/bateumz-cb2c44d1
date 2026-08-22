@@ -3,8 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Crown, RotateCcw, Bot, Clock, History, ChevronRight, Shield, Swords } from 'lucide-react';
+import { Crown, RotateCcw, Bot, Clock, History, Shield, Swords } from 'lucide-react';
 
 // ===================== TYPES =====================
 
@@ -617,9 +616,24 @@ export default function ChessGame({ onScore, liveCode }: Props) {
   if (phase === 'menu') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-6 p-4">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl">♔</motion.div>
-        <h2 className="text-2xl font-bold">Xadrez</h2>
-        <div className="flex flex-col gap-3 w-64">
+        <motion.div
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className="text-6xl drop-shadow-lg"
+        >{PIECE_SYMBOLS.w.K}</motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="text-2xl font-bold"
+        >Xadrez</motion.h2>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="flex flex-col gap-3 w-64"
+        >
           <div className="text-sm font-medium text-muted-foreground">Dificuldade</div>
           <div className="flex gap-2">
             {DIFFICULTY_OPTIONS.map(d => (
@@ -636,10 +650,16 @@ export default function ChessGame({ onScore, liveCode }: Props) {
               </Button>
             ))}
           </div>
-        </div>
-        <Button size="lg" onClick={startGame} className="gap-2 mt-2">
-          <Swords className="w-5 h-5" /> Jogar contra Bot
-        </Button>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Button size="lg" onClick={startGame} className="gap-2 mt-2">
+            <Swords className="w-5 h-5" /> Jogar contra Bot
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -649,21 +669,33 @@ export default function ChessGame({ onScore, liveCode }: Props) {
     const promoTypes: PieceType[] = ['Q', 'R', 'B', 'N'];
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-4">
-        <h3 className="text-xl font-bold">Promover peão</h3>
+        <motion.h3
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-xl font-bold"
+        >Promover peão</motion.h3>
         <div className="flex gap-3">
-          {promoTypes.map(pt => (
+          {promoTypes.map((pt, i) => (
             <motion.button
               key={pt}
-              whileHover={{ scale: 1.1 }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: i * 0.08, type: "spring", stiffness: 250, damping: 20 }}
+              whileHover={{ scale: 1.15, y: -4 }}
               whileTap={{ scale: 0.95 }}
-              className="w-16 h-16 flex items-center justify-center text-4xl bg-card border-2 border-border rounded-xl hover:border-primary transition-colors cursor-pointer"
+              className="w-16 h-16 flex items-center justify-center text-4xl bg-card border-2 border-border rounded-xl hover:border-primary hover:shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-shadow cursor-pointer"
               onClick={() => handlePromotion(pt)}
             >
               {PIECE_SYMBOLS.w[pt]}
             </motion.button>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">Escolha a peça para promoção</p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-sm text-muted-foreground"
+        >Escolha a peça para promoção</motion.p>
       </div>
     );
   }
@@ -673,21 +705,64 @@ export default function ChessGame({ onScore, liveCode }: Props) {
   const blackKingPos = findKing(board, 'b');
   const whiteInCheck = checkState === 'w';
   const blackInCheck = checkState === 'b';
+  const coordFiles = 'abcdefgh';
+  const sortedCapturedW = [...capturedByWhite].sort((a, b) => PIECE_VALUES[b.type] - PIECE_VALUES[a.type]);
+  const sortedCapturedB = [...capturedByBlack].sort((a, b) => PIECE_VALUES[b.type] - PIECE_VALUES[a.type]);
+  const materialAdv = capturedByWhite.reduce((s, p) => s + PIECE_VALUES[p.type], 0)
+    - capturedByBlack.reduce((s, p) => s + PIECE_VALUES[p.type], 0);
 
   return (
     <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 p-4 w-full max-w-4xl mx-auto">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2 px-1">
+      <div className="flex flex-col gap-2">
+        {/* Black player bar */}
+        <motion.div
+          animate={turn === 'b' && phase === 'playing' ? { boxShadow: ['0 0 0px rgba(99,102,241,0)', '0 0 8px rgba(99,102,241,0.4)', '0 0 0px rgba(99,102,241,0)'] } : {}}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-card border border-border"
+        >
           <div className="flex items-center gap-2">
-            <Bot className="w-4 h-4" />
+            <Bot className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium">Pretas (Bot)</span>
-            {turn === 'b' && phase === 'playing' && <Badge variant="default" className="text-xs">Vez</Badge>}
+            {turn === 'b' && phase === 'playing' && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-block w-2 h-2 rounded-full bg-primary"
+              />
+            )}
           </div>
-          <div className={cn("flex items-center gap-1 text-sm font-mono px-2 py-1 rounded", blackInCheck && "bg-red-500/20 text-red-500")}>
+          <div className={cn(
+            'flex items-center gap-1 text-sm font-mono px-2 py-1 rounded-md',
+            blackInCheck ? 'bg-red-500/20 text-red-500 font-bold' : 'bg-muted/50'
+          )}>
             <Clock className="w-3 h-3" />
             {formatTime(blackTime)}
           </div>
-        </div>
+        </motion.div>
+
+        {/* Captured by black (white pieces lost) */}
+        {sortedCapturedB.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-0.5 px-2 min-h-[24px] flex-wrap"
+          >
+            {sortedCapturedB.map((p, i) => (
+              <motion.span
+                key={i}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="text-lg leading-none opacity-70"
+              >
+                {PIECE_SYMBOLS[p.color][p.type]}
+              </motion.span>
+            ))}
+            {materialAdv < 0 && (
+              <span className="text-xs font-bold text-red-400 ml-1">+{-materialAdv}</span>
+            )}
+          </motion.div>
+        )}
 
         <div className="relative border-2 border-border rounded-lg overflow-hidden shadow-xl">
           {Array.from({ length: 8 }, (_, r) => (
@@ -697,43 +772,81 @@ export default function ChessGame({ onScore, liveCode }: Props) {
                 const piece = board[r][c];
                 const isSelected = selected?.[0] === r && selected?.[1] === c;
                 const isValidTarget = validMoveTargets.some(m => m.toR === r && m.toC === c);
-                const isLastMove = lastMove && ((lastMove.fromR === r && lastMove.fromC === c) || (lastMove.toR === r && lastMove.toC === c));
+                const isLastMoveFrom = lastMove != null && lastMove.fromR === r && lastMove.fromC === c;
+                const isLastMoveTo = lastMove != null && lastMove.toR === r && lastMove.toC === c;
                 const isKingInCheck = (whiteInCheck && whiteKingPos[0] === r && whiteKingPos[1] === c) ||
                   (blackInCheck && blackKingPos[0] === r && blackKingPos[1] === c);
+                const canInteract = phase === 'playing' && turn === 'w' && piece?.color === 'w';
 
                 return (
                   <motion.button
                     key={c}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={canInteract ? { scale: 1.08 } : {}}
+                    whileTap={isValidTarget || canInteract ? { scale: 0.92 } : {}}
                     className={cn(
-                      "w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl relative transition-colors",
-                      isLight ? "bg-amber-100" : "bg-amber-800",
-                      isSelected && "bg-emerald-400/60",
-                      isLastMove && !isSelected && "bg-yellow-300/50",
-                      isKingInCheck && "bg-red-500/50",
-                      isValidTarget && "cursor-pointer",
-                      !piece && !isValidTarget && "cursor-default",
+                      'w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl relative transition-all duration-150 outline-none',
+                      isLight ? 'bg-amber-100' : 'bg-amber-800',
+                      isSelected && 'bg-emerald-400/70 ring-2 ring-inset ring-emerald-300 shadow-[inset_0_0_12px_rgba(52,211,153,0.5)]',
+                      isLastMoveTo && !isSelected && (isLight ? 'bg-yellow-200/80' : 'bg-yellow-600/60'),
+                      isLastMoveFrom && !isSelected && (isLight ? 'bg-yellow-200/50' : 'bg-yellow-700/40'),
+                      isKingInCheck && 'bg-red-500/50',
+                      isValidTarget && 'cursor-pointer',
+                      canInteract && 'cursor-pointer',
+                      !piece && !isValidTarget && !canInteract && 'cursor-default',
                     )}
                     onClick={() => handleCellClick(r, c)}
                   >
                     {isValidTarget && !piece && (
-                      <div className="w-3 h-3 rounded-full bg-black/20" />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        className="w-3 h-3 rounded-full bg-black/25"
+                      />
                     )}
                     {isValidTarget && piece && (
-                      <div className="absolute inset-0 border-4 border-black/20 rounded-full" />
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="absolute inset-0.5 border-[3px] border-black/25 rounded-full"
+                      />
+                    )}
+                    {isKingInCheck && (
+                      <motion.div
+                        animate={{ opacity: [0.3, 0.7, 0.3] }}
+                        transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                        className="absolute inset-0 rounded-sm bg-red-500/40"
+                      />
                     )}
                     {piece && (
                       <motion.span
                         key={`${piece.type}-${piece.color}-${r}-${c}`}
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 22 }}
                         className={cn(
-                          "select-none leading-none",
-                          piece.color === 'w' ? "drop-shadow-sm" : "drop-shadow-md",
+                          'select-none leading-none relative z-10',
+                          piece.color === 'w'
+                            ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                            : 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.5)]',
+                          isSelected && 'drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]',
                         )}
                       >
                         {PIECE_SYMBOLS[piece.color][piece.type]}
                       </motion.span>
+                    )}
+                    {r === 7 && (
+                      <span className={cn(
+                        'absolute bottom-0 right-0.5 text-[9px] font-mono leading-none pointer-events-none',
+                        isLight ? 'text-amber-800/50' : 'text-amber-100/50'
+                      )}>{coordFiles[c]}</span>
+                    )}
+                    {c === 0 && (
+                      <span className={cn(
+                        'absolute top-0 left-0.5 text-[9px] font-mono leading-none pointer-events-none',
+                        isLight ? 'text-amber-800/50' : 'text-amber-100/50'
+                      )}>{8 - r}</span>
                     )}
                   </motion.button>
                 );
@@ -742,29 +855,64 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           ))}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-1">
+        {/* Captured by white (black pieces taken) */}
+        {sortedCapturedW.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-0.5 px-2 min-h-[24px] flex-wrap"
+          >
+            {sortedCapturedW.map((p, i) => (
+              <motion.span
+                key={i}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="text-lg leading-none opacity-70"
+              >
+                {PIECE_SYMBOLS[p.color][p.type]}
+              </motion.span>
+            ))}
+            {materialAdv > 0 && (
+              <span className="text-xs font-bold text-emerald-400 ml-1">+{materialAdv}</span>
+            )}
+          </motion.div>
+        )}
+
+        {/* White player bar */}
+        <motion.div
+          animate={turn === 'w' && phase === 'playing' ? { boxShadow: ['0 0 0px rgba(99,102,241,0)', '0 0 8px rgba(99,102,241,0.4)', '0 0 0px rgba(99,102,241,0)'] } : {}}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-card border border-border"
+        >
           <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4" />
+            <Crown className="w-4 h-4 text-yellow-500" />
             <span className="text-sm font-medium">Brancas (Você)</span>
-            {turn === 'w' && phase === 'playing' && <Badge variant="default" className="text-xs">Vez</Badge>}
+            {turn === 'w' && phase === 'playing' && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-block w-2 h-2 rounded-full bg-primary"
+              />
+            )}
           </div>
-          <div className={cn("flex items-center gap-1 text-sm font-mono px-2 py-1 rounded", whiteInCheck && "bg-red-500/20 text-red-500")}>
+          <div className={cn(
+            'flex items-center gap-1 text-sm font-mono px-2 py-1 rounded-md',
+            whiteInCheck ? 'bg-red-500/20 text-red-500 font-bold' : 'bg-muted/50'
+          )}>
             <Clock className="w-3 h-3" />
             {formatTime(whiteTime)}
           </div>
-        </div>
-
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground text-xs">Capturadas:</span>
-            {capturedByWhite.map((p, i) => (
-              <span key={i}>{PIECE_SYMBOLS[p.color][p.type]}</span>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </div>
 
-      <div className="flex flex-col gap-3 w-64">
+      {/* Side panel */}
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-col gap-3 w-64"
+      >
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowHistory(h => !h)} className="gap-1">
             <History className="w-4 h-4" /> Histórico
@@ -774,22 +922,56 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           </Button>
         </div>
 
-        {showHistory && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-card border rounded-lg p-3">
-            <div ref={historyRef} className="max-h-60 overflow-y-auto text-xs space-y-1">
-              {moveHistory.map((m, i) => {
-                const notation = moveToNotation(m, moveHistory.slice(0, i).reduce((b, mv) => applyMoveToBoard(b, mv), createInitialBoard()));
-                const moveNum = Math.floor(i / 2) + 1;
-                return (
-                  <div key={i} className={cn("flex gap-2", i % 2 === 0 && "font-medium")}>
-                    {i % 2 === 0 && <span className="text-muted-foreground w-6">{moveNum}.</span>}
-                    <span>{notation}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-card border rounded-lg overflow-hidden"
+            >
+              <div ref={historyRef} className="max-h-60 overflow-y-auto p-2 text-xs">
+                {moveHistory.length === 0 && (
+                  <p className="text-muted-foreground text-center py-2">Nenhum movimento</p>
+                )}
+                {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
+                  const whiteMove = moveHistory[i * 2];
+                  const blackMove = moveHistory[i * 2 + 1];
+                  const whiteNotation = whiteMove
+                    ? moveToNotation(whiteMove, moveHistory.slice(0, i * 2).reduce((b, mv) => applyMoveToBoard(b, mv), createInitialBoard()))
+                    : '';
+                  const boardAfterWhite = whiteMove
+                    ? applyMoveToBoard(moveHistory.slice(0, i * 2).reduce((b, mv) => applyMoveToBoard(b, mv), createInitialBoard()), whiteMove)
+                    : null;
+                  const blackNotation = blackMove && boardAfterWhite
+                    ? moveToNotation(blackMove, boardAfterWhite)
+                    : '';
+                  const isLastPair = i === Math.ceil(moveHistory.length / 2) - 1;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={cn(
+                        'flex gap-1 px-2 py-1 rounded',
+                        isLastPair && 'bg-primary/10 font-medium',
+                        !isLastPair && i % 2 === 0 && 'bg-muted/30',
+                      )}
+                    >
+                      <span className="text-muted-foreground w-6 text-right shrink-0">{i + 1}.</span>
+                      <span className="w-14 shrink-0">{whiteNotation}</span>
+                      {blackMove ? (
+                        <span className="w-14">{blackNotation}</span>
+                      ) : (
+                        <span className="w-14 text-muted-foreground">...</span>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="bg-card border rounded-lg p-3 space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -799,37 +981,77 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           {phase === 'playing' && (
             <div className="text-sm space-y-1">
               <p>Vez: {turn === 'w' ? 'Brancas' : 'Pretas'}</p>
-              {checkState && <p className="text-red-500 font-bold animate-pulse">Xeque!</p>}
+              {checkState && (
+                <motion.p
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-red-500 font-bold flex items-center gap-1"
+                >
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                  >Xeque!</motion.span>
+                </motion.p>
+              )}
               <p className="text-xs text-muted-foreground">Dificuldade: {DIFFICULTY_OPTIONS.find(d => d.value === difficulty)?.label}</p>
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
+      {/* Game over overlay */}
       <AnimatePresence>
         {phase === 'ended' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           >
             <motion.div
-              initial={{ scale: 0.8, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-card border rounded-2xl p-6 max-w-sm w-full text-center space-y-4"
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              className="bg-card border rounded-2xl p-8 max-w-sm w-full text-center space-y-5 shadow-2xl"
             >
-              <div className="text-5xl">♔</div>
-              <h3 className="text-xl font-bold">Fim de Jogo</h3>
-              <p className="text-muted-foreground">{gameResult}</p>
-              <div className="flex gap-3 justify-center">
+              <motion.div
+                initial={{ y: -10 }}
+                animate={{ y: 0 }}
+                transition={{ repeat: Infinity, repeatType: 'reverse', duration: 2 }}
+                className="text-6xl"
+              >{PIECE_SYMBOLS.w.K}</motion.div>
+              <motion.h3
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="text-2xl font-bold"
+              >Fim de Jogo</motion.h3>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="text-muted-foreground text-lg"
+              >{gameResult}</motion.p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-xs text-muted-foreground"
+              >{moveHistory.length} movimentos jogados</motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="flex gap-3 justify-center"
+              >
                 <Button onClick={startGame} className="gap-2">
                   <RotateCcw className="w-4 h-4" /> Jogar Novamente
                 </Button>
                 <Button variant="outline" onClick={() => setPhase('menu')}>
                   Menu
                 </Button>
-              </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}

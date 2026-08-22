@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Timer, Calculator, Send, Bot } from "lucide-react";
+import { RotateCcw, Timer, Calculator, Send, Bot, Flame, Zap, Trophy, Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ type PlayerStats = {
   totalTime: number;
   streak: number;
   bestStreak: number;
+  fastestTime: number;
 };
 
 type RoundResult = {
@@ -35,6 +36,13 @@ type RoundResult = {
   p1Time: number | null;
   p2Time: number | null;
   timedOut: boolean;
+};
+
+type ScorePop = {
+  id: number;
+  player: 1 | 2;
+  points: number;
+  streak: number;
 };
 
 const TOTAL_ROUNDS = 10;
@@ -114,6 +122,12 @@ function getDifficultyColor(d: Difficulty): string {
   return "bg-red-500/20 text-red-400 border-red-500/30";
 }
 
+function getDifficultyGlow(d: Difficulty): string {
+  if (d === "Fácil") return "shadow-green-500/20";
+  if (d === "Médio") return "shadow-yellow-500/20";
+  return "shadow-red-500/20";
+}
+
 function ConfettiParticles({ color }: { color: string }) {
   const particles = Array.from({ length: 20 }, (_, i) => ({
     id: i,
@@ -152,6 +166,78 @@ function ConfettiParticles({ color }: { color: string }) {
   );
 }
 
+function ScorePopAnimation({ pop }: { pop: ScorePop }) {
+  const isP1 = pop.player === 1;
+  return (
+    <motion.div
+      key={pop.id}
+      className={cn(
+        "absolute -top-2 left-1/2 pointer-events-none z-30 flex flex-col items-center",
+        isP1 ? "text-cyan-300" : "text-pink-300"
+      )}
+      initial={{ y: 0, opacity: 1, scale: 0.5 }}
+      animate={{ y: -40, opacity: 0, scale: 1.2 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
+      <motion.span
+        className="text-sm font-black whitespace-nowrap flex items-center gap-0.5"
+        initial={{ scale: 0.5 }}
+        animate={{ scale: [0.5, 1.3, 1] }}
+        transition={{ duration: 0.4, type: "spring", stiffness: 400 }}
+      >
+        <Zap className="w-3 h-3" />
+        +{pop.points}
+      </motion.span>
+      {pop.streak > 1 && (
+        <motion.span
+          className="text-[10px] font-bold text-yellow-400 whitespace-nowrap flex items-center gap-0.5"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <Flame className="w-2.5 h-2.5" />
+          x{pop.streak}
+        </motion.span>
+      )}
+    </motion.div>
+  );
+}
+
+function StreakBadge({ streak, color }: { streak: number; color: "cyan" | "pink" }) {
+  if (streak <= 1) return null;
+  return (
+    <motion.div
+      className={cn(
+        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black",
+        color === "cyan"
+          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+          : "bg-pink-500/20 text-pink-300 border border-pink-500/30",
+        streak >= 5 && "ring-2 ring-yellow-500/40 bg-yellow-500/15 border-yellow-500/40 text-yellow-300"
+      )}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 500, damping: 15 }}
+    >
+      <motion.div
+        animate={streak >= 3 ? { scale: [1, 1.3, 1], rotate: [0, -5, 5, 0] } : {}}
+        transition={{ duration: 0.6, repeat: streak >= 3 ? Infinity : 0, repeatDelay: 1 }}
+      >
+        <Flame className={cn("w-3.5 h-3.5", streak >= 5 && "text-yellow-400")} />
+      </motion.div>
+      <span>{streak}</span>
+      {streak >= 3 && (
+        <motion.span
+          className="text-[9px] uppercase tracking-wider"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          COMBO
+        </motion.span>
+      )}
+    </motion.div>
+  );
+}
+
 export default function QuickMath({ onScore, liveCode }: Props) {
   const [gameState, setGameState] = useState<GameState>("idle");
   const [mode, setMode] = useState<GameMode>("player");
@@ -164,8 +250,8 @@ export default function QuickMath({ onScore, liveCode }: Props) {
   const [wrongMode, setWrongMode] = useState<WrongMode>("retry");
   const [p1Input, setP1Input] = useState("");
   const [p2Input, setP2Input] = useState("");
-  const [p1Stats, setP1Stats] = useState<PlayerStats>({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
-  const [p2Stats, setP2Stats] = useState<PlayerStats>({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
+  const [p1Stats, setP1Stats] = useState<PlayerStats>({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
+  const [p2Stats, setP2Stats] = useState<PlayerStats>({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
   const [p1Locked, setP1Locked] = useState(false);
   const [p2Locked, setP2Locked] = useState(false);
   const [p1Wrong, setP1Wrong] = useState(false);
@@ -175,11 +261,15 @@ export default function QuickMath({ onScore, liveCode }: Props) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiColor, setConfettiColor] = useState("cyan");
   const [botThinking, setBotThinking] = useState(false);
+  const [scorePops, setScorePops] = useState<ScorePop[]>([]);
+  const [p1FlashCorrect, setP1FlashCorrect] = useState(false);
+  const [p2FlashCorrect, setP2FlashCorrect] = useState(false);
   const p1Ref = useRef<HTMLInputElement>(null);
   const p2Ref = useRef<HTMLInputElement>(null);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const roundEnded = useRef(false);
   const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scorePopId = useRef(0);
 
   const getP2Name = useCallback(() => (mode === "bot" ? "Computador" : "Jogador 2"), [mode]);
 
@@ -221,11 +311,20 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     [clearTimer]
   );
 
+  const triggerScorePop = useCallback((player: 1 | 2, streak: number) => {
+    const points = 10 + (streak > 1 ? streak * 2 : 0);
+    const id = ++scorePopId.current;
+    setScorePops((prev) => [...prev, { id, player, points, streak }]);
+    setTimeout(() => {
+      setScorePops((prev) => prev.filter((p) => p.id !== id));
+    }, 1000);
+  }, []);
+
   const startGame = useCallback(() => {
     clearBotTimeout();
     const firstProblem = generateProblem(1);
-    setP1Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
-    setP2Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
+    setP1Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
+    setP2Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
     setCurrentRound(1);
     setProblem(firstProblem);
     setP1Input("");
@@ -237,6 +336,9 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setRoundResult(null);
     setCountdown(COUNTDOWN_SECONDS);
     setBotThinking(false);
+    setScorePops([]);
+    setP1FlashCorrect(false);
+    setP2FlashCorrect(false);
     roundEnded.current = false;
     setGameState("countdown");
   }, [clearBotTimeout]);
@@ -271,11 +373,14 @@ export default function QuickMath({ onScore, liveCode }: Props) {
       const setStats = player === 1 ? setP1Stats : setP2Stats;
       const otherSetStats = player === 1 ? setP2Stats : setP1Stats;
 
+      const newStreak = (player === 1 ? p1Stats.streak : p2Stats.streak) + 1;
+
       setStats((prev) => ({
         correct: prev.correct + 1,
         totalTime: prev.totalTime + elapsed,
         streak: prev.streak + 1,
         bestStreak: Math.max(prev.bestStreak, prev.streak + 1),
+        fastestTime: Math.min(prev.fastestTime, elapsed),
       }));
 
       otherSetStats((prev) => ({
@@ -295,11 +400,21 @@ export default function QuickMath({ onScore, liveCode }: Props) {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 1500);
 
+      if (player === 1) {
+        setP1FlashCorrect(true);
+        setTimeout(() => setP1FlashCorrect(false), 800);
+      } else {
+        setP2FlashCorrect(true);
+        setTimeout(() => setP2FlashCorrect(false), 800);
+      }
+
+      triggerScorePop(player, newStreak);
+
       setGameState("roundResult");
       setBotThinking(false);
       toast.success(`${name} — Correto! (${elapsed.toFixed(1)}s)`);
     },
-    [clearTimer, clearBotTimeout, roundStartTime, getP2Name]
+    [clearTimer, clearBotTimeout, roundStartTime, getP2Name, p1Stats.streak, p2Stats.streak, triggerScorePop]
   );
 
   const handleSubmit = useCallback(
@@ -354,11 +469,14 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               const otherSetStats = otherPlayer === 1 ? setP1Stats : setP2Stats;
               const loserSetStats = player === 1 ? setP2Stats : setP1Stats;
 
+              const newStreak = (otherPlayer === 1 ? p1Stats.streak : p2Stats.streak) + 1;
+
               otherSetStats((prev) => ({
                 correct: prev.correct + 1,
                 totalTime: prev.totalTime + elapsed,
                 streak: prev.streak + 1,
                 bestStreak: Math.max(prev.bestStreak, prev.streak + 1),
+                fastestTime: Math.min(prev.fastestTime, elapsed),
               }));
               loserSetStats((prev) => ({ ...prev, streak: 0 }));
 
@@ -374,6 +492,16 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               setShowConfetti(true);
               setTimeout(() => setShowConfetti(false), 1500);
 
+              if (otherPlayer === 1) {
+                setP1FlashCorrect(true);
+                setTimeout(() => setP1FlashCorrect(false), 800);
+              } else {
+                setP2FlashCorrect(true);
+                setTimeout(() => setP2FlashCorrect(false), 800);
+              }
+
+              triggerScorePop(otherPlayer, newStreak);
+
               setGameState("roundResult");
               setBotThinking(false);
               toast.success(`${otherName} — Correto! (${elapsed.toFixed(1)}s)`);
@@ -382,7 +510,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
         }
       }
     },
-    [gameState, problem, p1Input, p2Input, p1Locked, p2Locked, wrongMode, handleWin, clearTimer, clearBotTimeout, roundStartTime, mode, getP2Name]
+    [gameState, problem, p1Input, p2Input, p1Locked, p2Locked, wrongMode, handleWin, clearTimer, clearBotTimeout, roundStartTime, mode, getP2Name, p1Stats.streak, p2Stats.streak, triggerScorePop]
   );
 
   /* Bot AI effect */
@@ -438,6 +566,8 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setP2Wrong(false);
     setRoundResult(null);
     setBotThinking(false);
+    setP1FlashCorrect(false);
+    setP2FlashCorrect(false);
     roundEnded.current = false;
     setGameState("playing");
     setRoundStartTime(Date.now());
@@ -453,8 +583,8 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setProblem(null);
     setP1Input("");
     setP2Input("");
-    setP1Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
-    setP2Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0 });
+    setP1Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
+    setP2Stats({ correct: 0, totalTime: 0, streak: 0, bestStreak: 0, fastestTime: Infinity });
     setP1Locked(false);
     setP2Locked(false);
     setP1Wrong(false);
@@ -462,9 +592,14 @@ export default function QuickMath({ onScore, liveCode }: Props) {
     setRoundResult(null);
     setShowConfetti(false);
     setBotThinking(false);
+    setScorePops([]);
+    setP1FlashCorrect(false);
+    setP2FlashCorrect(false);
   }, [clearTimer, clearBotTimeout]);
 
   const timerPercent = gameState === "playing" ? (timeLeft / timerDuration) * 100 : 100;
+  const timerUrgent = gameState === "playing" && timeLeft <= timerDuration * 0.25;
+  const timerWarning = gameState === "playing" && timeLeft <= timerDuration * 0.5 && !timerUrgent;
   const timerBarColor = timeLeft > timerDuration * 0.5
     ? "from-green-500 to-green-400"
     : timeLeft > timerDuration * 0.25
@@ -473,22 +608,36 @@ export default function QuickMath({ onScore, liveCode }: Props) {
 
   const p1AvgTime = p1Stats.correct > 0 ? (p1Stats.totalTime / p1Stats.correct).toFixed(1) : "—";
   const p2AvgTime = p2Stats.correct > 0 ? (p2Stats.totalTime / p2Stats.correct).toFixed(1) : "—";
+  const p1Fastest = p1Stats.fastestTime === Infinity ? null : p1Stats.fastestTime;
+  const p2Fastest = p2Stats.fastestTime === Infinity ? null : p2Stats.fastestTime;
+
+  const p1Score = p1Stats.correct * 10 + (p1Stats.correct > 0 ? Math.max(0, Math.round((timerDuration - p1Stats.totalTime / p1Stats.correct) * 2)) : 0);
+  const p2Score = p2Stats.correct * 10 + (p2Stats.correct > 0 ? Math.max(0, Math.round((timerDuration - p2Stats.totalTime / p2Stats.correct) * 2)) : 0);
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-4 relative">
       {showConfetti && <ConfettiParticles color={confettiColor} />}
 
+      {/* Score Header */}
       <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
-        <motion.div
-          className="flex items-center gap-2"
-          key={p1Stats.correct}
-          animate={{ scale: [1, 1.15, 1] }}
-          transition={{ duration: 0.3 }}
-        >
-          <span className="text-cyan-400 font-bold text-sm sm:text-base">Jogador 1</span>
-          <span className="text-cyan-300 text-lg sm:text-xl font-black">{p1Stats.correct}</span>
-          <span className="text-cyan-500/60 text-xs">✓</span>
-        </motion.div>
+        <div className="relative">
+          <motion.div
+            className="flex items-center gap-2"
+            key={"p1score-" + p1Stats.correct}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.35, type: "spring", stiffness: 400 }}
+          >
+            <span className="text-cyan-400 font-bold text-sm sm:text-base">Jogador 1</span>
+            <span className="text-cyan-300 text-lg sm:text-xl font-black tabular-nums">{p1Stats.correct}</span>
+            <span className="text-cyan-500/60 text-xs">✓</span>
+          </motion.div>
+          <StreakBadge streak={p1Stats.streak} color="cyan" />
+          <AnimatePresence>
+            {scorePops.filter((p) => p.player === 1).map((pop) => (
+              <ScorePopAnimation key={pop.id} pop={pop} />
+            ))}
+          </AnimatePresence>
+        </div>
 
         <div className="flex flex-col items-center">
           <h2 className="text-white font-black text-sm sm:text-base tracking-wider">
@@ -499,25 +648,34 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           )}
         </div>
 
-        <motion.div
-          className="flex items-center gap-2"
-          key={p2Stats.correct}
-          animate={{ scale: [1, 1.15, 1] }}
-          transition={{ duration: 0.3 }}
-        >
-          <span className="text-pink-500/60 text-xs">✓</span>
-          <span className="text-pink-400 text-lg sm:text-xl font-black">{p2Stats.correct}</span>
-          {mode === "bot" ? (
-            <span className="text-pink-400 font-bold text-sm sm:text-base flex items-center gap-1">
-              <Bot className="w-4 h-4" />
-              <span className="hidden sm:inline">Computador</span>
-            </span>
-          ) : (
-            <span className="text-pink-400 font-bold text-sm sm:text-base">Jogador 2</span>
-          )}
-        </motion.div>
+        <div className="relative flex justify-end">
+          <motion.div
+            className="flex items-center gap-2"
+            key={"p2score-" + p2Stats.correct}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.35, type: "spring", stiffness: 400 }}
+          >
+            <span className="text-pink-500/60 text-xs">✓</span>
+            <span className="text-pink-400 text-lg sm:text-xl font-black tabular-nums">{p2Stats.correct}</span>
+            {mode === "bot" ? (
+              <span className="text-pink-400 font-bold text-sm sm:text-base flex items-center gap-1">
+                <Bot className="w-4 h-4" />
+                <span className="hidden sm:inline">Computador</span>
+              </span>
+            ) : (
+              <span className="text-pink-400 font-bold text-sm sm:text-base">Jogador 2</span>
+            )}
+          </motion.div>
+          <StreakBadge streak={p2Stats.streak} color="pink" />
+          <AnimatePresence>
+            {scorePops.filter((p) => p.player === 2).map((pop) => (
+              <ScorePopAnimation key={pop.id} pop={pop} />
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
 
+      {/* Round Info + Timer Display */}
       {gameState !== "idle" && (
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
           <span className="text-white/60 font-medium">
@@ -527,26 +685,77 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             <Badge variant="outline" className={cn("text-[10px] sm:text-xs", getDifficultyColor(problem?.difficulty ?? "Fácil"))}>
               {problem?.difficulty ?? "Fácil"}
             </Badge>
-            <span className="flex items-center gap-1 text-white/60">
-              <Timer className="w-3 h-3" />
+            <motion.span
+              className={cn(
+                "flex items-center gap-1 font-bold tabular-nums",
+                timerUrgent
+                  ? "text-red-400"
+                  : timerWarning
+                  ? "text-yellow-400"
+                  : "text-white/60"
+              )}
+              animate={timerUrgent ? { scale: [1, 1.15, 1], opacity: [1, 0.7, 1] } : {}}
+              transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <motion.div
+                animate={timerUrgent ? { rotate: [0, 10, -10, 0] } : {}}
+                transition={{ duration: 0.4, repeat: Infinity, repeatDelay: 0.6 }}
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </motion.div>
               {Math.ceil(timeLeft)}s
-            </span>
+            </motion.span>
           </div>
         </div>
       )}
 
+      {/* Timer Bar with Urgency Effects */}
       {gameState === "playing" && (
-        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+        <div className="relative w-full">
           <motion.div
-            className={cn("h-full rounded-full bg-gradient-to-r", timerBarColor)}
-            initial={{ width: "100%" }}
-            animate={{ width: `${timerPercent}%` }}
-            transition={{ duration: 0.1, ease: "linear" }}
-          />
+            className={cn(
+              "w-full h-2.5 bg-white/5 rounded-full overflow-hidden",
+              timerUrgent && "ring-1 ring-red-500/30"
+            )}
+            animate={timerUrgent ? { scale: [1, 1.01, 1] } : {}}
+            transition={{ duration: 0.3, repeat: Infinity }}
+          >
+            <motion.div
+              className={cn(
+                "h-full rounded-full bg-gradient-to-r relative",
+                timerBarColor,
+                timerUrgent && "shadow-[0_0_12px_rgba(239,68,68,0.5)]"
+              )}
+              initial={{ width: "100%" }}
+              animate={{ width: `${timerPercent}%` }}
+              transition={{ duration: 0.1, ease: "linear" }}
+            >
+              {timerUrgent && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                  animate={{ x: ["-100%", "200%"] }}
+                  transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+                />
+              )}
+            </motion.div>
+          </motion.div>
+          {/* Urgency vignette overlay */}
+          <AnimatePresence>
+            {timerUrgent && (
+              <motion.div
+                className="absolute -inset-1 rounded-full pointer-events-none"
+                style={{ boxShadow: "0 0 20px rgba(239,68,68,0.15), inset 0 0 20px rgba(239,68,68,0.05)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 0.8, repeat: Infinity }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       )}
 
       <AnimatePresence mode="wait">
+        {/* IDLE SCREEN */}
         {gameState === "idle" && (
           <motion.div
             key="idle"
@@ -689,6 +898,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
+        {/* COUNTDOWN SCREEN */}
         {gameState === "countdown" && (
           <motion.div
             key="countdown"
@@ -712,6 +922,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
+        {/* PLAYING SCREEN */}
         {gameState === "playing" && problem && (
           <motion.div
             key={"playing-" + currentRound}
@@ -720,35 +931,134 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             exit={{ opacity: 0 }}
             className="flex flex-col gap-4"
           >
+            {/* Enhanced Problem Card */}
             <motion.div
-              className="bg-white/5 border border-white/10 rounded-2xl px-6 py-8 sm:py-10 text-center relative overflow-hidden"
+              className={cn(
+                "relative rounded-2xl px-6 py-8 sm:py-10 text-center overflow-hidden",
+                "bg-gradient-to-br from-white/[0.07] to-white/[0.02]",
+                "border border-white/10",
+                timerUrgent && "!border-red-500/30"
+              )}
               initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              animate={{
+                scale: 1,
+                opacity: 1,
+                borderColor: timerUrgent
+                  ? "rgba(239,68,68,0.4)"
+                  : "rgba(255,255,255,0.1)",
+              }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-pink-500/5" />
-              <p className="text-4xl sm:text-5xl font-black text-white relative z-10">
-                {problem.expression} = ?
-              </p>
-            </motion.div>
-
-            <div className={cn("grid gap-3 sm:gap-4 mt-2", mode === "bot" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
+              {/* Animated gradient border effect */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-pink-500/10" />
+              {timerUrgent && (
+                <motion.div
+                  className="absolute inset-0 rounded-2xl"
+                  style={{ background: "radial-gradient(ellipse at center, rgba(239,68,68,0.08) 0%, transparent 70%)" }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 0.6, repeat: Infinity }}
+                />
+              )}
+              {/* Top glow line */}
               <motion.div
                 className={cn(
-                  "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
+                  "absolute top-0 left-0 right-0 h-[2px]",
+                  timerUrgent
+                    ? "bg-gradient-to-r from-transparent via-red-500/60 to-transparent"
+                    : "bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent"
+                )}
+                animate={timerUrgent ? { opacity: [0.5, 1, 0.5] } : { opacity: [0.3, 0.7, 0.3] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <div className="relative z-10">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full",
+                    problem.difficulty === "Fácil" ? "bg-green-400" :
+                    problem.difficulty === "Médio" ? "bg-yellow-400" : "bg-red-400"
+                  )} />
+                  <span className="text-white/30 text-xs font-medium uppercase tracking-widest">
+                    {problem.difficulty}
+                  </span>
+                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full",
+                    problem.difficulty === "Fácil" ? "bg-green-400" :
+                    problem.difficulty === "Médio" ? "bg-yellow-400" : "bg-red-400"
+                  )} />
+                </div>
+                <motion.p
+                  className="text-4xl sm:text-5xl font-black text-white tracking-tight"
+                  animate={timerUrgent ? { scale: [1, 1.01, 1] } : {}}
+                  transition={{ duration: 0.3, repeat: Infinity }}
+                >
+                  {problem.expression}{" "}=<span className="text-white/40">?</span>
+                </motion.p>
+              </div>
+            </motion.div>
+
+            {/* Input Cards */}
+            <div className={cn("grid gap-3 sm:gap-4 mt-2", mode === "bot" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
+              {/* Player 1 Card */}
+              <motion.div
+                className={cn(
+                  "relative flex flex-col gap-2 rounded-xl p-4 border transition-colors overflow-hidden",
                   p1Locked
                     ? "bg-green-500/10 border-green-500/30"
+                    : p1FlashCorrect
+                    ? "bg-green-500/15 border-green-500/50"
                     : "bg-cyan-950/20 border-cyan-500/20"
                 )}
                 animate={p1Wrong ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
                 transition={{ duration: 0.4 }}
               >
-                <label className="text-cyan-400 font-bold text-sm flex items-center gap-2">
+                {/* Correct flash overlay */}
+                <AnimatePresence>
+                  {p1FlashCorrect && (
+                    <motion.div
+                      className="absolute inset-0 bg-green-500/20 z-10 pointer-events-none rounded-xl"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0, 1, 0] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.6 }}
+                    />
+                  )}
+                </AnimatePresence>
+                {/* Wrong flash overlay */}
+                <AnimatePresence>
+                  {p1Wrong && (
+                    <motion.div
+                      className="absolute inset-0 bg-red-500/15 z-10 pointer-events-none rounded-xl"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                  )}
+                </AnimatePresence>
+                <label className="text-cyan-400 font-bold text-sm flex items-center gap-2 relative z-20">
                   <span className="w-2 h-2 rounded-full bg-cyan-400" />
                   Jogador 1
-                  {p1Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
+                  {p1Locked && (
+                    <motion.span
+                      className="flex items-center gap-1 text-green-400 text-xs ml-auto"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Correto!
+                    </motion.span>
+                  )}
+                  {p1Wrong && (
+                    <motion.span
+                      className="flex items-center gap-1 text-red-400 text-xs ml-auto"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Errado!
+                    </motion.span>
+                  )}
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative z-20">
                   <input
                     ref={p1Ref}
                     type="number"
@@ -784,21 +1094,45 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 </div>
               </motion.div>
 
+              {/* Player 2 / Bot Card */}
               {mode === "bot" ? (
                 <motion.div
                   className={cn(
-                    "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
+                    "relative flex flex-col gap-2 rounded-xl p-4 border transition-colors overflow-hidden",
                     p2Locked
                       ? "bg-green-500/10 border-green-500/30"
+                      : p2FlashCorrect
+                      ? "bg-green-500/15 border-green-500/50"
                       : "bg-pink-950/20 border-pink-500/20"
                   )}
-                  animate={botThinking ? { scale: [1, 1.02, 1] } : {}}
+                  animate={botThinking ? { scale: [1, 1.01, 1] } : {}}
                   transition={{ duration: 1, repeat: botThinking ? Infinity : 0 }}
                 >
-                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2">
+                  <AnimatePresence>
+                    {p2FlashCorrect && (
+                      <motion.div
+                        className="absolute inset-0 bg-green-500/20 z-10 pointer-events-none rounded-xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 0] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2 relative z-20">
                     <Bot className="w-4 h-4" />
                     Computador
-                    {p2Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
+                    {p2Locked && (
+                      <motion.span
+                        className="flex items-center gap-1 text-green-400 text-xs ml-auto"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Correto!
+                      </motion.span>
+                    )}
                     {botThinking && !p2Locked && (
                       <motion.span
                         animate={{ opacity: [0.4, 1, 0.4] }}
@@ -809,7 +1143,7 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                       </motion.span>
                     )}
                   </label>
-                  <div className="flex items-center justify-center py-2 text-white/20 text-sm">
+                  <div className="flex items-center justify-center py-2 text-white/20 text-sm relative z-20">
                     <Bot className="w-6 h-6 mr-2 text-pink-500/40" />
                     IA jogando automaticamente
                   </div>
@@ -817,20 +1151,64 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               ) : (
                 <motion.div
                   className={cn(
-                    "flex flex-col gap-2 rounded-xl p-4 border transition-colors",
+                    "relative flex flex-col gap-2 rounded-xl p-4 border transition-colors overflow-hidden",
                     p2Locked
                       ? "bg-green-500/10 border-green-500/30"
+                      : p2FlashCorrect
+                      ? "bg-green-500/15 border-green-500/50"
                       : "bg-pink-950/20 border-pink-500/20"
                   )}
                   animate={p2Wrong ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
                   transition={{ duration: 0.4 }}
                 >
-                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2">
+                  <AnimatePresence>
+                    {p2FlashCorrect && (
+                      <motion.div
+                        className="absolute inset-0 bg-green-500/20 z-10 pointer-events-none rounded-xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 0] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {p2Wrong && (
+                      <motion.div
+                        className="absolute inset-0 bg-red-500/15 z-10 pointer-events-none rounded-xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <label className="text-pink-400 font-bold text-sm flex items-center gap-2 relative z-20">
                     <span className="w-2 h-2 rounded-full bg-pink-400" />
                     Jogador 2
-                    {p2Locked && <span className="text-green-400 text-xs ml-auto">✓ Correto!</span>}
+                    {p2Locked && (
+                      <motion.span
+                        className="flex items-center gap-1 text-green-400 text-xs ml-auto"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Correto!
+                      </motion.span>
+                    )}
+                    {p2Wrong && (
+                      <motion.span
+                        className="flex items-center gap-1 text-red-400 text-xs ml-auto"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Errado!
+                      </motion.span>
+                    )}
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 relative z-20">
                     <input
                       ref={p2Ref}
                       type="number"
@@ -867,21 +1245,43 @@ export default function QuickMath({ onScore, liveCode }: Props) {
               )}
             </div>
 
+            {/* Stats Bar with Enhanced Streak Display */}
             <div className={cn("grid gap-3 mt-1 text-xs text-white/40 px-2", mode === "bot" ? "grid-cols-1" : "grid-cols-2")}>
               <div className="flex items-center gap-3">
                 <span className="text-cyan-400/70">Média: {p1AvgTime}s</span>
-                <span>•</span>
-                <span className="text-cyan-400/70">Streak: {p1Stats.streak}</span>
+                <span className="text-white/20">•</span>
+                <motion.span
+                  className={cn(
+                    "flex items-center gap-1 font-bold",
+                    p1Stats.streak >= 3 ? "text-yellow-400" : "text-cyan-400/70"
+                  )}
+                  animate={p1Stats.streak >= 3 ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                >
+                  {p1Stats.streak >= 2 && <Flame className="w-3 h-3" />}
+                  Streak: {p1Stats.streak}
+                </motion.span>
               </div>
               <div className={cn("flex items-center gap-3", mode === "bot" ? "justify-start" : "justify-end")}>
                 <span className="text-pink-400/70">Média: {p2AvgTime}s</span>
-                <span>•</span>
-                <span className="text-pink-400/70">Streak: {p2Stats.streak}</span>
+                <span className="text-white/20">•</span>
+                <motion.span
+                  className={cn(
+                    "flex items-center gap-1 font-bold",
+                    p2Stats.streak >= 3 ? "text-yellow-400" : "text-pink-400/70"
+                  )}
+                  animate={p2Stats.streak >= 3 ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                >
+                  {p2Stats.streak >= 2 && <Flame className="w-3 h-3" />}
+                  Streak: {p2Stats.streak}
+                </motion.span>
               </div>
             </div>
           </motion.div>
         )}
 
+        {/* ROUND RESULT SCREEN */}
         {gameState === "roundResult" && roundResult && (
           <motion.div
             key={"result-" + currentRound}
@@ -890,11 +1290,18 @@ export default function QuickMath({ onScore, liveCode }: Props) {
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-5 py-6"
           >
-            <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-center">
-              <p className="text-2xl sm:text-3xl font-black text-white/60">
+            {/* Answer reveal card */}
+            <motion.div
+              className="bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-center"
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <p className="text-sm text-white/30 mb-1">Resposta</p>
+              <p className="text-2xl sm:text-3xl font-black text-white/80">
                 {problem?.expression} = {problem?.answer}
               </p>
-            </div>
+            </motion.div>
 
             {roundResult.timedOut ? (
               <motion.div
@@ -902,7 +1309,15 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 animate={{ scale: 1 }}
                 className="text-center"
               >
-                <p className="text-2xl font-black text-red-400">Tempo!</p>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  className="flex items-center justify-center gap-2 text-red-400 mb-2"
+                >
+                  <Timer className="w-6 h-6" />
+                  <p className="text-2xl font-black">Tempo Esgotado!</p>
+                </motion.div>
                 <p className="text-white/40 text-sm mt-1">Ninguém respondeu a tempo</p>
               </motion.div>
             ) : (
@@ -912,17 +1327,72 @@ export default function QuickMath({ onScore, liveCode }: Props) {
                 transition={{ type: "spring", stiffness: 300, damping: 15 }}
                 className="text-center"
               >
-                <p
+                {/* Winner name with animated icon */}
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <motion.div
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                  >
+                    <Check className={cn("w-7 h-7", roundResult.winner === 1 ? "text-cyan-400" : "text-pink-400")} />
+                  </motion.div>
+                  <p
+                    className={cn(
+                      "text-3xl sm:text-4xl font-black",
+                      roundResult.winner === 1 ? "text-cyan-400" : "text-pink-400"
+                    )}
+                  >
+                    {roundResult.winnerName}
+                  </p>
+                </div>
+                <motion.p
                   className={cn(
-                    "text-3xl sm:text-4xl font-black",
-                    roundResult.winner === 1 ? "text-cyan-400" : "text-pink-400"
+                    "text-lg font-bold",
+                    roundResult.winner === 1 ? "text-cyan-300/70" : "text-pink-300/70"
                   )}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
                 >
-                  {roundResult.winnerName} — Correto!
-                </p>
-                <p className="text-white/40 text-sm mt-2">
-                  Resposta em {(roundResult.winner === 1 ? roundResult.p1Time : roundResult.p2Time)?.toFixed(1)}s
-                </p>
+                  Correto!
+                </motion.p>
+                {/* Time display with speed rating */}
+                <motion.div
+                  className="mt-3 flex items-center justify-center gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Clock className="w-4 h-4 text-white/40" />
+                  <span className="text-white/50 text-sm font-medium">
+                    {(roundResult.winner === 1 ? roundResult.p1Time : roundResult.p2Time)?.toFixed(1)}s
+                  </span>
+                  {(roundResult.winner === 1 ? roundResult.p1Time : roundResult.p2Time)! < 2 && (
+                    <motion.span
+                      className="text-yellow-400 text-xs font-bold flex items-center gap-0.5"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      Rápido!
+                    </motion.span>
+                  )}
+                </motion.div>
+                {/* Streak indicator in result */}
+                {((roundResult.winner === 1 ? p1Stats.streak : p2Stats.streak) >= 2) && (
+                  <motion.div
+                    className="mt-2 flex items-center justify-center gap-1"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.6, type: "spring", stiffness: 400 }}
+                  >
+                    <Flame className="w-4 h-4 text-yellow-400" />
+                    <span className="text-yellow-400 text-sm font-bold">
+                      Streak x{roundResult.winner === 1 ? p1Stats.streak : p2Stats.streak}!
+                    </span>
+                  </motion.div>
+                )}
               </motion.div>
             )}
 
@@ -940,79 +1410,253 @@ export default function QuickMath({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
+        {/* GAME OVER SCREEN */}
         {gameState === "gameOver" && (
           <motion.div
             key="gameOver"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-5 py-6"
+            className="flex flex-col items-center gap-6 py-6"
           >
-            <h3 className="text-3xl sm:text-4xl font-black text-white">Fim do Jogo!</h3>
+            {/* Title */}
+            <motion.div
+              className="flex items-center gap-3"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Trophy className="w-8 h-8 text-yellow-400" />
+              <h3 className="text-3xl sm:text-4xl font-black text-white">Fim do Jogo!</h3>
+              <Trophy className="w-8 h-8 text-yellow-400" />
+            </motion.div>
 
+            {/* Winner Announcement */}
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 12 }}
+            >
+              {p1Stats.correct > p2Stats.correct ? (
+                <div className="flex items-center gap-2 text-2xl font-black text-cyan-400">
+                  <Trophy className="w-7 h-7" />
+                  <span>Jogador 1 Venceu!</span>
+                </div>
+              ) : p2Stats.correct > p1Stats.correct ? (
+                <div className="flex items-center gap-2 text-2xl font-black text-pink-400">
+                  <Trophy className="w-7 h-7" />
+                  <span>{getP2Name()} Venceu!</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-2xl font-black text-yellow-400">
+                  <span>Empate!</span>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Player Stats Cards */}
             <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+              {/* Player 1 Card */}
               <motion.div
                 className={cn(
-                  "rounded-xl p-4 border text-center",
+                  "rounded-xl p-4 border text-center relative overflow-hidden",
                   p1Stats.correct > p2Stats.correct
                     ? "bg-cyan-500/10 border-cyan-500/40 ring-2 ring-cyan-500/20"
                     : "bg-white/5 border-white/10"
                 )}
                 initial={{ x: -30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.3 }}
               >
+                {p1Stats.correct > p2Stats.correct && (
+                  <motion.div
+                    className="absolute top-2 right-2"
+                    initial={{ rotate: -20, scale: 0 }}
+                    animate={{ rotate: 0, scale: 1 }}
+                    transition={{ delay: 0.6, type: "spring" }}
+                  >
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                  </motion.div>
+                )}
                 <p className="text-cyan-400 font-bold text-sm">Jogador 1</p>
-                <p className="text-4xl font-black text-white mt-2">{p1Stats.correct}</p>
+                <motion.p
+                  className="text-4xl font-black text-white mt-2 tabular-nums"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5, type: "spring", stiffness: 400 }}
+                >
+                  {p1Stats.correct}
+                </motion.p>
                 <p className="text-white/40 text-xs mt-1">acertos</p>
-                <div className="mt-3 space-y-1 text-xs text-white/50">
-                  <p>Média: {p1AvgTime}s</p>
-                  <p>Melhor streak: {p1Stats.bestStreak}</p>
+
+                {/* Score breakdown */}
+                <div className="mt-3 space-y-1.5 text-xs text-white/50">
+                  <div className="flex items-center justify-between">
+                    <span>Pontuação</span>
+                    <motion.span
+                      className="text-cyan-300 font-bold tabular-nums"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.8 }}
+                    >
+                      {p1Score}
+                    </motion.span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Média</span>
+                    <span className="tabular-nums">{p1AvgTime}s</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Mais rápido</span>
+                    <span className="tabular-nums flex items-center gap-0.5">
+                      {p1Fastest !== null ? (
+                        <><Zap className="w-2.5 h-2.5 text-yellow-400" />{p1Fastest.toFixed(1)}s</>
+                      ) : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Melhor streak</span>
+                    <span className="flex items-center gap-0.5 tabular-nums">
+                      {p1Stats.bestStreak > 0 && <Flame className="w-2.5 h-2.5 text-yellow-400" />}
+                      {p1Stats.bestStreak}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Accuracy bar */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] text-white/30 mb-1">
+                    <span>Precisão</span>
+                    <span className="tabular-nums">{Math.round((p1Stats.correct / TOTAL_ROUNDS) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(p1Stats.correct / TOTAL_ROUNDS) * 100}%` }}
+                      transition={{ delay: 0.6, duration: 0.8, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
               </motion.div>
 
+              {/* Player 2 Card */}
               <motion.div
                 className={cn(
-                  "rounded-xl p-4 border text-center",
+                  "rounded-xl p-4 border text-center relative overflow-hidden",
                   p2Stats.correct > p1Stats.correct
                     ? "bg-pink-500/10 border-pink-500/40 ring-2 ring-pink-500/20"
                     : "bg-white/5 border-white/10"
                 )}
                 initial={{ x: 30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.3 }}
               >
+                {p2Stats.correct > p1Stats.correct && (
+                  <motion.div
+                    className="absolute top-2 right-2"
+                    initial={{ rotate: 20, scale: 0 }}
+                    animate={{ rotate: 0, scale: 1 }}
+                    transition={{ delay: 0.6, type: "spring" }}
+                  >
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                  </motion.div>
+                )}
                 <p className="text-pink-400 font-bold text-sm flex items-center justify-center gap-1">
                   {mode === "bot" && <Bot className="w-4 h-4" />}
                   {getP2Name()}
                 </p>
-                <p className="text-4xl font-black text-white mt-2">{p2Stats.correct}</p>
+                <motion.p
+                  className="text-4xl font-black text-white mt-2 tabular-nums"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5, type: "spring", stiffness: 400 }}
+                >
+                  {p2Stats.correct}
+                </motion.p>
                 <p className="text-white/40 text-xs mt-1">acertos</p>
-                <div className="mt-3 space-y-1 text-xs text-white/50">
-                  <p>Média: {p2AvgTime}s</p>
-                  <p>Melhor streak: {p2Stats.bestStreak}</p>
+
+                {/* Score breakdown */}
+                <div className="mt-3 space-y-1.5 text-xs text-white/50">
+                  <div className="flex items-center justify-between">
+                    <span>Pontuação</span>
+                    <motion.span
+                      className="text-pink-300 font-bold tabular-nums"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.8 }}
+                    >
+                      {p2Score}
+                    </motion.span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Média</span>
+                    <span className="tabular-nums">{p2AvgTime}s</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Mais rápido</span>
+                    <span className="tabular-nums flex items-center gap-0.5">
+                      {p2Fastest !== null ? (
+                        <><Zap className="w-2.5 h-2.5 text-yellow-400" />{p2Fastest.toFixed(1)}s</>
+                      ) : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Melhor streak</span>
+                    <span className="flex items-center gap-0.5 tabular-nums">
+                      {p2Stats.bestStreak > 0 && <Flame className="w-2.5 h-2.5 text-yellow-400" />}
+                      {p2Stats.bestStreak}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Accuracy bar */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] text-white/30 mb-1">
+                    <span>Precisão</span>
+                    <span className="tabular-nums">{Math.round((p2Stats.correct / TOTAL_ROUNDS) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-pink-500 to-pink-400"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(p2Stats.correct / TOTAL_ROUNDS) * 100}%` }}
+                      transition={{ delay: 0.6, duration: 0.8, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
               </motion.div>
             </div>
 
+            {/* Score comparison bar */}
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5, type: "spring" }}
+              className="w-full max-w-md"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
             >
-              {p1Stats.correct > p2Stats.correct ? (
-                <p className="text-2xl font-black text-cyan-400">
-                  🏆 Jogador 1 Venceu!
-                </p>
-              ) : p2Stats.correct > p1Stats.correct ? (
-                <p className="text-2xl font-black text-pink-400">
-                  🏆 {getP2Name()} Venceu!
-                </p>
-              ) : (
-                <p className="text-2xl font-black text-yellow-400">
-                  🤝 Empate!
-                </p>
-              )}
+              <div className="flex justify-between text-xs text-white/40 mb-1">
+                <span className="text-cyan-400">Jogador 1: {p1Score}</span>
+                <span className="text-pink-400">{getP2Name()}: {p2Score}</span>
+              </div>
+              <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden flex">
+                {p1Score + p2Score > 0 && (
+                  <>
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(p1Score / (p1Score + p2Score)) * 100}%` }}
+                      transition={{ delay: 0.9, duration: 1, ease: "easeOut" }}
+                    />
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-pink-400 to-pink-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(p2Score / (p1Score + p2Score)) * 100}%` }}
+                      transition={{ delay: 0.9, duration: 1, ease: "easeOut" }}
+                    />
+                  </>
+                )}
+              </div>
             </motion.div>
 
             <Button

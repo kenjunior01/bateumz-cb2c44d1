@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Trophy, Users, User, Flame, Swords } from "lucide-react";
+import { Zap, Trophy, Users, User, Flame, Swords, Crown, TrendingUp, RotateCcw } from "lucide-react";
 import confetti from "canvas-confetti";
 import { countdownPulse, springBouncy, popIn, shake } from "@/lib/animation-utilities";
 
@@ -28,10 +28,9 @@ interface Ripple {
   x: number;
   y: number;
   color: string;
+  ring?: number;
 }
 
-let _nextId = 0;
-const nextId = () => ++_nextId;
 
 // ---- Tap sound via AudioContext ----
 function playTapSound(pitch = 600) {
@@ -69,6 +68,14 @@ function playCountdownBeep(final = false) {
   } catch { /* silent fail */ }
 }
 
+// ---- Helper: combo tier label ----
+function comboTierLabel(c: number): { label: string; color: string } | null {
+  if (c > 10) return { label: "INSANE", color: "text-yellow-300" };
+  if (c > 6) return { label: "FRENZY", color: "text-orange-400" };
+  if (c > 2) return { label: "COMBO", color: "text-orange-500/70" };
+  return null;
+}
+
 // ---- Component ----
 const TapBattle = ({ duration = 5, onScore }: Props) => {
   const [mode, setMode] = useState<Mode>("bot");
@@ -86,6 +93,12 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
   const [shakeP1, setShakeP1] = useState(false);
   const [shakeP2, setShakeP2] = useState(false);
   const [screenFlash, setScreenFlash] = useState(false);
+  const [p1Flash, setP1Flash] = useState(false);
+  const [p2Flash, setP2Flash] = useState(false);
+  const [p1PeakCombo, setP1PeakCombo] = useState(0);
+  const [p2PeakCombo, setP2PeakCombo] = useState(0);
+  const [prevP1Taps, setPrevP1Taps] = useState(0);
+  const [prevP2Taps, setPrevP2Taps] = useState(0);
 
   const intervalRef = useRef<number | null>(null);
   const botRef = useRef<number | null>(null);
@@ -130,7 +143,12 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
   }, []);
 
   const addRipple = useCallback((x: number, y: number, color: string) => {
-    setRipples((prev) => [...prev.slice(-10), { id: Date.now() + Math.random(), x, y, color }]);
+    const id = Date.now() + Math.random();
+    setRipples((prev) => [...prev.slice(-15), { id, x, y, color, ring: 0 }]);
+    // second concentric ring slightly delayed
+    setTimeout(() => {
+      setRipples((prev) => [...prev.slice(-15), { id: id + 0.01, x, y, color, ring: 1 }]);
+    }, 60);
   }, []);
 
   const handleP1Tap = useCallback(
@@ -164,8 +182,11 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
       // Floating +1
       const comboCount = p1Combos;
       const comboText = comboCount > 2 ? `+1 x${comboCount}` : "+1";
-      addFloat(cx, cy - 10, comboText, comboCount > 5 ? "#f59e0b" : comboCount > 2 ? "#f97316" : "#60a5fa");
-      addRipple(cx, cy, "rgba(96, 165, 250, 0.5)");
+      addFloat(cx, cy - 10, comboText, comboCount > 8 ? "#facc15" : comboCount > 5 ? "#f59e0b" : comboCount > 2 ? "#f97316" : "#60a5fa");
+      addRipple(cx, cy, "rgba(96, 165, 250, 0.6)");
+      setP1Flash(true);
+      setTimeout(() => setP1Flash(false), 100);
+      if (comboCount > p1PeakCombo) setP1PeakCombo(comboCount);
 
       // Sound (pitch increases with combo)
       playTapSound(500 + Math.min(comboCount * 30, 400));
@@ -176,7 +197,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
         setTimeout(() => setShakeP1(false), 300);
       }
     },
-    [phase, p1Combos, addFloat, addRipple]
+    [phase, p1Combos, addFloat, addRipple, p1PeakCombo]
   );
 
   const handleP2Tap = useCallback(
@@ -207,8 +228,11 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
 
       const comboCount = p2Combos;
       const comboText = comboCount > 2 ? `+1 x${comboCount}` : "+1";
-      addFloat(cx, cy - 10, comboText, comboCount > 5 ? "#f59e0b" : comboCount > 2 ? "#f97316" : "#fbbf24");
-      addRipple(cx, cy, "rgba(251, 191, 36, 0.5)");
+      addFloat(cx, cy - 10, comboText, comboCount > 8 ? "#facc15" : comboCount > 5 ? "#f59e0b" : comboCount > 2 ? "#f97316" : "#fbbf24");
+      addRipple(cx, cy, "rgba(251, 191, 36, 0.6)");
+      setP2Flash(true);
+      setTimeout(() => setP2Flash(false), 100);
+      if (comboCount > p2PeakCombo) setP2PeakCombo(comboCount);
       playTapSound(450 + Math.min(comboCount * 30, 400));
 
       if (comboCount > 3 && comboCount % 3 === 0) {
@@ -216,14 +240,18 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
         setTimeout(() => setShakeP2(false), 300);
       }
     },
-    [phase, p2Combos, addFloat, addRipple]
+    [phase, p2Combos, addFloat, addRipple, p2PeakCombo]
   );
 
   const startCountdown = () => {
     setP1Taps(0);
     setP2Taps(0);
+    setPrevP1Taps(0);
+    setPrevP2Taps(0);
     setP1Combos(0);
     setP2Combos(0);
+    setP1PeakCombo(0);
+    setP2PeakCombo(0);
     p1LastTap.current = 0;
     p2LastTap.current = 0;
     setTime(duration);
@@ -297,7 +325,7 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
         onScore?.(p2Name, p2Taps);
       }
     } else {
-      // Draw – subtle burst
+      // Draw - subtle burst
       confetti({ particleCount: 40, spread: 40, origin: { x: 0.5, y: 0.5 } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,38 +449,63 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
 
         {/* ---- Score cards with VS badge ---- */}
         <div className="w-full flex items-center gap-2">
+          {/* Player 1 Score Card */}
           <motion.div
             variants={shake}
             animate={shakeP1 ? "shake" : undefined}
-            className={`flex-1 rounded-2xl p-3 text-center transition-all duration-300 ${
+            className={`flex-1 rounded-2xl p-3 text-center transition-all duration-300 relative overflow-hidden ${
               p1Wins && phase === "done"
                 ? "bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-2 border-blue-500/50 shadow-lg shadow-blue-500/10"
                 : "bg-blue-500/10 border border-blue-500/20"
             }`}
           >
-            <p className="text-[10px] uppercase tracking-wider text-blue-400 font-bold truncate">{p1Name}</p>
+            {/* Glow pulse behind score on change */}
+            <AnimatePresence>
+              {p1Taps !== prevP1Taps && phase === "running" && (
+                <motion.div
+                  key={`g1-${p1Taps}`}
+                  initial={{ opacity: 0.6, scale: 0.5 }}
+                  animate={{ opacity: 0, scale: 1.8 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="absolute inset-0 rounded-full bg-blue-400/20 blur-xl pointer-events-none"
+                  onAnimationComplete={() => setPrevP1Taps(p1Taps)}
+                />
+              )}
+            </AnimatePresence>
+            <p className="text-[10px] uppercase tracking-wider text-blue-400 font-bold truncate relative z-10">{p1Name}</p>
             <motion.p
               key={p1Taps}
-              initial={{ scale: 1.3, color: "#60a5fa" }}
+              initial={{ scale: 1.4, color: "#93c5fd" }}
               animate={{ scale: 1, color: "inherit" }}
-              transition={{ duration: 0.2 }}
-              className="font-display text-3xl font-black text-foreground"
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              className="font-display text-3xl font-black text-foreground relative z-10"
             >
               {p1Taps}
             </motion.p>
-            {/* Combo indicator */}
+            {/* Combo indicator with tier */}
             <AnimatePresence>
-              {p1Combos > 2 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5, y: 5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center justify-center gap-0.5 mt-0.5"
-                >
-                  <Flame className="h-3 w-3 text-orange-400" />
-                  <span className="text-[10px] font-bold text-orange-400">x{p1Combos}</span>
-                </motion.div>
-              )}
+              {p1Combos > 2 && (() => {
+                const tier = comboTierLabel(p1Combos);
+                return tier ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="flex items-center justify-center gap-1 mt-1 relative z-10"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Flame className={`h-3.5 w-3.5 ${tier.color}`} />
+                    </motion.div>
+                    <span className={`text-[10px] font-black tabular-nums ${tier.color}`}>x{p1Combos}</span>
+                    <span className={`text-[8px] font-black ${tier.color} uppercase tracking-wider ml-0.5`}>{tier.label}</span>
+                  </motion.div>
+                ) : null;
+              })()}
             </AnimatePresence>
           </motion.div>
 
@@ -461,61 +514,99 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
             animate={
               phase === "running"
                 ? { scale: [1, 1.15, 1], rotate: [0, -3, 3, 0] }
+                : phase === "done"
+                ? { scale: [1, 1.1, 1] }
                 : { scale: 1 }
             }
-            transition={{ duration: 1.5, repeat: phase === "running" ? Infinity : 0, ease: "easeInOut" }}
+            transition={{ duration: 1.5, repeat: phase === "running" || phase === "done" ? Infinity : 0, ease: "easeInOut" }}
             className="relative flex-shrink-0"
           >
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs ${
+              className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-xs transition-all duration-300 ${
                 phase === "running"
                   ? "bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg shadow-red-500/30"
                   : phase === "done"
-                  ? "bg-gradient-to-br from-emerald-500 to-green-600 text-white"
+                  ? "bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30"
                   : "bg-card border border-border text-muted-foreground"
               }`}
             >
               {phase === "done" ? (
-                <Trophy className="h-4 w-4" />
+                <Trophy className="h-5 w-5" />
               ) : (
                 <Swords className="h-4 w-4" />
               )}
             </div>
+            {phase === "done" && !isDraw && (
+              <motion.div
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.3 }}
+                className="absolute -top-1 -right-1"
+              >
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${p1Wins ? "bg-blue-500 text-white" : "bg-amber-500 text-white"}`}>
+                  <Crown className="h-2.5 w-2.5" />
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
+          {/* Player 2 Score Card */}
           <motion.div
             variants={shake}
             animate={shakeP2 ? "shake" : undefined}
-            className={`flex-1 rounded-2xl p-3 text-center transition-all duration-300 ${
+            className={`flex-1 rounded-2xl p-3 text-center transition-all duration-300 relative overflow-hidden ${
               p2Wins && phase === "done"
                 ? "bg-gradient-to-br from-amber-500/20 to-orange-500/10 border-2 border-amber-500/50 shadow-lg shadow-amber-500/10"
                 : "bg-card border border-border"
             }`}
           >
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold truncate">
+            <AnimatePresence>
+              {p2Taps !== prevP2Taps && phase === "running" && (
+                <motion.div
+                  key={`g2-${p2Taps}`}
+                  initial={{ opacity: 0.6, scale: 0.5 }}
+                  animate={{ opacity: 0, scale: 1.8 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="absolute inset-0 rounded-full bg-amber-400/20 blur-xl pointer-events-none"
+                  onAnimationComplete={() => setPrevP2Taps(p2Taps)}
+                />
+              )}
+            </AnimatePresence>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold truncate relative z-10">
               {mode === "vs" ? p2Name : "Bot"}
             </p>
             <motion.p
               key={p2Taps}
-              initial={{ scale: 1.3, color: "#fbbf24" }}
+              initial={{ scale: 1.4, color: "#fde68a" }}
               animate={{ scale: 1, color: "inherit" }}
-              transition={{ duration: 0.2 }}
-              className="font-display text-3xl font-black text-foreground"
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              className="font-display text-3xl font-black text-foreground relative z-10"
             >
               {p2Taps}
             </motion.p>
             <AnimatePresence>
-              {p2Combos > 2 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5, y: 5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center justify-center gap-0.5 mt-0.5"
-                >
-                  <Flame className="h-3 w-3 text-orange-400" />
-                  <span className="text-[10px] font-bold text-orange-400">x{p2Combos}</span>
-                </motion.div>
-              )}
+              {p2Combos > 2 && (() => {
+                const tier = comboTierLabel(p2Combos);
+                return tier ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="flex items-center justify-center gap-1 mt-1 relative z-10"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Flame className={`h-3.5 w-3.5 ${tier.color}`} />
+                    </motion.div>
+                    <span className={`text-[10px] font-black tabular-nums ${tier.color}`}>x{p2Combos}</span>
+                    <span className={`text-[8px] font-black ${tier.color} uppercase tracking-wider ml-0.5`}>{tier.label}</span>
+                  </motion.div>
+                ) : null;
+              })()}
             </AnimatePresence>
           </motion.div>
         </div>
@@ -525,17 +616,51 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
           <motion.div
             initial={{ opacity: 0, scaleX: 0.8 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            className="w-full h-2 rounded-full bg-card border border-border overflow-hidden flex"
+            className="w-full relative"
           >
-            <motion.div
-              className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-l-full"
-              style={{ width: `${p1Percent}%` }}
-              transition={{ duration: 0.15 }}
-            />
-            <motion.div
-              className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-r-full"
-              style={{ width: `${p2Percent}%` }}
-              transition={{ duration: 0.15 }}
+            <div className="w-full h-3 rounded-full bg-card border border-border overflow-hidden flex relative">
+              <motion.div
+                className="h-full rounded-l-full relative overflow-hidden"
+                style={{ width: `${p1Percent}%`, background: "linear-gradient(90deg, #60a5fa, #3b82f6, #2563eb)" }}
+                transition={{ duration: 0.15 }}
+              >
+                {/* Shimmer sweep on P1 bar */}
+                {phase === "running" && p1Taps > 0 && (
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)", backgroundSize: "200% 100%" }}
+                    animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                  />
+                )}
+              </motion.div>
+              <motion.div
+                className="h-full rounded-r-full relative overflow-hidden"
+                style={{ width: `${p2Percent}%`, background: "linear-gradient(90deg, #f59e0b, #f97316, #ea580c)" }}
+                transition={{ duration: 0.15 }}
+              >
+                {phase === "running" && p2Taps > 0 && (
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)", backgroundSize: "200% 100%" }}
+                    animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear", delay: 0.3 }}
+                  />
+                )}
+              </motion.div>
+              {/* Center divider glow */}
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-white/20 z-10" />
+            </div>
+            {/* Glow underneath the bar */}
+            <div
+              className="h-2 -mt-1 rounded-full blur-sm opacity-40"
+              style={{
+                background: p1Percent > p2Percent
+                  ? "linear-gradient(90deg, rgba(59,130,246,0.6), rgba(59,130,246,0))"
+                  : p2Percent > p1Percent
+                  ? "linear-gradient(90deg, rgba(245,158,11,0), rgba(245,158,11,0.6))"
+                  : "linear-gradient(90deg, rgba(59,130,246,0.3), rgba(245,158,11,0.3))",
+              }}
             />
           </motion.div>
         )}
@@ -577,18 +702,28 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
               </motion.p>
               {/* Time progress bar */}
               {phase === "running" && (
-                <div className="mt-1 h-1 rounded-full bg-card overflow-hidden">
+                <div className="mt-1.5 h-1.5 rounded-full bg-card overflow-hidden relative">
                   <motion.div
-                    className="h-full rounded-full"
+                    className="h-full rounded-full relative"
                     style={{
                       width: `${timeProgress * 100}%`,
                       background: time <= 2
-                        ? "linear-gradient(90deg, #ef4444, #f87171)"
+                        ? "linear-gradient(90deg, #dc2626, #ef4444, #f87171)"
                         : time <= 3.5
-                        ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                        : "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                        ? "linear-gradient(90deg, #d97706, #f59e0b, #fbbf24)"
+                        : "linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa)",
                     }}
                     transition={{ duration: 0.15 }}
+                  />
+                  {/* Glow pulse at the leading edge */}
+                  <motion.div
+                    className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full blur-sm"
+                    style={{
+                      left: `${timeProgress * 100}%`,
+                      background: time <= 2 ? "#f87171" : time <= 3.5 ? "#fbbf24" : "#60a5fa",
+                    }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
                   />
                 </div>
               )}
@@ -607,51 +742,78 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
               animate={shakeP1 ? "shake" : undefined}
               className="relative"
             >
-              {/* Glow ring */}
+              {/* Glow ring - intensifies with combo */}
               <motion.div
-                className="absolute -inset-2 rounded-full"
+                className="absolute -inset-3 rounded-full"
                 style={{
-                  background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
+                  background: p1Combos > 10
+                    ? "radial-gradient(circle, rgba(250,204,21,0.5) 0%, transparent 70%)"
+                    : p1Combos > 5
+                    ? "radial-gradient(circle, rgba(168,85,247,0.4) 0%, transparent 70%)"
+                    : "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
                 }}
                 animate={p1Combos > 3
-                  ? { scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }
+                  ? { scale: [1, 1.15, 1], opacity: [0.5, 1, 0.5] }
                   : { opacity: 0.3 }
                 }
-                transition={{ duration: 0.5, repeat: p1Combos > 3 ? Infinity : 0 }}
+                transition={{ duration: 0.4, repeat: p1Combos > 3 ? Infinity : 0 }}
               />
               <motion.button
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 onClick={handleP1Tap}
                 onTouchStart={handleP1Tap}
-                className={`relative w-36 h-36 sm:w-40 sm:h-40 rounded-full text-white font-bold text-lg shadow-2xl select-none touch-none overflow-hidden transition-shadow duration-150 ${
+                className={`relative w-36 h-36 sm:w-40 sm:h-40 rounded-full text-white font-bold text-lg shadow-2xl select-none touch-none overflow-hidden transition-all duration-100 ${
                   p1Combos > 10
-                    ? "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 shadow-orange-500/40"
+                    ? "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 shadow-orange-500/50 border-4 border-yellow-300/40"
                     : p1Combos > 5
-                    ? "bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 shadow-purple-500/30"
-                    : "bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30"
-                } border-4 border-white/20 active:brightness-110`}
+                    ? "bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 shadow-purple-500/40 border-4 border-purple-300/30"
+                    : "bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30 border-4 border-white/20"
+                }`}
               >
+                {/* Flash overlay on tap */}
+                <AnimatePresence>
+                  {p1Flash && (
+                    <motion.div
+                      key="p1flash"
+                      initial={{ opacity: 0.7 }}
+                      animate={{ opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute inset-0 rounded-full bg-white pointer-events-none"
+                    />
+                  )}
+                </AnimatePresence>
                 {/* Inner ring animation */}
                 <motion.div
-                  className="absolute inset-1 rounded-full border-2 border-white/10"
-                  animate={phase === "running" ? { scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] } : {}}
-                  transition={{ duration: 1, repeat: Infinity }}
+                  className="absolute inset-1.5 rounded-full border-2 border-white/15"
+                  animate={phase === "running" ? { scale: [1, 1.06, 1], opacity: [0.3, 0.6, 0.3] } : {}}
+                  transition={{ duration: 0.8, repeat: Infinity }}
                 />
+                {/* Outer rotating ring at high combo */}
+                {p1Combos > 5 && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-dashed"
+                    style={{ borderColor: p1Combos > 10 ? "rgba(250,204,21,0.4)" : "rgba(192,132,252,0.3)" }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  />
+                )}
                 <span className="relative z-10 flex flex-col items-center gap-1">
-                  <Zap className="h-6 w-6" />
-                  <span className="text-sm font-semibold">{p1Name.split(" ")[0]}</span>
+                  <Zap className="h-7 w-7 drop-shadow-lg" />
+                  <span className="text-sm font-semibold drop-shadow">{p1Name.split(" ")[0]}</span>
                 </span>
               </motion.button>
-              {/* Ripple effects */}
+              {/* Ripple effects - concentric rings */}
               {ripples
                 .filter((r) => r.color.includes("96, 165"))
                 .map((r) => (
                   <motion.div
                     key={r.id}
-                    initial={{ scale: 0.5, opacity: 0.8 }}
-                    animate={{ scale: 2, opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="absolute inset-0 rounded-full border-2 border-blue-400/40 pointer-events-none"
+                    initial={{ scale: 0.3, opacity: r.ring === 1 ? 0.5 : 0.8 }}
+                    animate={{ scale: r.ring === 1 ? 2.5 : 1.8, opacity: 0 }}
+                    transition={{ duration: r.ring === 1 ? 0.6 : 0.45, ease: "easeOut" }}
+                    className={`absolute inset-0 rounded-full pointer-events-none ${r.ring === 1 ? "border border-blue-300/30" : "border-2 border-blue-400/50"}`}
                   />
                 ))}
             </motion.div>
@@ -664,35 +826,62 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
                 className="relative"
               >
                 <motion.div
-                  className="absolute -inset-2 rounded-full"
+                  className="absolute -inset-3 rounded-full"
                   style={{
-                    background: "radial-gradient(circle, rgba(251,191,36,0.3) 0%, transparent 70%)",
+                    background: p2Combos > 10
+                      ? "radial-gradient(circle, rgba(250,204,21,0.5) 0%, transparent 70%)"
+                      : p2Combos > 5
+                      ? "radial-gradient(circle, rgba(234,88,12,0.4) 0%, transparent 70%)"
+                      : "radial-gradient(circle, rgba(251,191,36,0.3) 0%, transparent 70%)",
                   }}
                   animate={p2Combos > 3
-                    ? { scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }
+                    ? { scale: [1, 1.15, 1], opacity: [0.5, 1, 0.5] }
                     : { opacity: 0.3 }
                   }
-                  transition={{ duration: 0.5, repeat: p2Combos > 3 ? Infinity : 0 }}
+                  transition={{ duration: 0.4, repeat: p2Combos > 3 ? Infinity : 0 }}
                 />
                 <motion.button
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.85 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   onClick={handleP2Tap}
                   onTouchStart={handleP2Tap}
-                  className={`relative w-36 h-36 sm:w-40 sm:h-40 rounded-full text-white font-bold text-lg shadow-2xl select-none touch-none overflow-hidden transition-shadow duration-150 ${
+                  className={`relative w-36 h-36 sm:w-40 sm:h-40 rounded-full text-white font-bold text-lg shadow-2xl select-none touch-none overflow-hidden transition-all duration-100 ${
                     p2Combos > 10
-                      ? "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 shadow-orange-500/40"
+                      ? "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 shadow-orange-500/50 border-4 border-yellow-300/40"
                       : p2Combos > 5
-                      ? "bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 shadow-orange-500/30"
-                      : "bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/30"
-                  } border-4 border-white/20 active:brightness-110`}
+                      ? "bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 shadow-orange-500/40 border-4 border-orange-300/30"
+                      : "bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/30 border-4 border-white/20"
+                  }`}
                 >
+                  {/* Flash overlay on tap */}
+                  <AnimatePresence>
+                    {p2Flash && (
+                      <motion.div
+                        key="p2flash"
+                        initial={{ opacity: 0.7 }}
+                        animate={{ opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute inset-0 rounded-full bg-white pointer-events-none"
+                      />
+                    )}
+                  </AnimatePresence>
                   <motion.div
-                    className="absolute inset-1 rounded-full border-2 border-white/10"
-                    animate={phase === "running" ? { scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] } : {}}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />\n                  <span className="relative z-10 flex flex-col items-center gap-1">
-                    <Zap className="h-6 w-6" />
-                    <span className="text-sm font-semibold">{p2Name.split(" ")[0]}</span>
+                    className="absolute inset-1.5 rounded-full border-2 border-white/15"
+                    animate={phase === "running" ? { scale: [1, 1.06, 1], opacity: [0.3, 0.6, 0.3] } : {}}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  />
+                  {p2Combos > 5 && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-2 border-dashed"
+                      style={{ borderColor: p2Combos > 10 ? "rgba(250,204,21,0.4)" : "rgba(234,88,12,0.3)" }}
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                  <span className="relative z-10 flex flex-col items-center gap-1">
+                    <Zap className="h-7 w-7 drop-shadow-lg" />
+                    <span className="text-sm font-semibold drop-shadow">{p2Name.split(" ")[0]}</span>
                   </span>
                 </motion.button>
                 {ripples
@@ -700,10 +889,10 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
                   .map((r) => (
                     <motion.div
                       key={r.id}
-                      initial={{ scale: 0.5, opacity: 0.8 }}
-                      animate={{ scale: 2, opacity: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="absolute inset-0 rounded-full border-2 border-amber-400/40 pointer-events-none"
+                      initial={{ scale: 0.3, opacity: r.ring === 1 ? 0.5 : 0.8 }}
+                      animate={{ scale: r.ring === 1 ? 2.5 : 1.8, opacity: 0 }}
+                      transition={{ duration: r.ring === 1 ? 0.6 : 0.45, ease: "easeOut" }}
+                      className={`absolute inset-0 rounded-full pointer-events-none ${r.ring === 1 ? "border border-amber-300/30" : "border-2 border-amber-400/50"}`}
                     />
                   ))}
               </motion.div>
@@ -714,14 +903,14 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
               <motion.div
                 key={f.id}
                 initial={{ opacity: 1, y: 0, scale: 1 }}
-                animate={{ opacity: 0, y: -50, scale: 1.2 }}
+                animate={{ opacity: 0, y: -50, scale: 1.3 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
                 className="absolute pointer-events-none font-black text-sm"
                 style={{
                   left: f.x,
                   top: f.y,
                   color: f.color,
-                  textShadow: "0 0 8px currentColor",
+                  textShadow: "0 0 10px currentColor",
                   zIndex: 30,
                 }}
               >
@@ -789,13 +978,13 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full text-center px-6 py-5 rounded-2xl border overflow-hidden relative"
+              className="w-full text-center px-5 py-6 rounded-2xl border overflow-hidden relative"
               style={{
                 background: isDraw
-                  ? "linear-gradient(135deg, rgba(100,100,100,0.1), rgba(150,150,150,0.1))"
+                  ? "linear-gradient(135deg, rgba(100,100,100,0.12), rgba(150,150,150,0.08))"
                   : p1Wins
-                  ? "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.1))"
-                  : "linear-gradient(135deg, rgba(251,191,36,0.15), rgba(249,115,22,0.1))",
+                  ? "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.08))"
+                  : "linear-gradient(135deg, rgba(251,191,36,0.15), rgba(249,115,22,0.08))",
                 borderColor: isDraw
                   ? "rgba(150,150,150,0.3)"
                   : p1Wins
@@ -807,68 +996,162 @@ const TapBattle = ({ duration = 5, onScore }: Props) => {
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)",
+                  background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)",
                   backgroundSize: "200% 100%",
                 }}
                 animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               />
 
+              {/* Trophy with spring-in rotation */}
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.1 }}
-                className="inline-block"
+                className="inline-block relative"
               >
                 <Trophy
-                  className={`h-8 w-8 mx-auto mb-2 ${
+                  className={`h-9 w-9 mx-auto ${
                     isDraw ? "text-gray-400" : p1Wins ? "text-blue-400" : "text-amber-400"
                   }`}
                 />
               </motion.div>
 
+              {/* Winner label */}
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className={`font-black text-xl ${
+                className={`font-black text-xl mt-2 ${
                   isDraw ? "text-gray-300" : p1Wins ? "text-blue-400" : "text-amber-400"
                 }`}
               >
-                {isDraw ? "Empate!" : `\u{1F3C6} ${winnerLabel}`}
+                {winnerLabel}
               </motion.p>
 
+              {/* Animated score comparison */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.35 }}
-                className="flex items-center justify-center gap-3 mt-2"
+                className="flex items-center justify-center gap-3 mt-3"
               >
-                <span className="text-2xl font-black text-blue-400">{p1Taps}</span>
-                <span className="text-sm text-muted-foreground font-bold">vs</span>
-                <span className="text-2xl font-black text-amber-400">{p2Taps}</span>
-                <span className="text-xs text-muted-foreground ml-1">taps</span>
+                <div className="flex flex-col items-center">
+                  <motion.span
+                    initial={{ scale: 0.5 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15, delay: 0.4 }}
+                    className={`text-3xl font-black ${p1Wins ? "text-blue-400" : "text-muted-foreground"}`}
+                  >
+                    {p1Taps}
+                  </motion.span>
+                  <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">{p1Name.split(" ")[0]}</span>
+                </div>
+                <div className="flex flex-col items-center px-2">
+                  <span className="text-xs text-muted-foreground font-bold">vs</span>
+                  <span className="text-[9px] text-muted-foreground/60 mt-0.5">taps</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <motion.span
+                    initial={{ scale: 0.5 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15, delay: 0.5 }}
+                    className={`text-3xl font-black ${p2Wins ? "text-amber-400" : "text-muted-foreground"}`}
+                  >
+                    {p2Taps}
+                  </motion.span>
+                  <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">{mode === "vs" ? p2Name.split(" ")[0] : "Bot"}</span>
+                </div>
               </motion.div>
 
-              {/* Tap rate stats */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="text-[10px] text-muted-foreground mt-1"
+              {/* Animated result bar */}
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0.5 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
+                className="mx-6 mt-3 h-2 rounded-full bg-white/5 overflow-hidden flex"
               >
-                {((p1Taps / duration).toFixed(1))} taps/s vs {((p2Taps / duration).toFixed(1))} taps/s
-              </motion.p>
+                <motion.div
+                  className="h-full rounded-l-full"
+                  style={{
+                    width: `${p1Percent}%`,
+                    background: "linear-gradient(90deg, #60a5fa, #3b82f6)",
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${p1Percent}%` }}
+                  transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
+                />
+                <motion.div
+                  className="h-full rounded-r-full"
+                  style={{
+                    width: `${p2Percent}%`,
+                    background: "linear-gradient(90deg, #f59e0b, #ea580c)",
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${p2Percent}%` }}
+                  transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
+                />
+              </motion.div>
 
+              {/* Stats row */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="flex items-center justify-center gap-4 mt-3 text-[10px] text-muted-foreground"
+              >
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{(p1Taps / duration).toFixed(1)} vs {(p2Taps / duration).toFixed(1)} taps/s</span>
+                </div>
+              </motion.div>
+
+              {/* Peak combo stats */}
+              {(p1PeakCombo > 2 || p2PeakCombo > 2) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.75 }}
+                  className="flex items-center justify-center gap-4 mt-1.5 text-[10px]"
+                >
+                  {p1PeakCombo > 2 && (
+                    <div className="flex items-center gap-1 text-orange-400/70">
+                      <Flame className="h-3 w-3" />
+                      <span className="font-semibold">Pico x{p1PeakCombo}</span>
+                    </div>
+                  )}
+                  {p2PeakCombo > 2 && (
+                    <div className="flex items-center gap-1 text-orange-400/70">
+                      <Flame className="h-3 w-3" />
+                      <span className="font-semibold">Pico x{p2PeakCombo}</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Differential */}
+              {!isDraw && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.85 }}
+                  className="text-[10px] text-muted-foreground/60 mt-1"
+                >
+                  Diferenca: {Math.abs(p1Taps - p2Taps)} taps
+                </motion.p>
+              )}
+
+              {/* Play again button */}
               <motion.button
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 0.9 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setPhase("idle")}
-                className="mt-4 px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow"
+                className="mt-4 px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2 mx-auto"
               >
+                <RotateCcw className="h-3.5 w-3.5" />
                 Nova batalha
               </motion.button>
             </motion.div>

@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Timer, Grid3X3, Bot } from 'lucide-react';
+import { RotateCcw, Timer, Grid3X3, Bot, Trophy, Zap, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ type TimerOption = 0 | 60 | 90 | 120;
 type GameState = 'idle' | 'playing' | 'ended';
 type CardStatus = 'hidden' | 'flipping' | 'matched' | 'shaking';
 type GameMode = 'player' | 'bot';
-type BotDifficulty = 'Fácil' | 'Médio' | 'Difícil';
+type BotDifficulty = 'F\u00e1cil' | 'M\u00e9dio' | 'Dif\u00edcil';
 
 interface CardData {
   id: number;
@@ -29,8 +29,27 @@ interface CardData {
   status: CardStatus;
 }
 
+interface BurstParticle {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+  angle: number;
+  speed: number;
+  size: number;
+}
+
+interface Confetto {
+  id: number;
+  x: number;
+  delay: number;
+  color: string;
+  duration: number;
+  rotation: number;
+}
+
 /* ------------------------------------------------------------------ */
-/*  Shape definitions – SVG path-based geometric patterns              */
+/*  Shape definitions \u2013 SVG path-based geometric patterns              */
 /* ------------------------------------------------------------------ */
 
 type ShapeName =
@@ -46,13 +65,13 @@ type ShapeName =
   | 'lightning';
 
 const SHAPE_DEFS: Record<ShapeName, { color: string; label: string }> = {
-  circle:    { color: '#06b6d4', label: 'Círculo' },
+  circle:    { color: '#06b6d4', label: 'C\u00edrculo' },
   star:      { color: '#eab308', label: 'Estrela' },
   diamond:   { color: '#ec4899', label: 'Diamante' },
-  heart:     { color: '#ef4444', label: 'Coração' },
-  triangle:  { color: '#22c55e', label: 'Triângulo' },
+  heart:     { color: '#ef4444', label: 'Cora\u00e7\u00e3o' },
+  triangle:  { color: '#22c55e', label: 'Tri\u00e2ngulo' },
   square:    { color: '#3b82f6', label: 'Quadrado' },
-  hexagon:   { color: '#a855f7', label: 'Hexágono' },
+  hexagon:   { color: '#a855f7', label: 'Hex\u00e1gono' },
   cross:     { color: '#f97316', label: 'Cruz' },
   moon:      { color: '#6366f1', label: 'Lua' },
   lightning: { color: '#f59e0b', label: 'Raio' },
@@ -190,6 +209,63 @@ function CardBackPattern() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Match Burst Particles                                              */
+/* ------------------------------------------------------------------ */
+
+let particleIdCounter = 0;
+
+function MatchBurstParticles({ color, onDone }: { color: string; onDone: () => void }) {
+  const particles = useMemo<BurstParticle[]>(() => {
+    const count = 14;
+    return Array.from({ length: count }, (_, i) => ({
+      id: ++particleIdCounter,
+      x: 0,
+      y: 0,
+      color,
+      angle: (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4,
+      speed: 40 + Math.random() * 50,
+      size: 3 + Math.random() * 4,
+    }));
+  }, [color]);
+
+  useEffect(() => {
+    const t = setTimeout(onDone, 900);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
+      {particles.map(p => {
+        const dx = Math.cos(p.angle) * p.speed;
+        const dy = Math.sin(p.angle) * p.speed;
+        return (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-full"
+            style={{
+              left: '50%',
+              top: '50%',
+              width: p.size,
+              height: p.size,
+              backgroundColor: p.color,
+              boxShadow: `0 0 6px 2px ${p.color}88`,
+            }}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+            animate={{
+              x: dx,
+              y: dy,
+              opacity: 0,
+              scale: 0.2,
+            }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Match / Mismatch toast                                             */
 /* ------------------------------------------------------------------ */
 
@@ -211,7 +287,7 @@ function FeedbackToast({ message, color }: { message: string; color: string }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Single Card component                                              */
+/*  Single Card component \u2013 Enhanced 3D flip, shake, glow             */
 /* ------------------------------------------------------------------ */
 
 interface CardProps {
@@ -230,19 +306,23 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
   return (
     <motion.div
       className="relative"
-      style={{ perspective: 600 }}
+      style={{ perspective: 1000 }}
       layout
     >
       <AnimatePresence>
         {isMatched && (
           <motion.div
             key={`glow-${card.id}`}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: [0, 1, 0.6], scale: [0.8, 1.15, 1] }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute inset-0 rounded-xl z-10 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{
+              opacity: [0, 1, 0.7, 1],
+              scale: [0.6, 1.2, 1.05, 1.1],
+            }}
+            transition={{ duration: 0.8, ease: 'easeOut', times: [0, 0.3, 0.6, 1] }}
+            className="absolute -inset-1 rounded-2xl z-0 pointer-events-none"
             style={{
-              boxShadow: `0 0 20px 4px ${shapeDef.color}66, 0 0 40px 8px ${shapeDef.color}33`,
+              background: `radial-gradient(ellipse at center, ${shapeDef.color}44 0%, transparent 70%)`,
+              boxShadow: `0 0 24px 6px ${shapeDef.color}55, 0 0 48px 12px ${shapeDef.color}22`,
             }}
           />
         )}
@@ -254,38 +334,62 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
         onClick={() => onClick(index)}
         animate={
           isShaking
-            ? { x: [0, -6, 6, -6, 6, -3, 3, 0] }
+            ? {
+                x: [0, -8, 8, -6, 6, -3, 3, 0],
+                rotate: [0, -3, 3, -2, 2, -1, 1, 0],
+              }
             : isMatched
-              ? { scale: [1, 1.12, 1] }
+              ? { scale: [1, 1.15, 0.95, 1.08, 1] }
               : {}
         }
         transition={
           isShaking
-            ? { duration: 0.5, ease: 'easeInOut' }
+            ? { duration: 0.55, ease: 'easeInOut' }
             : isMatched
-              ? { duration: 0.4, ease: 'easeOut' }
+              ? { duration: 0.6, ease: 'easeOut', times: [0, 0.2, 0.5, 0.7, 1] }
               : {}
         }
         className={cn(
-          'relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl cursor-pointer focus:outline-none transition-shadow',
+          'relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl cursor-pointer focus:outline-none',
           isMatched && 'cursor-default',
           disabled && !isFlipped && !isMatched && 'cursor-not-allowed opacity-60',
+          !disabled && !isFlipped && !isMatched && 'hover:brightness-125 active:scale-95',
         )}
         style={{
           transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'translateZ(20px)' : undefined,
         }}
         aria-label={`Carta ${index + 1}`}
       >
+        {/* Red flash overlay for shaking */}
+        <AnimatePresence>
+          {isShaking && (
+            <motion.div
+              key={`redflash-${card.id}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.35, 0.25, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.55 }}
+              className="absolute inset-0 rounded-xl bg-red-500 z-20 pointer-events-none"
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Card back (face-down) */}
         <motion.div
           className={cn(
             'absolute inset-0 rounded-xl border bg-slate-800 border-slate-700 flex items-center justify-center',
+            'backface-hidden shadow-lg shadow-black/30',
           )}
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
           }}
           animate={{ rotateY: isFlipped ? 180 : 0 }}
-          transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+          transition={{
+            duration: 0.5,
+            ease: [0.4, 0.0, 0.2, 1],
+          }}
         >
           <div className="text-slate-500 flex flex-col items-center justify-center">
             <CardBackPattern />
@@ -296,31 +400,243 @@ function GameCard({ card, index, disabled, onClick }: CardProps) {
           </span>
         </motion.div>
 
+        {/* Card front (face-up) */}
         <motion.div
           className={cn(
             'absolute inset-0 rounded-xl border border-slate-300 dark:border-slate-400 bg-white dark:bg-slate-100 flex items-center justify-center',
-            isMatched && 'border-green-400',
+            'backface-hidden',
+            isMatched
+              ? 'border-green-400 shadow-lg shadow-green-500/20'
+              : 'shadow-lg shadow-black/20',
           )}
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
           }}
           animate={{ rotateY: isFlipped ? 0 : -180 }}
-          transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+          transition={{
+            duration: 0.5,
+            ease: [0.4, 0.0, 0.2, 1],
+          }}
         >
           <ShapeSVG shape={card.shape} color={shapeDef.color} />
           {isMatched && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.25 }}
-              className="absolute top-0.5 right-0.5 text-green-500 text-xs"
+            <motion.div
+              initial={{ opacity: 0, scale: 0, rotate: -90 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ delay: 0.3, duration: 0.3, type: 'spring', stiffness: 200 }}
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-md"
             >
-              ✓
-            </motion.span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </motion.div>
           )}
         </motion.div>
       </motion.button>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Combo Badge                                                        */
+/* ------------------------------------------------------------------ */
+
+function ComboBadge({ combo, color }: { combo: number; color: string }) {
+  if (combo < 2) return null;
+  return (
+    <motion.div
+      key={`combo-${combo}`}
+      initial={{ scale: 0, y: -6 }}
+      animate={{ scale: 1, y: 0 }}
+      exit={{ scale: 0, opacity: 0 }}
+      className={cn(
+        'flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+        'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+      )}
+    >
+      <Zap className="w-2.5 h-2.5" />
+      <span>x{combo}</span>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Game Over Overlay with Confetti                                     */
+/* ------------------------------------------------------------------ */
+
+function GameOverOverlay({
+  winner,
+  p2Name,
+  scores,
+  combos,
+  totalPairs,
+  onPlayAgain,
+  onReset,
+}: {
+  winner: 1 | 2 | 'draw';
+  p2Name: string;
+  scores: [number, number];
+  combos: [number, number];
+  totalPairs: number;
+  onPlayAgain: () => void;
+  onReset: () => void;
+}) {
+  const confetti = useMemo<Confetto[]>(() => {
+    const colors = ['#06b6d4', '#ec4899', '#eab308', '#22c55e', '#a855f7', '#f97316', '#ef4444', '#3b82f6'];
+    return Array.from({ length: 40 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      delay: Math.random() * 1.2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      duration: 2.5 + Math.random() * 2,
+      rotation: Math.random() * 360,
+    }));
+  }, []);
+
+  const winnerColor = winner === 1 ? 'from-cyan-400 to-cyan-600' : 'from-pink-400 to-pink-600';
+  const winnerName = winner === 'draw' ? 'Empate' : winner === 1 ? 'Jogador 1' : p2Name;
+  const winnerIcon = winner === 'draw' ? <Sparkles className="w-8 h-8 text-yellow-400" /> : <Trophy className="w-8 h-8 text-yellow-400" />;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="absolute inset-0 z-50 flex items-center justify-center"
+    >
+      {/* Confetti */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {confetti.map(c => (
+          <motion.div
+            key={c.id}
+            className="absolute w-2 h-2 rounded-sm"
+            style={{
+              left: `${c.x}%`,
+              top: -10,
+              backgroundColor: c.color,
+              rotate: c.rotation,
+            }}
+            initial={{ y: -20, opacity: 1, rotate: 0 }}
+            animate={{
+              y: ['0vh', '105vh'],
+              x: [0, (Math.random() - 0.5) * 80],
+              rotate: [0, 360 + Math.random() * 360],
+              opacity: [1, 1, 0.5],
+            }}
+            transition={{
+              duration: c.duration,
+              delay: c.delay,
+              ease: 'linear',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+      {/* Content card */}
+      <motion.div
+        initial={{ scale: 0.7, y: 30, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.15 }}
+        className="relative z-10 w-[90%] max-w-sm rounded-2xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-md p-6 shadow-2xl"
+      >
+        {/* Trophy + winner */}
+        <div className="flex flex-col items-center gap-2 mb-5">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 12, delay: 0.3 }}
+          >
+            {winnerIcon}
+          </motion.div>
+          <motion.h3
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className={cn(
+              'text-2xl font-extrabold bg-clip-text text-transparent',
+              winner === 'draw' ? 'bg-gradient-to-r from-cyan-400 to-pink-400' : `bg-gradient-to-r ${winnerColor}`,
+            )}
+          >
+            {winner === 'draw' ? 'Empate!' : `${winnerName} Venceu!`}
+          </motion.h3>
+        </div>
+
+        {/* Score comparison */}
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className={cn(
+              'flex-1 rounded-xl p-3 text-center border',
+              winner === 1
+                ? 'border-cyan-500/50 bg-cyan-500/10'
+                : 'border-slate-700 bg-slate-800/50',
+            )}
+          >
+            <div className="text-cyan-300 text-xs font-semibold mb-1">Jogador 1</div>
+            <div className="text-3xl font-black text-white">{scores[0]}</div>
+            <div className="text-slate-400 text-[10px] mt-1">de {totalPairs} pares</div>
+            {combos[0] >= 2 && (
+              <div className="flex items-center justify-center gap-0.5 text-amber-400 text-[10px] mt-1">
+                <Zap className="w-2.5 h-2.5" /> Melhor combo: x{combos[0]}
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.7, type: 'spring' }}
+            className="text-slate-500 font-bold text-sm"
+          >
+            VS
+          </motion.div>
+
+          <motion.div
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className={cn(
+              'flex-1 rounded-xl p-3 text-center border',
+              winner === 2
+                ? 'border-pink-500/50 bg-pink-500/10'
+                : 'border-slate-700 bg-slate-800/50',
+            )}
+          >
+            <div className="text-pink-300 text-xs font-semibold mb-1">{p2Name}</div>
+            <div className="text-3xl font-black text-white">{scores[1]}</div>
+            <div className="text-slate-400 text-[10px] mt-1">de {totalPairs} pares</div>
+            {combos[1] >= 2 && (
+              <div className="flex items-center justify-center gap-0.5 text-amber-400 text-[10px] mt-1">
+                <Zap className="w-2.5 h-2.5" /> Melhor combo: x{combos[1]}
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-2">
+          <Button
+            onClick={onReset}
+            variant="outline"
+            className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+          >
+            <RotateCcw className="w-3.5 h-3.5 mr-1" />
+            Menu
+          </Button>
+          <Button
+            onClick={onPlayAgain}
+            className="flex-1 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white"
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1" />
+            Jogar Novamente
+          </Button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -333,24 +649,28 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
   /* ---- State ---- */
   const [gameState, setGameState] = useState<GameState>('idle');
   const [mode, setMode] = useState<GameMode>('player');
-  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('Médio');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('M\u00e9dio');
   const [gridSize, setGridSize] = useState<GridSize>('4x4');
   const [timerOption, setTimerOption] = useState<TimerOption>(90);
   const [cards, setCards] = useState<CardData[]>([]);
   const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
   const [scores, setScores] = useState<[number, number]>([0, 0]);
+  const [combos, setCombos] = useState<[number, number]>([0, 0]);
+  const [bestCombos, setBestCombos] = useState<[number, number]>([0, 0]);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [canFlip, setCanFlip] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; color: string; id: number } | null>(null);
   const [winner, setWinner] = useState<1 | 2 | 'draw' | null>(null);
   const [botThinking, setBotThinking] = useState(false);
+  const [burstParticles, setBurstParticles] = useState<{ color: string; key: number } | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const feedbackIdRef = useRef(0);
   const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const botMemoryRef = useRef<Map<number, number>>(new Map()); // index -> pairId
+  const botMemoryRef = useRef<Map<number, number>>(new Map());
   const isProcessingRef = useRef(false);
+  const burstKeyRef = useRef(0);
 
   const config = GRID_CONFIG[gridSize];
   const totalPairs = config.pairs;
@@ -362,8 +682,42 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
   /* ---- Derived ---- */
   const activeGlow =
     currentPlayer === 1
-      ? 'shadow-[0_0_20px_4px_rgba(6,182,212,0.35)] border-cyan-500/50'
-      : 'shadow-[0_0_20px_4px_rgba(236,72,153,0.35)] border-pink-500/50';
+      ? 'shadow-[0_0_24px_6px_rgba(6,182,212,0.3)] border-cyan-500/50'
+      : 'shadow-[0_0_24px_6px_rgba(236,72,153,0.3)] border-pink-500/50';
+
+  const activeTurnColor = currentPlayer === 1 ? 'text-cyan-300' : 'text-pink-300';
+
+  /* ---- Spawn burst particles ---- */
+  const spawnBurst = useCallback((color: string) => {
+    const key = ++burstKeyRef.current;
+    setBurstParticles({ color, key });
+    setTimeout(() => setBurstParticles(prev => prev && prev.key === key ? null : prev), 900);
+  }, []);
+
+  /* ---- Update combo ---- */
+  const updateCombo = useCallback((player: 1 | 2, isMatch: boolean) => {
+    if (isMatch) {
+      setCombos(prev => {
+        const next = [...prev] as [number, number];
+        next[player - 1] += 1;
+        return next;
+      });
+      setBestCombos(prev => {
+        const next = [...prev] as [number, number];
+        const currentCombo = (player === 1 ? combos[0] : combos[1]) + 1;
+        if (currentCombo > next[player - 1]) {
+          next[player - 1] = currentCombo;
+        }
+        return next;
+      });
+    } else {
+      setCombos(prev => {
+        const next = [...prev] as [number, number];
+        next[player - 1] = 0;
+        return next;
+      });
+    }
+  }, [combos]);
 
   /* ---- Init game ---- */
   const initGame = useCallback(() => {
@@ -381,11 +735,14 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setFlippedIndices([]);
     setCurrentPlayer(1);
     setScores([0, 0]);
+    setCombos([0, 0]);
+    setBestCombos([0, 0]);
     setCanFlip(true);
     setFeedback(null);
     setWinner(null);
     setTimeRemaining(timerOption);
     setBotThinking(false);
+    setBurstParticles(null);
     isProcessingRef.current = false;
     setGameState('playing');
   }, [totalPairs, timerOption]);
@@ -460,7 +817,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setCards(updated);
     setFlippedIndices(newFlipped);
 
-    // Remember revealed cards for bot
     if (player === 1 || mode === 'bot') {
       botMemoryRef.current.set(index, updated[index].pairId);
     }
@@ -469,6 +825,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
       setCanFlip(false);
       const [a, b] = newFlipped;
       if (updated[a].pairId === updated[b].pairId) {
+        const matchColor = updated[a].color;
         setTimeout(() => {
           setCards(prev =>
             prev.map((c, i) => (i === a || i === b ? { ...c, status: 'matched' as CardStatus } : c)),
@@ -478,14 +835,22 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
             next[player - 1] += 1;
             return next;
           });
-          showFeedback('Par!', 'bg-green-600 text-white');
+          updateCombo(player, true);
+          spawnBurst(matchColor);
+          const comboVal = (player === 1 ? combos[0] : combos[1]) + 1;
+          if (comboVal >= 2) {
+            showFeedback(`Par! Combo x${comboVal}`, 'bg-green-600 text-white');
+          } else {
+            showFeedback('Par!', 'bg-green-600 text-white');
+          }
           setFlippedIndices([]);
           setCanFlip(true);
           isProcessingRef.current = false;
         }, 500);
         return true;
       } else {
-        showFeedback('Não é par', 'bg-red-600 text-white');
+        updateCombo(player, false);
+        showFeedback('N\u00e3o \u00e9 par', 'bg-red-600 text-white');
         setTimeout(() => {
           setCards(prev =>
             prev.map((c, i) =>
@@ -509,7 +874,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     }
     isProcessingRef.current = false;
     return true;
-  }, [gameState, mode, showFeedback]);
+  }, [gameState, mode, showFeedback, updateCombo, spawnBurst, combos]);
 
   /* ---- Player card click ---- */
   const handleCardClick = useCallback(
@@ -552,9 +917,9 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setBotThinking(true);
 
     const botMemoryPct: Record<BotDifficulty, number> = {
-      'Fácil': 0.3,
-      'Médio': 0.6,
-      'Difícil': 0.9,
+      'F\u00e1cil': 0.3,
+      'M\u00e9dio': 0.6,
+      'Dif\u00edcil': 0.9,
     };
     const memoryChance = botMemoryPct[botDifficulty];
     const memory = botMemoryRef.current;
@@ -577,11 +942,9 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         return;
       }
 
-      // First flip
       let firstPick: number;
       let secondPick: number | null = null;
 
-      // Check if bot remembers a matching pair
       const rememberedPairs = new Map<number, number[]>();
       for (const [idx, pairId] of memory) {
         if (cards[idx]?.status === 'hidden') {
@@ -602,12 +965,10 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         }
       }
 
-      // Check if bot remembers one card of a pair and another is available
       if (!foundMatch) {
         for (const [pairId, indices] of rememberedPairs) {
           if (indices.length === 1 && Math.random() < memoryChance) {
             firstPick = indices[0];
-            // Find the other card of this pair
             const otherIdx = available.find(
               c => c.pairId === pairId && c.index !== firstPick
             );
@@ -624,7 +985,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         firstPick = available[Math.floor(Math.random() * available.length)].index;
       }
 
-      // Flip first card
       const currentCards = cards;
       const currentFlipped = flippedIndices;
 
@@ -641,14 +1001,13 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
       setFlippedIndices(newFlipped);
       memory.set(firstPick, updated[firstPick].pairId);
 
-      // After 800ms, flip second card
       botTimeoutRef.current = setTimeout(() => {
         if (gameState !== 'playing' || currentPlayer !== 2) {
           setBotThinking(false);
           return;
         }
 
-        const freshCards = cards; // re-read latest
+        const freshCards = cards;
         const freshAvailable = freshCards
           .map((c, i) => ({ index: i, pairId: c.pairId, status: c.status }))
           .filter(c => c.status === 'hidden');
@@ -658,7 +1017,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         if (secondPick !== null && freshCards[secondPick]?.status === 'hidden') {
           actualSecond = secondPick;
         } else {
-          // Try to find a match with the first card
           const firstPairId = updated[firstPick].pairId;
           const matchIdx = freshAvailable.find(c => c.pairId === firstPairId && c.index !== firstPick);
           if (matchIdx && Math.random() < memoryChance) {
@@ -679,6 +1037,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         setCanFlip(false);
         const [a, b] = finalFlipped;
         if (finalUpdated[a].pairId === finalUpdated[b].pairId) {
+          const matchColor = finalUpdated[a].color;
           setTimeout(() => {
             setCards(prev =>
               prev.map((c, i) => (i === a || i === b ? { ...c, status: 'matched' as CardStatus } : c)),
@@ -688,13 +1047,21 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
               next[1] += 1;
               return next;
             });
-            showFeedback('Par!', 'bg-green-600 text-white');
+            updateCombo(2, true);
+            spawnBurst(matchColor);
+            const comboVal = combos[1] + 1;
+            if (comboVal >= 2) {
+              showFeedback(`Par! Combo x${comboVal}`, 'bg-green-600 text-white');
+            } else {
+              showFeedback('Par!', 'bg-green-600 text-white');
+            }
             setFlippedIndices([]);
             setCanFlip(true);
             setBotThinking(false);
           }, 500);
         } else {
-          showFeedback('Não é par', 'bg-red-600 text-white');
+          updateCombo(2, false);
+          showFeedback('N\u00e3o \u00e9 par', 'bg-red-600 text-white');
           setTimeout(() => {
             setCards(prev =>
               prev.map((c, i) =>
@@ -717,7 +1084,6 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
       }, 800);
     };
 
-    // Bot thinks for 800ms before first flip
     botTimeoutRef.current = setTimeout(doBotTurn, 800);
 
     return () => {
@@ -727,7 +1093,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
       }
       setBotThinking(false);
     };
-  }, [gameState, mode, currentPlayer, canFlip, cards, flippedIndices, botDifficulty, showFeedback]);
+  }, [gameState, mode, currentPlayer, canFlip, cards, flippedIndices, botDifficulty, showFeedback, updateCombo, spawnBurst, combos]);
 
   /* ---- Reset to idle ---- */
   const resetAll = () => {
@@ -737,12 +1103,15 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
     setCards([]);
     setFlippedIndices([]);
     setScores([0, 0]);
+    setCombos([0, 0]);
+    setBestCombos([0, 0]);
     setCurrentPlayer(1);
     setTimeRemaining(0);
     setCanFlip(false);
     setFeedback(null);
     setWinner(null);
     setBotThinking(false);
+    setBurstParticles(null);
     botMemoryRef.current = new Map();
     isProcessingRef.current = false;
   };
@@ -760,106 +1129,186 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto select-none">
-      <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
-        MEMÓRIA VS CARTAS
+      <h2 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tracking-tight">
+        MEM\u00d3RIA VS CARTAS
       </h2>
 
-      <div className="w-full rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-3 flex items-center justify-between">
-        <div
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all',
-            currentPlayer === 1 && gameState === 'playing'
-              ? 'bg-cyan-500/20 ring-1 ring-cyan-400'
-              : 'opacity-70',
-          )}
-        >
-          <div className="w-3 h-3 rounded-full bg-cyan-400" />
-          <span className="text-cyan-300 font-semibold text-sm">Jogador 1</span>
-          <motion.span
-            key={`s1-${scores[0]}`}
-            initial={{ scale: 0.5, y: -8 }}
-            animate={{ scale: 1, y: 0 }}
-            className="text-white font-bold text-lg"
+      {/* ---- Score / Turn Bar ---- */}
+      <div className="w-full rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-slate-700/50 p-3">
+        <div className="flex items-center justify-between">
+          {/* Player 1 panel */}
+          <div
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300',
+              currentPlayer === 1 && gameState === 'playing'
+                ? 'bg-cyan-500/15 ring-1 ring-cyan-400/70 shadow-[0_0_12px_2px_rgba(6,182,212,0.2)]'
+                : 'opacity-60',
+            )}
           >
-            {scores[0]}
-          </motion.span>
-          <span className="text-cyan-400/60 text-xs">pares</span>
-        </div>
-
-        <div className="flex flex-col items-center gap-1">
-          {gameState === 'playing' && (
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={currentPlayer}
-                initial={{ opacity: 0, x: currentPlayer === 1 ? -10 : 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className={cn(
-                  'text-xs font-semibold px-2 py-0.5 rounded-full',
-                  currentPlayer === 1
-                    ? 'text-cyan-300 bg-cyan-500/10'
-                    : 'text-pink-300 bg-pink-500/10',
+            <motion.div
+              className="w-3 h-3 rounded-full bg-cyan-400"
+              animate={
+                currentPlayer === 1 && gameState === 'playing'
+                  ? { scale: [1, 1.4, 1], boxShadow: ['0 0 0 0 rgba(6,182,212,0.5)', '0 0 0 6px rgba(6,182,212,0)', '0 0 0 0 rgba(6,182,212,0.5)'] }
+                  : {}
+              }
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <div className="flex flex-col">
+              <span className="text-cyan-300 font-semibold text-xs leading-tight">Jogador 1</span>
+              <AnimatePresence>
+                {combos[0] >= 2 && (
+                  <ComboBadge combo={combos[0]} color="cyan" />
                 )}
-              >
-                {currentPlayer === 2 && mode === 'bot' && botThinking ? 'Computador pensando...' : 'Sua vez'}
-              </motion.span>
-            </AnimatePresence>
-          )}
-          {gameState === 'idle' && (
-            <span className="text-slate-400 text-xs">Pronto para jogar</span>
-          )}
-          {gameState === 'ended' && winner && winner !== 'draw' && (
+              </AnimatePresence>
+            </div>
             <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className={cn(
-                'text-sm font-bold',
-                winner === 1 ? 'text-cyan-300' : 'text-pink-300',
-              )}
+              key={`s1-${scores[0]}`}
+              initial={{ scale: 0.5, y: -10 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="text-white font-black text-2xl tabular-nums"
             >
-              {winner === 1 ? 'Jogador 1' : getP2Name()} Venceu!
+              {scores[0]}
             </motion.span>
-          )}
-          {gameState === 'ended' && winner === 'draw' && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-sm font-bold text-yellow-300"
-            >
-              Empate!
-            </motion.span>
-          )}
-        </div>
+            <span className="text-cyan-400/50 text-[10px] leading-none">pares</span>
+          </div>
 
-        <div
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all',
-            currentPlayer === 2 && gameState === 'playing'
-              ? 'bg-pink-500/20 ring-1 ring-pink-400'
-              : 'opacity-70',
-          )}
-        >
-          <span className="text-pink-400/60 text-xs">pares</span>
-          <motion.span
-            key={`s2-${scores[1]}`}
-            initial={{ scale: 0.5, y: -8 }}
-            animate={{ scale: 1, y: 0 }}
-            className="text-white font-bold text-lg"
+          {/* Center turn indicator */}
+          <div className="flex flex-col items-center gap-1 min-w-[90px]">
+            {gameState === 'playing' && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPlayer}
+                  initial={{ opacity: 0, x: currentPlayer === 1 ? -12 : 12, scale: 0.8 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: currentPlayer === 1 ? 12 : -12, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  className="flex flex-col items-center gap-0.5"
+                >
+                  {currentPlayer === 2 && mode === 'bot' && botThinking ? (
+                    <div className="flex items-center gap-1">
+                      <motion.div
+                        className="flex gap-0.5"
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                      >
+                        <span className={cn('text-[10px] font-semibold', activeTurnColor)}>Pensando</span>
+                        <motion.span
+                          animate={{ opacity: [0, 1, 0] }}
+                          transition={{ duration: 1.2, repeat: Infinity, delay: 0 }}
+                          className={cn('text-[10px]', activeTurnColor)}
+                        >.</motion.span>
+                        <motion.span
+                          animate={{ opacity: [0, 1, 0] }}
+                          transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
+                          className={cn('text-[10px]', activeTurnColor)}
+                        >.</motion.span>
+                        <motion.span
+                          animate={{ opacity: [0, 1, 0] }}
+                          transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }}
+                          className={cn('text-[10px]', activeTurnColor)}
+                        >.</motion.span>
+                      </motion.div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      {currentPlayer === 1 ? (
+                        <ArrowRight className={cn('w-3 h-3', activeTurnColor)} />
+                      ) : (
+                        <ArrowLeft className={cn('w-3 h-3', activeTurnColor)} />
+                      )}
+                      <span className={cn('text-[10px] font-bold', activeTurnColor)}>SUA VEZ</span>
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      'w-6 h-0.5 rounded-full',
+                      currentPlayer === 1 ? 'bg-cyan-400' : 'bg-pink-400',
+                    )}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            )}
+            {gameState === 'idle' && (
+              <span className="text-slate-500 text-[10px]">Pronto para jogar</span>
+            )}
+            {gameState === 'ended' && winner && winner !== 'draw' && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 250 }}
+                className="flex flex-col items-center"
+              >
+                <Trophy className={cn('w-4 h-4', winner === 1 ? 'text-cyan-400' : 'text-pink-400')} />
+                <span className={cn('text-[10px] font-bold mt-0.5', winner === 1 ? 'text-cyan-300' : 'text-pink-300')}>
+                  {winner === 1 ? 'Jogador 1' : getP2Name()}
+                </span>
+              </motion.div>
+            )}
+            {gameState === 'ended' && winner === 'draw' && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex flex-col items-center"
+              >
+                <Sparkles className="w-4 h-4 text-yellow-400" />
+                <span className="text-[10px] font-bold text-yellow-300 mt-0.5">Empate</span>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Player 2 panel */}
+          <div
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300',
+              currentPlayer === 2 && gameState === 'playing'
+                ? 'bg-pink-500/15 ring-1 ring-pink-400/70 shadow-[0_0_12px_2px_rgba(236,72,153,0.2)]'
+                : 'opacity-60',
+            )}
           >
-            {scores[1]}
-          </motion.span>
-          {mode === 'bot' ? (
-            <span className="text-pink-300 font-semibold text-sm flex items-center gap-1">
-              <Bot className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Computador</span>
-            </span>
-          ) : (
-            <span className="text-pink-300 font-semibold text-sm">Jogador 2</span>
-          )}
-          <div className="w-3 h-3 rounded-full bg-pink-400" />
+            <span className="text-pink-400/50 text-[10px] leading-none">pares</span>
+            <motion.span
+              key={`s2-${scores[1]}`}
+              initial={{ scale: 0.5, y: -10 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="text-white font-black text-2xl tabular-nums"
+            >
+              {scores[1]}
+            </motion.span>
+            <div className="flex flex-col items-end">
+              <span className="text-pink-300 font-semibold text-xs leading-tight flex items-center gap-1">
+                {mode === 'bot' ? (
+                  <>
+                    <Bot className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Computador</span>
+                    <span className="sm:hidden">CPU</span>
+                  </>
+                ) : (
+                  'Jogador 2'
+                )}
+              </span>
+              <AnimatePresence>
+                {combos[1] >= 2 && (
+                  <ComboBadge combo={combos[1]} color="pink" />
+                )}
+              </AnimatePresence>
+            </div>
+            <motion.div
+              className="w-3 h-3 rounded-full bg-pink-400"
+              animate={
+                currentPlayer === 2 && gameState === 'playing'
+                  ? { scale: [1, 1.4, 1], boxShadow: ['0 0 0 0 rgba(236,72,153,0.5)', '0 0 0 6px rgba(236,72,153,0)', '0 0 0 0 rgba(236,72,153,0.5)'] }
+                  : {}
+              }
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </div>
         </div>
       </div>
 
+      {/* ---- Settings bar ---- */}
       <div className="w-full flex flex-wrap items-center justify-center gap-2">
         <div className="flex items-center gap-1">
           <span className="text-xs text-slate-400 mr-1">Modo:</span>
@@ -873,7 +1322,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
             disabled={gameState === 'playing'}
             onClick={() => setMode('player')}
           >
-            👤 Jogador
+            <span className="mr-1 text-[10px]">⛹</span> Jogador
           </Button>
           <Button
             size="sm"
@@ -893,7 +1342,7 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         {mode === 'bot' && (
           <div className="flex items-center gap-1">
             <span className="text-xs text-slate-400 mr-1">IA:</span>
-            {(['Fácil', 'Médio', 'Difícil'] as BotDifficulty[]).map(d => (
+            {(['F\u00e1cil', 'M\u00e9dio', 'Dif\u00edcil'] as BotDifficulty[]).map(d => (
               <Button
                 key={d}
                 size="sm"
@@ -952,18 +1401,35 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
         </div>
       </div>
 
+      {/* ---- Timer bar ---- */}
       {timerOption > 0 && gameState === 'playing' && (
-        <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2"
-        >
+        <div className="w-full flex items-center gap-2">
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-1"
+          >
+            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <motion.div
+                className={cn(
+                  'h-full rounded-full transition-colors duration-300',
+                  timeRemaining <= 10
+                    ? 'bg-red-500'
+                    : timeRemaining <= 30
+                      ? 'bg-yellow-500'
+                      : 'bg-cyan-500',
+                )}
+                animate={{ width: `${(timeRemaining / timerOption) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'linear' }}
+              />
+            </div>
+          </motion.div>
           <Badge
             variant="outline"
             className={cn(
-              'font-mono text-sm px-3 py-0.5',
+              'font-mono text-sm px-3 py-0.5 tabular-nums',
               timeRemaining <= 10
-                ? 'border-red-500 text-red-400 bg-red-500/10'
+                ? 'border-red-500 text-red-400 bg-red-500/10 animate-pulse'
                 : timeRemaining <= 30
                   ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10'
                   : 'border-slate-500 text-slate-300',
@@ -971,24 +1437,27 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
           >
             {fmt(timeRemaining)}
           </Badge>
-        </motion.div>
+        </div>
       )}
 
+      {/* ---- Idle screen ---- */}
       {gameState === 'idle' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="text-slate-400 text-sm text-center max-w-xs">
-            Jogo de memória competitivo. {mode === 'bot' ? 'Desafie o computador!' : 'Dois jogadores revezam turnos no mesmo tabuleiro.'}
+            Jogo de mem\u00f3ria competitivo. {mode === 'bot' ? 'Desafie o computador!' : 'Dois jogadores revezam turnos no mesmo tabuleiro.'}
             Encontre os pares para marcar pontos!
           </div>
           <Button
             onClick={initGame}
-            className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-6"
+            className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-2 text-sm font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-shadow"
           >
+            <Sparkles className="w-4 h-4 mr-2" />
             Iniciar Jogo
           </Button>
         </div>
       )}
 
+      {/* ---- Game board ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div
           className={cn(
@@ -997,6 +1466,17 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
             gameState === 'ended' && 'border-slate-700',
           )}
         >
+          {/* Burst particles overlay */}
+          <AnimatePresence>
+            {burstParticles && (
+              <MatchBurstParticles
+                key={burstParticles.key}
+                color={burstParticles.color}
+                onDone={() => {}}
+              />
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {feedback && (
               <FeedbackToast
@@ -1023,9 +1503,25 @@ export default function MemoryCardsVS({ onScore, liveCode: _liveCode }: Props) {
               />
             ))}
           </div>
+
+          {/* Game over overlay */}
+          <AnimatePresence>
+            {gameState === 'ended' && winner && (
+              <GameOverOverlay
+                winner={winner}
+                p2Name={getP2Name()}
+                scores={scores}
+                combos={bestCombos}
+                totalPairs={totalPairs}
+                onPlayAgain={initGame}
+                onReset={resetAll}
+              />
+            )}
+          </AnimatePresence>
         </div>
       )}
 
+      {/* ---- Bottom bar ---- */}
       {(gameState === 'playing' || gameState === 'ended') && (
         <div className="flex items-center gap-4 mt-1">
           <Button

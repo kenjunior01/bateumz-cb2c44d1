@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Wind, Crosshair } from "lucide-react";
+import { RotateCcw, Wind, Crosshair, Zap, Heart, Trophy } from "lucide-react";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -43,6 +43,15 @@ interface Explosion {
   frame: number;
   maxFrames: number;
   particles: ExplosionParticle[];
+  shockwaveRadius: number;
+}
+
+interface WindStreak {
+  x: number;
+  y: number;
+  length: number;
+  speed: number;
+  alpha: number;
 }
 
 interface GameState {
@@ -95,21 +104,55 @@ function generateWind(): number {
 
 function createExplosion(x: number, y: number): Explosion {
   const particles: ExplosionParticle[] = [];
-  const colors = ["#ff6600", "#ff9900", "#ffcc00", "#ff3300", "#ffffff"];
-  for (let i = 0; i < 20; i++) {
+  const fireColors = ["#ff6600", "#ff9900", "#ffcc00", "#ff3300", "ffffff"];
+  const smokeColors = ["#666666", "#888888", "#555555", "#777777"];
+
+  // Fire/spark particles (30)
+  for (let i = 0; i < 30; i++) {
     const ang = Math.random() * Math.PI * 2;
-    const speed = 1 + Math.random() * 4;
+    const speed = 1.5 + Math.random() * 5;
     particles.push({
       x,
       y,
       vx: Math.cos(ang) * speed,
-      vy: Math.sin(ang) * speed - 2,
+      vy: Math.sin(ang) * speed - 2.5,
       size: 2 + Math.random() * 4,
       alpha: 1,
-      color: colors[Math.floor(Math.random() * colors.length)],
+      color: fireColors[Math.floor(Math.random() * fireColors.length)],
     });
   }
-  return { x, y, frame: 0, maxFrames: 40, particles };
+
+  // Smoke particles (12)
+  for (let i = 0; i < 12; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const speed = 0.3 + Math.random() * 1.5;
+    particles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: Math.cos(ang) * speed,
+      vy: -0.5 - Math.random() * 1.5,
+      size: 4 + Math.random() * 7,
+      alpha: 0.7,
+      color: smokeColors[Math.floor(Math.random() * smokeColors.length)],
+    });
+  }
+
+  // Debris particles (8)
+  for (let i = 0; i < 8; i++) {
+    const ang = -Math.PI * 0.1 - Math.random() * Math.PI * 0.8;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed,
+      size: 1.5 + Math.random() * 2.5,
+      alpha: 1,
+      color: Math.random() > 0.5 ? "#8B6914" : "#6B4F12",
+    });
+  }
+
+  return { x, y, frame: 0, maxFrames: 50, particles, shockwaveRadius: 0 };
 }
 
 function createProjectile(
@@ -150,10 +193,34 @@ function initGameState(): GameState {
   };
 }
 
+function initWindStreaks(): WindStreak[] {
+  const streaks: WindStreak[] = [];
+  for (let i = 0; i < 20; i++) {
+    streaks.push({
+      x: Math.random() * CANVAS_WIDTH,
+      y: Math.random() * CANVAS_HEIGHT * 0.45,
+      length: 10 + Math.random() * 25,
+      speed: 0.5 + Math.random() * 1.5,
+      alpha: 0.03 + Math.random() * 0.07,
+    });
+  }
+  return streaks;
+}
+
 export default function CannonBattle({ onScore, liveCode }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState>(initGameState());
   const animFrameRef = useRef<number>(0);
+  const shakeRef = useRef(0);
+  const windStreaksRef = useRef<WindStreak[]>([]);
+  const displayHealthRef = useRef({ p1: 100, p2: 100 });
+  const damageFlashRef = useRef({ p1: 0, p2: 0 });
+  const muzzleFlashRef = useRef<{ x: number; y: number; alpha: number } | null>(null);
+  const frameCountRef = useRef(0);
+  const gameOverSparklesRef = useRef<
+    { x: number; y: number; vx: number; vy: number; alpha: number; size: number }[]
+  >([]);
+  const gameOverInitedRef = useRef(false);
 
   const [angle, setAngle] = useState(45);
   const [power, setPower] = useState(50);
@@ -190,6 +257,19 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
 
     const fireAngle = gs.currentPlayer === 1 ? angle : 180 - angle;
     const proj = createProjectile(playerX, startY, fireAngle, power);
+
+    // Muzzle flash setup
+    const rad = (fireAngle * Math.PI) / 180;
+    const dir = gs.currentPlayer === 1 ? 1 : -1;
+    const barrelLen = 18;
+    muzzleFlashRef.current = {
+      x: playerX + Math.cos(rad) * barrelLen * dir,
+      y: startY - Math.sin(rad) * barrelLen,
+      alpha: 1,
+    };
+
+    // Small recoil shake
+    shakeRef.current = 3;
 
     gs.projectile = proj;
     gs.phase = "firing";
@@ -239,30 +319,109 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Initialize wind streaks
+    if (windStreaksRef.current.length === 0) {
+      windStreaksRef.current = initWindStreaks();
+    }
+
+    const drawRoundRect = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number
+    ) => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    };
+
     const drawSky = () => {
       const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-      grad.addColorStop(0, "#0a0a2e");
-      grad.addColorStop(0.5, "#1a1040");
+      grad.addColorStop(0, "#05051e");
+      grad.addColorStop(0.4, "#0f0a30");
+      grad.addColorStop(0.7, "#1a1040");
       grad.addColorStop(1, "#0d1b2a");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      for (let i = 0; i < 60; i++) {
+      // Stars with twinkling
+      for (let i = 0; i < 70; i++) {
         const sx = (i * 137 + 42 * 31) % CANVAS_WIDTH;
-        const sy = (i * 89 + 42 * 17) % Math.floor(CANVAS_HEIGHT * 0.5);
-        const brightness = 0.3 + (i % 5) * 0.15;
+        const sy = (i * 89 + 42 * 17) % Math.floor(CANVAS_HEIGHT * 0.55);
+        const twinkle =
+          0.3 +
+          (i % 5) * 0.12 +
+          Math.sin(frameCountRef.current * 0.03 + i * 2.1) * 0.15;
+        const brightness = Math.max(0.1, Math.min(1, twinkle));
         ctx.fillStyle = `rgba(255,255,255,${brightness})`;
         ctx.beginPath();
-        ctx.arc(sx, sy, 0.5 + (i % 3) * 0.3, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 0.5 + (i % 3) * 0.4, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // Moon with glow
+      ctx.save();
+      const moonGrad = ctx.createRadialGradient(590, 45, 0, 590, 45, 40);
+      moonGrad.addColorStop(0, "rgba(200,215,255,0.15)");
+      moonGrad.addColorStop(0.3, "rgba(150,180,230,0.06)");
+      moonGrad.addColorStop(1, "rgba(100,130,200,0)");
+      ctx.fillStyle = moonGrad;
+      ctx.beginPath();
+      ctx.arc(590, 45, 40, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowColor = "rgba(200,220,255,0.6)";
+      ctx.shadowBlur = 20;
+      const moonFace = ctx.createRadialGradient(588, 43, 0, 590, 45, 12);
+      moonFace.addColorStop(0, "rgba(240,245,255,0.95)");
+      moonFace.addColorStop(0.6, "rgba(200,215,240,0.7)");
+      moonFace.addColorStop(1, "rgba(160,190,220,0.3)");
+      ctx.fillStyle = moonFace;
+      ctx.beginPath();
+      ctx.arc(590, 45, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const drawWindStreaks = (windVal: number) => {
+      if (Math.abs(windVal) < 0.3) return;
+      const dir = windVal > 0 ? 1 : -1;
+      const streaks = windStreaksRef.current;
+
+      for (const s of streaks) {
+        s.x += s.speed * dir * Math.abs(windVal) * 0.4;
+        if (dir > 0 && s.x > CANVAS_WIDTH + 40) {
+          s.x = -40;
+          s.y = Math.random() * CANVAS_HEIGHT * 0.45;
+        } else if (dir < 0 && s.x < -40) {
+          s.x = CANVAS_WIDTH + 40;
+          s.y = Math.random() * CANVAS_HEIGHT * 0.45;
+        }
+
+        ctx.strokeStyle = `rgba(180,210,255,${s.alpha * Math.min(1, Math.abs(windVal) * 0.4)})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x + s.length * dir, s.y);
+        ctx.stroke();
       }
     };
 
     const drawTerrain = (terrain: number[]) => {
-      const grad = ctx.createLinearGradient(0, CANVAS_HEIGHT * 0.4, 0, CANVAS_HEIGHT);
+      const grad = ctx.createLinearGradient(0, CANVAS_HEIGHT * 0.35, 0, CANVAS_HEIGHT);
       grad.addColorStop(0, "#2d5016");
-      grad.addColorStop(0.3, "#3a6b1e");
-      grad.addColorStop(0.6, "#4a3728");
+      grad.addColorStop(0.15, "#3a6b1e");
+      grad.addColorStop(0.4, "#3d5a20");
+      grad.addColorStop(0.7, "#4a3728");
       grad.addColorStop(1, "#2a1f14");
 
       ctx.beginPath();
@@ -275,7 +434,11 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       ctx.fillStyle = grad;
       ctx.fill();
 
-      ctx.strokeStyle = "#4a8a2a";
+      // Grass edge glow
+      ctx.save();
+      ctx.shadowColor = "rgba(100,200,50,0.3)";
+      ctx.shadowBlur = 4;
+      ctx.strokeStyle = "#5aaa3a";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let x = 0; x < CANVAS_WIDTH; x++) {
@@ -283,6 +446,66 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
         else ctx.lineTo(x, terrain[x]);
       }
       ctx.stroke();
+      ctx.restore();
+    };
+
+    const drawTrajectoryPreview = (gs: GameState) => {
+      if (gs.phase !== "aiming") return;
+
+      const pi = gs.currentPlayer === 1 ? 0 : 1;
+      const player = gs.players[pi];
+      const playerX = player.x;
+      const terrainY =
+        gs.terrain[
+          Math.floor(Math.max(0, Math.min(playerX, CANVAS_WIDTH - 1)))
+        ];
+      const startY = terrainY - 16;
+
+      const fireAngle = gs.currentPlayer === 1 ? angle : 180 - angle;
+      const rad = (fireAngle * Math.PI) / 180;
+      const vx = power * Math.cos(rad) * 0.15;
+      const vy = -power * Math.sin(rad) * 0.15;
+
+      let px = playerX;
+      let py = startY;
+      let pvx = vx;
+      let pvy = vy;
+
+      const isP1 = gs.currentPlayer === 1;
+      const rgb = isP1 ? "34,211,238" : "244,114,182";
+      const steps = 60;
+
+      for (let i = 0; i < steps; i++) {
+        px += pvx + gs.wind * 0.03;
+        pvy += GRAVITY;
+        py += pvy;
+
+        if (px < 0 || px >= CANVAS_WIDTH || py > CANVAS_HEIGHT) break;
+
+        const terrainAtX =
+          gs.terrain[
+            Math.floor(Math.max(0, Math.min(px, CANVAS_WIDTH - 1)))
+          ];
+        if (py >= terrainAtX) break;
+
+        if (i % 3 === 0) {
+          const progress = i / steps;
+          const alpha = 0.35 * (1 - progress);
+          const sz = 1.8 * (1 - progress * 0.6);
+
+          // Glow around dot
+          ctx.fillStyle = `rgba(${rgb},${alpha * 0.3})`;
+          ctx.beginPath();
+          ctx.arc(px, py, sz * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Dot
+          ctx.fillStyle = `rgba(${rgb},${alpha})`;
+          ctx.beginPath();
+          ctx.arc(px, py, sz, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     };
 
     const drawCannon = (
@@ -290,33 +513,37 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       terrainY: number,
       cannonAngle: number,
       color: string,
-      isP1: boolean
+      isP1: boolean,
+      isActive: boolean
     ) => {
       const bodyW = 24;
       const bodyH = 10;
       const bodyX = playerX - bodyW / 2;
       const bodyY = terrainY - bodyH;
+      const glowIntensity = isActive ? 14 : 5;
+      const pulseGlow = isActive
+        ? 10 + Math.sin(frameCountRef.current * 0.08) * 5
+        : 0;
 
+      // Body with glow
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = glowIntensity + pulseGlow;
       ctx.fillStyle = color;
+      drawRoundRect(bodyX, bodyY, bodyW, bodyH, 3);
+      ctx.fill();
       ctx.strokeStyle = "rgba(255,255,255,0.3)";
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      const r = 2;
-      ctx.moveTo(bodyX + r, bodyY);
-      ctx.lineTo(bodyX + bodyW - r, bodyY);
-      ctx.quadraticCurveTo(bodyX + bodyW, bodyY, bodyX + bodyW, bodyY + r);
-      ctx.lineTo(bodyX + bodyW, bodyY + bodyH - r);
-      ctx.quadraticCurveTo(bodyX + bodyW, bodyY + bodyH, bodyX + bodyW - r, bodyY + bodyH);
-      ctx.lineTo(bodyX + r, bodyY + bodyH);
-      ctx.quadraticCurveTo(bodyX, bodyY + bodyH, bodyX, bodyY + bodyH - r);
-      ctx.lineTo(bodyX, bodyY + r);
-      ctx.quadraticCurveTo(bodyX, bodyY, bodyX + r, bodyY);
-      ctx.closePath();
-      ctx.fill();
       ctx.stroke();
+      ctx.restore();
 
+      // Body highlight stripe
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.fillRect(bodyX + 2, bodyY + 1, bodyW - 4, 3);
+
+      // Wheels
       const wheelR = 5;
-      ctx.fillStyle = "#555";
+      ctx.fillStyle = "#444";
       ctx.beginPath();
       ctx.arc(bodyX + 5, terrainY, wheelR, 0, Math.PI * 2);
       ctx.fill();
@@ -324,7 +551,7 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       ctx.arc(bodyX + bodyW - 5, terrainY, wheelR, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = "#777";
       ctx.beginPath();
       ctx.arc(bodyX + 5, terrainY, 2, 0, Math.PI * 2);
       ctx.fill();
@@ -332,176 +559,506 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       ctx.arc(bodyX + bodyW - 5, terrainY, 2, 0, Math.PI * 2);
       ctx.fill();
 
+      // Barrel with glow
       const barrelLen = 18;
       const barrelW = 4;
       const pivotX = playerX;
       const pivotY = bodyY;
-      const rad = (cannonAngle * Math.PI) / 180;
+      const bRad = (cannonAngle * Math.PI) / 180;
       const dir = isP1 ? 1 : -1;
-      const endX = pivotX + Math.cos(rad) * barrelLen * dir;
-      const endY = pivotY - Math.sin(rad) * barrelLen;
+      const endX = pivotX + Math.cos(bRad) * barrelLen * dir;
+      const endY = pivotY - Math.sin(bRad) * barrelLen;
 
       ctx.save();
       ctx.translate(pivotX, pivotY);
-      ctx.rotate(-rad * dir);
+      ctx.rotate(-bRad * dir);
+
+      // Barrel shadow/glow
+      ctx.shadowColor = color;
+      ctx.shadowBlur = isActive ? 10 : 3;
+
+      // Tapered barrel
+      ctx.beginPath();
+      ctx.moveTo(0, -barrelW / 2);
+      ctx.lineTo(barrelLen * dir, -barrelW / 2 * 0.65);
+      ctx.lineTo(barrelLen * dir, barrelW / 2 * 0.65);
+      ctx.lineTo(0, barrelW / 2);
+      ctx.closePath();
       ctx.fillStyle = color;
-      ctx.fillRect(0, -barrelW / 2, barrelLen * dir, barrelW);
-      ctx.strokeStyle = "rgba(255,255,255,0.3)";
-      ctx.strokeRect(0, -barrelW / 2, barrelLen * dir, barrelW);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      // Barrel highlight
+      ctx.beginPath();
+      ctx.moveTo(2 * dir, -barrelW / 2 * 0.7);
+      ctx.lineTo((barrelLen - 3) * dir, -barrelW / 2 * 0.4);
+      ctx.lineTo((barrelLen - 3) * dir, -barrelW / 2 * 0.1);
+      ctx.lineTo(2 * dir, -barrelW / 2 * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.fill();
+
       ctx.restore();
 
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      // Barrel tip glow (active player only)
+      if (isActive) {
+        ctx.save();
+        const tipGlow = ctx.createRadialGradient(
+          endX,
+          endY,
+          0,
+          endX,
+          endY,
+          10
+        );
+        tipGlow.addColorStop(0, `rgba(255,255,255,${0.3 + Math.sin(frameCountRef.current * 0.1) * 0.15})`);
+        tipGlow.addColorStop(0.4, color.replace(")", ",0.15)").replace("rgb", "rgba"));
+        tipGlow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = tipGlow;
+        ctx.beginPath();
+        ctx.arc(endX, endY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Barrel tip bright dot
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.beginPath();
       ctx.arc(endX, endY, 2, 0, Math.PI * 2);
       ctx.fill();
     };
 
-    const drawHealthBar = (x: number, y: number, health: number) => {
-      const barW = 40;
-      const barH = 5;
+    const drawMuzzleFlash = () => {
+      const mf = muzzleFlashRef.current;
+      if (!mf || mf.alpha < 0.01) return;
+
+      ctx.save();
+      const flashGrad = ctx.createRadialGradient(mf.x, mf.y, 0, mf.x, mf.y, 20);
+      flashGrad.addColorStop(0, `rgba(255,255,200,${mf.alpha * 0.9})`);
+      flashGrad.addColorStop(0.2, `rgba(255,200,50,${mf.alpha * 0.6})`);
+      flashGrad.addColorStop(0.5, `rgba(255,100,0,${mf.alpha * 0.2})`);
+      flashGrad.addColorStop(1, "rgba(255,50,0,0)");
+      ctx.fillStyle = flashGrad;
+      ctx.beginPath();
+      ctx.arc(mf.x, mf.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const drawHealthBar = (
+      x: number,
+      y: number,
+      displayHealth: number,
+      playerIdx: number
+    ) => {
+      const barW = 44;
+      const barH = 6;
       const bx = x - barW / 2;
+      const healthPct = Math.max(0, Math.min(1, displayHealth / 100));
+      const flash = playerIdx === 0 ? damageFlashRef.current.p1 : damageFlashRef.current.p2;
 
-      ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect(bx - 1, y - 1, barW + 2, barH + 2);
-      ctx.fillStyle = "#333";
-      ctx.fillRect(bx, y, barW, barH);
+      // Background
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      drawRoundRect(bx - 1, y - 1, barW + 2, barH + 2, 3);
+      ctx.fill();
 
-      const healthPct = Math.max(0, health) / 100;
-      const hColor =
-        healthPct > 0.5 ? "#22c55e" : healthPct > 0.25 ? "#eab308" : "#ef4444";
-      ctx.fillStyle = hColor;
-      ctx.fillRect(bx, y, barW * healthPct, barH);
+      ctx.fillStyle = "#1a1a2e";
+      drawRoundRect(bx, y, barW, barH, 2);
+      ctx.fill();
 
-      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      // Health fill with gradient
+      if (healthPct > 0.01) {
+        const hColor1 =
+          healthPct > 0.5
+            ? "#22c55e"
+            : healthPct > 0.25
+              ? "#eab308"
+              : "#ef4444";
+        const hColor2 =
+          healthPct > 0.5
+            ? "#16a34a"
+            : healthPct > 0.25
+              ? "#ca8a04"
+              : "#dc2626";
+
+        const fillW = barW * healthPct;
+        const hGrad = ctx.createLinearGradient(bx, y, bx, y + barH);
+        hGrad.addColorStop(0, hColor1);
+        hGrad.addColorStop(1, hColor2);
+        ctx.fillStyle = hGrad;
+        drawRoundRect(bx, y, fillW, barH, 2);
+        ctx.fill();
+
+        // Shine on health bar
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        drawRoundRect(bx + 1, y, fillW - 2, barH * 0.45, 1);
+        ctx.fill();
+      }
+
+      // Damage flash overlay
+      if (flash > 0.02) {
+        ctx.fillStyle = `rgba(255,255,255,${flash * 0.5})`;
+        drawRoundRect(bx, y, barW * healthPct, barH, 2);
+        ctx.fill();
+      }
+
+      // Low health pulsing glow
+      if (healthPct > 0 && healthPct < 0.3) {
+        ctx.save();
+        const glowAlpha =
+          0.4 + Math.sin(frameCountRef.current * 0.12) * 0.25;
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 6 + Math.sin(frameCountRef.current * 0.12) * 3;
+        ctx.strokeStyle = `rgba(239,68,68,${glowAlpha})`;
+        ctx.lineWidth = 1;
+        drawRoundRect(bx - 1, y - 1, barW + 2, barH + 2, 3);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Border
+      ctx.strokeStyle = "rgba(255,255,255,0.12)";
       ctx.lineWidth = 0.5;
-      ctx.strokeRect(bx, y, barW, barH);
+      drawRoundRect(bx, y, barW, barH, 2);
+      ctx.stroke();
     };
 
     const drawWindIndicator = (windVal: number) => {
       const cx = CANVAS_WIDTH / 2;
-      const cy = 25;
+      const cy = 22;
+      const pillW = 100;
+      const pillH = 22;
 
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.font = "bold 11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("VENTO", cx, cy - 8);
+      // Background pill
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      drawRoundRect(cx - pillW / 2, cy - pillH / 2, pillW, pillH, 11);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      drawRoundRect(cx - pillW / 2, cy - pillH / 2, pillW, pillH, 11);
+      ctx.stroke();
 
-      const arrowLen = Math.abs(windVal) * 10;
+      // Label
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.font = "bold 9px sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("VENTO", cx - pillW / 2 + 10, cy);
+
+      // Arrow with glow
+      const arrowLen = Math.min(Math.abs(windVal) * 8, 35);
       const dir = windVal > 0 ? 1 : -1;
-      const startX = cx - (arrowLen / 2) * dir;
-      const endX = cx + (arrowLen / 2) * dir;
+      const arrowStartX = cx + 2;
+      const arrowEndX = arrowStartX + arrowLen * dir;
 
-      ctx.strokeStyle = "rgba(255,255,255,0.8)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(startX, cy);
-      ctx.lineTo(endX, cy);
-      ctx.stroke();
+      if (Math.abs(windVal) > 0.2) {
+        ctx.save();
+        ctx.shadowColor = "rgba(150,200,255,0.5)";
+        ctx.shadowBlur = 4;
+        ctx.strokeStyle = `rgba(150,200,255,${0.5 + Math.abs(windVal) * 0.08})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(arrowStartX, cy);
+        ctx.lineTo(arrowEndX, cy);
+        ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(endX, cy);
-      ctx.lineTo(endX - 6 * dir, cy - 4);
-      ctx.moveTo(endX, cy);
-      ctx.lineTo(endX - 6 * dir, cy + 4);
-      ctx.stroke();
+        if (arrowLen > 4) {
+          ctx.beginPath();
+          ctx.moveTo(arrowEndX, cy);
+          ctx.lineTo(arrowEndX - 5 * dir, cy - 3.5);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(arrowEndX, cy);
+          ctx.lineTo(arrowEndX - 5 * dir, cy + 3.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.font = "10px sans-serif";
-      ctx.fillText(windVal.toFixed(1), cx, cy + 14);
+      // Strength text
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.font = "8px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(Math.abs(windVal).toFixed(1), cx + pillW / 2 - 8, cy);
+      ctx.textBaseline = "alphabetic";
     };
 
     const drawProjectile = (proj: Projectile) => {
+      // Enhanced trail
       for (let i = 0; i < proj.trail.length; i++) {
         const t = proj.trail[i];
-        const alpha = t.alpha * (i / proj.trail.length) * 0.8;
-        const sz = 1 + (i / proj.trail.length) * 2;
-        ctx.fillStyle = `rgba(255,200,50,${alpha})`;
+        const progress = i / proj.trail.length;
+        const alpha = t.alpha * progress * 0.7;
+        const sz = 1 + progress * 3;
+
+        // Outer trail glow
+        ctx.fillStyle = `rgba(255,150,0,${alpha * 0.25})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, sz * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner trail
+        ctx.fillStyle = `rgba(255,220,100,${alpha})`;
         ctx.beginPath();
         ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.fillStyle = "#ffe066";
-      ctx.shadowColor = "#ff8800";
-      ctx.shadowBlur = 8;
+      // Outer pulsing glow
+      const pulseSize = 14 + Math.sin(frameCountRef.current * 0.3) * 3;
+      const glowGrad = ctx.createRadialGradient(
+        proj.x,
+        proj.y,
+        0,
+        proj.x,
+        proj.y,
+        pulseSize
+      );
+      glowGrad.addColorStop(0, "rgba(255,200,50,0.35)");
+      glowGrad.addColorStop(0.4, "rgba(255,100,0,0.12)");
+      glowGrad.addColorStop(1, "rgba(255,50,0,0)");
+      ctx.fillStyle = glowGrad;
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+      ctx.arc(proj.x, proj.y, pulseSize, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
 
+      // Main ball with radial gradient
+      ctx.save();
+      ctx.shadowColor = "#ff8800";
+      ctx.shadowBlur = 12;
+      const ballGrad = ctx.createRadialGradient(
+        proj.x - 1,
+        proj.y - 1,
+        0,
+        proj.x,
+        proj.y,
+        5
+      );
+      ballGrad.addColorStop(0, "#ffffff");
+      ballGrad.addColorStop(0.25, "#ffe88a");
+      ballGrad.addColorStop(0.6, "#ff9900");
+      ballGrad.addColorStop(1, "#cc4400");
+      ctx.fillStyle = ballGrad;
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Bright core
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, 1.5, 0, Math.PI * 2);
+      ctx.arc(proj.x - 1, proj.y - 1, 1.5, 0, Math.PI * 2);
       ctx.fill();
     };
 
     const drawExplosion = (exp: Explosion) => {
       const progress = exp.frame / exp.maxFrames;
-      const baseRadius = 5 + progress * 25;
 
+      // Shockwave ring
+      if (exp.shockwaveRadius > 2) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,200,100,${(1 - progress) * 0.35})`;
+        ctx.lineWidth = 2.5 - progress * 2;
+        ctx.beginPath();
+        ctx.arc(exp.x, exp.y, exp.shockwaveRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner shockwave
+        ctx.strokeStyle = `rgba(255,255,220,${(1 - progress) * 0.15})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(exp.x, exp.y, exp.shockwaveRadius * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Bright flash (early frames)
+      if (progress < 0.15) {
+        const flashProgress = progress / 0.15;
+        const flashAlpha = (1 - flashProgress) * 0.7;
+        const flashRadius = 35 * flashProgress;
+        const flashGrad = ctx.createRadialGradient(
+          exp.x,
+          exp.y,
+          0,
+          exp.x,
+          exp.y,
+          flashRadius
+        );
+        flashGrad.addColorStop(0, `rgba(255,255,255,${flashAlpha})`);
+        flashGrad.addColorStop(0.4, `rgba(255,220,100,${flashAlpha * 0.5})`);
+        flashGrad.addColorStop(1, "rgba(255,100,0,0)");
+        ctx.fillStyle = flashGrad;
+        ctx.beginPath();
+        ctx.arc(exp.x, exp.y, flashRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Base fire glow
+      const baseRadius = 5 + progress * 28;
       const grad = ctx.createRadialGradient(
-        exp.x, exp.y, 0,
-        exp.x, exp.y, baseRadius
+        exp.x,
+        exp.y,
+        0,
+        exp.x,
+        exp.y,
+        baseRadius
       );
-      grad.addColorStop(0, `rgba(255,255,200,${1 - progress})`);
-      grad.addColorStop(0.4, `rgba(255,150,0,${0.7 - progress * 0.7})`);
-      grad.addColorStop(0.7, `rgba(255,50,0,${0.5 - progress * 0.5})`);
+      grad.addColorStop(0, `rgba(255,255,200,${0.9 - progress * 0.9})`);
+      grad.addColorStop(0.3, `rgba(255,150,0,${0.6 - progress * 0.6})`);
+      grad.addColorStop(0.6, `rgba(255,50,0,${0.4 - progress * 0.4})`);
       grad.addColorStop(1, "rgba(100,0,0,0)");
-
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(exp.x, exp.y, baseRadius, 0, Math.PI * 2);
       ctx.fill();
 
+      // Particles
       for (const p of exp.particles) {
+        if (p.alpha < 0.01) continue;
+        let r = 255,
+          g = 255,
+          b = 255;
         if (p.color.startsWith("#")) {
-          const r = parseInt(p.color.slice(1, 3), 16);
-          const g = parseInt(p.color.slice(3, 5), 16);
-          const b = parseInt(p.color.slice(5, 7), 16);
-          ctx.fillStyle = `rgba(${r},${g},${b},${p.alpha})`;
-        } else {
-          ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
+          r = parseInt(p.color.slice(1, 3), 16);
+          g = parseInt(p.color.slice(3, 5), 16);
+          b = parseInt(p.color.slice(5, 7), 16);
         }
+        ctx.fillStyle = `rgba(${r},${g},${b},${p.alpha})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * p.alpha, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size * Math.max(0.3, p.alpha), 0, Math.PI * 2);
         ctx.fill();
       }
     };
 
     const drawHitMessage = (msg: string, playerColor: string) => {
       if (!msg) return;
+
+      // Background pill
+      const textWidth = ctx.measureText(msg).width;
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      drawRoundRect(
+        CANVAS_WIDTH / 2 - textWidth / 2 - 16,
+        CANVAS_HEIGHT * 0.4 - 16,
+        textWidth + 32,
+        32,
+        16
+      );
+      ctx.fill();
+
+      ctx.save();
       ctx.fillStyle = playerColor;
-      ctx.font = "bold 20px sans-serif";
+      ctx.font = "bold 22px sans-serif";
       ctx.textAlign = "center";
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 6;
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = playerColor;
+      ctx.shadowBlur = 10;
       ctx.fillText(msg, CANVAS_WIDTH / 2, CANVAS_HEIGHT * 0.4);
-      ctx.shadowBlur = 0;
+      ctx.restore();
     };
 
     const drawGameOver = (winnerNum: 1 | 2) => {
-      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      // Dark vignette overlay
+      const vigGrad = ctx.createRadialGradient(
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2,
+        CANVAS_WIDTH * 0.2,
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2,
+        CANVAS_WIDTH * 0.6
+      );
+      vigGrad.addColorStop(0, "rgba(0,0,0,0.4)");
+      vigGrad.addColorStop(1, "rgba(0,0,0,0.75)");
+      ctx.fillStyle = vigGrad;
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      const color = winnerNum === 1 ? "#22d3ee" : "#f472b6";
-      ctx.fillStyle = color;
-      ctx.font = "bold 28px sans-serif";
-      ctx.textAlign = "center";
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 15;
-      ctx.fillText(
-        `🎉 Jogador ${winnerNum} Venceu! 🎉`,
-        CANVAS_WIDTH / 2,
-        CANVAS_HEIGHT / 2 - 10
-      );
-      ctx.shadowBlur = 0;
+      // Light beams
+      const color = winnerNum === 1 ? "34,211,238" : "244,114,182";
+      const beamCount = 12;
+      for (let i = 0; i < beamCount; i++) {
+        const angle = (i / beamCount) * Math.PI * 2 + frameCountRef.current * 0.005;
+        const len = 200 + Math.sin(frameCountRef.current * 0.02 + i) * 50;
+        ctx.save();
+        ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
+        ctx.rotate(angle);
+        const beamGrad = ctx.createLinearGradient(0, 0, len, 0);
+        beamGrad.addColorStop(0, `rgba(${color},0.08)`);
+        beamGrad.addColorStop(1, `rgba(${color},0)`);
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.lineTo(len, -15);
+        ctx.lineTo(len, 15);
+        ctx.lineTo(0, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
 
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.font = "14px sans-serif";
+      // Sparkle particles
+      const sparkles = gameOverSparklesRef.current;
+      for (const sp of sparkles) {
+        if (sp.alpha < 0.01) continue;
+        ctx.fillStyle = `rgba(${color},${sp.alpha})`;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Title text
+      ctx.save();
+      ctx.fillStyle = `rgba(${color},0.95)`;
+      ctx.font = "bold 32px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = `rgba(${color},0.8)`;
+      ctx.shadowBlur = 20;
+      ctx.fillText(
+        `VITORIA!`,
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2 - 20
+      );
+      ctx.restore();
+
+      // Subtitle
+      ctx.fillStyle = `rgba(${color},0.7)`;
+      ctx.font = "bold 18px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        `Jogador ${winnerNum}`,
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2 + 15
+      );
+
+      // Decorative line
+      const lineW = 120;
+      const lineGrad = ctx.createLinearGradient(
+        CANVAS_WIDTH / 2 - lineW / 2,
+        0,
+        CANVAS_WIDTH / 2 + lineW / 2,
+        0
+      );
+      lineGrad.addColorStop(0, `rgba(${color},0)`);
+      lineGrad.addColorStop(0.5, `rgba(${color},0.5)`);
+      lineGrad.addColorStop(1, `rgba(${color},0)`);
+      ctx.strokeStyle = lineGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(CANVAS_WIDTH / 2 - lineW / 2, CANVAS_HEIGHT / 2 + 35);
+      ctx.lineTo(CANVAS_WIDTH / 2 + lineW / 2, CANVAS_HEIGHT / 2 + 35);
+      ctx.stroke();
+
+      // Restart hint
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.font = "12px sans-serif";
+      ctx.textBaseline = "alphabetic";
       ctx.fillText(
         'Clique em "Reiniciar Tudo" para jogar novamente',
         CANVAS_WIDTH / 2,
-        CANVAS_HEIGHT / 2 + 20
+        CANVAS_HEIGHT / 2 + 55
       );
     };
 
@@ -511,7 +1068,11 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       radius: number
     ) => {
       const r2 = radius * radius;
-      for (let x = Math.floor(cx - radius); x <= Math.ceil(cx + radius); x++) {
+      for (
+        let x = Math.floor(cx - radius);
+        x <= Math.ceil(cx + radius);
+        x++
+      ) {
         if (x < 0 || x >= CANVAS_WIDTH) continue;
         const dx = x - cx;
         const depth = Math.sqrt(Math.max(0, r2 - dx * dx));
@@ -520,12 +1081,25 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
     };
 
     const gameLoop = () => {
+      frameCountRef.current++;
       const gs = gameStateRef.current;
+
+      // Decay visual effects
+      shakeRef.current *= 0.9;
+      if (shakeRef.current < 0.1) shakeRef.current = 0;
+      damageFlashRef.current.p1 *= 0.93;
+      damageFlashRef.current.p2 *= 0.93;
+      if (muzzleFlashRef.current) {
+        muzzleFlashRef.current.alpha *= 0.82;
+        if (muzzleFlashRef.current.alpha < 0.01) {
+          muzzleFlashRef.current = null;
+        }
+      }
 
       if (gs.phase === "firing" && gs.projectile) {
         const proj = gs.projectile;
         proj.trail.push({ x: proj.x, y: proj.y, alpha: 1 });
-        if (proj.trail.length > 25) proj.trail.shift();
+        if (proj.trail.length > 30) proj.trail.shift();
 
         proj.x += proj.vx + gs.wind * 0.03;
         proj.vy += GRAVITY;
@@ -551,6 +1125,14 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
           gs.projectile = null;
           gs.hitMessage = "Acertou!";
 
+          // Visual effects for hit
+          shakeRef.current = 10;
+          if (oppIdx === 0) {
+            damageFlashRef.current.p1 = 1;
+          } else {
+            damageFlashRef.current.p2 = 1;
+          }
+
           if (opp.health <= 0) {
             gs.phase = "gameOver";
             gs.winner = gs.currentPlayer;
@@ -558,6 +1140,8 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
             const winnerP = gs.players[gs.currentPlayer - 1];
             const score = winnerP.health * 10 + winnerP.roundsWon * 50;
             onScore?.(`Jogador ${gs.currentPlayer}`, score);
+            // Init game over sparkles
+            gameOverInitedRef.current = false;
           } else {
             gs.phase = "exploding";
           }
@@ -586,6 +1170,7 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
           gs.projectile = null;
           gs.hitMessage = "Errou!";
           gs.phase = "exploding";
+          shakeRef.current = 5;
           syncUI(gs);
         }
       }
@@ -593,11 +1178,13 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       if (gs.phase === "exploding" && gs.explosion) {
         const exp = gs.explosion;
         exp.frame++;
+        exp.shockwaveRadius += 3.5;
         for (const p of exp.particles) {
           p.x += p.vx;
           p.y += p.vy;
           p.vy += 0.08;
           p.alpha *= 0.95;
+          p.vx *= 0.99;
         }
         if (exp.frame >= exp.maxFrames) {
           gs.explosion = null;
@@ -613,6 +1200,36 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
         }
       }
 
+      // Game over sparkle init & update
+      if (gs.phase === "gameOver" && !gameOverInitedRef.current) {
+        gameOverInitedRef.current = true;
+        gameOverSparklesRef.current = [];
+        for (let i = 0; i < 30; i++) {
+          gameOverSparklesRef.current.push({
+            x: CANVAS_WIDTH / 2 + (Math.random() - 0.5) * 250,
+            y: CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 150,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -0.3 - Math.random() * 0.7,
+            alpha: 0.5 + Math.random() * 0.5,
+            size: 1 + Math.random() * 2.5,
+          });
+        }
+      }
+      for (const sp of gameOverSparklesRef.current) {
+        sp.x += sp.vx;
+        sp.y += sp.vy;
+        sp.alpha *= 0.997;
+        sp.alpha += Math.sin(frameCountRef.current * 0.05 + sp.x * 0.1) * 0.01;
+        sp.alpha = Math.max(0, Math.min(1, sp.alpha));
+      }
+
+      // Smooth health interpolation
+      displayHealthRef.current.p1 +=
+        (gs.players[0].health - displayHealthRef.current.p1) * 0.12;
+      displayHealthRef.current.p2 +=
+        (gs.players[1].health - displayHealthRef.current.p2) * 0.12;
+
+      // ---- DRAWING ----
       const p1 = gs.players[0];
       const p2 = gs.players[1];
       const p1TerrainY =
@@ -629,24 +1246,37 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       const p2CannonAngle =
         gs.currentPlayer === 2 && gs.phase === "aiming" ? angle : 45;
 
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Apply screen shake
+      ctx.save();
+      if (shakeRef.current > 0.1) {
+        const shakeX = (Math.random() - 0.5) * shakeRef.current * 2;
+        const shakeY = (Math.random() - 0.5) * shakeRef.current * 2;
+        ctx.translate(shakeX, shakeY);
+      }
+
+      ctx.clearRect(-10, -10, CANVAS_WIDTH + 20, CANVAS_HEIGHT + 20);
       drawSky();
+      drawWindStreaks(gs.wind);
       drawTerrain(gs.terrain);
-      drawWindIndicator(gs.wind);
+      drawTrajectoryPreview(gs);
 
-      drawCannon(p1.x, p1TerrainY, p1CannonAngle, "#22d3ee", true);
-      drawCannon(p2.x, p2TerrainY, p2CannonAngle, "#f472b6", false);
+      const p1Active = gs.currentPlayer === 1 && gs.phase === "aiming";
+      const p2Active = gs.currentPlayer === 2 && gs.phase === "aiming";
+      drawCannon(p1.x, p1TerrainY, p1CannonAngle, "#22d3ee", true, p1Active);
+      drawCannon(p2.x, p2TerrainY, p2CannonAngle, "#f472b6", false, p2Active);
 
-      drawHealthBar(p1.x, p1TerrainY - 30, p1.health);
-      drawHealthBar(p2.x, p2TerrainY - 30, p2.health);
+      drawMuzzleFlash();
 
-      if (gs.currentPlayer === 1 && gs.phase === "aiming") {
-        ctx.fillStyle = "rgba(34,211,238,0.6)";
+      drawHealthBar(p1.x, p1TerrainY - 30, displayHealthRef.current.p1, 0);
+      drawHealthBar(p2.x, p2TerrainY - 30, displayHealthRef.current.p2, 1);
+
+      if (p1Active) {
+        ctx.fillStyle = "rgba(34,211,238,0.7)";
         ctx.font = "bold 10px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("J1", p1.x, p1TerrainY - 36);
-      } else if (gs.currentPlayer === 2 && gs.phase === "aiming") {
-        ctx.fillStyle = "rgba(244,114,182,0.6)";
+      } else if (p2Active) {
+        ctx.fillStyle = "rgba(244,114,182,0.7)";
         ctx.font = "bold 10px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("J2", p2.x, p2TerrainY - 36);
@@ -659,6 +1289,11 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       if (gs.explosion) {
         drawExplosion(gs.explosion);
       }
+
+      ctx.restore(); // End screen shake
+
+      // HUD elements (not shaken)
+      drawWindIndicator(gs.wind);
 
       if (gs.hitMessage && gs.phase !== "gameOver") {
         const msgColor =
@@ -679,12 +1314,19 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
 
     animFrameRef.current = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [angle, onScore, syncUI]);
+  }, [angle, power, onScore, syncUI]);
 
   const resetGame = useCallback(() => {
     gameStateRef.current = initGameState();
     setAngle(45);
     setPower(50);
+    shakeRef.current = 0;
+    damageFlashRef.current = { p1: 0, p2: 0 };
+    muzzleFlashRef.current = null;
+    displayHealthRef.current = { p1: 100, p2: 100 };
+    gameOverSparklesRef.current = [];
+    gameOverInitedRef.current = false;
+    windStreaksRef.current = initWindStreaks();
     const gs = gameStateRef.current;
     syncUI(gs);
   }, [syncUI]);
@@ -704,33 +1346,45 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
           <span className="text-cyan-400 font-bold text-sm">Jogador 1</span>
           <div className="flex gap-0.5">
             {Array.from({ length: maxHearts }).map((_, i) => (
-              <motion.span
+              <motion.div
                 key={i}
-                animate={{ scale: i < heartsP1 ? [1, 1.2, 1] : 1 }}
+                animate={{ scale: i < heartsP1 ? [1, 1.25, 1] : 1 }}
                 transition={{ duration: 0.3 }}
-                className={i < heartsP1 ? "text-red-500" : "text-gray-600"}
               >
-                {i < heartsP1 ? "\u2764\uFE0F" : "\u2661"}
-              </motion.span>
+                <Heart
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    i < heartsP1
+                      ? "text-red-500 fill-red-500"
+                      : "text-gray-600"
+                  )}
+                />
+              </motion.div>
             ))}
           </div>
         </div>
 
         <h2 className="text-white font-bold text-base tracking-wider">
-          BATALHA DE CANH\u00D5ES
+          BATALHA DE CANHÕES
         </h2>
 
         <div className="flex items-center gap-2">
           <div className="flex gap-0.5">
             {Array.from({ length: maxHearts }).map((_, i) => (
-              <motion.span
+              <motion.div
                 key={i}
-                animate={{ scale: i < heartsP2 ? [1, 1.2, 1] : 1 }}
+                animate={{ scale: i < heartsP2 ? [1, 1.25, 1] : 1 }}
                 transition={{ duration: 0.3 }}
-                className={i < heartsP2 ? "text-red-500" : "text-gray-600"}
               >
-                {i < heartsP2 ? "\u2764\uFE0F" : "\u2661"}
-              </motion.span>
+                <Heart
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    i < heartsP2
+                      ? "text-red-500 fill-red-500"
+                      : "text-gray-600"
+                  )}
+                />
+              </motion.div>
             ))}
           </div>
           <span className="text-pink-400 font-bold text-sm">Jogador 2</span>
@@ -754,8 +1408,8 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
           className="flex items-center gap-1.5 text-xs border-white/20 text-white/70 bg-white/5"
         >
           <Wind className="w-3 h-3" />
-          Vento: {wind > 0 ? "\u2192" : "\u2190"}
-          {Math.abs(wind) > 1.5 ? (wind > 0 ? "\u2192" : "\u2190") : ""}{" "}
+          Vento: {wind > 0 ? "→" : "←"}
+          {Math.abs(wind) > 1.5 ? (wind > 0 ? "→" : "←") : ""}{" "}
           {Math.abs(wind).toFixed(1)}
         </Badge>
       </div>
@@ -827,7 +1481,7 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-white/70 text-xs font-medium">
-                    \u00C2ngulo
+                    Ângulo
                   </span>
                   <span
                     className={cn(
@@ -837,7 +1491,7 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
                         : "text-pink-400"
                     )}
                   >
-                    {angle}\u00B0
+                    {angle}°
                   </span>
                 </div>
                 <input
@@ -856,20 +1510,18 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
             </div>
 
             <div className="flex items-center gap-3">
-              <span
+              <Zap
                 className={cn(
-                  "text-sm shrink-0 w-4 text-center font-bold",
+                  "w-4 h-4 shrink-0",
                   currentPlayer === 1
                     ? "text-cyan-400"
                     : "text-pink-400"
                 )}
-              >
-                💥
-              </span>
+              />
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-white/70 text-xs font-medium">
-                    For\u00E7a
+                    Força
                   </span>
                   <span
                     className={cn(
@@ -904,16 +1556,17 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
                 className={cn(
                   "w-full h-12 text-lg font-bold rounded-xl transition-all",
                   currentPlayer === 1
-                    ? "bg-cyan-600 hover:bg-cyan-500 text-white"
-                    : "bg-pink-600 hover:bg-pink-500 text-white"
+                    ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/25"
+                    : "bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-500/25"
                 )}
               >
-                🔥 FOGO!
+                <Zap className="w-5 h-5 mr-2" />
+                FOGO!
               </Button>
             </motion.div>
 
             <p className="text-white/30 text-[10px] text-center">
-              Teclas: A/D = \u00C2ngulo | W/S = For\u00E7a | Espa\u00E7o = Fogo!
+              Teclas: A/D = Ângulo | W/S = Força | Espaço = Fogo!
             </p>
           </motion.div>
         )}
@@ -928,16 +1581,47 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
             className="w-full"
           >
             <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
+              animate={{ scale: [1, 1.03, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
               className={cn(
-                "text-center py-4 rounded-xl font-bold text-xl mb-3",
+                "text-center py-5 rounded-xl font-bold mb-3 relative overflow-hidden",
                 winner === 1
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                  : "bg-pink-500/20 text-pink-400 border border-pink-500/30"
+                  ? "bg-gradient-to-br from-cyan-500/20 to-cyan-900/30 text-cyan-400 border border-cyan-500/30"
+                  : "bg-gradient-to-br from-pink-500/20 to-pink-900/30 text-pink-400 border border-pink-500/30"
               )}
             >
-              🏆 Jogador {winner} Venceu! 🏆
+              <motion.div
+                initial={{ rotate: -15, scale: 0 }}
+                animate={{ rotate: 0, scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="flex justify-center mb-2"
+              >
+                <Trophy
+                  className={cn(
+                    "w-8 h-8",
+                    winner === 1
+                      ? "text-cyan-400"
+                      : "text-pink-400"
+                  )}
+                />
+              </motion.div>
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-xl block"
+              >
+                Jogador {winner} Venceu!
+              </motion.span>
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.5 }}
+                className={cn(
+                  "h-px w-24 mx-auto mt-2",
+                  winner === 1 ? "bg-cyan-500/40" : "bg-pink-500/40"
+                )}
+              />
             </motion.div>
             <Button
               onClick={resetGame}
@@ -974,7 +1658,7 @@ export default function CannonBattle({ onScore, liveCode }: Props) {
       )}
 
       <span className="text-white/10 text-[10px]">
-        Vida: {healthP1}% vs {healthP2}% | Turno #{turnCount}
+        Vida: {Math.round(healthP1)}% vs {Math.round(healthP2)}% | Turno #{turnCount}
       </span>
     </div>
   );

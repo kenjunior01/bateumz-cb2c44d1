@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -233,6 +234,12 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
 
       const p1Wins = newResults.filter((r) => r.winner === 1).length;
       const p2Wins = newResults.filter((r) => r.winner === 2).length;
+
+      if (p1Wins !== p2Wins) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+      }
 
       const p1ValidTimes = newResults
         .filter((r) => !r.p1FalseStart && r.p1Time !== null)
@@ -471,7 +478,7 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
         )}
       </AnimatePresence>
 
-      <div className="rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-4">
+      <div className="rounded-xl bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 p-4 shadow-[0_0_25px_rgba(34,211,238,0.1)]">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-start gap-1">
             <span className="text-sm font-medium text-cyan-400">Jogador 1</span>
@@ -561,6 +568,7 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                   Jogador 1: Space / Jogador 2: Enter
                 </p>
               </div>
+              <motion.div whileHover={{ scale: 1.03 }}>
               <Button
                 onClick={startRound}
                 className="mt-2 bg-gradient-to-r from-cyan-500 to-pink-500 text-white hover:from-cyan-600 hover:to-pink-600"
@@ -568,6 +576,7 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                 <Zap className="mr-2 h-4 w-4" />
                 Iniciar Round {currentRound}
               </Button>
+              </motion.div>
             </motion.div>
           )}
 
@@ -1014,10 +1023,11 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 }}
+                  whileHover={{ scale: 1.03 }}
                 >
                   <Button
                     onClick={finishRound}
-                    className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white hover:from-cyan-600 hover:to-pink-600"
+                    className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white hover:from-cyan-600 hover:to-pink-600 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                   >
                     <Zap className="mr-2 h-4 w-4" />
                     Próximo Round
@@ -1029,10 +1039,11 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 }}
+                  whileHover={{ scale: 1.03 }}
                 >
                   <Button
                     onClick={finishRound}
-                    className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600"
+                    className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
                   >
                     <Timer className="mr-2 h-4 w-4" />
                     Ver Resultado Final
@@ -1330,13 +1341,15 @@ export default function ReactionRace({ onScore, liveCode }: Props) {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={resetGame}
-                  className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white hover:from-cyan-600 hover:to-pink-600"
+                  className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white hover:from-cyan-600 hover:to-pink-600 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Reiniciar Tudo
                 </Button>
+                </motion.div>
               </motion.div>
             </motion.div>
           )}

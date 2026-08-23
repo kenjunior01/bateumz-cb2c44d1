@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Timer, Send, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -303,6 +304,11 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
           onScore?.("Jogador 1", s1);
           onScore?.("Jogador 2", s2);
         }
+        if (s1 !== s2) {
+          confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+          setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+        }
         setGameState("final_results");
         return;
       }
@@ -494,6 +500,11 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
       if (s1 === s2 && s1 > 0) {
         onScore?.("Jogador 1", s1 * 10);
         onScore?.("Jogador 2", s2 * 10);
+      }
+      if (s1 !== s2) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
       }
       setGameState("final_results");
     } else {
@@ -975,6 +986,7 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
                   )}
 
                   <div className="flex items-center justify-center gap-3">
+                    <motion.div whileHover={{ scale: 1.03 }}>
                     <Button
                       variant="outline"
                       size="sm"
@@ -984,13 +996,16 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
                       <RotateCcw className="w-4 h-4 mr-1" />
                       Reiniciar Tudo
                     </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.03 }}>
                     <Button
                       onClick={nextRound}
-                      className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold"
+                      className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                     >
                       {round >= TOTAL_ROUNDS ? "Ver Resultados" : "Próximo Round"}
                       <Send className="w-4 h-4 ml-1" />
                     </Button>
+                    </motion.div>
                   </div>
                 </motion.div>
               )}
@@ -1097,13 +1112,16 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
               )}
 
               <div className="flex items-center justify-center gap-3">
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={resetAll}
-                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-6"
+                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-6 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Reiniciar Tudo
                 </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1113,11 +1131,12 @@ const WordScramble = ({ onScore, liveCode }: Props) => {
                       startGame(null, true);
                     }
                   }}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800 px-6"
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800 px-6 shadow-[0_0_15px_rgba(161,161,170,0.15)]"
                 >
                   <Shuffle className="w-4 h-4 mr-2" />
                   Jogar Novamente
                 </Button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>

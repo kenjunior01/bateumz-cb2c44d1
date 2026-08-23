@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Shuffle, Zap, Trophy, RotateCcw, Timer, AlertTriangle, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,13 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
   };
 
   const nextRound = () => {
-    if (qIdx + 1 >= challenges.length) { setPhase('done'); onScore?.(playerName, score); return; }
+    if (qIdx + 1 >= challenges.length) {
+      const completedCount = results.filter(r => r.completed).length;
+      if (completedCount >= ROUNDS / 2) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
+      setPhase('done'); onScore?.(playerName, score); return;
+    }
     setQIdx(i => i + 1); setTimeLeft(challenges[qIdx + 1].time); setSucceeded(null);
   };
 
@@ -92,7 +99,7 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Desafios aleatórios contra o relógio! Complete o máximo possível em {ROUNDS} rodadas. Tipos: mental, físico e talento.</p>
           <div><label className="text-xs text-muted-foreground mb-1 block">Nome do Jogador</label><input value={playerName} onChange={e => setPlayerName(e.target.value)} className="w-full rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50" /></div>
-          <Button onClick={initGame} className="w-full bg-gradient-to-r from-rose-500 to-pink-600"><Zap className="h-4 w-4 mr-2" /> Iniciar Caos!</Button>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={initGame} className="w-full bg-gradient-to-r from-rose-500 to-pink-600" style={{ boxShadow: '0 0 25px rgba(244,63,94,0.3)' }}><Zap className="h-4 w-4 mr-2" /> Iniciar Caos!</Button></motion.div>
         </CardContent>
       </Card>
     );
@@ -118,8 +125,8 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Button onClick={markSuccess} className="bg-gradient-to-r from-emerald-500 to-green-600 py-6 text-lg font-bold">Conseguiu!</Button>
-              <Button onClick={markFail} variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 py-6 text-lg font-bold">Falhou!</Button>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={markSuccess} className="w-full bg-gradient-to-r from-emerald-500 to-green-600 py-6 text-lg font-bold" style={{ boxShadow: '0 0 15px rgba(16,185,129,0.3)' }}>Conseguiu!</Button></motion.div>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={markFail} variant="outline" className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 py-6 text-lg font-bold" style={{ boxShadow: '0 0 15px rgba(239,68,68,0.2)' }}>Falhou!</Button></motion.div>
             </div>
           </motion.div>
         )}
@@ -132,7 +139,7 @@ export default function ChaosChallenge({ onScore, liveCode }: ChaosChallengeProp
               <p className="text-2xl mb-1">{succeeded ? '✅' : '❌'}</p>
               <p className="font-bold">{succeeded ? `+${10 + (c.time - timeLeft) * 2} pontos!` : 'Sem pontos nesta rodada'}</p>
             </div>
-            <Button onClick={nextRound} className="w-full bg-gradient-to-r from-rose-500 to-pink-600">{qIdx + 1 >= challenges.length ? 'Ver Resultado' : 'Próximo Desafio'}</Button>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={nextRound} className="w-full bg-gradient-to-r from-rose-500 to-pink-600" style={{ boxShadow: '0 0 20px rgba(244,63,94,0.3)' }}>{qIdx + 1 >= challenges.length ? 'Ver Resultado' : 'Próximo Desafio'}</Button></motion.div>
           </motion.div>
         )}
       </AnimatePresence>

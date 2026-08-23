@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Skull, RotateCcw, Plus, Trash2, Laugh, Volume2, VolumeX, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,7 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
         setResult(segments[idx].label);
         setShowResult(true);
         setHistory(h => [segments[idx].label, ...h.slice(0, 9)]);
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
       }
     };
     requestAnimationFrame(animate);
@@ -106,14 +108,16 @@ export default function PunishmentWheel({ onScore, liveCode }: PunishmentWheelPr
         <CardContent className="space-y-4">
           <div className="flex justify-center relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10 text-2xl drop-shadow-lg">▼</div>
-            <canvas ref={canvasRef} className="max-w-[320px] w-full rounded-full shadow-2xl" />
+            <canvas ref={canvasRef} className="max-w-[320px] w-full rounded-full" style={{ boxShadow: '0 0 30px rgba(239,68,68,0.2), 0 0 60px rgba(249,115,22,0.1)' }} />
           </div>
-          <Button onClick={spin} disabled={spinning} className={`w-full text-base font-bold py-6 ${spinning ? '' : 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 animate-pulse'}`}>
+          <motion.div whileHover={{scale:1.03}}>
+          <Button onClick={spin} disabled={spinning} className={`w-full text-base font-bold py-6 ${spinning ? '' : 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 animate-pulse'}`} style={spinning ? undefined : { boxShadow: '0 0 24px rgba(239,68,68,0.35)' }}>
             {spinning ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.5 }}><Zap className="h-5 w-5" /></motion.div> : <><Laugh className="h-5 w-5 mr-2" /> GIRAR A ROLETA!</>}
           </Button>
+          </motion.div>
           <AnimatePresence>
             {showResult && result && (
-              <motion.div initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 p-4 text-center text-white">
+              <motion.div initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 p-4 text-center text-white" style={{ boxShadow: '0 0 30px rgba(239,68,68,0.3), 0 0 60px rgba(249,115,22,0.15)' }}>
                 <p className="text-xs uppercase tracking-wider opacity-80 mb-1">Castigo Sorteado</p>
                 <p className="text-lg font-bold">{result}</p>
               </motion.div>

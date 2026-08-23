@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -664,6 +665,11 @@ export default function MazeRace({ onScore, liveCode }: Props) {
         if (s.p1 > s.p2) onScRef.current?.("Jogador 1", s.p1);
         else if (s.p2 > s.p1) onScRef.current?.("Jogador 2", s.p2);
         else onScRef.current?.("Empate", s.p1);
+        if (s.p1 !== s.p2) {
+          confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+          setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+        }
       } else {
         startRound(rRef.current + 1);
       }
@@ -1150,13 +1156,15 @@ export default function MazeRace({ onScore, liveCode }: Props) {
       <div className="flex justify-center gap-3">
         {phase === "idle" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               onClick={startGame}
               size="lg"
-              className="gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold shadow-lg shadow-cyan-500/20"
+              className="gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold shadow-lg shadow-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
             >
               <Map className="h-4 w-4" />Iniciar Jogo
             </Button>
+            </motion.div>
           </motion.div>
         )}
         {phase === "playing" && (
@@ -1166,13 +1174,15 @@ export default function MazeRace({ onScore, liveCode }: Props) {
         )}
         {phase === "gameOver" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               onClick={resetAll}
               size="lg"
-              className="gap-2 bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white font-bold shadow-lg"
+              className="gap-2 bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white font-bold shadow-lg shadow-[0_0_20px_rgba(34,211,238,0.2)]"
             >
               <RotateCcw className="h-4 w-4" />Jogar Novamente
             </Button>
+            </motion.div>
           </motion.div>
         )}
       </div>

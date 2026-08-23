@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
 const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
@@ -534,6 +535,9 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
     const winnerCheck = checkGameOver(anim.finalBoard);
     if (winnerCheck) {
       setWinner(winnerCheck);
+      if (winnerCheck === "p1") {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
       setTimeout(() => {
         setPhase("result");
         phaseRef.current = "result";
@@ -561,6 +565,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
       if (botPit === -1) {
         // Bot has no moves — player wins by default
         setWinner("p1");
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
         setPhase("result");
         phaseRef.current = "result";
         if (onScoreRef.current)
@@ -957,8 +962,9 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
 
             <div className="flex justify-center gap-2">
               {_MODES.map((m) => (
-                <button
+                <motion.button
                   key={m}
+                  whileHover={{ scale: 1.03 }}
                   onClick={() => setMode(m)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                     mode === m ? "text-black" : "text-amber-200/60"
@@ -968,6 +974,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                       ? {
                           background:
                             "linear-gradient(135deg, #FFD700, #FF6B35)",
+                          boxShadow: "0 0 15px rgba(255,215,0,0.3)",
                         }
                       : {
                           background: "rgba(255,215,0,0.1)",
@@ -976,7 +983,7 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                   }
                 >
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
-                </button>
+                </motion.button>
               ))}
             </div>
 
@@ -1010,15 +1017,18 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
               </div>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={startGame}
-              className="w-full py-3 rounded-xl text-black font-black text-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-3 rounded-xl text-black font-black text-lg transition-all"
               style={{
                 background: "linear-gradient(135deg, #FFD700, #FF6B35)",
+                boxShadow: "0 0 25px rgba(255,215,0,0.3)",
               }}
             >
               Comecar Jogo
-            </button>
+            </motion.button>
           </div>
         )}
 
@@ -1229,15 +1239,18 @@ export default function DjikotaGame({ onScore, liveCode }: DjikotaProps) {
                 </p>
               </div>
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={startGame}
-              className="px-8 py-2.5 rounded-xl text-black font-bold transition-all hover:scale-105 active:scale-95"
+              className="px-8 py-2.5 rounded-xl text-black font-bold transition-all"
               style={{
                 background: "linear-gradient(135deg, #FFD700, #FF6B35)",
+                boxShadow: "0 0 25px rgba(255,215,0,0.3)",
               }}
             >
               Jogar Novamente
-            </button>
+            </motion.button>
           </div>
         )}
       </div>

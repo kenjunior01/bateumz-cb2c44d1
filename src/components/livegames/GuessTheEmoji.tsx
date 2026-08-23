@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { SmilePlus, Lightbulb, RotateCcw, Trophy, Clock, Star, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,13 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
   }, [phase, showHint, timeLeft, revealed, qIdx]);
 
   const advance = () => {
-    if (qIdx + 1 >= puzzles.length) { setPhase('done'); return; }
+    if (qIdx + 1 >= puzzles.length) {
+      const correctCount = results.filter(r => r.correct).length;
+      if (correctCount >= ROUNDS / 2) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
+      setPhase('done'); return;
+    }
     setQIdx(i => i + 1); setGuess(''); setShowHint(false); setRevealed(false); setTimeLeft(TIME_HINT);
   };
 
@@ -94,7 +101,9 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
         <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><SmilePlus className="h-5 w-5 text-yellow-400" /> Adivinhe o Emoji</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-center">
           <p className="text-sm text-muted-foreground">Decifre a frase a partir dos emojis! {ROUNDS} rodadas com bônus de streak.</p>
-          <Button onClick={() => initGame('Player')} className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700"><Lightbulb className="h-4 w-4 mr-2" /> Jogar</Button>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Button onClick={() => initGame('Player')} className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700" style={{ boxShadow: '0 0 25px rgba(234,179,8,0.3)' }}><Lightbulb className="h-4 w-4 mr-2" /> Jogar</Button>
+          </motion.div>
         </CardContent>
       </Card>
     );
@@ -120,7 +129,9 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
             {!revealed && (
               <div className="flex gap-2">
                 <input value={guess} onChange={e => setGuess(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitGuess()} placeholder="Qual é a resposta?" className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50" autoFocus />
-                <Button onClick={submitGuess} className="bg-gradient-to-r from-yellow-500 to-amber-600">Enviar</Button>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button onClick={submitGuess} className="bg-gradient-to-r from-yellow-500 to-amber-600" style={{ boxShadow: '0 0 15px rgba(234,179,8,0.2)' }}>Enviar</Button>
+                </motion.div>
               </div>
             )}
             {!revealed && !showHint && (
@@ -159,7 +170,7 @@ export default function GuessTheEmoji({ onScore, liveCode }: GuessTheEmojiProps)
               <h2 className="text-2xl font-bold mb-2">Resultado Final</h2>
               <p className="text-4xl font-bold text-yellow-400 mb-1">{score} pts</p>
               <p className="text-sm opacity-70 mb-4">{results.filter(r => r.correct).length}/{results.length} acertos</p>
-              <div className="flex gap-2"><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Sair</Button><Button onClick={() => initGame('Player')} className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-600">Jogar Novamente</Button></div>
+              <div className="flex gap-2"><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Sair</Button><motion.div whileHover={{ scale: 1.03 }}><Button onClick={() => initGame('Player')} className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-600" style={{ boxShadow: '0 0 20px rgba(234,179,8,0.3)' }}>Jogar Novamente</Button></motion.div></div>
             </motion.div>
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Heart, Flame, RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -174,6 +175,9 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
       };
     }));
     onScore?.(selectedPlayer, pts);
+    if (completed && pts > 0) {
+      confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 }, colors: ['#a855f7', '#ec4899'] });
+    }
     setRoundHistory(prev => [{
       player: selectedPlayer,
       type: challengeType === 'verdade' ? 'Verdade' : 'Desafio',
@@ -257,6 +261,7 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
               <Button
                 onClick={startSpin}
                 className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25 transition-all"
+                style={{ boxShadow: '0 0 24px rgba(168,85,247,0.4)' }}
               >
                 <RefreshCw className="w-5 h-5 mr-2" /> Girar a Roleta
               </Button>
@@ -462,6 +467,7 @@ export default function TruthOrDare({ onScore, liveCode }: TruthOrDareProps) {
                     ? 'bg-blue-600 hover:bg-blue-500'
                     : 'bg-orange-600 hover:bg-orange-500'
                 }`}
+                style={{ boxShadow: challengeType === 'verdade' ? '0 0 16px rgba(59,130,246,0.4)' : '0 0 16px rgba(249,115,22,0.4)' }}
               >
                 ✅ Cumpriu! (+{challengeType === 'desafio' ? 3 : 2} pts)
               </Button>

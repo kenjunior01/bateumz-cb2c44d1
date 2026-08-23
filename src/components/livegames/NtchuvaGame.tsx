@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
 const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
@@ -261,6 +262,9 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
           if (newRoundTimeoutRef.current) clearTimeout(newRoundTimeoutRef.current);
           setPhase("result");
           if (onScore) onScore("Ntchuva", scoreRef.current.p1);
+          if (scoreRef.current.p1 > scoreRef.current.p2) {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#FFD700", "#009140", "#FF6B35"] });
+          }
           return 0;
         }
         return t - 1;
@@ -719,6 +723,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               className="w-full py-3 rounded-xl text-black font-black text-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
                 background: "linear-gradient(135deg, #FFD700, #FF6B35)",
+                boxShadow: "0 0 20px rgba(255,215,0,0.4)",
               }}
             >
               Comecar Jogo
@@ -960,6 +965,7 @@ export default function NtchuvaGame({ onScore, liveCode }: NtchuvaProps) {
               className="px-8 py-2.5 rounded-xl text-black font-bold transition-all hover:scale-105 active:scale-95"
               style={{
                 background: "linear-gradient(135deg, #FFD700, #FF6B35)",
+                boxShadow: "0 0 20px rgba(255,215,0,0.5)",
               }}
             >
               Jogar Novamente

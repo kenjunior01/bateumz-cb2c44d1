@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo, useReducer } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -572,13 +573,18 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
     if (state.gameOver) {
       onScore?.("Jogador 1", state.p1Coins);
       onScore?.("Jogador 2", state.p2Coins);
+      if (state.winner !== null && state.winner !== -1) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+      }
     }
-  }, [state.gameOver, state.p1Coins, state.p2Coins, onScore]);
+  }, [state.gameOver, state.p1Coins, state.p2Coins, onScore, state.winner]);
 
   /* ---- Render ---- */
   return (
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 space-y-4 text-white select-none">
-      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 sm:p-4">
+      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 sm:p-4 shadow-[0_0_20px_rgba(34,211,238,0.1)]">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <span className="text-cyan-400 font-bold text-sm sm:text-base truncate">Jogador 1</span>
@@ -700,22 +706,26 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
+        <motion.div whileHover={{ scale: 1.03 }} className="flex-1">
         <Button
           variant="outline"
           onClick={() => setShowPaytable((p) => !p)}
-          className="flex-1 border-slate-600 text-slate-300 hover:text-white"
+          className="flex-1 border-slate-600 text-slate-300 hover:text-white shadow-[0_0_15px_rgba(161,161,170,0.1)]"
         >
           <Star className="w-4 h-4 mr-1.5" />
           Tabela de Prémios {showPaytable ? "▲" : "▼"}
         </Button>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.03 }}>
         <Button
           variant="outline"
           onClick={handleReset}
-          className="border-slate-600 text-slate-300 hover:text-white"
+          className="border-slate-600 text-slate-300 hover:text-white shadow-[0_0_15px_rgba(161,161,170,0.1)]"
         >
           <RotateCcw className="w-4 h-4 mr-1.5" />
           Reiniciar Tudo
         </Button>
+        </motion.div>
       </div>
 
       <AnimatePresence>
@@ -838,13 +848,15 @@ export default function SlotsVS({ onScore, liveCode }: Props) {
                 </div>
               </div>
 
+              <motion.div whileHover={{ scale: 1.03 }}>
               <Button
                 onClick={handleReset}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl w-full py-5 text-base shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:from-amber-400 hover:to-orange-400 transition-all"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl w-full py-5 text-base shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:from-amber-400 hover:to-orange-400 transition-all shadow-[0_0_25px_rgba(245,158,11,0.3)]"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Jogar Novamente
               </Button>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}

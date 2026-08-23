@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { RotateCcw, Bot, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -192,7 +193,9 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
     });
 
     onScore?.(playerName(otherPlayer), sequence.length);
-
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+    setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+    setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
     setGameState('gameOver');
   }, [sequence, onScore, playerName]);
 
@@ -218,7 +221,9 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
       });
 
       onScore?.(playerName(otherPlayer as 1 | 2), sequence.length);
-
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+      setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
       setGameState('gameOver');
       return;
     }
@@ -508,13 +513,15 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
                       {playerName(2)}: {playerScores[1]}
                     </span>
                   </div>
+                  <motion.div whileHover={{ scale: 1.03 }}>
                   <Button
                     onClick={startNewGame}
-                    className="bg-violet-600 hover:bg-violet-700 text-white mt-2"
+                    className="bg-violet-600 hover:bg-violet-700 text-white mt-2 shadow-[0_0_20px_rgba(139,92,246,0.3)]"
                   >
                     <RotateCcw className="w-4 h-4 mr-1" />
                     Reiniciar Tudo
                   </Button>
+                  </motion.div>
                 </motion.div>
               </motion.div>
             )}
@@ -613,13 +620,15 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 }}
               >
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={startRound}
-                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-semibold"
+                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)]"
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   Iniciar
                 </Button>
+                </motion.div>
               </motion.div>
             )}
 
@@ -628,12 +637,14 @@ export default function ColorSequence({ onScore, liveCode }: Props) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               >
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={nextRound}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                 >
                   Próximo Round
                 </Button>
+                </motion.div>
               </motion.div>
             )}
 

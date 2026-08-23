@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Brain, RotateCcw, Trophy, Clock, Star, Swords, Grid3X3, LayoutGrid } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,9 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
       setPhase('done');
       const winner = scores[0] > scores[1] ? p1Name : scores[1] > scores[0] ? p2Name : 'Empate';
       onScore?.(winner, Math.max(scores[0], scores[1]) * 100 - elapsed);
+      if (winner !== 'Empate') {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#6366f1', '#a855f7', '#fbbf24'] });
+      }
     }
   }, [scores, phase, difficulty, elapsed, onScore, p1Name, p2Name]);
 
@@ -103,7 +107,7 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
               ))}
             </div>
           </div>
-          <Button onClick={initGame} className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"><Swords className="h-4 w-4 mr-2" /> Iniciar Duelo</Button>
+          <Button onClick={initGame} className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700" style={{ boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}><Swords className="h-4 w-4 mr-2" /> Iniciar Duelo</Button>
         </CardContent>
       </Card>
     );
@@ -154,8 +158,8 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
               <p className="text-indigo-200 text-sm mb-1">{scores[0]} - {scores[1]} pares · {fmt(elapsed)}</p>
               <p className="text-indigo-300/60 text-xs mb-4">{moves[0]} vs {moves[1]} jogadas</p>
               <div className="flex gap-2">
-                <Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Novo Jogo</Button>
-                <Button onClick={initGame} className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600">Revanche</Button>
+                <motion.div whileHover={{ scale: 1.03 }}><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Novo Jogo</Button></motion.div>
+                <motion.div whileHover={{ scale: 1.03 }}><Button onClick={initGame} className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600" style={{ boxShadow: '0 0 16px rgba(99,102,241,0.4)' }}>Revanche</Button></motion.div>
               </div>
             </motion.div>
           </motion.div>

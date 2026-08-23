@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Brain, Swords, Trophy, Clock, Zap, Check, X, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,9 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
       setPhase('done');
       const winner = s[0] > s[1] ? p1Name : s[1] > s[0] ? p2Name : 'Empate';
       onScore?.(winner, Math.max(s[0], s[1]));
+      if (winner !== 'Empate') {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#06b6d4', '#a855f7', '#fbbf24'] });
+      }
     } else {
       setQIdx(i => i + 1); setP1Answer(null); setP2Answer(null); setTimeLeft(TIME_PER_Q); setShowAnswer(false);
     }
@@ -123,7 +127,7 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
             <div><label className="text-xs text-muted-foreground mb-1 block">Jogador 2</label><input value={p2Name} onChange={e => setP2Name(e.target.value)} className="w-full rounded-lg border border-purple-500/30 bg-purple-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50" /></div>
           </div>
           <p className="text-xs text-muted-foreground">{ROUNDS} perguntas · {TIME_PER_Q}s cada · Bônus de streak!</p>
-          <Button onClick={initGame} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"><Swords className="h-4 w-4 mr-2" /> Iniciar Batalha</Button>
+          <Button onClick={initGame} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700" style={{ boxShadow: '0 0 20px rgba(6,182,212,0.4)' }}><Swords className="h-4 w-4 mr-2" /> Iniciar Batalha</Button>
         </CardContent>
       </Card>
     );
@@ -204,7 +208,7 @@ export default function BattleOfKnowledge({ onScore, liveCode }: BattleOfKnowled
               <h2 className="text-2xl font-bold text-white mb-1">{winner === 'Empate' ? 'Empate!' : `${winner} Venceu!`}</h2>
               <p className="text-3xl font-bold text-white mb-1">{scores[0]} <span className="text-sm opacity-60">vs</span> {scores[1]}</p>
               <p className="text-cyan-200/60 text-xs mb-4">{ROUNDS} perguntas respondidas</p>
-              <div className="flex gap-2"><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Sair</Button><Button onClick={initGame} className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600">Revanche</Button></div>
+              <div className="flex gap-2"><motion.div whileHover={{ scale: 1.03 }}><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Sair</Button></motion.div><motion.div whileHover={{ scale: 1.03 }}><Button onClick={initGame} className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600" style={{ boxShadow: '0 0 16px rgba(6,182,212,0.4)' }}>Revanche</Button></motion.div></div>
             </motion.div>
           </motion.div>
         )}

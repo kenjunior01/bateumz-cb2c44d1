@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Star, Trophy, Swords, Timer, Zap, Crown, ChevronLeft, ChevronRight, Sparkles, Volume2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,13 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
 
     if (currentRound >= totalRounds) {
       setPhase("results");
+      const p1 = p1Score + (p1Votes > p2Votes ? 1 : 0);
+      const p2 = p2Score + (p2Votes > p1Votes ? 1 : 0);
+      if (p1 > p2 || p2 > p1) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        confetti({ particleCount: 100, angle: 60, spread: 55, origin: { x: 0, y: 0.65 } });
+        confetti({ particleCount: 100, angle: 120, spread: 55, origin: { x: 1, y: 0.65 } });
+      }
     } else {
       setCurrentRound((p) => p + 1);
       startRound();
@@ -149,9 +157,11 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
               aleatório e tem 30 segundos para impressionar a plateia!
             </p>
           </div>
-          <Button onClick={startBattle} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl px-8 py-6 text-lg font-bold">
+          <motion.div whileHover={{scale:1.03}}>
+          <Button onClick={startBattle} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl px-8 py-6 text-lg font-bold" style={{ boxShadow: "0 0 24px rgba(245,158,11,0.35)" }}>
             Iniciar Batalha <Swords className="h-5 w-5 ml-2" />
           </Button>
+          </motion.div>
         </div>
       )}
 
@@ -171,6 +181,7 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20 }}
               className="rounded-3xl p-6 bg-gradient-to-br from-violet-600/90 via-purple-600/90 to-fuchsia-600/90 text-white text-center"
+              style={{ boxShadow: "0 0 30px rgba(139,92,246,0.3), 0 0 60px rgba(217,70,239,0.15)" }}
             >
               <Sparkles className="h-5 w-5 mx-auto mb-3 opacity-60" />
               <p className="text-lg md:text-xl font-black leading-snug">{challenge}</p>
@@ -231,9 +242,11 @@ const TalentBattle = ({ isHost = false, player1Name = "Jogador 1", player2Name =
             </motion.button>
           </div>
           {isHost && (
+            <motion.div whileHover={{scale:1.03}}>
             <Button onClick={finishVoting} className="w-full rounded-xl gap-2">
               {currentRound >= totalRounds ? "Ver Resultados" : "Próxima Rodada"} <ChevronRight className="h-4 w-4" />
             </Button>
+            </motion.div>
           )}
         </div>
       )}

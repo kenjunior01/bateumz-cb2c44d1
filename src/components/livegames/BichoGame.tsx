@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 const _MODES: ("bot" | "pvp")[] = ["bot", "pvp"];
 const _DIFFS: ("Facil" | "Medio" | "Dificil")[] = ["Facil", "Medio", "Dificil"];
@@ -229,6 +230,9 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
       const t = setTimeout(() => {
         setPhase("result");
         if (onScore) onScore("Bicho", scoreRef.current.p1);
+        if (scoreRef.current.p1 > scoreRef.current.p2) {
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#FFD700", "#FF6B35", "#009140"] });
+        }
       }, 2500);
       return () => clearTimeout(t);
     }
@@ -314,10 +318,11 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
                     ))}
                   </div>
                 )}
-                <button onClick={startGame}
-                  className="px-8 py-3 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black font-bold text-lg hover:scale-105 transition-transform">
+                <motion.button whileHover={{ scale: 1.03 }} onClick={startGame}
+                  className="px-8 py-3 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black font-bold text-lg hover:scale-105 transition-transform"
+                  style={{ boxShadow: "0 0 20px rgba(245,158,11,0.4)" }}>
                   Começar Jogo
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}
@@ -419,7 +424,8 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
                   )}
                   <div className="text-center">
                     <motion.button
-                      whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
+                      style={{ boxShadow: "0 0 16px rgba(245,158,11,0.35)" }}
                       onClick={placeBet}
                       disabled={isDrawing || coins <= 0 || (betType === "animal" && selectedAnimal === null) || (betType === "grupo" && selectedGrupo === null)}
                       className="px-8 py-3 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 transition-transform"
@@ -491,10 +497,11 @@ export default function BichoGame({ onScore, liveCode }: BichoProps) {
                 </div>
               </div>
               <p className="text-sm text-amber-200/60">Moedas finais: {coins}</p>
-              <button onClick={() => setPhase("menu")}
-                className="px-8 py-3 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black font-bold text-lg hover:scale-105 transition-transform">
+              <motion.button whileHover={{ scale: 1.03 }} onClick={() => setPhase("menu")}
+                className="px-8 py-3 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black font-bold text-lg hover:scale-105 transition-transform"
+                style={{ boxShadow: "0 0 24px rgba(245,158,11,0.5)" }}>
                 Jogar Novamente
-              </button>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>

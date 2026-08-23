@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,9 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
       const winnerScore = Math.max(p1Score, p2Score);
       onScore?.(winnerName, winnerScore);
       setPhase("gameOver");
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+      setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
       return;
     }
     setPhase("choosing");
@@ -182,6 +186,9 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
         const winnerScore = Math.max(p1Score, p2Score);
         onScore?.(winnerName, winnerScore);
         setPhase("gameOver");
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
       }
     }
   }, [phase, p1Score, p2Score, winsNeeded, p2Label, onScore]);
@@ -202,7 +209,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-700/50">
-      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4">
+      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4 shadow-[0_0_25px_rgba(34,211,238,0.1)]">
         <div className="flex items-center justify-between">
           <motion.div
             className="text-center flex-1"
@@ -457,12 +464,14 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={handleReveal}
-                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold shadow-lg"
+                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold shadow-lg shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                 >
                   Revelar
                 </Button>
+                </motion.div>
               </motion.div>
             )}
 
@@ -503,6 +512,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
                     <Coins className="w-3.5 h-3.5" />+{bet}
                   </motion.div>
                 )}
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={nextRound}
                   variant="outline"
@@ -511,6 +521,7 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
                 >
                   Pr\u00f3ximo Round
                 </Button>
+                </motion.div>
               </motion.div>
             )}
 
@@ -539,13 +550,15 @@ export default function RockPaperScissors({ onScore, liveCode }: Props) {
                 >
                   {gameWinner === "p1" ? "Jogador 1" : p2Label} Venceu!
                 </p>
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={resetAll}
                   size="sm"
-                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold"
+                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold shadow-[0_0_20px_rgba(34,211,238,0.3)]"
                 >
                   Reiniciar Tudo
                 </Button>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

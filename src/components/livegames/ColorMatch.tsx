@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import {
   RotateCcw,
   Timer,
@@ -351,6 +352,9 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
         const p2Name = botMode ? "Computador" : "Jogador 2";
         const winner = p1Score > p2Score ? "Jogador 1" : p2Name;
         onScore?.(winner, Math.max(p1Score, p2Score));
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
       }
     } else {
       setRound((r) => r + 1);
@@ -492,7 +496,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               <Button
                 size="lg"
                 onClick={startGame}
-                className="mt-2 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 text-lg shadow-lg shadow-purple-500/20"
+                className="mt-2 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 text-lg shadow-lg shadow-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.3)]"
               >
                 Jogar
               </Button>
@@ -931,7 +935,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     onClick={advanceRound}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-6 shadow-lg shadow-purple-500/20"
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-6 shadow-lg shadow-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
                   >
                     {round >= TOTAL_ROUNDS ? "Ver Resultado" : (
                       <>
@@ -1154,7 +1158,7 @@ export default function ColorMatch({ onScore, liveCode }: Props) {
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   onClick={startGame}
-                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-6 shadow-lg shadow-purple-500/20"
+                  className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-6 shadow-lg shadow-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
                 >
                   Reiniciar Tudo
                 </Button>

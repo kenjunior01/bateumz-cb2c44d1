@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -174,6 +175,11 @@ export default function TargetTap({ onScore, liveCode }: Props) {
     setTargets([]);
     onScore?.("Jogador 1", p1ScoreRef.current);
     onScore?.("Jogador 2", p2ScoreRef.current);
+    if (p1ScoreRef.current !== p2ScoreRef.current) {
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+      setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+    }
   }, [onScore, clearAllTimers]);
 
   const spawnTarget = useCallback(() => {
@@ -663,13 +669,15 @@ export default function TargetTap({ onScore, liveCode }: Props) {
               <p className="text-slate-300 text-sm font-medium text-center px-4">
                 Toque nos alvos da sua cor! Alvos dourados são para todos.
               </p>
+              <motion.div whileHover={{ scale: 1.03 }}>
               <Button
                 onClick={startGame}
-                className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-8"
+                className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-8 shadow-[0_0_20px_rgba(34,211,238,0.25)]"
               >
                 <Target className="w-4 h-4 mr-2" />
                 Iniciar
               </Button>
+              </motion.div>
             </motion.div>
           )}
 
@@ -726,22 +734,26 @@ export default function TargetTap({ onScore, liveCode }: Props) {
                 )}
               </motion.div>
               <div className="flex gap-2">
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   size="sm"
                   onClick={nextRound}
-                  className="bg-slate-700 hover:bg-slate-600 text-white font-bold"
+                  className="bg-slate-700 hover:bg-slate-600 text-white font-bold shadow-[0_0_20px_rgba(34,211,238,0.25)]"
                 >
                   Próximo Round
                 </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={restartAll}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800 shadow-[0_0_15px_rgba(161,161,170,0.1)]"
                 >
                   <RotateCcw className="w-3 h-3 mr-1" />
                   Reiniciar Tudo
                 </Button>
+                </motion.div>
               </div>
             </motion.div>
           )}

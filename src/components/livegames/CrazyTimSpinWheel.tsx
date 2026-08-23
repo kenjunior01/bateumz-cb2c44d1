@@ -272,13 +272,15 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
             className="w-full max-w-lg drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]" 
           />
           
-          <button
+          <motion.button
             onClick={spinWheel}
             disabled={isSpinning}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
                      w-28 h-28 rounded-full shadow-[0_0_30px_rgba(0,0,0,0.5)]
                      flex items-center justify-center z-20 transition-transform 
-                     hover:scale-110 active:scale-95 disabled:opacity-80 group"
+                     disabled:opacity-80 group"
             style={{ 
               backgroundColor: custom.centerButtonColor,
               color: custom.centerButtonTextColor,
@@ -316,13 +318,16 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
                 >
                   {winner.label}
                 </div>
-                <Button 
-                  size="lg" 
-                  className="w-full rounded-full h-14 font-bold text-lg"
-                  onClick={() => setWinner(null)}
-                >
-                  FECHAR
-                </Button>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button 
+                    size="lg" 
+                    className="w-full rounded-full h-14 font-bold text-lg"
+                    onClick={() => setWinner(null)}
+                    style={{ boxShadow: '0 0 25px rgba(250,204,21,0.3)' }}
+                  >
+                    FECHAR
+                  </Button>
+                </motion.div>
               </CardContent>
             </Card>
           </motion.div>
@@ -486,9 +491,11 @@ const CrazyTimSpinWheel: React.FC<CrazyTimSpinWheelProps> = ({
               </Tabs>
 
               <div className="mt-12 pt-6 border-t border-white/10">
-                <Button onClick={handleSave} className="w-full h-14 rounded-full font-black text-lg gap-2">
-                  <Save className="w-5 h-5" /> SALVAR CONFIGURAÇÕES
-                </Button>
+                <motion.div whileHover={{ scale: 1.03 }}>
+                  <Button onClick={handleSave} className="w-full h-14 rounded-full font-black text-lg gap-2" style={{ boxShadow: '0 0 20px rgba(250,204,21,0.2)' }}>
+                    <Save className="w-5 h-5" /> SALVAR CONFIGURAÇÕES
+                  </Button>
+                </motion.div>
               </div>
             </SheetContent>
           </Sheet>

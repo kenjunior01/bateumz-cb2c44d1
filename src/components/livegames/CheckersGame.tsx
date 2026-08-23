@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, RotateCcw, Trophy, Coins, Bot } from "lucide-react";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -340,6 +341,9 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
       const winnerName = winner === 1 ? "Jogador 1" : (vsComputer ? "Computador" : "Jogador 2");
       onScore?.(winnerName, winScore);
       setScores(s => winner === 1 ? { ...s, p1: s.p1 + winScore } : { ...s, p2: s.p2 + winScore });
+      if (winner === 1) {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#f59e0b", "#ef4444", "#fbbf24"] });
+      }
     }
   }, [gameOver, winner, gameStarted, vsComputer, captured, bet, onScore]);
 
@@ -406,12 +410,15 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
             </motion.div>
           )}
         </AnimatePresence>
+        <motion.div whileHover={{ scale: 1.03 }}>
         <Button
           onClick={startGame}
           className="bg-gradient-to-r from-amber-500 to-red-500 text-white rounded-xl px-10 text-lg font-bold"
+          style={{ boxShadow: "0 0 20px rgba(245,158,11,0.4)" }}
         >
           Iniciar Jogo
         </Button>
+        </motion.div>
       </div>
     );
   }
@@ -524,6 +531,7 @@ const CheckersGame = ({ onScore, liveCode }: Props) => {
             <Button
               onClick={reset}
               className="bg-gradient-to-r from-amber-500 to-red-500 text-white rounded-xl"
+              style={{ boxShadow: "0 0 20px rgba(245,158,11,0.4)" }}
             >
               <RotateCcw className="h-4 w-4 mr-2" />Jogar Novamente
             </Button>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 interface UriProps {
   onScore?: (name: string, score: number) => void;
@@ -153,6 +154,9 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
     clearAllTimers();
     setPhase("result");
     onScore?.("Uri", score.p1);
+    if (score.p1 > score.p2) {
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    }
   }, [clearAllTimers, onScore, score.p1]);
 
   // Handle a guess from a player
@@ -457,7 +461,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                 style={{
                   background: "linear-gradient(135deg, #009140, #006B30)",
                   color: "#FFD700",
-                  boxShadow: "0 4px 20px rgba(0,145,64,0.3)",
+                  boxShadow: "0 4px 20px rgba(0,145,64,0.3), 0 0 30px rgba(0,145,64,0.15)",
                 }}
               >
                 COMECAR JOGO
@@ -671,6 +675,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                         backgroundColor: "rgba(0,145,64,0.2)",
                         color: "#009140",
                         border: "1px solid rgba(0,145,64,0.3)",
+                        boxShadow: "0 0 15px rgba(0,145,64,0.2)",
                       }}
                     >
                       Chutar
@@ -706,6 +711,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                           backgroundColor: "rgba(255,107,53,0.2)",
                           color: "#FF6B35",
                           border: "1px solid rgba(255,107,53,0.3)",
+                          boxShadow: "0 0 15px rgba(255,107,53,0.2)",
                         }}
                       >
                         Chutar
@@ -850,6 +856,7 @@ export default function UriGame({ onScore, liveCode }: UriProps) {
                   style={{
                     background: "linear-gradient(135deg, #009140, #006B30)",
                     color: "#FFD700",
+                    boxShadow: "0 0 20px rgba(0,145,64,0.3)",
                   }}
                 >
                   Jogar Novamente

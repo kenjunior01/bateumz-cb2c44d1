@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +53,6 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
   useEffect(() => {
     if (!isSpeedMode || gameOver) return;
     if (timer <= 0) {
-      // Time out - other player wins
       const loser = current;
       setGameOver(true);
       setWinner(loser === "X" ? "O" : "X");
@@ -67,6 +67,21 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
   useEffect(() => {
     if (isSpeedMode) setTimer(10);
   }, [current]);
+
+  // Confetti on win
+  useEffect(() => {
+    if (winner) {
+      const isX = winner === "X";
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: isX
+          ? ["#22d3ee", "#06b6d4", "#67e8f9"]
+          : ["#ec4899", "#f472b6", "#8b5cf6"],
+      });
+    }
+  }, [winner]);
 
   const play = (idx: number) => {
     if (gameOver || board[idx]) return;
@@ -110,12 +125,35 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative overflow-hidden">
+      {/* Background floating sparkle particles */}
+      {[...Array(6)].map((_, i) => (
+        <motion.div
+          key={`sparkle-${i}`}
+          className="absolute w-1 h-1 rounded-full bg-violet-400/40 pointer-events-none"
+          style={{ left: `${10 + i * 16}%`, top: `${15 + (i % 3) * 28}%` }}
+          animate={{ y: [0, -18, 0], opacity: [0.2, 0.7, 0.2] }}
+          transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.5, ease: "easeInOut" }}
+        />
+      ))}
+
+      {/* Score header with bouncing scores and glowing current player */}
       <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-violet-900/30 to-pink-900/30 border border-violet-500/20">
         <div className="text-center flex-1">
-          <span className={cn("text-2xl font-black", current === "X" && !gameOver ? "text-cyan-400" : "text-slate-500")}>✕</span>
+          <span className={cn(
+            "text-2xl font-black transition-all",
+            current === "X" && !gameOver
+              ? "text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]"
+              : "text-slate-500"
+          )}>✕</span>
           <p className="text-sm font-bold text-white">Jogador X</p>
-          <p className="text-xl font-black text-white">{scores.x}</p>
+          <motion.p
+            key={`score-x-${scores.x}`}
+            className="text-xl font-black text-white"
+            initial={{ scale: 1.5, color: "#22d3ee" }}
+            animate={{ scale: 1, color: "#ffffff" }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          >{scores.x}</motion.p>
           {streak.x > 1 && <Badge className="bg-amber-500/20 text-amber-400 text-[9px]">🔥 {streak.x} streak</Badge>}
         </div>
         <div className="text-center px-3">
@@ -127,14 +165,37 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
           )}
         </div>
         <div className="text-center flex-1">
-          <span className={cn("text-2xl font-black", current === "O" && !gameOver ? "text-pink-400" : "text-slate-500")}>○</span>
+          <span className={cn(
+            "text-2xl font-black transition-all",
+            current === "O" && !gameOver
+              ? "text-pink-400 drop-shadow-[0_0_10px_rgba(236,72,153,0.6)]"
+              : "text-slate-500"
+          )}>○</span>
           <p className="text-sm font-bold text-white">Jogador O</p>
-          <p className="text-xl font-black text-white">{scores.o}</p>
+          <motion.p
+            key={`score-o-${scores.o}`}
+            className="text-xl font-black text-white"
+            initial={{ scale: 1.5, color: "#ec4899" }}
+            animate={{ scale: 1, color: "#ffffff" }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          >{scores.o}</motion.p>
           {streak.o > 1 && <Badge className="bg-amber-500/20 text-amber-400 text-[9px]">🔥 {streak.o} streak</Badge>}
         </div>
       </div>
 
-      <div className="flex justify-center">
+      {/* Game board with animated gradient border glow when in play */}
+      <motion.div
+        className="flex justify-center"
+        animate={!gameOver ? {
+          boxShadow: [
+            "0 0 15px rgba(139,92,246,0.15), inset 0 0 15px rgba(139,92,246,0.03)",
+            "0 0 30px rgba(236,72,153,0.25), inset 0 0 25px rgba(236,72,153,0.05)",
+            "0 0 15px rgba(139,92,246,0.15), inset 0 0 15px rgba(139,92,246,0.03)",
+          ]
+        } : { boxShadow: "0 0 0px transparent" }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{ borderRadius: "1rem" }}
+      >
         <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-900/50 border border-slate-800">
           {board.map((cell, i) => (
             <motion.button
@@ -143,6 +204,16 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
               disabled={gameOver || !!cell}
               whileHover={!gameOver && !cell ? { scale: 1.05, backgroundColor: "rgba(139,92,246,0.1)" } : {}}
               whileTap={!gameOver && !cell ? { scale: 0.95 } : {}}
+              animate={winLine?.includes(i) ? {
+                boxShadow: [
+                  "0 0 8px 2px rgba(250,204,21,0.3)",
+                  "0 0 22px 6px rgba(250,204,21,0.6)",
+                  "0 0 8px 2px rgba(250,204,21,0.3)",
+                ]
+              } : {}}
+              transition={winLine?.includes(i)
+                ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                : undefined}
               className={cn(
                 "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl font-black transition-all border",
                 !cell && "bg-slate-800/50 border-slate-700 hover:border-violet-500/50 cursor-pointer",
@@ -161,32 +232,56 @@ const TicTacToeVS = ({ onScore, liveCode }: Props) => {
             </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
+      {/* Control buttons with hover/tap effects */}
       <div className="flex flex-wrap gap-2 justify-center">
-        <Button size="sm" variant={isSpeedMode ? "default" : "outline"}
-          className={cn("rounded-xl text-xs", isSpeedMode && "bg-red-500")}
-          onClick={() => setIsSpeedMode(!isSpeedMode)}>
-          ⚡ {isSpeedMode ? "Velocidade ON" : "Modo Velocidade"}
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }}>
+          <Button size="sm" variant={isSpeedMode ? "default" : "outline"}
+            className={cn("rounded-xl text-xs", isSpeedMode && "bg-red-500")}
+            onClick={() => setIsSpeedMode(!isSpeedMode)}>
+            ⚡ {isSpeedMode ? "Velocidade ON" : "Modo Velocidade"}
+          </Button>
+        </motion.div>
         {[10, 25, 50, 100].map(v => (
-          <Button key={v} size="sm" variant={bet === v ? "default" : "outline"}
-            className={cn("rounded-xl text-xs", bet === v && "bg-amber-500")}
-            onClick={() => setBet(v)}><Coins className="h-3 w-3 mr-1" />{v}</Button>
+          <motion.div key={v} whileHover={{ scale: 1.05 }}>
+            <Button size="sm" variant={bet === v ? "default" : "outline"}
+              className={cn("rounded-xl text-xs", bet === v && "bg-amber-500")}
+              onClick={() => setBet(v)}><Coins className="h-3 w-3 mr-1" />{v}</Button>
+          </motion.div>
         ))}
-        <Button size="sm" variant="outline" className="rounded-xl" onClick={reset}><RotateCcw className="h-3.5 w-3.5" /></Button>
+        <motion.div whileTap={{ scale: 0.95 }}>
+          <Button size="sm" variant="outline" className="rounded-xl" onClick={reset}><RotateCcw className="h-3.5 w-3.5" /></Button>
+        </motion.div>
       </div>
 
-      {gameOver && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
-          <div className="text-5xl">{draw ? "🤝" : "🏆"}</div>
-          <h3 className="text-xl font-black text-white">{draw ? "Empate!" : `${winner} Venceu!`}</h3>
-          <div className="flex gap-2 justify-center">
-            <Button onClick={reset} className="bg-gradient-to-r from-violet-500 to-pink-500 text-white rounded-xl">Próximo Round</Button>
-            <Button onClick={fullReset} variant="outline" className="rounded-xl">Reiniciar Tudo</Button>
-          </div>
-        </motion.div>
-      )}
+      {/* Game over section with AnimatePresence and gradient text */}
+      <AnimatePresence>
+        {gameOver && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+            className="text-center space-y-3"
+          >
+            <div className="text-5xl">{draw ? "🤝" : "🏆"}</div>
+            <h3 className={cn(
+              "text-xl font-black",
+              draw
+                ? "text-white"
+                : "bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent"
+            )}>{draw ? "Empate!" : `${winner} Venceu!`}</h3>
+            <div className="flex gap-2 justify-center">
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button onClick={reset} className="bg-gradient-to-r from-violet-500 to-pink-500 text-white rounded-xl">Próximo Round</Button>
+              </motion.div>
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button onClick={fullReset} variant="outline" className="rounded-xl">Reiniciar Tudo</Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

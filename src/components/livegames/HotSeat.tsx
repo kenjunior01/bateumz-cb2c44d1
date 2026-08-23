@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Flame, Timer, SkipForward, Users, Zap, Crown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,7 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
     setAnswered((p) => p + 1);
     setTimerActive(false);
     setShowResult(true);
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
   };
 
   const handlePass = () => {
@@ -135,6 +137,7 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
           exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
           className={cn("rounded-3xl p-8 text-center text-white overflow-hidden", `bg-gradient-to-br ${intensityColor}`)}
+          style={{ boxShadow: "0 0 30px rgba(249,115,22,0.25), 0 0 60px rgba(249,115,22,0.1)" }}
         >
           <Badge className="bg-white/20 backdrop-blur text-white border-0 text-[10px] mb-4">
             <Flame className="h-3 w-3 mr-1" />{INTENSITY_LABELS[current.intensity]}
@@ -159,14 +162,17 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
       {!showResult && !timerActive && !isHost && (
         <div className="grid grid-cols-2 gap-3">
           <motion.button
+            whileHover={{scale:1.03}}
             whileTap={{ scale: 0.95 }}
             onClick={startTimer}
             className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-primary/10 border-2 border-primary/20 hover:border-primary/50 transition-all"
+            style={{ boxShadow: "0 0 16px rgba(59,130,246,0.2)" }}
           >
             <Flame className="h-7 w-7 text-primary" />
             <span className="text-sm font-bold text-primary">Arriscar!</span>
           </motion.button>
           <motion.button
+            whileHover={{scale:1.03}}
             whileTap={{ scale: 0.95 }}
             onClick={nextQuestion}
             className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-red-500/10 border-2 border-red-500/20 hover:border-red-500/50 transition-all"
@@ -178,9 +184,11 @@ const HotSeat = ({ isHost = false, players = [] }: Props) => {
       )}
 
       {timerActive && !showResult && (
-        <Button onClick={handleAnswer} className="w-full py-4 text-base font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+        <motion.div whileHover={{scale:1.03}}>
+        <Button onClick={handleAnswer} className="w-full py-4 text-base font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600" style={{ boxShadow: "0 0 20px rgba(16,185,129,0.35)" }}>
           Responder Agora
         </Button>
+        </motion.div>
       )}
 
       {showResult && (

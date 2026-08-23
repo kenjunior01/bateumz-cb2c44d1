@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 interface ChigogoProps {
   onScore?: (name: string, score: number) => void;
@@ -52,6 +53,9 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
     if (scores.p1 >= ROUNDS_TO_WIN || scores.p2 >= ROUNDS_TO_WIN) {
       setPhase("gameOver");
       if (onScore) onScore("Chigogo", Math.max(scores.p1, scores.p2));
+      if (scores.p1 >= ROUNDS_TO_WIN) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
       return;
     }
     setRound((r) => r + 1);
@@ -183,8 +187,8 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
                 ))}
               </div>
             )}
-            <button onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Comecar</button>
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 25px rgba(255,215,0,0.3)" }}>Comecar</motion.button>
           </div>
         )}
 
@@ -208,7 +212,7 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
                 const canGuess = phase === "playing" && !isP1Turn && mode === "bot" && selectedHand;
 
                 return (
-                  <motion.button key={h} whileTap={canInteract || canGuess ? { scale: 0.9 } : {}}
+                  <motion.button key={h} whileHover={canInteract || canGuess ? { scale: 1.05 } : {}} whileTap={canInteract || canGuess ? { scale: 0.9 } : {}}
                     onClick={() => { if (isP1Turn) handleP1Hide(h); else if (canGuess) handleP1Guess(h); else if (!isP1Turn && mode !== "bot") handleP1Guess(h); }}
                     className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl transition-all ${canInteract || canGuess ? "cursor-pointer" : "cursor-default"}`}
                     style={{
@@ -261,8 +265,8 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
             )}
 
             {phase === "roundResult" && (
-              <button onClick={nextRound} className="w-full py-2.5 rounded-xl text-black font-bold"
-                style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Proxima Ronda</button>
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={nextRound} className="w-full py-2.5 rounded-xl text-black font-bold"
+                style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 20px rgba(255,215,0,0.3)" }}>Proxima Ronda</motion.button>
             )}
           </div>
         )}
@@ -276,8 +280,8 @@ export default function ChigogoGame({ onScore, liveCode }: ChigogoProps) {
               <div className="text-xl font-bold self-center" style={{ color: "#FFD700" }}>vs</div>
               <div><p className="text-xs" style={{ color: "#CD853F" }}>{p2Label}</p><p className="text-3xl font-black" style={{ color: "#FF6B35" }}>{scores.p2}</p></div>
             </div>
-            <button onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 25px rgba(255,215,0,0.3)" }}>Jogar Novamente</motion.button>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 interface UrusseProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
 
@@ -228,6 +229,11 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
       setStores([s1, s2]);
       setPhase("gameOver");
       if (onScore) onScore("Urusse", Math.max(s1, s2));
+      if (s1 !== s2) {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+        confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+      }
       return;
     }
 
@@ -257,7 +263,7 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
 
   return (
     <div className="relative w-full max-w-lg mx-auto rounded-2xl border-2 border-amber-800/40 overflow-hidden"
-      style={{ background: "linear-gradient(145deg, #1a1207 0%, #2d1f0e 50%, #1a1207 100%)" }}>
+      style={{ background: "linear-gradient(145deg, #1a1207 0%, #2d1f0e 50%, #1a1207 100%)", boxShadow: "0 0 24px rgba(255,215,0,0.12)" }}>
       <CapulanaBg />
 
       <div className="relative z-10 p-4 md:p-6">
@@ -299,8 +305,8 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                 ))}
               </div>
             )}
-            <button onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Comecar</button>
+            <motion.button whileHover={{scale:1.03}} onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 20px rgba(255,215,0,0.3)" }}>Comecar</motion.button>
           </div>
         )}
 
@@ -369,8 +375,8 @@ export default function UrusseGame({ onScore, liveCode }: UrusseProps) {
                   <div><p className="text-xs" style={{ color: "#009140" }}>{p1Label}</p><p className="text-2xl font-black" style={{ color: "#009140" }}>{finalScores?.[0]}</p></div>
                   <div><p className="text-xs" style={{ color: "#FF6B35" }}>{p2Label}</p><p className="text-2xl font-black" style={{ color: "#FF6B35" }}>{finalScores?.[1]}</p></div>
                 </div>
-                <button onClick={() => setPhase("menu")} className="px-6 py-2 rounded-xl text-black font-bold"
-                  style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
+                <motion.button whileHover={{scale:1.03}} onClick={() => setPhase("menu")} className="px-6 py-2 rounded-xl text-black font-bold"
+                  style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 20px rgba(255,215,0,0.3)" }}>Jogar Novamente</motion.button>
               </div>
             )}
           </>

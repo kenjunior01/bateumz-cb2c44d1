@@ -1,6 +1,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -281,6 +282,11 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
     const pp = pref.current;
     onScoreRef.current?.('Jogador 1', pp[0].score);
     onScoreRef.current?.('Jogador 2', pp[1].score);
+    if (pp[0].score > pp[1].score || pp[1].score > pp[0].score) {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+      confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+    }
   }, [over]);
 
   /* ---- cleanup on unmount ---- */
@@ -674,7 +680,7 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
      ============================================================ */
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-4xl mx-auto px-2 py-4 select-none">
-      <div className="w-full bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-2xl px-3 sm:px-5 py-3">
+      <div className="w-full bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-2xl px-3 sm:px-5 py-3 shadow-[0_0_20px_rgba(6,182,212,0.15),0_0_20px_rgba(236,72,153,0.15)]">
         <div className="flex items-center justify-between gap-2">
           <div className="text-cyan-400 font-bold text-sm sm:text-lg truncate">
             <Sparkles className="inline w-3.5 h-3.5 sm:w-4 sm:h-4 mr-0.5 sm:mr-1 shrink-0" />
@@ -785,21 +791,26 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
 
       <div className="flex gap-3 mt-1">
         {!active && !over && (
+          <motion.div whileHover={{scale:1.03}}>
           <Button
             onClick={start}
             className="bg-green-600 hover:bg-green-700 text-white font-semibold"
           >
             Iniciar
           </Button>
+          </motion.div>
         )}
         {over && (
+          <motion.div whileHover={{scale:1.03}}>
           <Button
             onClick={start}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-[0_0_16px_rgba(34,197,94,0.4)]"
           >
             Jogar Novamente
           </Button>
+          </motion.div>
         )}
+        <motion.div whileHover={{scale:1.03}}>
         <Button
           variant="outline"
           size="sm"
@@ -809,6 +820,7 @@ export default function Match4Grid({ onScore, liveCode }: Props) {
           <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
           Reiniciar Tudo
         </Button>
+        </motion.div>
       </div>
     </div>
   );

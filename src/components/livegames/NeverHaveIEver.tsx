@@ -120,17 +120,21 @@ const NeverHaveIEver = ({ isHost = false, onPublishStatement }: Props) => {
       {!revealed ? (
         <div className="grid grid-cols-2 gap-3">
           <motion.button
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleVote("yes")}
             className="flex flex-col items-center gap-2 py-6 rounded-2xl bg-rose-500/10 border-2 border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-500/20 transition-all"
+            style={{ boxShadow: "0 0 15px rgba(244,63,94,0.15)" }}
           >
             <ThumbsUp className="h-8 w-8 text-rose-500" />
             <span className="text-sm font-bold text-rose-500">Já fiz!</span>
           </motion.button>
           <motion.button
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleVote("no")}
             className="flex flex-col items-center gap-2 py-6 rounded-2xl bg-blue-500/10 border-2 border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/20 transition-all"
+            style={{ boxShadow: "0 0 15px rgba(59,130,246,0.15)" }}
           >
             <ThumbsDown className="h-8 w-8 text-blue-500" />
             <span className="text-sm font-bold text-blue-500">Nunca!</span>

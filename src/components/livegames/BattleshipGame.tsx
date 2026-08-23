@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Crosshair, Ship, Coins, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -216,6 +217,11 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
       onScore?.(winnerName, winScore);
       setScores(s => current === 1 ? { ...s, p1: s.p1 + winScore } : { ...s, p2: s.p2 + winScore });
       setShowEnemy(true);
+      if (current === 1) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        confetti({ particleCount: 100, angle: 60, spread: 55, origin: { x: 0, y: 0.65 } });
+        confetti({ particleCount: 100, angle: 120, spread: 55, origin: { x: 1, y: 0.65 } });
+      }
       return;
     }
 
@@ -351,6 +357,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
         <div className="text-6xl">🚢</div>
         <h2 className="text-3xl font-black text-white">Batalha Naval</h2>
         <div className="flex gap-3">
+          <motion.div whileHover={{scale:1.03}}>
           <Button
             onClick={() => setVsComputer(false)}
             className={cn(
@@ -362,6 +369,8 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           >
             👤 vs Jogador
           </Button>
+          </motion.div>
+          <motion.div whileHover={{scale:1.03}}>
           <Button
             onClick={() => setVsComputer(true)}
             className={cn(
@@ -373,6 +382,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           >
             <Bot className="h-4 w-4 mr-2" />vs Computador
           </Button>
+          </motion.div>
         </div>
         <AnimatePresence>
           {vsComputer && (
@@ -403,12 +413,15 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
             </motion.div>
           )}
         </AnimatePresence>
+        <motion.div whileHover={{scale:1.03}}>
         <Button
           onClick={startGame}
           className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-10 text-lg font-bold"
+          style={{ boxShadow: "0 0 24px rgba(6,182,212,0.35)" }}
         >
           Iniciar Batalha
         </Button>
+        </motion.div>
       </div>
     );
   }
@@ -469,7 +482,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 text-center">
             Meu Tabuleiro ({myShips.remaining} restantes)
           </p>
-          <div className="grid grid-cols-8 gap-0.5 mx-auto w-fit rounded-xl overflow-hidden shadow-lg border border-slate-700">
+          <div className="grid grid-cols-8 gap-0.5 mx-auto w-fit rounded-xl overflow-hidden shadow-lg border border-slate-700" style={{ boxShadow: "0 0 16px rgba(6,182,212,0.15)" }}>
             {myBoard.flatMap((row, r) =>
               row.map((cell, c) => (
                 <div key={`${r}-${c}`} className={cn(
@@ -490,7 +503,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 text-center flex items-center justify-center gap-1">
             <Crosshair className="h-3 w-3" /> Ataque ao Inimigo
           </p>
-          <div className="grid grid-cols-8 gap-0.5 mx-auto w-fit rounded-xl overflow-hidden shadow-lg border border-slate-700">
+          <div className="grid grid-cols-8 gap-0.5 mx-auto w-fit rounded-xl overflow-hidden shadow-lg border border-slate-700" style={{ boxShadow: "0 0 16px rgba(239,68,68,0.15)" }}>
             {(gameOver && showEnemy ? (current === 1 ? p2Board : p1Board) : myAttack).flatMap((row, r) =>
               row.map((cell, c) => (
                 <motion.button
@@ -547,15 +560,20 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
             {winner === 1 ? "Jogador 1" : (vsComputer ? "Computador" : "Jogador 2")} Afundou Toda a Frota!
           </h3>
           <div className="flex gap-2 justify-center">
+            <motion.div whileHover={{scale:1.03}}>
             <Button
               onClick={reset}
               className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl"
+              style={{ boxShadow: "0 0 20px rgba(6,182,212,0.35)" }}
             >
               <RotateCcw className="h-4 w-4 mr-2" />Nova Batalha
             </Button>
+            </motion.div>
+            <motion.div whileHover={{scale:1.03}}>
             <Button onClick={() => { reset(); setGameStarted(false); }} variant="outline" className="rounded-xl">
               Menu
             </Button>
+            </motion.div>
           </div>
         </motion.div>
       )}

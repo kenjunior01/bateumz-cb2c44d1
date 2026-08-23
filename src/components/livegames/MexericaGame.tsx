@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 
 interface MexericaProps {
   onScore?: (name: string, score: number) => void;
@@ -175,6 +176,11 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
         if (t <= 1) {
           setPhase("result");
           if (onScore) onScore("Mexerica", score.p1);
+          if (score.p1 > score.p2) {
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+            confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+          }
           return 0;
         }
         return t - 1;
@@ -199,7 +205,7 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
   const isWin = score.p1 > score.p2;
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto rounded-2xl border-2 border-amber-700/40 overflow-hidden"
+    <div className="relative w-full max-w-2xl mx-auto rounded-2xl border-2 border-amber-700/40 overflow-hidden shadow-[0_0_24px_rgba(255,215,0,0.15)]"
       style={{ background: "linear-gradient(145deg, #1a1207 0%, #2d1f0e 50%, #1a1207 100%)" }}>
       <CapulanaPattern />
 
@@ -252,10 +258,10 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
                 ))}
               </div>
             )}
-            <button onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg transition-all hover:scale-[1.02]"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>
+            <motion.button whileHover={{scale:1.03}} onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg transition-all hover:scale-[1.02]"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 20px rgba(255,215,0,0.3)" }}>
               Comecar Jogo
-            </button>
+            </motion.button>
           </div>
         )}
 
@@ -311,8 +317,8 @@ export default function MexericaGame({ onScore, liveCode }: MexericaProps) {
               <div className="text-xl font-bold self-center" style={{ color: "#FFD700" }}>vs</div>
               <div><p className="text-xs" style={{ color: "#CD853F" }}>{mode === "bot" ? "Bot" : "J2"}</p><p className="text-3xl font-black" style={{ color: "#FF6B35" }}>{score.p2}</p></div>
             </div>
-            <button onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
+            <motion.button whileHover={{scale:1.03}} onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)", boxShadow: "0 0 20px rgba(255,215,0,0.3)" }}>Jogar Novamente</motion.button>
           </div>
         )}
       </div>

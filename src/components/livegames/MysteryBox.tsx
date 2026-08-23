@@ -69,6 +69,7 @@ const MysteryBox = ({ highChance = 0.25, lowChance = 0.4, noneChance = 0.35, onS
         onChange={(e) => setName(e.target.value)}
         placeholder="O teu nome (para o leaderboard)"
         className="w-full mb-3 px-3 py-2 rounded-xl bg-card border border-border text-sm"
+        style={{ boxShadow: '0 0 12px rgba(59,130,246,0.1)' }}
         disabled={picked !== null}
       />
 
@@ -90,6 +91,7 @@ const MysteryBox = ({ highChance = 0.25, lowChance = 0.4, noneChance = 0.35, onS
                   ? "bg-card border-border opacity-60"
                   : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 hover:border-primary"
               }`}
+              style={picked === null ? { boxShadow: '0 0 20px rgba(59,130,246,0.15)' } : undefined}
             >
               <AnimatePresence mode="wait">
                 {!revealed ? (
@@ -118,9 +120,9 @@ const MysteryBox = ({ highChance = 0.25, lowChance = 0.4, noneChance = 0.35, onS
           <p className={`font-bold text-base ${boxes[picked].value === "none" ? "text-muted-foreground" : "text-primary"}`}>
             {boxes[picked].value === "none" ? "😅 Sem sorte desta vez" : `🎉 Ganhaste: ${boxes[picked].label}`}
           </p>
-          <button onClick={reset} className="mt-2 text-sm text-primary font-medium hover:underline">
+          <motion.button whileHover={{scale:1.03}} onClick={reset} className="mt-2 text-sm text-primary font-medium hover:underline">
             🔁 Nova rodada
-          </button>
+          </motion.button>
         </motion.div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Zap, Trophy, RotateCcw, User, Timer, AlertTriangle, Target, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
     const setter = w === 1 ? setP1Score : setP2Score;
     setter(s => {
       const ns = s + 1;
-      if (ns >= WINS_NEEDED) { setPhase('gameOver'); onScore?.(name, ns); }
+      if (ns >= WINS_NEEDED) { setPhase('gameOver'); onScore?.(name, ns); confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } }); setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250); setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500); }
       else setPhase('roundResult');
       return ns;
     });
@@ -197,9 +198,11 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
                   <Input value={p2Name} onChange={e => setP2Name(e.target.value || 'Jogador 2')} className="border-fuchsia-500/30 focus:border-fuchsia-400" />
                 </div>
               </div>
-              <Button onClick={startRound} className="w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold py-6 text-base shadow-lg shadow-cyan-500/25">
+              <motion.div whileHover={{ scale: 1.03 }}>
+              <Button onClick={startRound} className="w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold py-6 text-base shadow-lg shadow-cyan-500/25 shadow-[0_0_25px_rgba(34,211,238,0.3)]">
                 <Zap className="h-5 w-5 mr-2" /> Iniciar Batalha
               </Button>
+              </motion.div>
             </motion.div>
           )}
 
@@ -365,9 +368,10 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
                   )}
                 </>
               ) : null}
-              <Button onClick={nextRound} className="w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold py-5">
+              <motion.div whileHover={{ scale: 1.03 }}><Button onClick={nextRound} className="w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold py-5 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
                 <Zap className="h-4 w-4 mr-2" /> Pr\u00f3xima Rodada
               </Button>
+            </motion.div>
             </motion.div>
           )}
 
@@ -484,13 +488,17 @@ export default function SpeedReaction({ onScore, liveCode }: SpeedReactionProps)
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="flex gap-3 pt-1">
-                <Button onClick={resetGame} variant="outline" className="flex-1 border-white/10">
+                <motion.div whileHover={{ scale: 1.03 }}>
+                <Button onClick={resetGame} variant="outline" className="flex-1 border-white/10 shadow-[0_0_15px_rgba(161,161,170,0.15)]">
                   <RotateCcw className="h-4 w-4 mr-2" /> Novo Jogo
                 </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button onClick={() => { resetGame(); setTimeout(startRound, 200); }}
-                  className="flex-1 bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold">
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-bold shadow-[0_0_20px_rgba(34,211,238,0.3)]">
                   <Zap className="h-4 w-4 mr-2" /> Revanche
                 </Button>
+                </motion.div>
               </motion.div>
             </motion.div>
           )}

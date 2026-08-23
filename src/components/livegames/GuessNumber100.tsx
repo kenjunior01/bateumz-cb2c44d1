@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -362,8 +363,14 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
       if (onScore) {
         if (scores[0] > scores[1]) {
           onScore("Jogador 1", scores[0]);
+          confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+          setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
         } else if (scores[1] > scores[0]) {
           onScore(getP2Name(), scores[1]);
+          confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+          setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
         }
       }
     } else {
@@ -392,7 +399,7 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
 
   return (
     <div className="w-full max-w-lg mx-auto p-4 space-y-4">
-      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4">
+      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-4 shadow-[0_0_25px_rgba(34,211,238,0.1)]">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-center gap-1 min-w-[80px]">
             <span className={cn("text-xs font-medium uppercase tracking-wider", p1Color)}>
@@ -533,12 +540,14 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
             </motion.div>
           )}
 
+          <motion.div whileHover={{ scale: 1.03 }}>
           <Button
             onClick={startGame}
-            className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-3 font-semibold text-base"
+            className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-3 font-semibold text-base shadow-[0_0_20px_rgba(34,211,238,0.3)]"
           >
             Iniciar Jogo
           </Button>
+          </motion.div>
         </motion.div>
       )}
 
@@ -680,6 +689,7 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                       : "border-pink-500/30 focus:ring-pink-500/50"
                   )}
                 />
+                <motion.div whileHover={{ scale: 1.03 }}>
                 <Button
                   onClick={handlePlayerGuess}
                   disabled={
@@ -690,12 +700,13 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
                   className={cn(
                     "px-6 py-3 font-semibold text-base transition-all",
                     currentPlayer === 1
-                      ? "bg-cyan-600 hover:bg-cyan-500 text-white"
-                      : "bg-pink-600 hover:bg-pink-500 text-white"
+                      ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                      : "bg-pink-600 hover:bg-pink-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]"
                   )}
                 >
                   Chutar
                 </Button>
+                </motion.div>
               </div>
             )}
 
@@ -801,17 +812,19 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               </div>
             </motion.div>
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               onClick={handleNextRound}
               className={cn(
                 "px-8 py-3 font-semibold text-base transition-all",
                 roundWinner === 1
-                  ? "bg-cyan-600 hover:bg-cyan-500 text-white"
-                  : "bg-pink-600 hover:bg-pink-500 text-white"
+                  ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  : "bg-pink-600 hover:bg-pink-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]"
               )}
             >
               {currentRound >= TOTAL_ROUNDS ? "Ver Resultado Final" : "Próximo Round →"}
             </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -910,13 +923,15 @@ export default function GuessNumber100({ onScore, liveCode }: Props) {
               </motion.p>
             )}
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               onClick={handleRestart}
-              className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-3 font-semibold text-base transition-all"
+              className="bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white px-8 py-3 font-semibold text-base transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)]"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
               Reiniciar Tudo
             </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

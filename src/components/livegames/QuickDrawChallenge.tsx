@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Pencil, Timer, Users, Trophy, RotateCcw, Palette, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,8 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
       setScores(s => ({ ...s, [name]: (s[name] || 0) + pts }));
       setGuessed(g => [...g, name]); onScore?.(name, pts);
       setGuessInput('');
+      // Fire confetti on correct guess
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ['#10b981', '#14b8a6', '#06b6d4'] });
     }
   };
 
@@ -99,62 +102,171 @@ export default function QuickDrawChallenge({ onScore, liveCode }: QuickDrawChall
 
   if (phase === 'setup') {
     return (
-      <Card className="border-2 border-dashed border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-teal-500/5">
-        <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-emerald-400" /> Desenho Rápido</CardTitle></CardHeader>
-        <CardContent className="space-y-3 text-center">
-          <p className="text-sm text-muted-foreground">Desenhe a palavra e deixe o público adivinhar! {DRAW_TIME}s por desenho.</p>
-          <Button onClick={startRound} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600"><Pencil className="h-4 w-4 mr-2" /> Iniciar Rodada</Button>
-        </CardContent>
-      </Card>
+      // Enhancement 3: Convert setup Card to motion.div with fade-in animation
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+      >
+        <Card className="border-2 border-dashed border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-teal-500/5">
+          <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-emerald-400" /> Desenho Rápido</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground">Desenhe a palavra e deixe o público adivinhar! {DRAW_TIME}s por desenho.</p>
+            {/* Enhancement 11: Convert start button to motion.button with whileHover and whileTap */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={startRound}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-md px-4 py-2 text-sm font-medium cursor-pointer"
+            >
+              <Pencil className="h-4 w-4 mr-2 inline" /> Iniciar Rodada
+            </motion.button>
+          </CardContent>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-2xl bg-card border border-border p-3">
+      {/* Enhancement 12: Top bar wrapped in motion.div with slide-down animation on phase change */}
+      <motion.div
+        key={phase}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="flex items-center justify-between rounded-2xl bg-card border border-border p-3"
+      >
         <div><Badge variant="outline">Rodada {round}</Badge></div>
-        <div className={`font-mono text-lg font-bold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-foreground'}`}><Timer className="h-4 w-4 inline mr-1" />{timeLeft}s</div>
+        {/* Enhancement 8: Pulsing glow on timer when timeLeft <= 10 */}
+        <div
+          className={`font-mono text-lg font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-foreground'}`}
+          style={timeLeft <= 10 ? {
+            textShadow: '0 0 8px rgba(248,113,113,0.6), 0 0 20px rgba(248,113,113,0.3)',
+            animation: 'pulse 1s ease-in-out infinite',
+          } : undefined}
+        >
+          <Timer className="h-4 w-4 inline mr-1" />{timeLeft}s
+        </div>
         {phase === 'drawing' && <div className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">A DIVINHAR: {word.toUpperCase()}</div>}
-      </div>
+      </motion.div>
 
-      <div className="rounded-2xl overflow-hidden border-2 border-border bg-[#1a1a2e]">
+      {/* Enhancement 10: Subtle animated border/glow on canvas container when in drawing phase */}
+      <motion.div
+        className="rounded-2xl overflow-hidden bg-[#1a1a2e]"
+        animate={phase === 'drawing' ? {
+          boxShadow: [
+            '0 0 5px rgba(16,185,129,0.1), 0 0 20px rgba(16,185,129,0.05)',
+            '0 0 15px rgba(16,185,129,0.3), 0 0 40px rgba(16,185,129,0.15)',
+            '0 0 5px rgba(16,185,129,0.1), 0 0 20px rgba(16,185,129,0.05)',
+          ],
+          borderColor: [
+            'rgba(16,185,129,0.3)',
+            'rgba(16,185,129,0.7)',
+            'rgba(16,185,129,0.3)',
+          ],
+        } : { boxShadow: '0 0 0px rgba(16,185,129,0)', borderColor: 'hsl(var(--border))' }}
+        transition={phase === 'drawing' ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+        style={{ border: '2px solid hsl(var(--border))' }}
+      >
         <canvas ref={canvasRef} width={600} height={400} className="w-full touch-none cursor-crosshair"
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw}
         />
-      </div>
+      </motion.div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex gap-1">{['#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'].map(c => (
-          <button key={c} onClick={() => setColor(c)} className={`h-7 w-7 rounded-full border-2 transition-transform ${color === c ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+          // Enhancement 4: whileHover on color palette buttons
+          <motion.button
+            key={c}
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setColor(c)}
+            className={`h-7 w-7 rounded-full border-2 transition-transform cursor-pointer ${color === c ? 'border-white scale-110' : 'border-transparent'}`}
+            style={{ backgroundColor: c }}
+          />
         ))}</div>
         <div className="flex gap-1 ml-auto">
           {[2, 4, 8, 16].map(s => (
-            <button key={s} onClick={() => setBrushSize(s)} className={`h-7 w-7 rounded-lg border text-xs font-bold ${brushSize === s ? 'border-primary bg-primary/20' : 'border-border bg-card'}`}>{s}</button>
+            // Enhancement 5: whileTap={{scale:0.9}} on brush size buttons
+            <motion.button
+              key={s}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setBrushSize(s)}
+              className={`h-7 w-7 rounded-lg border text-xs font-bold cursor-pointer ${brushSize === s ? 'border-primary bg-primary/20' : 'border-border bg-card'}`}
+            >{s}</motion.button>
           ))}
-          <button onClick={clearCanvas} className="h-7 px-2 rounded-lg border border-border bg-card text-xs hover:bg-red-500/10 hover:border-red-500/30"><Eraser className="h-3 w-3" /></button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={clearCanvas}
+            className="h-7 px-2 rounded-lg border border-border bg-card text-xs hover:bg-red-500/10 hover:border-red-500/30 cursor-pointer"
+          ><Eraser className="h-3 w-3" /></motion.button>
         </div>
       </div>
 
-      {phase === 'drawing' && (
-        <div className="flex gap-2">
-          <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitGuess()} placeholder="Digite seu palpite..." className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
-          <Button onClick={submitGuess} className="bg-gradient-to-r from-emerald-500 to-teal-600">Enviar</Button>
-        </div>
-      )}
+      {/* Enhancement 6: Guess input area wrapped in motion.div with slide-up animation */}
+      <AnimatePresence>
+        {phase === 'drawing' && (
+          <motion.div
+            key="guess-input"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="flex gap-2"
+          >
+            <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitGuess()} placeholder="Digite seu palpite..." className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+            <Button onClick={submitGuess} className="bg-gradient-to-r from-emerald-500 to-teal-600">Enviar</Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {guessed.length > 0 && (
-        <div className="flex gap-2 flex-wrap">{guessed.map((g, i) => <Badge key={i} className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">✅ {g}</Badge>)}</div>
-      )}
+      {/* Enhancement 7: Staggered animation on guessed player badges */}
+      <div className="flex gap-2 flex-wrap">
+        <AnimatePresence>
+          {guessed.map((g, i) => (
+            <motion.div
+              key={`${g}-${i}`}
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.1, ease: 'easeOut' }}
+            >
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                ✅ {g}
+              </Badge>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
-      {phase === 'result' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-card border border-border p-4 text-center space-y-3">
-          <p className="text-sm text-muted-foreground">A palavra era:</p>
-          <p className="text-2xl font-bold text-primary">{word}</p>
-          <p className="text-sm">{guessed.length > 0 ? `${guessed.length} pessoa(s) acertaram!` : 'Ninguém acertou 😅'}</p>
-          <Button onClick={startRound} className="bg-gradient-to-r from-emerald-500 to-teal-600"><RotateCcw className="h-4 w-4 mr-2" /> Próxima Rodada</Button>
-        </motion.div>
-      )}
+      {/* Enhancement 2: AnimatePresence around the result phase */}
+      <AnimatePresence mode="wait">
+        {phase === 'result' && (
+          <motion.div
+            key="result-phase"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="rounded-2xl bg-card border border-border p-4 text-center space-y-3"
+          >
+            <p className="text-sm text-muted-foreground">A palavra era:</p>
+            <p className="text-2xl font-bold text-primary">{word}</p>
+            <p className="text-sm">{guessed.length > 0 ? `${guessed.length} pessoa(s) acertaram!` : 'Ninguém acertou 😅'}</p>
+            {/* Enhancement 9: whileHover={{scale:1.02}} on Próxima Rodada button */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block"
+            >
+              <Button onClick={startRound} className="bg-gradient-to-r from-emerald-500 to-teal-600">
+                <RotateCcw className="h-4 w-4 mr-2" /> Próxima Rodada
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

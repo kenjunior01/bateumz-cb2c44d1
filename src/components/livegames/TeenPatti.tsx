@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Eye, EyeOff, Coins, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -215,7 +216,10 @@ const TeenPatti = ({ onScore, liveCode }: Props) => {
     if (playerChips <= 0 || botChips <= 0) {
       setGamePhase("gameover");
       setWinner(playerChips <= 0 ? "Bot venceu o jogo!" : "Parabens! Voce venceu o jogo!");
-      if (playerChips > 0) onScore?.("Teen Patti", playerChips);
+      if (playerChips > 0) {
+        onScore?.("Teen Patti", playerChips);
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
     }
   }, [playerChips, botChips, onScore]);
 
@@ -278,9 +282,9 @@ const TeenPatti = ({ onScore, liveCode }: Props) => {
       {gamePhase === "betting" && turn === "player" && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
           {!playerSeen && (
-            <Button onClick={() => setPlayerSeen(true)} className="w-full gap-2" variant="outline">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full"><Button onClick={() => setPlayerSeen(true)} className="w-full gap-2" variant="outline" style={{ boxShadow: '0 0 15px rgba(16,185,129,0.2)' }}>
               <Eye className="h-4 w-4" /> Ver Cartas (aposta dobrada)
-            </Button>
+            </Button></motion.div>
           )}
           {playerSeen && (
             <div className="text-center text-xs text-emerald-400 mb-1">
@@ -288,13 +292,13 @@ const TeenPatti = ({ onScore, liveCode }: Props) => {
             </div>
           )}
           <div className="flex gap-2">
-            <Button onClick={() => playerBet(currentBet)} className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="flex-1"><Button onClick={() => playerBet(currentBet)} className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" style={{ boxShadow: '0 0 15px rgba(16,185,129,0.3)' }}>
               <Coins className="h-4 w-4" /> Apostar {(!playerSeen ? currentBet : currentBet * 2)}
-            </Button>
+            </Button></motion.div>
             <Button onClick={raiseBet} variant="outline" className="flex-1">Aumentar (+20)</Button>
-            <Button onClick={doShow} variant="destructive" className="gap-2">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={doShow} variant="destructive" className="gap-2" style={{ boxShadow: '0 0 15px rgba(239,68,68,0.3)' }}>
               <EyeOff className="h-4 w-4" /> Mostrar
-            </Button>
+            </Button></motion.div>
           </div>
           <p className="text-center text-[10px] text-muted-foreground">
             Aposta atual: {currentBet} {playerSeen ? "(vista x2)" : "(cega)"}
@@ -308,7 +312,7 @@ const TeenPatti = ({ onScore, liveCode }: Props) => {
             <Trophy className={"h-8 w-8 mx-auto mb-2 " + (winner.includes("Voce") ? "text-amber-500" : "text-slate-400")} />
             <p className="text-lg font-black mb-1">{winner}</p>
             <p className="text-xs text-muted-foreground mb-3">{handResult}</p>
-            <Button onClick={startRound} className="gap-2"><RotateCcw className="h-4 w-4" /> Proxima Ronda</Button>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={startRound} className="gap-2" style={{ boxShadow: '0 0 20px rgba(245,158,11,0.3)' }}><RotateCcw className="h-4 w-4" /> Proxima Ronda</Button></motion.div>
           </motion.div>
         )}
         {gamePhase === "gameover" && (
@@ -317,7 +321,7 @@ const TeenPatti = ({ onScore, liveCode }: Props) => {
             <p className="text-xl font-black mb-1">{winner}</p>
             <p className="text-sm text-muted-foreground mb-4">Fichas finais: Voce {playerChips} | Bot {botChips}</p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={startRound} className="gap-2"><RotateCcw className="h-4 w-4" /> Jogar Novamente</Button>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Button onClick={startRound} className="gap-2" style={{ boxShadow: '0 0 20px rgba(245,158,11,0.3)' }}><RotateCcw className="h-4 w-4" /> Jogar Novamente</Button></motion.div>
             </div>
           </motion.div>
         )}

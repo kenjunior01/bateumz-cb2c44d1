@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Hash, Swords, Trophy, ArrowUp, ArrowDown, Equal, RotateCcw, Target, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,9 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
       const name = player === 1 ? p1Name : p2Name;
       setWinner(name); setPhase('done');
       onScore?.(name, 100 - (player === 1 ? p1Guesses : p2Guesses).length * 10);
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+      confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
     } else {
       setCurrentPlayer(p => p === 1 ? 2 : 1);
     }
@@ -78,7 +82,9 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
               ))}
             </div>
           </div>
-          <Button onClick={startGame} className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-600"><Swords className="h-4 w-4 mr-2" /> Iniciar Duelo</Button>
+          <motion.div whileHover={{scale:1.03}}>
+          <Button onClick={startGame} className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-600" style={{ boxShadow: '0 0 24px rgba(139,92,246,0.35)' }}><Swords className="h-4 w-4 mr-2" /> Iniciar Duelo</Button>
+          </motion.div>
         </CardContent>
       </Card>
     );
@@ -95,7 +101,7 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 1 ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-border bg-card opacity-60'}`}>
+        <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 1 ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-border bg-card opacity-60'}`} style={currentPlayer === 1 ? { boxShadow: '0 0 20px rgba(6,182,212,0.15)' } : undefined}>
           <div className="flex items-center justify-between">
             <span className="font-bold text-sm">{p1Name}</span>
             <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">{p1Guesses.length} tentativas</Badge>
@@ -108,7 +114,7 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
           {p1Guesses.length > 0 && <div className="flex flex-wrap gap-1">{p1Guesses.map((g, i) => <Badge key={i} variant="outline" className="text-[10px]">{g}</Badge>)}</div>}
         </div>
 
-        <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 2 ? 'border-fuchsia-500/50 bg-fuchsia-500/5' : 'border-border bg-card opacity-60'}`}>
+        <div className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${currentPlayer === 2 ? 'border-fuchsia-500/50 bg-fuchsia-500/5' : 'border-border bg-card opacity-60'}`} style={currentPlayer === 2 ? { boxShadow: '0 0 20px rgba(217,70,239,0.15)' } : undefined}>
           <div className="flex items-center justify-between">
             <span className="font-bold text-sm">{p2Name}</span>
             <Badge className="bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30">{p2Guesses.length} tentativas</Badge>
@@ -130,7 +136,7 @@ export default function NumberGuessBattle({ onScore, liveCode }: NumberGuessBatt
               <h2 className="text-2xl font-bold mb-2">{winner} Acertou!</h2>
               <p className="text-4xl font-bold text-white mb-1">O número era {secret}</p>
               <p className="text-sm opacity-70 mb-4">{p1Name}: {p1Guesses.length} vs {p2Name}: {p2Guesses.length} tentativas</p>
-              <div className="flex gap-2"><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Sair</Button><Button onClick={startGame} className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-600">Revanche</Button></div>
+              <div className="flex gap-2"><motion.div whileHover={{scale:1.03}} className="flex-1"><Button onClick={() => setPhase('setup')} variant="outline" className="w-full border-white/20 text-white">Sair</Button></motion.div><motion.div whileHover={{scale:1.03}} className="flex-1"><Button onClick={startGame} className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-600">Revanche</Button></motion.div></div>
             </motion.div>
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import {
   RotateCcw,
   Eye,
@@ -595,9 +596,14 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
     const nextRound = round + 1;
     if (nextRound >= TOTAL_ROUNDS) {
       setPhase("game_over");
+      const { p1, p2 } = scoresRef.current;
+      if (p1 !== p2) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+      }
       if (onScore && !onScoreFired.current) {
         onScoreFired.current = true;
-        const { p1, p2 } = scoresRef.current;
         if (p1 > p2) {
           onScore("Jogador 1", p1);
         } else if (p2 > p1) {
@@ -740,14 +746,16 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </span>
             </div>
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               size="lg"
               onClick={handleStart}
-              className="mt-2 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 shadow-lg shadow-cyan-500/20 transition-all"
+              className="mt-2 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 shadow-lg shadow-cyan-500/20 transition-all shadow-[0_0_20px_rgba(6,182,212,0.25)]"
             >
               <Grid3X3 className="w-5 h-5 mr-2" />
               Iniciar Jogo
             </Button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -880,19 +888,21 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               ))}
             </div>
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               size="lg"
               onClick={handleConfirm}
               className={cn(
                 "mt-3 font-bold px-8 shadow-lg transition-all",
                 activePlayer === 1
-                  ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-500/25"
-                  : "bg-pink-600 hover:bg-pink-500 text-white shadow-pink-500/25",
+                  ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-500/25 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  : "bg-pink-600 hover:bg-pink-500 text-white shadow-pink-500/25 shadow-[0_0_20px_rgba(236,72,153,0.3)]",
               )}
             >
               <Eye className="w-4 h-4 mr-2" />
               Confirmar ({currentTaps.size})
             </Button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -1134,15 +1144,17 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               <span className="text-pink-400 font-bold">J2: {p2Total}</span>
             </div>
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               size="lg"
               onClick={handleNextRound}
-              className="mt-1 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 shadow-lg"
+              className="mt-1 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold px-8 shadow-lg shadow-[0_0_20px_rgba(6,182,212,0.25)]"
             >
               {round + 1 < TOTAL_ROUNDS
                 ? "Próxima Rodada"
                 : "Ver Resultado Final"}
             </Button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -1400,15 +1412,17 @@ export default function PatternMemory({ onScore, liveCode }: Props) {
               </motion.p>
             )}
 
+            <motion.div whileHover={{ scale: 1.03 }}>
             <Button
               variant="outline"
               size="lg"
               onClick={handleRestart}
-              className="relative z-10 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white font-bold px-6 mt-2"
+              className="relative z-10 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white font-bold px-6 mt-2 shadow-[0_0_15px_rgba(161,161,170,0.15)]"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
               Jogar Novamente
             </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

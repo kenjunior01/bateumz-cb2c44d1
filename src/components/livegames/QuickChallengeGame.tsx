@@ -131,6 +131,13 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
       if (onGameEnd) {
         onGameEnd(totalPoints, correctCount);
       }
+      if (correctCount === Math.min(maxChallenges, challenges.length)) {
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+        confetti({ particleCount: 120, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } });
+        confetti({ particleCount: 120, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } });
+      } else {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      }
     } else {
       setCurrentIndex(prev => prev + 1);
       setTimeLeft(challenges[currentIndex + 1]?.timeLimit || 10);
@@ -144,7 +151,7 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black p-4 flex items-center justify-center">
         <Card className="w-full max-w-md border-white/10 bg-black/50 backdrop-blur-xl">
           <CardContent className="p-12 text-center space-y-8">
-            <div className="w-24 h-24 bg-yellow-400 rounded-full mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)]">
+            <div className="w-24 h-24 bg-yellow-400 rounded-full mx-auto flex items-center justify-center" style={{ boxShadow: "0 0 50px rgba(250,204,21,0.5), 0 0 100px rgba(250,204,21,0.2)" }}>
               <Trophy className="w-12 h-12 text-black" />
             </div>
             <div>
@@ -167,9 +174,11 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
                 </span>
               </div>
             </div>
-            <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-full font-black text-lg">
+            <motion.div whileHover={{scale:1.03}}>
+            <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-full font-black text-lg" style={{ boxShadow: "0 0 24px rgba(59,130,246,0.35)" }}>
               JOGAR NOVAMENTE
             </Button>
+            </motion.div>
           </CardContent>
         </Card>
       </div>
@@ -266,9 +275,11 @@ const QuickChallengeGame: React.FC<QuickChallengeGameProps> = ({
                 <p className={`font-black mb-3 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
                   {isCorrect ? '✓ CORRETO!' : '✗ INCORRETO'}
                 </p>
+                <motion.div whileHover={{scale:1.03}}>
                 <Button onClick={handleNext} className="w-full rounded-full">
                   {currentIndex + 1 >= Math.min(maxChallenges, challenges.length) ? 'VER RESULTADO' : 'PRÓXIMO'}
                 </Button>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

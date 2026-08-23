@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -281,6 +282,11 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
     if (gameState === "finished") {
       onScore?.("Jogador 1", player1.score);
       onScore?.("Jogador 2", player2.score);
+      if (player1.score !== player2.score) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } }), 250);
+        setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+      }
     }
   }, [gameState, onScore, player1.score, player2.score]);
 
@@ -337,11 +343,11 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
           </p>
         </div>
 
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={startGame}
             size="lg"
-            className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold text-lg px-10 py-6 rounded-2xl"
+            className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold text-lg px-10 py-6 rounded-2xl shadow-[0_0_25px_rgba(34,211,238,0.3)]"
           >
             Começar Jogo
           </Button>
@@ -496,11 +502,11 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
           </motion.div>
         )}
 
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={handleRestart}
             size="lg"
-            className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold text-lg px-8 py-5 rounded-2xl"
+            className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold text-lg px-8 py-5 rounded-2xl shadow-[0_0_25px_rgba(34,211,238,0.3)]"
           >
             <RotateCcw className="mr-2 h-5 w-5" />
             Reiniciar Tudo
@@ -513,7 +519,7 @@ export default function TriviaFlash({ onScore, liveCode }: Props) {
   /* ===================== MAIN GAME SCREEN ===================== */
   return (
     <div className="flex flex-col gap-4 p-3 md:p-4 w-full max-w-3xl mx-auto">
-      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 flex items-center justify-between shadow-[0_0_20px_rgba(34,211,238,0.1)]">
         <div className="flex items-center gap-2">
           <span className="text-cyan-400 font-bold text-sm">Jogador 1</span>
           <motion.span

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Trophy, Zap, Shield, Heart, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -110,6 +111,7 @@ const KabaddiRaid = ({ onScore, liveCode }: Props) => {
     if (phase === "fail") {
       setPhase("gameover");
       onScore?.("Kabaddi Raid", score);
+      if (score >= 50) confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ["#22c55e", "#f59e0b", "#ef4444"] });
       return;
     }
     if (phase === "gameover") {
@@ -214,7 +216,7 @@ const KabaddiRaid = ({ onScore, liveCode }: Props) => {
           height: 320,
           background: arenaBg,
           border: "4px solid #4A1D0A",
-          boxShadow: "inset 0 0 60px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.5)",
+          boxShadow: "inset 0 0 60px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.5), 0 0 30px rgba(249,115,22,0.15)",
         }}
         onClick={handleTap}
       >
@@ -325,7 +327,9 @@ const KabaddiRaid = ({ onScore, liveCode }: Props) => {
 
       {(phase === "ready" || phase === "gameover") && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 flex justify-center">
-          <Button onClick={handleTap} className="gap-2"><RotateCcw className="h-4 w-4" /> {phase === "gameover" ? "Jogar Novamente" : "Comecar Raid"}</Button>
+          <motion.div whileHover={{ scale: 1.03 }}>
+          <Button onClick={handleTap} className="gap-2" style={{ boxShadow: '0 0 16px rgba(249,115,22,0.4)' }}><RotateCcw className="h-4 w-4" /> {phase === "gameover" ? "Jogar Novamente" : "Comecar Raid"}</Button>
+          </motion.div>
         </motion.div>
       )}
 

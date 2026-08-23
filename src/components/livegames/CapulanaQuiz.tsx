@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface CapulanaQuizProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
@@ -93,6 +94,13 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
     return () => { if (botTimer.current) clearTimeout(botTimer.current); };
   }, [phase, currentQ, mode, difficulty, questions]);
 
+  /* Fire confetti on game over win */
+  useEffect(() => {
+    if (phase === "gameOver" && scores.p1 > scores.p2) {
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    }
+  }, [phase, scores.p1, scores.p2]);
+
   const handleAnswer = useCallback((optionIdx: number) => {
     if (phase !== "playing" || selected !== null) return;
     setSelected(optionIdx);
@@ -150,43 +158,44 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
           </div>
           {phase !== "menu" && (
             <div className="flex items-center gap-3">
-              <div className="text-center"><p className="text-[10px]" style={{ color: "#009140" }}>{p1Label}</p><p className="text-lg font-black" style={{ color: "#009140" }}>{scores.p1}</p></div>
+              <div className="text-center" style={streak >= 3 ? { filter: "drop-shadow(0 0 8px rgba(0,145,64,0.8))" } : undefined}><p className="text-[10px]" style={{ color: "#009140" }}>{p1Label}</p><p className="text-lg font-black" style={{ color: "#009140" }}>{scores.p1}</p></div>
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,215,0,0.1)", color: "#FFD700" }}>{currentQ + 1}/{questions.length}</span>
               <div className="text-center"><p className="text-[10px]" style={{ color: "#FF6B35" }}>{p2Label}</p><p className="text-lg font-black" style={{ color: "#FF6B35" }}>{scores.p2}</p></div>
             </div>
           )}
         </div>
 
+        <AnimatePresence mode="wait">
         {phase === "menu" && (
-          <div className="space-y-4">
+          <motion.div key="menu" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="space-y-4">
             <p className="text-sm text-center" style={{ color: "#DEB887" }}>
               Testa os teus conhecimentos sobre Mocambique! {TOTAL_QUESTIONS} perguntas de cultura, geografia, gastronomia e mais.
             </p>
             <div className="flex justify-center gap-2">
               {(["bot", "pvp"]).map((m) => (
-                <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
+                <motion.button key={m} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded-xl text-sm font-bold ${mode === m ? "text-black" : ""}`}
                   style={mode === m ? { background: "linear-gradient(135deg, #FFD700, #FF6B35)" } : { background: "rgba(255,215,0,0.1)", color: "#CD853F" }}>
                   {m === "bot" ? "vs Computador" : "vs Jogador"}
-                </button>
+                </motion.button>
               ))}
             </div>
             {mode === "bot" && (
               <div className="flex justify-center gap-2">
                 {(["Facil", "Medio", "Dificil"]).map((d) => (
-                  <button key={d} onClick={() => setDifficulty(d as any)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
-                    style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</button>
+                  <motion.button key={d} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }} onClick={() => setDifficulty(d as any)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${difficulty === d ? "text-black" : ""}`}
+                    style={difficulty === d ? { background: d === "Facil" ? "#009140" : d === "Medio" ? "#FF6B35" : "#FF0000" } : { background: "rgba(255,255,255,0.05)", color: "#CD853F" }}>{d}</motion.button>
                 ))}
               </div>
             )}
-            <button onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Comecar Quiz</button>
-          </div>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={startGame} className="w-full py-3 rounded-xl text-black font-black text-lg"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Comecar Quiz</motion.button>
+          </motion.div>
         )}
 
         {(phase === "playing" || phase === "answered") && q && (
-          <div className="space-y-4">
+          <motion.div key={`playing-${currentQ}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl">{q.emoji}</span>
+              <motion.span className="text-2xl" animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.4)", "brightness(1)"] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>{q.emoji}</motion.span>
               <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(0,145,64,0.15)", color: "#009140" }}>{q.category}</span>
               {streak >= 3 && <span className="text-xs font-bold px-2 py-0.5 rounded-full animate-pulse" style={{ background: "rgba(255,0,0,0.15)", color: "#FFD700" }}>🔥 Streak {streak}</span>}
             </div>
@@ -207,10 +216,10 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
                 }
 
                 return (
-                  <motion.button key={i} whileTap={phase === "playing" ? { scale: 0.97 } : {}}
+                  <motion.button key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.3 }} whileTap={phase === "playing" ? { scale: 0.97 } : {}}
                     onClick={() => handleAnswer(i)} disabled={phase === "answered"}
                     className={`relative p-3 rounded-xl text-sm font-medium text-left transition-all ${phase === "playing" ? "cursor-pointer" : ""}`}
-                    style={{ background: bgColor, border: `2px solid ${borderColor}`, color: "#DEB887" }}>
+                    style={{ background: bgColor, border: `2px solid ${borderColor}`, color: "#DEB887", ...(showResult && isCorrect ? { boxShadow: "0 0 16px rgba(0,200,64,0.5), 0 0 32px rgba(0,200,64,0.2)" } : {}) }}>
                     <span className="inline-flex items-center gap-2">
                       <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0"
                         style={{ background: isP1Selected ? "#009140" : isBotSelected ? "#FF6B35" : "rgba(255,215,0,0.1)", color: (isP1Selected || isBotSelected) ? "white" : "#CD853F" }}>
@@ -227,27 +236,28 @@ export default function CapulanaQuiz({ onScore, liveCode }: CapulanaQuizProps) {
             </div>
 
             {phase === "answered" && (
-              <button onClick={nextQuestion} className="w-full py-2.5 rounded-xl text-black font-bold"
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={nextQuestion} className="w-full py-2.5 rounded-xl text-black font-bold"
                 style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>
                 {currentQ + 1 >= questions.length ? "Ver Resultado" : "Proxima Pergunta"}
-              </button>
+              </motion.button>
             )}
-          </div>
+          </motion.div>
         )}
 
         {phase === "gameOver" && (
-          <div className="text-center py-8 space-y-4">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl">{isP1Win ? "🏆" : "🤝"}</motion.div>
+          <motion.div key="gameOver" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="text-center py-8 space-y-4">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }} className="text-6xl">{isP1Win ? "🏆" : "🤝"}</motion.div>
             <h3 className="text-2xl font-black" style={{ color: "#FFD700" }}>{winner}{winner !== "Empate" ? " venceu!" : "!"}</h3>
             <div className="flex justify-center gap-8">
               <div><p className="text-xs" style={{ color: "#009140" }}>{p1Label}</p><p className="text-3xl font-black" style={{ color: "#009140" }}>{scores.p1}</p></div>
               <div className="text-xl font-bold self-center" style={{ color: "#FFD700" }}>vs</div>
               <div><p className="text-xs" style={{ color: "#FF6B35" }}>{p2Label}</p><p className="text-3xl font-black" style={{ color: "#FF6B35" }}>{scores.p2}</p></div>
             </div>
-            <button onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold"
-              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</button>
-          </div>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setPhase("menu")} className="px-8 py-2.5 rounded-xl text-black font-bold"
+              style={{ background: "linear-gradient(135deg, #FFD700, #FF6B35)" }}>Jogar Novamente</motion.button>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );

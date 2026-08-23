@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -415,10 +416,10 @@ export default function NumberTetris({
   const [p1, setP1] = useState<PlayerState>(createInitialState);
   const [p2, setP2] = useState<PlayerState>(createInitialState);
   const lastTimeRef = useRef(Date.now());
-  const scoreCalledRef = useRef({ p1: false, p2: false });
+  const scoreCalledRef = useRef({ p1: false, p2: false, confetti: false });
 
   const resetAll = useCallback(() => {
-    scoreCalledRef.current = { p1: false, p2: false };
+    scoreCalledRef.current = { p1: false, p2: false, confetti: false };
     lastTimeRef.current = Date.now();
     setP1(createInitialState());
     setP2(createInitialState());
@@ -542,6 +543,13 @@ export default function NumberTetris({
       : "Empate"
     : null;
 
+  useEffect(() => {
+    if (bothOut && winner && winner !== "Empate" && !scoreCalledRef.current.confetti) {
+      scoreCalledRef.current.confetti = true;
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    }
+  }, [bothOut, winner]);
+
   return (
     <div className="w-full max-w-2xl mx-auto px-1 sm:px-2">
       <div className="text-center mb-3">
@@ -553,7 +561,7 @@ export default function NumberTetris({
         </p>
       </div>
 
-      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 mb-3 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 mb-3 flex justify-between items-center" style={{ boxShadow: '0 0 20px rgba(34,211,238,0.1), 0 0 20px rgba(244,114,182,0.1)' }}>
         <div className="text-cyan-400 font-bold">
           <span className="text-[10px] sm:text-xs opacity-70">P1 </span>
           <span className="text-base sm:text-lg tabular-nums">{p1.score}</span>
@@ -607,15 +615,17 @@ export default function NumberTetris({
       </div>
 
       <div className="flex justify-center mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={resetAll}
-          className="gap-1.5 text-[11px] sm:text-xs border-white/10 hover:bg-white/5"
-        >
-          <RotateCcw className="h-3 w-3" />
-          Reiniciar Tudo
-        </Button>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetAll}
+            className="gap-1.5 text-[11px] sm:text-xs border-white/10 hover:bg-white/5"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reiniciar Tudo
+          </Button>
+        </motion.div>
       </div>
 
       <AnimatePresence>
@@ -627,7 +637,7 @@ export default function NumberTetris({
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="mt-4 text-center"
           >
-            <div className="inline-flex flex-col items-center bg-gradient-to-r from-cyan-900/50 to-pink-900/50 border border-white/15 rounded-xl px-6 py-3 backdrop-blur-sm">
+            <div className="inline-flex flex-col items-center bg-gradient-to-r from-cyan-900/50 to-pink-900/50 border border-white/15 rounded-xl px-6 py-3 backdrop-blur-sm" style={{ boxShadow: '0 0 25px rgba(250,204,21,0.2)' }}>
               <p className="text-lg sm:text-xl font-black text-yellow-400">
                 {winner === "Empate"
                   ? "Empate!"

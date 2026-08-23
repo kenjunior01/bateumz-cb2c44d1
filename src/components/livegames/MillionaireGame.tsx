@@ -371,10 +371,12 @@ export default function MillionaireGame({ gameId: propGameId, onComplete }: Prop
                   key={letter}
                   initial={{ opacity: 0, x: letter < 'C' ? -20 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
+                  whileHover={{ scale: 1.03 }}
                   transition={{ delay: (letter.charCodeAt(0) - 'A'.charCodeAt(0)) * 0.1 }}
                   onClick={() => handleAnswer(letter)}
                   disabled={answered || isDisabled || status !== 'playing'}
                   className={`relative group flex items-center p-1 rounded-full border-2 transition-all duration-300 ${stateClass}`}
+                  style={{ boxShadow: "0 0 15px rgba(250,204,21,0.1)" }}
                 >
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black text-primary group-hover:bg-primary group-hover:text-black transition-colors">
                     {letter}
@@ -478,7 +480,7 @@ export default function MillionaireGame({ gameId: propGameId, onComplete }: Prop
                 </>
               )}
               <div className="flex gap-4 justify-center pt-4">
-                <Button size="lg" className="px-12 py-8 text-xl font-black rounded-full" onClick={restartGame}>TENTAR NOVAMENTE</Button>
+                <Button size="lg" className="px-12 py-8 text-xl font-black rounded-full" style={{ boxShadow: "0 0 25px rgba(250,204,21,0.3)" }} onClick={restartGame}>TENTAR NOVAMENTE</Button>
                 <Button size="lg" variant="outline" className="px-12 py-8 text-xl font-black rounded-full border-white/20" onClick={() => window.location.href = '/'}>SAIR</Button>
               </div>
             </motion.div>

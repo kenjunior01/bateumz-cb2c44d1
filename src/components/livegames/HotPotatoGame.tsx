@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Bomb, Users, Trophy, RotateCcw, Flame, Zap, Skull, Timer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
     if (alive.length <= 1) {
       clearInterval(intervalRef.current); clearInterval(bombTimerRef.current);
       onScore?.(alive[0] || 'Ninguém', round * 50);
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors: ['#f97316', '#ef4444', '#fbbf24'] });
       setPhase('done'); return;
     }
     // Move potato
@@ -93,7 +95,7 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
               <Badge key={i} variant="outline" className="gap-1">{p}<button onClick={() => setPlayers(pl => pl.filter((_, j) => j !== i))} className="ml-1 text-muted-foreground hover:text-red-400">×</button></Badge>
             ))}</div>
           </div>
-          <Button onClick={startGame} disabled={players.length < 3} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"><Flame className="h-4 w-4 mr-2" /> Iniciar ({players.length} jogadores)</Button>
+          <Button onClick={startGame} disabled={players.length < 3} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700" style={{ boxShadow: '0 0 16px rgba(249,115,22,0.4)' }}><Flame className="h-4 w-4 mr-2" /> Iniciar ({players.length} jogadores)</Button>
         </CardContent>
       </Card>
     );
@@ -153,7 +155,7 @@ export default function HotPotatoGame({ onScore, liveCode }: HotPotatoGameProps)
               <Trophy className="h-12 w-12 text-yellow-400 mx-auto mb-3" />
               <h2 className="text-2xl font-bold mb-2">{winner} Sobreviveu!</h2>
               <p className="text-sm opacity-70 mb-4">Venceu após {round} rodada(s)</p>
-              <div className="flex gap-2"><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Novo Jogo</Button><Button onClick={startGame} className="flex-1 bg-gradient-to-r from-orange-500 to-red-600">Revanche</Button></div>
+              <div className="flex gap-2"><motion.div whileHover={{ scale: 1.03 }}><Button onClick={() => setPhase('setup')} variant="outline" className="flex-1 border-white/20 text-white">Novo Jogo</Button></motion.div><motion.div whileHover={{ scale: 1.03 }}><Button onClick={startGame} className="flex-1 bg-gradient-to-r from-orange-500 to-red-600" style={{ boxShadow: '0 0 16px rgba(249,115,22,0.4)' }}>Revanche</Button></motion.div></div>
             </motion.div>
           </motion.div>
         )}

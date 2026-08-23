@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Timer, Eye, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -380,6 +381,9 @@ export default function SpotDifference({
     if (status === "gameOver" && onScore && !scoredRef.current) {
       scoredRef.current = true;
       const s = totalScoreRef.current;
+      if (s.p1 > s.p2) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
       if (s.p1 > s.p2) onScore("Jogador 1", s.p1);
       else if (s.p2 > s.p1) onScore("Jogador 2", s.p2);
       else {
@@ -568,6 +572,7 @@ export default function SpotDifference({
           <Button
             onClick={startRound}
             className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold px-8"
+            style={{ boxShadow: "0 0 25px rgba(6,182,212,0.3), 0 0 25px rgba(236,72,153,0.3)" }}
           >
             Iniciar Jogo
           </Button>
@@ -585,7 +590,7 @@ export default function SpotDifference({
                 "relative bg-slate-900 rounded-xl border-2 border-cyan-500/30 overflow-hidden",
                 status === "playing" && "cursor-pointer"
               )}
-              style={{ width: SCENE_W, height: SCENE_H }}
+              style={{ width: SCENE_W, height: SCENE_H, boxShadow: "0 0 20px rgba(6,182,212,0.15)" }}
               onClick={(e) => handleClick(1, "A", e)}
             >
               {sceneA.map((s) => (
@@ -617,7 +622,7 @@ export default function SpotDifference({
                 "relative bg-slate-900 rounded-xl border-2 border-pink-500/30 overflow-hidden",
                 status === "playing" && "cursor-pointer"
               )}
-              style={{ width: SCENE_W, height: SCENE_H }}
+              style={{ width: SCENE_W, height: SCENE_H, boxShadow: "0 0 20px rgba(236,72,153,0.15)" }}
               onClick={(e) => handleClick(2, "B", e)}
             >
               {sceneB.map((s) => (

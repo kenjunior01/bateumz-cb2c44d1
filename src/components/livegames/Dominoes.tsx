@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -234,6 +235,7 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
       setScores((s) => [s[0] + p2, s[1]]);
       setRoundResult(`Venceu! ${PLAYER_NAMES[0]} (${p1} vs ${p2})`);
       onScore?.(PLAYER_NAMES[0], p2);
+      if (vsBot) confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#22d3ee', '#f472b6', '#fbbf24'] });
     } else if (p2 < p1) {
       setScores((s) => [s[0], s[1] + p1]);
       setRoundResult(`Venceu! ${PLAYER_NAMES[1]} (${p2} vs ${p1})`);
@@ -311,6 +313,9 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         });
         setRoundResult(`Venceu! ${PLAYER_NAMES[currentPlayer]}`);
         onScore?.(PLAYER_NAMES[currentPlayer], oppPips);
+        if (vsBot && currentPlayer === 0) {
+          confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#22d3ee', '#f472b6', '#fbbf24'] });
+        }
         setPhase('roundOver');
         return;
       }
@@ -475,6 +480,7 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-cyan-900/30 to-pink-900/30 border border-cyan-500/20 rounded-xl p-3 flex items-center justify-between"
+        style={{ boxShadow: '0 0 20px rgba(34,211,238,0.15), 0 0 20px rgba(244,114,182,0.15)' }}
       >
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-cyan-400" />
@@ -790,13 +796,17 @@ export default function Dominoes({ onScore, liveCode: _liveCode }: Props) {
               </div>
 
               <div className="flex gap-2 justify-center flex-wrap">
-                <Button size="sm" onClick={nextRound} className="text-xs gap-1">
-                  Pr\u00f3xima Rodada
-                </Button>
-                <Button size="sm" variant="outline" onClick={restartAll} className="text-xs gap-1">
-                  <RotateCcw className="w-3 h-3" />
-                  Reiniciar Tudo
-                </Button>
+                <motion.div whileHover={{ scale: 1.03 }}>
+                  <Button size="sm" onClick={nextRound} className="text-xs gap-1" style={{ boxShadow: '0 0 16px rgba(34,211,238,0.35)' }}>
+                    Pr\u00f3xima Rodada
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }}>
+                  <Button size="sm" variant="outline" onClick={restartAll} className="text-xs gap-1">
+                    <RotateCcw className="w-3 h-3" />
+                    Reiniciar Tudo
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>

@@ -242,9 +242,10 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
               <input value={p2Name} onChange={(e) => setP2Name(e.target.value)} placeholder="Jogador 2" className="px-3 py-2 rounded-xl bg-card border border-border text-sm text-center" />
             </div>
           )}
-          <button onClick={startGame} className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 hover:shadow-xl transition-shadow">
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={startGame} className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 hover:shadow-xl transition-shadow"
+            style={{ boxShadow: '0 0 25px rgba(168,85,247,0.3)' }}>
             <Play className="h-4 w-4 fill-current" /> Começar Jogo
-          </button>
+          </motion.button>
           <div className="rounded-xl bg-muted/40 border border-border p-3 text-center">
             <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-1">Como Jogar</p>
             <p className="text-xs text-muted-foreground">Toque APENAS nos círculos da cor indicada. Cores erradas tiram pontos!</p>
@@ -316,9 +317,10 @@ const ColorCatch = ({ onScore, liveCode }: Props) => {
                 <Trophy className="h-10 w-10 text-yellow-400" />
                 <p className="font-display text-2xl font-bold text-white">{winner ? `${winner} venceu!` : "Empate!"}</p>
                 <p className="text-sm text-white/70">{p1Score} - {p2Score}</p>
-                <button onClick={startGame} className="mt-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-sm flex items-center gap-2 shadow-lg">
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={startGame} className="mt-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-sm flex items-center gap-2"
+                  style={{ boxShadow: '0 0 25px rgba(168,85,247,0.3)' }}>
                   <RotateCcw className="h-4 w-4" /> Jogar Novamente
-                </button>
+                </motion.button>
                 <button onClick={() => setPhase("idle")} className="px-4 py-2 rounded-full bg-white/10 text-white/80 text-xs font-medium hover:bg-white/20 transition">
                   Voltar ao Menu
                 </button>

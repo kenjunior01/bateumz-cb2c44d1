@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { RotateCcw, Coins, SkipForward, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -164,6 +165,9 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
       setHands(newHands);
       setDiscard(newDiscard);
       setMessage(`${NAMES[pIdx]} Venceu! 🏆`);
+      if (pIdx === 0) {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#6366f1", "#a855f7", "#ec4899", "#ef4444", "#22c55e", "#eab308"] });
+      }
       return;
     }
 
@@ -242,7 +246,7 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
               onClick={() => setBet(v)}><Coins className="h-3 w-3 mr-1" />{v}</Button>
           ))}
         </div>
-        <Button onClick={dealCards} className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl px-8 text-lg font-bold">
+        <Button onClick={dealCards} className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl px-8 text-lg font-bold" style={{ boxShadow: "0 0 20px rgba(99,102,241,0.4)" }}>
           🎴 Iniciar Jogo
         </Button>
       </div>
@@ -279,7 +283,7 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         <div className="text-center">
           <p className="text-[10px] text-slate-500 mb-1">Monte ({deck.length})</p>
           <button onClick={handleDraw} disabled={gameOver}
-            className="w-14 h-20 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 border-2 border-indigo-400/30 flex items-center justify-center text-white font-bold shadow-lg hover:scale-105 transition-transform">
+            className="w-14 h-20 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 border-2 border-indigo-400/30 flex items-center justify-center text-white font-bold shadow-lg hover:scale-105 transition-transform" style={{ boxShadow: "0 0 16px rgba(99,102,241,0.35)" }}>
             🃏
           </button>
         </div>
@@ -353,7 +357,7 @@ const UnoCardGame = ({ onScore, liveCode }: Props) => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
           <div className="text-5xl">🏆</div>
           <h3 className="text-xl font-black text-white">{NAMES[winner!]} Venceu!</h3>
-          <Button onClick={() => { dealCards(); setScores(s => { const ns = [...s]; ns[winner!] += 100 + (bet||0); return ns; }); }} className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl">
+          <Button onClick={() => { dealCards(); setScores(s => { const ns = [...s]; ns[winner!] += 100 + (bet||0); return ns; }); }} className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl" style={{ boxShadow: "0 0 20px rgba(99,102,241,0.4)" }}>
             <RotateCcw className="h-4 w-4 mr-2" />Jogar Novamente
           </Button>
         </motion.div>

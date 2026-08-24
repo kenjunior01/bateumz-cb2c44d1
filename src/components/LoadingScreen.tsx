@@ -375,18 +375,33 @@ const LoadingScreen = () => {
           animate={{ scale: 1, rotate: 0 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
         >
+          {/* Pulsing glow ring */}
+          <motion.div
+            className="absolute -inset-8 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(0,145,64,0.15) 0%, transparent 70%)" }}
+            animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          />
           <motion.div
             className="absolute -inset-4 rounded-3xl"
-            style={{ background: "conic-gradient(from 0deg, #009140, #FFD700, #D7263D, #6366f1, #009140)" }}
+            style={{ background: "conic-gradient(from 0deg, #009140, #FFD700, #D7263D, #6366f1, #009140)", filter: "blur(1px)" }}
             animate={{ rotate: 360 }}
             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           />
           <div className="relative rounded-2xl p-1" style={{ background: "hsl(var(--background))" }}>
-            <img
+            <motion.img
               src={bateuLogo}
               alt="Bateu"
               className="h-20 w-20 md:h-24 md:w-24"
-              style={{ filter: "drop-shadow(0 0 20px rgba(0,145,64,0.3))" }}
+              style={{ filter: "drop-shadow(0 0 24px rgba(0,145,64,0.4))" }}
+              animate={{
+                filter: [
+                  "drop-shadow(0 0 24px rgba(0,145,64,0.4))",
+                  "drop-shadow(0 0 32px rgba(255,215,0,0.4))",
+                  "drop-shadow(0 0 24px rgba(0,145,64,0.4))",
+                ],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             />
           </div>
         </motion.div>
@@ -397,11 +412,15 @@ const LoadingScreen = () => {
           transition={{ delay: 0.6, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="mt-6 text-center"
         >
-          <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
+          <motion.h1
+            className="font-display text-3xl md:text-5xl font-bold tracking-tight"
+            animate={{ opacity: [0.9, 1, 0.9] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
             <span className="bg-gradient-to-r from-[#009140] via-[#FFD700] to-[#D7263D] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
               Bateu
             </span>
-          </h1>
+          </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -418,9 +437,23 @@ const LoadingScreen = () => {
           transition={{ duration: 0.5 }}
           className="mt-10 w-64 md:w-80"
         >
-          <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "hsl(var(--secondary))" }}>
+          <div className="relative h-2 rounded-full overflow-hidden" style={{ background: "hsl(var(--secondary))" }}>
+            {/* Glow underlay */}
             <motion.div
-              className="absolute inset-y-0 left-0 rounded-full"
+              className="absolute inset-y-0 left-0 rounded-full blur-sm"
+              style={{
+                width: progressWidth,
+                background: "linear-gradient(90deg, #009140, #FFD700, #D7263D)",
+                backgroundSize: "200% 100%",
+                opacity: 0.6,
+              }}
+              animate={{
+                backgroundPosition: ["0% 0%", "100% 0%", "0% 0%"],
+              }}
+              transition={{ backgroundPosition: { duration: 2, repeat: Infinity, ease: "linear" } }}
+            />
+            <motion.div
+              className="absolute inset-y-0 left-0 rounded-full relative"
               style={{
                 width: progressWidth,
                 background: "linear-gradient(90deg, #009140, #FFD700, #D7263D)",
@@ -430,6 +463,16 @@ const LoadingScreen = () => {
                 backgroundPosition: ["0% 0%", "100% 0%", "0% 0%"],
               }}
               transition={{ width: { duration: 0.15 }, backgroundPosition: { duration: 2, repeat: Infinity, ease: "linear" } }}
+            />
+            {/* Shimmer effect on progress bar */}
+            <motion.div
+              className="absolute inset-y-0 w-16 rounded-full"
+              style={{
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
+                left: progressWidth,
+              }}
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
             />
             <motion.div
               className="absolute top-0 right-0 w-6 h-full"

@@ -460,7 +460,19 @@ export default function WhyDifferent() {
           transition={{ delay: 0.4, duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
           className="mt-12 sm:mt-16 relative"
         >
-          <div className="relative rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/80 to-zinc-950/90 backdrop-blur-sm overflow-hidden">
+          <div className="relative rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/80 to-zinc-950/90 backdrop-blur-sm overflow-hidden"
+          >
+            {/* Animated gradient border accent */}
+            <motion.div
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                background: `linear-gradient(135deg, ${CYAN}15, transparent 40%, transparent 60%, ${GREEN}15)`,
+              }}
+              whileHover={{
+                background: `linear-gradient(135deg, ${CYAN}30, transparent 35%, transparent 65%, ${GREEN}30)`,
+              }}
+              transition={{ duration: 0.4 }}
+            />
             {/* Glow effects */}
             <div
               className="absolute top-0 left-[20%] h-40 w-40 rounded-full blur-[80px] pointer-events-none"
@@ -535,9 +547,17 @@ function StatChip({
   color: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs">
+    <motion.div
+      className="flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5 border backdrop-blur-sm cursor-default"
+      style={{
+        borderColor: `${color}25`,
+        background: `${color}08`,
+      }}
+      whileHover={{ scale: 1.08, borderColor: `${color}50` }}
+      transition={SPRING_BOUNCE}
+    >
       <Icon className="h-3.5 w-3.5" style={{ color }} />
-      <span className="font-semibold text-zinc-300">{label}</span>
-    </div>
+      <span className="font-semibold" style={{ color }}>{label}</span>
+    </motion.div>
   );
 }

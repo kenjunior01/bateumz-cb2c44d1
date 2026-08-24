@@ -37,22 +37,28 @@ function WinnerAvatar({
   const dim = size === "lg" ? "h-16 w-16" : "h-14 w-14";
   if (avatarUrl) {
     return (
-      <div className={`${dim} shrink-0 overflow-hidden rounded-xl border border-border`}>
+      <motion.div
+        className={`${dim} shrink-0 overflow-hidden rounded-xl border border-border`}
+        whileHover={{ scale: 1.05, borderColor: "hsl(var(--primary) / 0.4)" }}
+        transition={{ type: "spring" as const, stiffness: 400, damping: 20 }}
+      >
         <OptimizedImage
           src={avatarUrl}
           alt={name}
           optimizeWidth={128}
           className="h-full w-full object-cover"
         />
-      </div>
+      </motion.div>
     );
   }
   return (
-    <div
+    <motion.div
       className={`${dim} flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent font-display text-lg font-bold text-primary-foreground`}
+      whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
+      transition={{ type: "spring" as const, stiffness: 400, damping: 20 }}
     >
       {initials}
-    </div>
+    </motion.div>
   );
 }
 
@@ -174,21 +180,32 @@ const WinnersSection = () => {
 
     if (w.type === "raffle") {
       return (
-        <Link
-          to={`/transparencia?raffle=${w.raffleId}`}
-          className="glass group block overflow-hidden rounded-2xl p-5 transition-all hover:border-primary/30"
+        <motion.div
+          whileHover={{ y: -3, scale: 1.01 }}
+          transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
         >
-          {header}
-          {prizePhoto}
-        </Link>
+          <Link
+            to={`/transparencia?raffle=${w.raffleId}`}
+            className="glass group block overflow-hidden rounded-2xl p-5 transition-all hover:border-primary/30 relative"
+          >
+            {/* Gradient hover overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+            <div className="relative">{header}{prizePhoto}</div>
+          </Link>
+        </motion.div>
       );
     }
 
     return (
-      <div className="glass group overflow-hidden rounded-2xl p-5 transition-all hover:border-primary/30">
-        {header}
-        {prizePhoto}
-      </div>
+      <motion.div
+        whileHover={{ y: -3, scale: 1.01 }}
+        transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
+      >
+        <div className="glass group overflow-hidden rounded-2xl p-5 transition-all hover:border-primary/30 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+          <div className="relative">{header}{prizePhoto}</div>
+        </div>
+      </motion.div>
     );
   };
 
@@ -196,11 +213,24 @@ const WinnersSection = () => {
     <section id="winners" className="relative py-24 section-glow-divider">
       <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]" style={{ background: "color-mix(in srgb, var(--region-primary, hsl(var(--primary))) 5%, transparent)" }} />
       <div className="container mx-auto px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-4 text-center">
-          <span className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-primary">
-            <ShieldCheck className="h-4 w-4" /> {t("winners.badge")}
-          </span>
-          <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">{t("winners.title")}</h2>
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }} className="mb-4 text-center">
+          <motion.span
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20"
+            whileHover={{ scale: 1.05, borderColor: "hsl(var(--primary) / 0.4)" }}
+            transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
+          >
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className="inline-block"
+            >
+              <ShieldCheck className="h-4 w-4 text-primary" />
+            </motion.div>
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{t("winners.badge")}</span>
+          </motion.span>
+          <h2 className="font-display text-4xl font-bold md:text-5xl">
+            <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">{t("winners.title")}</span>
+          </h2>
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -230,21 +260,33 @@ const WinnersSection = () => {
                 </motion.div>
               ))
             ) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass flex flex-col items-center justify-center rounded-2xl p-12 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }} className="glass flex flex-col items-center justify-center rounded-2xl p-12 text-center">
+                <motion.div
+                  className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/10"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                >
                   <Sparkles className="h-7 w-7 text-primary" />
-                </div>
+                </motion.div>
                 <h3 className="mb-2 font-display text-lg font-semibold text-foreground">{t("winners.emptyTitle")}</h3>
                 <p className="max-w-sm text-sm text-muted-foreground">{t("winners.emptyDesc")}</p>
               </motion.div>
             )}
 
             {winners.length > 0 && (
-              <div className="pt-2 text-center">
-                <Link to="/historico" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                  {t("winners.viewHistory")} <Trophy className="h-3.5 w-3.5" />
-                </Link>
-              </div>
+              <motion.div
+                className="pt-2 text-center"
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.6, duration: 0.4 }}
+              >
+                <motion.div whileHover={{ x: 4 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
+                  <Link to="/historico" className="group inline-flex items-center gap-1.5 text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:underline">
+                    {t("winners.viewHistory")} <Trophy className="h-3.5 w-3.5" />
+                  </Link>
+                </motion.div>
+              </motion.div>
             )}
           </div>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>

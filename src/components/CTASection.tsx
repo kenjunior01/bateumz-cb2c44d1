@@ -157,12 +157,21 @@ const CTASection = () => (
         </motion.p>
 
         <motion.div variants={itemVariants} className="mt-8 mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm px-5 py-2.5 text-sm font-semibold text-primary shadow-sm">
-            <ShieldCheck className="h-4 w-4" />
-            <span>100% Protecção ao Comprador</span>
+          <motion.div
+            whileHover={{ scale: 1.03, borderColor: "hsl(var(--primary) / 0.4)" }}
+            transition={SPRING_BOUNCE}
+            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm px-5 py-2.5 text-sm font-semibold text-primary shadow-sm"
+          >
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </motion.div>
+            <span>100% Proteccão ao Comprador</span>
             <span className="text-primary/30">·</span>
             <span>Nenhum dado de cartão armazenado</span>
-          </div>
+          </motion.div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4 mb-16">
@@ -199,13 +208,17 @@ const CTASection = () => (
                 key={badge.label}
                 custom={i}
                 variants={badgeVariants}
-                whileHover={{ y: -6, transition: { duration: 0.3 } }}
+                whileHover={{ y: -6, scale: 1.03, transition: { duration: 0.3 } }}
                 className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg neon-border shine-card"
               >
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className={"relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br " + badge.color}>
+                <motion.div
+                  whileHover={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 0.5 }}
+                  className={"relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br " + badge.color}
+                >
                   <Icon className="h-5 w-5 text-white" />
-                </div>
+                </motion.div>
                 <div className="relative text-center">
                   <p className="text-sm font-semibold text-foreground">{badge.label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{badge.sub}</p>

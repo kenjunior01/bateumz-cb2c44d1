@@ -197,7 +197,7 @@ export default function PlatformPulseWidget() {
 
   return (
     <>
-      <Card className="border-border/60">
+      <Card className="border-border/60 shadow-[0_0_10px_hsl(var(--primary)/0.08)]">
         <CardContent className="p-4 space-y-4">
           {visibleAnnouncements.length > 0 && (
             <div className="space-y-2">

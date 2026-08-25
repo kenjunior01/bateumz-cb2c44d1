@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -42,5 +43,13 @@ export default function ProtectedRoute({ children, requiredRole, blockRoles = []
     return <Navigate to="/profile" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {children}
+    </motion.div>
+  );
 }

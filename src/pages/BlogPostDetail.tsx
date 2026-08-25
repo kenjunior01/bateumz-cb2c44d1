@@ -751,7 +751,7 @@ export default function BlogPostDetail() {
               </div>
             )}
 
-            <Card className="mt-10 border-primary/10">
+            <Card className="mt-10 border-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
               <CardContent className="p-6 flex items-start gap-4">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-2xl font-black text-primary">B</span>
@@ -783,7 +783,7 @@ export default function BlogPostDetail() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {relatedPosts.slice(0, 3).map((rp) => (
                     <Link key={rp.id} to={`/blog/${rp.slug}`} className="group">
-                      <Card className="overflow-hidden h-full transition-all hover:shadow-lg hover:border-primary/30">
+                      <Card className="overflow-hidden h-full transition-all hover:shadow-lg hover:border-primary/30 shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
                         <div className="relative h-36 overflow-hidden">
                           <img
                             src={rp.image_url || "/placeholder.svg"}
@@ -828,7 +828,7 @@ export default function BlogPostDetail() {
               </section>
             )}
 
-            <Card className="mt-14 bg-gradient-to-r from-primary to-primary/80 border-none overflow-hidden">
+            <Card className="mt-14 bg-gradient-to-r from-primary to-primary/80 border-none overflow-hidden shadow-[0_0_20px_hsl(var(--primary)/0.2)]">
               <CardContent className="p-8 md:p-10 flex flex-col md:flex-row items-center gap-6">
                 <div className="flex-1 text-center md:text-left space-y-2">
                   <h3 className="text-2xl font-black uppercase text-white">
@@ -966,7 +966,7 @@ export default function BlogPostDetail() {
         <Button
           onClick={scrollToTop}
           size="icon"
-          className="rounded-full h-12 w-12 shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground"
+          className="rounded-full h-12 w-12 shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
         >
           <ArrowUp className="h-5 w-5" />
         </Button>

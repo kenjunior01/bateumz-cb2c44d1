@@ -170,7 +170,7 @@ const ScheduledLivePage = () => {
       <MobileTopBar />
       <main className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl overflow-hidden border border-border bg-card shadow-lg">
+          className="rounded-3xl overflow-hidden border border-border bg-card shadow-lg shadow-[0_0_15px_rgba(16,185,129,0.12)]">
           {live.cover_url && (
             <div className="aspect-video bg-muted">
               <img src={live.cover_url} alt={live.title} className="w-full h-full object-cover" />
@@ -204,14 +204,14 @@ const ScheduledLivePage = () => {
             )}
 
             <button onClick={enterLive} disabled={isEnded}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-foreground text-background font-bold text-sm disabled:opacity-50">
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-foreground text-background font-bold text-sm disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] transition-shadow">
               <ExternalLink className="h-4 w-4" />
               {isEnded ? "Esta live já terminou" : isLive ? "Entrar na live agora" : "Abrir página da live"}
             </button>
           </div>
         </motion.div>
 
-        <div className="rounded-3xl border border-border bg-card p-5 space-y-3">
+        <div className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-emerald-600" />
             <h2 className="font-display text-sm font-bold flex-1">Convida amigos e ganha prémios</h2>

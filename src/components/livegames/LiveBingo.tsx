@@ -520,7 +520,7 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
                 />
 
                 <motion.div
-                  className="w-28 h-28 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex flex-col items-center justify-center shadow-[0_0_40px_rgba(var(--primary),0.35)] relative z-10 border-2 border-white/20"
+                  className="w-28 h-28 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex flex-col items-center justify-center shadow-[0_0_40px_hsl(var(--primary)/0.35)] relative z-10 border-2 border-white/20"
                   initial={{ scale: 0 }}
                   animate={{ scale: [0, 1.5, 1] }}
                   transition={{
@@ -697,7 +697,7 @@ const LiveBingo = ({ scheduledLiveId, liveCode, isHost, onScore }: Props) => {
                         }}
                         className={`inline-flex items-center justify-center w-7 h-7 rounded-md text-[10px] font-bold ${
                           isLastItem
-                            ? "bg-primary text-primary-foreground ring-2 ring-primary/40 shadow-[0_0_10px_rgba(var(--primary),0.3)]"
+                            ? "bg-primary text-primary-foreground ring-2 ring-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.3)]"
                             : "bg-muted text-foreground"
                         }`}
                       >

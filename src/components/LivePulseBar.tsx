@@ -80,8 +80,8 @@ export default function LivePulseBar() {
           onClick={handleDismiss}
         >
           <span className="flex items-center justify-center w-2 h-2">
-            <span className="absolute w-2 h-2 rounded-full bg-green-400 animate-ping opacity-75" />
-            <span className="relative w-2 h-2 rounded-full bg-green-500" />
+            <span className="absolute w-2 h-2 rounded-full bg-green-400 animate-ping opacity-75 shadow-[0_0_8px_hsl(var(--primary)/0.4)]" />
+            <span className="relative w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
           </span>
           <span className="text-sm text-green-400 font-bold tracking-wider">AO VIVO</span>
           <span className="text-xs text-white/70">{visible.icon} {visible.text}</span>

@@ -29,7 +29,7 @@ export default function ShareButtons({ data, size = "default" }: Props) {
           <Button
             variant="outline"
             size={size === "sm" ? "icon" : "icon"}
-            className={`h-9 w-9 glass border-border transition-colors ${b.cls}`}
+            className={`h-9 w-9 glass border-border transition-all duration-200 hover:shadow-[0_0_12px_hsl(var(--primary)/0.2)] ${b.cls}`}
             onClick={() => shareTo(b.p, data)}
             aria-label={b.label}
           >
@@ -38,7 +38,7 @@ export default function ShareButtons({ data, size = "default" }: Props) {
         </motion.div>
       ))}
       {canNative && (
-        <Button variant="outline" size="icon" className="h-9 w-9 glass border-border hover:text-primary" onClick={() => shareTo("native", data)} aria-label="Partilhar">
+        <Button variant="outline" size="icon" className="h-9 w-9 glass border-border hover:text-primary hover:shadow-[0_0_12px_hsl(var(--primary)/0.2)]" onClick={() => shareTo("native", data)} aria-label="Partilhar">
           <Share2 className="h-4 w-4" />
         </Button>
       )}

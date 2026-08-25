@@ -59,7 +59,7 @@ const TrustSignals = () => {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
               whileHover={{ y: -4, scale: 1.04, borderColor: "hsl(var(--primary) / 0.3)" }}
-              className="group flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border border-border text-center cursor-default"
+              className="group flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border border-border text-center cursor-default shadow-[0_0_15px_hsl(var(--primary)/0.1)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.2)] transition-shadow duration-300"
             >
               <motion.div
                 className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center"
@@ -109,7 +109,7 @@ const TrustSignals = () => {
               viewport={{ once: true }}
               transition={{ delay: 0.3 + i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
               whileHover={{ y: -4, scale: 1.03, borderColor: "hsl(var(--primary) / 0.3)" }}
-              className="group rounded-2xl bg-card border border-border p-4 text-center relative overflow-hidden"
+              className="group rounded-2xl bg-card border border-border p-4 text-center relative overflow-hidden shadow-[0_0_12px_hsl(var(--primary)/0.08)] hover:shadow-[0_0_22px_hsl(var(--primary)/0.18)] transition-shadow duration-300"
             >
               {/* Hover gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />

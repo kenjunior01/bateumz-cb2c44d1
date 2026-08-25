@@ -129,7 +129,7 @@ const CountdownTimer = ({ targetDate }: Props) => {
                   ? "bg-destructive/5 border-destructive/30"
                   : isUrgent
                   ? "bg-accent/5 border-accent/30"
-                  : "bg-card border-border"
+                  : "bg-card border-border shadow-[0_0_10px_hsl(var(--primary)/0.08)]"
               }`}
             >
               <motion.span

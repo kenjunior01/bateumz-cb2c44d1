@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Globe, MapPin } from "lucide-react";
 import { COUNTRIES, getRegions } from "@/lib/regions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,9 +15,14 @@ export default function CountryRegionFilter({ country, region, onCountry, onRegi
   const regions = country && country !== "all" ? getRegions(country) : [];
 
   return (
-    <div className={`flex gap-2 ${compact ? "" : "flex-wrap"}`}>
+    <motion.div
+      className={`flex gap-2 ${compact ? "" : "flex-wrap"}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <Select value={country || "all"} onValueChange={(v) => { onCountry(v === "all" ? "" : v); onRegion(""); }}>
-        <SelectTrigger className={`${compact ? "h-9 w-[150px]" : "h-10 min-w-[170px]"} glass border-border`}>
+        <SelectTrigger className={`${compact ? "h-9 w-[150px]" : "h-10 min-w-[170px]"} glass border-border shadow-[0_0_10px_hsl(var(--primary)/0.1)]`}>
           <Globe className="h-4 w-4 mr-1 text-primary" />
           <SelectValue placeholder="Country" />
         </SelectTrigger>
@@ -44,6 +50,6 @@ export default function CountryRegionFilter({ country, region, onCountry, onRegi
           </SelectContent>
         </Select>
       )}
-    </div>
+    </motion.div>
   );
 }

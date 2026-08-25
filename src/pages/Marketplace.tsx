@@ -293,7 +293,7 @@ const Marketplace = () => {
         />
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 hidden md:block">
-          <h1 className="font-display text-4xl font-bold text-foreground mb-2">{t("marketplace.title")}</h1>
+          <h1 className="font-display text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">{t("marketplace.title")}</h1>
           <p className="text-muted-foreground text-lg">{t("marketplace.subtitle")}</p>
         </motion.div>
 
@@ -437,7 +437,7 @@ const Marketplace = () => {
                       whileHover={{ y: -4 }}
                     >
                       <Link to={`/concursos/${contest.id}`}>
-                        <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full">
+                        <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
                           <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
                             {contest.image_url ? (
                               <OptimizedImage
@@ -521,7 +521,7 @@ const Marketplace = () => {
                           whileHover={{ y: -4 }}
                         >
                           <Link to={getRaffleUrl(raffle)}>
-                            <Card className="glass group hover:border-primary/30 transition-all overflow-hidden">
+                            <Card className="glass group hover:border-primary/30 transition-all overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
                               <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
                                 {raffle.image_url ? (
                                   <OptimizedImage

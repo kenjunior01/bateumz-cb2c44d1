@@ -245,7 +245,7 @@ const BackgroundDecorations = memo(() => (
     />
     <motion.div
       animate={orbPulse(-8, 30, [0, -35], [0, -20], [1, 1.15])}
-      className="absolute rounded-full"
+      className="absolute rounded-full shadow-[0_0_80px_hsl(var(--accent)/0.05)]"
       style={{ top: "40%", left: "60%", width: 450, height: 450, background: "radial-gradient(circle, color-mix(in srgb, hsl(var(--accent)) 0.06, transparent) 0%, transparent 70%)", filter: "blur(50px)" }}
     />
     <motion.div
@@ -273,7 +273,7 @@ const BackgroundDecorations = memo(() => (
 
     <div className="vignette-overlay" />
 
-    <motion.svg animate={floatRotate(0, 14)} className="absolute top-[6%] left-[4%] w-20 h-20 text-primary/[0.04] dark:text-primary/[0.07]" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1">
+    <motion.svg animate={floatRotate(0, 14)} className="absolute top-[6%] left-[4%] w-20 h-20 text-primary/[0.04] dark:text-primary/[0.07] shadow-[0_0_30px_hsl(var(--primary)/0.03)]" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1">
       <circle cx="32" cy="32" r="28" strokeDasharray="4 6" />
       <path d="M20 20l24 24M44 20L20 44" />
     </motion.svg>

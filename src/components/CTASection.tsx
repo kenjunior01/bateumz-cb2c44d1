@@ -187,7 +187,7 @@ const CTASection = () => (
 
           <Link to="/referral">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={SPRING_BOUNCE}>
-              <span className="group inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-6 py-3.5 text-sm font-semibold text-foreground transition-all duration-300 hover:bg-secondary hover:border-border">
+              <span className="group inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-6 py-3.5 text-sm font-semibold text-foreground transition-all duration-300 hover:bg-secondary hover:border-border hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
                 <Sparkles className="h-4 w-4 text-amber-500" />
                 Indique um amigo, ganhe Pontos
                 <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5" />
@@ -209,7 +209,7 @@ const CTASection = () => (
                 custom={i}
                 variants={badgeVariants}
                 whileHover={{ y: -6, scale: 1.03, transition: { duration: 0.3 } }}
-                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg neon-border shine-card"
+                className="group relative flex flex-col items-center gap-2.5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-xl p-5 transition-all duration-300 hover:bg-card/60 hover:border-border/70 hover:shadow-lg hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)] neon-border shine-card"
               >
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <motion.div

@@ -53,7 +53,7 @@ const AmbassadorRedirect = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-emerald-500/5 px-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-white mb-4 shadow-xl">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-white mb-4 shadow-xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
           <Sparkles className="h-7 w-7" />
         </div>
         <h1 className="font-display text-2xl font-bold mb-2">A entrar na live…</h1>

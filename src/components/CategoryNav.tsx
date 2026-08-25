@@ -1,4 +1,5 @@
 import { useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import {
   Smartphone, Car, Home, Plane, Gamepad2, ShoppingBag, Gift, Sparkles,
   Trophy, Heart, Utensils, Baby,
@@ -44,9 +45,14 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
   if (isMobile) {
     const visible = categories.slice(0, 10);
     return (
-      <section className="py-3">
+      <motion.section
+        className="py-3"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         <div className="container mx-auto px-3">
-          <div className="rounded-2xl bg-gradient-to-br from-card via-card to-secondary/30 border border-border/50 p-3 shadow-sm">
+          <div className="rounded-2xl bg-gradient-to-br from-card via-card to-secondary/30 border border-border/50 p-3 shadow-sm shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
             <div className="scale-in-stagger grid grid-cols-5 gap-x-1 gap-y-3">
               {visible.map((cat) => {
                 const isActive = selected === cat.value;
@@ -88,17 +94,22 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
     );
   }
 
   return (
-    <section className="py-6">
+    <motion.section
+      className="py-6"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("cat.sectionTitle")}</h3>
         </div>
-        <div className="scale-in-stagger grid grid-cols-8 gap-3">
+        <div className="scale-in-stagger grid grid-cols-8 gap-3 shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
           {categories.slice(0, 8).map((cat) => {
             const isActive = selected === cat.value;
             return (
@@ -124,7 +135,7 @@ const CategoryNav = ({ selected = "todos", onSelect }: CategoryNavProps) => {
           })}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 

@@ -51,7 +51,7 @@ const LiveTicker = () => {
     <div className="w-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-y border-border/60 overflow-hidden">
       <div className="container mx-auto px-3 py-1.5 flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary">
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
           {t("ticker.live")}
         </div>
         <div className="flex-1 overflow-hidden relative">

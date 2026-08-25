@@ -178,7 +178,7 @@ function ProvablyFair() {
                   key={step.step}
                   whileHover={{ y: -4, scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className={`relative rounded-2xl border ${step.borderColor} bg-gradient-to-br ${step.color} backdrop-blur-sm p-5 sm:p-6 text-center group`}
+                  className={`relative rounded-2xl border ${step.borderColor} bg-gradient-to-br ${step.color} backdrop-blur-sm p-5 sm:p-6 text-center group shadow-[0_0_15px_hsl(var(--primary)/0.1)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.2)] transition-shadow duration-300`}
                 >
                   {/* Step number badge */}
                   <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background text-[11px] font-bold text-foreground border border-border shadow-sm">
@@ -303,8 +303,8 @@ function ProvablyFair() {
               size="lg"
               className="
                 relative gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600
-                px-8 py-5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20
-                hover:shadow-xl hover:shadow-emerald-500/30
+                px-8 py-5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 shadow-[0_0_20px_hsl(var(--primary)/0.15)]
+                hover:shadow-xl hover:shadow-emerald-500/30 hover:shadow-[0_0_30px_hsl(var(--primary)/0.25)]
                 transition-shadow duration-300
               "
               onClick={() => {
@@ -333,7 +333,7 @@ function ProvablyFair() {
                   whileHover={{ y: -2 }}
                   className="
                     flex items-center gap-3.5 rounded-2xl border border-border
-                    bg-card/60 backdrop-blur-sm p-4 sm:p-5
+                    bg-card/60 backdrop-blur-sm p-4 sm:p-5 shadow-[0_0_12px_hsl(var(--primary)/0.1)]
                   "
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">

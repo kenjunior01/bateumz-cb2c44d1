@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,12 @@ export default function ImageUploadField({
   };
 
   return (
-    <div className="space-y-2">
+    <motion.div
+      className="space-y-2"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
         {allowUrl && (
@@ -79,7 +85,7 @@ export default function ImageUploadField({
       </div>
 
       {value ? (
-        <div className="relative rounded-lg overflow-hidden border border-border/60 bg-muted">
+        <div className="relative rounded-lg overflow-hidden border border-border/60 bg-muted shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
           <img src={value} alt="" className="w-full h-40 object-cover" />
           <button
             type="button"
@@ -136,7 +142,7 @@ export default function ImageUploadField({
         />
       )}
       {helper && <p className="text-[10px] text-muted-foreground">{helper}</p>}
-    </div>
+    </motion.div>
   );
 }
 

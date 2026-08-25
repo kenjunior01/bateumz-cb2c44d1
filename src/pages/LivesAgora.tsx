@@ -82,10 +82,11 @@ const LiveCard = ({ live, index }: { live: any; index: number }) => {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
+      whileHover={{ scale: 1.02, y: -2 }}
     >
       <Link
         to={`/live-evento/${live.slug}`}
-        className="group block rounded-2xl border border-border/60 overflow-hidden hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-card"
+        className="group block rounded-2xl border border-border/60 overflow-hidden hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)] bg-card"
       >
         <div className={cn("relative h-44 bg-gradient-to-br flex items-center justify-center overflow-hidden", gradient)}>
           <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/95 backdrop-blur-sm text-white text-[10px] font-bold shadow-lg shadow-red-500/30">
@@ -165,6 +166,7 @@ const CreatorCard = ({ creator, index }: { creator: CreatorStat; index: number }
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03, duration: 0.3 }}
+      whileHover={{ scale: 1.02, y: -2 }}
       className="flex items-center gap-3 p-3 rounded-2xl border border-border/60 hover:border-primary/30 hover:bg-muted/20 transition-all group"
     >
       <span className={cn(
@@ -205,7 +207,8 @@ const ClipCard = ({ clip, index }: { clip: LiveClip; index: number }) => (
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
     transition={{ delay: index * 0.05 }}
-    className="rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 transition-all group cursor-pointer"
+    whileHover={{ scale: 1.02, y: -2 }}
+    className="rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 transition-all group cursor-pointer hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
   >
     <div className={cn("relative h-48 bg-gradient-to-br flex items-center justify-center", GRADIENTS[index % GRADIENTS.length])}>
       <Film className="h-8 w-8 text-white/20" />
@@ -286,7 +289,7 @@ const LivesAgora = () => {
 
       <div className="container mx-auto px-4 py-6 max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 p-6 md:p-8 border border-primary/10">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 p-6 md:p-8 border border-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.12)]">
             <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
             <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -303,12 +306,12 @@ const LivesAgora = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <div className="text-center">
+                <div className="text-center rounded-2xl bg-card/60 border border-border/40 px-4 py-2 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
                   <p className="text-2xl font-black text-primary">{lives.length}</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ao Vivo</p>
                 </div>
                 <div className="w-px h-10 bg-border" />
-                <div className="text-center">
+                <div className="text-center rounded-2xl bg-card/60 border border-border/40 px-4 py-2 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                   <p className="text-2xl font-black text-amber-500">{creators.length}</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Criadores</p>
                 </div>

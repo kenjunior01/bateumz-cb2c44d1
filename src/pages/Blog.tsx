@@ -189,7 +189,7 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
       viewport={{ once: true, amount: 0.15 }}
     >
       <Link to={`/blog/${post.slug}`} className="block group">
-        <Card className="h-full overflow-hidden border-border/50 bg-card hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group-hover:-translate-y-1 rounded-2xl">
+        <Card className="h-full overflow-hidden border-border/50 bg-card hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group-hover:-translate-y-1 rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
           <div className="relative aspect-video overflow-hidden">
             <img
               src={post.image_url || '/placeholder.svg'}
@@ -687,7 +687,7 @@ export default function Blog() {
                       </h2>
                     </div>
                     <Link to={`/blog/${featuredPost.slug}`} className="block group">
-                      <div className="relative rounded-3xl overflow-hidden h-[320px] md:h-[440px] w-full">
+                      <div className="relative rounded-3xl overflow-hidden h-[320px] md:h-[440px] w-full shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
                         <img
                           src={featuredPost.image_url || '/placeholder.svg'}
                           alt={featuredPost.title}
@@ -936,7 +936,7 @@ export default function Blog() {
                       </div>
                       <Button
                         size="lg"
-                        className="rounded-full bg-white text-primary font-bold hover:bg-white/90 shadow-2xl shadow-black/20 px-8 py-6 text-base group-hover:scale-105 transition-transform duration-300"
+                        className="rounded-full bg-white text-primary font-bold hover:bg-white/90 shadow-2xl shadow-black/20 px-8 py-6 text-base group-hover:scale-105 transition-transform duration-300 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
                       >
                         Ver Sorteios
                         <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />

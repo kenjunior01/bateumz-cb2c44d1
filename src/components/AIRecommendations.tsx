@@ -87,7 +87,7 @@ const AIRecommendations = () => {
   return (
     <section className="py-6">
       <div className="flex items-center gap-2 mb-4">
-        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
           <Sparkles className="h-4 w-4 text-primary" />
         </div>
         <h3 className="font-display text-sm font-bold text-foreground">
@@ -103,8 +103,10 @@ const AIRecommendations = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate(`/raffle/${r.slug || r.id}`)}
-            className="rounded-2xl bg-card border border-border overflow-hidden text-left group hover:border-primary/30 transition-all"
+            className="rounded-2xl bg-card border border-border overflow-hidden text-left group hover:border-primary/30 transition-all shadow-[0_0_10px_hsl(var(--primary)/0.08)] hover:shadow-[0_0_15px_hsl(var(--primary)/0.2)]"
           >
             <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
               {r.image_url ? (

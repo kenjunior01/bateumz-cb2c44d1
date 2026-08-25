@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Play, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -55,21 +56,40 @@ export default function SocialVideoEmbed({ url, className = "" }: Props) {
   if (!info) {
     // Fallback: try as direct video
     return (
-      <video src={url} controls className={`w-full rounded-lg ${className}`} />
+      <motion.video
+        src={url}
+        controls
+        className={`w-full rounded-lg shadow-[0_0_10px_hsl(var(--primary)/0.1)] ${className}`}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      />
     );
   }
 
   if (info.type === "direct") {
     return (
-      <video src={info.embedUrl} controls autoPlay className={`w-full rounded-lg ${className}`} />
+      <motion.video
+        src={info.embedUrl}
+        controls
+        autoPlay
+        className={`w-full rounded-lg shadow-[0_0_10px_hsl(var(--primary)/0.1)] ${className}`}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      />
     );
   }
 
   if (!playing) {
     return (
-      <div
-        className={`relative aspect-video bg-secondary rounded-lg flex items-center justify-center cursor-pointer group ${className}`}
+      <motion.div
+        className={`relative aspect-video bg-secondary rounded-lg flex items-center justify-center cursor-pointer group shadow-[0_0_10px_hsl(var(--primary)/0.1)] ${className}`}
         onClick={() => setPlaying(true)}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        whileHover={{ scale: 1.02 }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-lg" />
         <div className="z-10 flex flex-col items-center gap-2">
@@ -89,12 +109,17 @@ export default function SocialVideoEmbed({ url, className = "" }: Props) {
             <ExternalLink className="h-3 w-3" /> Abrir
           </Button>
         </a>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className={`aspect-video rounded-lg overflow-hidden ${className}`}>
+    <motion.div
+      className={`aspect-video rounded-lg overflow-hidden shadow-[0_0_10px_hsl(var(--primary)/0.1)] ${className}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <iframe
         src={info.embedUrl}
         className="w-full h-full border-0"
@@ -102,7 +127,7 @@ export default function SocialVideoEmbed({ url, className = "" }: Props) {
         allowFullScreen
         title="Video embed"
       />
-    </div>
+    </motion.div>
   );
 }
 

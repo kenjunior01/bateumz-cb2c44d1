@@ -335,7 +335,7 @@ export default function Battles() {
             animate={statsVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.5, delay: 0 }}
             whileHover={{ scale: 1.03, y: -2 }}
-            className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-600/20 via-purple-500/10 to-transparent p-4 text-center"
+            className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-600/20 via-purple-500/10 to-transparent p-4 text-center shadow-[0_0_15px_rgba(168,85,247,0.2)]"
           >
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-500/10 blur-xl" />
             <Sword className="mx-auto mb-2 h-5 w-5 text-purple-400" />
@@ -348,7 +348,7 @@ export default function Battles() {
             animate={statsVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.5, delay: 0.1 }}
             whileHover={{ scale: 1.03, y: -2 }}
-            className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-600/20 via-emerald-500/10 to-transparent p-4 text-center"
+            className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-600/20 via-emerald-500/10 to-transparent p-4 text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]"
           >
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-emerald-500/10 blur-xl" />
             <TrendingUp className="mx-auto mb-2 h-5 w-5 text-emerald-400" />
@@ -361,7 +361,7 @@ export default function Battles() {
             animate={statsVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.5, delay: 0.2 }}
             whileHover={{ scale: 1.03, y: -2 }}
-            className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-600/20 via-amber-500/10 to-transparent p-4 text-center"
+            className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-600/20 via-amber-500/10 to-transparent p-4 text-center shadow-[0_0_15px_rgba(245,158,11,0.2)]"
           >
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-amber-500/10 blur-xl" />
             <Users className="mx-auto mb-2 h-5 w-5 text-amber-400" />
@@ -494,7 +494,7 @@ export default function Battles() {
                           <motion.div key={battle.id} variants={fadeUp}
                             whileHover={{ scale: 1.01, borderColor: 'rgba(168, 85, 247, 0.3)' }}
                             whileTap={{ scale: 0.99 }}
-                            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition hover:border-purple-500/30 hover:bg-white/[0.07]"
+                            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition hover:border-purple-500/30 hover:bg-white/[0.07] shadow-[0_0_10px_rgba(168,85,247,0.15)] hover:shadow-[0_0_20px_rgba(168,85,247,0.25)]"
                           >
                             <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity group-hover:opacity-100" style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.15), transparent, rgba(236,72,153,0.1))' }} />
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -44,5 +45,15 @@ export function ProofImage({ proofRef, alt, className }: ProofImageProps) {
   if (!url) {
     return <div className={`bg-muted animate-pulse ${className ?? ""}`} />;
   }
-  return <img src={url} alt={alt} className={className} loading="lazy" />;
+  return (
+    <motion.img
+      src={url}
+      alt={alt}
+      className={`${className ?? ""} shadow-[0_0_10px_hsl(var(--primary)/0.1)]`}
+      loading="lazy"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    />
+  );
 }

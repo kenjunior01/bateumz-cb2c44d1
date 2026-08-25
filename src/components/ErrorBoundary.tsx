@@ -34,7 +34,7 @@ function ErrorFallback({ error, onReset, onReload }: { error: Error | null; onRe
         transition={{ delay: 0.1, type: "spring" as const, stiffness: 200, damping: 15 }}
         className="relative mb-6"
       >
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20">
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
           <AlertTriangle className="h-10 w-10 text-destructive" />
         </div>
         {/* Pulsing ring */
@@ -85,7 +85,7 @@ function ErrorFallback({ error, onReset, onReload }: { error: Error | null; onRe
           whileHover={{ scale: 1.05, boxShadow: "0 0 20px hsl(var(--primary) / 0.2)" }}
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:from-primary/95 hover:to-primary/85"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:from-primary/95 hover:to-primary/85 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
         >
           <RotateCcw className="h-4 w-4" />
           Try again

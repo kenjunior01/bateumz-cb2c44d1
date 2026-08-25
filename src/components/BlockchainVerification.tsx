@@ -88,7 +88,7 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-strong rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              className="glass-strong rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex items-center gap-3 rounded-xl border p-4 mb-5 ${
                       verification
-                        ? "bg-primary/10 border-primary/20"
+                        ? "bg-primary/10 border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
                         : "bg-accent/10 border-accent/20"
                     }`}
                   >
@@ -210,7 +210,7 @@ export default function BlockchainVerification({ raffleId, raffleTitle }: Props)
                       href={explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Ver no {displayData.network === "polygon" ? "PolygonScan" : "Etherscan"}

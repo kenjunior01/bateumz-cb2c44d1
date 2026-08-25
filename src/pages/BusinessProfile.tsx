@@ -580,7 +580,8 @@ export default function BusinessProfile() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 * i }}
-                  className="rounded-xl border border-border/60 bg-card p-2 sm:p-3 text-center sm:text-left"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  className="rounded-xl border border-border/60 bg-card p-2 sm:p-3 text-center sm:text-left shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)] transition-shadow"
                 >
                   <div className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg ${s.bg} mb-1`}>
                     <s.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${s.color}`} />

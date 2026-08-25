@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,10 +76,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {label && <Label>{label}</Label>}
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 shadow-[0_0_10px_hsl(var(--primary)/0.1)] rounded-lg p-1">
         <Input
           type="text"
           placeholder={placeholder}
@@ -125,6 +131,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           Arquivo selecionado: {preview}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };

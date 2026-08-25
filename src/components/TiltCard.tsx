@@ -34,7 +34,7 @@ export default function TiltCard({ children, className = "" }: Props) {
         transform: `perspective(800px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`,
         transition: "transform 0.15s ease-out",
       }}
-      className={`relative overflow-hidden ${className}`}
+      className={`relative overflow-hidden ${className} shadow-[0_0_15px_hsl(var(--primary)/0.1)] group-hover:shadow-[0_0_25px_hsl(var(--primary)/0.2)] transition-shadow duration-300`}
     >
       {children}
       <div

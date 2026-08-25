@@ -135,7 +135,7 @@ const ContestTypesShowcase = () => {
           <motion.div
             animate={{ rotate: [0, -8, 8, 0] }}
             transition={{ repeat: Infinity, duration: 3 }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
           >
             <Sparkles className="h-4 w-4 text-primary" />
           </motion.div>
@@ -169,7 +169,7 @@ const ContestTypesShowcase = () => {
               >
                 <Link to="/concursos">
                   <div
-                    className={`relative h-full overflow-hidden rounded-xl glass border border-border/50 hover:border-primary/40 transition-all p-3 group cursor-pointer bg-gradient-to-br ${type.gradient}`}
+                    className={`relative h-full overflow-hidden rounded-xl glass border border-border/50 hover:border-primary/40 transition-all p-3 group cursor-pointer bg-gradient-to-br ${type.gradient} shadow-[0_0_10px_hsl(var(--primary)/0.06)] hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)]`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <motion.div

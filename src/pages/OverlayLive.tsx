@@ -272,7 +272,7 @@ const OverlayLive = () => {
                 exit={{ opacity: 0, scale: 0.7, y: 20 }}
                 transition={{ type: "spring", stiffness: 250, damping: 20 }}
               >
-                <div className="ov-announcement" style={{ borderColor: "#fbbf2460", background: "linear-gradient(135deg, rgba(251,191,36,0.15), rgba(139,92,246,0.1))" }}>
+                <div className="ov-announcement" style={{ borderColor: "#fbbf2460", background: "linear-gradient(135deg, rgba(251,191,36,0.15), rgba(139,92,246,0.1))", boxShadow: "0 0 20px rgba(251,191,36,0.2)" }}>
                   <div className="ov-announcement-header" style={{ borderBottomColor: "#fbbf2430" }}>
                     <Trophy className="h-4 w-4" style={{ color: "#fbbf24" }} />
                     <span className="ov-announcement-badge" style={{ color: "#fbbf24", backgroundColor: "rgba(251,191,36,0.15)" }}>VENCEDOR</span>

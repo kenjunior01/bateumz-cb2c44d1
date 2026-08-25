@@ -118,7 +118,7 @@ const PopularLeaderboard = () => {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="glass rounded-2xl p-5"
+              className="glass rounded-2xl p-5 shadow-[0_0_10px_hsl(var(--primary)/0.08)] hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)] transition-shadow"
             >
               <div className="mb-4 flex items-center gap-2">
                 <Flame className="h-4 w-4 text-accent" />
@@ -180,7 +180,7 @@ const PopularLeaderboard = () => {
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="glass rounded-2xl p-5"
+              className="glass rounded-2xl p-5 shadow-[0_0_10px_hsl(var(--primary)/0.08)] hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)] transition-shadow"
             >
               <div className="mb-4 flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-primary" />

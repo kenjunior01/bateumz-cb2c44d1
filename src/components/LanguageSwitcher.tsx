@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Globe } from "lucide-react";
 import { useLanguage, Lang } from "@/contexts/LanguageContext";
 import {
@@ -21,9 +22,15 @@ export default function LanguageSwitcher() {
   const current = LANGS.find((l) => l.code === lang) ?? LANGS[0];
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="inline-flex"
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
         aria-label="Change language"
       >
         <Globe className="h-4 w-4" />
@@ -43,5 +50,6 @@ export default function LanguageSwitcher() {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+    </motion.div>
   );
 }

@@ -162,7 +162,7 @@ const NotFound = () => {
           >
             <Link
               to="/sorteios"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-border bg-card text-foreground font-semibold text-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-border bg-card text-foreground font-semibold text-sm shadow-[0_0_15px_hsl(var(--primary)/0.08)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] transition-shadow"
             >
               <Search className="h-4 w-4" />
               Explorar Sorteios

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,8 +66,13 @@ export default function BlogNewsWidget() {
   }
 
   return (
-    <Card className="border-primary/10 overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="border-primary/10 overflow-hidden shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             📰 Últimas Notícias
@@ -123,6 +129,7 @@ export default function BlogNewsWidget() {
           </Link>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }

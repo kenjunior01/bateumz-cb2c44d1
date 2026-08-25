@@ -200,7 +200,7 @@ export const RegionalCEODashboard: React.FC = () => {
           </TabsList>
 
           <TabsContent value="branding" className="space-y-6">
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-white/10 bg-white/5 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="w-5 h-5" />
@@ -252,7 +252,7 @@ export const RegionalCEODashboard: React.FC = () => {
                   />
                 </div>
 
-                <Button onClick={handleSaveBranding} disabled={saving} className="w-full gap-2">
+                <Button onClick={handleSaveBranding} disabled={saving} className="w-full gap-2 shadow-[0_0_12px_hsl(var(--primary)/0.15)]">
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -331,7 +331,7 @@ export const RegionalCEODashboard: React.FC = () => {
                   + Adicionar Tradução
                 </Button>
 
-                <Button onClick={handleSaveTranslations} disabled={saving} className="w-full gap-2">
+                <Button onClick={handleSaveTranslations} disabled={saving} className="w-full gap-2 shadow-[0_0_12px_hsl(var(--primary)/0.15)]">
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />

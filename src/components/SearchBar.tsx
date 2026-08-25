@@ -63,9 +63,9 @@ const SearchBar = () => {
 
           <form
             onSubmit={handleSubmit}
-            className={`relative flex-1 flex items-center rounded-full border bg-card transition-colors ${
+            className={`relative flex-1 flex items-center rounded-full border bg-card transition-all duration-300 ${
               focused
-                ? "border-primary shadow-md shadow-primary/10 ring-1 ring-primary/15"
+                ? "border-primary shadow-md shadow-primary/10 shadow-[0_0_20px_hsl(var(--primary)/0.15)] ring-1 ring-primary/15"
                 : "border-border/70"
             }`}
           >

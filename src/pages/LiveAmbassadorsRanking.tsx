@@ -75,7 +75,7 @@ const LiveAmbassadorsRanking = () => {
           <ArrowLeft className="h-3 w-3" /> Voltar
         </Link>
 
-        <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-amber-500 p-6 text-white shadow-xl">
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-amber-500 p-6 text-white shadow-xl shadow-[0_0_15px_rgba(16,185,129,0.15)]">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-90">
             <Sparkles className="h-3.5 w-3.5" /> Live Ambassadors
           </div>
@@ -84,11 +84,11 @@ const LiveAmbassadorsRanking = () => {
             Ranking público dos convidados gerados pelos embaixadores nesta live.
           </p>
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+            <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2 shadow-[0_0_12px_rgba(255,255,255,0.1)]">
               <p className="text-[10px] uppercase opacity-80">Ambassadors</p>
               <p className="text-2xl font-extrabold">{ranking.length}{hasMore ? "+" : ""}</p>
             </div>
-            <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+            <div className="rounded-2xl bg-white/15 backdrop-blur px-3 py-2 shadow-[0_0_12px_rgba(255,255,255,0.1)]">
               <p className="text-[10px] uppercase opacity-80">Visits únicas</p>
               <p className="text-2xl font-extrabold">{totalVisits}</p>
             </div>
@@ -109,12 +109,12 @@ const LiveAmbassadorsRanking = () => {
           <button onClick={copy} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-bold inline-flex items-center gap-1">
             {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />} Copy
           </button>
-          <button onClick={share} className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold inline-flex items-center gap-1">
+          <button onClick={share} className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold inline-flex items-center gap-1 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-shadow">
             <Share2 className="h-3 w-3" /> Share
           </button>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-border bg-card overflow-hidden">
+        <div className="mt-6 rounded-3xl border border-border bg-card overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.08)]">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <Trophy className="h-4 w-4 text-amber-500" />
             <h2 className="font-display text-sm font-bold flex-1">Top embaixadores</h2>
@@ -134,7 +134,8 @@ const LiveAmbassadorsRanking = () => {
                 <AnimatePresence initial={false}>
                   {ranking.map((r, i) => (
                     <motion.li key={r.ambassador_id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                      className="px-4 py-3 flex items-center gap-3">
+                      whileHover={{ scale: 1.02, y: -1 }}
+                      className="px-4 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors">
                       <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-extrabold ${
                         i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-slate-300 text-black" :
                         i === 2 ? "bg-amber-700 text-white" : "bg-muted text-muted-foreground"
@@ -154,7 +155,7 @@ const LiveAmbassadorsRanking = () => {
               <div className="p-4 border-t border-border flex items-center justify-center">
                 {hasMore ? (
                   <button onClick={() => loadPage(page + 1, true)} disabled={loadingMore}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50">
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-shadow">
                     {loadingMore ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronDown className="h-3 w-3" />}
                     Carregar mais (+{PAGE_SIZE})
                   </button>

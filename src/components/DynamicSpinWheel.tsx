@@ -353,6 +353,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
             duration: wheelConfig?.rotation_duration || 4,
             ease: [0.17, 0.67, 0.12, 0.99],
           }}
+          className="shadow-[0_0_20px_hsl(var(--primary)/0.15)] rounded-full"
         >
           <canvas
             ref={canvasRef}
@@ -368,7 +369,7 @@ const DynamicSpinWheel = ({ gameId }: SpinWheelProps) => {
         whileTap={{ scale: 0.95 }}
         onClick={spin}
         disabled={spinning}
-        className="group relative px-10 py-4 rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-lg hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 transition-all shadow-lg shadow-primary/25"
+        className="group relative px-10 py-4 rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-lg hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 transition-all shadow-lg shadow-primary/25 shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_35px_hsl(var(--primary)/0.5)]"
       >
         <span className="flex items-center gap-2">
           {spinning ? (

@@ -215,7 +215,7 @@ const SupportChatbot = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30 flex items-center justify-center text-primary-foreground"
+        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.25)] flex items-center justify-center text-primary-foreground hover:shadow-[0_0_30px_hsl(var(--primary)/0.35)] transition-shadow duration-300"
         aria-label="Abrir chat de suporte"
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
@@ -231,7 +231,7 @@ const SupportChatbot = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="fixed bottom-36 right-4 lg:bottom-24 lg:right-6 z-40 w-[calc(100vw-2rem)] sm:w-96 max-h-[70vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            className="fixed bottom-36 right-4 lg:bottom-24 lg:right-6 z-40 w-[calc(100vw-2rem)] sm:w-96 max-h-[70vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl shadow-[0_0_25px_hsl(var(--primary)/0.12)] overflow-hidden"
           >
             <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-accent/10 border-b border-border">
               <div className="flex items-center gap-2">

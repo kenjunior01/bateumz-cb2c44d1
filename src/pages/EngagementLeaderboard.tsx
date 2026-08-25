@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Zap, Trophy, TrendingUp, Star } from "lucide-react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 interface UserEngagement {
   user_id: string;
@@ -135,7 +136,7 @@ export default function EngagementLeaderboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8">
+    <motion.div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
@@ -149,41 +150,47 @@ export default function EngagementLeaderboard() {
 
         {userRank && (
           <div className="grid gap-4 md:grid-cols-3 mb-8">
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Teus Pontos</p>
-                    <p className="text-3xl font-bold">{userRank.points}</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0 }}>
+              <Card className="shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Teus Pontos</p>
+                      <p className="text-3xl font-bold">{userRank.points}</p>
+                    </div>
+                    <Zap className="h-8 w-8 text-yellow-500" />
                   </div>
-                  <Zap className="h-8 w-8 text-yellow-500" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tua Posição</p>
-                    <p className="text-3xl font-bold">#{userRank.rank}</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
+              <Card className="shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tua Posição</p>
+                      <p className="text-3xl font-bold">#{userRank.rank}</p>
+                    </div>
+                    <Trophy className="h-8 w-8 text-primary" />
                   </div>
-                  <Trophy className="h-8 w-8 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pontos Totais (Carreira)</p>
-                    <p className="text-3xl font-bold">{userRank.total_lifetime_points}</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+              <Card className="shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pontos Totais (Carreira)</p>
+                      <p className="text-3xl font-bold">{userRank.total_lifetime_points}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-green-500" />
                   </div>
-                  <TrendingUp className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         )}
 
@@ -208,19 +215,23 @@ export default function EngagementLeaderboard() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {leaderboard.map((entry) => {
+                    {leaderboard.map((entry, index) => {
                       const isUser = user && entry.user_id === user.id;
                       const medal =
                         entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : "  ";
 
                       return (
-                        <div
+                        <motion.div
                           key={entry.user_id}
                           className={`flex items-center justify-between p-4 rounded-lg transition-all ${
                             isUser
-                              ? "bg-primary/10 border-2 border-primary"
+                              ? "bg-primary/10 border-2 border-primary shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
                               : "bg-muted hover:bg-muted/80"
                           }`}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.05 * index }}
+                          whileHover={{ scale: 1.02 }}
                         >
                           <div className="flex items-center gap-4 flex-1">
                             <span className="text-2xl w-8 text-center">{medal}</span>
@@ -242,7 +253,7 @@ export default function EngagementLeaderboard() {
                               {entry.total_lifetime_points} total
                             </p>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
@@ -289,7 +300,7 @@ export default function EngagementLeaderboard() {
                   </div>
                 )}
 
-                <div className="border-t pt-6 mt-6">
+                <div className="border-t pt-6 mt-6 shadow-[0_0_10px_hsl(var(--primary)/0.1)] rounded-lg">
                   <h3 className="font-bold mb-4">Guia de Pontos</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -331,6 +342,6 @@ export default function EngagementLeaderboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </motion.div>
   );
 }

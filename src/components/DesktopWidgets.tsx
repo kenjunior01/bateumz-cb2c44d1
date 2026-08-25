@@ -36,7 +36,7 @@ const DesktopWidgets = () => {
       <LiveFeed />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="glass rounded-2xl p-5">
+        className="glass rounded-2xl p-5 shadow-[0_0_10px_hsl(var(--primary)/0.08)]">
         <div className="mb-4 flex items-center gap-2">
           <Flame className="h-4 w-4 text-accent" />
           <span className="text-sm font-semibold text-foreground">Em Alta</span>
@@ -70,7 +70,7 @@ const DesktopWidgets = () => {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="glass rounded-2xl p-5">
+        className="glass rounded-2xl p-5 shadow-[0_0_10px_hsl(var(--primary)/0.08)]">
         <div className="mb-3 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Estatísticas</span>

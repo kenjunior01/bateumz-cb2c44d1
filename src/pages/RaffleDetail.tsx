@@ -268,7 +268,7 @@ const RaffleDetail = () => {
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-3 space-y-6">
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rd-image-wrap">
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.01 }} className="rd-image-wrap shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
               {raffle.image_url ? (
                 <img loading="lazy" src={raffle.image_url} alt={raffle.title} className="w-full h-full object-cover" />
               ) : (
@@ -298,7 +298,7 @@ const RaffleDetail = () => {
 
             <motion.div className="flex gap-3" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.2 }}>
               <BlockchainVerification raffleId={raffle.id} raffleTitle={raffle.title} />
-              <motion.button className="rd-bolao-btn" onClick={() => { sfx.modalOpen(); setBolaoOpen(true); }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <motion.button className="rd-bolao-btn shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]" onClick={() => { sfx.modalOpen(); setBolaoOpen(true); }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Users className="h-4 w-4" /> Bolao
               </motion.button>
             </motion.div>

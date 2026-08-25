@@ -24,7 +24,7 @@ export default function EmojiReactions({ onReact, compact }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-1 relative">
+    <div className="flex items-center gap-1 relative shadow-[0_0_10px_hsl(var(--primary)/0.1)] rounded-full p-1">
       {REACTIONS.map((r) => (
         <motion.button
           key={r.emoji}

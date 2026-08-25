@@ -257,7 +257,7 @@ export default function PrestacoesProduto() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
               <div className="aspect-video bg-muted">
                 {product.images[activeImage] ? (
                   <img
@@ -420,7 +420,7 @@ export default function PrestacoesProduto() {
                     </div>
                   </div>
 
-                  <div className="bg-primary/5 rounded-lg p-4 mt-4 space-y-2">
+                  <div className="bg-primary/5 rounded-lg p-4 mt-4 space-y-2 shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
                     <div className="flex items-baseline justify-between">
                       <span className="text-xs text-muted-foreground">Mensalidade</span>
                       <span className="text-2xl font-bold text-primary">
@@ -442,7 +442,7 @@ export default function PrestacoesProduto() {
 
                 <Button
                   onClick={openWhatsApp}
-                  className="w-full"
+                  className="w-full shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-shadow"
                   size="lg"
                   disabled={outOfStock}
                 >

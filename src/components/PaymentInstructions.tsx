@@ -251,7 +251,7 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
       </div>
 
       {recipient && (
-        <div className="flex items-center gap-3 rounded-lg bg-card p-3 border border-border">
+        <div className="flex items-center gap-3 rounded-lg bg-card p-3 border border-border shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground mb-0.5">{recipientLabel}</p>
             <p className="font-mono text-base sm:text-lg font-bold text-foreground tracking-wide break-all">{recipient}</p>
@@ -267,7 +267,7 @@ const PaymentInstructions = ({ method, number, totalAmount, brandName }: Payment
         </div>
       )}
 
-      <div className="rounded-lg bg-primary/10 p-3 text-center">
+      <div className="rounded-lg bg-primary/10 p-3 text-center shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
         <p className="text-xs text-muted-foreground mb-0.5">{t("pay.amountToSend")}</p>
         <p className="font-display text-2xl font-bold text-primary">{formatMZN(totalAmount)}</p>
       </div>

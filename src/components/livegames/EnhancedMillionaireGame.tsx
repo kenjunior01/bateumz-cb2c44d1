@@ -437,7 +437,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
 
       <div className="relative z-10 p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.5)]">
+          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_hsl(var(--primary)/0.5)]">
             <Trophy className="text-black w-6 h-6" />
           </div>
           <div>
@@ -546,7 +546,7 @@ export default function EnhancedMillionaireGame({ gameId: propGameId, onComplete
               const isDisabled = disabledOptions.includes(letter);
 
               let stateClass = "border-white/20 bg-white/5 hover:bg-white/10 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]";
-              if (isSelected) stateClass = "border-primary bg-primary/20 text-primary shadow-[0_0_25px_rgba(var(--primary),0.4)]";
+              if (isSelected) stateClass = "border-primary bg-primary/20 text-primary shadow-[0_0_25px_hsl(var(--primary)/0.4)]";
               if (answered && isCorrect) stateClass = "border-green-500 bg-green-500/20 text-green-500 option-reveal-correct";
               if (answered && isSelected && !isCorrect) stateClass = "border-red-500 bg-red-500/20 text-red-500 option-reveal-wrong";
               if (isDisabled) stateClass = "opacity-20 pointer-events-none grayscale";

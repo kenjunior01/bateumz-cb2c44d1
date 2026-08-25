@@ -130,7 +130,7 @@ export default function RaffleHistory() {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block text-center mb-10">
           <Trophy className="h-12 w-12 text-accent mx-auto mb-4" />
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Histórico de Vencedores</h1>
+          <h1 className="font-display text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">Histórico de Vencedores</h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
             Todos os sorteios realizados com vencedores verificados na blockchain. Transparência total.
           </p>
@@ -150,7 +150,7 @@ export default function RaffleHistory() {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Tente outra pesquisa ou aguarde novos sorteios concluídos.
             </p>
-            <Link to="/marketplace" className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition">
+            <Link to="/marketplace" className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]">
               <Ticket className="h-4 w-4" /> Ver Sorteios Activos
             </Link>
           </motion.div>
@@ -164,7 +164,7 @@ export default function RaffleHistory() {
                 transition={{ delay: Math.min(i, 8) * 0.03 }}
               >
                 <Link to={`/raffle/${raffle.slug || raffle.id}`}>
-                  <Card className="glass group hover:border-accent/40 transition-all overflow-hidden rounded-2xl">
+                  <Card className="glass group hover:border-accent/40 transition-all overflow-hidden rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
                     <div className="relative aspect-square md:aspect-[4/3] bg-secondary overflow-hidden">
                       {raffle.image_url ? (
                         <img src={raffle.image_url} alt={raffle.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

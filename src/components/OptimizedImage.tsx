@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { getOptimizedImageUrl } from "@/lib/image-utils";
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -28,30 +29,42 @@ export default function OptimizedImage({
 
   if (webpSrc && webpSrc !== src) {
     return (
-      <picture>
-        <source srcSet={webpSrc} type="image/webp" />
-        <img
-          src={src}
-          alt={alt}
-          loading={loading}
-          decoding="async"
-          fetchPriority={fetchPriority}
-          className={className}
-          {...rest}
-        />
-      </picture>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <picture>
+          <source srcSet={webpSrc} type="image/webp" />
+          <img
+            src={src}
+            alt={alt}
+            loading={loading}
+            decoding="async"
+            fetchPriority={fetchPriority}
+            className={className}
+            {...rest}
+          />
+        </picture>
+      </motion.div>
     );
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      loading={loading}
-      decoding="async"
-      fetchPriority={fetchPriority}
-      className={className}
-      {...rest}
-    />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        loading={loading}
+        decoding="async"
+        fetchPriority={fetchPriority}
+        className={className}
+        {...rest}
+      />
+    </motion.div>
   );
 }

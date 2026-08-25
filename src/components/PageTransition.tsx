@@ -92,7 +92,7 @@ export default function PageTransition({ children, variant = 'default', classNam
       animate="animate"
       exit="exit"
       className={combinedClassName}
-      style={{ animationDelay: `${delay}s` }}
+      style={{ animationDelay: `${delay}s`, boxShadow: '0 0 30px hsl(var(--primary) / 0.06)' }}
       onAnimationStart={() => {
         try { sfx.sectionReveal(); } catch {}
       }}

@@ -60,7 +60,7 @@ export default function LiveLeaderboard({ contestId, evaluationType }: Props) {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-8 p-4 rounded-2xl glass"
+      className="mb-8 p-4 rounded-2xl glass shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
     >
       <div className="flex items-center gap-2 mb-3">
         <Crown className="h-5 w-5 text-yellow-500" />

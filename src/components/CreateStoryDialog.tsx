@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -112,7 +113,12 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className={`relative aspect-[9/12] rounded-2xl bg-gradient-to-br ${bg} overflow-hidden flex items-center justify-center p-6 text-center`}>
+          <motion.div
+            className={`relative aspect-[9/12] rounded-2xl bg-gradient-to-br ${bg} overflow-hidden flex items-center justify-center p-6 text-center shadow-[0_0_10px_hsl(var(--primary)/0.1)]`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             {imagePreview && (
               <img src={imagePreview} alt="" className="absolute inset-0 w-full h-full object-cover" />
             )}
@@ -129,7 +135,7 @@ const CreateStoryDialog = ({ open, onOpenChange, onCreated }: Props) => {
                 <X className="h-4 w-4" />
               </button>
             )}
-          </div>
+          </motion.div>
 
           <div>
             <Textarea

@@ -76,7 +76,7 @@ export default function InstantWin() {
               <Zap className="h-3.5 w-3.5 text-primary" />
               {t("instantWin.badge")}
             </div>
-            <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               {t("instantWin.title")}
             </h1>
             <p className="text-lg text-muted-foreground">
@@ -105,7 +105,7 @@ export default function InstantWin() {
             <p className="mb-6 text-muted-foreground">
               {t("instantWin.noGamesDesc")}
             </p>
-            <Button asChild>
+            <Button asChild className="shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]">
               <Link to="/">{t("common.back")}</Link>
             </Button>
           </Card>
@@ -117,7 +117,7 @@ export default function InstantWin() {
                 to={g.type === "spin" ? `/games/spin-wheel/${g.id}` : `/games/millionaire/${g.id}`}
                 className="group"
               >
-                <Card className="h-full overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3),0_0_30px_rgba(251,191,36,0.1)] hover:-translate-y-1 game-card-3d game-shimmer">
+                <Card className="h-full overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3),0_0_30px_rgba(251,191,36,0.1),0_0_15px_hsl(var(--primary)/0.25)] hover:-translate-y-1 game-card-3d game-shimmer">
                   <div
                     className="relative flex h-40 items-center justify-center bg-muted"
                     style={

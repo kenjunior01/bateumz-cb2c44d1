@@ -44,7 +44,7 @@ export default function ContestCountdown({ endDate, compact }: Props) {
       {items.map((it) => (
         <motion.div
           key={it.label}
-          className={`${compact ? "px-2 py-1" : "px-2.5 py-1.5"} rounded-md bg-gradient-premium text-primary-foreground font-bold font-display tabular-nums shadow-elegant min-w-[36px] text-center`}
+          className={`${compact ? "px-2 py-1" : "px-2.5 py-1.5"} rounded-md bg-gradient-premium text-primary-foreground font-bold font-display tabular-nums shadow-elegant min-w-[36px] text-center shadow-[0_0_8px_hsl(var(--primary)/0.2)]`}
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
         >

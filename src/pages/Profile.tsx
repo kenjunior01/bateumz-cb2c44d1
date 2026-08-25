@@ -155,7 +155,7 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="relative mb-8"
         >
-          <Card className="glass border-primary/10 overflow-hidden">
+          <Card className="glass border-primary/10 overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
             <div className="h-24 bg-gradient-to-r from-primary/30 via-primary/10 to-accent/20" />
             <CardContent className="relative px-4 sm:px-6 pb-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10 text-center sm:text-left">
@@ -221,8 +221,9 @@ const Profile = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.08 }}
+              whileHover={{ scale: 1.02, y: -2 }}
             >
-              <Card className="glass">
+              <Card className="glass shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)] transition-shadow">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.color}`}>
                     <stat.icon className="h-5 w-5" />
@@ -284,7 +285,7 @@ const Profile = () => {
                               transition={{ delay: i * 0.03 }}
                             >
                               <Card
-                                className="glass hover:border-primary/20 transition-all cursor-pointer group"
+                                className="glass hover:border-primary/20 transition-all cursor-pointer group shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
                                 onClick={() => p.raffle?.slug && navigate(`/raffle/${p.raffle.slug}`)}
                               >
                                 <CardContent className="p-4">
@@ -402,7 +403,7 @@ const Profile = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: i * 0.07, type: "spring", stiffness: 260, damping: 20 }}
                   >
-                    <Card className="glass hover:border-primary/20 transition-all">
+                    <Card className="glass hover:border-primary/20 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
                       <CardContent className="p-5">
                         <div className="flex items-start justify-between mb-3">
                           <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.color}`}>

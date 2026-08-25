@@ -160,7 +160,7 @@ function StatCard({ stat, index, isInView }: StatCardProps) {
       className="group relative"
     >
       <div
-        className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-5 shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/20 md:p-6"
+        className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-5 shadow-lg shadow-[0_0_15px_hsl(var(--primary)/0.1)] transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[0_0_25px_hsl(var(--primary)/0.2)] group-hover:border-primary/20 md:p-6"
         style={{
           background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
           backdropFilter: "blur(20px) saturate(1.5)",

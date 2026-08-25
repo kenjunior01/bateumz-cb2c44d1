@@ -396,7 +396,7 @@ const StoriesCarousel = () => {
               animate={{ scale: 1, opacity: 1, rotateY: 0 }}
               exit={{ scale: 0.9, opacity: 0, rotateY: 15 }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              className={`w-full max-w-sm mx-4 aspect-[9/16] rounded-3xl bg-gradient-to-br ${activeStory.gradient} flex flex-col items-center justify-center p-8 text-center relative overflow-hidden`}
+              className={`w-full max-w-sm mx-4 aspect-[9/16] rounded-3xl bg-gradient-to-br ${activeStory.gradient} flex flex-col items-center justify-center p-8 text-center relative overflow-hidden shadow-[0_0_40px_hsl(var(--primary)/0.2)]`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (activeStory.link) navigate(activeStory.link);

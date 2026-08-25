@@ -328,7 +328,7 @@ export default function Prestacoes() {
                   handleCategoryChange(cat.id);
                   scrollToId("simulador");
                 }}
-                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${cat.color} p-3 sm:p-6 text-left transition-all hover:scale-[1.02] hover:border-primary/50`}
+                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${cat.color} p-3 sm:p-6 text-left transition-all hover:scale-[1.02] hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)]`}
               >
                 <cat.icon className="h-7 w-7 sm:h-10 sm:w-10 text-foreground" />
                 <p className="mt-2 sm:mt-3 font-display text-sm sm:text-lg font-semibold text-foreground">{cat.label}</p>
@@ -446,7 +446,7 @@ export default function Prestacoes() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6">
+              <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6 shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Prestação mensal estimada</p>
                 <p className="mt-2 font-display text-4xl font-bold text-foreground">{formatMZN(sim.monthly)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -460,7 +460,7 @@ export default function Prestacoes() {
                   <Row label="Prazo" value={`${months} meses`} muted />
                 </div>
 
-                <Button className="mt-6 w-full gap-2" onClick={() => scrollToId("interesse")}>
+                <Button className="mt-6 w-full gap-2 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-shadow" onClick={() => scrollToId("interesse")}>
                   <ArrowRight className="h-4 w-4" /> Quero esta proposta
                 </Button>
                 <a href={`/prestacoes/catalogo?category=${productType}`} className="mt-3 block">
@@ -498,7 +498,7 @@ export default function Prestacoes() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="rounded-2xl border border-border bg-card p-6"
+                className="rounded-2xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)] transition-all"
               >
                 <s.icon className="h-8 w-8 text-primary" />
                 <h3 className="mt-4 font-display text-lg font-semibold text-foreground">{s.title}</h3>

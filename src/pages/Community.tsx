@@ -289,7 +289,7 @@ export default function Community() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <Card className="glass mb-6 border-primary/10 bg-gradient-to-br from-card to-card/80">
+            <Card className="glass mb-6 border-primary/10 bg-gradient-to-br from-card to-card/80 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
               <CardContent className="p-4">
                 <div className="flex gap-2 mb-3 flex-wrap">
                   {[
@@ -413,7 +413,7 @@ export default function Community() {
                     whileHover={{ y: -2 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Card className="glass hover:border-primary/20 transition-colors">
+                    <Card className="glass hover:border-primary/20 hover:shadow-[0_0_15px_hsl(var(--primary)/0.08)] transition-all">
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/25 to-primary/10 text-primary text-sm font-bold">

@@ -384,7 +384,7 @@ export default function ResponsibleGaming() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20"
+                    className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_15px_hsl(var(--primary)/0.12)]"
                   >
                     <CheckCircle className="h-5 w-5 text-amber-400 shrink-0" />
                     <div>
@@ -606,7 +606,7 @@ export default function ResponsibleGaming() {
               </Button>
               <Button
                 onClick={handleBreakApply}
-                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/25"
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/25 shadow-[0_0_15px_hsl(var(--primary)/0.15)]"
               >
                 <PauseCircle className="h-4 w-4 mr-2" />
                 Confirmar Pausa

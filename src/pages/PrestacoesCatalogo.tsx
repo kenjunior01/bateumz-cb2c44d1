@@ -294,7 +294,7 @@ export default function PrestacoesCatalogo() {
         >
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Catálogo a Prestações</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Catálogo a Prestações</h1>
               <p className="text-muted-foreground mt-1">
                 Viaturas, imóveis, eletrónicos e equipamentos com pagamento parcelado.
               </p>
@@ -307,7 +307,7 @@ export default function PrestacoesCatalogo() {
 
         <div className="grid md:grid-cols-[260px_1fr] gap-6 mt-3 md:mt-0">
           <aside className="hidden md:block">
-            <Card>
+            <Card className="shadow-[0_0_15px_hsl(var(--primary)/0.08)]">
               <CardContent className="p-4">{DesktopFiltersBlock}</CardContent>
             </Card>
           </aside>

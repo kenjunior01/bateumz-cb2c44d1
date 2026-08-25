@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,7 +93,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {label && <Label>{label}</Label>}
       
       <div className="flex gap-2">
@@ -138,7 +144,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       </div>
 
       {preview && (
-        <div className="mt-3 relative rounded-lg overflow-hidden border border-border">
+        <div className="mt-3 relative rounded-lg overflow-hidden border border-border shadow-[0_0_10px_hsl(var(--primary)/0.1)]">
           <img 
             src={preview} 
             alt="Preview" 
@@ -147,6 +153,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           />
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };

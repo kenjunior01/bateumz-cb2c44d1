@@ -583,7 +583,7 @@ export default function MascotBuddy() {
       {!visible && !dismissed && (
         <motion.button
           onClick={openChat}
-          className="fixed bottom-20 right-3 sm:bottom-24 sm:right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed bottom-20 right-3 sm:bottom-24 sm:right-4 z-50 rounded-full shadow-lg hover:shadow-xl transition-all shadow-[0_0_12px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.35)]"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}

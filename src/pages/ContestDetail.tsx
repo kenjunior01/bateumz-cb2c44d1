@@ -280,7 +280,7 @@ export default function ContestDetail() {
               {isOpen && user && (
                 <Dialog open={showForm} onOpenChange={setShowForm}>
                   <DialogTrigger asChild>
-                    <Button size="lg" className="gap-2 shadow-lg"><Send className="h-4 w-4" /> Participar</Button>
+                    <Button size="lg" className="gap-2 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"><Send className="h-4 w-4" /> Participar</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
                     <DialogHeader><DialogTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Submeter Participação</DialogTitle></DialogHeader>
@@ -417,7 +417,7 @@ export default function ContestDetail() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {winners.map((w, i) => (
                   <motion.div key={w.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1, type: "spring" }}>
-                    <Card className="border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 overflow-hidden">
+                    <Card className="border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
                       {w.photo_url && (
                         <div className="relative">
                           <img loading="lazy" src={w.photo_url} alt={w.participant_name} className="w-full aspect-video object-cover" />
@@ -475,7 +475,7 @@ export default function ContestDetail() {
                     transition={{ delay: i * 0.05, type: "spring", stiffness: 200 }}
                     whileHover={{ y: -4 }}
                   >
-                    <Card className={`overflow-hidden glass transition-all ${sub.is_winner ? "ring-2 ring-accent" : ""} ${rank <= 3 ? "border-primary/20" : ""}`}>
+                    <Card className={`overflow-hidden glass transition-all ${sub.is_winner ? "ring-2 ring-accent" : ""} ${rank <= 3 ? "border-primary/20" : ""} shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]`}>
                       {sub.photo_url && (
                         <div className="aspect-video overflow-hidden cursor-pointer relative group" onClick={() => setSelectedMedia({ url: sub.photo_url!, type: "photo" })}>
                           <img loading="lazy" src={sub.photo_url} alt={sub.participant_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />

@@ -69,7 +69,7 @@ const Transparency = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.1 }}
                 whileHover={{ y: -4, scale: 1.03 }}
-                className="p-4 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
+                className="p-4 rounded-2xl bg-card border border-border hover:border-primary/30 transition-all hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)]"
               >
                 <p className="font-display text-2xl font-bold text-primary">{s.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
@@ -87,7 +87,7 @@ const Transparency = () => {
           whileInView="visible"
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="max-w-3xl mx-auto rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-card p-6"
+          className="max-w-3xl mx-auto rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-card p-6 shadow-[0_0_15px_hsl(var(--primary)/0.12)]"
         >
           <h2 className="font-display text-lg font-bold text-foreground mb-4 text-center">
             {content.howItWorksTitle}
@@ -96,7 +96,7 @@ const Transparency = () => {
             {content.howItWorksSteps.map((step, i) => (
               <motion.div
                 key={step.step}
-                whileHover={{ y: -3, borderColor: "rgba(var(--primary), 0.3)" }}
+                whileHover={{ y: -3, borderColor: "hsl(var(--primary)/0.3)" }}
                 className="flex gap-3 rounded-xl bg-background/60 border border-border p-4 hover:border-primary/25 transition-colors"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-bold">
@@ -184,7 +184,7 @@ const Transparency = () => {
             <h3 className="font-display text-xl font-bold text-foreground mb-2">{content.ctaTitle}</h3>
             <p className="text-sm text-muted-foreground mb-4">{content.ctaSubtitle}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/faq" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition">
+              <Link to="/faq" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]">
                 {content.ctaFaq} <ChevronRight className="h-4 w-4" />
               </Link>
               <Link to="/historico" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-card border border-border text-foreground text-sm font-medium hover:bg-secondary transition">

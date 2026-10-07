@@ -218,3 +218,28 @@ Stage Summary:
 - Modo convidado completo (sem conta joga, com conta sincroniza)
 - Área de jogos legível em qualquer tema, topo limpo, mobile sem clutter
 - Suite E2E: 139 asserts verdes
+
+---
+Task ID: 16
+Agent: Main Agent (Super Z)
+Task: v10 — Coração da Floresta (Floresta Ancestral espetacular) + correção do bug da HUD sobreposta
+
+Work Log:
+- Verificado estado pós-continuação: v8 (6327959) e v9 (a16086b) já pushadas; E2E 139/139
+- worldEngine.ts — NOVO SISTEMA buildHeartForest(): 9 Árvores Anciãs colossais (troncos 3 segmentos, contrafortes-raiz, musgo, copa-domo, trepadeiras), 8 god rays aditivos, círculo de 10 pedras, cristal do Coração (3 octaedros + PointLight pulsante + glow), 3 pedras rúnicas, poça de luz, sub-bosque denso (88 fetos + 52 arbustos + 34 cogumelos instanciados), 34 esporos dia/noite (pólen dourado → ciano)
+- updateHeartForest() ligado ao ciclo dia/noite: pulso do cristal, raios de dia, tint dos esporos, pulso das runas à noite
+- SAFE zone da clareira (-120,-40 r27) protege o centro de vegetação aleatória; Anciãs respeitam Ruínas e Cabana
+- GUARDIÃ ANCIÃ: 5º chefe (tier 4) em (-131,-52); 19º marco "Coração da Floresta" com lore; região Floresta com descrição nova
+- BateuWorld.tsx — BUG VISUAL REAL corrigido: nav superior (7 botões centrados) sobrepunha a coluna direita (foto/som/online) em contentores ~908px → foto INACESSÍVEL (E2E do modo foto falhava intermitentemente; elementFromPoint mostrava bw-nav-set por cima de bw-photo)
+- Fix: foto+som movidos para DENTRO da barra de navegação (testids mantidos), coluna direita desceu para top-[46px], rótulos da nav hidden lg:inline, online/minimapa/descobertas hidden no mobile, chip de convidado reajustado
+- BateuWorld.tsx — o mundo faz scrollIntoView ao entrar na fase "world" (HUD nunca fica fora do ecrã no hub)
+- E2E: modo foto reescrito com sondagem resiliente (janela ~1.2s) + scroll do mundo antes do clique; 2 asserts v10 (Coração revelado na legenda após teleporte + lore da Guardiã) → 141/141 ✅
+- tsc 0 erros; build de produção OK; screenshots de validação da floresta e da HUD limpa
+- android/app/build.gradle: versionCode 10 / versionName 2.10
+- JDK/SDK Android AINDA perdidos do rollback — APKs não regenerados nesta ronda (reinstalar toolchain antes do próximo build Android)
+
+Stage Summary:
+- Commit 35c8ab8 pushado para origin/main
+- Floresta Ancestral transformada: clareira sagrada com Anciãs colossais, god rays, cristal pulsante, runas, esporos e novo chefe Guardiã
+- Bug da HUD sobreposta (foto/som inacessíveis) corrigido de vez em todos os tamanhos de ecrã
+- Suite E2E: 141 asserts verdes

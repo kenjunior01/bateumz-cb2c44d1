@@ -193,3 +193,28 @@ Work Log:
 Stage Summary:
 - Bateu World v6 entregue: mundo 55% maior com 7 regiões e 18 marcos com significado, escudo/defesa com modo Guarda, mapa-múndi com legenda e bússola de destino, gate de membros registados e progresso/cupões/trocas ligados à conta da plataforma
 - E2E 104/104 verde; 3 artefactos Android v2.6 gerados; migração SQL para super-sincronização pronta a aplicar
+
+---
+Task ID: 15
+Agent: Main Agent (Super Z)
+Task: v9 — Jogo aberto a convidados + tela de jogos sem ofuscação e sem bugs
+
+Work Log:
+- Recuperado repo do rollback (reset a origin/main 8c290d0 — v8 já estava pushada)
+- Diagnóstico com Playwright: screenshots + estilos computados em /lives e /jogos
+- CAUSA DA OFUSCAÇÃO: JogosLayout força texto claro (--area-text) mas os filhos usam tokens do tema; em tema light os cartões ficavam brancos com texto claro = ilegível. Fix: class "dark" no wrapper do JogosLayout
+- Navbar global duplicada removida do LiveHub (duas navs fixed top-0 sobrepunham-se no topo)
+- <a> dentro de <a> corrigido na Navbar (orb "ao vivo" era filho do Link do logo)
+- button dentro de button corrigido no LiveHub (3× ButtonRipple as="div")
+- Cockpit de streamer (LiveControlPanel) + LevelProgressWidget escondidos no mobile
+- CONVIDADOS: gate de registo removido do BateuWorld; convidado cria herói e joga; progresso local + nota e chip "CONVIDADO" com atalho para criar conta
+- Suspense fallback dos jogos com feedback ("A carregar o jogo…")
+- E2E: secção 0 reescrita (v9 guest mode, 6 asserts novos) + polling waitChip nos acontecimentos; 139/139 verdes
+- tsc 0 erros + build de produção OK (44.8s)
+- Screenshots de validação: /lives e /jogos legíveis em tema light (dark forçado) e mobile limpo
+
+Stage Summary:
+- Commit a16086b pushado para origin/main
+- Modo convidado completo (sem conta joga, com conta sincroniza)
+- Área de jogos legível em qualquer tema, topo limpo, mobile sem clutter
+- Suite E2E: 139 asserts verdes

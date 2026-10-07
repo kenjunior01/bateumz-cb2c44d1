@@ -178,6 +178,19 @@ export const LANDMARKS: { id: string; name: string; x: number; z: number; r: num
   { id: "eco", name: "Gruta do Eco", x: 155, z: -70, r: 9, emoji: "🕳️", desc: "Cada golpe ressoa sete vezes — treina os teus poderes aqui" },
 ];
 
+// ── v8: Vilas e Interiores — edifícios enteráveis do mundo ──
+// Catálogo público (mapa, legenda e E2E). A geometria real vive
+// no motor (buildBuildings → makeHouse / makeLighthouse).
+export const BUILDINGS: { id: string; name: string; desc: string; x: number; z: number; emoji: string; floors: number }[] = [
+  { id: "casa-explorador", name: "Casa do Explorador", desc: "Primeira casa da vila — sobe ao 2º andar e vigia a praça", x: 24, z: 18, emoji: "🏠", floors: 2 },
+  { id: "pousada", name: "Pousada do Viajante", desc: "Camas quentes e alpendre — descanso rápido dentro", x: -27, z: 21, emoji: "🛏️", floors: 1 },
+  { id: "cabana-lenhador", name: "Cabana do Lenhador", desc: "Troncos milenares na Floresta Ancestral — mapas no andar de cima", x: -106, z: -24, emoji: "🛖", floors: 2 },
+  { id: "casa-mercador", name: "Casa do Mercador", desc: "Adobe fresco nas Dunas — tapetes e jarros do norte", x: -52, z: -136, emoji: "🏺", floors: 1 },
+  { id: "farol", name: "Farol das Ondas", desc: "3 pisos e miradouro no topo — a melhor vista do mundo", x: 140, z: 34, emoji: "🗼", floors: 4 },
+  { id: "abrigo-pantano", name: "Abrigo do Pântano", desc: "Em palafitas sobre a água — os bugs não sobem", x: 18, z: 126, emoji: "🏡", floors: 1 },
+  { id: "fortim-vulcanico", name: "Fortim Vulcânico", desc: "Bastião de pedra nas Terras Vulcânicas — vigia o calor", x: 158, z: -128, emoji: "🏰", floors: 2 },
+];
+
 export const ARENA_CENTER = new THREE.Vector3(112, 0, 0);
 export const ARENA_RADIUS = 26;
 
@@ -288,6 +301,43 @@ interface GroundLoot {
   t: number;
 }
 
+// ── v8: EDIFÍCIOS ENTERÁVEIS ────────────────────────────────
+// Piso = retângulo a altura fixa; Rampa = escada que interpola a
+// altura enquanto o herói anda (sobe-se a pé, sem teleportes).
+// Paredes = caixas de colisão (AABB) com topo — só bloqueiam
+// quem está por baixo, para o 2º andar ser andável por cima.
+interface FloorZone {
+  minX: number; maxX: number; minZ: number; maxZ: number;
+  y: number;
+  rampAxis?: "x" | "z";
+  y0?: number; // altura no lado MIN do eixo
+  y1?: number; // altura no lado MAX do eixo
+}
+
+interface WallBox {
+  minX: number; maxX: number; minZ: number; maxZ: number;
+  top: number; base: number; // colide só entre base e topo
+}
+
+interface Building {
+  id: string;
+  name: string;
+  desc: string;
+  group: THREE.Group;
+  cx: number;
+  cz: number;
+  minX: number; maxX: number; minZ: number; maxZ: number;
+  f0Y: number; // altura do piso de entrada
+  zones: FloorZone[];
+  walls: WallBox[];
+  roof: THREE.Group | null;
+  doorPivot: THREE.Group | null;
+  doorBaseY: number;
+  doorOpenT: number; // 0 fechado → 1 aberto
+  light: THREE.PointLight | null;
+  camBlockers: THREE.Mesh[];
+}
+
 // v4 — estado da Arena das Ondas
 interface ArenaState {
   active: boolean;
@@ -385,7 +435,11 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-function makeTextSprite(text: string, opts: { size?: number; color?: string; bg?: boolean; accent?: string } = {}): THREE.Sprite {
+// v8: pool de rótulos/ícones do mundo para culling por distância
+// (limpeza visual — nada de texto a flutuar longe do jogador)
+const CULL_POOL: THREE.Sprite[] = [];
+
+function makeTextSprite(text: string, opts: { size?: number; color?: string; bg?: boolean; accent?: string; cull?: boolean } = {}): THREE.Sprite {
   const size = opts.size ?? 30;
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -412,10 +466,11 @@ function makeTextSprite(text: string, opts: { size?: number; color?: string; bg?
   ctx.fillText(text, 256, 64);
   const tex = new THREE.CanvasTexture(canvas);
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
+  if (opts.cull) CULL_POOL.push(spr);
   return spr;
 }
 
-function makeIconSprite(emoji: string): THREE.Sprite {
+function makeIconSprite(emoji: string, cull = false): THREE.Sprite {
   const canvas = document.createElement("canvas");
   canvas.width = 128; canvas.height = 128;
   const ctx = canvas.getContext("2d")!;
@@ -424,7 +479,9 @@ function makeIconSprite(emoji: string): THREE.Sprite {
   ctx.textBaseline = "middle";
   ctx.fillText(emoji, 64, 70);
   const tex = new THREE.CanvasTexture(canvas);
-  return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
+  if (cull) CULL_POOL.push(spr);
+  return spr;
 }
 
 export class WorldEngine {
@@ -508,6 +565,16 @@ export class WorldEngine {
   private wEvent: { kind: "" | "meteors" | "frenzy" | "swarm"; until: number; next: number } = { kind: "", until: 0, next: 14000 };
   private meteors: { x: number; z: number; t0: number; ring: THREE.Mesh; spr: THREE.Sprite; hit: boolean }[] = [];
   private meteorTimer = 0;
+
+  // v8 — EDIFÍCIOS ENTERÁVEIS (casas, torres, escadas)
+  private buildings: Building[] = [];
+  private camBlockerList: THREE.Mesh[] = [];
+  private curInside: Building | null = null;
+  private insideSeen = new Set<string>();
+  private insideRegenT = 0;
+  private cullables: { spr: THREE.Sprite; x: number; z: number }[] = [];
+  private cullT = 0;
+  private ray = new THREE.Raycaster();
 
   // v3 — céu, clima e vida do mundo
   private skyDome!: THREE.Mesh;
@@ -611,6 +678,7 @@ export class WorldEngine {
     this.buildPlaza();
     this.buildPOIs();
     this.buildLandmarks();
+    this.buildBuildings(); // v8: casas, pousada, farol, fortim… enteráveis
     this.buildArena();
     this.buildNature();
     // v5: configuração do avatar antes de construir o corpo
@@ -627,6 +695,16 @@ export class WorldEngine {
     this.resizeObs = new ResizeObserver(() => this.resize());
     this.resizeObs.observe(this.canvas.parentElement || this.canvas);
     this.resize();
+
+    // v8: regista rótulos/ícones distantes para culling (visão limpa)
+    // + parede de todos os edifícios para a câmara não atravessar
+    this.scene.updateMatrixWorld(true);
+    const wv = new THREE.Vector3();
+    for (const s of CULL_POOL.splice(0)) {
+      s.getWorldPosition(wv);
+      this.cullables.push({ spr: s, x: wv.x, z: wv.z });
+    }
+    this.camBlockerList = this.buildings.flatMap((b) => b.camBlockers);
 
     this.lastT = performance.now();
     this.loop(this.lastT);
@@ -1095,7 +1173,7 @@ export class WorldEngine {
     lintel.position.set(0, 6.4, 0);
     lintel.rotation.z = -0.08;
     ruins.add(lintel);
-    const rIcon = makeIconSprite("🏛️");
+    const rIcon = makeIconSprite("🏛️", true);
     rIcon.scale.set(1.6, 1.6, 1);
     rIcon.position.y = 8.2;
     ruins.add(rIcon);
@@ -1111,7 +1189,7 @@ export class WorldEngine {
     lake.position.set(95, groundY(95, 70) + 0.12, 70);
     this.scene.add(lake);
     this.lakeWater = lake;
-    const lIcon = makeIconSprite("🌊");
+    const lIcon = makeIconSprite("🌊", true);
     lIcon.scale.set(1.6, 1.6, 1);
     lIcon.position.set(95, groundY(95, 70) + 3.4, 70);
     this.scene.add(lIcon);
@@ -1136,7 +1214,7 @@ export class WorldEngine {
       cr.position.set(Math.cos(a) * rr, h / 2 + 0.3, Math.sin(a) * rr);
       cave.add(cr);
     }
-    const cIcon = makeIconSprite("💎");
+    const cIcon = makeIconSprite("💎", true);
     cIcon.scale.set(1.6, 1.6, 1);
     cIcon.position.y = 8;
     cave.add(cIcon);
@@ -1161,12 +1239,604 @@ export class WorldEngine {
       cl.scale.setScalar(s / 2.4);
       baoba.add(cl);
     }
-    const bIcon2 = makeIconSprite("🌳");
+    const bIcon2 = makeIconSprite("🌳", true);
     bIcon2.scale.set(1.7, 1.7, 1);
     bIcon2.position.y = 13.6;
     baoba.add(bIcon2);
     baoba.position.set(60, 0, -100);
     this.scene.add(baoba);
+  }
+
+  // ── v8: EDIFÍCIOS ENTERÁVEIS ────────────────────────────────
+  // Casas com interior mobiliado, portas que abrem à passagem,
+  // escadas com rampas navegáveis a pé, telhados que desaparecem
+  // quando entras (vês o interior), zonas seguras sem mobs.
+
+  private buildBuildings(): void {
+    // Vila da Praça (Planície Central)
+    this.makeHouse({ id: "casa-explorador", name: "Casa do Explorador", desc: "Primeira casa da vila — sobe ao 2º andar e vigia a praça", x: 24, z: 18, w: 9, d: 7, floors: 2, wall: 0xc9b18c, roof: 0xb4552d, trim: 0x7c5a38 });
+    this.makeHouse({ id: "pousada", name: "Pousada do Viajante", desc: "Camas quentes e alpendre — descanso rápido dentro", x: -27, z: 21, w: 10, d: 7, floors: 1, wall: 0xd9c49a, roof: 0x8c5a3c, trim: 0x6b4a2f, porch: true });
+    // Floresta Ancestral
+    this.makeHouse({ id: "cabana-lenhador", name: "Cabana do Lenhador", desc: "Troncos milenares na Floresta Ancestral — mapas no andar de cima", x: -106, z: -24, w: 8.5, d: 7, floors: 2, wall: 0x8a6a45, roof: 0x4a5d3a, trim: 0x5c4033 });
+    // Dunas Escaldantes
+    this.makeHouse({ id: "casa-mercador", name: "Casa do Mercador", desc: "Adobe fresco nas Dunas — tapetes e jarros do norte", x: -52, z: -136, w: 9, d: 6.5, floors: 1, wall: 0xe0c294, roof: 0xc2874e, trim: 0xa1733f, adobe: true });
+    // Litoral das Ondas — farol com 3 pisos + miradouro
+    this.makeLighthouse(140, 34);
+    // Pântano Sombrio
+    this.makeHouse({ id: "abrigo-pantano", name: "Abrigo do Pântano", desc: "Em palafitas sobre a água — os bugs não sobem", x: 18, z: 126, w: 8, d: 6.5, floors: 1, wall: 0x7d6b52, roof: 0x5d5a43, trim: 0x4c4436, stilts: true });
+    // Terras Vulcânicas
+    this.makeHouse({ id: "fortim-vulcanico", name: "Fortim Vulcânico", desc: "Bastião de pedra nas Terras Vulcânicas — vigia o calor", x: 158, z: -128, w: 9.5, d: 8, floors: 2, wall: 0x8d8d93, roof: 0x53535b, trim: 0x3f3f46, stone: true });
+  }
+
+  /** Caixa de parede: malha visível + colisor + bloqueio de câmara. */
+  private wallBox(g: THREE.Group, blockers: THREE.Mesh[], mat: THREE.Material, minX: number, maxX: number, minZ: number, maxZ: number, base: number, top: number, walls: WallBox[]): THREE.Mesh {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.max(0.05, maxX - minX), Math.max(0.05, top - base), Math.max(0.05, maxZ - minZ)),
+      mat
+    );
+    m.position.set((minX + maxX) / 2, (base + top) / 2, (minZ + maxZ) / 2);
+    g.add(m);
+    blockers.push(m);
+    walls.push({ minX, maxX, minZ, maxZ, base, top });
+    return m;
+  }
+
+  private makeHouse(o: { id: string; name: string; desc: string; x: number; z: number; w: number; d: number; floors: number; wall: number; roof: number; trim: number; porch?: boolean; adobe?: boolean; stilts?: boolean; stone?: boolean }): void {
+    const g = new THREE.Group();
+    const FLOOR_H = 3.1;
+    const hw = o.w / 2, hd = o.d / 2, t = 0.36;
+    const baseY = groundY(o.x, o.z);
+    const f0 = o.stilts ? baseY + 1.35 : baseY; // palafitas: piso elevado
+    const f1 = f0 + FLOOR_H;
+    const iMinX = o.x - hw + t, iMaxX = o.x + hw - t, iMinZ = o.z - hd + t, iMaxZ = o.z + hd - t;
+    const zones: FloorZone[] = [];
+    const walls: WallBox[] = [];
+    const blockers: THREE.Mesh[] = [];
+    const matWall = new THREE.MeshLambertMaterial({ color: o.wall });
+    const matTrim = new THREE.MeshLambertMaterial({ color: o.trim });
+    const matRoof = new THREE.MeshLambertMaterial({ color: o.roof });
+    const matWood = new THREE.MeshLambertMaterial({ color: o.stone ? 0x64748b : 0x8b5e3c });
+    const matFloor = new THREE.MeshLambertMaterial({ color: o.adobe ? 0xd8c7a1 : o.stone ? 0x9a9aa2 : 0xa07850 });
+
+    // fundação (ou palafitas sob a casa)
+    if (o.stilts) {
+      const postMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+      for (const [px, pz] of [[-hw + 0.5, -hd + 0.5], [hw - 0.5, -hd + 0.5], [-hw + 0.5, hd - 0.5], [hw - 0.5, hd - 0.5], [0, -hd + 0.5], [0, hd - 0.5]] as [number, number][]) {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.7, 6), postMat);
+        p.position.set(o.x + px, baseY + 0.55, o.z + pz);
+        g.add(p);
+      }
+    }
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(o.w + 0.7, 1.2, o.d + 0.7), new THREE.MeshLambertMaterial({ color: o.stone ? 0x6e6e75 : 0x9b9186 }));
+    slab.position.set(o.x, f0 - 0.6, o.z);
+    g.add(slab);
+
+    // piso interior do rés-do-chão
+    const floor0 = new THREE.Mesh(new THREE.BoxGeometry(o.w - 0.1, 0.22, o.d - 0.1), matFloor);
+    floor0.position.set(o.x, f0 + 0.11, o.z);
+    g.add(floor0);
+    zones.push({ minX: o.x - hw - 0.35, maxX: o.x + hw + 0.35, minZ: o.z - hd - 0.35, maxZ: o.z + hd + 0.35, y: f0 });
+
+    // escada exterior para casas em palafitas (rampa a sul, até à porta)
+    if (o.stilts) {
+      const rl = 4.6;
+      const rz1e = o.z - hd + 0.1, rz0e = rz1e - rl;
+      zones.push({ minX: o.x - 1.0, maxX: o.x + 1.0, minZ: rz0e, maxZ: rz1e, y: f0, rampAxis: "z", y0: baseY, y1: f0 });
+      const steps = 8;
+      for (let i = 0; i < steps; i++) {
+        const st = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, rl / steps + 0.03), matWood);
+        st.position.set(o.x, baseY + ((i + 1) / steps) * (f0 - baseY) - 0.07, rz0e + (i + 0.5) * (rl / steps));
+        g.add(st);
+      }
+      for (const sx of [-1.05, 1.05]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, rl), matTrim);
+        rail.position.set(o.x + sx, baseY + (f0 - baseY) / 2 + 0.5, (rz0e + rz1e) / 2);
+        g.add(rail);
+      }
+    }
+
+    // paredes do rés-do-chão (porta ao sul, no centro)
+    const gap = 0.95;
+    const wallH = o.floors === 2 ? FLOOR_H : 2.75;
+    this.wallBox(g, blockers, matWall, o.x - hw, o.x - gap, o.z - hd, o.z - hd + t, f0 - 0.5, f0 + wallH, walls);
+    this.wallBox(g, blockers, matWall, o.x + gap, o.x + hw, o.z - hd, o.z - hd + t, f0 - 0.5, f0 + wallH, walls);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(gap * 2, Math.max(0.3, wallH - 2.4), t), matTrim);
+    lintel.position.set(o.x, f0 + 2.4 + Math.max(0.3, wallH - 2.4) / 2, o.z - hd + t / 2);
+    g.add(lintel);
+    blockers.push(lintel);
+    this.wallBox(g, blockers, matWall, o.x - hw, o.x + hw, o.z + hd - t, o.z + hd, f0 - 0.5, f0 + wallH, walls);
+    this.wallBox(g, blockers, matWall, o.x - hw, o.x - hw + t, o.z - hd + t, o.z + hd - t, f0 - 0.5, f0 + wallH, walls);
+    this.wallBox(g, blockers, matWall, o.x + hw - t, o.x + hw, o.z - hd + t, o.z + hd - t, f0 - 0.5, f0 + wallH, walls);
+
+    // janelas brilhantes (decorativas)
+    const matGlass = new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.6 });
+    const addWin = (x: number, z: number, ry: number, yy: number) => {
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.24, 0.08), matTrim);
+      fr.position.set(x, yy, z);
+      fr.rotation.y = ry;
+      g.add(fr);
+      const w1 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.0, 0.1), matGlass);
+      w1.position.copy(fr.position);
+      w1.rotation.y = ry;
+      w1.translateZ(0.03);
+      g.add(w1);
+    };
+    addWin(o.x - hw - 0.02, o.z, Math.PI / 2, f0 + 1.75);
+    addWin(o.x + hw + 0.02, o.z, -Math.PI / 2, f0 + 1.75);
+
+    // telhado (desaparece quando entras — vês o interior)
+    let roofG: THREE.Group | null = null;
+    if (o.adobe) {
+      roofG = new THREE.Group();
+      const flat = new THREE.Mesh(new THREE.BoxGeometry(o.w + 0.55, 0.3, o.d + 0.55), matRoof);
+      flat.position.set(o.x, f0 + wallH + 0.15, o.z);
+      roofG.add(flat);
+      const pw = new THREE.Mesh(new THREE.BoxGeometry(o.w + 0.55, 0.5, 0.18), matTrim);
+      pw.position.set(o.x, f0 + wallH + 0.52, o.z - o.d / 2 - 0.2);
+      const pe = pw.clone(); pe.position.z = o.z + o.d / 2 + 0.2;
+      const pn = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.5, o.d + 0.55), matTrim);
+      pn.position.set(o.x - o.w / 2 - 0.2, f0 + wallH + 0.52, o.z);
+      const ps = pn.clone(); ps.position.x = o.x + o.w / 2 + 0.2;
+      roofG.add(pw, pe, pn, ps);
+    } else {
+      roofG = new THREE.Group();
+      const rise = 2.3;
+      const slope = Math.hypot(hw + 0.6, rise);
+      const ang = Math.atan2(rise, hw + 0.6);
+      const r1 = new THREE.Mesh(new THREE.BoxGeometry(slope + 0.3, 0.16, o.d + 1.0), matRoof);
+      r1.position.set(o.x - (hw + 0.6) / 2, f0 + wallH + rise / 2, o.z);
+      r1.rotation.z = ang;
+      const r2 = new THREE.Mesh(new THREE.BoxGeometry(slope + 0.3, 0.16, o.d + 1.0), matRoof);
+      r2.position.set(o.x + (hw + 0.6) / 2, f0 + wallH + rise / 2, o.z);
+      r2.rotation.z = -ang;
+      const ridge = new THREE.Mesh(new THREE.BoxGeometry(o.w + 1.5, 0.26, 0.34), matTrim);
+      ridge.position.set(o.x, f0 + wallH + rise, o.z);
+      roofG.add(r1, r2, ridge);
+      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.5, 0.55), o.stone ? matTrim : new THREE.MeshLambertMaterial({ color: 0x8d8d93 }));
+      chim.position.set(o.x + hw - 1.2, f0 + wallH + rise + 0.4, o.z + 0.8);
+      roofG.add(chim);
+    }
+    g.add(roofG);
+
+    // porta com dobradiça — abre-se à passagem com ranger suave
+    const pivot = new THREE.Group();
+    pivot.position.set(o.x - gap + 0.04, f0, o.z - hd + t / 2);
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(gap * 2 - 0.12, 2.32, 0.1), matWood);
+    panel.position.set(gap - 0.02, 1.16, 0);
+    pivot.add(panel);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), new THREE.MeshBasicMaterial({ color: 0xf5c96b }));
+    knob.position.set(gap * 2 - 0.26, 1.12, 0.09);
+    pivot.add(knob);
+    g.add(pivot);
+
+    // mobília do rés-do-chão
+    this.furnBed(g, o.x + hw - 1.35, o.z + hd - 1.45, f0, o.floors === 2 ? Math.PI : 0);
+    this.furnTable(g, o.x - 1.0, o.z + 0.4, f0);
+    this.furnRug(g, o.x - 0.6, o.z - 1.5, f0 + 0.02, 0x9f4a3e);
+    this.furnShelf(g, o.x - hw + 0.62, o.z + hd - 1.5, f0);
+    this.furnChest(g, o.x + 1.9, o.z - 1.5, f0);
+    if (o.adobe) this.furnJar(g, o.x - hw + 0.8, o.z - hd + 1.0, f0);
+
+    if (o.floors === 2) {
+      // anel de paredes do andar de cima + janelas
+      const b2 = f0 + wallH - 0.28, t2 = f1 + 2.8;
+      this.wallBox(g, blockers, matWall, o.x - hw, o.x + hw, o.z + hd - t, o.z + hd, b2, t2, walls);
+      this.wallBox(g, blockers, matWall, o.x - hw, o.x - hw + t, o.z - hd + t, o.z + hd - t, b2, t2, walls);
+      this.wallBox(g, blockers, matWall, o.x + hw - t, o.x + hw, o.z - hd + t, o.z + hd - t, b2, t2, walls);
+      this.wallBox(g, blockers, matWall, o.x - hw, o.x + hw, o.z - hd, o.z - hd + t, b2, t2, walls);
+      addWin(o.x - hw - 0.02, o.z, Math.PI / 2, f1 + 1.7);
+      addWin(o.x + hw + 0.02, o.z, -Math.PI / 2, f1 + 1.7);
+      // escada: faixa junto à parede norte, sobe de oeste para leste
+      const rampLen = Math.min(5.0, o.w - 2.8);
+      const rx0 = iMinX, rx1 = iMinX + rampLen;
+      const rz0 = iMaxZ - 1.5, rz1 = iMaxZ;
+      // piso superior = tudo exceto a faixa da escada
+      zones.push({ minX: rx1, maxX: iMaxX + t, minZ: iMinZ - t, maxZ: iMaxZ + t, y: f1 });
+      zones.push({ minX: iMinX - t, maxX: rx1, minZ: iMinZ - t, maxZ: rz0, y: f1 });
+      zones.push({ minX: rx0, maxX: rx1, minZ: rz0, maxZ: rz1, y: f1, rampAxis: "x", y0: f0, y1: f1 });
+      // guarda-corpo (deixa a saída da escada livre)
+      this.wallBox(g, blockers, matTrim, rx0, rx1 - 1.15, rz0 - 0.16, rz0, f1 + 0.55, f1 + 1.45, walls);
+      // degraus visuais
+      const steps = 9;
+      for (let i = 0; i < steps; i++) {
+        const st = new THREE.Mesh(new THREE.BoxGeometry(rampLen / steps + 0.03, 0.15, 1.48), matWood);
+        st.position.set(rx0 + (i + 0.5) * (rampLen / steps), f0 + ((i + 1) / steps) * FLOOR_H - 0.08, (rz0 + rz1) / 2);
+        g.add(st);
+      }
+      // mobília do andar de cima
+      this.furnBed(g, o.x + hw - 1.35, o.z - hd + 1.5, f1, Math.PI);
+      this.furnShelf(g, o.x - hw + 0.62, o.z - hd + 1.4, f1);
+      this.furnRug(g, o.x, o.z, f1 + 0.02, 0x3f6f8a);
+      // (luz partilhada com o rés-do-chão — 1 luz por edifício, performance)
+    }
+
+    // luz interior quente
+    const light = new THREE.PointLight(0xffd9a0, 15, o.w + 5, 1.7);
+    light.position.set(o.x, f0 + 2.3, o.z);
+    g.add(light);
+
+    // alpendre da pousada
+    if (o.porch) {
+      const pw = o.w * 0.72, pz0 = o.z - hd - 3.1, pz1 = o.z - hd;
+      const pf = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.22, 3.1), matWood);
+      pf.position.set(o.x, f0 + 0.11, pz0 + 1.55);
+      g.add(pf);
+      zones.push({ minX: o.x - pw / 2, maxX: o.x + pw / 2, minZ: pz0, maxZ: pz1, y: f0 + 0.22 });
+      const postM = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+      for (const px of [-pw / 2, pw / 2]) {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 2.7, 6), postM);
+        p.position.set(o.x + px, f0 + 1.35, pz0 + 0.35);
+        g.add(p);
+      }
+      const awn = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.6, 0.14, 3.6), matRoof);
+      awn.position.set(o.x, f0 + 2.75, pz0 + 1.4);
+      awn.rotation.x = -0.16;
+      g.add(awn);
+      this.furnBed(g, o.x - hw + 1.3, o.z - hd + 1.5, f0, 0);
+    }
+
+    // rótulo do edifício (some ao longe — visão limpa)
+    const lab = makeTextSprite(o.name, { size: 26, bg: true, accent: "#fbbf24", cull: true });
+    lab.scale.set(5.0, 1.25, 1);
+    lab.position.set(o.x, f0 + (o.floors === 2 ? 8.2 : 5.4), o.z);
+    g.add(lab);
+
+    this.scene.add(g);
+    this.buildings.push({
+      id: o.id, name: o.name, desc: o.desc,
+      group: g, cx: o.x, cz: o.z,
+      minX: o.x - hw - 0.6, maxX: o.x + hw + 0.6,
+      minZ: o.z - hd - (o.porch ? 3.6 : 0.6), maxZ: o.z + hd + 0.6,
+      f0Y: f0,
+      zones, walls,
+      roof: roofG, doorPivot: pivot, doorBaseY: f0, doorOpenT: 0,
+      light, camBlockers: blockers,
+    });
+  }
+
+  /** Farol do Litoral: torre com 3 pisos de escadas em zigue-zague + miradouro. */
+  private makeLighthouse(x: number, z: number): void {
+    const g = new THREE.Group();
+    const g0 = groundY(x, z);
+    const F = 2.95;
+    const w = 7.4, hw = w / 2, t = 0.42;
+    const f1 = g0 + F, f2 = g0 + F * 2, fT = g0 + F * 3 + 0.7;
+    const iMinX = x - hw + t, iMaxX = x + hw - t, iMinZ = z - hw + t, iMaxZ = z + hw - t;
+    const zones: FloorZone[] = [];
+    const walls: WallBox[] = [];
+    const blockers: THREE.Mesh[] = [];
+    const matWall = new THREE.MeshLambertMaterial({ color: 0xe8e2d4 });
+    const matRed = new THREE.MeshLambertMaterial({ color: 0xc2452d });
+    const matWood = new THREE.MeshLambertMaterial({ color: 0x8b5e3c });
+    const matFloor = new THREE.MeshLambertMaterial({ color: 0xb09877 });
+
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.8, 1.3, w + 0.8), new THREE.MeshLambertMaterial({ color: 0x9b9186 }));
+    slab.position.set(x, g0 - 0.62, z);
+    g.add(slab);
+    zones.push({ minX: x - hw - 0.4, maxX: x + hw + 0.4, minZ: z - hw - 0.4, maxZ: z + hw + 0.4, y: g0 });
+
+    // faixas vermelhas exteriores (visual de farol)
+    for (const yy of [g0 + 1.0, g0 + 4.2, g0 + 7.4]) {
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(hw + 0.09, hw + 0.09, 0.85, 12), matRed);
+      band.position.set(x, yy, z);
+      g.add(band);
+    }
+
+    // paredes altas (sul com porta)
+    const gap = 0.95;
+    const topAll = fT + 1.05;
+    this.wallBox(g, blockers, matWall, x - hw, x - gap, z - hw, z - hw + t, g0 - 0.5, topAll, walls);
+    this.wallBox(g, blockers, matWall, x + gap, x + hw, z - hw, z - hw + t, g0 - 0.5, topAll, walls);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(gap * 2, 0.7, t), matRed);
+    lintel.position.set(x, g0 + 2.75, z - hw + t / 2);
+    g.add(lintel);
+    blockers.push(lintel);
+    this.wallBox(g, blockers, matWall, x - hw, x + hw, z + hw - t, z + hw, g0 - 0.5, topAll, walls);
+    this.wallBox(g, blockers, matWall, x - hw, x - hw + t, z - hw + t, z + hw - t, g0 - 0.5, topAll, walls);
+    this.wallBox(g, blockers, matWall, x + hw - t, x + hw, z - hw + t, z + hw - t, g0 - 0.5, topAll, walls);
+
+    const matGlass = new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.6 });
+    for (const yy of [g0 + 1.8, f1 + 1.8, f2 + 1.8]) {
+      const w1 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.9, 1.0), matGlass);
+      w1.position.set(x - hw - 0.02, yy, z);
+      g.add(w1);
+      const w2 = w1.clone();
+      w2.position.x = x + hw + 0.02;
+      g.add(w2);
+    }
+
+    // piso 0
+    const fl0 = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.2, w - 0.1), matFloor);
+    fl0.position.set(x, g0 + 0.1, z);
+    g.add(fl0);
+
+    // escadas em zigue-zague (norte → sul → norte)
+    const rl = 4.3;
+    // A: piso 0 → 1, faixa norte, sobe para leste
+    const ax0 = iMinX, ax1 = iMinX + rl, az0 = iMaxZ - 1.5, az1 = iMaxZ;
+    zones.push({ minX: ax1, maxX: iMaxX + t, minZ: iMinZ - t, maxZ: iMaxZ + t, y: f1 });
+    zones.push({ minX: iMinX - t, maxX: ax1, minZ: iMinZ - t, maxZ: az0, y: f1 });
+    zones.push({ minX: ax0, maxX: ax1, minZ: az0, maxZ: az1, y: f1, rampAxis: "x", y0: g0, y1: f1 });
+    this.wallBox(g, blockers, matRed, ax0, ax1 - 1.1, az0 - 0.16, az0, f1 + 0.5, f1 + 1.35, walls);
+    // B: piso 1 → 2, faixa sul, sobe para oeste
+    const bx0 = iMaxX - rl, bx1 = iMaxX, bz0 = iMinZ - t, bz1 = iMinZ + 1.5;
+    zones.push({ minX: iMinX - t, maxX: bx0, minZ: iMinZ - t, maxZ: iMaxZ + t, y: f2 });
+    zones.push({ minX: bx0, maxX: iMaxX + t, minZ: bz1, maxZ: iMaxZ + t, y: f2 });
+    zones.push({ minX: bx0, maxX: bx1, minZ: bz0, maxZ: bz1, y: f2, rampAxis: "x", y0: f2, y1: f1 });
+    this.wallBox(g, blockers, matRed, bx0 + 1.1, bx1, bz1, bz1 + 0.16, f2 + 0.5, f2 + 1.35, walls);
+    // C: piso 2 → miradouro, faixa norte outra vez
+    const cx0 = iMinX, cx1 = iMinX + rl, cz0 = iMaxZ - 1.5, cz1 = iMaxZ;
+    zones.push({ minX: cx1, maxX: iMaxX + t, minZ: iMinZ - t, maxZ: iMaxZ + t, y: fT });
+    zones.push({ minX: iMinX - t, maxX: cx1, minZ: iMinZ - t, maxZ: cz0, y: fT });
+    zones.push({ minX: cx0, maxX: cx1, minZ: cz0, maxZ: cz1, y: fT, rampAxis: "x", y0: f2, y1: fT });
+    this.wallBox(g, blockers, matRed, cx0, cx1 - 1.1, cz0 - 0.16, cz0, fT + 0.5, fT + 1.35, walls);
+
+    // degraus visuais das 3 rampas
+    for (const [yA, yB, x0, x1, zc] of [[g0, f1, ax0, ax1, (az0 + az1) / 2], [f1, f2, bx0, bx1, (bz0 + bz1) / 2], [f2, fT, cx0, cx1, (cz0 + cz1) / 2]] as [number, number, number, number, number][]) {
+      const steps = 8;
+      for (let i = 0; i < steps; i++) {
+        const st = new THREE.Mesh(new THREE.BoxGeometry(rl / steps + 0.03, 0.15, 1.48), matWood);
+        const tt = (i + 0.5) / steps;
+        st.position.set(x0 + (i + 0.5) * (rl / steps), yA + tt * (yB - yA) - 0.08, zc);
+        g.add(st);
+      }
+    }
+
+    // mobília mínima por piso
+    this.furnChest(g, x + hw - 1.1, z + hw - 1.2, g0);
+    this.furnShelf(g, x - hw + 0.7, z + hw - 1.3, f1);
+    this.furnTable(g, x, z, f2);
+
+    // lanterna no topo
+    const lampLight = new THREE.PointLight(0xfff2c0, 40, 30, 1.5);
+    lampLight.position.set(x, fT + 2.3, z);
+    g.add(lampLight);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), new THREE.MeshBasicMaterial({ color: 0xfff2c0 }));
+    bulb.position.set(x, fT + 2.3, z);
+    g.add(bulb);
+    for (const [px, pz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as [number, number][]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.7, 6), matWood);
+      post.position.set(x + px * 1.4, fT + 0.85, z + pz * 1.4);
+      g.add(post);
+    }
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.3, 10), matRed);
+    cap.position.set(x, fT + 3.7, z);
+    g.add(cap);
+
+    const lab = makeTextSprite("Farol das Ondas", { size: 26, bg: true, accent: "#38bdf8", cull: true });
+    lab.scale.set(5.4, 1.35, 1);
+    lab.position.set(x, fT + 6.0, z);
+    g.add(lab);
+
+    this.scene.add(g);
+    this.buildings.push({
+      id: "farol", name: "Farol das Ondas", desc: "3 pisos e miradouro no topo — a melhor vista do mundo",
+      group: g, cx: x, cz: z,
+      minX: x - hw - 0.6, maxX: x + hw + 0.6, minZ: z - hw - 0.6, maxZ: z + hw + 0.6,
+      f0Y: g0,
+      zones, walls,
+      roof: null, doorPivot: null, doorBaseY: g0, doorOpenT: 0,
+      light: lampLight, camBlockers: blockers,
+    });
+  }
+
+  // ── v8: mobília dos interiores ──
+
+  private furnBed(g: THREE.Group, x: number, z: number, y: number, ry: number): void {
+    const b = new THREE.Group();
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.42, 2.15), new THREE.MeshLambertMaterial({ color: 0x6b4a2f }));
+    frame.position.y = 0.21;
+    const mat = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.2, 1.95), new THREE.MeshLambertMaterial({ color: 0xe7e0d2 }));
+    mat.position.y = 0.5;
+    const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.16, 0.42), new THREE.MeshLambertMaterial({ color: 0xfdf6e9 }));
+    pillow.position.set(0, 0.62, -0.72);
+    const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.1, 1.1), new THREE.MeshLambertMaterial({ color: 0xb4552d }));
+    blanket.position.set(0, 0.6, 0.35);
+    b.add(frame, mat, pillow, blanket);
+    b.position.set(x, y, z);
+    b.rotation.y = ry;
+    g.add(b);
+  }
+
+  private furnTable(g: THREE.Group, x: number, z: number, y: number): void {
+    const tb = new THREE.Group();
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.78, 6), new THREE.MeshLambertMaterial({ color: 0x5c4033 }));
+    leg.position.y = 0.39;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 10), new THREE.MeshLambertMaterial({ color: 0x8b5e3c }));
+    top.position.y = 0.8;
+    const mug1 = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.14, 8), new THREE.MeshLambertMaterial({ color: 0x3f6f8a }));
+    mug1.position.set(0.18, 0.9, 0.12);
+    const mug2 = mug1.clone();
+    mug2.position.set(-0.2, 0.9, -0.1);
+    tb.add(leg, top, mug1, mug2);
+    tb.position.set(x, y, z);
+    g.add(tb);
+  }
+
+  private furnRug(g: THREE.Group, x: number, z: number, y: number, color: number): void {
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }));
+    rug.rotateX(-Math.PI / 2);
+    rug.position.set(x, y, z);
+    g.add(rug);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.05, 18), new THREE.MeshBasicMaterial({ color: 0xf5c96b, transparent: true, opacity: 0.5 }));
+    ring.rotateX(-Math.PI / 2);
+    ring.position.set(x, y + 0.01, z);
+    g.add(ring);
+  }
+
+  private furnShelf(g: THREE.Group, x: number, z: number, y: number): void {
+    const s = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.7, 1.3), new THREE.MeshLambertMaterial({ color: 0x6b4a2f }));
+    body.position.y = 0.85;
+    s.add(body);
+    const bookCols = [0xb4552d, 0x3f6f8a, 0x9f4a3e, 0x4a7c59, 0xf5c96b];
+    for (let i = 0; i < 5; i++) {
+      const bk = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.12), new THREE.MeshLambertMaterial({ color: bookCols[i] }));
+      bk.position.set(0.24, 0.45 + (i % 2) * 0.62, -0.45 + i * 0.22);
+      s.add(bk);
+    }
+    s.position.set(x, y, z);
+    g.add(s);
+  }
+
+  private furnChest(g: THREE.Group, x: number, z: number, y: number): void {
+    const c = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 0.62), new THREE.MeshLambertMaterial({ color: 0x8a5a2b }));
+    body.position.y = 0.28;
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.18, 0.66), new THREE.MeshLambertMaterial({ color: 0x6e4520 }));
+    lid.position.y = 0.62;
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.99, 0.6, 0.14), new THREE.MeshLambertMaterial({ color: 0xf5c96b }));
+    band.position.y = 0.3;
+    c.add(body, lid, band);
+    c.position.set(x, y, z);
+    g.add(c);
+  }
+
+  private furnJar(g: THREE.Group, x: number, z: number, y: number): void {
+    const j = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.62, 8), new THREE.MeshLambertMaterial({ color: 0xb0703c }));
+    j.position.set(x, y + 0.31, z);
+    g.add(j);
+    const j2 = j.clone();
+    j2.position.set(x + 0.55, y + 0.22, z + 0.3);
+    j2.scale.setScalar(0.7);
+    g.add(j2);
+  }
+
+  // ── v8: física dos edifícios ──
+
+  /** Altura efetiva do chão: terreno + pisos e rampas dos edifícios. */
+  private groundHeightAt(x: number, z: number): number {
+    let g = groundY(x, z);
+    if (this.buildings.length === 0) return g;
+    const py = this.pos ? this.pos.y : g;
+    for (const b of this.buildings) {
+      if (x < b.minX - 1 || x > b.maxX + 1 || z < b.minZ - 1 || z > b.maxZ + 1) continue;
+      for (const zn of b.zones) {
+        if (x < zn.minX || x > zn.maxX || z < zn.minZ || z > zn.maxZ) continue;
+        let y = zn.y;
+        if (zn.rampAxis === "x") {
+          const tt = (x - zn.minX) / Math.max(0.001, zn.maxX - zn.minX);
+          y = (zn.y0 ?? zn.y) + ((zn.y1 ?? zn.y) - (zn.y0 ?? zn.y)) * tt;
+        } else if (zn.rampAxis === "z") {
+          const tt = (z - zn.minZ) / Math.max(0.001, zn.maxZ - zn.minZ);
+          y = (zn.y0 ?? zn.y) + ((zn.y1 ?? zn.y) - (zn.y0 ?? zn.y)) * tt;
+        }
+        if (y <= py + 0.8 && y > g) g = y;
+      }
+    }
+    return g;
+  }
+
+  /** Empurra o herói para fora das paredes (colisão AABB). */
+  private collideWalls(): void {
+    const py = this.pos.y;
+    const r = 0.42;
+    for (const b of this.buildings) {
+      if (this.pos.x < b.minX - 1.5 || this.pos.x > b.maxX + 1.5 || this.pos.z < b.minZ - 1.5 || this.pos.z > b.maxZ + 1.5) continue;
+      for (const w of b.walls) {
+        if (py + 1.6 <= w.base || py >= w.top) continue;
+        if (this.pos.x > w.minX - r && this.pos.x < w.maxX + r && this.pos.z > w.minZ - r && this.pos.z < w.maxZ + r) {
+          const dxL = this.pos.x - (w.minX - r);
+          const dxR = (w.maxX + r) - this.pos.x;
+          const dzL = this.pos.z - (w.minZ - r);
+          const dzR = (w.maxZ + r) - this.pos.z;
+          const m = Math.min(dxL, dxR, dzL, dzR);
+          if (m === dxL) this.pos.x = w.minX - r;
+          else if (m === dxR) this.pos.x = w.maxX + r;
+          else if (m === dzL) this.pos.z = w.minZ - r;
+          else this.pos.z = w.maxZ + r;
+        }
+      }
+    }
+  }
+
+  /** Edifício cujo terreno ocupa esta posição (para mobs não nascerem dentro). */
+  private insideFootprint(x: number, z: number): Building | null {
+    for (const b of this.buildings) {
+      if (x > b.minX && x < b.maxX && z > b.minZ && z < b.maxZ) return b;
+    }
+    return null;
+  }
+
+  // ── v8: portas automáticas, telhados, zona segura e descoberta ──
+
+  private updateBuildings(dt: number): void {
+    let inside: Building | null = null;
+    for (const b of this.buildings) {
+      const inF = this.pos.x > b.minX && this.pos.x < b.maxX && this.pos.z > b.minZ && this.pos.z < b.maxZ && this.pos.y > b.f0Y - 0.9;
+      if (b.doorPivot) {
+        const dx = this.pos.x - b.doorPivot.position.x;
+        const dz = this.pos.z - b.doorPivot.position.z;
+        const near = dx * dx + dz * dz < 13;
+        const was = b.doorOpenT;
+        b.doorOpenT = Math.min(1, Math.max(0, b.doorOpenT + (near ? dt * 3.2 : -dt * 2.0)));
+        if ((was <= 0.02 && b.doorOpenT > 0.02) || (was >= 0.98 && b.doorOpenT < 0.98)) worldAudio.play("door");
+        const e = b.doorOpenT * b.doorOpenT * (3 - 2 * b.doorOpenT);
+        b.doorPivot.rotation.y = -2.05 * e;
+      }
+      if (b.roof) b.roof.visible = !inF;
+      if (b.light) {
+        // v8: luz só ligada perto do herói (histerese 40/50) — performance
+        const d = Math.hypot(this.pos.x - b.cx, this.pos.z - b.cz);
+        const want = d < 40 || (b.light.visible && d < 50);
+        if (b.light.visible !== want) b.light.visible = want;
+        b.light.intensity = inF ? 18 : 14;
+      }
+      if (inF) inside = b;
+    }
+    if (inside !== this.curInside) {
+      this.curInside = inside;
+      if (inside) {
+        this.opts.onEvent({ type: "inside", name: inside.name, desc: inside.desc, on: true });
+        this.opts.onEvent({ type: "quest", kind: "home" });
+        if (!this.insideSeen.has(inside.id)) {
+          this.insideSeen.add(inside.id);
+          worldAudio.play("discover");
+          this.discoverFx();
+          this.opts.onEvent({ type: "discover", id: "bld-" + inside.id, name: inside.name, emoji: "🏠", xp: 45 });
+        }
+      } else {
+        this.opts.onEvent({ type: "inside", name: "", desc: "", on: false });
+      }
+    }
+    // descanso: dentro de casa recupera vida depressa (zona segura)
+    if (this.curInside && !this.dead && this.hp < this.opts.stats.maxHp) {
+      this.hp = Math.min(this.opts.stats.maxHp, this.hp + this.opts.stats.maxHp * 0.05 * dt);
+      this.insideRegenT += dt;
+      if (this.insideRegenT >= 1.2) {
+        this.insideRegenT = 0;
+        this.opts.onEvent({ type: "hp", hp: this.hp, maxHp: this.opts.stats.maxHp });
+        this.floatText(this.pos.clone().add(new THREE.Vector3(0, 2.1, 0)), "+ descanso", "#34d399", 0.8);
+      }
+    }
+  }
+
+  // ── v8: API pública para o mapa e testes ──
+
+  getBuildingsInfo(): { count: number; names: string[]; inside: string | null; visited: number } {
+    return {
+      count: this.buildings.length,
+      names: this.buildings.map((b) => b.name),
+      inside: this.curInside ? this.curInside.name : null,
+      visited: this.insideSeen.size,
+    };
+  }
+
+  /** Teleporta o herói para uma posição (usado por testes e futuras viagens rápidas). */
+  warpTo(x: number, z: number): void {
+    // v8: teleportar = deixar a arena (evita o auto-exit no meio do warp)
+    if (this.arena.active) this.endArena("quit");
+    // v8: preserva a altura atual como referência — permite teleportes
+    // dentro do mesmo piso e subir rampas com passos curtos; pisos
+    // muito acima continuam a exigir subir pela escada (anti-queda)
+    this.pos.x = x;
+    this.pos.z = z;
+    const gy = this.groundHeightAt(x, z);
+    this.pos.y = gy + 0.4;
+    this.vy = 0;
+    this.onGround = true;
+    this.player.position.copy(this.pos);
+    this.ringEffectAt(new THREE.Vector3(x, this.pos.y + 0.1, z), 0x38bdf8, 3.2);
   }
 
   // ── v4: ARENA DAS ONDAS (sobrevivência) ───────────────────
@@ -2164,6 +2834,9 @@ export class WorldEngine {
   }
 
   private spawnMob(tier: number, x: number, z: number, boss = false, isGuard = false, isArena = false): void {
+    // v8: não nascer dentro de edifícios — empurra para fora
+    const fb = this.insideFootprint(x, z);
+    if (fb) { x = fb.maxX + 4 + Math.random() * 3; z = fb.maxZ + 4 + Math.random() * 3; }
     const t = MOB_TIERS[tier];
     const g = new THREE.Group();
     const scale = boss ? 2.4 : isGuard ? t.scale * 1.35 : t.scale;
@@ -2275,12 +2948,27 @@ export class WorldEngine {
 
   // ── Objetos de plataforma (populados pelo React) ───────────
 
+  // v8: espelho dos objetos da plataforma para atualização AO VIVO
+  private platInteractables: Interactable[] = [];
+
+  /** Remove os objetos da plataforma atuais (antes de recriar em tempo real). */
+  clearPlatformObjects(): void {
+    for (const it of this.platInteractables) {
+      this.scene.remove(it.group);
+      const idx = this.interactables.indexOf(it);
+      if (idx >= 0) this.interactables.splice(idx, 1);
+    }
+    this.platInteractables = [];
+  }
+
   spawnPlatformObjects(data: {
     raffles: { id: string; title: string; prizeTitle: string }[];
     contests: { id: string; title: string; prize?: string }[];
     vouchers: { id: string; code: string; label: string }[];
     assets: { id: string; title: string; value: number; modality: string }[];
   }): void {
+    // v8: pode ser chamado de novo em tempo real — limpa os anteriores
+    this.clearPlatformObjects();
     const nR = Math.min(data.raffles.length, 8);
     for (let i = 0; i < nR; i++) {
       const r = data.raffles[i];
@@ -2311,6 +2999,9 @@ export class WorldEngine {
       const x = (i - (nV - 1) / 2) * 3.6;
       this.addChest(v.id, x, 52, v);
     }
+
+    // v8: snapshot dos objetos criados (para atualização ao vivo)
+    this.platInteractables = this.interactables.filter((i) => ["raffle", "contest", "voucher", "asset"].includes(i.kind));
   }
 
   private addCrystal(id: string, title: string, x: number, z: number, color: number, emoji: string): void {
@@ -3452,6 +4143,7 @@ export class WorldEngine {
     pois: { x: number; z: number; k: string }[];
     players: { x: number; z: number }[];
     marks: { id: string; x: number; z: number; found: boolean }[];
+    buildings: { x: number; z: number; visited: boolean }[];
   } {
     return {
       px: this.pos.x, pz: this.pos.z, yaw: this.camYaw,
@@ -3463,6 +4155,7 @@ export class WorldEngine {
       ],
       players: [...this.remotes.values()].map((r) => ({ x: r.group.position.x, z: r.group.position.z })),
       marks: LANDMARKS.map((l) => ({ id: l.id, x: l.x, z: l.z, found: this.discovered.has(l.id) })),
+      buildings: this.buildings.map((b) => ({ x: b.cx, z: b.cz, visited: this.insideSeen.has(b.id) })),
     };
   }
 
@@ -3507,6 +4200,7 @@ export class WorldEngine {
     this.lastT = t;
 
     this.updatePlayer(dt);
+    this.updateBuildings(dt); // v8: portas, telhados, zona segura
     this.updateMobs(t, dt);
     this.updateProjectiles(dt);
     this.updateOrbs(dt);
@@ -3526,6 +4220,13 @@ export class WorldEngine {
 
     for (let i = 0; i < 3; i++) this.skillCds[i] = Math.max(0, this.skillCds[i] - dt);
     this.atkCd = Math.max(0, this.atkCd - dt);
+
+    // v8: culling de rótulos/ícones distantes — visão limpa
+    this.cullT += dt;
+    if (this.cullT > 0.4) {
+      this.cullT = 0;
+      for (const c of this.cullables) c.spr.visible = Math.hypot(this.pos.x - c.x, this.pos.z - c.z) < 58;
+    }
 
     // regeneração fora de combate + círculo de cura
     const now = performance.now();
@@ -3686,7 +4387,8 @@ export class WorldEngine {
             this.shake(0.35);
             worldAudio.play("boom");
             const dP = Math.hypot(this.pos.x - me.x, this.pos.z - me.z);
-            if (!this.dead && dP < 2.8 && performance.now() > this.invulnUntil) {
+            // v8: dentro de uma casa o telhado protege dos meteoros
+            if (!this.dead && !this.curInside && dP < 2.8 && performance.now() > this.invulnUntil) {
               const dmg = Math.round(this.opts.stats.maxHp * 0.08);
               this.hp -= dmg;
               this.lastHitAt = performance.now();
@@ -3752,8 +4454,11 @@ export class WorldEngine {
       this.pos.z *= WORLD_RADIUS / r;
     }
 
+    // v8: colisão com as paredes dos edifícios
+    this.collideWalls();
+
     // gravidade / salto
-    const gy = groundY(this.pos.x, this.pos.z);
+    const gy = this.groundHeightAt(this.pos.x, this.pos.z);
     if (!this.onGround) {
       this.vy -= 16 * dt;
       this.pos.y += this.vy * dt;
@@ -3792,11 +4497,14 @@ export class WorldEngine {
       const aggro = m.arena ? 200 : m.isBoss ? 13 : m.isGuard ? 10 : 8.5;
       const spd = now < m.slowUntil ? m.speed * 0.4 : m.speed;
 
+      // v8: barra de HP só quando faz falta (ferido/aggro e perto) — visão limpa
+      m.hpBar.visible = (m.hp < m.maxHp || m.state === "chase") && distP < 18;
+
       if (m.state === "idle") {
         if (m.arena) {
           // mobs da arena nascem já agressivos
           m.state = "chase";
-        } else if (distP < aggro && !this.dead && Math.hypot(this.pos.x, this.pos.z) > (m.isGuard ? 12 : PVP_SAFE_RADIUS)) {
+        } else if (distP < aggro && !this.dead && !this.curInside && Math.hypot(this.pos.x, this.pos.z) > (m.isGuard ? 12 : PVP_SAFE_RADIUS)) {
           m.state = "chase";
           // v3: anel de aviso + som quando o inimigo te nota
           this.ringEffectAt(m.group.position.clone().add(new THREE.Vector3(0, 0.15, 0)), m.isBoss ? 0xdc2626 : 0xf97316, m.isBoss ? 4.5 : 2.8);
@@ -3808,7 +4516,10 @@ export class WorldEngine {
       }
 
       if (m.state === "chase") {
-        if (!m.arena && (this.dead || distP > aggro + 9 || Math.hypot(gp.x, gp.z) < (m.isGuard ? 13 : 20))) {
+        // v8: o herói entrou numa casa — os bugs não entram (zona segura)
+        if (!m.arena && this.curInside) {
+          m.state = "return";
+        } else if (!m.arena && (this.dead || distP > aggro + 9 || Math.hypot(gp.x, gp.z) < (m.isGuard ? 13 : 20))) {
           m.state = "return";
         } else if (distP < 1.7) {
           // atacar
@@ -3856,6 +4567,9 @@ export class WorldEngine {
 
   private hurtPlayer(rawDmg: number, m: Mob): void {
     if (this.dead || performance.now() < this.invulnUntil) return;
+    // v8: ZONA SEGURA — dentro de um edifício os bugs não conseguem ferir
+    // (jogadores em PvP continuam a poder — receivePvpHit é separado)
+    if (this.curInside) return;
     // v6: DEFESA — def reduz o dano (3% por ponto, máx 60%);
     // o modo GUARDA bloqueia +40% extra (máx total 78%)
     const defPct = Math.min(0.6, (this.opts.stats.def || 0) * 0.03);
@@ -4336,11 +5050,29 @@ export class WorldEngine {
   }
 
   private updateCamera(dt: number): void {
+    const head = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
     const target = new THREE.Vector3(
       this.pos.x + Math.sin(this.camYaw) * this.camDist,
       this.pos.y + 5.5 + this.camDist * 0.32,
       this.pos.z + Math.cos(this.camYaw) * this.camDist
     );
+    // v8: a câmara desliza junto às paredes em vez de as atravessar
+    if (this.camBlockerList.length > 0) {
+      let nearB = false;
+      for (const b of this.buildings) {
+        if (Math.abs(this.pos.x - b.cx) < 16 && Math.abs(this.pos.z - b.cz) < 16) { nearB = true; break; }
+      }
+      if (nearB) {
+        const dir = target.clone().sub(head);
+        const maxD = dir.length();
+        this.ray.set(head, dir.normalize());
+        this.ray.far = maxD + 0.5;
+        const hits = this.ray.intersectObjects(this.camBlockerList, false);
+        if (hits.length > 0 && hits[0].distance < maxD) {
+          target.copy(head).addScaledVector(dir, Math.max(2.0, hits[0].distance - 0.45));
+        }
+      }
+    }
     this.camPos.lerp(target, Math.min(1, dt * 5));
     this.camera.position.copy(this.camPos);
     if (this.shakeAmp > 0.001) {

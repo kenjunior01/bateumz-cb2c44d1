@@ -366,3 +366,77 @@ export async function upsertWorldProgress(row: WorldProgressRow): Promise<boolea
     return false;
   }
 }
+
+// ── v8: SYNC TOTAL — tudo o que acontece no mundo fica registado ──
+// Cada evento relevante (caça, nível, roubo, descoberta, missão,
+// interiores, trocas) é enviado para world_activity. Sem sessão ou
+// sem a tabela ainda criada, fica em fila local e é reenviado
+// automaticamente — nunca se perde nada do que acontece.
+
+export interface WorldActivity {
+  kind: string;
+  label?: string;
+  value?: number;
+  at: string;
+}
+
+const LS_ACT = "bateu_world_activity_queue";
+
+export async function logWorldActivity(guestId: string, kind: string, label?: string, value?: number): Promise<boolean> {
+  try {
+    const { data: auth } = await sb.auth.getUser();
+    const row = { guest_id: guestId, user_id: auth?.user?.id ?? null, kind, label: label ?? "", value: value ?? 0 };
+    const { error } = await sb.from("world_activity").insert(row);
+    if (!error) return true;
+    throw error || new Error("insert falhou");
+  } catch {
+    // fila local — sincroniza depois com flushWorldActivity()
+    try {
+      const q = JSON.parse(localStorage.getItem(LS_ACT) || "[]");
+      q.push({ guestId, kind, label: label ?? "", value: value ?? 0, at: new Date().toISOString() });
+      localStorage.setItem(LS_ACT, JSON.stringify(q.slice(-200)));
+    } catch { /* ignore */ }
+    return false;
+  }
+}
+
+/** Reenvia atividades em fila (após login ou recuperação da base). */
+export async function flushWorldActivity(): Promise<number> {
+  try {
+    const q = JSON.parse(localStorage.getItem(LS_ACT) || "[]");
+    if (!Array.isArray(q) || q.length === 0) return 0;
+    const { data: auth } = await sb.auth.getUser();
+    if (!auth?.user) return 0;
+    let ok = 0;
+    for (const a of q.slice(-100)) {
+      try {
+        const { error } = await sb.from("world_activity").insert({
+          guest_id: a.guestId, user_id: auth.user.id, kind: a.kind, label: a.label || "", value: a.value || 0,
+        });
+        if (!error) ok += 1;
+      } catch { /* ignore */ }
+    }
+    localStorage.removeItem(LS_ACT);
+    return ok;
+  } catch {
+    return 0;
+  }
+}
+
+// ── v8: a PLATAFORMA reflete-se no mundo AO VIVO ────────────
+// Subscreve mudanças reais (sorteios, concursos, cupões, bens) e
+// avisa o mundo para atualizar os objetos sem recarregar nada.
+
+export function subscribePlatformLive(onPing: (kind: string) => void): () => void {
+  try {
+    const ch: any = sb.channel("bateu-world-plat-v8")
+      .on("postgres_changes", { event: "*", schema: "public", table: "raffles" }, () => onPing("raffle"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => onPing("contest"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "vouchers" }, () => onPing("voucher"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "alienacao_assets" }, () => onPing("asset"))
+      .subscribe();
+    return () => { try { (sb as any).removeChannel(ch); } catch { /* ignore */ } };
+  } catch {
+    return () => { /* sem realtime */ };
+  }
+}

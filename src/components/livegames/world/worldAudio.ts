@@ -15,7 +15,9 @@ type SfxName =
   // v6 — defesa e mapa
   | "block" | "waypoint" | "region"
   // v7 — acontecimentos do mundo
-  | "boom" | "event";
+  | "boom" | "event"
+  // v8 — interiores
+  | "door";
 
 class WorldAudio {
   private ctx: AudioContext | null = null;
@@ -191,6 +193,12 @@ class WorldAudio {
         // fanfarra de acontecimento do mundo
         [392, 523, 659, 784].forEach((f, i) => this.tone(f, 0.14, "square", 0.1, undefined, i * 0.09));
         this.noise(0.3, 0.05, 3500, 0.1);
+        break;
+      // ── v8 ──
+      case "door":
+        // porto de madeira a abrir (creak)
+        this.tone(210, 0.34, "sawtooth", 0.05, 305);
+        this.tone(133, 0.4, "triangle", 0.06, 176, 0.05);
         break;
     }
   }

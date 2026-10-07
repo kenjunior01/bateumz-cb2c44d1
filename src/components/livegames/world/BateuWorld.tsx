@@ -27,7 +27,7 @@ import {
   Backpack, Settings, Camera, Music, PawPrint, Cloud,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, type LootItem } from "./worldEngine";
+import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, BUILDINGS, type LootItem } from "./worldEngine";
 import { worldAudio } from "./worldAudio";
 import { AvatarPreview, AvatarSwatches } from "./AvatarEditor";
 import { defaultAvatar, randomAvatar, parseAvatarKey, type AvatarConfig } from "./avatar";
@@ -35,6 +35,7 @@ import {
   fetchPlatformData, upsertCharacter, setCharacterOffline,
   worldRoute, fmtMZN, voucherLabel, MODALITY_LABEL, exchangeWorldPoints,
   fetchServerChar, flushPendingExchanges, claimWorldVoucher, upsertWorldProgress,
+  logWorldActivity, flushWorldActivity, subscribePlatformLive,
   type PlatformData,
 } from "./platformSync";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,7 +64,7 @@ interface Char {
   streak: number;
   lastDaily: string;
   vouchers: { id: string; code: string; label: string }[];
-  quests: { date: string; kills: number; chest: number; visit: number; steal: number; waves: number; cK: boolean; cC: boolean; cV: boolean; cS: boolean; cW: boolean; item: number; duel: number; atk: number; cI: boolean; cD: boolean; cA: boolean };
+  quests: { date: string; kills: number; chest: number; visit: number; steal: number; waves: number; cK: boolean; cC: boolean; cV: boolean; cS: boolean; cW: boolean; item: number; duel: number; atk: number; cI: boolean; cD: boolean; cA: boolean; home: number; cH: boolean };
   // v2
   pts: number;         // Pontos de Troféu (economia do mundo)
   discoveries: string[];
@@ -123,7 +124,7 @@ function newChar(name: string, classId: number, avatar?: AvatarConfig): Char {
     allocAtk: 0, allocHp: 0, allocSpd: 0, allocDef: 0,
     kills: 0, deaths: 0, streak: 0,
     lastDaily: "", vouchers: [],
-    quests: { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false },
+    quests: { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false },
     pts: 0, discoveries: [], sagaIdx: 0,
     saga: { kills: 0, bosses: 0, chests: 0, steals: 0, discovers: 0 },
     chal: { date: todayStr(), c1: false, c2: false },
@@ -147,7 +148,7 @@ function migrateBase(old: any): Char {
   });
   if (old.saga) c.saga = { ...c.saga, ...old.saga };
   if (old.quests?.date === todayStr()) {
-    c.quests = { ...c.quests, ...old.quests, waves: 0, cW: false };
+    c.quests = { ...c.quests, ...old.quests, waves: 0, cW: false, home: old.quests.home || 0, cH: !!old.quests.cH };
   }
   return c;
 }
@@ -202,7 +203,7 @@ function loadChar(): Char | null {
     const c = JSON.parse(raw) as Char;
     if (!c?.name || !c?.uid) return null;
     if (c.quests?.date !== todayStr()) {
-      c.quests = { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false };
+      c.quests = { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false };
     }
     // v7: garantir campos novos em saves v6
     c.quests.item = c.quests.item || 0;
@@ -211,6 +212,9 @@ function loadChar(): Char | null {
     c.quests.cI = !!c.quests.cI;
     c.quests.cD = !!c.quests.cD;
     c.quests.cA = !!c.quests.cA;
+    // v8: missão de interiores
+    c.quests.home = c.quests.home || 0;
+    c.quests.cH = !!c.quests.cH;
     if (c.chal?.date !== todayStr()) {
       c.chal = { date: todayStr(), c1: false, c2: false };
     }
@@ -324,6 +328,11 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   // v7 — Acontecimento do Mundo ativo (chip com contagem)
   const [worldEvent, setWorldEvent] = useState<{ kind: string; name: string; emoji: string; until: number } | null>(null);
   const [eventNow, setEventNow] = useState(Date.now());
+
+  // v8 — interiores (chip "Estás em") + ticker da plataforma ao vivo
+  const [inside, setInside] = useState<{ name: string; desc: string } | null>(null);
+  const [ticker, setTicker] = useState<{ id: number; msg: string }[]>([]);
+  const tickerId = useRef(0);
   useEffect(() => {
     if (!worldEvent) return;
     const iv = setInterval(() => setEventNow(Date.now()), 500);
@@ -567,6 +576,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         showBanner({ kind: "levelup", emoji: "⚡", title: `NÍVEL ${level}`, sub: `${titleFor(level)} · +3 pontos de atributo` });
         engineRef.current?.levelFx();
         scoreRef.current?.("Bateu World", level * 1000);
+        logWorldActivity(charRef.current?.uid || "anon", "level", `Subiu para o nível ${level}`, level);
         // v4: o companheiro alado junta-se no nível 5
         if (level >= 5 && !petToastDone.current) {
           petToastDone.current = true;
@@ -603,6 +613,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     persist(c);
     setChar(c);
     setPhase("world");
+    // v8: sincroniza atividades em fila de sessões anteriores
+    flushWorldActivity();
   }, [persist, pushToast, user]);
 
   // ── Ações do Banco de Pontos ───────────────────────────────
@@ -748,6 +760,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           case "near":
             setNear(ev.label);
             break;
+          case "inside":
+            // v8: entrou/saiu de um interior (casa, farol, fortim...)
+            setInside(ev.on ? { name: ev.name, desc: ev.desc } : null);
+            break;
           case "open":
             if (ev.kind === "arena") {
               setCard({ kind: "arena", id: "arena" });
@@ -759,14 +775,17 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             setChar((p) => {
               if (!p) return p;
               const q = { ...p.quests };
-              if (q.date !== todayStr()) { q.date = todayStr(); q.kills = 0; q.chest = 0; q.visit = 0; q.steal = 0; q.waves = 0; q.item = 0; q.duel = 0; q.atk = 0; }
+              if (q.date !== todayStr()) { q.date = todayStr(); q.kills = 0; q.chest = 0; q.visit = 0; q.steal = 0; q.waves = 0; q.item = 0; q.duel = 0; q.atk = 0; q.home = 0; }
               const saga = { ...p.saga };
               if (ev.kind === "chest") { q.chest += 1; saga.chests += 1; }
               if (ev.kind === "visit") q.visit += 1;
+              if (ev.kind === "home") q.home += 1;
               return { ...p, quests: q, saga };
             });
             break;
           case "discover": {
+            // v8: tudo o que acontece fica registado na plataforma
+            logWorldActivity(cur.uid, "discover", ev.name, 10);
             setChar((p) => {
               if (!p) return p;
               if (p.discoveries.includes(ev.id)) return p;
@@ -826,6 +845,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
                 if (ev.item) n.inv = [...p.inv, ev.item];
                 return n;
               });
+              logWorldActivity(cur.uid, "steal", `Roubou ${ev.pts} pts a ${ev.victim}`, ev.pts || 0);
               if (ev.coupon) {
                 (async () => {
                   try {
@@ -887,6 +907,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             setDeathFx(true);
             pushToast(`💀 Foste derrotado por ${ev.by}...`, "bad");
             setChar((p) => (p ? { ...p, deaths: p.deaths + 1 } : p));
+            logWorldActivity(cur.uid, "death", `Derrotado por ${ev.by}`, 1);
             setTimeout(() => setDeathFx(false), 1600);
             break;
         }
@@ -910,7 +931,36 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       });
     }
 
+    // v8: PLATAFORMA AO VIVO — qualquer mudança (sorteio, concurso,
+    // cupão, bem) reflete-se no mundo sem recarregar nada
+    const unsubPlat = subscribePlatformLive((kind) => {
+      (async () => {
+        try {
+          const pd = await fetchPlatformData();
+          platformRef.current = pd;
+          setPlatform(pd);
+          eng.spawnPlatformObjects({
+            raffles: pd.raffles.map((r) => ({ id: r.id, title: r.title, prizeTitle: r.prizeTitle })),
+            contests: pd.contests.map((x) => ({ id: x.id, title: x.title, prize: x.prize })),
+            vouchers: pd.vouchers.map((v) => ({ id: v.id, code: v.code, label: voucherLabel(v) })),
+            assets: pd.assets.map((a) => ({ id: a.id, title: a.title, value: a.value, modality: a.modality })),
+          });
+          const msgs: Record<string, string> = {
+            raffle: "🎁 Sorteios atualizados — novos cristais no Templo!",
+            contest: "🏆 Concursos atualizados na Torre!",
+            voucher: "🎟️ Novos cupões esperam-te no Cofre!",
+            asset: "🛒 Novos bens na Feira Bateu!",
+          };
+          tickerId.current += 1;
+          const tid = tickerId.current;
+          setTicker((t) => [...t.slice(-2), { id: tid, msg: msgs[kind] || "📡 A plataforma foi atualizada!" }]);
+          setTimeout(() => setTicker((t) => t.filter((x) => x.id !== tid)), 7000);
+        } catch { /* ignore */ }
+      })();
+    });
+
     return () => {
+      unsubPlat();
       eng.dispose();
       engineRef.current = null;
     };
@@ -1031,13 +1081,13 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     });
   };
 
-  const claimQuest = (k: "K" | "C" | "V" | "S" | "W" | "I" | "D" | "A") => {
+  const claimQuest = (k: "K" | "C" | "V" | "S" | "W" | "I" | "D" | "A" | "H") => {
     setChar((p) => {
       if (!p) return p;
       const q = { ...p.quests };
-      const key = k === "K" ? "cK" : k === "C" ? "cC" : k === "V" ? "cV" : k === "S" ? "cS" : k === "W" ? "cW" : k === "I" ? "cI" : k === "D" ? "cD" : "cA";
+      const key = k === "K" ? "cK" : k === "C" ? "cC" : k === "V" ? "cV" : k === "S" ? "cS" : k === "W" ? "cW" : k === "I" ? "cI" : k === "D" ? "cD" : k === "H" ? "cH" : "cA";
       if ((q as any)[key]) return p;
-      const done = k === "K" ? q.kills >= 10 : k === "C" ? q.chest >= 1 : k === "V" ? q.visit >= 1 : k === "S" ? q.steal >= 1 : k === "W" ? q.waves >= 3 : k === "I" ? q.item >= 1 : k === "D" ? q.duel >= 3 : q.atk >= 5;
+      const done = k === "K" ? q.kills >= 10 : k === "C" ? q.chest >= 1 : k === "V" ? q.visit >= 1 : k === "S" ? q.steal >= 1 : k === "W" ? q.waves >= 3 : k === "I" ? q.item >= 1 : k === "D" ? q.duel >= 3 : k === "H" ? q.home >= 2 : q.atk >= 5;
       if (!done) return p;
       (q as any)[key] = true;
       let { gold, xp, pts } = p;
@@ -1049,8 +1099,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       if (k === "I") { gold += 300; pts += 20; }
       if (k === "D") { gold += 250; pts += 15; }
       if (k === "A") { gold += 200; pts += 10; }
+      if (k === "H") { gold += 150; pts += 10; }
       const n = applyXp({ ...p, gold, xp, pts, quests: q }, 0);
-      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
+      if (k === "H") logWorldActivity(p.uid, "quest", "Missão de interiores concluída", 10);
+      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
       return n;
     });
   };
@@ -1816,6 +1868,43 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         )}
       </AnimatePresence>
 
+      {/* v8: ESTÁS EM — interior de um edifício (zona segura) */}
+      <AnimatePresence>
+        {inside && (
+          <motion.div
+            key={inside.name}
+            initial={{ opacity: 0, y: 12, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.94 }}
+            className="pointer-events-none absolute bottom-32 left-1/2 z-10 -translate-x-1/2"
+            data-testid="bw-inside"
+          >
+            <div className="flex max-w-[300px] items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/75 px-4 py-2 shadow-xl backdrop-blur">
+              <span className="text-lg">🏠</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[11px] font-black text-amber-200">{inside.name}</span>
+                <span className="block text-[9px] font-bold text-emerald-300">Zona segura · vida a recuperar</span>
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* v8: ticker da plataforma ao vivo — o que acontece fora aparece aqui */}
+      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1">
+        <AnimatePresence>
+          {ticker.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, x: -14, scale: 0.92 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -14, scale: 0.92 }}
+              className="max-w-[240px] rounded-xl border border-sky-400/40 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-sky-100 shadow-lg backdrop-blur"
+              data-testid="bw-ticker"
+            >
+              <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
+              {t.msg}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* painel de navegação superior */}
       <div className="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
         {([
@@ -2090,6 +2179,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
                 <QuestRow emoji="🎒" title="Rouba 1 ITEM a outro herói (PvP)" progress={`${Math.min(q.item, 1)}/1`} done={q.cI} canClaim={q.item >= 1 && !q.cI} reward="+300 ouro · +20 pts" onClaim={() => claimQuest("I")} testid="bw-quest-item" />
                 <QuestRow emoji="🩸" title="Vence 3 heróis em duelo (PvP)" progress={`${Math.min(q.duel, 3)}/3`} done={q.cD} canClaim={q.duel >= 3 && !q.cD} reward="+250 ouro · +15 pts" onClaim={() => claimQuest("D")} testid="bw-quest-duel" />
                 <QuestRow emoji="🎯" title="Acerta 5 golpes em heróis (PvP)" progress={`${Math.min(q.atk, 5)}/5`} done={q.cA} canClaim={q.atk >= 5 && !q.cA} reward="+200 ouro · +10 pts" onClaim={() => claimQuest("A")} testid="bw-quest-atk" />
+                <QuestRow emoji="🏠" title="Entra 2 vezes em interiores (casas, farol…)" progress={`${Math.min(q.home, 2)}/2`} done={q.cH} canClaim={q.home >= 2 && !q.cH} reward="+150 ouro · +10 pts" onClaim={() => claimQuest("H")} testid="bw-quest-home" />
                 <p className="mt-3 text-[10px] text-muted-foreground">As missões diárias reiniciam todos os dias. PvP ativo fora da praça — jogadores abaixo do Nv3 estão protegidos. Durante o Frenesi de Roubos cada roubo rende +25 pts bónus!</p>
               </>
             )}
@@ -2281,6 +2371,28 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
                           <span className="min-w-0 flex-1">
                             <span className={`block text-[11px] font-bold ${found ? "text-amber-200" : "text-white/40"}`}>{found ? l.name : "Lugar por descobrir"}</span>
                             <span className={`block text-[9px] leading-snug ${found ? "text-white/60" : "text-white/25"}`}>{found ? l.desc : "Explora o mundo para revelares o seu significado!"}</span>
+                          </span>
+                          <span className="text-[8px] text-white/30">🧭</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* v8: VILAS E INTERIORES — casas enteráveis com escadas */}
+                  <p className="mb-1 mt-3 text-[10px] font-black uppercase tracking-wider text-amber-300/90">🏘️ Vilas e Interiores (podes entrar!)</p>
+                  <div className="space-y-1">
+                    {BUILDINGS.map((b) => {
+                      const visited = char.discoveries.includes("bld-" + b.id);
+                      return (
+                        <button
+                          key={b.id}
+                          onClick={() => { engineRef.current?.setWaypoint(b.x, b.z); }}
+                          className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${visited ? "bg-amber-500/10 hover:bg-amber-500/20" : "bg-white/[0.03] hover:bg-white/10"}`}
+                          data-testid={`bw-bld-${b.id}`}
+                        >
+                          <span className="text-base leading-none">{b.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[11px] font-bold text-amber-100">{b.name} <span className="text-[8px] font-black text-white/40">{b.floors === 1 ? "· 1 piso" : b.floors === 4 ? "· 3 pisos + miradouro" : `· ${b.floors} pisos`}</span></span>
+                            <span className="block text-[9px] leading-snug text-white/55">{b.desc}</span>
                           </span>
                           <span className="text-[8px] text-white/30">🧭</span>
                         </button>

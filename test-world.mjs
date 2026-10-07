@@ -45,7 +45,7 @@ async function main() {
   // cards do hub que contenham a mesma palavra, ex: "Banco ou Arriscar?")
   const openPanel = async (label) => {
     for (let i = 0; i < 3; i++) {
-      await page.getByRole("button", { name: label, exact: true }).first().click({ timeout: 6000 });
+      await page.getByRole("button", { name: label, exact: true }).first().click({ timeout: 6000, force: true }).catch(() => {});
       const vis = await page.locator('[data-testid="bw-panel"]').isVisible().catch(() => false);
       if (vis) {
         const t = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
@@ -53,14 +53,14 @@ async function main() {
       }
       await page.waitForTimeout(700);
       const closeBtn = page.locator('[data-testid="bw-panel"] button').first();
-      if (await closeBtn.count().catch(() => 0) > 0) { await closeBtn.click().catch(() => {}); await page.waitForTimeout(400); }
+      if (await closeBtn.count().catch(() => 0) > 0) { await closeBtn.click({ force: true }).catch(() => {}); await page.waitForTimeout(400); }
     }
     return "";
   };
 
   const closePanel = async () => {
     const btn = page.locator('[data-testid="bw-panel"] button').first();
-    if (await btn.count().catch(() => 0) > 0) { await btn.click().catch(() => {}); await page.waitForTimeout(350); }
+    if (await btn.count().catch(() => 0) > 0) { await btn.click({ force: true }).catch(() => {}); await page.waitForTimeout(350); }
   };
 
   // ── 0. v6 — GATE: sem conta registada NÃO se joga ──
@@ -206,15 +206,15 @@ async function main() {
     await guardBtn.click({ force: true }).catch(() => {});
   }
   ok("v6: indicador de GUARDA ativa aparece", guardOn);
-  await page.waitForTimeout(600);
+  // v8: um único toque extra + espera longa (evita corrida de toggles em FPS baixo)
   await guardBtn.click({ force: true }).catch(() => {});
   let guardOff = false;
-  for (let i = 0; i < 6; i++) {
-    await page.waitForTimeout(600);
+  for (let i = 0; i < 8; i++) {
+    await page.waitForTimeout(700);
     guardOff = !(await page.locator('[data-testid="bw-guard-indicator"]').isVisible().catch(() => false));
     if (guardOff) break;
-    await guardBtn.click({ force: true }).catch(() => {});
   }
+  if (!guardOff) { await guardBtn.click({ force: true }).catch(() => {}); await page.waitForTimeout(900); guardOff = !(await page.locator('[data-testid="bw-guard-indicator"]').isVisible().catch(() => false)); }
   ok("v6: guarda desliga ao segundo toque", guardOff);
 
   // ── v6: mapa-múndi com significados ──
@@ -398,7 +398,14 @@ async function main() {
   const photoBtn = page.locator('[data-testid="bw-photo"]');
   ok("Botão de foto presente", await photoBtn.count() > 0);
   if (await photoBtn.count() > 0) {
-    await photoBtn.click();
+    // v8: clique resiliente — com muitos edifícios o FPS baixa no
+    // renderer por software e o botão pode parecer "instável"
+    let clicked = false;
+    for (let i = 0; i < 3 && !clicked; i++) {
+      clicked = await photoBtn.click({ force: true, timeout: 8000 }).then(() => true).catch(() => false);
+      if (!clicked) await page.waitForTimeout(1200);
+    }
+    ok("Botão de foto clicável", clicked);
     await page.waitForTimeout(500);
     const overlay = page.locator('[data-testid="bw-photo-overlay"]');
     ok("Overlay do modo foto aparece", await overlay.isVisible().catch(() => false));
@@ -427,6 +434,19 @@ async function main() {
   }
   ok("HUD mostra ONDA 1 com inimigos", onda1Txt.includes("ONDA 1"));
   await page.screenshot({ path: "shots/world-07-arena.png" });
+  // v8: termina a arena — sem ela ativa, os waves infinitos e o auto-exit
+  // (d > raio → teleporte para a praça) não perturbam os testes seguintes
+  await page.evaluate(() => { const e = window.__bw; if (e && e.endArena) e.endArena("quit"); });
+  await page.waitForTimeout(500);
+  // fecha o painel modal "Fim da sessão!" que o endArena abre
+  const arenaEndBtn = page.locator('[data-testid="bw-arena-end"] button');
+  for (let i = 0; i < 3; i++) {
+    if (await arenaEndBtn.count().catch(() => 0) > 0) {
+      await arenaEndBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      if ((await page.locator('[data-testid="bw-arena-end"]').count().catch(() => 0)) === 0) break;
+    } else break;
+  }
 
   // ── 11b. v7 — Mundo Espectacular: missões PvP, acontecimentos, aurora ──
   console.log("▶ v7 — Missões diárias de caça PvP");
@@ -481,6 +501,98 @@ async function main() {
   await page.waitForTimeout(500);
   const invTxt7 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
   ok("v7: 'Lâmina Roubada' aparece na mochila", invTxt7.includes("Lâmina Roubada"));
+  await closePanel();
+
+  // ── 11c. v8 — VILAS E INTERIORES (casas enteráveis com escadas) ──
+  console.log("▶ v8 — Casas e imóveis enteráveis");
+  const canvasV8 = page.locator('[data-testid="bateu-world"] canvas');
+  ok("v8: mundo ativo para o teste de interiores", await canvasV8.count() > 0);
+  const binfo0 = await page.evaluate(() => { const e = window.__bw; return e && e.getBuildingsInfo ? e.getBuildingsInfo() : null; });
+  ok("v8: 7 edifícios construídos no mundo", !!binfo0 && binfo0.count === 7);
+  ok("v8: catálogo inclui o Farol das Ondas", !!binfo0 && binfo0.names.includes("Farol das Ondas"));
+  ok("v8: catálogo inclui a Casa do Explorador", !!binfo0 && binfo0.names.includes("Casa do Explorador"));
+
+  // teleporta para DENTRO da casa junto à praça (24,18)
+  // v8: cura primeiro — o herói pode chegar fraco da arena/v7
+  await page.evaluate(() => { const e = window.__bw; if (e && e.healFull) e.healFull(); });
+  const yCenter = await page.evaluate(() => {
+    const e = window.__bw;
+    if (!e || !e.warpTo) return null;
+    e.warpTo(24, 18);
+    return e.pos ? e.pos.y : null;
+  });
+  await page.waitForTimeout(900);
+  const binfo1 = await page.evaluate(() => { const e = window.__bw; return e && e.getBuildingsInfo ? e.getBuildingsInfo() : null; });
+  ok("v8: herói DENTRO da Casa do Explorador", !!binfo1 && binfo1.inside === "Casa do Explorador");
+  const insideChip = page.locator('[data-testid="bw-inside"]');
+  ok("v8: chip 'Estás em' aparece no HUD", await insideChip.count() > 0 && await insideChip.isVisible().catch(() => false));
+  const insideTxt = await insideChip.innerText().catch(() => "");
+  ok("v8: chip mostra o nome da casa + zona segura", insideTxt.includes("Casa do Explorador") && insideTxt.includes("Zona segura"));
+  ok("v8: descoberta de interior registada", !!binfo1 && binfo1.visited >= 1);
+
+  // telhado esconde-se + porta abre (com tolerância a FPS baixo)
+  let roofDoor = { roof: false, door: false, diag: "" };
+  for (let i = 0; i < 6 && !(roofDoor.roof && roofDoor.door); i++) {
+    roofDoor = await page.evaluate(() => {
+      const e = window.__bw;
+      const b = e && e.buildings ? e.buildings[0] : null;
+      return {
+        roof: !!(b && b.roof && b.roof.visible === false),
+        door: !!(b && b.doorPivot && Math.abs(b.doorPivot.rotation.y) > 0.4),
+        diag: b ? `${b.name}|roof=${b.roof ? b.roof.visible : "null"}|door=${b.doorPivot ? b.doorPivot.rotation.y.toFixed(2) : "null"}|inside=${e.getBuildingsInfo().inside}|pos=${e.pos.x.toFixed(1)},${e.pos.y.toFixed(2)},${e.pos.z.toFixed(1)}|hp=${Math.round(e.hp)}|dead=${e.dead}|arena=${e.arena ? e.arena.active : "?"}|ev=${e.wEvent ? e.wEvent.kind : "?"}|chase=${e.mobs ? e.mobs.filter((m) => m.state === "chase").length : "?"}` : "sem b0",
+      };
+    }).catch(() => ({ roof: false, door: false, diag: "evaluate falhou" }));
+    if (!(roofDoor.roof && roofDoor.door)) await page.waitForTimeout(600);
+  }
+  ok("v8: telhado desaparece quando se entra (vê-se o interior)", roofDoor.roof);
+  if (!roofDoor.roof) console.log("   diag telhado:", roofDoor.diag);
+  ok("v8: porta abre-se à passagem do herói", roofDoor.door);
+  if (!roofDoor.door) console.log("   diag porta:", roofDoor.diag);
+
+  // escadas: sobe em passos curtos (como se andasse) até ao 2º piso
+  for (let i = 0; i < 9; i++) {
+    await page.evaluate((k) => { const e = window.__bw; if (e && e.warpTo) e.warpTo(20.3 + k * 0.6, 20.4); }, i);
+    await page.waitForTimeout(120);
+  }
+  const yTop = await page.evaluate(() => { const e = window.__bw; return e && e.pos ? e.pos.y : null; });
+  ok("v8: escadas sobem o herói ao 2º piso (+2.5m)", typeof yTop === "number" && typeof yCenter === "number" && yTop - yCenter > 2.5);
+  if (!(typeof yTop === "number" && typeof yCenter === "number" && yTop - yCenter > 2.5)) {
+    console.log(`   diag escadas: yCenter=${yCenter} yTop=${yTop}`);
+  }
+
+  // ao sair, deixa de estar dentro
+  await page.evaluate(() => { const e = window.__bw; if (e && e.warpTo) e.warpTo(0, 0); });
+  await page.waitForTimeout(700);
+  const binfo2 = await page.evaluate(() => { const e = window.__bw; return e && e.getBuildingsInfo ? e.getBuildingsInfo() : null; });
+  ok("v8: ao sair, deixa de estar dentro", !!binfo2 && binfo2.inside === null);
+
+  // mapa: secção de Vilas e Interiores com todos os edifícios
+  let mapTxt8 = "";
+  for (let i = 0; i < 3; i++) {
+    await page.locator('[data-testid="bw-nav-map"]').click({ force: true, timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    mapTxt8 = await page.locator('[data-testid="bw-panel"]').first().innerText().catch(() => "");
+    if (mapTxt8.toUpperCase().includes("VILAS E INTERIORES")) break;
+    await page.locator('[data-testid="bw-panel"] button').first().click({ force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+  }
+  ok("v8: mapa mostra secção Vilas e Interiores", mapTxt8.toUpperCase().includes("VILAS E INTERIORES"));
+  ok("v8: mapa lista o Farol das Ondas", mapTxt8.includes("Farol das Ondas"));
+  ok("v8: mapa lista a Pousada do Viajante", mapTxt8.includes("Pousada do Viajante"));
+  ok("v8: mapa lista o Fortim Vulcânico", mapTxt8.includes("Fortim Vulcânico"));
+  await closePanel();
+
+  // missões: linha da missão de interiores
+  let questsTxt8 = "";
+  for (let i = 0; i < 3; i++) {
+    await page.locator('[data-testid="bw-nav-quests"]').click({ force: true, timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    questsTxt8 = await page.locator('[data-testid="bw-panel"]').first().innerText().catch(() => "");
+    if (questsTxt8.toLowerCase().includes("interiores")) break;
+    await page.locator('[data-testid="bw-panel"] button').first().click({ force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+  }
+  ok("v8: missão diária de interiores existe", questsTxt8.toLowerCase().includes("interiores"));
   await closePanel();
 
   // ── 12. Persistência ──

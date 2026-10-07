@@ -13,7 +13,10 @@
 // do jogo e visual sincronizado entre todos os jogadores.
 // v6: SÓ MEMBROS REGISTADOS jogam (conta da plataforma),
 // ESCUDO + DEFESA (stat DEF, modo Guarda, loot de escudos),
-// MUNDO 55% MAIOR com 7 regiões nomeadas e 18 marcos com
+// v10: CORAÇÃO DA FLORESTA — a Floresta Ancestral agora espetacular:
+// 9 Árvores Anciãs colossais, god rays, cristal verde pulsante, runas,
+// esporos dia/noite, Guardiã Anciã e o 19º marco do mundo.
+// MUNDO 55% MAIOR com 7 regiões nomeadas e 19 marcos com
 // SIGNIFICADO, MAPA GRANDE com legenda e bússola de destino,
 // e super-sincronização com a conta (progresso na nuvem).
 // ============================================================
@@ -349,16 +352,18 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   );
   const comboTimer = useRef<any>(null);
   const photoTimer = useRef<any>(null);
+  const worldWrapRef = useRef<HTMLDivElement | null>(null);
   const petToastDone = useRef(false);
 
   const EMOTES = ["👋", "😄", "❤️", "😤", "🎉", "🙏"];
   const TIPS = [
-    "🗺️ Mundo gigante: 18 marcos com significado — TAB abre o MAPA-MÚNDI",
+    "🗺️ Mundo gigante: 19 marcos com significado — TAB abre o MAPA-MÚNDI",
     "🛡️ Segura SHIFT (ou o botão de escudo) para DEFENDER — bloqueia 40% do dano!",
     "🧭 No mapa grande, toca num lugar para marcar o destino — a bússola guia-te",
     "💡 Aproxima-te de um baú e prime E (ou toca no botão) para abrir",
     "⚔️ Clique no mundo = atacar. Perto de jogadores = PvP com roubo!",
-    "🗺️ Explora o mundo gigante: 18 marcos com significado — cada descoberta dá XP e pontos",
+    "🗺️ Explora o mundo gigante: 19 marcos com significado — cada descoberta dá XP e pontos",
+    "💚 O Coração da Floresta pulsa na clareira sagrada a oeste — a Guardiã Anciã protege-o",
     "🏟️ A Arena das Ondas (este do mapa) paga pontos e ouro por onda",
     "🎒 Inimigos e chefes dropam equipamento — equipa na Mochila!",
     "🔥 Combo de mortes em menos de 4s = até +50% de XP",
@@ -427,6 +432,16 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       return !on;
     });
   }, [pushToast]);
+
+  // v10: garantir que o mundo entra na vista ao começar a jogar — no hub
+  // a página pode estar rolada e a HUD do jogo ficaria fora do ecrã
+  useEffect(() => {
+    if (phase !== "world") return;
+    const t = setTimeout(() => {
+      try { worldWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { /* ignore */ }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   // v4: aplicar qualidade ao motor quando muda
   useEffect(() => {
@@ -1439,7 +1454,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   }
 
   return (
-    <div className="relative z-10 w-full aspect-[4/3] md:aspect-video rounded-2xl overflow-hidden bg-slate-900 select-none" data-testid="bateu-world">
+    <div ref={worldWrapRef} className="relative z-10 w-full aspect-[4/3] md:aspect-video rounded-2xl overflow-hidden bg-slate-900 select-none" data-testid="bateu-world">
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
       {/* flash de dano / morte */}
@@ -1660,37 +1675,19 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         </motion.button>
       )}
 
-      {/* topo-direita: online + som + minimapa + emotes */}
-      <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
-        <div className="flex items-center gap-1.5">
-          {/* v4: modo foto */}
-          <button
-            onClick={togglePhoto}
-            className="flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11px] font-bold text-white backdrop-blur hover:bg-black/75 transition-colors"
-            data-testid="bw-photo"
-            title="Modo Foto (P)"
-          >
-            <Camera className="h-3 w-3 text-sky-300" />
-          </button>
-          {/* v3: som on/off */}
-          <button
-            onClick={() => setMuted(worldAudio.toggleMute())}
-            className="flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11px] font-bold text-white backdrop-blur hover:bg-black/75 transition-colors"
-            data-testid="bw-sound"
-            title={muted ? "Ligar som (M)" : "Desligar som (M)"}
-          >
-            {muted ? <VolumeX className="h-3 w-3 text-red-300" /> : <Volume2 className="h-3 w-3 text-emerald-300" />}
-          </button>
-          <div className="pointer-events-none flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
-            <Users className="h-3 w-3 text-sky-400" /> {online} online
-            {platform?.live && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-          </div>
+      {/* v10: topo-direita desce para debaixo da barra de navegação —
+          em ecrãs estreitos as duas linhas sobrepunham-se (foto/som
+          ficavam escondidas atrás de Definições — bug visual) */}
+      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5">
+        <div className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm sm:flex">
+          <Users className="h-3 w-3 text-sky-400" /> {online} online
+          {platform?.live && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
         </div>
-        <div className="relative">
+        <div className="relative hidden sm:block">
           <canvas id="bw-minimap" width={100} height={100} className="rounded-xl border border-white/25 shadow-lg" />
           <span className="pointer-events-none absolute left-1/2 top-0.5 -translate-x-1/2 text-[7px] font-black text-white/80">N</span>
         </div>
-        <div className="pointer-events-none rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-sm">
+        <div className="pointer-events-none hidden rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-sm sm:block">
           <MapPin className="mr-0.5 inline h-2.5 w-2.5 text-amber-300" />{char!.discoveries.length}/{LANDMARKS.length} descobertas
         </div>
         {/* v3: roda de emotes */}
@@ -1860,7 +1857,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* painel de navegação superior */}
+      {/* painel de navegação superior — v10: foto e som vivem aqui para
+          nunca colidirem com a coluna direita; rótulos só em ecrãs largos */}
       <div className="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
@@ -1877,12 +1875,30 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold backdrop-blur transition-colors ${panel === id ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
             data-testid={`bw-nav-${id}`}
           >
-            {icon} {label}
+            {icon}<span className="hidden lg:inline">{label}</span>
             {id === "char" && char!.points > 0 && <span className="ml-0.5 h-2 w-2 rounded-full bg-emerald-400" />}
             {id === "quests" && <span className="ml-0.5 h-2 w-2 rounded-full bg-amber-400" />}
             {id === "inv" && char!.inv.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{char!.inv.length}</span>}
           </button>
         ))}
+        <div className="mx-0.5 w-px self-stretch bg-white/20" />
+        {/* v10: modo foto + som mudaram da coluna direita para aqui */}
+        <button
+          onClick={togglePhoto}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-photo"
+          title="Modo Foto (P)"
+        >
+          <Camera className="h-4 w-4 text-sky-300" />
+        </button>
+        <button
+          onClick={() => setMuted(worldAudio.toggleMute())}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-sound"
+          title={muted ? "Ligar som (M)" : "Desligar som (M)"}
+        >
+          {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
+        </button>
       </div>
 
       {/* v9: chip de convidado — lembra suave, nunca bloqueia */}
@@ -1890,7 +1906,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <button
           onClick={() => go("/register")}
           data-testid="bw-guest-chip"
-          className="absolute top-11 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25"
+          className="absolute top-[84px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25 sm:top-11"
         >
           👤 CONVIDADO — criar conta para guardar na nuvem
         </button>

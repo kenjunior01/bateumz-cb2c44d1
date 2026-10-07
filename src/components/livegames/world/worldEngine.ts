@@ -176,6 +176,8 @@ export const LANDMARKS: { id: string; name: string; x: number; z: number; r: num
   { id: "cacamp", name: "Acampamento dos Caçadores", x: 150, z: 90, r: 10, emoji: "⛺", desc: "Base dos heróis no deserto — fogueira com bónus de XP" },
   { id: "eclipse", name: "Portal do Eclipse", x: -150, z: -140, r: 11, emoji: "🌀", desc: "Portal instável — por aqui entram os bugs mais perigosos" },
   { id: "eco", name: "Gruta do Eco", x: 155, z: -70, r: 9, emoji: "🕳️", desc: "Cada golpe ressoa sete vezes — treina os teus poderes aqui" },
+  // v10 — o novo coração da Floresta Ancestral
+  { id: "coracao", name: "Coração da Floresta", x: -120, z: -40, r: 13, emoji: "💚", desc: "A clareira sagrada onde o cristal verde pulsa — a Guardiã Anciã nunca dorme" },
 ];
 
 // ── v8: Vilas e Interiores — edifícios enteráveis do mundo ──
@@ -375,7 +377,7 @@ export interface RegionDef {
 }
 export const REGIONS: RegionDef[] = [
   { id: "planicie", name: "Planície Central", desc: "Zona inicial segura — a Praça, o Banco e a Fonte", cx: 0, cz: 0, r: 70, color: "#4ade80" },
-  { id: "floresta", name: "Floresta Ancestral", desc: "Árvores milenares a oeste — bugs sombrios nas sombras", cx: -120, cz: -40, r: 85, color: "#15803d" },
+  { id: "floresta", name: "Floresta Ancestral", desc: "Árvores milenares a oeste — o Coração Verde pulsa entre raízes gigantes", cx: -120, cz: -40, r: 85, color: "#15803d" },
   { id: "dunas", name: "Dunas Escaldantes", desc: "Deserto do norte — calor extremo e bugs de elite", cx: -40, cz: -150, r: 85, color: "#f59e0b" },
   { id: "litoral", name: "Litoral das Ondas", desc: "Costa a leste — a Arena e o Lago Misterioso", cx: 130, cz: 20, r: 85, color: "#38bdf8" },
   { id: "pantano", name: "Pântano Sombrio", desc: "Terras húmidas do sul — o perigo espreita na névoa", cx: 40, cz: 150, r: 85, color: "#7c3aed" },
@@ -576,6 +578,13 @@ export class WorldEngine {
   private cullT = 0;
   private ray = new THREE.Raycaster();
 
+  // v10 — CORAÇÃO DA FLORESTA (Floresta Ancestral espetacular)
+  private heartLight: THREE.PointLight | null = null;
+  private heartCrystal: THREE.Group | null = null;
+  private godRays: { mesh: THREE.Mesh; phase: number }[] = [];
+  private spores: { spr: THREE.Sprite; a: number; r: number; y0: number; s: number; phase: number }[] = [];
+  private heartRunes: THREE.Mesh[] = [];
+
   // v3 — céu, clima e vida do mundo
   private skyDome!: THREE.Mesh;
   private stars!: THREE.Points;
@@ -681,6 +690,7 @@ export class WorldEngine {
     this.buildBuildings(); // v8: casas, pousada, farol, fortim… enteráveis
     this.buildArena();
     this.buildNature();
+    this.buildHeartForest(); // v10: Coração da Floresta — clareira sagrada
     // v5: configuração do avatar antes de construir o corpo
     if (this.opts.avatar) this.avCfg = this.opts.avatar;
     this.avKey = avatarKey(this.avCfg);
@@ -1985,6 +1995,7 @@ export class WorldEngine {
       [0, -52, 16], [52, 0, 16], [-52, 0, 16], [0, 52, 16],
       [-100, -60, 12], [95, 70, 15], [-90, 85, 10], [60, -100, 12], [112, 0, 30],
       [-140, 20, 11], [40, 140, 13], [-35, -150, 10], [150, 90, 11], [-150, -140, 12], [155, -70, 10],
+      [-120, -40, 27], // v10: clareira do Coração da Floresta — só cenário curado
     ];
     const inSafe = (x: number, z: number, pad = 0): boolean => {
       if (Math.abs(x) < 6 + pad || Math.abs(z) < 6 + pad) return true; // estradas
@@ -2551,6 +2562,357 @@ export class WorldEngine {
     }
   }
 
+  // ══ v10: CORAÇÃO DA FLORESTA — a clareira sagrada da Floresta Ancestral ══
+  // 9 Árvores Anciãs colossais em anel, dossel fechado, feixes de luz,
+  // círculo de pedras com o cristal verde pulsante, runas antigas,
+  // trepadeiras, sub-bosque denso e esporos luminosos dia/noite.
+
+  private buildHeartForest(): void {
+    const CX = -120, CZ = -40;
+    const dummy = new THREE.Object3D();
+    const col = new THREE.Color();
+
+    // ── 1. ÁRVORES ANCIÃS (anel colossal) ──────────────────────
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a3520 });
+    const rootMat = new THREE.MeshLambertMaterial({ color: 0x3f2d1d });
+    const mossMat = new THREE.MeshLambertMaterial({ color: 0x2d6a4f });
+    const canopyCols = [0x1b4332, 0x2d6a4f, 0x40916c, 0x35684a];
+    const runeMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 });
+    const ANCIENTS = 9;
+    let runeTree = 0;
+    for (let i = 0; i < ANCIENTS; i++) {
+      const a = (i / ANCIENTS) * Math.PI * 2 + 0.35;
+      const rr = 34 + Math.random() * 12;
+      const x = CX + Math.cos(a) * rr;
+      const z = CZ + Math.sin(a) * rr * 0.92;
+      // respeita as Ruínas Antigas e a Cabana do Lenhador
+      if (Math.hypot(x + 100, z + 60) < 15 || Math.hypot(x + 106, z + 24) < 14) continue;
+      const y = groundY(x, z);
+      const h = 15 + Math.random() * 7;      // altura total
+      const tr = 1.7 + Math.random() * 0.9;  // raio do tronco
+      const g = new THREE.Group();
+
+      // tronco em 3 segmentos afilados com leve inclinação
+      const lean = (Math.random() - 0.5) * 0.1;
+      const seg1 = new THREE.Mesh(new THREE.CylinderGeometry(tr * 0.66, tr, h * 0.45, 9), trunkMat);
+      seg1.position.y = h * 0.225;
+      const seg2 = new THREE.Mesh(new THREE.CylinderGeometry(tr * 0.5, tr * 0.66, h * 0.32, 9), trunkMat);
+      seg2.position.y = h * 0.61;
+      const seg3 = new THREE.Mesh(new THREE.CylinderGeometry(tr * 0.3, tr * 0.5, h * 0.25, 9), trunkMat);
+      seg3.position.y = h * 0.895;
+      seg3.rotation.z = lean;
+      g.add(seg1, seg2, seg3);
+
+      // raízes de apoio (contrafortes) à volta da base
+      const nRoots = 6 + Math.floor(Math.random() * 2);
+      for (let k = 0; k < nRoots; k++) {
+        const ra = (k / nRoots) * Math.PI * 2 + Math.random() * 0.4;
+        const root = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.85, 2.9, 5), rootMat);
+        root.position.set(Math.cos(ra) * tr * 0.95, 0.75, Math.sin(ra) * tr * 0.95);
+        root.rotation.set(Math.sin(ra) * 0.62, -ra, -Math.cos(ra) * 0.62);
+        root.scale.y = 0.9 + Math.random() * 0.7;
+        g.add(root);
+      }
+
+      // musgo no tronco
+      for (let k = 0; k < 4; k++) {
+        const moss = new THREE.Mesh(new THREE.SphereGeometry(0.5 + Math.random() * 0.45, 7, 6), mossMat);
+        moss.position.set((Math.random() - 0.5) * tr * 1.3, 1.6 + Math.random() * h * 0.4, (Math.random() - 0.5) * tr * 1.3);
+        moss.scale.set(1, 0.55, 0.5);
+        moss.rotation.y = Math.random() * Math.PI;
+        g.add(moss);
+      }
+
+      // runas antigas brilhantes em 3 anciãs
+      if (i % 3 === 0 && runeTree < 3) {
+        runeTree++;
+        for (let k = 0; k < 3; k++) {
+          const rune = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.5 + Math.random() * 0.4, 0.06), runeMat);
+          rune.position.set(tr * 0.72, 2.2 + k * 1.15 + Math.random() * 0.5, (Math.random() - 0.5) * 0.6);
+          rune.rotation.y = Math.random() * 0.6;
+          rune.userData.base = 0.9;
+          g.add(rune);
+          this.heartRunes.push(rune);
+        }
+      }
+
+      // copa em domo (6-7 bolosas achatadas)
+      const topY = h * (0.98 + Math.random() * 0.06);
+      const nBlob = 6 + Math.floor(Math.random() * 2);
+      for (let k = 0; k < nBlob; k++) {
+        const isTop = k === 0;
+        const br = isTop ? 4.6 + Math.random() * 1.6 : 3.1 + Math.random() * 2.3;
+        const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(br, 1), new THREE.MeshLambertMaterial({ color: canopyCols[Math.floor(Math.random() * canopyCols.length)] }));
+        const ba = (k / nBlob) * Math.PI * 2;
+        const brad = isTop ? 0 : 2.6 + Math.random() * 2.4;
+        blob.position.set(Math.cos(ba) * brad, topY + (isTop ? 2.2 : 0.6 + Math.random() * 1.6) - k * 0.55, Math.sin(ba) * brad);
+        blob.scale.set(1.25, 0.62 + Math.random() * 0.2, 1.25);
+        g.add(blob);
+      }
+
+      // trepadeiras penduradas da copa
+      const nVines = 4 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < nVines; k++) {
+        const va = Math.random() * Math.PI * 2;
+        const vlen = 2.6 + Math.random() * 3.4;
+        const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.028, vlen, 5), new THREE.MeshLambertMaterial({ color: 0x3a7248 }));
+        vine.position.set(Math.cos(va) * tr * 0.9, h * 0.8 - vlen / 2, Math.sin(va) * tr * 0.9);
+        vine.rotation.z = (Math.random() - 0.5) * 0.16;
+        g.add(vine);
+      }
+
+      g.position.set(x, y, z);
+      g.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(g);
+    }
+
+    // ── 2. FEIXES DE LUZ (god rays) entre a copa e o chão ───────
+    const rayGeo = new THREE.ConeGeometry(2.5, 19, 12, 1, true);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+      const rr = 7 + Math.random() * 15;
+      const x = CX + Math.cos(a) * rr;
+      const z = CZ + Math.sin(a) * rr;
+      const mesh = new THREE.Mesh(rayGeo, new THREE.MeshBasicMaterial({
+        color: 0xfff6cf, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
+      }));
+      mesh.position.set(x, groundY(x, z) + 9.2, z);
+      mesh.rotation.set((Math.random() - 0.5) * 0.14, Math.random() * Math.PI, 0.2 + Math.random() * 0.24);
+      mesh.userData.phase = Math.random() * Math.PI * 2;
+      this.scene.add(mesh);
+      this.godRays.push({ mesh, phase: mesh.userData.phase });
+    }
+
+    // ── 3. CÍRCULO DE PEDRAS + CRISTAL DO CORAÇÃO ──────────────
+    const stoneMat = new THREE.MeshLambertMaterial({ color: 0x5f705f });
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const x = CX + Math.cos(a) * 7.5;
+      const z = CZ + Math.sin(a) * 7.5;
+      const st = new THREE.Mesh(new THREE.IcosahedronGeometry(0.85 + Math.random() * 0.4, 0), stoneMat);
+      st.position.set(x, groundY(x, z) + 0.7, z);
+      st.scale.set(1, 1.5 + Math.random() * 0.9, 0.8);
+      st.rotation.set((Math.random() - 0.5) * 0.24, Math.random() * Math.PI, (Math.random() - 0.5) * 0.2);
+      this.scene.add(st);
+      // tapete de musgo na base
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.75, 7, 5), mossMat);
+      m.position.set(x, groundY(x, z) + 0.12, z);
+      m.scale.set(1.2, 0.3, 1.2);
+      this.scene.add(m);
+    }
+
+    // montinho musgoso central + cristais verdes flutuantes
+    const heart = new THREE.Group();
+    const mound = new THREE.Mesh(new THREE.IcosahedronGeometry(2.7, 1), mossMat);
+    mound.scale.set(1, 0.38, 1);
+    mound.position.y = 0.2;
+    heart.add(mound);
+    const cryMat = new THREE.MeshLambertMaterial({ color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 0.95 });
+    const c1 = new THREE.Mesh(new THREE.OctahedronGeometry(0.95, 0), cryMat);
+    c1.position.y = 2.15;
+    const c2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.58, 0), cryMat);
+    c2.position.set(0.62, 1.35, 0.3);
+    c2.rotation.set(0.5, 0.4, 0.3);
+    const c3 = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), cryMat);
+    c3.position.set(-0.55, 1.5, -0.35);
+    c3.rotation.set(-0.4, 0.8, 0.2);
+    const heartGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: (() => {
+        const cv = document.createElement("canvas");
+        cv.width = 64; cv.height = 64;
+        const cx2 = cv.getContext("2d")!;
+        const gr = cx2.createRadialGradient(32, 32, 3, 32, 32, 30);
+        gr.addColorStop(0, "rgba(52,211,153,0.9)");
+        gr.addColorStop(1, "rgba(52,211,153,0)");
+        cx2.fillStyle = gr; cx2.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(cv);
+      })(), transparent: true, depthWrite: false, opacity: 0.75,
+    }));
+    heartGlow.position.y = 2.1;
+    heartGlow.scale.setScalar(6);
+    const hLight = new THREE.PointLight(0x34d399, 6, 24);
+    hLight.position.y = 2.4;
+    heart.add(mound, c1, c2, c3, heartGlow, hLight);
+    heart.position.set(CX, groundY(CX, CZ), CZ);
+    this.scene.add(heart);
+    this.heartCrystal = heart;
+    this.heartLight = hLight;
+
+    // pedras rúnicas em pé (3) — pulsam à noite
+    const runeStoneMat = new THREE.MeshLambertMaterial({ color: 0x556055 });
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 1.1;
+      const x = CX + Math.cos(a) * 11.5;
+      const z = CZ + Math.sin(a) * 11.5;
+      const y = groundY(x, z);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.9, 0.45), runeStoneMat);
+      st.position.set(x, y + 0.85, z);
+      st.rotation.set((Math.random() - 0.5) * 0.12, Math.random() * Math.PI, (Math.random() - 0.5) * 0.1);
+      this.scene.add(st);
+      const glyph = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.85, 0.05), runeMat.clone());
+      glyph.position.set(0, 0.12, 0.24);
+      glyph.userData.base = 0.8;
+      st.add(glyph);
+      this.heartRunes.push(glyph);
+    }
+
+    // poça de luz na orla da clareira
+    const poolX = CX - 13, poolZ = CZ + 7;
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(2.4, 20), new THREE.MeshBasicMaterial({ color: 0x5eead4, transparent: true, opacity: 0.3, depthWrite: false }));
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(poolX, groundY(poolX, poolZ) + 0.18, poolZ);
+    pool.userData.base = 0.3;
+    this.scene.add(pool);
+    this.heartRunes.push(pool);
+
+    // ── 4. SUB-BOSQUE DENSO (só bioma floresta) ────────────────
+    const inHeart = (x: number, z: number, pad = 0) => Math.hypot(x - CX, z - CZ) < 12 + pad;
+    const fspot = (minR: number, maxR: number): [number, number] | null => {
+      for (let g = 0; g < 30; g++) {
+        const a = Math.random() * Math.PI * 2;
+        const rr = minR + Math.random() * (maxR - minR);
+        const x = CX + Math.cos(a) * rr;
+        const z = CZ + Math.sin(a) * rr;
+        if (Math.hypot(x, z) > 224) continue;
+        if (Math.abs(x) < 7 || Math.abs(z) < 7) continue;
+        if (Math.hypot(x + 100, z + 60) < 13 || Math.hypot(x + 106, z + 24) < 14) continue;
+        if (inHeart(x, z, -4)) continue; // clareira interior fica curada
+        return [x, z];
+      }
+      return null;
+    };
+    // fetos
+    const fernGeo = new THREE.ConeGeometry(0.46, 0.55, 6);
+    fernGeo.translate(0, 0.22, 0);
+    const fFerns = new THREE.InstancedMesh(fernGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), 88);
+    let ffi = 0;
+    for (let i = 0; i < 150 && ffi < 88; i++) {
+      const p = fspot(10, 82);
+      if (!p) continue;
+      const [x, z] = p;
+      dummy.position.set(x, groundY(x, z), z);
+      dummy.scale.set(0.8 + Math.random() * 1.0, 0.7 + Math.random() * 0.7, 0.8 + Math.random() * 1.0);
+      dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      dummy.updateMatrix();
+      fFerns.setMatrixAt(ffi, dummy.matrix);
+      fFerns.setColorAt(ffi, col.setHex(0x276b3f).offsetHSL(0, 0, (Math.random() - 0.5) * 0.08));
+      ffi++;
+    }
+    fFerns.count = ffi;
+    if (fFerns.instanceColor) fFerns.instanceColor.needsUpdate = true;
+    this.scene.add(fFerns);
+    // arbustos
+    const bushGeo2 = new THREE.IcosahedronGeometry(0.6, 0);
+    const fBush = new THREE.InstancedMesh(bushGeo2, new THREE.MeshLambertMaterial({ color: 0xffffff }), 52);
+    let fbi = 0;
+    for (let i = 0; i < 90 && fbi < 52; i++) {
+      const p = fspot(12, 84);
+      if (!p) continue;
+      const [x, z] = p;
+      dummy.position.set(x, groundY(x, z) + 0.24, z);
+      dummy.scale.set(0.8 + Math.random() * 1.0, 0.55 + Math.random() * 0.5, 0.8 + Math.random() * 1.0);
+      dummy.rotation.set(0, Math.random() * Math.PI, 0);
+      dummy.updateMatrix();
+      fBush.setMatrixAt(fbi, dummy.matrix);
+      fBush.setColorAt(fbi, col.setHex(Math.random() < 0.5 ? 0x2d6a4f : 0x40916c).offsetHSL(0, (Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.08));
+      fbi++;
+    }
+    fBush.count = fbi;
+    if (fBush.instanceColor) fBush.instanceColor.needsUpdate = true;
+    this.scene.add(fBush);
+    // cogumelos luminosos
+    const mushStemGeo2 = new THREE.CylinderGeometry(0.06, 0.1, 0.46, 5);
+    mushStemGeo2.translate(0, 0.23, 0);
+    const fStems = new THREE.InstancedMesh(mushStemGeo2, new THREE.MeshLambertMaterial({ color: 0xe8e2d0 }), 34);
+    const fCaps = new THREE.InstancedMesh(new THREE.ConeGeometry(0.3, 0.34, 7).translate(0, 0.54, 0), new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x444444 }), 34);
+    const fMushCols = [0x22d3ee, 0xa855f7, 0x4ade80];
+    let fmi = 0;
+    for (let i = 0; i < 70 && fmi < 34; i++) {
+      const p = fspot(11, 80);
+      if (!p) continue;
+      const [x, z] = p;
+      const y = groundY(x, z);
+      dummy.rotation.set(0, Math.random() * Math.PI, 0);
+      dummy.scale.setScalar(0.75 + Math.random() * 1.1);
+      dummy.position.set(x, y, z);
+      dummy.updateMatrix();
+      fStems.setMatrixAt(fmi, dummy.matrix);
+      fCaps.setMatrixAt(fmi, dummy.matrix);
+      fCaps.setColorAt(fmi, col.setHex(fMushCols[Math.floor(Math.random() * fMushCols.length)]).clone());
+      fmi++;
+    }
+    fStems.count = fmi; fCaps.count = fmi;
+    if (fCaps.instanceColor) fCaps.instanceColor.needsUpdate = true;
+    this.scene.add(fStems, fCaps);
+
+    // ── 5. ESPOROS LUMINOSOS (pólen dourado de dia / esporos ciano à noite) ──
+    const sporeTex = (() => {
+      const cv = document.createElement("canvas");
+      cv.width = 32; cv.height = 32;
+      const cx2 = cv.getContext("2d")!;
+      const gr = cx2.createRadialGradient(16, 16, 2, 16, 16, 15);
+      gr.addColorStop(0, "rgba(255,255,255,1)");
+      gr.addColorStop(1, "rgba(255,255,255,0)");
+      cx2.fillStyle = gr; cx2.fillRect(0, 0, 32, 32);
+      return new THREE.CanvasTexture(cv);
+    })();
+    for (let i = 0; i < 34; i++) {
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: sporeTex, transparent: true, depthWrite: false, opacity: 0 }));
+      const a = Math.random() * Math.PI * 2;
+      const rr = 10 + Math.random() * 68;
+      this.spores.push({
+        spr, a, r: rr, s: 0.015 + Math.random() * 0.035,
+        y0: 0.4 + Math.random() * 5, phase: Math.random() * Math.PI * 2,
+      });
+      spr.scale.setScalar(0.42 + Math.random() * 0.5);
+      spr.position.set(CX + Math.cos(a) * rr, 0, CZ + Math.sin(a) * rr);
+      this.scene.add(spr);
+    }
+  }
+
+  /** v10: animação do Coração da Floresta (chamada do ciclo dia/noite). */
+  private updateHeartForest(t: number, dt: number, dayAmt: number): void {
+    const CX = -120, CZ = -40;
+    if (this.heartLight) {
+      this.heartLight.intensity = (4.6 + Math.sin(t * 0.0021) * 1.8 + Math.sin(t * 0.0073) * 1.2) * (1.3 - dayAmt * 0.5);
+    }
+    if (this.heartCrystal) {
+      this.heartCrystal.rotation.y += dt * 0.45;
+      const kids = this.heartCrystal.children;
+      if (kids.length >= 4) {
+        kids[1].position.y = 2.15 + Math.sin(t * 0.0012) * 0.22;
+        kids[2].position.y = 1.35 + Math.sin(t * 0.0016 + 1.4) * 0.16;
+        kids[3].position.y = 1.5 + Math.sin(t * 0.0019 + 2.8) * 0.18;
+      }
+    }
+    // god rays: brilham de dia, apagam à noite (o cristal assume o turno)
+    for (const gr of this.godRays) {
+      (gr.mesh.material as THREE.MeshBasicMaterial).opacity =
+        (0.05 + dayAmt * 0.17) * (0.72 + Math.sin(t * 0.0006 + gr.phase) * 0.28);
+    }
+    // esporos: derivam para cima, dourados de dia / ciano à noite
+    const nightAmt = Math.max(0, 1 - dayAmt * 1.6);
+    for (const sp of this.spores) {
+      const m = sp.spr.material as THREE.SpriteMaterial;
+      m.opacity = 0.34 + Math.sin(t * 0.001 + sp.phase) * 0.14;
+      if (m.opacity <= 0.02) continue;
+      m.color.setRGB(0.55 + (1 - nightAmt) * 0.45, 0.72, 0.25 + nightAmt * 0.62);
+      sp.a += sp.s * dt * 60;
+      sp.y0 += dt * 0.28;
+      if (sp.y0 > 6.2) sp.y0 = 0.35;
+      const x = CX + Math.cos(sp.a) * sp.r;
+      const z = CZ + Math.sin(sp.a) * sp.r;
+      sp.spr.position.set(x + Math.sin(t * 0.0004 + sp.phase) * 0.6, groundY(x, z) + sp.y0, z + Math.cos(t * 0.0005 + sp.phase) * 0.6);
+    }
+    // runas, glifos e poça: pulso suave
+    for (let i = 0; i < this.heartRunes.length; i++) {
+      const mm = this.heartRunes[i].material as THREE.MeshBasicMaterial;
+      const base = (this.heartRunes[i].userData.base as number) || 0.85;
+      mm.opacity = base * (0.68 + Math.sin(t * 0.003 + i * 1.7) * 0.32) * (0.75 + nightAmt * 0.45);
+    }
+  }
+
   // ── Jogador ─────────────────────────────────────────────────
 
   private buildPlayer(): void {
@@ -2809,6 +3171,7 @@ export class WorldEngine {
       { tier: 4, count: 1, boss: true, pos: [-112, 112] },
       { tier: 4, count: 1, boss: true, pos: [-150, -140] },  // Portal do Eclipse
       { tier: 3, count: 1, boss: true, pos: [155, -70] },    // Gruta do Eco
+      { tier: 4, count: 1, boss: true, pos: [-131, -52] },   // v10: Guardiã Anciã do Coração da Floresta
       { tier: 2, count: 1, guard: true, pos: [0, -45] },
       { tier: 2, count: 1, guard: true, pos: [0, 45] },
       { tier: 3, count: 1, guard: true, pos: [-140, 20] },   // Torre de Vigia
@@ -4927,6 +5290,8 @@ export class WorldEngine {
       const z = Math.sin(ff.a) * ff.r;
       ff.spr.position.set(x, ff.y0 + Math.sin(t / 900 + ff.r) * 0.4, z);
     }
+    // v10: Coração da Floresta — cristal, raios de luz, esporos e runas
+    this.updateHeartForest(t, dt, dayAmt);
   }
 
   // ── v3: céu vivo (nuvens, borboletas, água, fonte) ──────────

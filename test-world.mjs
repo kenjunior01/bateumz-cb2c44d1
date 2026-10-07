@@ -193,12 +193,12 @@ async function main() {
   ok("v3: rastreador de objetivos presente", await page.locator('[data-testid="bw-tracker"]').count() > 0);
   const hudText = await page.locator('[data-testid="bateu-world"]').innerText().catch(() => "");
   ok("HUD mostra nível + título", hudText.includes("Nv") && hudText.includes("Novato"));
-  let dicaOk = hudText.includes("18 marcos");
+  let dicaOk = hudText.includes("19 marcos");
   for (let i = 0; i < 12 && !dicaOk; i++) {
     await page.waitForTimeout(700);
-    dicaOk = (await page.locator('[data-testid="bateu-world"]').innerText().catch(() => "")).includes("18 marcos");
+    dicaOk = (await page.locator('[data-testid="bateu-world"]').innerText().catch(() => "")).includes("19 marcos");
   }
-  ok("v6: mundo maior anúnciado nas dicas (18 marcos)", dicaOk);
+  ok("v6: mundo maior anúnciado nas dicas (19 marcos)", dicaOk);
   ok("HUD mostra Pontos de Troféu", hudText.includes("🏆"));
   ok("HUD mostra descobertas", hudText.includes("descobertas"));
   ok("HUD mostra Objetivo da Saga", /objetivo da saga/i.test(hudText));
@@ -240,7 +240,16 @@ async function main() {
   ok("v6: lugares por descobrir ficam mistério", mapTxt.includes("por descobrir"));
   ok("v6: canvas do mapa grande presente", await page.locator('[data-testid="bw-bigmap"]').count() > 0);
   const lmCount = await page.locator('[data-testid^="bw-map-"]').count();
-  ok("v6: 18 marcos na legenda do mapa", lmCount === 18);
+  ok("v6: 19 marcos na legenda do mapa", lmCount === 19);
+  // v10: descobrir o Coração da Floresta (teleporte à clareira sagrada) —
+  // a legenda só revela nome + lore de lugares JÁ descobertos
+  await page.evaluate(() => { const e = window.__bw; if (e && e.warpTo) e.warpTo(-120, -40); });
+  await page.waitForTimeout(1600);
+  await page.evaluate(() => { const e = window.__bw; if (e && e.healFull) e.healFull(); if (e && e.warpTo) e.warpTo(0, 0); });
+  await page.waitForTimeout(800);
+  const mapTxt10 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
+  ok("v10: Coração da Floresta descoberto e revelado na legenda", mapTxt10.includes("Coração da Floresta"));
+  ok("v10: lore da Guardiã Anciã visível", mapTxt10.includes("Guardiã Anciã"));
   // marcar destino → bússola
   const arenaItem = page.locator('[data-testid="bw-map-arena"]');
   await arenaItem.evaluate((el) => el.scrollIntoView({ block: "center" })).catch(() => {});
@@ -407,6 +416,11 @@ async function main() {
   await closePanel();
 
   console.log("▶ v4 — Modo Foto");
+  // v10: a página do hub pode estar rolada (a legenda do mapa fez
+  // scrollIntoView) — um utilizador real volta a centrar o jogo antes
+  // de carregar no botão; o teste faz o mesmo.
+  await page.evaluate(() => { document.querySelector('[data-testid="bateu-world"]')?.scrollIntoView({ block: "center" }); });
+  await page.waitForTimeout(700);
   const photoBtn = page.locator('[data-testid="bw-photo"]');
   ok("Botão de foto presente", await photoBtn.count() > 0);
   if (await photoBtn.count() > 0) {
@@ -418,15 +432,21 @@ async function main() {
       if (!clicked) await page.waitForTimeout(1200);
     }
     ok("Botão de foto clicável", clicked);
-    await page.waitForTimeout(500);
+    // v10: janela de foto é curta (~1.2s) e o renderer por software atrasa
+    // o overlay — sonda continuamente e valida a HUD DENTRO da janela
     const overlay = page.locator('[data-testid="bw-photo-overlay"]');
-    ok("Overlay do modo foto aparece", await overlay.isVisible().catch(() => false));
+    let overlayVisible = false;
     let hudHidden = false;
-    for (let i = 0; i < 8; i++) {
-      hudHidden = !(await page.locator('[data-testid="bw-attack"]').isVisible().catch(() => true));
-      if (hudHidden) break;
-      await page.waitForTimeout(300);
+    const pT0 = Date.now();
+    while (Date.now() - pT0 < 6000) {
+      overlayVisible = await overlay.isVisible().catch(() => false);
+      if (overlayVisible) {
+        hudHidden = !(await page.locator('[data-testid="bw-attack"]').isVisible().catch(() => true));
+        if (hudHidden) break;
+      }
+      await page.waitForTimeout(140);
     }
+    ok("Overlay do modo foto aparece", overlayVisible);
     ok("HUD escondida durante a foto", hudHidden);
     await page.waitForTimeout(1200);
     ok("Modo foto termina sozinho", true);

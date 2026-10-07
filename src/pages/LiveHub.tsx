@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Sus
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -555,7 +554,8 @@ const LiveHub = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      <Navbar />
+      {/* v9: SEM Navbar global — o JogosLayout já tem navegação própria fixa;
+          as duas navs fixed top-0 sobrepunham-se e esmagavam o topo */}
 
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
@@ -587,7 +587,7 @@ const LiveHub = () => {
                       {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  <ButtonRipple soundEffect={() => sfx.click()}>
+                  <ButtonRipple as="div" soundEffect={() => sfx.click()}>
                     <button onClick={requestEndLive} disabled={ending} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 disabled:opacity-50">
                       <Square className="h-3.5 w-3.5 fill-current" /> Encerrar Live
                     </button>
@@ -601,7 +601,7 @@ const LiveHub = () => {
                       <span className="text-[11px] text-primary font-bold">{templateName}</span>
                     </div>
                   )}
-                  <ButtonRipple soundEffect={() => sfx.success()}>
+                  <ButtonRipple as="div" soundEffect={() => sfx.success()}>
                     <button onClick={startLive} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
                       <Play className="h-4 w-4 fill-current" /> Iniciar Live
                     </button>
@@ -617,7 +617,7 @@ const LiveHub = () => {
                 branding={branding}
                 onBrandingChange={setBranding}
               />
-              <ButtonRipple soundEffect={() => sfx.click()}>
+              <ButtonRipple as="div" soundEffect={() => sfx.click()}>
                 <Link
                   to="/dashboard/raffles/create"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
@@ -730,7 +730,13 @@ const LiveHub = () => {
           <div>
             <GameFullscreenWrapper gameName={activeMeta?.label ?? ""}>
             <AnimatePresence mode="wait">
-              <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
+                  <Loader2 className="h-9 w-9 animate-spin text-primary" />
+                  <p className="text-xs font-bold text-muted-foreground">A carregar o jogo…</p>
+                  <p className="text-[10px] text-muted-foreground/60">prepara-te, isto é grande 😄</p>
+                </div>
+              }>
               {active === "wheel" && (
                 <motion.div key="wheel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <div className="mb-8">
@@ -1381,19 +1387,25 @@ const LiveHub = () => {
           </div>
 
           <aside className="space-y-4">
-            <LevelProgressWidget />
-            <LiveControlPanel
-              liveCode={liveCode}
-              entries={leaderboard}
-              onClear={() => setLeaderboard([])}
-              onResetConfig={resetConfig}
-              isLive={isLive}
-              elapsedSec={elapsed}
-              activeGameLabel={activeMeta?.label}
-              onStartLive={startLive}
-              onEndLive={requestEndLive}
-              onBroadcastWinner={broadcastWinner}
-            />
+            {/* v9: widgets de streamer só em ecrãs grandes — no mobile ficavam
+                empilhados abaixo do jogo a tapar o essencial */}
+            <div className="hidden lg:block">
+              <LevelProgressWidget />
+            </div>
+            <div className="hidden lg:block">
+              <LiveControlPanel
+                liveCode={liveCode}
+                entries={leaderboard}
+                onClear={() => setLeaderboard([])}
+                onResetConfig={resetConfig}
+                isLive={isLive}
+                elapsedSec={elapsed}
+                activeGameLabel={activeMeta?.label}
+                onStartLive={startLive}
+                onEndLive={requestEndLive}
+                onBroadcastWinner={broadcastWinner}
+              />
+            </div>
             <LiveLeaderboard entries={leaderboard} onClear={() => setLeaderboard([])} />
             {user && (
               <AmbassadorPanel

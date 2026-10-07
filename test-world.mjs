@@ -63,8 +63,8 @@ async function main() {
     if (await btn.count().catch(() => 0) > 0) { await btn.click({ force: true }).catch(() => {}); await page.waitForTimeout(350); }
   };
 
-  // ── 0. v6 — GATE: sem conta registada NÃO se joga ──
-  console.log("▶ v6 — Gate de registo obrigatório");
+  // ── 0. v9 — MODO CONVIDADO: sem conta TAMBÉM se joga ──
+  console.log("▶ v9 — Modo convidado (sem registo)");
   const sbToken = {
     access_token: "e2e.header." + Math.random().toString(36).slice(2),
     token_type: "bearer",
@@ -82,23 +82,35 @@ async function main() {
       updated_at: new Date().toISOString(),
     },
   };
-  // 0a: SEM sessão → ecrã de registo obrigatório
+  // 0a: SEM sessão → ecrã de criação abre direto (sem bloqueio)
   await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  const gate = page.locator('[data-testid="bateu-gate"]');
-  await gate.waitFor({ state: "visible", timeout: 25000 }).catch(() => {});
-  ok("v6: SEM conta — gate de membros aparece", await gate.count() > 0 && await gate.isVisible().catch(() => false));
-  const gateTxt = await page.locator("body").innerText().catch(() => "");
-  ok("v6: gate explica que é exclusivo para membros", gateTxt.includes("MEMBROS"));
-  ok("v6: gate tem botão de login", await page.locator('[data-testid="gate-login"]').count() > 0);
-  ok("v6: gate tem botão de registo grátis", await page.locator('[data-testid="gate-register"]').count() > 0);
-  ok("v6: sem conta, o mundo 3D NÃO arranca", (await page.locator('[data-testid="bateu-world"] canvas').count()) === 0);
-  await page.screenshot({ path: "shots/world-00-gate.png" });
+  const createScr = page.locator('[data-testid="bateu-create"]');
+  await createScr.waitFor({ state: "visible", timeout: 35000 }).catch(() => {});
+  ok("v9: SEM conta — ecrã de criação abre direto (sem bloqueio)", await createScr.count() > 0 && await createScr.isVisible().catch(() => false));
+  const guestNote = page.locator('[data-testid="guest-note"]');
+  await guestNote.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  ok("v9: nota de convidado explica que também pode jogar", await guestNote.isVisible().catch(() => false));
+  ok("v9: atalho para criar conta presente na criação", await page.locator('[data-testid="guest-register"]').count() > 0);
+  ok("v9: gate de bloqueio foi removido", (await page.locator('[data-testid="bateu-gate"]').count()) === 0);
+  await page.screenshot({ path: "shots/world-00-convidado.png" });
 
-  // 0b: injetar sessão de membro → mundo abre
+  // 0b: convidado cria herói e entra no mundo
+  const guestInput = page.locator('input[placeholder="Nome do teu herói"]');
+  await guestInput.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+  await guestInput.fill("TesteHero");
+  await page.locator('button:has-text("ENTRAR NO MUNDO")').first().click().catch(() => {});
+  const guestCanvas = page.locator('[data-testid="bateu-world"] canvas');
+  await page.waitForTimeout(12000); // margem para o mundo arrancar em dev
+  ok("v9: CONVIDADO joga — canvas 3D ativo sem conta", (await guestCanvas.count()) > 0);
+  ok("v9: chip CONVIDADO no HUD com atalho para conta", await page.locator('[data-testid="bw-guest-chip"]').count() > 0);
+  await page.screenshot({ path: "shots/world-00-convidado-jogando.png" });
+
+  // 0c: limpar herói de convidado e injetar sessão — o resto da suite cobre o fluxo MEMBRO
+  await page.evaluate(() => { try { localStorage.removeItem("bateu_world_char_v6"); } catch {} });
   await page.addInitScript((tok) => {
     try { localStorage.setItem("sb-ngxrdpplyghlugoowjqj-auth-token", JSON.stringify(tok)); } catch {}
   }, sbToken);
-  ok("v6: sessão de membro injetada para o resto do teste", true);
+  ok("v9: sessão de membro injetada para o resto do teste", true);
 
   // ── 1. CTA central na homepage ──
   console.log("▶ Homepage — CTA central do jogo");
@@ -471,12 +483,17 @@ async function main() {
   ok("v7: cena com vegetação/props rica", !!info && info.trees > 100);
 
   console.log("▶ v7 — Acontecimentos do Mundo");
+  // helper: espera poll pelo texto do chip (evita corridas de render em dev)
+  const waitChip = async (substr) => {
+    for (let i = 0; i < 10; i++) {
+      const t = (await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "")).toUpperCase();
+      if (t.includes(substr)) return true;
+      await page.waitForTimeout(500);
+    }
+    return false;
+  };
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugForceEvent) e.debugForceEvent("meteors"); });
-  await page.waitForTimeout(600);
-  const evChip = page.locator('[data-testid="bw-world-event"]');
-  ok("v7: chip do ACONTECIMENTO aparece", await evChip.isVisible().catch(() => false));
-  let evTxt = await evChip.innerText().catch(() => "");
-  ok("v7: CHUVA DE METEOROS anunciada", evTxt.toUpperCase().includes("METEOROS"));
+  ok("v7: chip do ACONTECIMENTO aparece", await waitChip("METEOROS"));
   await page.waitForTimeout(2600);
   await page.screenshot({ path: "shots/world-09-meteoros.png" });
   // trocar para enxame → 5 mobs de elite x2
@@ -484,15 +501,13 @@ async function main() {
   await page.waitForTimeout(700);
   const info2 = await page.evaluate(() => { const e = window.__bw; return e && e.debugWorldInfo ? e.debugWorldInfo() : null; });
   ok("v7: Enxame de Elite spawna 5 mobs", !!info2 && info2.eventMobs === 5);
-  evTxt = await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "");
-  ok("v7: chip mostra ENXAME DE ELITE", evTxt.toUpperCase().includes("ENXAME"));
+  ok("v7: chip mostra ENXAME DE ELITE", await waitChip("ENXAME"));
   // trocar para frenesi (limpa os mobs do enxame)
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugForceEvent) e.debugForceEvent("frenzy"); });
   await page.waitForTimeout(700);
   const info3 = await page.evaluate(() => { const e = window.__bw; return e && e.debugWorldInfo ? e.debugWorldInfo() : null; });
   ok("v7: fim do enxame remove os mobs de evento", !!info3 && info3.eventMobs === 0);
-  evTxt = await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "");
-  ok("v7: chip mostra FRENESI DE ROUBOS", evTxt.toUpperCase().includes("FRENESI"));
+  ok("v7: chip mostra FRENESI DE ROUBOS", await waitChip("FRENESI"));
 
   console.log("▶ v7 — Roubo de itens em PvP");
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugReceiveSteal) e.debugReceiveSteal(); });

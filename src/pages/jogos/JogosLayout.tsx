@@ -44,9 +44,12 @@ export default function JogosLayout() {
 
   return (
     <div
-      className="area-jogos min-h-screen relative"
+      className="area-jogos dark min-h-screen relative"
       style={{ background: 'var(--area-bg)', color: 'var(--area-text)' }}
     >
+      {/* v9: class "dark" no wrapper — toda a área de jogos usa o tema escuro
+          (design dark-first estilo Steam). Sem isto, em tema light os cartões
+          bg-card ficam brancos com texto claro herdado = conteúdo ofuscado. */}
       {/* Subtle grid pattern for Steam-like feel */}
       <div
         className="fixed inset-0 pointer-events-none z-0 opacity-[0.02]"

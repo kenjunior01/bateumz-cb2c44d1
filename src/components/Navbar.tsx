@@ -375,20 +375,22 @@ const Navbar = () => {
               (scrolled ? "px-6 py-2" : "px-6 py-3.5")
           }
           >
-            <Link to="/" className="group relative flex items-center gap-2.5">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: -3 }}
-                whileTap={{ scale: 0.95 }}
-                className="navbar-logo-ring relative"
-              >
-                <img
-                  src={bateuLogo}
-                  alt="Bateu"
-                  className={"transition-all duration-500 " + (scrolled ? "h-8 w-8" : "h-9 w-9")}
-                />
-                <div className="absolute inset-0 rounded-full bg-primary/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </motion.div>
-              <div className="flex items-center gap-2">
+            {/* v9: logo e orb "ao vivo" são links IRMÃOS — antes o orb estava
+                dentro do Link do logo (a dentro de a), quebrando os cliques */}
+            <div className="group relative flex items-center gap-2.5">
+              <Link to="/" className="relative flex items-center gap-2.5">
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: -3 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="navbar-logo-ring relative"
+                >
+                  <img
+                    src={bateuLogo}
+                    alt="Bateu"
+                    className={"transition-all duration-500 " + (scrolled ? "h-8 w-8" : "h-9 w-9")}
+                  />
+                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </motion.div>
                 <span
                   className={"navbar-brand-text font-display font-bold transition-all duration-500 text-gradient-primary " + (scrolled ? "text-lg" : "text-xl")}
                 >
@@ -397,18 +399,18 @@ const Navbar = () => {
                 <span className="navbar-verified-dot hidden md:inline-flex" title={t("nav.verified")}>
                   <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                 </span>
-                <Link
-                  to="/lives-agora"
-                  className="navbar-live-orb hidden items-center md:inline-flex"
-                  title={t("nav.live.count")}
-                  aria-label={`${liveCount} ${t("nav.live.count")}`}
-                >
-                  <span className="navbar-live-orb-ring" aria-hidden="true" />
-                  <span className="tabular-nums">{liveCount}</span>
-                  <span className="hidden xl:inline opacity-80">{t("nav.live")}</span>
-                </Link>
-              </div>
-            </Link>
+              </Link>
+              <Link
+                to="/lives-agora"
+                className="navbar-live-orb hidden items-center md:inline-flex"
+                title={t("nav.live.count")}
+                aria-label={`${liveCount} ${t("nav.live.count")}`}
+              >
+                <span className="navbar-live-orb-ring" aria-hidden="true" />
+                <span className="tabular-nums">{liveCount}</span>
+                <span className="hidden xl:inline opacity-80">{t("nav.live")}</span>
+              </Link>
+            </div>
 
             <div className="hidden lg:flex">
               <NavigationMenu>

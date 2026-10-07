@@ -278,7 +278,7 @@ const EXCHANGES = [
 
 export default function BateuWorld({ onScore, onNavigate }: Props) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [phase, setPhase] = useState<"boot" | "gate" | "create" | "world">("boot");
+  const [phase, setPhase] = useState<"boot" | "create" | "world">("boot");
   const [char, setChar] = useState<Char | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [pickClass, setPickClass] = useState(0);
@@ -460,16 +460,11 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // ── Boot (v6: SÓ MEMBROS REGISTADOS entram no mundo) ───────
+  // ── Boot (v9: TODOS jogam — com conta sincroniza na nuvem, sem conta joga como convidado) ──────
   useEffect(() => {
     if (authLoading) return; // espera pela sessão da plataforma
-    if (!user) {
-      // sem conta → ecrã de registo obrigatório
-      setPhase("gate");
-      return;
-    }
     const c = loadChar();
-    if (c) {
+    if (c && user) {
       // v6: progresso ligado à CONTA da plataforma (não ao dispositivo)
       c.uid = "bw_" + user.id;
       if (!c.name || c.name === "Herói") c.name = (profile?.display_name || user.email?.split("@")[0] || "Herói").slice(0, 14);
@@ -488,6 +483,11 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         const flushed = await flushPendingExchanges();
         if (flushed > 0) pushToast(`☁️ ${flushed} troca(s) pendente(s) processada(s) na tua conta!`, "good");
       })();
+    } else if (c) {
+      // v9: CONVIDADO — tem progresso anterior neste dispositivo, continua de onde ficou
+      setChar(c);
+      setPhase("world");
+      setTimeout(() => pushToast("👋 Estás a jogar como convidado — cria conta para guardar o progresso na nuvem!", "info"), 2200);
     } else {
       setPhase("create");
     }
@@ -1197,60 +1197,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     );
   }
 
-  // ── v6: GATE — só membros registados entram no Bateu World ──
-  if (phase === "gate") {
-    return (
-      <div className="relative z-10 w-full aspect-[4/3] md:aspect-video overflow-hidden rounded-2xl bg-slate-950 text-white" data-testid="bateu-gate">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
-        <motion.div
-          className="absolute inset-0 opacity-25"
-          animate={{ background: [
-            "radial-gradient(circle at 25% 25%, #f43f5e 0%, transparent 45%), radial-gradient(circle at 75% 75%, #38bdf8 0%, transparent 45%)",
-            "radial-gradient(circle at 75% 25%, #8b5cf6 0%, transparent 45%), radial-gradient(circle at 25% 75%, #fbbf24 0%, transparent 45%)",
-            "radial-gradient(circle at 25% 25%, #f43f5e 0%, transparent 45%), radial-gradient(circle at 75% 75%, #38bdf8 0%, transparent 45%)",
-          ] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-        />
-        <div className="relative h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
-          <motion.div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-4xl shadow-xl shadow-rose-500/20"
-            animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }}
-            transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-          >🔒</motion.div>
-          <h2 className="font-display text-2xl md:text-3xl font-black bg-gradient-to-r from-rose-300 via-amber-200 to-sky-300 bg-clip-text text-transparent">
-            MUNDO EXCLUSIVO PARA MEMBROS
-          </h2>
-          <p className="max-w-md text-sm text-white/70">
-            O Bateu World é o MMO oficial da plataforma Bateu. Para garantir PvP justo, economia real
-            e progresso seguro na nuvem, <b className="text-white">só joga quem tem conta registada</b>.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-xl text-[11px] text-white/75">
-            <div className="rounded-xl border border-white/15 bg-white/5 p-2">☁️ Progresso na tua conta</div>
-            <div className="rounded-xl border border-white/15 bg-white/5 p-2">🎟️ Cupões e prémios REAIS</div>
-            <div className="rounded-xl border border-white/15 bg-white/5 p-2">💵 Pontos → moeda da carteira</div>
-            <div className="rounded-xl border border-white/15 bg-white/5 p-2">⚔️ PvP com roubo de tesouros</div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 mt-1">
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => go("/login")}
-              data-testid="gate-login"
-              className="rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-7 py-3 font-display font-black shadow-lg shadow-rose-500/30"
-            >ENTRAR NA CONTA</motion.button>
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => go("/register")}
-              data-testid="gate-register"
-              className="rounded-xl border-2 border-amber-300/60 bg-amber-400/10 px-7 py-3 font-display font-black text-amber-200"
-            >CRIAR CONTA GRÁTIS</motion.button>
-          </div>
-          <p className="text-[10px] text-white/40 max-w-sm">A tua conta é a mesma de toda a plataforma — sorteios, carteira, perfil. O progresso do mundo fica guardado nela.</p>
-        </div>
-      </div>
-    );
-  }
+  // ── v9: SEM GATE — convidados entram direto na criação de herói ──
 
   if (phase === "create") {
     const sel = CLASSES[pickClass];
@@ -1376,6 +1323,14 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             />
             <span className="relative">ENTRAR NO MUNDO →</span>
           </motion.button>
+          {/* v9: nota de convidado — joga já, guarda depois */}
+          {!user && (
+            <div data-testid="guest-note" className="w-full max-w-lg rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-center text-[11px] text-amber-200">
+              👋 <b>Sem registo? Também podes jogar!</b> O progresso fica neste dispositivo —
+              <button onClick={() => go("/register")} data-testid="guest-register" className="ml-1 underline font-black hover:text-amber-100">cria conta grátis</button>
+              {" "}para o guardar na nuvem e receber moeda real.
+            </div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-lg text-[11px] text-white/70">
             <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">⚔️ 3 poderes por classe</div>
             <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">💀 Rouba cupões no PvP</div>
@@ -1929,6 +1884,17 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           </button>
         ))}
       </div>
+
+      {/* v9: chip de convidado — lembra suave, nunca bloqueia */}
+      {!user && (
+        <button
+          onClick={() => go("/register")}
+          data-testid="bw-guest-chip"
+          className="absolute top-11 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25"
+        >
+          👤 CONVIDADO — criar conta para guardar na nuvem
+        </button>
+      )}
 
       {/* joystick (mobile) */}
       <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} />

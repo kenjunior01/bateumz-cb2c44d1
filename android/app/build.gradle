@@ -7,15 +7,15 @@ android {
         applicationId "online.bateu.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "2.12"
+        versionCode 13
+        versionName "2.13"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            // *.gz / *.br (pré-comprimidos do vite) colidem com os ficheiros originais no AGP
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:*\\.gz:*\\.br'
-        }
+    }
+    // v13: AGP 8.x — ignoreAssetsPattern vive em androidResources (aaptOptions
+    // dentro de defaultConfig é ignorado silenciosamente) — *.gz/*.br do vite
+    // colidem com os originais ("Duplicate resources")
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:*.gz:*.br'
     }
     signingConfigs {
         release {

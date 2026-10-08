@@ -33,6 +33,7 @@ import LoadingScreen from "./components/LoadingScreen.tsx";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
+import { useIsMobile } from "@/hooks/use-mobile";
 import BottomTabBar from "./components/BottomTabBar.tsx";
 import MobileMenuDrawer from "./components/mobile/MobileMenuDrawer.tsx";
 import { MobileNavProvider } from "./contexts/MobileNavigationContext.tsx";
@@ -435,6 +436,9 @@ function AppShell() {
   const { loading: configLoading } = useRegionalContext();
   const { user, loading: authLoading } = useAuth();
   const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
+  const isMobile = useIsMobile();
+  /* Home mobile tem design escuro próprio (exemplos) — barras globais acompanham */
+  const isMobileHome = isMobile && location.pathname === "/";
 
   useEffect(() => {
     const timer = setTimeout(() => setShowLoading(false), 4000);
@@ -448,17 +452,17 @@ function AppShell() {
   if (showLoading && !isOverlay) return <LoadingScreen />;
 
   return (
-    <>
+    <MobileNavProvider>
+      <div className={isMobileHome ? "dark" : undefined}>
       {!isOverlay && <><Toaster /><Sonner /><BackgroundDecorations /></>}
       {!isOverlay && <>
         {!authLoading && user && <PushNotificationBanner />}
-        <MobileNavProvider>
-          <MobileTopBar />
-          <MobileMenuDrawer />
-          <BottomTabBar />
-          <RecentPagesTracker />
-        </MobileNavProvider>
+        <MobileTopBar />
+        <MobileMenuDrawer />
+        <BottomTabBar />
+        <RecentPagesTracker />
       </>}
+      </div>
       <AnimatedRoutes />
       {!isOverlay && <>
       {/* Assistente único (MascotBuddy): sem pop-ups automáticos — apenas
@@ -466,7 +470,7 @@ function AppShell() {
       <MascotBuddy />
       <RegionalPreviewBar />
       <WorldSwitcher /></>}
-    </>
+    </MobileNavProvider>
   );
 }
 

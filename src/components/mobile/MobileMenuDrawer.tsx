@@ -12,6 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useMobileNav } from "@/contexts/MobileNavigationContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
 
@@ -608,6 +611,13 @@ export default function MobileMenuDrawer() {
                         </button>
                       </div>
                     )}
+
+                    {/* Definições rápidas: idioma, região e tema (movidas do topo) */}
+                    <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                      <LanguageSwitcher />
+                      <RegionCountrySwitcher compact />
+                      <ThemeToggle />
+                    </div>
                   </motion.div>
                 </motion.div>
               </div>

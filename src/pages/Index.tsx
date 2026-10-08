@@ -27,6 +27,7 @@ import {
 import { motion, useInView } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useSEO } from "@/hooks/useSEO";
+import MobileHomeApp from "@/components/mobile/MobileHomeApp";
 import bateuLogo from "@/assets/bateu-logo.png";
 import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
@@ -254,6 +255,7 @@ export default function Index() {
   const navigate = useNavigate();
   const { sfx } = useSoundEffects();
   useSEO({ title: 'Jogos Online, Sorteios ao Vivo e Apostas Esportivas', description: 'Bateu é a plataforma líder em jogos online, sorteios ao vivo com prémios reais, apostas P2P e torneios de esports. Disponível em 12 países africanos e europeus. Jogue gratuitamente.', canonicalPath: '/' });
+  /* NOTA: no mobile, o retorno antecipado para MobileHomeApp acontece DEPOIS de todos os hooks (regras dos hooks respeitadas). */
 
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const [confettiActive, setConfettiActive] = useState(false);
@@ -369,6 +371,11 @@ export default function Index() {
   }, []);
 
   const quadrupledTicker = [...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems];
+
+  /* ═══ MOBILE — home estilo app nativo (o melhor das duas versões de exemplo) ═══ */
+  if (isMobile) {
+    return <MobileHomeApp />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ background: "#050508" }}>

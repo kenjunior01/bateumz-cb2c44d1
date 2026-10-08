@@ -1,15 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Bell, Menu, Star, Radio } from "lucide-react";
+import { Bell, Menu, Star, Radio, Search, Gem } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileNav } from "@/contexts/MobileNavigationContext";
 import { supabase } from "@/integrations/supabase/client";
-import ThemeToggle from "@/components/ThemeToggle";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 const MobileTopBar = () => {
@@ -111,9 +108,14 @@ const MobileTopBar = () => {
               {!scrolled && t("mob.pts")}
             </Link>
           )}
-          <LanguageSwitcher />
-          <RegionCountrySwitcher compact />
-          <ThemeToggle />
+          {/* pesquisa — versão de exemplo B */}
+          <button
+            onClick={() => navigate("/marketplace")}
+            className="mob-topbar-icon-btn"
+            aria-label={t("nav.search")}
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </button>
           <button
             onClick={() => { if (user) navigate("/dashboard/notifications"); else navigate("/login"); }}
             className="mob-topbar-icon-btn relative"
@@ -135,6 +137,16 @@ const MobileTopBar = () => {
                 )}
               </AnimatePresence>
             )}
+          </button>
+          {/* avatar — versão de exemplo B */}
+          <button
+            onClick={() => navigate(user ? "/profile" : "/login")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-[11px] font-extrabold text-white shadow-md shadow-violet-600/30 active:scale-90 transition-transform"
+            aria-label={t("nav.profile")}
+          >
+            {user
+              ? (user.user_metadata?.display_name || user.email?.split("@")[0] || "?").slice(0, 2).toUpperCase()
+              : <Gem className="h-3.5 w-3.5" />}
           </button>
           <motion.button
             whileTap={{ scale: 0.85 }}

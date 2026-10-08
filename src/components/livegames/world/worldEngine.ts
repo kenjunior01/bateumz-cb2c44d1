@@ -503,6 +503,9 @@ export class WorldEngine {
   private moveDirFace = new THREE.Vector3(0, 0, -1);
   private camYaw = 0;
   private camDist = 12;
+  // v12: modos de câmara — "orbit" (clássica) / "third" (ombro, San Andreas) / "first" (olhos do personagem, Minecraft)
+  camMode: "orbit" | "third" | "first" = "orbit";
+  private camPitch = 0.34;
   private camPos = new THREE.Vector3(0, 8, 18);
 
   private keys = new Set<string>();
@@ -669,17 +672,17 @@ export class WorldEngine {
     });
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87ceeb);
-    this.scene.fog = new THREE.FogExp2(0x9bd0e8, 0.0052); // v6: mundo maior — névoa mais longe
+    this.scene.background = new THREE.Color(0x9fd7f2);
+    this.scene.fog = new THREE.FogExp2(0xa8dbf0, 0.0042); // v12: névoa mais longe e leve — visão limpa
 
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 560);
 
-    this.hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3d6b35, 0.95);
+    this.hemi = new THREE.HemisphereLight(0xcde9ff, 0x52796f, 1.0);
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(0xfff3d6, 1.15);
     this.sun.position.set(40, 60, 20);
     this.scene.add(this.sun);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.36));
 
     this.buildTerrain();
     this.buildSky();
@@ -1009,7 +1012,7 @@ export class WorldEngine {
     );
     band.position.set(0, 11.5, 0);
     this.scene.add(band);
-    const glow = new THREE.PointLight(0xf43f5e, 60, 30);
+    const glow = new THREE.PointLight(0xf43f5e, 26, 20);
     glow.position.set(0, 12, 0);
     this.scene.add(glow);
 
@@ -1203,7 +1206,7 @@ export class WorldEngine {
     lIcon.scale.set(1.6, 1.6, 1);
     lIcon.position.set(95, groundY(95, 70) + 3.4, 70);
     this.scene.add(lIcon);
-    const lLight = new THREE.PointLight(0x22d3ee, 30, 24);
+    const lLight = new THREE.PointLight(0x22d3ee, 14, 18);
     lLight.position.set(95, 3, 70);
     this.scene.add(lLight);
 
@@ -1228,7 +1231,7 @@ export class WorldEngine {
     cIcon.scale.set(1.6, 1.6, 1);
     cIcon.position.y = 8;
     cave.add(cIcon);
-    const cLight = new THREE.PointLight(0x8b5cf6, 40, 26);
+    const cLight = new THREE.PointLight(0x8b5cf6, 18, 20);
     cLight.position.set(0, 3, 0);
     cave.add(cLight);
     cave.position.set(-90, 0, 85);
@@ -1461,7 +1464,7 @@ export class WorldEngine {
     }
 
     // luz interior quente
-    const light = new THREE.PointLight(0xffd9a0, 15, o.w + 5, 1.7);
+    const light = new THREE.PointLight(0xffd9a0, 9, o.w + 5, 1.7);
     light.position.set(o.x, f0 + 2.3, o.z);
     g.add(light);
 
@@ -1598,7 +1601,7 @@ export class WorldEngine {
     this.furnTable(g, x, z, f2);
 
     // lanterna no topo
-    const lampLight = new THREE.PointLight(0xfff2c0, 40, 30, 1.5);
+    const lampLight = new THREE.PointLight(0xfff2c0, 18, 24, 1.5);
     lampLight.position.set(x, fT + 2.3, z);
     g.add(lampLight);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), new THREE.MeshBasicMaterial({ color: 0xfff2c0 }));
@@ -1911,7 +1914,7 @@ export class WorldEngine {
       label: "🏟️ Entrar na Arena das Ondas",
       pos: portalPos, used: false, icon: aIcon,
     });
-    const light = new THREE.PointLight(0xf43f5e, 44, 30);
+    const light = new THREE.PointLight(0xf43f5e, 20, 22);
     light.position.set(ARENA_CENTER.x, 4, ARENA_CENTER.z);
     g.add(light);
     this.scene.add(g);
@@ -2731,7 +2734,7 @@ export class WorldEngine {
     }));
     heartGlow.position.y = 2.1;
     heartGlow.scale.setScalar(6);
-    const hLight = new THREE.PointLight(0x34d399, 6, 24);
+    const hLight = new THREE.PointLight(0x34d399, 4, 18);
     hLight.position.y = 2.4;
     heart.add(mound, c1, c2, c3, heartGlow, hLight);
     heart.position.set(CX, groundY(CX, CZ), CZ);
@@ -2889,13 +2892,13 @@ export class WorldEngine {
     // god rays: brilham de dia, apagam à noite (o cristal assume o turno)
     for (const gr of this.godRays) {
       (gr.mesh.material as THREE.MeshBasicMaterial).opacity =
-        (0.05 + dayAmt * 0.17) * (0.72 + Math.sin(t * 0.0006 + gr.phase) * 0.28);
+        (0.03 + dayAmt * 0.08) * (0.72 + Math.sin(t * 0.0006 + gr.phase) * 0.28);
     }
     // esporos: derivam para cima, dourados de dia / ciano à noite
     const nightAmt = Math.max(0, 1 - dayAmt * 1.6);
     for (const sp of this.spores) {
       const m = sp.spr.material as THREE.SpriteMaterial;
-      m.opacity = 0.34 + Math.sin(t * 0.001 + sp.phase) * 0.14;
+      m.opacity = 0.16 + Math.sin(t * 0.001 + sp.phase) * 0.07;
       if (m.opacity <= 0.02) continue;
       m.color.setRGB(0.55 + (1 - nightAmt) * 0.45, 0.72, 0.25 + nightAmt * 0.62);
       sp.a += sp.s * dt * 60;
@@ -2909,7 +2912,7 @@ export class WorldEngine {
     for (let i = 0; i < this.heartRunes.length; i++) {
       const mm = this.heartRunes[i].material as THREE.MeshBasicMaterial;
       const base = (this.heartRunes[i].userData.base as number) || 0.85;
-      mm.opacity = base * (0.68 + Math.sin(t * 0.003 + i * 1.7) * 0.32) * (0.75 + nightAmt * 0.45);
+      mm.opacity = base * (0.82 + Math.sin(t * 0.003 + i * 1.7) * 0.18) * (0.6 + nightAmt * 0.4);
     }
   }
 
@@ -2932,7 +2935,7 @@ export class WorldEngine {
     this.player = g;
     this.scene.add(g);
     this.playerShadow = this.addShadow(this.pos.x, 0, this.pos.z, 1.1);
-    const pLight = new THREE.PointLight(color, 8, 8);
+    const pLight = new THREE.PointLight(color, 4, 7);
     pLight.position.y = 2.4;
     g.add(pLight);
     // anel de escudo PvP próprio (visível quando ativo)
@@ -3251,7 +3254,7 @@ export class WorldEngine {
       crown.add(band);
       g.add(crown);
       // aura vermelha de chefe
-      const aura = new THREE.PointLight(0xff4444, 26, 12);
+      const aura = new THREE.PointLight(0xff4444, 12, 10);
       aura.position.y = 1.4 * scale;
       g.add(aura);
       this.bossAuraLights.push(aura);
@@ -3821,6 +3824,8 @@ export class WorldEngine {
     if (tag === "INPUT" || tag === "TEXTAREA") return;
     this.keys.add(e.key.toLowerCase());
     if (e.key === " ") { this.jump(); e.preventDefault(); }
+    // v12: C troca o modo de câmara (órbita → ombro → 1ª pessoa)
+    if (e.key.toLowerCase() === "c") this.cycleCamMode();
     if (e.key.toLowerCase() === "e") this.interact();
     if (e.key.toLowerCase() === "f") this.attack();
     if (e.key === "1") this.skill(0);
@@ -3849,7 +3854,11 @@ export class WorldEngine {
     if (this.dragStart.moved > 10) this.dragging = true;
     if (this.dragging) {
       this.camYaw -= dx * 0.0052;
-      this.camDist = Math.max(6, Math.min(18, this.camDist + dy * 0.02));
+      if (this.camMode === "orbit") {
+        this.camDist = Math.max(6, Math.min(18, this.camDist + dy * 0.02));
+      } else {
+        this.camPitch = Math.max(-1.1, Math.min(1.25, this.camPitch + dy * 0.0042));
+      }
     }
   };
 
@@ -3864,6 +3873,40 @@ export class WorldEngine {
   private onWheel = (e: WheelEvent): void => {
     this.camDist = Math.max(6, Math.min(18, this.camDist + (e.deltaY > 0 ? 1.2 : -1.2)));
   };
+
+  cycleCamMode(): void {
+    const order: ("orbit" | "third" | "first")[] = ["orbit", "third", "first"];
+    this.setCamMode(order[(order.indexOf(this.camMode) + 1) % order.length]);
+  }
+
+  setCamMode(m: "orbit" | "third" | "first"): void {
+    if (this.camMode === m) return;
+    const wasFirst = this.camMode === "first";
+    this.camMode = m;
+    if (m === "third") {
+      this.camPitch = Math.max(0.05, Math.min(this.camPitch, 0.6));
+    } else if (m === "orbit") {
+      this.camPitch = 0.34;
+    }
+    // ao sair da 1ª pessoa, encostar a câmara à posição orbital para evitar voo lateral
+    if (wasFirst && m !== "first") {
+      this.camPos.set(
+        this.pos.x + Math.sin(this.camYaw) * this.camDist,
+        this.pos.y + 5.5 + this.camDist * 0.32,
+        this.pos.z + Math.cos(this.camYaw) * this.camDist
+      );
+    }
+    this.applyCamVisibility();
+    this.opts.onEvent({ type: "cammode", mode: m });
+  }
+
+  private applyCamVisibility(): void {
+    // 1ª pessoa: o avatar desaparece (vês o mundo com os olhos dele)
+    const fp = this.camMode === "first";
+    if (this.player) this.player.visible = !fp;
+    if (this.playerShadow) this.playerShadow.visible = !fp;
+    if (this.classAura) this.classAura.visible = !fp;
+  }
 
   setJoystick(x: number, y: number): void {
     this.joy.x = x;
@@ -5198,10 +5241,10 @@ export class WorldEngine {
     const phase = (t % DAY_LEN) / DAY_LEN; // 0..1
     const dayAmt = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2); // 1=meio-dia, 0=meia-noite
     // v4: paleta em 4 fases (dia / entardecer / noite / amanhecer)
-    const cNoon = new THREE.Color(0x87ceeb);
-    const cDusk = new THREE.Color(0xf59e6b);
-    const cNight = new THREE.Color(0x0b1026);
-    const cDawn = new THREE.Color(0xf9a8d4);
+    const cNoon = new THREE.Color(0x9fd7f2);
+    const cDusk = new THREE.Color(0xf0b98d);
+    const cNight = new THREE.Color(0x101a33);
+    const cDawn = new THREE.Color(0xe4d5e2);
     const sky = new THREE.Color();
     if (dayAmt > 0.55) {
       sky.copy(cDusk).lerp(cNoon, smooth01((dayAmt - 0.55) / 0.45));
@@ -5240,7 +5283,7 @@ export class WorldEngine {
       this.aurora.position.set(this.pos.x, 0, this.pos.z);
       this.aurora.rotation.y = Math.sin(t * 0.00003) * 0.4;
       this.aurora.children.forEach((band, i) => {
-        ((band as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = nightF * (0.5 + Math.sin(t * 0.0004 + i * 2.1) * 0.22);
+        ((band as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = nightF * (0.16 + Math.sin(t * 0.0004 + i * 2.1) * 0.08);
         band.position.y = 95 + i * 26 + Math.sin(t * 0.00025 + i) * 6;
       });
     }
@@ -5416,11 +5459,41 @@ export class WorldEngine {
 
   private updateCamera(dt: number): void {
     const head = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
-    const target = new THREE.Vector3(
-      this.pos.x + Math.sin(this.camYaw) * this.camDist,
-      this.pos.y + 5.5 + this.camDist * 0.32,
-      this.pos.z + Math.cos(this.camYaw) * this.camDist
-    );
+
+    // v12: 1ª PESSOA — praticamente os olhos do personagem (estilo Minecraft)
+    if (this.camMode === "first") {
+      const cp = Math.cos(this.camPitch);
+      const dir = new THREE.Vector3(-Math.sin(this.camYaw) * cp, Math.sin(this.camPitch), -Math.cos(this.camYaw) * cp);
+      this.camera.position.set(head.x + dir.x * 0.18, head.y + dir.y * 0.18, head.z + dir.z * 0.18);
+      const look = head.clone().addScaledVector(dir, 12);
+      if (this.shakeAmp > 0.001) {
+        this.camera.position.y += (Math.random() - 0.5) * this.shakeAmp;
+        this.shakeAmp *= Math.max(0, 1 - dt * 6);
+      }
+      this.camera.lookAt(look);
+      return;
+    }
+
+    let target: THREE.Vector3;
+    let look: THREE.Vector3;
+    if (this.camMode === "third") {
+      // v12: OMBRO — câmara rente atrás do personagem (estilo San Andreas/GTA)
+      const d = 4.6;
+      const cp = Math.cos(this.camPitch), sp = Math.sin(this.camPitch);
+      target = new THREE.Vector3(
+        this.pos.x + Math.sin(this.camYaw) * d * cp + Math.cos(this.camYaw) * 0.85,
+        this.pos.y + 1.75 + sp * d,
+        this.pos.z + Math.cos(this.camYaw) * d * cp - Math.sin(this.camYaw) * 0.85
+      );
+      look = new THREE.Vector3(this.pos.x, this.pos.y + 1.7, this.pos.z);
+    } else {
+      target = new THREE.Vector3(
+        this.pos.x + Math.sin(this.camYaw) * this.camDist,
+        this.pos.y + 5.5 + this.camDist * 0.32,
+        this.pos.z + Math.cos(this.camYaw) * this.camDist
+      );
+      look = new THREE.Vector3(this.pos.x, this.pos.y + 1.6, this.pos.z);
+    }
     // v8: a câmara desliza junto às paredes em vez de as atravessar
     if (this.camBlockerList.length > 0) {
       let nearB = false;
@@ -5446,7 +5519,7 @@ export class WorldEngine {
       this.camera.position.z += (Math.random() - 0.5) * this.shakeAmp;
       this.shakeAmp *= Math.max(0, 1 - dt * 6);
     }
-    this.camera.lookAt(this.pos.x, this.pos.y + 1.6, this.pos.z);
+    this.camera.lookAt(look);
   }
 
   private resize(): void {

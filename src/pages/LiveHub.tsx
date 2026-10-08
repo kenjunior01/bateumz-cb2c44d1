@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -76,6 +76,7 @@ const RpgArenaBattle = lazy(() => import("@/components/livegames/RpgArenaBattle"
 const BattleRoyaleGame = lazy(() => import("@/components/livegames/BattleRoyaleGame"));
 const ChessGame = lazy(() => import("@/components/livegames/ChessGame"));
 const FlappyBirdGame = lazy(() => import("@/components/livegames/FlappyBirdGame"));
+const BounceGame = lazy(() => import("@/components/livegames/BounceGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
@@ -140,7 +141,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -162,88 +163,21 @@ interface SavedWheelGame {
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-rose-600 via-orange-500 to-amber-400" },
-  { id: "wheel", icon: RotateCcw, emoji: "🎰", grad: "from-violet-500 to-fuchsia-500" },
-  { id: "keyword", icon: Search, emoji: "🔎", grad: "from-amber-500 to-orange-500" },
-  { id: "emoji", icon: Vote, emoji: "💥", grad: "from-pink-500 to-rose-500" },
-  { id: "tap", icon: Zap, emoji: "⚡", grad: "from-amber-500 to-orange-500" },
-  { id: "quiz", icon: Brain, emoji: "🧠", grad: "from-sky-500 to-blue-500" },
-  { id: "mystery", icon: Package, emoji: "🎁", grad: "from-emerald-500 to-teal-500" },
-  { id: "millionaire", icon: Trophy, emoji: "💰", grad: "from-purple-500 to-violet-500" },
-  { id: "kahoot", icon: Brain, emoji: "🎯", grad: "from-sky-500 to-indigo-600" },
-  { id: "bingo", icon: Trophy, emoji: "🎱", grad: "from-emerald-500 to-teal-600" },
-  { id: "challenge", icon: RotateCcw, emoji: "🎭", grad: "from-fuchsia-500 to-pink-500" },
-  { id: "vsduel", icon: Swords, emoji: "⚔️", grad: "from-red-500 to-orange-600" },
-  { id: "speed", icon: Zap, emoji: "⚡", grad: "from-cyan-500 to-blue-600" },
-  { id: "truthordare", icon: Heart, emoji: "🔥", grad: "from-rose-500 to-red-600" },
-  { id: "memory", icon: Brain, emoji: "🧠", grad: "from-indigo-500 to-purple-600" },
-  { id: "punishment", icon: Skull, emoji: "💀", grad: "from-red-600 to-rose-700" },
-  { id: "boknowledge", icon: Brain, emoji: "📚", grad: "from-cyan-500 to-purple-600" },
-  { id: "guessEmoji", icon: SmilePlus, emoji: "😎", grad: "from-yellow-500 to-amber-600" },
-  { id: "quickdraw", icon: Pencil, emoji: "🎨", grad: "from-emerald-500 to-teal-600" },
-  { id: "hotpotato", icon: Bomb, emoji: "💣", grad: "from-orange-500 to-red-600" },
-  { id: "numguess", icon: Hash, emoji: "🔢", grad: "from-violet-500 to-fuchsia-600" },
-  { id: "chaos", icon: Shuffle, emoji: "🌪️", grad: "from-rose-500 to-pink-600" },
-  { id: "checkers", icon: Grid3X3, emoji: "♟️", grad: "from-amber-700 to-red-800" },
-  { id: "ludo", icon: Dices, emoji: "🎲", grad: "from-emerald-600 to-teal-700" },
-  { id: "snakesladders", icon: TrendingUp, emoji: "🪜", grad: "from-lime-600 to-emerald-700" },
-  { id: "connect4", icon: LayoutGrid, emoji: "🔴", grad: "from-blue-500 to-yellow-500" },
-  { id: "battleship", icon: Anchor, emoji: "🚢", grad: "from-slate-600 to-blue-900" },
-  { id: "tictactoe", icon: CircleDot, emoji: "✕", grad: "from-violet-500 to-pink-500" },
-  { id: "uno", icon: Sparkles, emoji: "🃏", grad: "from-indigo-500 to-purple-600" },
-  { id: "snakebattle", icon: Gamepad2, emoji: "🐍", grad: "from-emerald-500 to-teal-600" },
-  { id: "rps", icon: Swords, emoji: "✊", grad: "from-amber-500 to-orange-600" },
-  { id: "colorsequence", icon: Sparkles, emoji: "🟢", grad: "from-violet-500 to-fuchsia-600" },
+  { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
-  { id: "ballbreaker", icon: Gamepad2, emoji: "🧱", grad: "from-red-500 to-orange-600" },
-  { id: "reactionrace", icon: Zap, emoji: "⚡", grad: "from-yellow-500 to-red-600" },
-  { id: "quickmath", icon: Brain, emoji: "🧮", grad: "from-cyan-500 to-blue-700" },
-  { id: "memorycards", icon: Brain, emoji: "🃏", grad: "from-indigo-500 to-violet-600" },
-  { id: "wordscramble", icon: Shuffle, emoji: "🔤", grad: "from-rose-500 to-pink-600" },
-  { id: "tictactoepro", icon: Grid3X3, emoji: "✖", grad: "from-violet-600 to-indigo-700" },
-  { id: "guessnumber100", icon: Hash, emoji: "🔢", grad: "from-teal-500 to-cyan-700" },
-  { id: "colormatch", icon: Palette, emoji: "🎨", grad: "from-pink-500 to-rose-700" },
-  { id: "targettap", icon: Target, emoji: "🎯", grad: "from-orange-500 to-red-600" },
-  { id: "diceluel", icon: Dices, emoji: "🎲", grad: "from-amber-600 to-yellow-600" },
-  { id: "patternmemory", icon: Grid3X3, emoji: "🧩", grad: "from-purple-500 to-violet-700" },
-  { id: "triviaflash", icon: Brain, emoji: "❗", grad: "from-emerald-500 to-teal-700" },
-  { id: "dominoes", icon: LayoutGrid, emoji: "🎲", grad: "from-slate-600 to-zinc-700" },
-  { id: "mazerace", icon: Map, emoji: "🧩", grad: "from-green-600 to-emerald-700" },
-  { id: "slotsvs", icon: Sparkles, emoji: "🎰", grad: "from-amber-500 to-yellow-500" },
-  { id: "match4", icon: Sparkles, emoji: "✨", grad: "from-pink-500 to-rose-600" },
-  { id: "towerstack", icon: Layers, emoji: "🏗️", grad: "from-sky-500 to-blue-600" },
-  { id: "cannonbattle", icon: Crosshair, emoji: "💣", grad: "from-red-600 to-orange-700" },
-  { id: "spotdifference", icon: Search, emoji: "🔍", grad: "from-amber-500 to-yellow-600" },
-  { id: "wordchain", icon: Shuffle, emoji: "🔗", grad: "from-teal-500 to-emerald-600" },
-  { id: "numbertetris", icon: LayoutGrid, emoji: "🔢", grad: "from-orange-600 to-red-700" },
-  { id: "pongvs", icon: Gamepad2, emoji: "🏓", grad: "from-blue-600 to-indigo-700" },
-  { id: "whackamole", icon: Target, emoji: "🎯", grad: "from-emerald-500 to-green-600" },
-  { id: "colorcatch", icon: Palette, emoji: "🎨", grad: "from-pink-500 to-rose-600" },
-  { id: "mexerica", icon: Zap, emoji: "✋", grad: "from-amber-600 to-red-700" },
-  { id: "chigogo", icon: Target, emoji: "🪨", grad: "from-yellow-700 to-amber-800" },
-  { id: "urusse", icon: Gamepad2, emoji: "🟤", grad: "from-green-700 to-amber-900" },
-  { id: "capulanaquiz", icon: Brain, emoji: "👗", grad: "from-yellow-500 to-green-700" },
-  { id: "carromboard", icon: Target, emoji: "🎱", grad: "from-amber-600 to-orange-500" },
-  { id: "teenpatti", icon: Target, emoji: "🃏", grad: "from-emerald-600 to-green-500" },
-  { id: "kabaddiraid", icon: Zap, emoji: "🧔", grad: "from-orange-500 to-red-600" },
-  { id: "rpgarena", icon: Swords, emoji: "⚔", grad: "from-red-600 to-purple-800" },
-  { id: "battleroyale", icon: Target, emoji: "🎱", grad: "from-amber-500 to-red-700" },
-  { id: "chess", icon: Grid3X3, emoji: "♚", grad: "from-slate-700 to-zinc-900" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
-  { id: "fruitninja", icon: Sparkles, emoji: "🍎", grad: "from-red-500 to-orange-500" },
-  { id: "typingracer", icon: Zap, emoji: "⌨", grad: "from-cyan-500 to-blue-600" },
-  { id: "campaignrpg", icon: Swords, emoji: "⚔️", grad: "from-yellow-600 to-red-700" },
-  { id: "p2pbet", icon: Coins, emoji: "💰", grad: "from-amber-500 to-yellow-400" },
-  { id: "ntchuva", icon: Zap, emoji: "✋", grad: "from-amber-600 to-red-700" },
-  { id: "djikota", icon: Target, emoji: "🎯", grad: "from-green-600 to-teal-700" },
-  { id: "bicho", icon: Dices, emoji: "🦎", grad: "from-emerald-500 to-green-600" },
-  { id: "uri", icon: Zap, emoji: "👆", grad: "from-orange-500 to-red-600" },
-  { id: "mines", icon: Bomb, emoji: "💣", grad: "from-orange-500 to-red-600" },
-  { id: "plinko", icon: CircleDot, emoji: "🔮", grad: "from-fuchsia-500 to-purple-600" },
-  { id: "crash", icon: Rocket, emoji: "🚀", grad: "from-rose-500 to-red-600" },
-  { id: "hilo", icon: Spade, emoji: "🃏", grad: "from-sky-500 to-indigo-600" },
-  { id: "raspadinha", icon: Ticket, emoji: "🎟️", grad: "from-amber-500 to-yellow-500" },
-  { id: "keno", icon: Hash, emoji: "🔢", grad: "from-cyan-500 to-blue-600" },
-  { id: "limbo", icon: Gauge, emoji: "📈", grad: "from-purple-500 to-fuchsia-600" },
+  { id: "snakebattle", icon: Gamepad2, emoji: "🐍", grad: "from-emerald-500 to-teal-600" },
+  { id: "numbertetris", icon: LayoutGrid, emoji: "#", grad: "from-orange-600 to-red-700" },
+  { id: "pongvs", icon: Gamepad2, emoji: "🏓", grad: "from-blue-600 to-indigo-700" },
+  { id: "tictactoepro", icon: Grid3X3, emoji: "✖", grad: "from-violet-600 to-indigo-700" },
+  { id: "connect4", icon: LayoutGrid, emoji: "🔴", grad: "from-blue-500 to-yellow-500" },
+  { id: "checkers", icon: Grid3X3, emoji: "♟️", grad: "from-amber-700 to-red-800" },
+  { id: "chess", icon: Crown, emoji: "♚", grad: "from-slate-700 to-zinc-900" },
+  { id: "dominoes", icon: LayoutGrid, emoji: "🎲", grad: "from-slate-600 to-zinc-700" },
+  { id: "snakesladders", icon: TrendingUp, emoji: "🪜", grad: "from-lime-600 to-emerald-700" },
+  { id: "memory", icon: Brain, emoji: "🧠", grad: "from-indigo-500 to-purple-600" },
+  { id: "urusse", icon: Gamepad2, emoji: "🧴", grad: "from-green-700 to-amber-900" },
+  { id: "mexerica", icon: Zap, emoji: "✋", grad: "from-amber-600 to-red-700" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1283,6 +1217,12 @@ const LiveHub = () => {
                 <motion.div key="flappybird" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Flappy Bird">
                   <FlappyBirdGame onScore={recordScore("Flappy Bird")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "bounce" && (
+                <motion.div key="bounce" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Bounce">
+                  <BounceGame onScore={recordScore("Bounce")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "fruitninja" && (

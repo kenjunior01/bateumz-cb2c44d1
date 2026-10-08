@@ -505,7 +505,7 @@ async function main() {
   console.log("▶ v7 — Acontecimentos do Mundo");
   // helper: espera poll pelo texto do chip (evita corridas de render em dev)
   const waitChip = async (substr) => {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 18; i++) {
       const t = (await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "")).toUpperCase();
       if (t.includes(substr)) return true;
       await page.waitForTimeout(500);
@@ -652,6 +652,76 @@ async function main() {
   const jogosTxt = await page.locator("body").innerText().catch(() => "");
   ok("Jogos mostra destaque Bateu World", jogosTxt.includes("BATEU WORLD 3D"));
   ok("Jogos sem Bateu Life", !jogosTxt.includes("BATEU LIFE") && !jogosTxt.includes("Bateu Life"));
+
+  // ── 13. v12 — Catálogo curado + Bounce ──
+  console.log("▶ v12 Catálogo curado");
+  await page.goto(`${BASE}/jogos`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  let jogosTxt12 = "";
+  for (let i = 0; i < 20; i++) {
+    jogosTxt12 = await page.locator("body").innerText().catch(() => "");
+    if (jogosTxt12.includes("Galo PRO")) break;
+    await page.waitForTimeout(1000);
+  }
+  ok("v12: Guerra Espacial no catálogo", jogosTxt12.toUpperCase().includes("GUERRA ESPACIAL"));
+  ok("v12: Bounce no catálogo", jogosTxt12.includes("Bounce"));
+  ok("v12: jogos de sorteio (Crash/Plinko/Limbo) saíram do catálogo", !jogosTxt12.includes("Crash") && !jogosTxt12.includes("Plinko") && !jogosTxt12.includes("Limbo"));
+  ok("v12: RPG Arena saiu do catálogo", !jogosTxt12.includes("RPG Arena"));
+
+  console.log("▶ v12 Jogo Bounce");
+  await page.goto(`${BASE}/lives?game=bounce`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  for (let i = 0; i < 20; i++) {
+    if ((await page.locator('[data-testid="bounce-game"]').count()) > 0) break;
+    await page.waitForTimeout(1000);
+  }
+  await page.waitForTimeout(600);
+  ok("v12: Bounce carrega no hub", await page.locator('[data-testid="bounce-game"]').count() > 0);
+  ok("v12: menu do Bounce com botão JOGAR", await page.locator('[data-testid="bounce-play"]').count() > 0);
+  await page.locator('[data-testid="bounce-play"]').click({ force: true }).catch(() => {});
+  await page.waitForTimeout(1000);
+  ok("v12: canvas do Bounce presente em jogo", await page.locator('[data-testid="bounce-canvas"]').count() > 0);
+  await page.locator('[data-testid="bounce-left"]').click({ force: true }).catch(() => {});
+  await page.waitForTimeout(700);
+  ok("v12: Bounce continua vivo após controlos (sem crash)", await page.locator('[data-testid="bounce-canvas"]').count() > 0);
+  await page.screenshot({ path: "shots/v12-bounce.png" });
+
+  // ── 14. v12 — Câmara (3 modos) + Ecrã inteiro + Música ──
+  console.log("▶ v12 Câmara / Fullscreen / Música");
+  await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.waitForFunction(() => !!window.__bw, { timeout: 45000 }).catch(() => null);
+  await page.waitForTimeout(2200);
+  const eng12 = await page.waitForFunction(() => !!window.__bw, { timeout: 40000 }).catch(() => null);
+  ok("v12: motor exposto para câmara", !!eng12);
+  if (eng12) {
+    await page.evaluate(() => { window.__bw.setCamMode("first"); });
+    await page.waitForTimeout(450);
+    ok("v12: mira aparece na 1ª pessoa", await page.locator('[data-testid="bw-crosshair"]').count() > 0);
+    ok("v12: camMode = first", (await page.evaluate(() => window.__bw.camMode)) === "first");
+    await page.screenshot({ path: "shots/v12-first-person.png" });
+
+    await page.evaluate(() => { window.__bw.setCamMode("third"); });
+    await page.waitForTimeout(350);
+    ok("v12: mira some no modo ombro", (await page.locator('[data-testid="bw-crosshair"]').count()) === 0);
+    ok("v12: camMode = third", (await page.evaluate(() => window.__bw.camMode)) === "third");
+
+    await page.locator('[data-testid="bw-cam"]').click({ force: true, timeout: 6000 }).catch((e) => console.log("   cam click:", String(e).split("\n")[0]));
+    await page.waitForTimeout(280);
+    ok("v12: botão HUD cicla para 1ª pessoa", (await page.evaluate(() => window.__bw.camMode)) === "first");
+    await page.locator('[data-testid="bw-cam"]').click({ force: true, timeout: 6000 }).catch(() => {});
+    await page.waitForTimeout(280);
+    ok("v12: volta à órbita clássica", (await page.evaluate(() => window.__bw.camMode)) === "orbit");
+  }
+  ok("v12: botão de ecrã inteiro presente", await page.locator('[data-testid="bw-fullscreen"]').count() > 0);
+
+  await page.locator('[data-testid="bw-music"]').click({ force: true, timeout: 6000 }).catch((e) => console.log("   music click:", String(e).split("\n")[0]));
+  await page.waitForTimeout(700);
+  ok("v12: música a tocar (chip da faixa)", await page.locator('[data-testid="bw-track"]').count() > 0);
+  const trackTxt = await page.locator('[data-testid="bw-track"]').innerText().catch(() => "");
+  ok("v12: faixa clássica em domínio público (Für Elise/Ode/Canon)", /Elise|Ode|Canon/i.test(trackTxt));
+  await page.locator('[data-testid="bw-music-next"]').click({ force: true, timeout: 6000 }).catch((e) => console.log("   next click:", String(e).split("\n")[0]));
+  await page.waitForTimeout(450);
+  const trackTxt2 = await page.locator('[data-testid="bw-track"]').innerText().catch(() => "");
+  ok("v12: próxima faixa muda o nome", !!trackTxt2 && trackTxt2 !== trackTxt);
+  await page.screenshot({ path: "shots/v12-camera-musica.png" });
 
   // ── 13. Estabilidade ──
   console.log("▶ Estabilidade");

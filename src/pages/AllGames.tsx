@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Target, Sparkles, Dices, LayoutGrid, Hash, Shuffle, Palette, Map, Crosshair, Layers, Radio, Trophy, Pencil, Bomb, SmilePlus, Anchor, CircleDot, Package, RotateCcw, Vote, Skull, Heart, Lock, ChevronRight, Spade, Globe, Crown, Swords as SwordsIcon, Cherry, Keyboard, Shield, Coins, Rocket, Ticket, Gauge } from "lucide-react";
+import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Sparkles, LayoutGrid, Radio, ChevronRight, Globe, Crown, CircleDot } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -26,115 +26,33 @@ interface GameDef {
   regions?: string[];
 }
 
+// CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o MMO da plataforma
 const ALL_GAMES: GameDef[] = [
-  { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "Galo Ultimate — 9 mini-tabuleiros, estrategia avancada!", grad: "from-violet-600 to-indigo-700", category: "Estrategia", players: "1v1 / Bot", icon: Grid3X3, hasBot: true },
-  { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estrategia pura: ligue 4 pecas em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estrategia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: true },
-  { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "Duas cobras, um tabuleiro — quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
-  { id: "quickmath", label: "Duelo de Matematica", emoji: "🧮", desc: "Contas rapidas — quem resolve primeiro marca ponto!", grad: "from-cyan-500 to-blue-700", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: true },
-  { id: "memorycards", label: "Memoria VS Cartas", emoji: "🃏", desc: "Encontre os pares no tabuleiro partilhado!", grad: "from-indigo-500 to-violet-600", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: true },
-  { id: "guessnumber100", label: "Adivinha 1 a 100", emoji: "🔢", desc: "Quente/Frio — quem adivinha o numero secreto primeiro?", grad: "from-teal-500 to-cyan-700", category: "Puzzle", players: "1v1 / Bot", icon: Hash, hasBot: true },
-  { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "Classico Pong arcade — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: false },
-  { id: "whackamole", label: "Bate o Alvo", emoji: "🎯", desc: "Toque nas criaturas que aparecem — 30 segundos de caos!", grad: "from-emerald-500 to-green-600", category: "Arcade", players: "1v1 / Bot", icon: Target, hasBot: false },
-  { id: "colorcatch", label: "Pesca Cores", emoji: "🎨", desc: "Clique nas cores certas o mais rapido possivel!", grad: "from-pink-500 to-rose-600", category: "Reflexo", players: "Solo / Bot", icon: Palette, hasBot: false },
-  { id: "diceluel", label: "Duelo de Dados", emoji: "🎲", desc: "Banco ou Arriscar? Corrida a 100 pontos!", grad: "from-amber-600 to-yellow-600", category: "Sorte", players: "1v1 / Bot", icon: Dices, hasBot: false },
-  { id: "spotdifference", label: "Encontre Diferencas", emoji: "🔍", desc: "Encontre 5 diferencas entre cenas geradas!", grad: "from-amber-500 to-yellow-600", category: "Puzzle", players: "Solo", icon: Search, hasBot: false },
-  { id: "wordchain", label: "Corrente de Palavras", emoji: "🔗", desc: "A ultima letra vira a primeira — nao repita!", grad: "from-teal-500 to-emerald-600", category: "Palavras", players: "1v1 / Bot", icon: Shuffle, hasBot: false },
-  { id: "numbertetris", label: "Numeros Caindo", emoji: "🔢", desc: "Numeros caem e combinam — estilo Tetris 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: LayoutGrid, hasBot: false },
-  { id: "cannonbattle", label: "Batalha de Canhoes", emoji: "💣", desc: "Ajuste angulo e forca — destrua o adversario!", grad: "from-red-600 to-orange-700", category: "Estrategia", players: "1v1 / Bot", icon: Crosshair, hasBot: false },
-  { id: "towerstack", label: "Torre VS", emoji: "🏗️", desc: "Empilhe blocos com precisao — quem constroi mais alto!", grad: "from-sky-500 to-blue-600", category: "Arcade", players: "1v1 / Bot", icon: Layers, hasBot: false },
-  { id: "match4", label: "Combina 4", emoji: "✨", desc: "Combine 4+ pecas iguais — cascatas e combos!", grad: "from-pink-500 to-rose-600", category: "Puzzle", players: "1v1 / Bot", icon: Sparkles, hasBot: false },
-  { id: "mazerace", label: "Corrida no Labirinto", emoji: "🧩", desc: "Quem sai do labirinto primeiro?", grad: "from-green-600 to-emerald-700", category: "Arcade", players: "1v1 / Bot", icon: Map, hasBot: false },
-  { id: "slotsvs", label: "Caca-Niqueis VS", emoji: "🎰", desc: "Gire as maquinas — quem acumula mais moedas vence!", grad: "from-amber-500 to-yellow-500", category: "Sorte", players: "1v1 / Bot", icon: Sparkles, hasBot: false },
-  { id: "triviaflash", label: "Trivia Flash", emoji: "❗", desc: "Verdadeiro ou Falso — 20 perguntas, velocidade conta!", grad: "from-emerald-500 to-teal-700", category: "Quiz", players: "Solo / Bot", icon: Brain, hasBot: false },
-  { id: "patternmemory", label: "Memoria de Padroes", emoji: "🧩", desc: "Memorize o padrao de celulas iluminadas!", grad: "from-purple-500 to-violet-700", category: "Puzzle", players: "Solo / Bot", icon: Grid3X3, hasBot: false },
-  { id: "targettap", label: "Alvo Rapido", emoji: "🎯", desc: "Toque nos alvos certos antes que desaparecam!", grad: "from-orange-500 to-red-600", category: "Reflexo", players: "Solo", icon: Target, hasBot: false },
-  { id: "colormatch", label: "Cor versus Palavra", emoji: "🎨", desc: "Teste Stroop — identifique a COR do texto!", grad: "from-pink-500 to-rose-700", category: "Reflexo", players: "Solo / Bot", icon: Palette, hasBot: true },
-  { id: "wordscramble", label: "Palavras Embaralhadas", emoji: "🐤", desc: "Descubra a palavra escondida nas letras misturadas!", grad: "from-rose-500 to-pink-600", category: "Palavras", players: "Solo / Bot", icon: Shuffle, hasBot: false },
-  { id: "reactionrace", label: "Corrida de Reacao", emoji: "⚡", desc: "Quem reage mais rapido ao sinal?", grad: "from-yellow-500 to-red-600", category: "Reflexo", players: "1v1 / Bot", icon: Zap, hasBot: false },
-  { id: "ballbreaker", label: "Quebra-Bloco VS", emoji: "🧦", desc: "Destrua todos os blocos — quem limpa primeiro!", grad: "from-red-500 to-orange-600", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: false },
-  { id: "spaceshooter", label: "Nave Espacial VS", emoji: "🚀", desc: "Destrua naves inimigas — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: Zap, hasBot: false },
-  { id: "colorsequence", label: "Sequencia de Cores", emoji: "🟢", desc: "Memorize a sequencia de cores e repita!", grad: "from-violet-500 to-fuchsia-600", category: "Puzzle", players: "1v1 / Bot", icon: Sparkles, hasBot: true },
-  { id: "rps", label: "Pedra Papel Tesoura", emoji: "✊", desc: "Jokenpo classico — melhor de 3, 5 ou 7 rounds!", grad: "from-amber-500 to-orange-600", category: "Sorte", players: "1v1 / Bot", icon: Swords, hasBot: true },
-  { id: "tictactoe", label: "Galo VS", emoji: "✕", desc: "Rapido, com apostas, streaks e modo velocidade!", grad: "from-violet-500 to-pink-500", category: "Estrategia", players: "1v1 / Bot", icon: CircleDot, hasBot: false },
-  { id: "checkers", label: "Damas", emoji: "♟️", desc: "Jogo classico com capturas e promocao a rei!", grad: "from-amber-700 to-red-800", category: "Estrategia", players: "1v1 / Bot", icon: Grid3X3, hasBot: false },
-  { id: "battleship", label: "Batalha Naval", emoji: "🚢", desc: "Esconda os navios e afunde a frota inimiga!", grad: "from-slate-600 to-blue-900", category: "Estrategia", players: "1v1 / Bot", icon: Anchor, hasBot: false },
-  { id: "dominoes", label: "Domino", emoji: "🎲", desc: "Encaixe as pecas e esvazie a mao!", grad: "from-slate-600 to-zinc-700", category: "Estrategia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: false },
-  { id: "ludo", label: "Ludo", emoji: "🎲", desc: "4 jogadores, dado, pecas e estrategia!", grad: "from-emerald-600 to-teal-700", category: "Estrategia", players: "1v1 / Bot", icon: Dices, hasBot: false },
-  { id: "snakesladders", label: "Cobras e Escadas", emoji: "🤜", desc: "O classico mundial! Suba escadas, fuja das cobras e chegue primeiro ao 100!", grad: "from-lime-600 to-emerald-700", category: "Estrategia", players: "1v1 / Bot", icon: Sparkles, hasBot: true },
-  { id: "uno", label: "UNO Cartas", emoji: "🃏", desc: "Cartas com cores, especiais e UNO!", grad: "from-indigo-500 to-purple-600", category: "Cartas", players: "1v1 / Bot", icon: Sparkles, hasBot: false },
-  { id: "tap", label: "Tap Battle", emoji: "⚡", desc: "Batalha de toques: 1v1 ou contra o bot!", grad: "from-amber-500 to-orange-500", category: "Reflexo", players: "1v1 / Bot", icon: Zap, hasBot: true },
-  { id: "quiz", label: "Quiz Battle", emoji: "🧠", desc: "Trivia ao vivo, sozinho ou com convidado!", grad: "from-sky-500 to-blue-500", category: "Quiz", players: "1v1 / Bot", icon: Brain, hasBot: false },
-  { id: "millionaire", label: "Quem Quer Ser Milionario?", emoji: "💰", desc: "Perguntas e respostas para o premio maximo!", grad: "from-purple-500 to-violet-500", category: "Quiz", players: "Solo", icon: Trophy, hasBot: false },
-  { id: "wheel", label: "Roda de Premios", emoji: "🎰", desc: "Sorteie premios reais com probabilidades configuraveis!", grad: "from-violet-500 to-fuchsia-500", category: "Sorte", players: "Solo", icon: RotateCcw, hasBot: false },
-  { id: "mystery", label: "Caixa Misteriosa", emoji: "🎁", desc: "4 caixas, premios escondidos!", grad: "from-emerald-500 to-teal-500", category: "Sorte", players: "Solo", icon: Package, hasBot: false },
-  { id: "emoji", label: "Batalha de Emojis", emoji: "💥", desc: "Vote ao vivo, vencedores entram no sorteio!", grad: "from-pink-500 to-rose-500", category: "Social", players: "Multi", icon: Vote, hasBot: false },
-  { id: "keyword", label: "Caca a Palavra", emoji: "🔎", desc: "Audiencia adivinha a palavra-chave secreta!", grad: "from-amber-500 to-orange-500", category: "Social", players: "Multi", icon: Search, hasBot: false },
-  { id: "truthordare", label: "Verdade ou Desafio", emoji: "🔥", desc: "Verdades picantes e desafios engracados!", grad: "from-rose-500 to-red-600", category: "Social", players: "Multi", icon: Heart, hasBot: false },
-  { id: "mmorpg", label: "🌍 Bateu World 3D", emoji: "🌍", desc: "O MMO oficial da Bateu — combate em tempo real, níveis e poderes, rouba cupões a outros jogadores, troca pontos por moeda da plataforma e descobre um mundo ao vivo!", grad: "from-rose-600 via-orange-500 to-amber-500", category: "MMORPG", players: "Multiplayer", icon: Globe, hasBot: false },
-  { id: "punishment", label: "Roleta de Castigos", emoji: "💀", desc: "Gire a roleta e cumpra o castigo!", grad: "from-red-600 to-rose-700", category: "Social", players: "Multi", icon: Skull, hasBot: false },
-  { id: "guessEmoji", label: "Adivinhe o Emoji", emoji: "😎", desc: "Decifre a frase a partir dos emojis!", grad: "from-yellow-500 to-amber-600", category: "Quiz", players: "Multi", icon: SmilePlus, hasBot: false },
-  { id: "quickdraw", label: "Desenho Rapido", emoji: "🎨", desc: "Desenhe e deixe o publico adivinhar!", grad: "from-emerald-500 to-teal-600", category: "Social", players: "Multi", icon: Pencil, hasBot: false },
-  { id: "hotpotato", label: "Batata Quente", emoji: "💣", desc: "Passe a batata — quem tiver quando explodir, sai!", grad: "from-orange-500 to-red-600", category: "Social", players: "Multi", icon: Bomb, hasBot: false },
-  { id: "chaos", label: "Desafio Caotico", emoji: "🌪️", desc: "Desafios aleatorios contra o relogio!", grad: "from-rose-500 to-pink-600", category: "Social", players: "Multi", icon: Shuffle, hasBot: false },
-  { id: "boknowledge", label: "Batalha de Conhecimentos", emoji: "📚", desc: "Trivia VS com bonus de streak — 10 perguntas!", grad: "from-cyan-500 to-purple-600", category: "Quiz", players: "1v1 / Bot", icon: Brain, hasBot: false },
-  { id: "numguess", label: "Adivinha o Numero VS", emoji: "🔢", desc: "Duelo — quem adivinha o numero secreto primeiro?", grad: "from-violet-500 to-fuchsia-600", category: "Puzzle", players: "1v1 / Bot", icon: Hash, hasBot: false },
-  { id: "speed", label: "Duelo de Velocidade", emoji: "⚡", desc: "Quem reage mais rapido?", grad: "from-cyan-500 to-blue-600", category: "Reflexo", players: "1v1 / Bot", icon: Zap, hasBot: false },
-  { id: "vsduel", label: "Arena de Duelo VS", emoji: "⚔️", desc: "Duelo 1v1: reacao, matematica e palavras!", grad: "from-red-500 to-orange-600", category: "Variado", players: "1v1", icon: Swords, hasBot: false },
-  { id: "challenge", label: "Roleta de Desafios", emoji: "🎭", desc: "Gire a roleta e cumpra o desafio ao vivo!", grad: "from-fuchsia-500 to-pink-500", category: "Social", players: "Multi", icon: RotateCcw, hasBot: false },
-  { id: "kahoot", label: "Quiz ao Vivo", emoji: "🎯", desc: "Quiz multiplayer — a audiencia joga em tempo real!", grad: "from-sky-500 to-indigo-600", category: "Quiz", players: "Multi", icon: Brain, hasBot: false },
-  { id: "bingo", label: "Bingo ao Vivo", emoji: "🎱", desc: "Cartao virtual com numeros sorteados em tempo real!", grad: "from-emerald-500 to-teal-600", category: "Sorte", players: "Multi", icon: Trophy, hasBot: false },
-  { id: "memory", label: "Jogo da Memoria VS", emoji: "🧠", desc: "Batalha de pares — quem tem melhor memoria?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: false },
-  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mao — jogo mocambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Mocambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
-  { id: "chigogo", label: "Chigogo", emoji: "🪨", desc: "Adivinha a Pedrinha — esconda e descubra!", grad: "from-yellow-700 to-amber-800", category: "Mocambicano", players: "1v1 / Bot", icon: Target, hasBot: true },
-  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala mocambicano — semeie, capture e venca!", grad: "from-green-700 to-amber-900", category: "Mocambicano", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
-  { id: "capulanaquiz", label: "Capulana Quiz", emoji: "👗", desc: "Quiz de cultura mocambicana!", grad: "from-yellow-500 to-green-700", category: "Mocambicano", players: "1v1 / Bot", icon: Brain, hasBot: true },
-  { id: "kabaddiraid", label: "Kabaddi Raid", emoji: "🧔", desc: "Raid epico de Kabaddi - tempo e reflexos!", grad: "from-orange-500 to-red-600", category: "Indiano", players: "Solo", icon: Zap, hasBot: false, regions: ["IN"] },
-  { id: "carromboard", label: "Carrom", emoji: "🎱", desc: "Jogo classico de carrom indiano - encace as pecas!", grad: "from-amber-600 to-orange-500", category: "Indiano", players: "1v1 / Bot", icon: Target, hasBot: true, regions: ["IN"] },
-  { id: "teenpatti", label: "Teen Patti", emoji: "🃏", desc: "Poker indiano - quem tem a melhor mao?", grad: "from-emerald-600 to-green-500", category: "Indiano", players: "1v1 / Bot", icon: Spade, hasBot: true, regions: ["IN"] },
-  { id: "rpgarena", label: "RPG Arena Battle", emoji: "⚔️", desc: "Combate turn-based RPG: Guerreiro, Mago, Arqueiro, Ladino!", grad: "from-red-600 to-purple-800", category: "RPG", players: "1v1 / Bot", icon: Swords, hasBot: true },
-  { id: "battleroyale", label: "Battle Royale", emoji: "🎱", desc: "Sobreviva na zona! 40 jogadores, armas, loot e zona a fechar!", grad: "from-amber-500 to-red-700", category: "Battle Royale", players: "Solo / Bot", icon: Target, hasBot: true },
-  { id: "chess", label: "Xadrez", emoji: "♚", desc: "Xadrez completo: roque, en passant, promocao e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estrategia", players: "1v1 / Bot", icon: Crown, hasBot: true },
-  { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! Classico viciante com medalhas!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: Gamepad2, hasBot: true },
-  { id: "fruitninja", label: "Fruta Ninja", emoji: "🍎", desc: "Corte frutas e evite bombas! Combos e multiplicadores!", grad: "from-red-500 to-orange-500", category: "Acao", players: "Solo / Bot", icon: Sparkles, hasBot: true },
-  { id: "typingracer", label: "Corrida de Digitacao", emoji: "⚡", desc: "Digite o mais rapido! Corrida de carros com WPM!", grad: "from-cyan-500 to-blue-600", category: "Digitacao", players: "Solo / Bot", icon: Keyboard, hasBot: true },
-  { id: "campaignrpg", label: "Campanha RPG", emoji: "⚔️", desc: "5 mundos epicos, 6 classes, chefes devastadores. Campanha completa com equipamentos!", grad: "from-yellow-600 to-red-700", category: "RPG", players: "Solo / PVP", icon: Shield, hasBot: true },
-  { id: "p2pbet", label: "Arena de Apostas P2P", emoji: "💰", desc: "Aposta contra outros jogadores! Estacas, desafios e grandes vitorias!", grad: "from-amber-500 to-yellow-400", category: "Apostas", players: "P2P / Bot", icon: Coins, hasBot: true },
-  { id: "ntchuva", label: "Ntchuva", emoji: "✋", desc: "Jogo tradicional mocambicano de reacao! Sera o mais rapido?", grad: "from-amber-600 to-red-700", category: "Mocambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
-  { id: "djikota", label: "Djikota", emoji: "🎯", desc: "Jogo de estrategia tradicional! Desafia os teus amigos.", grad: "from-green-600 to-teal-700", category: "Mocambicano", players: "1v1 / Bot", icon: Target, hasBot: true },
-  { id: "bicho", label: "Jogo do Bicho", emoji: "🦎", desc: "Classico jogo de apostas brasileiro! Adivinha o animal!", grad: "from-emerald-500 to-green-600", category: "Apostas", players: "1v1 / Bot", icon: Dices, hasBot: true },
-  { id: "uri", label: "Uri", emoji: "👆", desc: "Desafio rapido de reacao! Sera o mais veloz?", grad: "from-orange-500 to-red-600", category: "Mocambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
-  { id: "mines", label: "Mines", emoji: "🚨", desc: "Encontra as gemas e evita as bombas! Levanta o multiplicador antes de explodir!", grad: "from-orange-500 to-red-600", category: "Instantaneo", players: "Solo", icon: Bomb, hasBot: false },
-  { id: "plinko", label: "Plinko", emoji: "🔮", desc: "Larga a bola e mira os multiplicadores das pontas! 8x nas pontas!", grad: "from-fuchsia-500 to-purple-600", category: "Instantaneo", players: "Solo", icon: CircleDot, hasBot: false },
-  { id: "crash", label: "Crash", emoji: "🚀", desc: "O foguetao sobe sem parar! Levanta antes de explodir para multiplicar!", grad: "from-rose-500 to-red-600", category: "Instantaneo", players: "Solo", icon: Rocket, hasBot: false },
-  { id: "hilo", label: "Hi-Lo", emoji: "🃏", desc: "A carta seguinte e maior ou menor? Sequencias multiplicam as moedas!", grad: "from-sky-500 to-indigo-600", category: "Instantaneo", players: "Solo", icon: Spade, hasBot: false },
-  { id: "raspadinha", label: "Raspadinha", emoji: "🎟️", desc: "Compra e raspa! 3 simbolos iguais e ganhas o premio na hora!", grad: "from-amber-500 to-yellow-500", category: "Instantaneo", players: "Solo", icon: Ticket, hasBot: false },
-  { id: "keno", label: "Keno", emoji: "🔢", desc: "Escolhe ate 8 numeros e reza pelos 10 sorteados! Ate 100x!", grad: "from-cyan-500 to-blue-600", category: "Instantaneo", players: "Solo", icon: Hash, hasBot: false },
-  { id: "limbo", label: "Limbo", emoji: "📈", desc: "Define o alvo e rola! Resultado igual ou acima do alvo multiplicar-te-a!", grad: "from-purple-500 to-fuchsia-600", category: "Instantaneo", players: "Solo", icon: Gauge, hasBot: false },
+  { id: "mmorpg", label: "Bateu World 3D", emoji: "🌍", desc: "O MMO oficial da Bateu — combate em tempo real, níveis e poderes, rouba cupões a outros jogadores e troca pontos por moeda da plataforma!", grad: "from-rose-600 via-orange-500 to-amber-500", category: "Mundo Aberto", players: "Multiplayer", icon: Globe, hasBot: false },
+  { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: CircleDot, hasBot: false },
+  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: Zap, hasBot: false },
+  { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: Gamepad2, hasBot: true },
+  { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "A cobra famosa de sempre — duas cobras, um tabuleiro, quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
+  { id: "numbertetris", label: "Números Caindo", emoji: "🔢", desc: "Estilo Tetris 2048 — números caem e combinam até fazer 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: LayoutGrid, hasBot: false },
+  { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "O primeiro clássico da história — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: false },
+  { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "O famoso jogo do galo a nível PRO — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", category: "Estratégia", players: "1v1 / Bot", icon: Grid3X3, hasBot: true },
+  { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estratégia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: true },
+  { id: "checkers", label: "Damas", emoji: "♟️", desc: "O clássico mundial das damas com capturas e promoção a rei!", grad: "from-amber-700 to-red-800", category: "Estratégia", players: "1v1 / Bot", icon: Grid3X3, hasBot: false },
+  { id: "chess", label: "Xadrez", emoji: "♚", desc: "Xadrez completo: roque, en passant, promoção e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estratégia", players: "1v1 / Bot", icon: Crown, hasBot: true },
+  { id: "dominoes", label: "Dominó", emoji: "🎲", desc: "O clássico das mesas de Moçambique — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700", category: "Estratégia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: false },
+  { id: "snakesladders", label: "Cobras e Escadas", emoji: "🪜", desc: "O clássico mundial! Suba escadas, fuja das cobras e chegue primeiro ao 100!", grad: "from-lime-600 to-emerald-700", category: "Arcade", players: "1v1 / Bot", icon: Sparkles, hasBot: true },
+  { id: "memory", label: "Jogo da Memória VS", emoji: "🧠", desc: "O clássico dos pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: false },
+  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala moçambicano — semeie, capture e vença!", grad: "from-green-700 to-amber-900", category: "Moçambicano", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
+  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mão — jogo moçambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Moçambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
 ];
 
 const CATEGORIES = [
   { id: "todos", label: "Todos", emoji: "🎮" },
-  { id: "Estrategia", label: "Estrategia", emoji: "♟️" },
+  { id: "Mundo Aberto", label: "Mundo Aberto", emoji: "🗺️" },
   { id: "Arcade", label: "Arcade", emoji: "👾" },
+  { id: "Estratégia", label: "Estratégia", emoji: "♟️" },
   { id: "Puzzle", label: "Puzzle", emoji: "🧩" },
-  { id: "Reflexo", label: "Reflexo", emoji: "⚡" },
-  { id: "Quiz", label: "Quiz", emoji: "🧠" },
-  { id: "Sorte", label: "Sorte", emoji: "🎲" },
-  { id: "Social", label: "Social", emoji: "👥" },
-  { id: "Palavras", label: "Palavras", emoji: "🐤" },
-  { id: "Cartas", label: "Cartas", emoji: "🃏" },
-  { id: "Variado", label: "Variado", emoji: "🎣" },
-  { id: "Apostas", label: "Apostas", emoji: "💰" },
-  { id: "Mocambicano", label: "Mocambicano", emoji: "🇲" },
-  { id: "Indiano", label: "Indiano", emoji: "🇮🇳" },
-  { id: "RPG", label: "RPG", emoji: "⚔️" },
-  { id: "Battle Royale", label: "Battle Royale", emoji: "🎱" },
-  { id: "Acao", label: "Acao", emoji: "💥" },
-  { id: "Digitacao", label: "Digitacao", emoji: "⌨️" },
-  { id: "Campanha", label: "Campanha", emoji: "🏕️" },
-  { id: "MMORPG", label: "Mundo Aberto", emoji: "🗺️" },
-  { id: "VIDASOCIAL", label: "Vida Social", emoji: "🏙️" },
-  { id: "Instantaneo", label: "Instantaneos", emoji: "⚡" },
+  { id: "Moçambicano", label: "Moçambicano", emoji: "🇲🇿" },
 ];
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
@@ -185,10 +103,10 @@ const AllGames = () => {
   return (
     <div className="min-h-screen pb-20 lg:pb-0" style={{ background: 'var(--area-bg, #0d1117)', color: 'var(--area-text, #e6edf3)' }}>
       <Helmet>
-        <title>90+ Jogos Online Gratis — Bateu</title>
-        <meta name="description" content="Jogue mais de 90 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
-        <meta property="og:title" content="90+ Jogos Online Gratis — Bateu" />
-        <meta property="og:description" content="Jogue mais de 90 jogos online gratis: estrategia, arcade, puzzle, quiz, reflexo e muito mais. Jogue contra amigos ou contra o computador!" />
+        <title>Jogos Clássicos Online Grátis — Bateu</title>
+        <meta name="description" content="Joga os melhores clássicos de sempre: Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas, Dominó e o MMO Bateu World 3D. Grátis, direto no navegador!" />
+        <meta property="og:title" content="Jogos Clássicos Online Grátis — Bateu" />
+        <meta property="og:description" content="Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas e o MMO Bateu World 3D — grátis e direto no navegador!" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href={`${window.location.origin}/jogos`} />
       </Helmet>
@@ -234,10 +152,10 @@ const AllGames = () => {
             </motion.div>
 
             <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3 jogos-glow-green">
-              <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Todos os Jogos</ShimmerText>
+              <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Jogos Clássicos</ShimmerText>
             </h1>
             <p className="text-base mb-6 max-w-xl" style={{ color: '#7d8590' }}>
-              Mais de 90 jogos online gratis. Estrategia, arcade, puzzle, quiz, reflexos e muito mais — jogue contra amigos ou contra o computador!
+              Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MMO Bateu World 3D. Grátis, direto no navegador!
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">

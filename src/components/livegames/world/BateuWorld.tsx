@@ -28,10 +28,12 @@ import {
   X, Copy, Coins, Heart, Zap, Crown, ExternalLink, Check, Wifi, Users,
   Landmark, Map, Shield, Flame, Volume2, VolumeX, MapPin, Smile, Target,
   Backpack, Settings, Camera, Music, PawPrint, Cloud,
+  Orbit, PersonStanding, Eye, Maximize2, Minimize2, SkipForward,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, BUILDINGS, type LootItem } from "./worldEngine";
 import { worldAudio } from "./worldAudio";
+import { WorldMusic } from "./worldMusic";
 import { AvatarPreview, AvatarSwatches } from "./AvatarEditor";
 import { defaultAvatar, randomAvatar, parseAvatarKey, type AvatarConfig } from "./avatar";
 import {
@@ -331,6 +333,13 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   // v7 — Acontecimento do Mundo ativo (chip com contagem)
   const [worldEvent, setWorldEvent] = useState<{ kind: string; name: string; emoji: string; until: number } | null>(null);
   const [eventNow, setEventNow] = useState(Date.now());
+
+  // v12 — modos de câmara, ecrã inteiro e música ambiente (domínio público)
+  const [camMode, setCamMode] = useState<"orbit" | "third" | "first">("orbit");
+  const [isFs, setIsFs] = useState(false);
+  const [musicOn, setMusicOn] = useState(false);
+  const [trackName, setTrackName] = useState("");
+  const musicRef = useRef<WorldMusic | null>(null);
 
   // v8 — interiores (chip "Estás em") + ticker da plataforma ao vivo
   const [inside, setInside] = useState<{ name: string; desc: string } | null>(null);
@@ -906,6 +915,9 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             }
             break;
           }
+          case "cammode":
+            setCamMode(ev.mode);
+            break;
           case "notify":
             pushToast(ev.msg, ev.tone);
             break;
@@ -978,8 +990,46 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       unsubPlat();
       eng.dispose();
       engineRef.current = null;
+      musicRef.current?.dispose();
+      musicRef.current = null;
     };
   }, [phase, char?.uid]);
+
+  // v12 — ecrã inteiro: funciona no browser e no WebView Android
+  const toggleFullscreen = useCallback(() => {
+    try {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen();
+      } else {
+        const el = document.documentElement as any;
+        (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+      }
+    } catch { /* dispositivo sem suporte */ }
+  }, []);
+
+  useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+
+  // v12 — música ambiente sem direitos de autor (clássicos em domínio público)
+  const toggleWorldMusic = useCallback(() => {
+    if (!musicRef.current) musicRef.current = new WorldMusic();
+    const on = musicRef.current.toggle();
+    setMusicOn(on);
+    setTrackName(on ? `${musicRef.current.track.name} · ${musicRef.current.track.author}` : "");
+  }, []);
+
+  const nextWorldTrack = useCallback(() => {
+    if (!musicRef.current || !musicRef.current.playing) return;
+    musicRef.current.next();
+    setTrackName(`${musicRef.current.track.name} · ${musicRef.current.track.author}`);
+  }, []);
+
+  const cycleCam = useCallback(() => {
+    engineRef.current?.cycleCamMode();
+  }, []);
 
   const handleOpen = useCallback((kind: string, id: string) => {
     const c = charRef.current;
@@ -1859,7 +1909,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
 
       {/* painel de navegação superior — v10: foto e som vivem aqui para
           nunca colidirem com a coluna direita; rótulos só em ecrãs largos */}
-      <div className="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+      <div className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 flex-wrap justify-center gap-1.5">
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
           ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
@@ -1899,6 +1949,43 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         >
           {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
         </button>
+        {/* v12: câmara — órbita / ombro / 1ª pessoa (C) */}
+        <button
+          onClick={cycleCam}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-cam"
+          title={camMode === "orbit" ? "Câmara: Órbita (C)" : camMode === "third" ? "Câmara: Ombro (C)" : "Câmara: 1ª Pessoa (C)"}
+        >
+          {camMode === "orbit" ? <Orbit className="h-4 w-4 text-sky-300" /> : camMode === "third" ? <PersonStanding className="h-4 w-4 text-amber-300" /> : <Eye className="h-4 w-4 text-emerald-300" />}
+        </button>
+        {/* v12: ecrã inteiro */}
+        <button
+          onClick={toggleFullscreen}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-fullscreen"
+          title={isFs ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
+        >
+          {isFs ? <Minimize2 className="h-4 w-4 text-sky-300" /> : <Maximize2 className="h-4 w-4 text-sky-300" />}
+        </button>
+        {/* v12: música ambiente sem direitos de autor */}
+        <button
+          onClick={toggleWorldMusic}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-music"
+          title={musicOn ? `Música: ${trackName} (tocar/parar)` : "Ligar música ambiente"}
+        >
+          <Music className={`h-4 w-4 ${musicOn ? "text-emerald-300" : "text-white/70"}`} />
+        </button>
+        {musicOn && (
+          <button
+            onClick={nextWorldTrack}
+            className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+            data-testid="bw-music-next"
+            title="Próxima música"
+          >
+            <SkipForward className="h-3.5 w-3.5 text-sky-300" />
+          </button>
+        )}
       </div>
 
       {/* v9: chip de convidado — lembra suave, nunca bloqueia */}
@@ -1910,6 +1997,22 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         >
           👤 CONVIDADO — criar conta para guardar na nuvem
         </button>
+      )}
+
+      {/* v12: mira da 1ª pessoa (estilo Minecraft) */}
+      {camMode === "first" && (
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2" data-testid="bw-crosshair">
+          <div className="relative h-5 w-5 opacity-80">
+            <div className="absolute left-1/2 top-0 h-5 w-0.5 -translate-x-1/2 bg-white/80" />
+            <div className="absolute top-1/2 left-0 h-0.5 w-5 -translate-y-1/2 bg-white/80" />
+            <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+          </div>
+        </div>
+      )}
+      {musicOn && trackName && (
+        <div className="pointer-events-none absolute top-2 left-3 z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white/85 backdrop-blur" data-testid="bw-track">
+          ♪ {trackName}
+        </div>
       )}
 
       {/* joystick (mobile) */}

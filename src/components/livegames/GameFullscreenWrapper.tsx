@@ -5,9 +5,12 @@ import { Maximize, Minimize, X, Monitor } from "lucide-react";
 interface Props {
   children: ReactNode;
   gameName: string;
+  /** v11: jogos com HUD/câmara própria (ex.: Bateu World) escondem o chrome
+   *  do wrapper — o botão em top-2 right-2 sobrepunha a HUD nativa do jogo. */
+  hideChrome?: boolean;
 }
 
-const GameFullscreenWrapper = ({ children, gameName }: Props) => {
+const GameFullscreenWrapper = ({ children, gameName, hideChrome }: Props) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [autoHideTimer, setAutoHideTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -75,7 +78,7 @@ const GameFullscreenWrapper = ({ children, gameName }: Props) => {
       onMouseMove={isFullscreen ? showControlsTemporarily : undefined}
     >
       <AnimatePresence>
-        {showControls && (
+        {showControls && !hideChrome && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}

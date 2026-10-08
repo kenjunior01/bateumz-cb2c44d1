@@ -200,7 +200,7 @@ const LoadingScreen = () => {
 
   const TIPS = [
     "Preparando os jogos...",
-    "Carregando 68+ jogos interativos...",
+    "A carregar os melhores jogos da plataforma...",
     "Conectando ao servidor...",
     "Preparando sua experiencia...",
     "Quase pronto...",

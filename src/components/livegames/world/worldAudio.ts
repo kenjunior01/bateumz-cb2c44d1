@@ -1,9 +1,13 @@
 // ============================================================
-// BATEU WORLD — Áudio sintetizado (WebAudio, zero assets) · v4
+// BATEU WORLD — Áudio sintetizado (WebAudio, zero assets) · v11
 // SFX de combate, progressão, economia e ambiente do mundo.
-// v4: MÚSICA ambiente procedural (pad harmónico que muda de
-// dia para noite), novos SFX (ondas, loot, combo, pet, foto)
-// e canais separados (música vs efeitos) com mute próprio.
+// v11: BANDA SONORA ORIGINAL com 5 FAIXAS compostas em código
+// (100% livres de direitos de autor — nenhum sample, nenhuma
+// melhoria de terceiros): Amanhecer no Vale (aventura),
+// Blocos ao Vento (calma tipo sandbox), Corrida do Ouro
+// (chiptune arcade), Neon da Metrópole (synthwave noturna) e
+// Coração da Floresta (mística). Leitor com próxima/anterior,
+// volume próprio e chuva/trovão para o novo CLIMA.
 // ============================================================
 
 type SfxName =
@@ -17,7 +21,9 @@ type SfxName =
   // v7 — acontecimentos do mundo
   | "boom" | "event"
   // v8 — interiores
-  | "door";
+  | "door"
+  // v11 — clima, colheita e montaria
+  | "thunder" | "gather" | "mount" | "craft";
 
 class WorldAudio {
   private ctx: AudioContext | null = null;
@@ -32,9 +38,19 @@ class WorldAudio {
   private lastAt: Record<string, number> = {};
   private chordIdx = 0;
 
+  // ── v11: banda sonora por faixas originais ──
+  private trackIdx = 0;
+  private musicVol = 0.6;      // 0..1 — slider do leitor
+  private stepIdx = 0;
+  private nextStepAt = 0;
+  private schedTimer: any = null;
+  private rainNode: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+
   constructor() {
     try { this.muted = localStorage.getItem("bateu_world_audio") === "off"; } catch { /* ignore */ }
     try { this.musicOff = localStorage.getItem("bateu_world_music") === "off"; } catch { /* ignore */ }
+    try { this.trackIdx = Math.max(0, Math.min(MUSIC_TRACKS.length - 1, parseInt(localStorage.getItem("bateu_world_track") || "0", 10) || 0)); } catch { /* ignore */ }
+    try { this.musicVol = Math.max(0.05, Math.min(1, parseFloat(localStorage.getItem("bateu_world_vol") || "0.6") || 0.6)); } catch { /* ignore */ }
   }
 
   get isMuted(): boolean { return this.muted; }
@@ -200,6 +216,30 @@ class WorldAudio {
         this.tone(210, 0.34, "sawtooth", 0.05, 305);
         this.tone(133, 0.4, "triangle", 0.06, 176, 0.05);
         break;
+      // ── v11 ──
+      case "thunder":
+        // trovão distante: rugido grave com eco
+        this.tone(52, 1.1, "sine", 0.22, 34);
+        this.noise(0.8, 0.16, 260);
+        this.tone(88, 0.5, "sawtooth", 0.06, 44, 0.18);
+        break;
+      case "gather":
+        // colheita: pop orgânico + brilho
+        this.tone(520, 0.07, "triangle", 0.1, 780);
+        this.tone(1040, 0.1, "sine", 0.07, 1560, 0.06);
+        break;
+      case "mount":
+        // montaria: rugido curto + passos
+        this.tone(160, 0.3, "sawtooth", 0.13, 90);
+        this.noise(0.18, 0.1, 500, 0.08);
+        this.noise(0.14, 0.08, 420, 0.26);
+        break;
+      case "craft":
+        // forja: marteladas metálicas
+        this.tone(1240, 0.06, "square", 0.1, 880);
+        this.noise(0.06, 0.1, 2600, 0.02);
+        this.tone(990, 0.08, "square", 0.08, 660, 0.14);
+        break;
     }
   }
 
@@ -260,58 +300,163 @@ class WorldAudio {
     } catch { /* ignore */ }
   }
 
-  // ── v4: MÚSICA procedural — pads que mudam de dia para noite ──
-  // Progressões: dia (jazzoso e claro) · noite (escura e lenta).
+  // ═══════════════════════════════════════════════════════════
+  // v11: BANDA SONORA — 5 faixas ORIGINAIS compostas em código.
+  // Nenhuma melodia/sample de terceiros: 100% sem direitos de
+  // autor. Cada faixa é um mini-compositor de passos (semínimas
+  // ao BPM) com progressão própria, baixo, melodia e percussão.
+  // ═══════════════════════════════════════════════════════════
+
   startMusic(): void {
     if (this.musicStarted || this.musicOff || this.muted || !this.ctx || !this.master) return;
     this.musicStarted = true;
     try {
       const ctx = this.ctx!;
       this.musicGain = ctx.createGain();
-      this.musicGain.gain.value = 0.05;
+      this.musicGain.gain.value = 0.13 * this.musicVol;
       const musFilter = ctx.createBiquadFilter();
       musFilter.type = "lowpass";
-      musFilter.frequency.value = 1400;
+      musFilter.frequency.value = 3400;
       this.musicGain.connect(musFilter);
       musFilter.connect(this.master);
     } catch { this.musicStarted = false; return; }
+    this.stepIdx = 0;
+    this.nextStepAt = (this.ctx?.currentTime || 0) + 0.12;
+    this.schedTimer = setInterval(this.schedTick, 130);
+  }
 
-    const DAY_CHORDS = [
-      [261.6, 329.6, 392.0, 493.9],   // Cmaj7
-      [220.0, 261.6, 329.6, 392.0],   // Am7
-      [174.6, 220.0, 261.6, 329.6],   // Fmaj7
-      [196.0, 246.9, 293.7, 349.2],   // G
-    ];
-    const NIGHT_CHORDS = [
-      [220.0, 261.6, 329.6, 415.3],   // Am(maj7) sombrio
-      [174.6, 207.7, 261.6, 311.1],   // Fm
-      [146.8, 174.6, 220.0, 261.6],   // Dm
-      [130.8, 155.6, 196.0, 233.1],   // Cm
-    ];
+  private schedTick = (): void => {
+    if (!this.ctx || !this.musicGain || this.musicOff || this.muted) return;
+    const tr = MUSIC_TRACKS[this.trackIdx];
+    const stepDur = 60 / tr.bpm / 2; // colcheias
+    if (this.nextStepAt < this.ctx.currentTime) this.nextStepAt = this.ctx.currentTime + 0.05;
+    while (this.nextStepAt < this.ctx.currentTime + 0.5) {
+      this.composeStep(this.stepIdx, this.nextStepAt);
+      this.stepIdx++;
+      this.nextStepAt += stepDur;
+    }
+  };
 
-    const scheduleChord = () => {
-      if (!this.ctx || !this.musicGain || this.muted) {
-        this.musicTimer = setTimeout(scheduleChord, 4000);
-        return;
-      }
-      const hourish = new Date().getHours();
-      const day = hourish >= 6 && hourish < 20;
-      const chords = day ? DAY_CHORDS : NIGHT_CHORDS;
-      const chord = chords[this.chordIdx % chords.length];
-      this.chordIdx++;
-      const dur = day ? 7.5 : 9.5;
-      chord.forEach((freq, i) => {
-        // duas vozes desafinadas por nota = pad largo
-        this.padNote(freq, dur, i === 0 ? 0.05 : 0.032);
-        this.padNote(freq * 1.004, dur, i === 0 ? 0.04 : 0.026);
-        if (i === 3) this.padNote(freq * 2, dur * 0.6, 0.012); // brilho
+  private isNight(): boolean {
+    const h = new Date().getHours();
+    return h < 6 || h >= 20;
+  }
+
+  /** Composição por passo — o coração das faixas originais. */
+  private composeStep(step: number, when: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const tr = MUSIC_TRACKS[this.trackIdx];
+    const chords = TRACK_CHORDS[tr.id] || TRACK_CHORDS.vale;
+    const mel = TRACK_MEL[tr.id] || TRACK_MEL.vale;
+    const chord = chords[Math.floor(step / 16) % chords.length];
+    const s16 = step % 16;
+    const night = this.isNight();
+    const delay = Math.max(0, when - this.ctx.currentTime);
+    const out = this.musicGain;
+
+    // PAD — a cada compasso
+    if (step % 16 === 0) {
+      const padType: OscillatorType = tr.id === "neon" ? "sawtooth" : "triangle";
+      chord.forEach((f, i) => {
+        const v = (tr.id === "neon" ? 0.026 : 0.03) * (night ? 1.12 : 1);
+        this.padNoteAt(f, 5.2, v, when, padType, out);
+        if (i === 0) this.padNoteAt(f / 2, 5.2, v * 0.85, when, "sine", out);
       });
-      this.musicTimer = setTimeout(scheduleChord, dur * 1000 - 400);
-    };
-    scheduleChord();
+    }
+    // BAIXO
+    if (tr.id === "neon" || tr.id === "corrida") {
+      if (step % 2 === 0) {
+        const seq = [0, 1, 2, 1];
+        const f = chord[seq[(step >> 1) % 4] % chord.length] / 2;
+        this.tone(f, tr.id === "neon" ? 0.2 : 0.14, tr.id === "neon" ? "sawtooth" : "square", tr.id === "neon" ? 0.055 : 0.062, undefined, delay, out);
+      }
+    } else {
+      if (s16 === 0) this.tone(chord[0] / 2, 0.6, "sine", tr.id === "floresta" ? 0.038 : 0.048, undefined, delay, out);
+      if (s16 === 8) this.tone((chord[1] || chord[0]) / 2, 0.45, "sine", 0.036, undefined, delay, out);
+    }
+    // MELODIA — tabelas originais de 32 passos (0 = pausa)
+    const f = mel[step % 32];
+    if (f > 0) {
+      const v = 0.05 * (night ? 0.82 : 1);
+      if (tr.id === "floresta") {
+        this.tone(f, 1.0, "sine", v, undefined, delay, out);
+        this.tone(f * 2, 0.8, "sine", v * 0.32, undefined, delay, out); // sino com oitava
+      } else if (tr.id === "blocos") {
+        this.tone(f, 0.5, "triangle", v * 0.9, undefined, delay, out);
+        this.tone(f * 1.002, 0.4, "sine", v * 0.3, undefined, delay, out);
+      } else if (tr.id === "corrida") {
+        this.tone(f, 0.13, "square", v * 0.85, undefined, delay, out);
+      } else {
+        this.tone(f, 0.3, "triangle", v, undefined, delay, out);
+        this.tone(f * 1.004, 0.26, "sine", v * 0.4, undefined, delay, out);
+      }
+    }
+    // PERCUSSÃO suave só na chiptune; sino raro na calma
+    if (tr.id === "corrida") {
+      if (step % 8 === 0) this.tone(72, 0.1, "sine", 0.075, 46, delay, out);
+      if (step % 8 === 4) this.noiseAt(0.045, 0.03, 3400, delay, out);
+    }
+    if (tr.id === "blocos" && step % 32 === 30) this.tone(1568, 0.6, "sine", 0.018, undefined, delay, out);
+    if (tr.id === "neon" && step % 4 === 2) this.noiseAt(0.03, 0.014, 5200, delay, out); // hats synthwave
+  }
+
+  getTrackIdx(): number { return this.trackIdx; }
+  getMusicVol(): number { return this.musicVol; }
+  trackInfo(): TrackDef { return MUSIC_TRACKS[this.trackIdx]; }
+
+  setTrack(i: number): number {
+    this.trackIdx = Math.max(0, Math.min(MUSIC_TRACKS.length - 1, i));
+    try { localStorage.setItem("bateu_world_track", String(this.trackIdx)); } catch { /* ignore */ }
+    if (this.musicStarted) {
+      this.stepIdx = 0;
+      this.nextStepAt = (this.ctx?.currentTime || 0) + 0.06;
+    }
+    return this.trackIdx;
+  }
+  nextTrack(): number { return this.setTrack((this.trackIdx + 1) % MUSIC_TRACKS.length); }
+  prevTrack(): number { return this.setTrack((this.trackIdx - 1 + MUSIC_TRACKS.length) % MUSIC_TRACKS.length); }
+
+  setMusicVol(v: number): void {
+    this.musicVol = Math.max(0.05, Math.min(1, v));
+    try { localStorage.setItem("bateu_world_vol", String(this.musicVol)); } catch { /* ignore */ }
+    if (this.musicGain && this.ctx) {
+      try { this.musicGain.gain.setTargetAtTime(0.13 * this.musicVol, this.ctx.currentTime, 0.12); } catch { /* ignore */ }
+    }
+  }
+
+  /** v11: chuva contínua (ruído filtrado em loop) para o sistema de clima. */
+  setRain(on: boolean): void {
+    if (on) {
+      if (this.rainNode || !this.ctx || !this.master || this.muted) return;
+      try {
+        const ctx = this.ctx!;
+        const len = Math.floor(ctx.sampleRate * 2);
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        const f = ctx.createBiquadFilter();
+        f.type = "bandpass"; f.frequency.value = 950; f.Q.value = 0.55;
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        g.gain.setTargetAtTime(0.05, ctx.currentTime, 1.4);
+        src.connect(f); f.connect(g); g.connect(this.master);
+        src.start();
+        this.rainNode = { src, gain: g };
+      } catch { /* ignore */ }
+    } else if (this.rainNode && this.ctx) {
+      const { src, gain } = this.rainNode;
+      this.rainNode = null;
+      try {
+        gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.9);
+        setTimeout(() => { try { src.stop(); } catch { /* ignore */ } }, 3000);
+      } catch { /* ignore */ }
+    }
   }
 
   stopMusic(): void {
+    if (this.schedTimer) { clearInterval(this.schedTimer); this.schedTimer = null; }
     if (this.musicTimer) { clearTimeout(this.musicTimer); this.musicTimer = null; }
     this.musicStarted = false;
     if (this.musicGain && this.ctx) {
@@ -322,19 +467,107 @@ class WorldAudio {
     }
   }
 
-  private padNote(freq: number, dur: number, vol: number): void {
-    if (!this.ctx || !this.musicGain) return;
-    const t0 = this.ctx.currentTime;
+  private padNoteAt(freq: number, dur: number, vol: number, when: number, type: OscillatorType, dest: GainNode): void {
+    if (!this.ctx) return;
+    const t0 = Math.max(this.ctx.currentTime, when);
     const osc = this.ctx.createOscillator();
-    osc.type = "triangle";
+    osc.type = type;
     osc.frequency.value = freq;
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(vol, t0 + dur * 0.35);   // ataque lento
+    g.gain.linearRampToValueAtTime(vol, t0 + dur * 0.3);   // ataque lento
     g.gain.linearRampToValueAtTime(0.0001, t0 + dur);       // release longo
-    osc.connect(g); g.connect(this.musicGain);
+    osc.connect(g); g.connect(dest);
     osc.start(t0); osc.stop(t0 + dur + 0.1);
   }
+
+  private noiseAt(dur: number, vol: number, lowpass: number, delay: number, dest: GainNode): void {
+    if (!this.ctx) return;
+    const t0 = this.ctx.currentTime + delay;
+    const len = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = "highpass"; f.frequency.value = lowpass * 0.7;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(dest);
+    src.start(t0);
+  }
 }
+
+// ── v11: metadados das faixas originais (leitor do HUD) ──────
+export interface TrackDef { id: string; name: string; emoji: string; bpm: number; desc: string }
+
+export const MUSIC_TRACKS: TrackDef[] = [
+  { id: "vale", name: "Amanhecer no Vale", emoji: "🌄", bpm: 84, desc: "Aventura serena para explorar o mundo" },
+  { id: "blocos", name: "Blocos ao Vento", emoji: "🌿", bpm: 72, desc: "Calma contemplativa para construir e sonhar" },
+  { id: "corrida", name: "Corrida do Ouro", emoji: "🏃", bpm: 126, desc: "Chiptune energética de arcada clássico" },
+  { id: "neon", name: "Neon da Metrópole", emoji: "🌃", bpm: 100, desc: "Synthwave para noites na cidade" },
+  { id: "floresta", name: "Coração da Floresta", emoji: "💚", bpm: 66, desc: "Mistério sagrado da Floresta Ancestral" },
+];
+
+// Progressões originais (Hz) — 4 acordes que rodam a cada compasso
+const TRACK_CHORDS: Record<string, number[][]> = {
+  vale: [
+    [261.6, 329.6, 392.0], [196.0, 246.9, 293.7],
+    [220.0, 261.6, 329.6], [174.6, 220.0, 261.6],
+  ],
+  blocos: [
+    [261.6, 329.6, 392.0, 493.9], [220.0, 261.6, 329.6, 392.0],
+    [174.6, 220.0, 261.6, 329.6], [196.0, 246.9, 293.7, 392.0],
+  ],
+  corrida: [
+    [261.6, 329.6, 392.0], [196.0, 246.9, 293.7],
+    [220.0, 261.6, 329.6], [174.6, 220.0, 349.2],
+  ],
+  neon: [
+    [220.0, 261.6, 329.6], [174.6, 220.0, 261.6],
+    [130.8, 164.8, 196.0], [196.0, 246.9, 293.7],
+  ],
+  floresta: [
+    [146.8, 220.0, 293.7], [174.6, 261.6, 349.2],
+    [110.0, 220.0, 261.6], [196.0, 293.7, 329.6],
+  ],
+};
+
+// Melodias ORIGINAIS de 32 passos (compostas para o Bateu World;
+// 0 = pausa) — nada de canções existentes.
+const TRACK_MEL: Record<string, number[]> = {
+  vale: [
+    523, 0, 587, 659, 0, 784, 659, 587,
+    523, 0, 392, 440, 0, 523, 440, 392,
+    330, 0, 392, 440, 523, 0, 440, 392,
+    349, 0, 392, 440, 392, 0, 330, 294,
+  ],
+  blocos: [
+    392, 0, 0, 523, 0, 0, 440, 0,
+    330, 0, 0, 392, 0, 0, 0, 0,
+    349, 0, 0, 440, 0, 0, 523, 0,
+    392, 0, 0, 330, 0, 0, 0, 0,
+  ],
+  corrida: [
+    659, 0, 659, 0, 784, 0, 659, 587,
+    523, 0, 523, 0, 587, 659, 587, 0,
+    494, 0, 494, 0, 587, 0, 494, 440,
+    392, 0, 440, 494, 523, 0, 587, 0,
+  ],
+  neon: [
+    440, 0, 0, 0, 523, 0, 0, 659,
+    0, 0, 587, 0, 523, 0, 0, 0,
+    349, 0, 0, 0, 440, 0, 0, 523,
+    0, 0, 494, 0, 392, 0, 0, 0,
+  ],
+  floresta: [
+    587, 0, 0, 0, 0, 0, 880, 0,
+    0, 0, 698, 0, 0, 0, 0, 0,
+    523, 0, 0, 0, 0, 0, 784, 0,
+    0, 0, 659, 0, 0, 0, 0, 0,
+  ],
+};
 
 export const worldAudio = new WorldAudio();

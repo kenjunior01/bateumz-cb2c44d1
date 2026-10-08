@@ -28,12 +28,11 @@ import {
   X, Copy, Coins, Heart, Zap, Crown, ExternalLink, Check, Wifi, Users,
   Landmark, Map, Shield, Flame, Volume2, VolumeX, MapPin, Smile, Target,
   Backpack, Settings, Camera, Music, PawPrint, Cloud,
-  Orbit, PersonStanding, Eye, Maximize2, Minimize2, SkipForward,
+  Maximize2, Minimize2, Video, Eye, Gamepad2, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, BUILDINGS, type LootItem } from "./worldEngine";
-import { worldAudio } from "./worldAudio";
-import { WorldMusic } from "./worldMusic";
+import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
 import { AvatarPreview, AvatarSwatches } from "./AvatarEditor";
 import { defaultAvatar, randomAvatar, parseAvatarKey, type AvatarConfig } from "./avatar";
 import {
@@ -69,7 +68,7 @@ interface Char {
   streak: number;
   lastDaily: string;
   vouchers: { id: string; code: string; label: string }[];
-  quests: { date: string; kills: number; chest: number; visit: number; steal: number; waves: number; cK: boolean; cC: boolean; cV: boolean; cS: boolean; cW: boolean; item: number; duel: number; atk: number; cI: boolean; cD: boolean; cA: boolean; home: number; cH: boolean };
+  quests: { date: string; kills: number; chest: number; visit: number; steal: number; waves: number; cK: boolean; cC: boolean; cV: boolean; cS: boolean; cW: boolean; item: number; duel: number; atk: number; cI: boolean; cD: boolean; cA: boolean; home: number; cH: boolean; gather: number; cG: boolean };
   // v2
   pts: number;         // Pontos de Troféu (economia do mundo)
   discoveries: string[];
@@ -88,6 +87,10 @@ interface Char {
   avatar: AvatarConfig;
   // v6
   allocDef: number;    // pontos em defesa (redução de dano)
+  // v11 — RPG+: materiais de recolha, poções da Oficina e NPCs
+  mat: { erva: number; minerio: number; cristal: number };
+  pot: { vida: number; forca: number; vento: number };
+  npcDay: { date: string; gomas: boolean; lurdes: boolean; sabio: boolean };
 }
 
 const LS_KEY = "bateu_world_char_v6";
@@ -129,13 +132,16 @@ function newChar(name: string, classId: number, avatar?: AvatarConfig): Char {
     allocAtk: 0, allocHp: 0, allocSpd: 0, allocDef: 0,
     kills: 0, deaths: 0, streak: 0,
     lastDaily: "", vouchers: [],
-    quests: { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false },
+    quests: { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false, gather: 0, cG: false },
     pts: 0, discoveries: [], sagaIdx: 0,
     saga: { kills: 0, bosses: 0, chests: 0, steals: 0, discovers: 0 },
     chal: { date: todayStr(), c1: false, c2: false },
     stolenFrom: 0, lostTo: 0, shieldUntil: 0,
     inv: [], equipped: { arma: null, armadura: null, amuleto: null, escudo: null },
     pet: false, wavesBest: 0,
+    mat: { erva: 0, minerio: 0, cristal: 0 },
+    pot: { vida: 0, forca: 0, vento: 0 },
+    npcDay: { date: todayStr(), gomas: false, lurdes: false, sabio: false },
     avatar: avatar ?? defaultAvatar(classId),
   };
 }
@@ -208,7 +214,7 @@ function loadChar(): Char | null {
     const c = JSON.parse(raw) as Char;
     if (!c?.name || !c?.uid) return null;
     if (c.quests?.date !== todayStr()) {
-      c.quests = { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false };
+      c.quests = { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false, gather: 0, cG: false };
     }
     // v7: garantir campos novos em saves v6
     c.quests.item = c.quests.item || 0;
@@ -220,6 +226,13 @@ function loadChar(): Char | null {
     // v8: missão de interiores
     c.quests.home = c.quests.home || 0;
     c.quests.cH = !!c.quests.cH;
+    // v11: missão de recolha + materiais + poções + NPCs
+    c.quests.gather = c.quests.gather || 0;
+    c.quests.cG = !!c.quests.cG;
+    c.mat = c.mat || { erva: 0, minerio: 0, cristal: 0 };
+    c.pot = c.pot || { vida: 0, forca: 0, vento: 0 };
+    if (c.npcDay?.date !== todayStr()) c.npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false };
+    c.npcDay = c.npcDay || { date: todayStr(), gomas: false, lurdes: false, sabio: false };
     if (c.chal?.date !== todayStr()) {
       c.chal = { date: todayStr(), c1: false, c2: false };
     }
@@ -257,6 +270,34 @@ function calcStats(c: Char) {
 
 const CLS_NAMES = ["Guerreiro", "Mago", "Arqueiro", "Curandeiro"];
 const CLS_EMOJIS = ["⚔️", "🔮", "🏹", "🌿"];
+
+// ── v11: Diálogos dos NPCs (RPG) ────────────────────────────
+export const NPC_LINES: Record<string, { emoji: string; name: string; lines: string[]; action: "gift" | "workshop" | "lore" }> = {
+  gomas: {
+    emoji: "🧙", name: "Mestre Gomas", action: "gift",
+    lines: [
+      "Ah, o herói do mundo! Os bugs voltaram a mexer nos cantos do mapa...",
+      "Recolhe recursos com E perto de ervas, minérios e cristais — a Lurdes transforma-os em poções.",
+      "Toma a bênção diária do Mestre: um pouco de ouro e sabedoria para a tua jornada!",
+    ],
+  },
+  lurdes: {
+    emoji: "🛠️", name: "Ferreira Lurdes", action: "workshop",
+    lines: [
+      "A bigorna está quente, herói! Trouxeste materiais da terra?",
+      "Com ervas e cristais fabrico poções: vida, força e vento. Tudo na tua Mochila → Oficina.",
+      "Uma Poção de Força antes de um chefe vale mais que dez espadas amoladas!",
+    ],
+  },
+  sabio: {
+    emoji: "📜", name: "Velho Sábio", action: "lore",
+    lines: [
+      "Este mundo nasceu de um sonho antigo... e os bugs são os seus pesadelos.",
+      "No Coração da Floresta pulsa um cristal mais velho que os reis. A Guardiã nunca dorme.",
+      "Dizem que a chuva acalma os bugs... mas as tempestades acordam os piores. Cuidado com o trovão.",
+    ],
+  },
+};
 
 // ── Saga: cadeia de missões permanente ──────────────────────
 const SAGA: { title: string; desc: string; prog: (c: Char) => number; goal: number; reward: string; apply: (c: Char) => void }[] = [
@@ -334,13 +375,6 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   const [worldEvent, setWorldEvent] = useState<{ kind: string; name: string; emoji: string; until: number } | null>(null);
   const [eventNow, setEventNow] = useState(Date.now());
 
-  // v12 — modos de câmara, ecrã inteiro e música ambiente (domínio público)
-  const [camMode, setCamMode] = useState<"orbit" | "third" | "first">("orbit");
-  const [isFs, setIsFs] = useState(false);
-  const [musicOn, setMusicOn] = useState(false);
-  const [trackName, setTrackName] = useState("");
-  const musicRef = useRef<WorldMusic | null>(null);
-
   // v8 — interiores (chip "Estás em") + ticker da plataforma ao vivo
   const [inside, setInside] = useState<{ name: string; desc: string } | null>(null);
   const [ticker, setTicker] = useState<{ id: number; msg: string }[]>([]);
@@ -359,6 +393,17 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   const [quality, setQuality] = useState<"auto" | "low" | "medium" | "high">(
     () => (localStorage.getItem("bateu_world_quality") as any) || "auto"
   );
+  // v11 — câmaras, ecrã inteiro, leitor de música, clima, diálogo, montaria
+  const [camMode, setCamMode] = useState<0 | 1 | 2>(0);
+  const [isFs, setIsFs] = useState(false);
+  const [musicOpen, setMusicOpen] = useState(false);
+  const [trackIdx, setTrackIdx] = useState(worldAudio.getTrackIdx());
+  const [musicVol, setMusicVolState] = useState(worldAudio.getMusicVol());
+  const [weatherChip, setWeatherChip] = useState<{ name: string; emoji: string } | null>(null);
+  const [dialogue, setDialogue] = useState<string | null>(null);
+  const [dlgStep, setDlgStep] = useState(0);
+  const [dlgText, setDlgText] = useState("");
+  const [mountOn, setMountOn] = useState(false);
   const comboTimer = useRef<any>(null);
   const photoTimer = useRef<any>(null);
   const worldWrapRef = useRef<HTMLDivElement | null>(null);
@@ -374,6 +419,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     "🗺️ Explora o mundo gigante: 19 marcos com significado — cada descoberta dá XP e pontos",
     "💚 O Coração da Floresta pulsa na clareira sagrada a oeste — a Guardiã Anciã protege-o",
     "🏟️ A Arena das Ondas (este do mapa) paga pontos e ouro por onda",
+    "🎥 Prime C (ou usa a barra topo) para trocar de câmara: 1ª pessoa tipo Minecraft, 3ª pessoa tipo GTA ou orbital",
+    "🌧️ A chuva e a tempestade visitam o mundo de vez em quando — os trovões iluminam o céu!",
+    "🐺 Ao nível 8 galopa com a Montaria Lobo Veloz (+75% velocidade) — botão 🐾",
+    "🌿 Recolhe ervas, minérios e cristais com E e fabrica poções na Oficina da Mochila",
     "🎒 Inimigos e chefes dropam equipamento — equipa na Mochila!",
     "🔥 Combo de mortes em menos de 4s = até +50% de XP",
     "🏦 Reúne Pontos de Troféu e troca por cupões ou moeda real no Banco",
@@ -435,7 +484,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               pushToast("📸 Foto capturada e descarregada!", "good");
             }
           } catch { /* ignore */ }
-          setTimeout(() => setPhotoMode(false), 900);
+          // v11: janela maior (1.6s) — tempo de ver a moldura e de a E2E captar
+          setTimeout(() => setPhotoMode(false), 2600); // v11: janela generosa (2.6s)
         }, 320);
       }
       return !on;
@@ -915,8 +965,37 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             }
             break;
           }
-          case "cammode":
-            setCamMode(ev.mode);
+          // ── v11: câmaras, clima, recolha, diálogo, montaria ──
+          case "camchange":
+            setCamMode(ev.mode as 0 | 1 | 2);
+            break;
+          case "weather":
+            pushToast(`${ev.emoji} ${ev.name}: ${ev.desc}`, "info");
+            setWeatherChip(ev.kind === "clear" ? null : { name: ev.name, emoji: ev.emoji });
+            break;
+          case "gather":
+            setChar((p) => {
+              if (!p) return p;
+              const mat = { ...p.mat };
+              if (ev.kind === "erva") mat.erva += 1;
+              else if (ev.kind === "minério") mat.minerio += 1;
+              else mat.cristal += 1;
+              const q = { ...p.quests };
+              if (q.date === todayStr()) q.gather += 1;
+              else { q.date = todayStr(); q.gather = 1; }
+              return { ...p, mat, quests: q };
+            });
+            pushToast(`${ev.kind === "erva" ? "🌿" : ev.kind === "minério" ? "⛏️" : "💎"} +1 ${ev.name} — material para a Oficina!`, "good");
+            worldAudio.play("coin");
+            break;
+          case "dialogue":
+            setDialogue(String(ev.npc || "gomas"));
+            setDlgStep(0);
+            setDlgText("");
+            break;
+          case "mount":
+            setMountOn(!!ev.on);
+            pushToast(ev.on ? "🐺 Montaste o Lobo Veloz — +75% de velocidade!" : "🐺 Desmontaste — o lobo descansa.", "good");
             break;
           case "notify":
             pushToast(ev.msg, ev.tone);
@@ -990,46 +1069,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       unsubPlat();
       eng.dispose();
       engineRef.current = null;
-      musicRef.current?.dispose();
-      musicRef.current = null;
     };
   }, [phase, char?.uid]);
-
-  // v12 — ecrã inteiro: funciona no browser e no WebView Android
-  const toggleFullscreen = useCallback(() => {
-    try {
-      if (document.fullscreenElement) {
-        void document.exitFullscreen();
-      } else {
-        const el = document.documentElement as any;
-        (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
-      }
-    } catch { /* dispositivo sem suporte */ }
-  }, []);
-
-  useEffect(() => {
-    const h = () => setIsFs(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", h);
-    return () => document.removeEventListener("fullscreenchange", h);
-  }, []);
-
-  // v12 — música ambiente sem direitos de autor (clássicos em domínio público)
-  const toggleWorldMusic = useCallback(() => {
-    if (!musicRef.current) musicRef.current = new WorldMusic();
-    const on = musicRef.current.toggle();
-    setMusicOn(on);
-    setTrackName(on ? `${musicRef.current.track.name} · ${musicRef.current.track.author}` : "");
-  }, []);
-
-  const nextWorldTrack = useCallback(() => {
-    if (!musicRef.current || !musicRef.current.playing) return;
-    musicRef.current.next();
-    setTrackName(`${musicRef.current.track.name} · ${musicRef.current.track.author}`);
-  }, []);
-
-  const cycleCam = useCallback(() => {
-    engineRef.current?.cycleCamMode();
-  }, []);
 
   const handleOpen = useCallback((kind: string, id: string) => {
     const c = charRef.current;
@@ -1063,6 +1104,17 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     const t = setTimeout(() => setSkillCds((s) => s.map((v) => Math.max(0, v - 1))), 1000);
     return () => clearTimeout(t);
   }, [skillCds]);
+
+  // v11: máquina de escrever do diálogo dos NPCs
+  useEffect(() => {
+    if (!dialogue) return;
+    const npc = NPC_LINES[dialogue];
+    if (!npc) return;
+    const full = npc.lines[Math.min(dlgStep, npc.lines.length - 1)] || "";
+    if (dlgText.length >= full.length) return;
+    const t = setTimeout(() => setDlgText(full.slice(0, dlgText.length + 1)), 16);
+    return () => clearTimeout(t);
+  }, [dialogue, dlgStep, dlgText]);
 
   // sincroniza stats com o motor (v6: inclui DEFESA)
   useEffect(() => {
@@ -1146,13 +1198,13 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     });
   };
 
-  const claimQuest = (k: "K" | "C" | "V" | "S" | "W" | "I" | "D" | "A" | "H") => {
+  const claimQuest = (k: "K" | "C" | "V" | "S" | "W" | "I" | "D" | "A" | "H" | "G") => {
     setChar((p) => {
       if (!p) return p;
       const q = { ...p.quests };
-      const key = k === "K" ? "cK" : k === "C" ? "cC" : k === "V" ? "cV" : k === "S" ? "cS" : k === "W" ? "cW" : k === "I" ? "cI" : k === "D" ? "cD" : k === "H" ? "cH" : "cA";
+      const key = k === "K" ? "cK" : k === "C" ? "cC" : k === "V" ? "cV" : k === "S" ? "cS" : k === "W" ? "cW" : k === "I" ? "cI" : k === "D" ? "cD" : k === "H" ? "cH" : k === "G" ? "cG" : "cA";
       if ((q as any)[key]) return p;
-      const done = k === "K" ? q.kills >= 10 : k === "C" ? q.chest >= 1 : k === "V" ? q.visit >= 1 : k === "S" ? q.steal >= 1 : k === "W" ? q.waves >= 3 : k === "I" ? q.item >= 1 : k === "D" ? q.duel >= 3 : k === "H" ? q.home >= 2 : q.atk >= 5;
+      const done = k === "K" ? q.kills >= 10 : k === "C" ? q.chest >= 1 : k === "V" ? q.visit >= 1 : k === "S" ? q.steal >= 1 : k === "W" ? q.waves >= 3 : k === "I" ? q.item >= 1 : k === "D" ? q.duel >= 3 : k === "H" ? q.home >= 2 : k === "G" ? q.gather >= 6 : q.atk >= 5;
       if (!done) return p;
       (q as any)[key] = true;
       let { gold, xp, pts } = p;
@@ -1165,10 +1217,92 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       if (k === "D") { gold += 250; pts += 15; }
       if (k === "A") { gold += 200; pts += 10; }
       if (k === "H") { gold += 150; pts += 10; }
+      if (k === "G") { gold += 180; xp += 150; }
       const n = applyXp({ ...p, gold, xp, pts, quests: q }, 0);
       if (k === "H") logWorldActivity(p.uid, "quest", "Missão de interiores concluída", 10);
-      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
+      if (k === "G") logWorldActivity(p.uid, "quest", "Missão de recolha concluída", 10);
+      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "G" ? "✅ Colheita Dourada: +180 ouro · +150 XP" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
       return n;
+    });
+  };
+
+  // ── v11: câmaras · ecrã inteiro · leitor de música · Oficina · NPCs ──
+
+  const toggleFs = useCallback(async () => {
+    const el = worldWrapRef.current;
+    if (!el) return;
+    try {
+      if (!document.fullscreenElement) {
+        const req = (el as any).requestFullscreen || (el as any).webkitRequestFullscreen;
+        if (req) await req.call(el);
+        try { await (screen.orientation as any)?.lock?.("landscape"); } catch { /* rotação opcional */ }
+        // v11: alguns motores (headless/WebView) engajam e saem logo — se em
+        // 450ms não houver fullscreen real, entra no modo visual (fallback)
+        setTimeout(() => {
+          if (!document.fullscreenElement) setIsFs(true);
+        }, 450);
+      } else {
+        await (document as any).exitFullscreen?.();
+        try { (screen.orientation as any)?.unlock?.(); } catch { /* ignore */ }
+        setIsFs(false);
+      }
+    } catch {
+      // fallback CSS puro — ecrã inteiro "fake" quando a API não existe
+      setIsFs((v) => !v);
+      try { await (screen.orientation as any)?.lock?.("landscape"); } catch { /* ignore */ }
+    }
+  }, []);
+
+  useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    document.addEventListener("webkitfullscreenchange", h);
+    return () => { document.removeEventListener("fullscreenchange", h); document.removeEventListener("webkitfullscreenchange", h); };
+  }, []);
+
+  const pickTrack = (i: number) => { setTrackIdx(worldAudio.setTrack(i)); };
+  const changeVol = (v: number) => { setMusicVolState(v); worldAudio.setMusicVol(v); };
+
+  const craftPotion = (kind: "vida" | "forca" | "vento") => {
+    const cost = kind === "vida" ? { erva: 3, minerio: 0, cristal: 1 } : kind === "forca" ? { erva: 2, minerio: 2, cristal: 0 } : { erva: 1, minerio: 1, cristal: 2 };
+    setChar((p) => {
+      if (!p) return p;
+      if (p.mat.erva < cost.erva || p.mat.minerio < cost.minerio || p.mat.cristal < cost.cristal) {
+        pushToast("Materiais insuficientes — recolhe ervas, minérios e cristais no mundo!", "info");
+        return p;
+      }
+      const mat = {
+        erva: p.mat.erva - cost.erva,
+        minerio: p.mat.minerio - cost.minerio,
+        cristal: p.mat.cristal - cost.cristal,
+      };
+      const pot = { ...p.pot, [kind]: p.pot[kind] + 1 };
+      pushToast(`⚗️ Poção fabricada na Oficina! Usa-a na mochila quando precisares.`, "good");
+      worldAudio.play("craft");
+      return { ...p, mat, pot };
+    });
+  };
+
+  const usePotion = (kind: "vida" | "forca" | "vento") => {
+    setChar((p) => {
+      if (!p || p.pot[kind] <= 0) return p;
+      engineRef.current?.usePotion(kind);
+      return { ...p, pot: { ...p.pot, [kind]: p.pot[kind] - 1 } };
+    });
+  };
+
+  const claimNpcGift = (npc: "gomas" | "lurdes" | "sabio") => {
+    setChar((p) => {
+      if (!p) return p;
+      if (p.npcDay?.date === todayStr() && p.npcDay?.[npc]) return p;
+      const npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false, ...(p.npcDay || {}), [npc]: true };
+      npcDay.date = todayStr();
+      const n = { ...p, npcDay } as Char;
+      if (npc === "gomas") { n.gold += 120; n.xp += 100; pushToast("🧙 Mestre Gomas: +120 ouro · +100 XP — volta amanhã!", "good"); }
+      if (npc === "lurdes") { n.pot = { ...n.pot, vida: n.pot.vida + 1 }; pushToast("🛠️ Ferreira Lurdes ofereceu-te uma Poção de Vida!", "good"); }
+      if (npc === "sabio") { n.pts += 5; n.xp += 60; pushToast("📜 O Velho Sábio partilhou sabedoria: +5 pts · +60 XP", "good"); }
+      worldAudio.play("heal");
+      return applyXp(n, 0);
     });
   };
 
@@ -1504,7 +1638,11 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   }
 
   return (
-    <div ref={worldWrapRef} className="relative z-10 w-full aspect-[4/3] md:aspect-video rounded-2xl overflow-hidden bg-slate-900 select-none" data-testid="bateu-world">
+    <div
+      ref={worldWrapRef}
+      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${isFs ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "aspect-[4/3] md:aspect-video rounded-2xl"}`}
+      data-testid="bateu-world"
+    >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
       {/* flash de dano / morte */}
@@ -1909,7 +2047,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
 
       {/* painel de navegação superior — v10: foto e som vivem aqui para
           nunca colidirem com a coluna direita; rótulos só em ecrãs largos */}
-      <div className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 flex-wrap justify-center gap-1.5">
+      <div className="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
           ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
@@ -1932,6 +2070,38 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           </button>
         ))}
         <div className="mx-0.5 w-px self-stretch bg-white/20" />
+        {/* v11: CÂMARAS — orbital · 1ª pessoa Minecraft · 3ª pessoa GTA */}
+        <div className="flex items-center gap-0.5 rounded-full bg-black/55 p-0.5 backdrop-blur" data-testid="bw-cam-group">
+          {([0, 1, 2] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => engineRef.current?.setCamMode(m)}
+              className={`rounded-full p-1.5 transition-colors ${camMode === m ? "bg-white text-slate-900" : "text-white/75 hover:text-white"}`}
+              data-testid={`bw-cam-${m}`}
+              title={m === 0 ? "Câmara Orbital (clássica)" : m === 1 ? "1ª Pessoa — tipo Minecraft (C)" : "3ª Pessoa — tipo San Andreas (C)"}
+            >
+              {m === 0 ? <Video className="h-4 w-4" /> : m === 1 ? <Eye className="h-4 w-4" /> : <Gamepad2 className="h-4 w-4" />}
+            </button>
+          ))}
+        </div>
+        {/* v11: ECRÃ INTEIRO */}
+        <button
+          onClick={toggleFs}
+          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          data-testid="bw-fs"
+          title="Ecrã inteiro"
+        >
+          {isFs ? <Minimize2 className="h-4 w-4 text-amber-300" /> : <Maximize2 className="h-4 w-4 text-white" />}
+        </button>
+        {/* v11: LEITOR DE MÚSICA — faixas originais sem direitos de autor */}
+        <button
+          onClick={() => { setMusicOpen((v) => !v); worldAudio.ensure(); }}
+          className={`flex items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
+          data-testid="bw-music"
+          title="Banda sonora do mundo"
+        >
+          <Music className={`h-4 w-4 ${musicOpen ? "text-slate-900" : "text-fuchsia-300"}`} />
+        </button>
         {/* v10: modo foto + som mudaram da coluna direita para aqui */}
         <button
           onClick={togglePhoto}
@@ -1949,44 +2119,108 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         >
           {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
         </button>
-        {/* v12: câmara — órbita / ombro / 1ª pessoa (C) */}
-        <button
-          onClick={cycleCam}
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
-          data-testid="bw-cam"
-          title={camMode === "orbit" ? "Câmara: Órbita (C)" : camMode === "third" ? "Câmara: Ombro (C)" : "Câmara: 1ª Pessoa (C)"}
-        >
-          {camMode === "orbit" ? <Orbit className="h-4 w-4 text-sky-300" /> : camMode === "third" ? <PersonStanding className="h-4 w-4 text-amber-300" /> : <Eye className="h-4 w-4 text-emerald-300" />}
-        </button>
-        {/* v12: ecrã inteiro */}
-        <button
-          onClick={toggleFullscreen}
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
-          data-testid="bw-fullscreen"
-          title={isFs ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
-        >
-          {isFs ? <Minimize2 className="h-4 w-4 text-sky-300" /> : <Maximize2 className="h-4 w-4 text-sky-300" />}
-        </button>
-        {/* v12: música ambiente sem direitos de autor */}
-        <button
-          onClick={toggleWorldMusic}
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
-          data-testid="bw-music"
-          title={musicOn ? `Música: ${trackName} (tocar/parar)` : "Ligar música ambiente"}
-        >
-          <Music className={`h-4 w-4 ${musicOn ? "text-emerald-300" : "text-white/70"}`} />
-        </button>
-        {musicOn && (
-          <button
-            onClick={nextWorldTrack}
-            className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
-            data-testid="bw-music-next"
-            title="Próxima música"
-          >
-            <SkipForward className="h-3.5 w-3.5 text-sky-300" />
-          </button>
-        )}
       </div>
+
+      {/* v11: LEITOR DE MÚSICA — 5 faixas ORIGINAIS (0% direitos de autor) */}
+      <AnimatePresence>
+        {musicOpen && (
+          <motion.div
+            key="music-player"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="absolute top-12 left-1/2 z-20 w-[248px] -translate-x-1/2 rounded-2xl border border-fuchsia-400/40 bg-black/85 p-3 shadow-2xl backdrop-blur-md"
+            data-testid="bw-music-player"
+          >
+            <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-fuchsia-300">♪ Banda Sonora Bateu · 100% original</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{MUSIC_TRACKS[trackIdx].emoji}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-black text-white" data-testid="bw-track-name">{MUSIC_TRACKS[trackIdx].name}</p>
+                <p className="truncate text-[9px] font-bold text-white/50">{MUSIC_TRACKS[trackIdx].desc} · {MUSIC_TRACKS[trackIdx].bpm} BPM</p>
+              </div>
+              <button onClick={() => setTrackIdx(worldAudio.prevTrack())} className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20" data-testid="bw-music-prev" title="Anterior">⏮</button>
+              <button onClick={() => { setTrackIdx(worldAudio.nextTrack()); }} className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20" data-testid="bw-music-next" title="Próxima">⏭</button>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[10px]">🔊</span>
+              <input
+                type="range" min={0.05} max={1} step={0.05} value={musicVol}
+                onChange={(e) => changeVol(parseFloat(e.target.value))}
+                className="h-1.5 flex-1 accent-fuchsia-400"
+                data-testid="bw-vol"
+              />
+              <span className="w-8 text-right text-[9px] font-black text-white/60">{Math.round(musicVol * 100)}%</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {MUSIC_TRACKS.map((tr, i) => (
+                <button key={tr.id} onClick={() => pickTrack(i)} className={`rounded-full px-2 py-0.5 text-[9px] font-black transition-colors ${i === trackIdx ? "bg-fuchsia-500 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}>
+                  {tr.emoji} {i + 1}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* v11: chip do CLIMA — chuva/tempestade ao vivo */}
+      <AnimatePresence>
+        {weatherChip && (
+          <motion.div
+            key="weather-chip"
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2"
+            data-testid="bw-weather"
+          >
+            <div className="flex items-center gap-2 rounded-full border border-sky-300/40 bg-black/70 px-3 py-1 text-[10px] font-black text-sky-100 backdrop-blur">
+              <span className="animate-pulse">{weatherChip.emoji}</span> {weatherChip.name.toUpperCase()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* v11: DIÁLOGO DE NPC — RPG com máquina de escrever */}
+      <AnimatePresence>
+        {dialogue && char && NPC_LINES[dialogue] && (
+          <motion.div
+            key="npc-dialogue"
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+            className="absolute bottom-40 left-1/2 z-30 w-[min(92%,420px)] -translate-x-1/2"
+            data-testid="bw-dialogue"
+          >
+            <div className="rounded-2xl border border-violet-300/40 bg-slate-950/92 p-3.5 shadow-2xl backdrop-blur-md">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/25 text-xl">{NPC_LINES[dialogue].emoji}</span>
+                <p className="text-xs font-black text-violet-200">{NPC_LINES[dialogue].name}</p>
+                <button onClick={() => setDialogue(null)} className="ml-auto rounded-lg bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/70 hover:bg-white/20" data-testid="bw-dialogue-close">✕ fechar</button>
+              </div>
+              <p className="min-h-[38px] text-[12px] leading-snug text-white/90">
+                {dlgText}
+                <span className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-violet-300 align-middle" />
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex gap-1">
+                  {NPC_LINES[dialogue].lines.map((_, i) => (
+                    <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === dlgStep ? "bg-violet-300" : "bg-white/20"}`} />
+                  ))}
+                </div>
+                <div className="flex gap-1.5">
+                  {dlgStep < NPC_LINES[dialogue].lines.length - 1 && (
+                    <button onClick={() => { setDlgStep((s) => s + 1); setDlgText(""); }} className="rounded-lg bg-white/10 px-3 py-1 text-[10px] font-black text-white hover:bg-white/20">continuar ▸</button>
+                  )}
+                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "gift" && (
+                    <button onClick={() => { claimNpcGift("gomas"); setDialogue(null); }} className="rounded-lg bg-emerald-500 px-3 py-1 text-[10px] font-black text-white hover:bg-emerald-400" data-testid="bw-dialogue-gift">🎁 Bênção diária</button>
+                  )}
+                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "workshop" && (
+                    <button onClick={() => { setPanel("inv"); setDialogue(null); }} className="rounded-lg bg-amber-500 px-3 py-1 text-[10px] font-black text-white hover:bg-amber-400" data-testid="bw-dialogue-forge">🛠️ Abrir Oficina</button>
+                  )}
+                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "lore" && (
+                    <button onClick={() => { claimNpcGift("sabio"); setDialogue(null); }} className="rounded-lg bg-sky-500 px-3 py-1 text-[10px] font-black text-white hover:bg-sky-400" data-testid="bw-dialogue-lore">📜 Sabedoria (+5 pts)</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* v9: chip de convidado — lembra suave, nunca bloqueia */}
       {!user && (
@@ -1997,22 +2231,6 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         >
           👤 CONVIDADO — criar conta para guardar na nuvem
         </button>
-      )}
-
-      {/* v12: mira da 1ª pessoa (estilo Minecraft) */}
-      {camMode === "first" && (
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2" data-testid="bw-crosshair">
-          <div className="relative h-5 w-5 opacity-80">
-            <div className="absolute left-1/2 top-0 h-5 w-0.5 -translate-x-1/2 bg-white/80" />
-            <div className="absolute top-1/2 left-0 h-0.5 w-5 -translate-y-1/2 bg-white/80" />
-            <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-          </div>
-        </div>
-      )}
-      {musicOn && trackName && (
-        <div className="pointer-events-none absolute top-2 left-3 z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white/85 backdrop-blur" data-testid="bw-track">
-          ♪ {trackName}
-        </div>
       )}
 
       {/* joystick (mobile) */}
@@ -2080,6 +2298,17 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             </button>
           </div>
         </div>
+        {/* v11: MONTARIA — Lobo Veloz (desbloqueia ao nível 8) */}
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={() => engineRef.current?.toggleMount()}
+          data-testid="bw-mount"
+          title="Montaria: Lobo Veloz (V) — +75% de velocidade · desbloqueia ao Nv8"
+          className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl shadow-lg active:scale-90 ${mountOn ? "bg-gradient-to-br from-sky-400 to-cyan-500 text-white ring-2 ring-white" : "bg-slate-800/90 text-white/90"}`}
+        >
+          {mountOn ? "🐺" : "🐾"}
+          {char!.level < 8 && <span className="absolute -top-1 -right-1 rounded-full bg-slate-900 px-1 text-[8px] font-black text-amber-300 border border-amber-400/50">Nv8</span>}
+        </motion.button>
       </div>
 
       {/* v3: dica rotativa + atalhos (desktop) */}
@@ -2265,6 +2494,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
                 <QuestRow emoji="🩸" title="Vence 3 heróis em duelo (PvP)" progress={`${Math.min(q.duel, 3)}/3`} done={q.cD} canClaim={q.duel >= 3 && !q.cD} reward="+250 ouro · +15 pts" onClaim={() => claimQuest("D")} testid="bw-quest-duel" />
                 <QuestRow emoji="🎯" title="Acerta 5 golpes em heróis (PvP)" progress={`${Math.min(q.atk, 5)}/5`} done={q.cA} canClaim={q.atk >= 5 && !q.cA} reward="+200 ouro · +10 pts" onClaim={() => claimQuest("A")} testid="bw-quest-atk" />
                 <QuestRow emoji="🏠" title="Entra 2 vezes em interiores (casas, farol…)" progress={`${Math.min(q.home, 2)}/2`} done={q.cH} canClaim={q.home >= 2 && !q.cH} reward="+150 ouro · +10 pts" onClaim={() => claimQuest("H")} testid="bw-quest-home" />
+                <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-emerald-400">🌿 Vida de recolhedor — v11</p>
+                <QuestRow emoji="🌿" title="Recolhe 6 recursos (ervas, minérios, cristais)" progress={`${Math.min(q.gather, 6)}/6`} done={q.cG} canClaim={q.gather >= 6 && !q.cG} reward="+180 ouro · +150 XP" onClaim={() => claimQuest("G")} testid="bw-quest-gather" />
                 <p className="mt-3 text-[10px] text-muted-foreground">As missões diárias reiniciam todos os dias. PvP ativo fora da praça — jogadores abaixo do Nv3 estão protegidos. Durante o Frenesi de Roubos cada roubo rende +25 pts bónus!</p>
               </>
             )}
@@ -2405,6 +2636,47 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             </div>
             <div className="mb-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2 py-1.5 text-[10px] font-bold text-emerald-300">
               Bónus total: +{stats.atk - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).atk)}⚔️ · +{stats.maxHp - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).maxHp)}❤️ · +{stats.spd.toFixed(1)}⚡ · +{stats.def - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).def)}🛡️
+            </div>
+            {/* v11: OFICINA — materiais → poções */}
+            <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-2.5">
+              <p className="mb-1.5 text-xs font-black flex items-center gap-1">⚗️ Oficina da Lurdes <span className="rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[8px] font-black text-amber-300">RECOLHE NO MUNDO COM E</span></p>
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-black">
+                <span className="rounded-lg bg-emerald-500/15 px-2 py-0.5 text-emerald-300" data-testid="bw-mat-erva">🌿 {char.mat.erva}</span>
+                <span className="rounded-lg bg-orange-500/15 px-2 py-0.5 text-orange-300" data-testid="bw-mat-minerio">⛏️ {char.mat.minerio}</span>
+                <span className="rounded-lg bg-cyan-500/15 px-2 py-0.5 text-cyan-300" data-testid="bw-mat-cristal">💎 {char.mat.cristal}</span>
+              </div>
+              <div className="space-y-1.5">
+                {([
+                  { k: "vida", emoji: "❤️", name: "Poção de Vida", desc: "Cura 55% da vida", cost: "3🌿 + 1💎", can: char.mat.erva >= 3 && char.mat.cristal >= 1 },
+                  { k: "forca", emoji: "💪", name: "Poção de Força", desc: "+30% ataque · 60s", cost: "2🌿 + 2⛏️", can: char.mat.erva >= 2 && char.mat.minerio >= 2 },
+                  { k: "vento", emoji: "💨", name: "Poção do Vento", desc: "+25% velocidade · 60s", cost: "1🌿 + 1⛏️ + 2💎", can: char.mat.erva >= 1 && char.mat.minerio >= 1 && char.mat.cristal >= 2 },
+                ] as const).map((r) => (
+                  <div key={r.k} className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1.5">
+                    <span className="text-lg">{r.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black text-white">{r.name} <span className="text-white/40">×{char.pot[r.k]}</span></p>
+                      <p className="text-[9px] text-white/50">{r.desc} · {r.cost}</p>
+                    </div>
+                    <button
+                      onClick={() => craftPotion(r.k)}
+                      disabled={!r.can}
+                      data-testid={`bw-craft-${r.k}`}
+                      className={`rounded-lg px-2.5 py-1 text-[9px] font-black ${r.can ? "bg-amber-400 text-slate-900 hover:bg-amber-300" : "bg-white/10 text-white/30"}`}
+                    >
+                      Fabricar
+                    </button>
+                    {char.pot[r.k] > 0 && (
+                      <button
+                        onClick={() => usePotion(r.k)}
+                        data-testid={`bw-use-${r.k}`}
+                        className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[9px] font-black text-white hover:bg-emerald-400"
+                      >
+                        Usar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <p className="mb-1.5 text-xs font-bold flex items-center gap-1"><Backpack className="h-3 w-3 text-sky-400" /> Mochila ({char.inv.length})</p>
             {char.inv.length === 0 && (

@@ -227,6 +227,7 @@ interface Mob {
   slowUntil: number;
   name: string;
   arena?: boolean;
+  elite?: boolean; // v11: variante rara — mais forte e recompensada
   event?: boolean; // v7: mob de Acontecimento (recompensas x2, desaparece no fim)
 }
 
@@ -287,7 +288,7 @@ interface FloatText {
 
 interface Interactable {
   group: THREE.Group;
-  kind: "raffle" | "contest" | "voucher" | "asset" | "games" | "bank" | "fountain" | "arena";
+  kind: "raffle" | "contest" | "voucher" | "asset" | "games" | "bank" | "fountain" | "arena" | "npc"; // v11: + npc
   id: string;
   label: string;
   pos: THREE.Vector3;
@@ -295,6 +296,13 @@ interface Interactable {
   lid?: THREE.Mesh;
   icon?: THREE.Sprite;
 }
+
+// v11 — nomes dos nós de recolha (rótulos da HUD)
+const GATHER_NAME: Record<"erva" | "minério" | "cristal", string> = {
+  erva: "Erva Curativa",
+  minério: "Minério de Ferro",
+  cristal: "Cristal Arcano",
+};
 
 // v4 — loot no chão
 interface GroundLoot {
@@ -503,10 +511,31 @@ export class WorldEngine {
   private moveDirFace = new THREE.Vector3(0, 0, -1);
   private camYaw = 0;
   private camDist = 12;
-  // v12: modos de câmara — "orbit" (clássica) / "third" (ombro, San Andreas) / "first" (olhos do personagem, Minecraft)
-  camMode: "orbit" | "third" | "first" = "orbit";
-  private camPitch = 0.34;
   private camPos = new THREE.Vector3(0, 8, 18);
+
+  // v11 — SISTEMA DE CÂMARAS: 0 orbital · 1 1ª pessoa (Minecraft) · 2 3ª pessoa ombro (San Andreas)
+  private camMode: 0 | 1 | 2 = 0;
+  private camPitch = 0.16;
+  private camFov = 58;
+  private fpWeapon: THREE.Group | null = null;
+  private lastNearLabel: string | null = null;
+
+  // v11 — CLIMA (chuva/tempestade)
+  private weather: "clear" | "rain" | "storm" = "clear";
+  private weatherUntil = 0;
+  private weatherNext = 110000;   // primeiro evento só aos ~110s (E2E estável)
+  private rain: THREE.Points | null = null;
+  private rainGeo: THREE.BufferGeometry | null = null;
+  private flashT = 4;
+
+  // v11 — RECOLHA (nós de recursos no mundo)
+  private gatherNodes: { kind: "erva" | "minerio" | "cristal"; group: THREE.Group; x: number; z: number; taken: boolean; respawnAt: number }[] = [];
+  private gatherNear = -1;
+
+  // v11 — MONTARIA (lobo veloz)
+  private mounted = false;
+  private mountMesh: THREE.Group | null = null;
+  private spdBuffUntil = 0;
 
   private keys = new Set<string>();
   private joy = { x: 0, y: 0 };
@@ -614,6 +643,9 @@ export class WorldEngine {
   private lastRegion = "";
   // v5: avatar articulado do jogador
   private avParts: AvatarParts | null = null;
+
+  // v11 — NPCs com diálogo + montaria
+  private npcs: { id: string; name: string; group: THREE.Group; baseY: number }[] = [];
   private avCfg: AvatarConfig = defaultAvatar(0);
   private avKey = "";
   private swingT = 0;             // 0..1 animação de golpe
@@ -672,17 +704,17 @@ export class WorldEngine {
     });
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x9fd7f2);
-    this.scene.fog = new THREE.FogExp2(0xa8dbf0, 0.0042); // v12: névoa mais longe e leve — visão limpa
+    this.scene.background = new THREE.Color(0x8fc8e8);
+    this.scene.fog = new THREE.FogExp2(0xb2d8ea, 0.0042); // v11: névoa clara e moderna
 
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 560);
 
-    this.hemi = new THREE.HemisphereLight(0xcde9ff, 0x52796f, 1.0);
+    this.hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3d6b35, 0.95);
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(0xfff3d6, 1.15);
     this.sun.position.set(40, 60, 20);
     this.scene.add(this.sun);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.36));
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
     this.buildTerrain();
     this.buildSky();
@@ -691,6 +723,9 @@ export class WorldEngine {
     this.buildPOIs();
     this.buildLandmarks();
     this.buildBuildings(); // v8: casas, pousada, farol, fortim… enteráveis
+    this.buildWeatherSystem(); // v11: chuva/tempestade viva
+    this.buildGatherNodes(); // v11: ervas, minérios e cristais para recolher
+    this.buildNpcs(); // v11: NPCs com diálogo (RPG)
     this.buildArena();
     this.buildNature();
     this.buildHeartForest(); // v10: Coração da Floresta — clareira sagrada
@@ -734,15 +769,15 @@ export class WorldEngine {
       this.renderer.getSize(size);
       this.composer = new EffectComposer(this.renderer);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.bloomPass = new UnrealBloomPass(size, 0.42, 0.6, 0.82);
+      this.bloomPass = new UnrealBloomPass(size, 0.18, 0.5, 0.88); // v11: brilho subtil — visual limpo
       this.composer.addPass(this.bloomPass);
       // vinheta + saturação suave (film look)
       this.vignettePass = new ShaderPass({
         uniforms: {
           tDiffuse: { value: null },
-          offset: { value: 1.12 },
-          darkness: { value: 0.62 },
-          saturation: { value: 1.07 },
+          offset: { value: 1.16 },
+          darkness: { value: 0.3 },   // v11: vinheta muito mais leve
+          saturation: { value: 1.02 }, // v11: cores naturais, sem exagero
         },
         vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `
@@ -815,7 +850,8 @@ export class WorldEngine {
         const n = 0.5 + 0.5 * Math.sin(x * 0.11 + Math.sin(z * 0.13) * 2.1) * Math.cos(z * 0.09 + Math.sin(x * 0.07) * 1.7);
         const micro = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * 0.06;
         cA.setHex(pal.base).lerp(new THREE.Color(pal.alt), n);
-        c.copy(cA).offsetHSL(0, 0, micro - 0.03);
+        // v11: paleta moderna — dessaturada e luminosa (visual limpo)
+        c.copy(cA).offsetHSL(0, 0, micro - 0.03).offsetHSL(0, -0.06, 0.02);
       }
       // borda do mundo escurece (falda de montanha inacessível)
       if (dCenter > 228) c.multiplyScalar(Math.max(0.35, 1 - (dCenter - 228) / 20));
@@ -838,9 +874,9 @@ export class WorldEngine {
       depthWrite: false,
       fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x2f7fd4) },
-        mid: { value: new THREE.Color(0x9bd0e8) },
-        bot: { value: new THREE.Color(0xdceef7) },
+        top: { value: new THREE.Color(0x3e8ecf) },
+        mid: { value: new THREE.Color(0xb7dbee) },
+        bot: { value: new THREE.Color(0xe9f4fa) },
       },
       vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `
@@ -899,7 +935,7 @@ export class WorldEngine {
     this.meteorTex = mkGlow("rgba(255,214,140,1)", "rgba(255,120,40,0)");
 
     // Nuvens low-poly a derivar (v7: material guardado para tint do entardecer)
-    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, fog: false });
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.72, fog: false });
     this.cloudMat = cloudMat;
     for (let i = 0; i < 9; i++) {
       const g = new THREE.Group();
@@ -957,8 +993,8 @@ export class WorldEngine {
     this.aurora = new THREE.Group();
     this.aurora.name = "aurora";
     const bands: [string, string, number, number][] = [
-      ["rgba(52,211,153,0.5)", "rgba(34,211,238,0.35)", -0.32, 0],
-      ["rgba(167,139,250,0.4)", "rgba(52,211,153,0.3)", -0.22, 1],
+      ["rgba(52,211,153,0.32)", "rgba(34,211,238,0.22)", -0.32, 0],
+      ["rgba(167,139,250,0.26)", "rgba(52,211,153,0.2)", -0.22, 1],
     ];
     for (const [c1, c2, tilt, k] of bands) {
       const band = new THREE.Mesh(
@@ -1012,7 +1048,7 @@ export class WorldEngine {
     );
     band.position.set(0, 11.5, 0);
     this.scene.add(band);
-    const glow = new THREE.PointLight(0xf43f5e, 26, 20);
+    const glow = new THREE.PointLight(0xf43f5e, 60, 30);
     glow.position.set(0, 12, 0);
     this.scene.add(glow);
 
@@ -1206,7 +1242,7 @@ export class WorldEngine {
     lIcon.scale.set(1.6, 1.6, 1);
     lIcon.position.set(95, groundY(95, 70) + 3.4, 70);
     this.scene.add(lIcon);
-    const lLight = new THREE.PointLight(0x22d3ee, 14, 18);
+    const lLight = new THREE.PointLight(0x22d3ee, 30, 24);
     lLight.position.set(95, 3, 70);
     this.scene.add(lLight);
 
@@ -1231,7 +1267,7 @@ export class WorldEngine {
     cIcon.scale.set(1.6, 1.6, 1);
     cIcon.position.y = 8;
     cave.add(cIcon);
-    const cLight = new THREE.PointLight(0x8b5cf6, 18, 20);
+    const cLight = new THREE.PointLight(0x8b5cf6, 40, 26);
     cLight.position.set(0, 3, 0);
     cave.add(cLight);
     cave.position.set(-90, 0, 85);
@@ -1464,7 +1500,7 @@ export class WorldEngine {
     }
 
     // luz interior quente
-    const light = new THREE.PointLight(0xffd9a0, 9, o.w + 5, 1.7);
+    const light = new THREE.PointLight(0xffd9a0, 15, o.w + 5, 1.7);
     light.position.set(o.x, f0 + 2.3, o.z);
     g.add(light);
 
@@ -1601,7 +1637,7 @@ export class WorldEngine {
     this.furnTable(g, x, z, f2);
 
     // lanterna no topo
-    const lampLight = new THREE.PointLight(0xfff2c0, 18, 24, 1.5);
+    const lampLight = new THREE.PointLight(0xfff2c0, 40, 30, 1.5);
     lampLight.position.set(x, fT + 2.3, z);
     g.add(lampLight);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), new THREE.MeshBasicMaterial({ color: 0xfff2c0 }));
@@ -1914,7 +1950,7 @@ export class WorldEngine {
       label: "🏟️ Entrar na Arena das Ondas",
       pos: portalPos, used: false, icon: aIcon,
     });
-    const light = new THREE.PointLight(0xf43f5e, 20, 22);
+    const light = new THREE.PointLight(0xf43f5e, 44, 30);
     light.position.set(ARENA_CENTER.x, 4, ARENA_CENTER.z);
     g.add(light);
     this.scene.add(g);
@@ -2734,7 +2770,7 @@ export class WorldEngine {
     }));
     heartGlow.position.y = 2.1;
     heartGlow.scale.setScalar(6);
-    const hLight = new THREE.PointLight(0x34d399, 4, 18);
+    const hLight = new THREE.PointLight(0x34d399, 6, 24);
     hLight.position.y = 2.4;
     heart.add(mound, c1, c2, c3, heartGlow, hLight);
     heart.position.set(CX, groundY(CX, CZ), CZ);
@@ -2892,13 +2928,13 @@ export class WorldEngine {
     // god rays: brilham de dia, apagam à noite (o cristal assume o turno)
     for (const gr of this.godRays) {
       (gr.mesh.material as THREE.MeshBasicMaterial).opacity =
-        (0.03 + dayAmt * 0.08) * (0.72 + Math.sin(t * 0.0006 + gr.phase) * 0.28);
+        (0.05 + dayAmt * 0.17) * (0.72 + Math.sin(t * 0.0006 + gr.phase) * 0.28);
     }
     // esporos: derivam para cima, dourados de dia / ciano à noite
     const nightAmt = Math.max(0, 1 - dayAmt * 1.6);
     for (const sp of this.spores) {
       const m = sp.spr.material as THREE.SpriteMaterial;
-      m.opacity = 0.16 + Math.sin(t * 0.001 + sp.phase) * 0.07;
+      m.opacity = 0.34 + Math.sin(t * 0.001 + sp.phase) * 0.14;
       if (m.opacity <= 0.02) continue;
       m.color.setRGB(0.55 + (1 - nightAmt) * 0.45, 0.72, 0.25 + nightAmt * 0.62);
       sp.a += sp.s * dt * 60;
@@ -2912,7 +2948,7 @@ export class WorldEngine {
     for (let i = 0; i < this.heartRunes.length; i++) {
       const mm = this.heartRunes[i].material as THREE.MeshBasicMaterial;
       const base = (this.heartRunes[i].userData.base as number) || 0.85;
-      mm.opacity = base * (0.82 + Math.sin(t * 0.003 + i * 1.7) * 0.18) * (0.6 + nightAmt * 0.4);
+      mm.opacity = base * (0.68 + Math.sin(t * 0.003 + i * 1.7) * 0.32) * (0.75 + nightAmt * 0.45);
     }
   }
 
@@ -2935,7 +2971,7 @@ export class WorldEngine {
     this.player = g;
     this.scene.add(g);
     this.playerShadow = this.addShadow(this.pos.x, 0, this.pos.z, 1.1);
-    const pLight = new THREE.PointLight(color, 4, 7);
+    const pLight = new THREE.PointLight(color, 8, 8);
     pLight.position.y = 2.4;
     g.add(pLight);
     // anel de escudo PvP próprio (visível quando ativo)
@@ -3254,7 +3290,7 @@ export class WorldEngine {
       crown.add(band);
       g.add(crown);
       // aura vermelha de chefe
-      const aura = new THREE.PointLight(0xff4444, 12, 10);
+      const aura = new THREE.PointLight(0xff4444, 26, 12);
       aura.position.y = 1.4 * scale;
       g.add(aura);
       this.bossAuraLights.push(aura);
@@ -3297,6 +3333,23 @@ export class WorldEngine {
       stunUntil: 0, slowUntil: 0,
       name: boss ? (tier >= 4 ? "Rainha Sombria" : "Bug Rei") : isGuard ? "Guardião" : t.name,
     };
+    // v11: ELITE — ~9% dos bugs comuns nascem como variante rara
+    // (maiores, aura roxa, +85% vida, +40% ataque, recompensas x2.4)
+    if (!boss && !isGuard && !isArena && tier >= 1 && Math.random() < 0.09) {
+      mob.elite = true;
+      mob.maxHp = Math.round(mob.maxHp * 1.85); mob.hp = mob.maxHp;
+      mob.atk = Math.round(mob.atk * 1.4);
+      mob.xp = Math.round(mob.xp * 2.4); mob.gold = Math.round(mob.gold * 2.4); mob.pts = Math.round(mob.pts * 2.4);
+      g.scale.setScalar(1.28);
+      mob.name = "✦ Elite " + mob.name;
+      const auraEl = new THREE.Mesh(
+        new THREE.RingGeometry(0.72, 0.98, 22),
+        new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }),
+      );
+      auraEl.rotation.x = -Math.PI / 2;
+      auraEl.position.y = 0.14;
+      g.add(auraEl);
+    }
     this.drawMobHp(mob);
     this.mobs.push(mob);
   }
@@ -3824,13 +3877,14 @@ export class WorldEngine {
     if (tag === "INPUT" || tag === "TEXTAREA") return;
     this.keys.add(e.key.toLowerCase());
     if (e.key === " ") { this.jump(); e.preventDefault(); }
-    // v12: C troca o modo de câmara (órbita → ombro → 1ª pessoa)
-    if (e.key.toLowerCase() === "c") this.cycleCamMode();
     if (e.key.toLowerCase() === "e") this.interact();
     if (e.key.toLowerCase() === "f") this.attack();
     if (e.key === "1") this.skill(0);
     if (e.key === "2") this.skill(1);
     if (e.key === "3") this.skill(2);
+    // v11: C troca de câmara · V monta/desmonta a montaria
+    if (e.key.toLowerCase() === "c") this.cycleCam();
+    if (e.key.toLowerCase() === "v") this.toggleMount();
     // v6: Shift = erguer/abaixar o escudo (modo guarda)
     if (e.key === "Shift") { e.preventDefault(); this.toggleGuard(); }
   };
@@ -3853,11 +3907,14 @@ export class WorldEngine {
     this.dragStart.moved += Math.abs(dx) + Math.abs(dy);
     if (this.dragStart.moved > 10) this.dragging = true;
     if (this.dragging) {
-      this.camYaw -= dx * 0.0052;
-      if (this.camMode === "orbit") {
+      if (this.camMode === 0) {
+        // orbital: arrastar roda e aproxima/afasta
+        this.camYaw -= dx * 0.0052;
         this.camDist = Math.max(6, Math.min(18, this.camDist + dy * 0.02));
       } else {
-        this.camPitch = Math.max(-1.1, Math.min(1.25, this.camPitch + dy * 0.0042));
+        // 1ª/3ª pessoa: olhar livre com inclinação (estilo Minecraft/GTA)
+        this.camYaw -= dx * 0.0056;
+        this.camPitch = Math.max(-1.05, Math.min(1.25, this.camPitch - dy * 0.0042));
       }
     }
   };
@@ -3871,42 +3928,9 @@ export class WorldEngine {
   };
 
   private onWheel = (e: WheelEvent): void => {
+    if (this.camMode !== 0) return; // v11: zoom da roda só no modo orbital
     this.camDist = Math.max(6, Math.min(18, this.camDist + (e.deltaY > 0 ? 1.2 : -1.2)));
   };
-
-  cycleCamMode(): void {
-    const order: ("orbit" | "third" | "first")[] = ["orbit", "third", "first"];
-    this.setCamMode(order[(order.indexOf(this.camMode) + 1) % order.length]);
-  }
-
-  setCamMode(m: "orbit" | "third" | "first"): void {
-    if (this.camMode === m) return;
-    const wasFirst = this.camMode === "first";
-    this.camMode = m;
-    if (m === "third") {
-      this.camPitch = Math.max(0.05, Math.min(this.camPitch, 0.6));
-    } else if (m === "orbit") {
-      this.camPitch = 0.34;
-    }
-    // ao sair da 1ª pessoa, encostar a câmara à posição orbital para evitar voo lateral
-    if (wasFirst && m !== "first") {
-      this.camPos.set(
-        this.pos.x + Math.sin(this.camYaw) * this.camDist,
-        this.pos.y + 5.5 + this.camDist * 0.32,
-        this.pos.z + Math.cos(this.camYaw) * this.camDist
-      );
-    }
-    this.applyCamVisibility();
-    this.opts.onEvent({ type: "cammode", mode: m });
-  }
-
-  private applyCamVisibility(): void {
-    // 1ª pessoa: o avatar desaparece (vês o mundo com os olhos dele)
-    const fp = this.camMode === "first";
-    if (this.player) this.player.visible = !fp;
-    if (this.playerShadow) this.playerShadow.visible = !fp;
-    if (this.classAura) this.classAura.visible = !fp;
-  }
 
   setJoystick(x: number, y: number): void {
     this.joy.x = x;
@@ -4149,14 +4173,16 @@ export class WorldEngine {
 
   private damageMob(m: Mob, dmg: number, crit: boolean): void {
     if (m.state === "dead") return;
-    const d = Math.max(1, Math.round(dmg * (crit ? 2 : 1)));
+    // v11: CRÍTICOS automáticos — 10% de chance em qualquer golpe (x1.85)
+    const critFin = crit || Math.random() < 0.1;
+    const d = Math.max(1, Math.round(dmg * (critFin ? 1.85 : 1)));
     m.hp -= d;
     m.hitFlash = 0.12;
-    worldAudio.play(crit ? "crit" : "hit");
+    worldAudio.play(critFin ? "crit" : "hit");
     this.drawMobHp(m);
     const p = m.group.position.clone().add(new THREE.Vector3(0, 1.6 * (m.isBoss ? 2.2 : 1), 0));
-    this.floatText(p, crit ? `${d}!` : `${d}`, crit ? "#fde047" : "#ffffff", crit ? 1.3 : 1);
-    this.burst(p, crit ? 0xfde047 : 0xffffff, crit ? 8 : 4, 2.6, 0.35, 0.07, 4);
+    this.floatText(p, critFin ? `CRÍTICO ${d}!` : `${d}`, critFin ? "#fb923c" : "#ffffff", critFin ? 1.35 : 1);
+    this.burst(p, critFin ? 0xfde047 : 0xffffff, critFin ? 8 : 4, 2.6, 0.35, 0.07, 4);
     (m.group.children[0] as THREE.Mesh).material = new THREE.MeshBasicMaterial({ color: 0xffffff });
     setTimeout(() => {
       if (!this.disposed && m.state !== "dead") {
@@ -4185,7 +4211,9 @@ export class WorldEngine {
     this.burst(m.group.position.clone().add(new THREE.Vector3(0, 0.9, 0)), m.isBoss ? 0xdc2626 : m.isGuard ? 0xfacc15 : MOB_TIERS[m.tier].color, m.isBoss ? 40 : 16, 4.5, 0.7, 0.12, 6);
     if (m.isBoss || m.isGuard) this.shake(0.3);
     // v4: loot com raridades
-    const loot = rollLoot(m.tier, m.isBoss, m.isGuard, this.opts.level);
+    let loot = rollLoot(m.tier, m.isBoss, m.isGuard, this.opts.level);
+    // v11: elites a quem falhe o loot têm segunda chance garantida (tier+1)
+    if (!loot && m.elite) loot = rollLoot(Math.min(4, m.tier + 1), false, false, this.opts.level);
     if (loot) this.dropLoot(m.group.position.clone(), loot);
     // v4: contabilidade da arena
     if (m.arena && this.arena.active) {
@@ -4469,8 +4497,18 @@ export class WorldEngine {
   // ── Interação com objetos ───────────────────────────────────
 
   interact(): void {
+    // v11: recolher recurso próximo tem prioridade máxima
+    if (this.gatherNear >= 0) { this.collectGather(); return; }
     if (!this.near) return;
     const it = this.near;
+    if (it.kind === "npc") {
+      // v11: NPC — abre o diálogo no HUD
+      worldAudio.play("click");
+      this.opts.onEvent({ type: "dialogue", npc: it.id });
+      this.near = null;
+      this.opts.onEvent({ type: "near", label: null });
+      return;
+    }
     if (it.kind === "voucher") {
       if (it.used) {
         this.opts.onEvent({ type: "notify", msg: "Este baú já foi aberto — procura outro!", tone: "info" });
@@ -4615,6 +4653,7 @@ export class WorldEngine {
     this.updateInteractables(t);
     this.updateRemotes(dt);
     this.updateDayNight(t, dt);
+    this.updateWeatherSystem(t, dt); // v11: clima vivo
     this.updateSkyV3(t, dt);
     this.updateHeroV3(dt);
     this.updatePet(dt);
@@ -4828,7 +4867,8 @@ export class WorldEngine {
     const len = Math.hypot(ix, iy);
     if (len > 1) { ix /= len; iy /= len; }
 
-    const speed = (4 + this.opts.stats.spd * 0.35) * (this.dead ? 0 : 1) * (this.guarding ? 0.45 : 1);
+    const speed = (4 + this.opts.stats.spd * 0.35) * (this.dead ? 0 : 1) * (this.guarding ? 0.45 : 1)
+      * (this.mounted ? 1.75 : 1) * (performance.now() < this.spdBuffUntil ? 1.25 : 1); // v11: montaria + poção do vento
     const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
     const right = new THREE.Vector3(fwd.z * -1, 0, fwd.x);
     const move = new THREE.Vector3()
@@ -4976,6 +5016,13 @@ export class WorldEngine {
     // v8: ZONA SEGURA — dentro de um edifício os bugs não conseguem ferir
     // (jogadores em PvP continuam a poder — receivePvpHit é separado)
     if (this.curInside) return;
+    // v11: ESQUIVA — reflexos rápidos (agilidade) anulam o golpe por inteiro
+    if (Math.random() < Math.min(0.16, (this.opts.stats.spd || 0) * 0.006)) {
+      worldAudio.play("pet");
+      this.floatText(this.pos.clone().add(new THREE.Vector3(0, 2.5, 0)), "ESQUIVA!", "#38bdf8", 1.2);
+      this.burst(this.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x38bdf8, 6, 1.6, 0.4, 0.05, 2.4);
+      return;
+    }
     // v6: DEFESA — def reduz o dano (3% por ponto, máx 60%);
     // o modo GUARDA bloqueia +40% extra (máx total 78%)
     const defPct = Math.min(0.6, (this.opts.stats.def || 0) * 0.03);
@@ -5109,6 +5156,20 @@ export class WorldEngine {
       const d = Math.hypot(this.pos.x - it.pos.x, this.pos.z - it.pos.z);
       if (d < bestD) { bestD = d; best = it; }
     }
+    // v11: nó de RECOLHA próximo (erva/minério/cristal)
+    let gLabel: string | null = null;
+    this.gatherNear = -1;
+    let gBestD = 2.6;
+    for (let i = 0; i < this.gatherNodes.length; i++) {
+      const n = this.gatherNodes[i];
+      if (n.taken) {
+        if (t > n.respawnAt) { n.taken = false; n.group.visible = true; }
+        continue;
+      }
+      const d = Math.hypot(this.pos.x - n.x, this.pos.z - n.z);
+      if (d < gBestD) { gBestD = d; this.gatherNear = i; }
+    }
+    if (this.gatherNear >= 0) gLabel = `✋ Recolher ${GATHER_NAME[this.gatherNodes[this.gatherNear].kind]}`;
     // v6: perto de um MARCO? — mostra nome + significado (descobertos)
     let lmLabel: string | null = null;
     for (const l of LANDMARKS) {
@@ -5116,14 +5177,12 @@ export class WorldEngine {
       const d = Math.hypot(this.pos.x - l.x, this.pos.z - l.z);
       if (d <= Math.max(9, l.r * 0.8)) { lmLabel = `${l.emoji} ${l.name} — ${l.desc}`; break; }
     }
-    const nearChanged = best !== this.near || lmLabel !== this.nearLm;
-    if (nearChanged) {
-      this.near = best;
-      this.nearLm = lmLabel;
-      this.opts.onEvent({ type: "near", label: best ? best.label : lmLabel });
-    } else if (this.near && lmLabel) {
-      // interativo tem prioridade sobre o marco
-      this.opts.onEvent({ type: "near", label: best ? best.label : lmLabel });
+    const label = best ? best.label : gLabel || lmLabel;
+    this.near = best;
+    this.nearLm = lmLabel;
+    if (label !== this.lastNearLabel) {
+      this.lastNearLabel = label;
+      this.opts.onEvent({ type: "near", label });
     }
   }
 
@@ -5241,10 +5300,10 @@ export class WorldEngine {
     const phase = (t % DAY_LEN) / DAY_LEN; // 0..1
     const dayAmt = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2); // 1=meio-dia, 0=meia-noite
     // v4: paleta em 4 fases (dia / entardecer / noite / amanhecer)
-    const cNoon = new THREE.Color(0x9fd7f2);
-    const cDusk = new THREE.Color(0xf0b98d);
-    const cNight = new THREE.Color(0x101a33);
-    const cDawn = new THREE.Color(0xe4d5e2);
+    const cNoon = new THREE.Color(0x87ceeb);
+    const cDusk = new THREE.Color(0xf59e6b);
+    const cNight = new THREE.Color(0x0b1026);
+    const cDawn = new THREE.Color(0xf9a8d4);
     const sky = new THREE.Color();
     if (dayAmt > 0.55) {
       sky.copy(cDusk).lerp(cNoon, smooth01((dayAmt - 0.55) / 0.45));
@@ -5257,8 +5316,8 @@ export class WorldEngine {
     }
     this.scene.background = sky;
     (this.scene.fog as THREE.FogExp2).color.copy(sky);
-    this.hemi.intensity = 0.35 + dayAmt * 0.65;
-    this.sun.intensity = 0.25 + dayAmt * 0.95;
+    this.hemi.intensity = (0.35 + dayAmt * 0.65) * this.weatherLight(); // v11: clima escurece a luz
+    this.sun.intensity = (0.25 + dayAmt * 0.95) * this.weatherLight();
     // luz do sol aquecida ao entardecer
     this.sun.color.setHex(dayAmt < 0.55 && dayAmt > 0.2 ? 0xffb27a : 0xfff3d6);
     const ang = phase * Math.PI * 2;
@@ -5283,7 +5342,7 @@ export class WorldEngine {
       this.aurora.position.set(this.pos.x, 0, this.pos.z);
       this.aurora.rotation.y = Math.sin(t * 0.00003) * 0.4;
       this.aurora.children.forEach((band, i) => {
-        ((band as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = nightF * (0.16 + Math.sin(t * 0.0004 + i * 2.1) * 0.08);
+        ((band as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = nightF * (0.28 + Math.sin(t * 0.0004 + i * 2.1) * 0.12);
         band.position.y = 95 + i * 26 + Math.sin(t * 0.00025 + i) * 6;
       });
     }
@@ -5299,7 +5358,7 @@ export class WorldEngine {
     if (this.skyDome) {
       this.skyDome.position.set(this.pos.x, 0, this.pos.z);
       const u = (this.skyDome.material as THREE.ShaderMaterial).uniforms;
-      u.top.value.copy(sky).lerp(new THREE.Color(0x1b4c8c), dayAmt * 0.7);
+      u.top.value.copy(sky).lerp(new THREE.Color(0x2b5c96), dayAmt * 0.7);
       u.mid.value.copy(sky);
       u.bot.value.copy(sky).lerp(new THREE.Color(0xffffff), 0.18);
     }
@@ -5455,45 +5514,96 @@ export class WorldEngine {
         (this.emoteSprite.material as THREE.SpriteMaterial).opacity = Math.min(1, remain * 3);
       }
     }
+    // v11: NPCs respiram ao vento + lobo galopa com o herói
+    const nowH = performance.now();
+    for (const n of this.npcs) {
+      n.group.position.y = n.baseY + Math.abs(Math.sin(nowH / 640 + n.baseY)) * 0.05;
+    }
+    if (this.mounted && this.mountMesh) {
+      const legs = (this.mountMesh as any).__legs as THREE.Mesh[] | undefined;
+      if (legs) {
+        if (this.isMoving()) {
+          legs.forEach((leg, i) => { leg.rotation.x = Math.sin(this.bob * 1.35 + (i % 2) * Math.PI) * 0.55; });
+        } else {
+          legs.forEach((leg) => { leg.rotation.x *= 0.82; });
+        }
+      }
+      this.mountMesh.position.y = Math.abs(Math.sin(this.bob)) * 0.05;
+    }
   }
 
   private updateCamera(dt: number): void {
-    const head = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
-
-    // v12: 1ª PESSOA — praticamente os olhos do personagem (estilo Minecraft)
-    if (this.camMode === "first") {
-      const cp = Math.cos(this.camPitch);
-      const dir = new THREE.Vector3(-Math.sin(this.camYaw) * cp, Math.sin(this.camPitch), -Math.cos(this.camYaw) * cp);
-      this.camera.position.set(head.x + dir.x * 0.18, head.y + dir.y * 0.18, head.z + dir.z * 0.18);
-      const look = head.clone().addScaledVector(dir, 12);
-      if (this.shakeAmp > 0.001) {
-        this.camera.position.y += (Math.random() - 0.5) * this.shakeAmp;
-        this.shakeAmp *= Math.max(0, 1 - dt * 6);
+    // ══ v11: 1ª PESSOA — estilo Minecraft (olhos do herói) ══
+    if (this.camMode === 1) {
+      const walkBob = this.isMoving() && this.onGround ? Math.sin(this.bob) * 0.05 : 0;
+      const eye = new THREE.Vector3(this.pos.x, this.pos.y + 1.58 + walkBob, this.pos.z);
+      this.camera.position.copy(eye);
+      const dir = new THREE.Vector3(
+        -Math.sin(this.camYaw) * Math.cos(this.camPitch),
+        Math.sin(this.camPitch),
+        -Math.cos(this.camYaw) * Math.cos(this.camPitch),
+      );
+      this.camera.lookAt(eye.clone().addScaledVector(dir, 8));
+      // o corpo esconde-se — só a mão/arma em 1ª pessoa
+      this.player.visible = false;
+      this.playerShadow.visible = false;
+      this.ensureFpWeapon();
+      if (this.fpWeapon) {
+        this.fpWeapon.visible = true;
+        const swing = this.swingT > 0 ? Math.sin(this.swingT * Math.PI) : 0;
+        this.fpWeapon.position.set(0.34, -0.3 + walkBob * 0.6 - swing * 0.1, -0.55 - swing * 0.16);
+        this.fpWeapon.rotation.set(0.12 + swing * -0.85, -0.22, 0.06);
       }
-      this.camera.lookAt(look);
+      this.setFov(74, dt);
       return;
     }
 
-    let target: THREE.Vector3;
-    let look: THREE.Vector3;
-    if (this.camMode === "third") {
-      // v12: OMBRO — câmara rente atrás do personagem (estilo San Andreas/GTA)
-      const d = 4.6;
-      const cp = Math.cos(this.camPitch), sp = Math.sin(this.camPitch);
-      target = new THREE.Vector3(
-        this.pos.x + Math.sin(this.camYaw) * d * cp + Math.cos(this.camYaw) * 0.85,
-        this.pos.y + 1.75 + sp * d,
-        this.pos.z + Math.cos(this.camYaw) * d * cp - Math.sin(this.camYaw) * 0.85
+    this.player.visible = !this.dead;
+    this.playerShadow.visible = true;
+    if (this.fpWeapon) this.fpWeapon.visible = false;
+
+    // ══ v11: 3ª PESSOA OMBRO — estilo San Andreas / GTA ══
+    if (this.camMode === 2) {
+      const pivot = new THREE.Vector3(this.pos.x, this.pos.y + 1.75, this.pos.z);
+      const back = new THREE.Vector3(
+        Math.sin(this.camYaw) * Math.cos(this.camPitch),
+        -Math.sin(this.camPitch) + 0.38,
+        Math.cos(this.camYaw) * Math.cos(this.camPitch),
       );
-      look = new THREE.Vector3(this.pos.x, this.pos.y + 1.7, this.pos.z);
-    } else {
-      target = new THREE.Vector3(
-        this.pos.x + Math.sin(this.camYaw) * this.camDist,
-        this.pos.y + 5.5 + this.camDist * 0.32,
-        this.pos.z + Math.cos(this.camYaw) * this.camDist
-      );
-      look = new THREE.Vector3(this.pos.x, this.pos.y + 1.6, this.pos.z);
+      const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
+      const want = pivot.clone().addScaledVector(back, 4.4).addScaledVector(right, 0.95);
+      // a câmara desliza junto às paredes em vez de as atravessar
+      if (this.camBlockerList.length > 0) {
+        const dir = want.clone().sub(pivot);
+        const maxD = dir.length();
+        this.ray.set(pivot, dir.normalize());
+        this.ray.far = maxD + 0.5;
+        const hits = this.ray.intersectObjects(this.camBlockerList, false);
+        if (hits.length > 0 && hits[0].distance < maxD) {
+          want.copy(pivot).addScaledVector(dir, Math.max(1.4, hits[0].distance - 0.4));
+        }
+      }
+      want.y = Math.max(this.groundHeightAt(this.pos.x, this.pos.z) + 0.5, want.y);
+      this.camPos.lerp(want, Math.min(1, dt * 8));
+      this.camera.position.copy(this.camPos);
+      if (this.shakeAmp > 0.001) {
+        this.camera.position.x += (Math.random() - 0.5) * this.shakeAmp;
+        this.camera.position.y += (Math.random() - 0.5) * this.shakeAmp;
+        this.camera.position.z += (Math.random() - 0.5) * this.shakeAmp;
+        this.shakeAmp *= Math.max(0, 1 - dt * 6);
+      }
+      this.camera.lookAt(pivot.clone().addScaledVector(right, 0.55).add(new THREE.Vector3(0, 0.1, 0)));
+      this.setFov(64, dt);
+      return;
     }
+
+    // ══ ORBITAL — o modo clássico do Bateu World ══
+    const head = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
+    const target = new THREE.Vector3(
+      this.pos.x + Math.sin(this.camYaw) * this.camDist,
+      this.pos.y + 5.5 + this.camDist * 0.32,
+      this.pos.z + Math.cos(this.camYaw) * this.camDist,
+    );
     // v8: a câmara desliza junto às paredes em vez de as atravessar
     if (this.camBlockerList.length > 0) {
       let nearB = false;
@@ -5519,7 +5629,371 @@ export class WorldEngine {
       this.camera.position.z += (Math.random() - 0.5) * this.shakeAmp;
       this.shakeAmp *= Math.max(0, 1 - dt * 6);
     }
-    this.camera.lookAt(look);
+    this.camera.lookAt(this.pos.x, this.pos.y + 1.6, this.pos.z);
+    this.setFov(58, dt);
+  }
+
+  /** v11: FOV suave entre modos de câmara. */
+  private setFov(f: number, dt: number): void {
+    this.camFov += (f - this.camFov) * Math.min(1, dt * 6);
+    if (Math.abs(this.camera.fov - this.camFov) > 0.02) {
+      this.camera.fov = this.camFov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
+  // ── v11: API DE CÂMARAS ──────────────────────────────────
+
+  setCamMode(m: 0 | 1 | 2): void {
+    this.camMode = m;
+    if (m !== 1 && this.fpWeapon) this.fpWeapon.visible = false;
+    // recoloca a posição suavemente para o novo enquadramento
+    this.camPos.set(
+      this.pos.x - Math.sin(this.camYaw) * 5.5,
+      this.pos.y + 4,
+      this.pos.z - Math.cos(this.camYaw) * 5.5,
+    );
+    worldAudio.play("click");
+    this.opts.onEvent({ type: "camchange", mode: m });
+  }
+
+  cycleCam(): void {
+    const next = ((this.camMode + 1) % 3) as 0 | 1 | 2;
+    this.setCamMode(next);
+  }
+
+  getCamMode(): number { return this.camMode; }
+
+  /** v11: mão + arma para a 1ª pessoa (estilo Minecraft). */
+  private ensureFpWeapon(): void {
+    if (this.fpWeapon) return;
+    const g = new THREE.Group();
+    const skin = new THREE.MeshLambertMaterial({ color: 0xe8b48c });
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.36), skin);
+    arm.position.set(0, -0.07, 0.12);
+    arm.rotation.x = 0.24;
+    g.add(arm);
+    const cls = this.opts.classId;
+    const mat = new THREE.MeshLambertMaterial({
+      color: cls === 0 ? 0xd6d9e0 : cls === 1 ? 0x8b5cf6 : cls === 2 ? 0x92400e : 0x34d399,
+    });
+    let w: THREE.Mesh;
+    if (cls === 0) {
+      w = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.52), mat); // lâmina
+      w.position.set(0, 0.03, -0.2);
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.03), new THREE.MeshLambertMaterial({ color: 0x92400e }));
+      guard.position.set(0, 0.03, 0.02);
+      g.add(guard);
+    } else if (cls === 1) {
+      w = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.56, 6), mat); // cajado
+      w.position.set(0, 0.03, -0.2);
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.055), new THREE.MeshBasicMaterial({ color: 0xc4b5fd }));
+      gem.position.set(0, 0.32, -0.2);
+      g.add(gem);
+    } else if (cls === 2) {
+      w = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.016, 6, 14, Math.PI), mat); // arco
+      w.rotation.y = Math.PI / 2;
+      w.rotation.z = -Math.PI / 2;
+      w.position.set(0, 0, -0.26);
+    } else {
+      w = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 10), new THREE.MeshBasicMaterial({ color: 0x5eead4 })); // orbe vital
+      w.position.set(0, 0.05, -0.22);
+    }
+    g.add(w);
+    g.position.set(0.34, -0.3, -0.55);
+    g.rotation.set(0.12, -0.22, 0.06);
+    g.visible = false;
+    this.camera.add(g);
+    if (!this.camera.parent) this.scene.add(this.camera); // filhos da câmara precisam dela na cena
+    this.fpWeapon = g;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // v11 — CLIMA VIVO: céu limpo → chuva → tempestade com trovão.
+  // Névoa densifica, luz suaviza, gotas caem a seguir ao herói.
+  // ═══════════════════════════════════════════════════════════
+
+  private buildWeatherSystem(): void {
+    const N = 720;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 46;
+      pos[i * 3 + 1] = Math.random() * 24;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 46;
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    this.rainGeo = geo;
+    this.rain = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: 0xaacbe8, size: 0.09, transparent: true, opacity: 0.55, depthWrite: false,
+    }));
+    this.rain.visible = false;
+    this.rain.frustumCulled = false;
+    this.scene.add(this.rain);
+  }
+
+  private updateWeatherSystem(t: number, dt: number): void {
+    const fog = this.scene.fog as THREE.FogExp2;
+    if (this.weather === "clear") {
+      // transição suave da névoa de volta ao normal
+      fog.density += (0.0042 - fog.density) * Math.min(1, dt * 1.2);
+      if (t > this.weatherNext && !this.dead) {
+        const storm = Math.random() < 0.32;
+        this.weather = storm ? "storm" : "rain";
+        this.weatherUntil = t + 55000 + Math.random() * 50000;
+        if (this.rain) this.rain.visible = true;
+        worldAudio.setRain(true);
+        this.opts.onEvent({
+          type: "weather", kind: this.weather,
+          name: storm ? "Tempestade" : "Chuva", emoji: storm ? "⛈️" : "🌧️",
+          desc: storm ? "Trovoadas no horizonte — os bugs ficam mais ousados!" : "Chuva fresca a cair sobre o mundo.",
+        });
+      }
+      return;
+    }
+    // ── chuva/tempestade ativa ──
+    if (t > this.weatherUntil) {
+      this.weather = "clear";
+      this.weatherNext = t + 150000 + Math.random() * 210000;
+      if (this.rain) this.rain.visible = false;
+      worldAudio.setRain(false);
+      this.opts.onEvent({ type: "weather", kind: "clear", name: "Céu Limpo", emoji: "☀️", desc: "O tempo abriu — o mundo volta a brilhar." });
+      return;
+    }
+    const targetD = this.weather === "storm" ? 0.0078 : 0.0058;
+    fog.density += (targetD - fog.density) * Math.min(1, dt * 1.2);
+    if (this.rain && this.rainGeo) {
+      const p = this.rainGeo.attributes.position as THREE.BufferAttribute;
+      const fall = (this.weather === "storm" ? 36 : 26) * dt;
+      for (let i = 0; i < p.count; i++) {
+        let y = p.getY(i) - fall;
+        if (y < 0) { y = 22 + Math.random() * 4; p.setX(i, (Math.random() - 0.5) * 46); p.setZ(i, (Math.random() - 0.5) * 46); }
+        p.setY(i, y);
+      }
+      p.needsUpdate = true;
+      this.rain.position.set(this.pos.x, 0, this.pos.z);
+    }
+    if (this.weather === "storm") {
+      this.flashT -= dt;
+      if (this.flashT <= 0) {
+        this.flashT = 5 + Math.random() * 8;
+        const flash = new THREE.PointLight(0xeaf2ff, 320, 180, 1.8);
+        flash.position.set(this.pos.x + (Math.random() - 0.5) * 70, 44, this.pos.z + (Math.random() - 0.5) * 70);
+        this.scene.add(flash);
+        worldAudio.play("thunder");
+        this.shake(0.16);
+        let k = 0;
+        const fade = () => {
+          k += 0.07;
+          flash.intensity = 320 * (1 - k);
+          if (k < 1 && !this.disposed) requestAnimationFrame(fade);
+          else this.scene.remove(flash);
+        };
+        fade();
+      }
+    }
+  }
+
+  /** Multiplicador de luz do clima (aplicado ao sol/luz ambiente). */
+  private weatherLight(): number {
+    return this.weather === "storm" ? 0.62 : this.weather === "rain" ? 0.8 : 1;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // v11 — RECOLHA: ervas, minérios e cristais espalhados no mundo.
+  // Recolhe com E/botão → materiais para a OFICINA (poções).
+  // ═══════════════════════════════════════════════════════════
+
+  private buildGatherNodes(): void {
+    for (let i = 0; i < 26; i++) {
+      const kind: "erva" | "minério" | "cristal" = i % 3 === 0 ? "erva" : i % 3 === 1 ? "minério" : "cristal";
+      let x = 0, z = 0, ok = false;
+      for (let tries = 0; tries < 24 && !ok; tries++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = 34 + Math.random() * 176;
+        x = Math.cos(a) * r;
+        z = Math.sin(a) * r;
+        ok = Math.hypot(x - 95, z - 70) > 16 // lago
+          && Math.hypot(x + 120, z + 40) > 30 // Coração da Floresta
+          && !this.buildings.some((b) => Math.hypot(x - b.cx, z - b.cz) < 11)
+          && Math.hypot(x - 112, z) > 32; // arena
+      }
+      if (!ok) continue;
+      const g = new THREE.Group();
+      const y = groundY(x, z);
+      if (kind === "erva") {
+        const bush = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 7), new THREE.MeshLambertMaterial({ color: 0x4ade80 }));
+        bush.position.y = 0.3; bush.scale.y = 0.8;
+        g.add(bush);
+        for (let f = 0; f < 3; f++) {
+          const fl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+          fl.position.set((Math.random() - 0.5) * 0.5, 0.55, (Math.random() - 0.5) * 0.5);
+          g.add(fl);
+        }
+      } else if (kind === "minério") {
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.44, 0), new THREE.MeshLambertMaterial({ color: 0x8f9aa8 }));
+        rock.position.y = 0.36; rock.rotation.set(0.4, 0.8, 0.2);
+        g.add(rock);
+        for (let o = 0; o < 3; o++) {
+          const ore = new THREE.Mesh(new THREE.OctahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+          ore.position.set((Math.random() - 0.5) * 0.6, 0.4 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6);
+          g.add(ore);
+        }
+      } else {
+        for (let c = 0; c < 3; c++) {
+          const h = 0.3 + Math.random() * 0.5;
+          const cr = new THREE.Mesh(new THREE.OctahedronGeometry(0.16 + Math.random() * 0.1, 0), new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 }));
+          cr.scale.y = 2.1;
+          cr.position.set((Math.random() - 0.5) * 0.5, h, (Math.random() - 0.5) * 0.5);
+          g.add(cr);
+        }
+        const gl = new THREE.PointLight(0x22d3ee, 4, 7);
+        gl.position.y = 0.9;
+        g.add(gl);
+      }
+      g.position.set(x, y, z);
+      this.scene.add(g);
+      this.gatherNodes.push({ kind, group: g, x, z, taken: false, respawnAt: 0 });
+    }
+  }
+
+  private collectGather(): void {
+    const n = this.gatherNodes[this.gatherNear];
+    if (!n || n.taken) return;
+    n.taken = true;
+    n.group.visible = false;
+    n.respawnAt = performance.now() + 90000;
+    worldAudio.play("gather");
+    const col = n.kind === "erva" ? 0x4ade80 : n.kind === "minério" ? 0xf59e0b : 0x22d3ee;
+    this.burst(new THREE.Vector3(n.x, groundY(n.x, n.z) + 0.6, n.z), col, 10, 2.4, 0.5, 0.07, 3);
+    this.opts.onEvent({ type: "gather", kind: n.kind, name: GATHER_NAME[n.kind] });
+    this.gatherNear = -1;
+    this.lastNearLabel = null;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // v11 — NPCs: aldeões com diálogo na praça (Mestre Gomas,
+  // Ferreira Lurdes, Velho Sábio). Interage → painel no HUD.
+  // ═══════════════════════════════════════════════════════════
+
+  private buildNpcs(): void {
+    const defs: { id: string; name: string; emoji: string; robe: number; hat: number; x: number; z: number }[] = [
+      { id: "gomas", name: "Mestre Gomas", emoji: "🧙", robe: 0x7c3aed, hat: 0x4c1d95, x: 9, z: 7 },
+      { id: "lurdes", name: "Ferreira Lurdes", emoji: "🛠️", robe: 0xb45309, hat: 0x78350f, x: -9, z: 9 },
+      { id: "sabio", name: "Velho Sábio", emoji: "📜", robe: 0x0e7490, hat: 0x155e75, x: 11, z: -7 },
+    ];
+    for (const d of defs) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.52, 1.5, 10), new THREE.MeshLambertMaterial({ color: d.robe }));
+      body.position.y = 0.75;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshLambertMaterial({ color: 0xe8b48c }));
+      head.position.y = 1.72;
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.55, 10), new THREE.MeshLambertMaterial({ color: d.hat }));
+      hat.position.y = 2.08;
+      hat.rotation.y = 0.3;
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.06, 12), new THREE.MeshLambertMaterial({ color: d.hat }));
+      brim.position.y = 1.9;
+      const lab = makeTextSprite(`${d.emoji} ${d.name}`, { size: 26, bg: true, accent: "#a78bfa" });
+      lab.scale.set(4.4, 1.05, 1);
+      lab.position.y = 2.85;
+      const sh = this.addShadow(d.x, groundY(d.x, d.z), d.z, 1.15);
+      sh.position.y = groundY(d.x, d.z) + 0.03;
+      g.add(body, head, hat, brim, lab);
+      g.position.set(d.x, groundY(d.x, d.z), d.z);
+      g.lookAt(0, g.position.y, 0);
+      this.scene.add(g);
+      this.npcs.push({ id: d.id, name: d.name, group: g, baseY: g.position.y });
+      this.interactables.push({
+        group: g, kind: "npc", id: d.id,
+        label: `💬 Falar com ${d.name}`,
+        pos: g.position.clone(), used: false,
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // v11 — MONTARIA: Lobo Veloz (desbloqueia ao nível 8).
+  // +75% de velocidade, animação própria e partículas ao correr.
+  // ═══════════════════════════════════════════════════════════
+
+  toggleMount(): void {
+    if (this.opts.level < 8) {
+      worldAudio.play("deny");
+      this.opts.onEvent({ type: "notify", msg: "🐺 A Montaria desbloqueia no nível 8 — continua a subir!", tone: "info" });
+      return;
+    }
+    this.mounted = !this.mounted;
+    if (this.mounted && !this.mountMesh) this.buildMount();
+    if (this.mountMesh) this.mountMesh.visible = this.mounted;
+    // o herói sobe para as costas do lobo
+    if (this.avParts) this.avParts.bodyRoot.position.y = this.mounted ? 0.62 : 0;
+    worldAudio.play(this.mounted ? "mount" : "click");
+    this.burst(this.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), this.mounted ? 0x94a3b8 : 0xcbb99a, 12, 2.4, 0.55, 0.08, 3);
+    this.opts.onEvent({ type: "mount", on: this.mounted });
+  }
+
+  private buildMount(): void {
+    const g = new THREE.Group();
+    const fur = new THREE.MeshLambertMaterial({ color: 0x8d99ae });
+    const belly = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.0, 4, 8), fur);
+    body.rotation.z = Math.PI / 2;
+    body.position.y = 0.66;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.38, 0.5), fur);
+    head.position.set(0, 0.88, -0.8);
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.24), belly);
+    snout.position.set(0, 0.8, -1.1);
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 4), fur);
+    earL.position.set(-0.14, 1.14, -0.74);
+    const earR = earL.clone();
+    earR.position.x = 0.14;
+    const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.5, 3, 6), fur);
+    tail.rotation.x = 0.95;
+    tail.position.set(0, 0.74, 0.92);
+    const legs: THREE.Mesh[] = [];
+    for (const [lx, lz] of [[-0.26, -0.48], [0.26, -0.48], [-0.26, 0.52], [0.26, 0.52]]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.52, 6), fur);
+      leg.position.set(lx, 0.3, lz);
+      legs.push(leg);
+      g.add(leg);
+    }
+    const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.62), new THREE.MeshLambertMaterial({ color: 0x92400e }));
+    saddle.position.y = 1.0;
+    g.add(body, head, snout, earL, earR, tail, saddle);
+    (g as any).__legs = legs;
+    this.mountMesh = g;
+    this.player.add(g);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // v11 — POÇÕES (fabricadas na Oficina da Mochila):
+  // vida (+55%), força (+30% ataque 60s), vento (+25% vel. 60s).
+  // ═══════════════════════════════════════════════════════════
+
+  usePotion(kind: "vida" | "forca" | "vento"): void {
+    const now = performance.now();
+    if (kind === "vida") {
+      if (this.hp >= this.opts.stats.maxHp) {
+        this.opts.onEvent({ type: "notify", msg: "❤️ A vida já está cheia!", tone: "info" });
+        return;
+      }
+      const heal = Math.round(this.opts.stats.maxHp * 0.55);
+      this.hp = Math.min(this.opts.stats.maxHp, this.hp + heal);
+      worldAudio.play("heal");
+      this.floatText(this.pos.clone().add(new THREE.Vector3(0, 2.3, 0)), `+${heal}`, "#34d399", 1.15);
+      this.burst(this.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x34d399, 16, 2.6, 0.6, 0.08, 3);
+    } else if (kind === "forca") {
+      this.atkBuffUntil = now + 60000;
+      worldAudio.play("skill");
+      this.floatText(this.pos.clone().add(new THREE.Vector3(0, 2.3, 0)), "FORÇA +30%!", "#fbbf24", 1.15);
+      this.ringEffect(0xf59e0b, 4.5);
+    } else {
+      this.spdBuffUntil = now + 60000;
+      worldAudio.play("skill");
+      this.floatText(this.pos.clone().add(new THREE.Vector3(0, 2.3, 0)), "VENTO +25%!", "#38bdf8", 1.15);
+      this.ringEffect(0x38bdf8, 4.5);
+    }
+    this.opts.onEvent({ type: "hp", hp: this.hp, maxHp: this.opts.stats.maxHp });
   }
 
   private resize(): void {

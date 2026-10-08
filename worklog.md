@@ -243,3 +243,28 @@ Stage Summary:
 - Floresta Ancestral transformada: clareira sagrada com Anciãs colossais, god rays, cristal pulsante, runas, esporos e novo chefe Guardiã
 - Bug da HUD sobreposta (foto/som inacessíveis) corrigido de vez em todos os tamanhos de ecrã
 - Suite E2E: 141 asserts verdes
+
+---
+Task ID: 17
+Agent: Main Agent (Super Z)
+Task: v11 — Home mobile nativa: fusão do melhor das duas versões de exemplo (screenshots do utilizador)
+
+Work Log:
+- Repo recuperado do rollback (reset a origin/main 9cc9620 — v10 já pushada)
+- Analisadas as 2 screenshots de exemplo: (A) PT — círculos AO VIVO/SORTEIOS/GAMES/VIP HUB, pill DESTAQUE, título com gradiente azul, WORLD central circular; (B) EN — anéis de gradiente por círculo, contagem decrescente no cartão, "Tickets from", barra de progresso, Live Discovery + FILTER, badges % Slots/Rare, WORLD3D em tile arredondado, avatar no topo
+- NOVO src/components/mobile/MobileHomeApp.tsx: home mobile estilo app nativa 100% PT — círculos de acesso rápido com anéis cónicos (AO VIVO com ponto pulsante → /lives; SORTEIOS → /marketplace?tab=raffles; GAMES → /jogos; VIP HUB → /pontos; MAIS → drawer), cartão DESTAQUE (sorteio a acabar mais cedo: pill pulsante + contagem viva 30s + título 1ª palavra branca/resto gradiente azul + "Bilhetes desde X MT" + progresso sold/total + CTA), Descoberta ao Vivo com FILTRAR funcional (Recentes/A acabar/Populares) e cartões horizontais com badge de raridade (Comum/Raro/Épico/Lendário por prize_value) + chip "% bilhetes" + contagem, faixa BATEU WORLD 3D, DailyMissions + MobileSocialFeed + Footer; fundo #050508 com ambiente roxo
+- Index.tsx: retorno antecipado isMobile → MobileHomeApp (após todos os hooks); desktop mantém o funil atual
+- BottomTabBar reescrito: Início, Loja, WORLD central (FAB tile arredondado gradiente violeta→fúcsia com brilho pulsante .mob-world-fab), Sorteios, Perfil (guest → /login); acesso ao drawer movido para o topo
+- MobileTopBar: + botão pesquisa e avatar com iniciais (exemplo B); LanguageSwitcher/RegionCountrySwitcher/ThemeToggle movidos para o rodapé do MobileMenuDrawer; sino mantém badge REAL de notificações (Supabase)
+- App.tsx: MobileNavProvider passa a envolver também as rotas (useMobileNav disponível em toda a app); barras globais recebem classe .dark condicional na home mobile (isMobileHome) — topbar/bottombar escuros a combinar com o design
+- index.css: color hsl(var(--foreground)) explícito no .mob-topbar e .mob-bottom-bar-inner; novos estilos .mob-world-fab (+@keyframes world-fab-breathe) e .mob-world-fab-label
+- LanguageContext: chaves mh.* (featured, endsIn, ticketsFrom, free, joinNow, slots, discovery, noRaffles, noFeatured, noFeaturedSub, worldTitle, worldSub) + tab.shop/tab.raffles em pt e en (fallback cobre restantes)
+- Correção de erro real: useMobileNav fora do provider (MobileHomeApp crash "Something went wrong") — resolvido com o provider global
+- Validação Playwright mobile (390×844): home topo+scroll, /marketplace, /jogos, /lives, /concursos — tudo legível, sem duplicação de headers, tabs ativas corretas
+- E2E test-world.mjs: 141/141 ✅; tsc --noEmit 0 erros; build de produção OK (48s)
+- Commit aad72c pushado para origin/main
+
+Stage Summary:
+- Home mobile redesenhada com o melhor das duas versões de exemplo, 100% em português, dados reais (sorteios, missões, feed)
+- Navegação inferior com WORLD 3D em destaque central; topo limpo (pesquisa, sino com badge, avatar); definições no drawer
+- Suite E2E intacta (141 asserts) e build verde

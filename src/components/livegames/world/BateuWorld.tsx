@@ -91,6 +91,8 @@ interface Char {
   mat: { erva: number; minerio: number; cristal: number };
   pot: { vida: number; forca: number; vento: number };
   npcDay: { date: string; gomas: boolean; lurdes: boolean; sabio: boolean };
+  // v13 — onboarding "Primeiros Passos" (novos jogadores)
+  onb?: { done: boolean; step: number };
 }
 
 const LS_KEY = "bateu_world_char_v6";
@@ -142,6 +144,7 @@ function newChar(name: string, classId: number, avatar?: AvatarConfig): Char {
     mat: { erva: 0, minerio: 0, cristal: 0 },
     pot: { vida: 0, forca: 0, vento: 0 },
     npcDay: { date: todayStr(), gomas: false, lurdes: false, sabio: false },
+    onb: { done: false, step: 0 },
     avatar: avatar ?? defaultAvatar(classId),
   };
 }
@@ -233,6 +236,8 @@ function loadChar(): Char | null {
     c.pot = c.pot || { vida: 0, forca: 0, vento: 0 };
     if (c.npcDay?.date !== todayStr()) c.npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false };
     c.npcDay = c.npcDay || { date: todayStr(), gomas: false, lurdes: false, sabio: false };
+    // v13: onboarding — veteranos (já lutaram/subiram) completam automaticamente
+    c.onb = c.onb || { done: (c.kills || 0) > 0 || (c.level || 1) > 2, step: 0 };
     if (c.chal?.date !== todayStr()) {
       c.chal = { date: todayStr(), c1: false, c2: false };
     }
@@ -270,6 +275,17 @@ function calcStats(c: Char) {
 
 const CLS_NAMES = ["Guerreiro", "Mago", "Arqueiro", "Curandeiro"];
 const CLS_EMOJIS = ["⚔️", "🔮", "🏹", "🌿"];
+
+// v13: trilha de onboarding — 5 passos (mover → lutar → recolher → NPC → progressão)
+// Psicologia: uma meta de cada vez (carga cognitiva mínima), loop aberto visível
+// (Zeigarnik) e recompensa imediata em cada passo (reforço positivo cedo).
+const ONB_STEPS = [
+  { emoji: "🧭", title: "Explora a ilha", desc: "Arrasta o joystick (ou WASD) e afasta-te da Praça Bateu" },
+  { emoji: "⚔️", title: "Primeira vitória", desc: "Aproxima-te de um inimigo e toca no botão de ataque" },
+  { emoji: "🌿", title: "Recolhe uma Erva", desc: "Vê uma erva a brilhar? Chega perto e toca em «Recolher»" },
+  { emoji: "🧙", title: "Fala com o Mestre Gomas", desc: "Os NPCs do mundo dão bênçãos diárias e sabedoria" },
+  { emoji: "📖", title: "Abre a ficha do Herói", desc: "No topo do ecrã, toca no primeiro botão e vê o teu progresso" },
+];
 
 // ── v11: Diálogos dos NPCs (RPG) ────────────────────────────
 export const NPC_LINES: Record<string, { emoji: string; name: string; lines: string[]; action: "gift" | "workshop" | "lore" }> = {
@@ -396,6 +412,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   // v11 — câmaras, ecrã inteiro, leitor de música, clima, diálogo, montaria
   const [camMode, setCamMode] = useState<0 | 1 | 2>(0);
   const [isFs, setIsFs] = useState(false);
+  const fsSeq = useRef(0); // v13: sequência de toggles (cancela fallbacks obsoletos)
   const [musicOpen, setMusicOpen] = useState(false);
   const [trackIdx, setTrackIdx] = useState(worldAudio.getTrackIdx());
   const [musicVol, setMusicVolState] = useState(worldAudio.getMusicVol());
@@ -646,6 +663,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       // atualizações cruzadas de componentes durante o render)
       setTimeout(() => {
         confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 }, colors: ["#f43f5e", "#fbbf24", "#38bdf8"] });
+        worldAudio.play("levelup"); // v13: fanfarra no pico emocional (regra pico-fim)
         pushToast(`🎉 Subiste para o nível ${level}! ${titleFor(level)} · +3 pontos`, "good");
         showBanner({ kind: "levelup", emoji: "⚡", title: `NÍVEL ${level}`, sub: `${titleFor(level)} · +3 pontos de atributo` });
         engineRef.current?.levelFx();
@@ -669,6 +687,52 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     }
     return { ...p, xp, level, points };
   }, [pushToast, showBanner]);
+
+  // ── v13: ONBOARDING "PRIMEIROS PASSOS" ─────────────────────
+  // Avanço com fast-forward: se o jogador fizer algo avançado cedo (ex.: matar
+  // antes de explorar), completa os passos intermédios e entrega as recompensas.
+  const onbAdvance = useCallback((step: number) => {
+    const c = charRef.current;
+    // step = ÍNDICE do passo concluído; pode ser o atual (avança 1) ou à frente (fast-forward)
+    if (!c?.onb || c.onb.done || step < c.onb.step) return;
+    const gained = step - c.onb.step + 1; // passos concluídos nesta ação
+    const finished = step + 1 >= ONB_STEPS.length;
+    setChar((p) => {
+      if (!p?.onb || p.onb.done || step < p.onb.step) return p;
+      const n = { ...p, onb: finished ? { done: true, step } : { done: false, step: step + 1 }, gold: p.gold + 60 * gained };
+      return applyXp(n, 40 * gained);
+    });
+    const st = ONB_STEPS[step];
+    setTimeout(() => {
+      pushToast(`✅ ${st.emoji} ${st.title} — +${40 * gained} XP · +${60 * gained} ouro`, "good");
+      worldAudio.play("coin");
+      if (finished) {
+        pushToast("🎓 Aventureiro de Bateu formado! O mundo é teu.", "good");
+        showBanner({ kind: "discover", emoji: "🎓", title: "AVENTUREIRO DE BATEU", sub: "Guia completo — o mundo inteiro desbloqueado" });
+        confetti({ particleCount: 120, spread: 85, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8", "#f43f5e"] });
+      }
+    }, 60);
+  }, [applyXp, pushToast, showBanner]);
+
+  const onbSkip = useCallback(() => {
+    setChar((p) => (p?.onb && !p.onb.done ? { ...p, onb: { done: true, step: p.onb.step } } : p));
+    setTimeout(() => pushToast("🧭 Guia ignorado — explora livre, herói!", "info"), 40);
+  }, [pushToast]);
+
+  // passo 0 (explorar): polling da posição do herói
+  useEffect(() => {
+    if (phase !== "world" || char?.onb?.done || char?.onb?.step !== 0) return;
+    const iv = setInterval(() => {
+      const pos = engineRef.current?.getPos?.();
+      if (pos && Math.hypot(pos.x, pos.z) > 16) onbAdvance(0);
+    }, 700);
+    return () => clearInterval(iv);
+  }, [phase, char?.onb?.done, char?.onb?.step, onbAdvance]);
+
+  // passo 4 (ficha do herói): abrir o painel completa o guia
+  useEffect(() => {
+    if (panel === "char") onbAdvance(4);
+  }, [panel, onbAdvance]);
 
   // ── Entrada no mundo ───────────────────────────────────────
   const enterWorld = useCallback((c: Char) => {
@@ -782,6 +846,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               if (ev.boss) saga.bosses += 1;
               return applyXp({ ...p, kills: p.kills + 1, pts: p.pts + (ev.pts || 1), quests: q, saga }, 0);
             });
+            onbAdvance(1);
             if (ev.boss) pushToast(`👑 Derrotaste o ${ev.name}! +${ev.pts} pts`, "good");
             break;
           }
@@ -986,12 +1051,14 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               return { ...p, mat, quests: q };
             });
             pushToast(`${ev.kind === "erva" ? "🌿" : ev.kind === "minério" ? "⛏️" : "💎"} +1 ${ev.name} — material para a Oficina!`, "good");
+            if (ev.kind === "erva") onbAdvance(2);
             worldAudio.play("coin");
             break;
           case "dialogue":
             setDialogue(String(ev.npc || "gomas"));
             setDlgStep(0);
             setDlgText("");
+            if (String(ev.npc || "").includes("gomas")) onbAdvance(3);
             break;
           case "mount":
             setMountOn(!!ev.on);
@@ -1233,16 +1300,29 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     if (!el) return;
     try {
       if (!document.fullscreenElement) {
+        const my = ++fsSeq.current; // invalida timeouts de toggles anteriores
         const req = (el as any).requestFullscreen || (el as any).webkitRequestFullscreen;
-        if (req) await req.call(el);
+        if (req) {
+          // v13: Promise.race — em WebViews/páginas escondidas o requestFullscreen
+          // pode ficar PENDENTE para sempre, o que congelava o fallback visual
+          await Promise.race([
+            Promise.resolve(req.call(el)).catch(() => {}),
+            new Promise((r) => setTimeout(r, 600)),
+          ]);
+        }
         try { await (screen.orientation as any)?.lock?.("landscape"); } catch { /* rotação opcional */ }
         // v11: alguns motores (headless/WebView) engajam e saem logo — se em
         // 450ms não houver fullscreen real, entra no modo visual (fallback)
         setTimeout(() => {
-          if (!document.fullscreenElement) setIsFs(true);
+          if (fsSeq.current === my && !document.fullscreenElement) setIsFs(true);
         }, 450);
       } else {
-        await (document as any).exitFullscreen?.();
+        fsSeq.current++; // sai: cancela fallbacks pendentes
+        // v13: race também na saída — exitFullscreen pode ficar pendente em WebViews
+        await Promise.race([
+          Promise.resolve((document as any).exitFullscreen?.()).catch(() => {}),
+          new Promise((r) => setTimeout(r, 400)),
+        ]);
         try { (screen.orientation as any)?.unlock?.(); } catch { /* ignore */ }
         setIsFs(false);
       }
@@ -1381,7 +1461,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   // ── Render ─────────────────────────────────────────────────
   if (phase === "boot") {
     return (
-      <div className="relative z-10 w-full aspect-[4/3] md:aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center gap-4 text-white">
+      <div className="relative z-10 w-full h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center gap-4 text-white">
         <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle at 50% 60%, rgba(244,63,94,0.12) 0%, transparent 55%), radial-gradient(circle at 30% 30%, rgba(56,189,248,0.1) 0%, transparent 45%)" }} />
         <motion.div className="text-5xl" animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}>🌍</motion.div>
         <p className="font-display font-bold text-xl bg-gradient-to-r from-rose-300 to-amber-200 bg-clip-text text-transparent">Bateu World</p>
@@ -1400,8 +1480,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
 
   if (phase === "create") {
     const sel = CLASSES[pickClass];
+    // v13 MOBILE: criação em altura quase plena (76svh) — caixa 4/3 de 292px
+    // obrigava a scroll interno minúsculo no telemóvel (1.ª impressão do jogo!)
     return (
-      <div className="relative z-10 w-full aspect-[4/3] md:aspect-video rounded-2xl overflow-hidden text-white bg-slate-950" data-testid="bateu-create">
+      <div className="relative z-10 w-full h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl overflow-hidden text-white bg-slate-950" data-testid="bateu-create">
         {/* fundo animado v3 */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
         <motion.div
@@ -1640,10 +1722,13 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   return (
     <div
       ref={worldWrapRef}
-      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${isFs ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "aspect-[4/3] md:aspect-video rounded-2xl"}`}
+      data-bw-fs={isFs ? "1" : undefined}
+      style={isFs ? { height: "100dvh", width: "100vw" } : undefined}
+      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${isFs ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "h-[72svh] min-h-[480px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl"}`}
       data-testid="bateu-world"
     >
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      {/* v13 MOBILE: touch-none impede o browser de roubar o arrasto (zoom/scroll) — câmara contínua no dedo */}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full touch-none" />
 
       {/* flash de dano / morte */}
       <AnimatePresence>
@@ -1659,6 +1744,11 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             </motion.p>
             <motion.p className="text-xs font-bold text-white/70" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }}>
               A renascer na Praça Bateu...
+            </motion.p>
+            {/* v13: consolo na derrota — amortece a aversão à perda e evita abandono
+                (o XP/ouro/itens do jogador NÃO são afetados por morte contra mobs) */}
+            <motion.p className="text-[10px] font-semibold text-emerald-300/90" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              Tranquilo — o teu XP, ouro e itens estão seguros. 💪
             </motion.p>
           </motion.div>
         )}
@@ -1786,7 +1876,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       {!photoMode && (
         <>
       {/* HUD topo-esquerda v3 (vidro + anel de classe + buffs) */}
-      <div className="pointer-events-none absolute left-2 top-2 w-[214px] rounded-2xl border border-white/15 bg-black/55 p-2.5 text-white shadow-xl backdrop-blur-md">
+      <div className="pointer-events-none absolute left-2 top-2 w-[214px] rounded-2xl border border-white/15 bg-black/55 p-2.5 text-white shadow-xl backdrop-blur-md" style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))", top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : undefined}>
         <div className="flex items-center gap-2">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ background: CLASSES[char!.classId]?.color + "33", border: `1.5px solid ${CLASSES[char!.classId]?.color}` }}>
             {CLS_EMOJIS[char!.classId]}
@@ -1844,6 +1934,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           onClick={() => setPanel("quests")}
           initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
           className="absolute left-2 top-[118px] z-10 w-[214px] rounded-xl border border-amber-400/30 bg-black/50 p-2 text-left text-white backdrop-blur-md hover:bg-black/70 transition-colors"
+          style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}
           data-testid="bw-tracker"
         >
           <p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-300"><Target className="h-2.5 w-2.5" /> Objetivo da Saga</p>
@@ -1866,7 +1957,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       {/* v10: topo-direita desce para debaixo da barra de navegação —
           em ecrãs estreitos as duas linhas sobrepunham-se (foto/som
           ficavam escondidas atrás de Definições — bug visual) */}
-      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5">
+      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5" style={isFs ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
         <div className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm sm:flex">
           <Users className="h-3 w-3 text-sky-400" /> {online} online
           {platform?.live && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
@@ -1927,7 +2018,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       </div>
 
       {/* chat */}
-      <div className="absolute bottom-2 right-2 z-10 w-[220px]">
+      <div className="absolute bottom-2 right-2 z-10 w-[220px]" style={isFs ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
         {chatOpen ? (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-black/65 p-2 text-white backdrop-blur">
             <div className="mb-1 flex items-center justify-between">
@@ -1965,7 +2056,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <motion.button
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
             onClick={() => engineRef.current?.interact()}
-            className="absolute bottom-24 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-5 py-2 text-sm font-black text-slate-900 shadow-xl hover:scale-105 transition-transform"
+            className={`absolute left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-5 py-2 text-sm font-black text-slate-900 shadow-xl hover:scale-105 transition-transform ${char?.onb && !char.onb.done ? "bottom-[7.5rem]" : "bottom-24"}`}
             data-testid="bw-interact"
           >
             {near} <span className="ml-1 text-slate-400">[E]</span>
@@ -2029,7 +2120,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       </AnimatePresence>
 
       {/* v8: ticker da plataforma ao vivo — o que acontece fora aparece aqui */}
-      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1">
+      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1" style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}>
         <AnimatePresence>
           {ticker.map((t) => (
             <motion.div
@@ -2046,8 +2137,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       </div>
 
       {/* painel de navegação superior — v10: foto e som vivem aqui para
-          nunca colidirem com a coluna direita; rótulos só em ecrãs largos */}
-      <div className="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+          nunca colidirem com a coluna direita; rótulos só em ecrãs largos
+          v13 MOBILE: flex-wrap — em 390px a linha transbordava e os últimos
+          botões (ecrã inteiro/foto/som) ficavam CORTADOS e intocáveis */}
+      <div className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 flex-wrap justify-center gap-1.5" style={isFs ? { top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : undefined}>
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
           ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
@@ -2060,6 +2153,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <button
             key={id}
             onClick={() => setPanel((p) => (p === id ? "none" : id))}
+            aria-label={label}
             className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold backdrop-blur transition-colors ${panel === id ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
             data-testid={`bw-nav-${id}`}
           >
@@ -2076,6 +2170,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             <button
               key={m}
               onClick={() => engineRef.current?.setCamMode(m)}
+              aria-label={m === 0 ? "Câmara Orbital" : m === 1 ? "Primeira pessoa" : "Terceira pessoa"}
               className={`rounded-full p-1.5 transition-colors ${camMode === m ? "bg-white text-slate-900" : "text-white/75 hover:text-white"}`}
               data-testid={`bw-cam-${m}`}
               title={m === 0 ? "Câmara Orbital (clássica)" : m === 1 ? "1ª Pessoa — tipo Minecraft (C)" : "3ª Pessoa — tipo San Andreas (C)"}
@@ -2087,6 +2182,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {/* v11: ECRÃ INTEIRO */}
         <button
           onClick={toggleFs}
+          aria-label="Ecrã inteiro"
           className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-fs"
           title="Ecrã inteiro"
@@ -2096,6 +2192,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {/* v11: LEITOR DE MÚSICA — faixas originais sem direitos de autor */}
         <button
           onClick={() => { setMusicOpen((v) => !v); worldAudio.ensure(); }}
+          aria-label="Banda sonora"
           className={`flex items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
           data-testid="bw-music"
           title="Banda sonora do mundo"
@@ -2105,6 +2202,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {/* v10: modo foto + som mudaram da coluna direita para aqui */}
         <button
           onClick={togglePhoto}
+          aria-label="Modo foto"
           className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-photo"
           title="Modo Foto (P)"
@@ -2113,6 +2211,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         </button>
         <button
           onClick={() => setMuted(worldAudio.toggleMute())}
+          aria-label={muted ? "Ligar som" : "Desligar som"}
           className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-sound"
           title={muted ? "Ligar som (M)" : "Desligar som (M)"}
@@ -2234,10 +2333,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       )}
 
       {/* joystick (mobile) */}
-      <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} />
+      <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} fs={isFs} />
 
       {/* barra de poderes + botões de combate v3 (cooldown radial) */}
-      <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2">
+      <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2" style={isFs ? { right: "calc(0.75rem + env(safe-area-inset-right, 0px))", bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
         <div className="flex flex-col items-center gap-2">
           {mySkills.map((sk, i) => {
             const locked = char!.level < sk.lvl;
@@ -2285,14 +2384,14 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               onClick={() => engineRef.current?.toggleGuard()}
               data-testid="bw-guard"
               title="Modo Guarda (Shift) — bloqueia 40% do dano"
-              className={`relative flex h-10 w-10 items-center justify-center rounded-full shadow-lg active:scale-90 ${guardOn ? "bg-gradient-to-br from-amber-300 to-yellow-500 text-slate-900 ring-2 ring-white" : "bg-slate-700/90 text-white"}`}
+              className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90 ${guardOn ? "bg-gradient-to-br from-amber-300 to-yellow-500 text-slate-900 ring-2 ring-white" : "bg-slate-700/90 text-white"}`}
             >
               {guardOn && <motion.span className="absolute inset-0 rounded-full border-2 border-amber-200" animate={{ scale: [1, 1.25, 1], opacity: [0.8, 0, 0.8] }} transition={{ duration: 1.2, repeat: Infinity }} />}
               <Shield className="h-5 w-5" />
             </motion.button>
             <button
               onClick={() => engineRef.current?.jump()}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600/90 text-white shadow-lg active:scale-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600/90 text-white shadow-lg active:scale-90"
             >
               <ArrowUp className="h-5 w-5" />
             </button>
@@ -2326,6 +2425,34 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           WASD mover · rato girar · clique/F atacar (jogadores perto = PvP!) · 1/2/3 poderes · E interagir · M som
         </p>
       </div>
+
+      {/* v13: ONBOARDING — cartão compacto com gradiente de meta visível */}
+      {char?.onb && !char.onb.done && ONB_STEPS[char.onb.step] && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-3 left-1/2 z-20 w-[290px] max-w-[86vw] -translate-x-1/2 rounded-2xl border border-amber-300/40 bg-slate-950/85 p-2.5 text-white shadow-2xl backdrop-blur-md"
+          data-testid="bw-onb"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[9px] font-black uppercase tracking-wider text-amber-300">🧭 Primeiros passos · {char.onb.step + 1}/{ONB_STEPS.length}</p>
+            <button onClick={onbSkip} className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-white/60 hover:bg-white/20" data-testid="bw-onb-skip">Pular</button>
+          </div>
+          <div className="mt-1 flex items-start gap-2">
+            <span className="text-xl leading-none">{ONB_STEPS[char.onb.step].emoji}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-black leading-tight" data-testid="bw-onb-title">{ONB_STEPS[char.onb.step].title}</p>
+              <p className="text-[10px] leading-snug text-white/65">{ONB_STEPS[char.onb.step].desc}</p>
+            </div>
+            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-black text-emerald-300 border border-emerald-400/30">+40 XP</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-1">
+            {ONB_STEPS.map((_, i) => (
+              <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < char!.onb!.step ? "bg-emerald-400" : i === char!.onb!.step ? "bg-amber-400" : "bg-white/15"} ${i === char!.onb!.step ? "animate-pulse" : ""}`} />
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Painéis ── */}
       <AnimatePresence>
@@ -2960,7 +3087,7 @@ function QuestRow({ emoji, title, progress, done, canClaim, reward, onClaim, tes
   );
 }
 
-function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
+function Joystick({ onMove, fs }: { onMove: (x: number, y: number) => void; fs?: boolean }) {
   const baseRef = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const active = useRef(false);
@@ -2985,7 +3112,7 @@ function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
       ref={baseRef}
       data-testid="bw-joystick"
       className="absolute bottom-4 left-4 z-10 h-24 w-24 touch-none rounded-full border-2 border-white/25 bg-black/35 backdrop-blur-sm"
-      style={{ touchAction: "none", boxShadow: "0 0 24px rgba(56,189,248,0.18), inset 0 0 18px rgba(255,255,255,0.06)" }}
+      style={{ touchAction: "none", boxShadow: "0 0 24px rgba(56,189,248,0.18), inset 0 0 18px rgba(255,255,255,0.06)", ...(fs ? { bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))", left: "calc(1rem + env(safe-area-inset-left, 0px))" } : {}) }}
       onPointerDown={(e) => { active.current = true; worldAudio.play("click"); (e.target as HTMLElement).setPointerCapture(e.pointerId); handle(e); }}
       onPointerMove={(e) => { if (active.current) handle(e); }}
       onPointerUp={() => { active.current = false; setKnob({ x: 0, y: 0 }); onMove(0, 0); }}

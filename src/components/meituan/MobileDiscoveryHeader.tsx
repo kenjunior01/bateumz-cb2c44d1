@@ -23,6 +23,9 @@ interface Props {
   backTo?: string;
   /** Extra mini-banner row below chips (e.g. promo strip) */
   banner?: ReactNode;
+  /** v13 MOBILE: jogos com HUD própria (Bateu World) precisam do topo livre —
+   *  sticky interceptava toques por cima do HUD do jogo (bug "não consigo tocar"). */
+  sticky?: boolean;
 }
 
 /**
@@ -43,11 +46,12 @@ export default function MobileDiscoveryHeader({
   rightAction,
   backTo,
   banner,
+  sticky = true,
 }: Props) {
   const navigate = useNavigate();
 
   return (
-    <header className="md:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/40 -mx-4 px-4 pt-2 pb-2">
+    <header className={`md:hidden ${sticky ? "sticky top-0" : "relative"} z-40 bg-background/95 backdrop-blur-md border-b border-border/40 -mx-4 px-4 pt-2 pb-2`}>
       <div className="flex items-center gap-2">
         <button
           onClick={() => (backTo ? navigate(backTo) : navigate(-1))}

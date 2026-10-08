@@ -540,8 +540,9 @@ export class WorldEngine {
   private keys = new Set<string>();
   private joy = { x: 0, y: 0 };
   private dragId: number | null = null;
-  private dragStart = { x: 0, y: 0, t: 0, moved: 0 };
+  private dragStart = { x: 0, y: 0, t: 0, moved: 0, touch: false };
   private dragging = false;
+  private lastDrag = { x: 0, y: 0 };
 
   private mobs: Mob[] = [];
   private projectiles: Projectile[] = [];
@@ -565,6 +566,12 @@ export class WorldEngine {
   private bob = 0;
   private raf = 0;
   private lastT = 0;
+  // v13 MOBILE: governador adaptativo — resolução dinâmica mantém o jogo fluido
+  // em telemóveis (queda de FPS → baixa a resolução interna; folga → recupera)
+  private fpsEma = 60;
+  private fpsT = 0;
+  private dynScale = 1;
+  private basePR = 1.5;
   private disposed = false;
   private resizeObs!: ResizeObserver;
   private myId: string;
@@ -813,10 +820,37 @@ export class WorldEngine {
     if (tier === "low") this.pq = { bloom: false, vignette: false, pixelRatio: 1 };
     else if (tier === "medium") this.pq = { bloom: true, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) };
     else this.pq = { bloom: true, vignette: true, pixelRatio: Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2) };
-    this.renderer.setPixelRatio(this.pq.pixelRatio);
+    this.basePR = this.pq.pixelRatio;
+    this.dynScale = 1; // nova qualidade → governador recomeça
+    this.renderer.setPixelRatio(this.basePR * this.dynScale);
+    if (this.composer) this.composer.setPixelRatio(this.basePR * this.dynScale);
     if (this.bloomPass) this.bloomPass.enabled = this.pq.bloom;
     if (this.vignettePass) this.vignettePass.enabled = this.pq.vignette;
     if (this.composer) this.composer.setSize(this.canvas.parentElement?.clientWidth || window.innerWidth, this.canvas.parentElement?.clientHeight || window.innerHeight);
+  }
+
+  /** v13: aplica a resolução interna do governador adaptativo (renderer + composer). */
+  private applyDynRes(): void {
+    const pr = this.basePR * this.dynScale;
+    this.renderer.setPixelRatio(pr);
+    if (this.composer) this.composer.setPixelRatio(pr);
+  }
+
+  /** v13: FPS suavizado (EMA) — para HUD/diagnóstico/testes. */
+  getFps(): number { return Math.round(this.fpsEma); }
+
+  /** v13: posição do herói (onboarding "Primeiros Passos" + testes). */
+  getPos(): { x: number; z: number } { return { x: this.pos.x, z: this.pos.z }; }
+
+  /** v13: estado da câmara (testes de regressão do touch + debug). */
+  getCam(): { yaw: number; pitch: number; dist: number; mode: number } {
+    return { yaw: this.camYaw, pitch: this.camPitch, dist: this.camDist, mode: this.camMode };
+  }
+
+  /** v13: teleporta o herói (hook de testes/debug — headless throttle não anda). */
+  tp(x: number, z: number): void {
+    this.pos.set(x, groundY(x, z), z);
+    this.burst(this.pos.clone(), 0x38bdf8, 10, 1.6, 0.5, 0.07, 3);
   }
 
   /** Fotografia do mundo (modo foto) — devolve dataURL PNG. */
@@ -3867,8 +3901,9 @@ export class WorldEngine {
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
-    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointermove", this.onPointerMove, { passive: true });
     window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerCancel);
     this.canvas.addEventListener("wheel", this.onWheel, { passive: true });
   }
 
@@ -3896,25 +3931,30 @@ export class WorldEngine {
   private onPointerDown = (e: PointerEvent): void => {
     if (this.dragId !== null) return;
     this.dragId = e.pointerId;
-    this.dragStart = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+    this.lastDrag = { x: e.clientX, y: e.clientY };
+    this.dragStart = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, touch: e.pointerType !== "mouse" };
     this.dragging = false;
   };
 
   private onPointerMove = (e: PointerEvent): void => {
     if (e.pointerId !== this.dragId) return;
-    const dx = e.movementX || 0;
-    const dy = e.movementY || 0;
+    // v13 MOBILE: delta manual — movementX/Y é 0/instável em touch (iOS/Android)
+    const dx = e.clientX - this.lastDrag.x;
+    const dy = e.clientY - this.lastDrag.y;
+    this.lastDrag = { x: e.clientX, y: e.clientY };
     this.dragStart.moved += Math.abs(dx) + Math.abs(dy);
-    if (this.dragStart.moved > 10) this.dragging = true;
+    // dedo tem jitter: limiar maior em touch para não confundir olhar com ataque-tap
+    if (this.dragStart.moved > (this.dragStart.touch ? 14 : 9)) this.dragging = true;
     if (this.dragging) {
+      const sens = this.dragStart.touch ? 1.45 : 1; // dedo percorre menos px que o rato
       if (this.camMode === 0) {
         // orbital: arrastar roda e aproxima/afasta
-        this.camYaw -= dx * 0.0052;
-        this.camDist = Math.max(6, Math.min(18, this.camDist + dy * 0.02));
+        this.camYaw -= dx * 0.0052 * sens;
+        this.camDist = Math.max(6, Math.min(18, this.camDist + dy * 0.02 * sens));
       } else {
         // 1ª/3ª pessoa: olhar livre com inclinação (estilo Minecraft/GTA)
-        this.camYaw -= dx * 0.0056;
-        this.camPitch = Math.max(-1.05, Math.min(1.25, this.camPitch - dy * 0.0042));
+        this.camYaw -= dx * 0.0056 * sens;
+        this.camPitch = Math.max(-1.05, Math.min(1.25, this.camPitch - dy * 0.0042 * sens));
       }
     }
   };
@@ -3922,7 +3962,15 @@ export class WorldEngine {
   private onPointerUp = (e: PointerEvent): void => {
     if (e.pointerId !== this.dragId) return;
     const dt = performance.now() - this.dragStart.t;
-    if (!this.dragging && dt < 320) this.attack();
+    // tap curto = ataque (rato); com dedo o limiar é maior (jitter) e a janela um pouco maior
+    if (!this.dragging && dt < (this.dragStart.touch ? 360 : 320)) this.attack();
+    this.dragId = null;
+    this.dragging = false;
+  };
+
+  // v13 MOBILE: gestos do browser (scroll/zoom/notificação) cancelam o pointer —
+  // sem isto a câmara ficava "presa" ao dedo que já não existe
+  private onPointerCancel = (): void => {
     this.dragId = null;
     this.dragging = false;
   };
@@ -4640,8 +4688,24 @@ export class WorldEngine {
   private loop = (t: number): void => {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
-    const dt = Math.min(0.05, (t - this.lastT) / 1000);
+    // v13: rawDt real (sem clamp) alimenta o governador de FPS
+    const rawDt = Math.max(0.0001, (t - this.lastT) / 1000);
+    const dt = Math.min(0.05, rawDt);
     this.lastT = t;
+
+    // v13 MOBILE: governador de FPS — resolução dinâmica a cada 2s
+    this.fpsEma = this.fpsEma * 0.94 + (1 / rawDt) * 0.06;
+    this.fpsT += rawDt;
+    if (this.fpsT >= 2) {
+      this.fpsT = 0;
+      if (this.fpsEma < 46 && this.dynScale > 0.55) {
+        this.dynScale = Math.max(0.55, this.dynScale - 0.15);
+        this.applyDynRes();
+      } else if (this.fpsEma > 57.5 && this.dynScale < 1) {
+        this.dynScale = Math.min(1, this.dynScale + 0.08);
+        this.applyDynRes();
+      }
+    }
 
     this.updatePlayer(dt);
     this.updateBuildings(dt); // v8: portas, telhados, zona segura
@@ -6014,6 +6078,7 @@ export class WorldEngine {
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("pointermove", this.onPointerMove);
     window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerCancel);
     try { this.chan?.unsubscribe(); } catch { /* ignore */ }
     try { this.renderer.dispose(); } catch { /* ignore */ }
     try { (supabase as any).removeChannel?.(this.chan); } catch { /* ignore */ }

@@ -588,15 +588,20 @@ const LiveHub = () => {
       )}
 
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
-        <MobileDiscoveryHeader
-          title={t("livehub.all")}
-          searchValue=""
-          onSearchChange={() => {}}
-          searchPlaceholder={t("livehub.search")}
-          categories={GAMES.map((g) => ({ id: g.id, label: g.label, icon: g.emoji }))}
-          activeCategory={active}
-          onCategoryChange={(id) => setActive(id as GameId)}
-        />
+        {/* v13 MOBILE: com o Bateu World ativo o header NÃO renderiza — ele ficava
+            por cima da UI full-screen do jogo (criação/HUD) e roubava os toques.
+            A navegação de jogos volta ao sair do mundo (pílula «◀ Jogos»). */}
+        {active !== "mmorpg" && (
+          <MobileDiscoveryHeader
+            title={t("livehub.all")}
+            searchValue=""
+            onSearchChange={() => {}}
+            searchPlaceholder={t("livehub.search")}
+            categories={GAMES.map((g) => ({ id: g.id, label: g.label, icon: g.emoji }))}
+            activeCategory={active}
+            onCategoryChange={(id) => setActive(id as GameId)}
+          />
+        )}
 
         {/* ⭐ BATEU WORLD — banner destaque permanente (jogo principal) */}
         {active !== "mmorpg" && (
@@ -662,7 +667,9 @@ const LiveHub = () => {
 
         <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
-            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""}>
+            {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
+                (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>
             <AnimatePresence mode="wait">
               <Suspense fallback={
                 <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
@@ -1244,7 +1251,18 @@ const LiveHub = () => {
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "mmorpg" && (
-                <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
+                  {/* v13 MOBILE: com o header de descoberta escondido, o jogador
+                      precisa de uma forma óbvia de voltar aos jogos */}
+                  <div className="md:hidden mb-2 flex">
+                    <button
+                      onClick={() => setActive("bounce" as GameId)}
+                      data-testid="hub-voltar-jogos"
+                      className="flex items-center gap-1.5 rounded-full bg-secondary/70 px-3 py-1.5 text-[11px] font-black text-foreground/80 border border-border/50 active:scale-95 transition"
+                    >
+                      ◀ Jogos
+                    </button>
+                  </div>
                   <GameErrorBoundary gameName="Bateu World 3D">
                   <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} />
                   </GameErrorBoundary>

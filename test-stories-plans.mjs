@@ -44,7 +44,7 @@ async function openPlatformStory(page, railTestid) {
 
 async function main() {
   console.log(`\n📸 Bateu v15 — Stories & Planos E2E — ${BASE}\n`);
-  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const browser = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
 
   // ---------- 1. Desktop: stories na home + viewer + CTA ----------
   {

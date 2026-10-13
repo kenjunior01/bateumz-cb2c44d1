@@ -389,7 +389,7 @@ async function main() {
   // ── 9. Ranking ──
   console.log("▶ Ranking");
   const rTxt = await openPanel("Ranking");
-  ok("Painel Ranking abre", rTxt.includes("Ranking do Mundo"));
+  ok("Painel Ranking abre", rTxt.includes("Ranking por POWER LEVEL") || rTxt.includes("Ranking do Mundo"));
   ok("Jogador listado no ranking", rTxt.includes("TesteHero"));
   await closePanel();
 

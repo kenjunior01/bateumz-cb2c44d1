@@ -16,18 +16,24 @@ async function testViewport(browser, label, viewport) {
   await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 45000 });
   /* a tela de carregamento demora até ~8s quando o geo-IP está lento */
   await page.waitForTimeout(9500);
+  const isMobileViewport = viewport.width < 800;
 
   // 1. Hero continua no topo
   const hero = await page.locator("text=Comunidade").first().isVisible().catch(() => false);
   ok(true, "página carregou");
 
-  // 2. Roll-up Destaques & Features
-  const destaques = await page.getByText("Destaques & Features", { exact: false }).first().isVisible().catch(() => false);
-  ok(destaques, "roll-up DESTAQUES & FEATURES visível");
-  const card01 = await page.getByText("Bateu World", { exact: false }).first().isVisible().catch(() => false);
-  ok(card01, "cartão 01 — Bateu World 3D");
-  const empresas = await page.getByText("PARA EMPRESAS", { exact: false }).first().isVisible().catch(() => false);
-  ok(empresas, "cartão 02 — Para Empresas (mensalidade)");
+  // 2. Roll-up Destaques & Features (desktop; mobile usa quick-links nativos)
+  if (!isMobileViewport) {
+    const destaques = await page.getByText("Destaques & Features", { exact: false }).first().isVisible().catch(() => false);
+    ok(destaques, "roll-up DESTAQUES & FEATURES visível");
+    const card01 = await page.getByText("Bateu World", { exact: false }).first().isVisible().catch(() => false);
+    ok(card01, "cartão 01 — Bateu World 3D");
+    const empresas = await page.getByText("PARA EMPRESAS", { exact: false }).first().isVisible().catch(() => false);
+    ok(empresas, "cartão 02 — Para Empresas (mensalidade)");
+  } else {
+    const quick = await page.locator('[data-testid="mh-quick"]').first().isVisible().catch(() => false);
+    ok(quick, "mobile: círculos de acesso rápido");
+  }
 
   // 3. Roll-up Jogos & Torneios
   const jogos = await page.getByText("Jogos & Torneios", { exact: false }).first().isVisible().catch(() => false);
@@ -37,22 +43,38 @@ async function testViewport(browser, label, viewport) {
   const vendas = await page.getByText("Coisas à Venda", { exact: false }).first().isVisible().catch(() => false);
   ok(vendas, "roll-up COISAS À VENDA visível");
 
-  // 5. Roll-up Sorteios & Concursos
-  const sorteios = await page.getByText("Sorteios & Concursos", { exact: false }).first().isVisible().catch(() => false);
-  ok(sorteios, "roll-up SORTEIOS & CONCURSOS visível");
+  // 5. Roll-up Sorteios & Concursos (desktop; mobile usa Descoberta ao Vivo)
+  if (!isMobileViewport) {
+    const sorteios = await page.getByText("Sorteios & Concursos", { exact: false }).first().isVisible().catch(() => false);
+    ok(sorteios, "roll-up SORTEIOS & CONCURSOS visível");
+  } else {
+    const disc = await page.locator('[data-testid="mh-discovery"]').first().isVisible().catch(() => false);
+    ok(disc, "mobile: Descoberta ao Vivo (sorteios)");
+  }
 
-  // 6. Feed da Plataforma
-  const feed = await page.getByText("Feed da Plataforma", { exact: false }).first().isVisible().catch(() => false);
-  ok(feed, "FEED DA PLATAFORMA visível");
+  // 6. Feed dinâmico (PlatformFeed no desktop; ActivityFeed no mobile)
+  if (!isMobileViewport) {
+    const feed = await page.getByText("Feed da Plataforma", { exact: false }).first().isVisible().catch(() => false);
+    ok(feed, "FEED DA PLATAFORMA visível");
+  } else {
+    const af = await page.getByText("o que está a acontecer", { exact: false }).first().isVisible().catch(() => false)
+      || await page.locator("text=Atividade").first().isVisible().catch(() => false);
+    ok(af, "mobile: Atividade ao vivo (feed)");
+  }
 
-  // 7. Chips de filtro funcionam (dentro do feed, não na navbar)
-  const feedSection = page.locator("section", { hasText: "Feed da Plataforma" }).first();
-  const chip = feedSection.locator("button", { hasText: "Sorteios" }).first();
-  if (await chip.count() > 0 && await chip.isVisible().catch(() => false)) {
-    await chip.click();
-    await page.waitForTimeout(600);
-    ok(true, "chips de filtro clicáveis");
-  } else ok(false, "chips de filtro clicáveis");
+  // 7. Chips de filtro funcionam (só desktop — o feed do mobile é compacto)
+  if (!isMobileViewport) {
+    const feedSection = page.locator("section", { hasText: "Feed da Plataforma" }).first();
+    const chip = feedSection.locator("button", { hasText: "Sorteios" }).first();
+    if (await chip.count() > 0 && await chip.isVisible().catch(() => false)) {
+      await chip.click();
+      await page.waitForTimeout(600);
+      ok(true, "chips de filtro clicáveis");
+    } else ok(false, "chips de filtro clicáveis");
+  } else {
+    const vendasM = await page.getByText("Coisas à Venda", { exact: false }).first().isVisible().catch(() => false);
+    ok(vendasM, "mobile: roll-up COISAS À VENDA no app");
+  }
 
   // 8. Cabeçalho do roll-up tem link "ver tudo"
   const verTudo = await page.locator('a:has-text("Ver os 80+ jogos")').first().isVisible().catch(() => false);

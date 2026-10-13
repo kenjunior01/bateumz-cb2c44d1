@@ -33,7 +33,7 @@ const NOISE = [
 
 async function main() {
   console.log(`\n📱 Bateu World MOBILE WEB E2E — ${BASE}\n`);
-  const browser = await chromium.launch({
+  const browser = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined,
     args: [
       "--no-sandbox", "--disable-dev-shm-usage",
       // v13: evita throttling de rAF/timers em headless (tab "oculta" simulava

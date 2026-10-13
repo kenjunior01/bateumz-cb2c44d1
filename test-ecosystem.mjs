@@ -38,7 +38,7 @@ const NOISE = [
 
 async function main() {
   console.log(`\n💚 Bateu v14 — Ecossistema E2E — ${BASE}\n`);
-  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const browser = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
 
   // ---------- 1. Página /negocios (desktop) ----------
   {

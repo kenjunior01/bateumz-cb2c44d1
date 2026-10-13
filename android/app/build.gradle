@@ -7,8 +7,8 @@ android {
         applicationId "online.bateu.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 16
-        versionName "2.16"
+        versionCode 17
+        versionName "2.17"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     // v13: AGP 8.x — ignoreAssetsPattern vive em androidResources (aaptOptions
@@ -16,6 +16,7 @@ android {
     // colidem com os originais ("Duplicate resources")
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:*.gz:*.br'
+
     }
     signingConfigs {
         release {

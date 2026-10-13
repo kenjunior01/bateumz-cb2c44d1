@@ -1251,20 +1251,10 @@ const LiveHub = () => {
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "mmorpg" && (
-                <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
-                  {/* v13 MOBILE: com o header de descoberta escondido, o jogador
-                      precisa de uma forma óbvia de voltar aos jogos */}
-                  <div className="md:hidden mb-2 flex">
-                    <button
-                      onClick={() => setActive("bounce" as GameId)}
-                      data-testid="hub-voltar-jogos"
-                      className="flex items-center gap-1.5 rounded-full bg-secondary/70 px-3 py-1.5 text-[11px] font-black text-foreground/80 border border-border/50 active:scale-95 transition"
-                    >
-                      ◀ Jogos
-                    </button>
-                  </div>
+                <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className={typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse) and (max-width: 1024px)").matches ? "contents" : undefined}>
                   <GameErrorBoundary gameName="Bateu World 3D">
-                  <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => setActive("bounce" as GameId)} />
+                  <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "p2pbet" && (

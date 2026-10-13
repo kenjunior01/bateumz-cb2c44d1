@@ -96,6 +96,11 @@ interface Char {
   npcDay: { date: string; gomas: boolean; lurdes: boolean; sabio: boolean };
   // v13 — onboarding "Primeiros Passos" (novos jogadores)
   onb?: { done: boolean; step: number };
+  // v17: ERA DRAGON BALL
+  credits: number;     // créditos da plataforma (moeda dos prémios)
+  prizes: { id: string; code: string; op: string; ts: number; claimed: boolean }[]; // prémios 1GB
+  shareWin: boolean;   // publicar conquistas nos Stories automaticamente
+  duelsWon: number;    // duelos 1v1 vencidos
 }
 
 const LS_KEY = "bateu_world_char_v6";
@@ -116,6 +121,72 @@ const TITLES: { lvl: number; title: string }[] = [
   { lvl: 40, title: "Lenda do Mundo" },
 ];
 
+// ── v17: ERA DRAGON BALL — transformações por classe ──
+// 2 formas desbloqueadas no Nv5 e Nv14; multiplicam ataque/velocidade e
+// drenam KI. Aura muda de cor (amarelo → vermelho) como no scouter.
+const TRANSFORMS: { name: string; emoji: string; lvl: number; mult: number; aura: string }[][] = [
+  // Guerreiro
+  [
+    { name: "Fúria Crescente", emoji: "🔥", lvl: 5, mult: 1.35, aura: "#fde047" },
+    { name: "Fúria Suprema", emoji: "💥", lvl: 14, mult: 1.8, aura: "#f87171" },
+  ],
+  // Mago
+  [
+    { name: "Zenith Arcano", emoji: "✨", lvl: 5, mult: 1.35, aura: "#fde047" },
+    { name: "Ascensão Mística", emoji: "🌟", lvl: 14, mult: 1.8, aura: "#f87171" },
+  ],
+  // Arqueiro
+  [
+    { name: "Olho de Falcão", emoji: "🦅", lvl: 5, mult: 1.35, aura: "#fde047" },
+    { name: "Sentido Divino", emoji: "👁️", lvl: 14, mult: 1.8, aura: "#f87171" },
+  ],
+  // Curandeiro
+  [
+    { name: "Bênção Interior", emoji: "🍃", lvl: 5, mult: 1.35, aura: "#fde047" },
+    { name: "Espírito Ancestral", emoji: "🌳", lvl: 14, mult: 1.8, aura: "#f87171" },
+  ],
+];
+
+// ── v17: PRÉMIO 1GB — suporte WhatsApp (qualquer operadora) ──
+const SUPPORT_WHATSAPP = "258848547887";
+const OPERATORS = ["Vodacom", "Movitel", "Tmcel"] as const;
+function prizeWhatsAppLink(code: string, op: string, phone: string, name: string): string {
+  const msg = [
+    "🎁 *PRÉMIO BATEU WORLD — 1GB*",
+    "",
+    `Herói: ${name}`,
+    `Código do prémio: ${code}`,
+    `Operadora: ${op}`,
+    `Número que vai receber o 1GB: ${phone}`,
+    "",
+    "Ganhei este prémio no Open World do Bateu (drop raríssimo). Por favor ativem os meus 1GB. Obrigado!",
+  ].join("\n");
+  return `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}`;
+}
+function newPrizeCode(): string {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 6; i++) s += abc[Math.floor(Math.random() * abc.length)];
+  return `BW-1GB-${s}`;
+}
+
+/** v17: publica uma conquista nos Stories da plataforma (sem imagem — fundo gradiente). */
+async function publishWinStory(content: string, background: string): Promise<void> {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getUser();
+    const uid = data?.user?.id;
+    if (!uid) return; // convidados não publicam (sem conta)
+    await supabase.from("user_stories").insert({
+      user_id: uid,
+      content,
+      background,
+      media_type: "text",
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+    });
+  } catch { /* silencioso — stories são bónus, nunca bloqueiam o jogo */ }
+}
+
 function titleFor(level: number): string {
   let t = TITLES[0].title;
   for (const tt of TITLES) if (level >= tt.lvl) t = tt.title;
@@ -123,9 +194,7 @@ function titleFor(level: number): string {
 }
 
 function xpNeeded(level: number): number {
-  // v16: curva MUITO mais exigente — o utilizador pediu evolução difícil,
-  // sem subir de nível «a toda a hora»: 105·L^1.8 → Nv2 = 363 XP,
-  // Nv10 ≈ 6 600 XP, Nv20 ≈ 23 600 XP (antes: 80·L^1.45)
+  // v16/v17: curva MUITO mais exigente — evolução difícil (105·L^1.8)
   return Math.round(105 * Math.pow(level, 1.8));
 }
 
@@ -152,6 +221,7 @@ function newChar(name: string, classId: number, avatar?: AvatarConfig): Char {
     npcDay: { date: todayStr(), gomas: false, lurdes: false, sabio: false },
     onb: { done: false, step: 0 },
     avatar: avatar ?? defaultAvatar(classId),
+    credits: 0, prizes: [], shareWin: true, duelsWon: 0,
   };
 }
 
@@ -257,6 +327,11 @@ function loadChar(): Char | null {
     if (!c.equipped.escudo) c.equipped.escudo = null;
     c.pet = !!c.pet;
     c.wavesBest = c.wavesBest || 0;
+    // v17: ERA DRAGON BALL — créditos, prémios e stories
+    c.credits = c.credits || 0;
+    c.prizes = Array.isArray(c.prizes) ? c.prizes : [];
+    if (typeof c.shareWin !== "boolean") c.shareWin = true;
+    c.duelsWon = c.duelsWon || 0;
     // v5: garantir avatar em qualquer save
     if (!c.avatar || typeof c.avatar.skin !== "number") {
       c.avatar = defaultAvatar(c.classId ?? 0);
@@ -368,7 +443,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
   const [near, setNear] = useState<string | null>(null);
   const [online, setOnline] = useState(1);
   const [toasts, setToasts] = useState<{ id: number; msg: string; tone: string }[]>([]);
-  const [panel, setPanel] = useState<"none" | "char" | "quests" | "rank" | "bank" | "inv" | "set" | "map">("none");
+  const [panel, setPanel] = useState<"none" | "char" | "quests" | "rank" | "bank" | "inv" | "set" | "map" | "poderes" | "heros">("none");
   const [questTab, setQuestTab] = useState<"daily" | "saga" | "chal">("daily");
   const [card, setCard] = useState<{ kind: string; id: string } | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -412,6 +487,17 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
   const [arenaHud, setArenaHud] = useState<{ wave: number; alive: number } | null>(null);
   const [arenaEnd, setArenaEnd] = useState<{ wave: number; kills: number; pts: number; gold: number; xp: number } | null>(null);
   const [photoMode, setPhotoMode] = useState(false);
+  // ── v17: ERA DRAGON BALL ──
+  const [form, setForm] = useState(0);                    // 0 base · 1 · 2
+  const [ki, setKi] = useState(100);                      // energia KI
+  const [myPl, setMyPl] = useState(0);                    // Power Level (scouter)
+  const [playersNear, setPlayersNear] = useState<{ id: string; name: string; level: number; pl: number; dist: number }[]>([]);
+  const [duelReq, setDuelReq] = useState<{ from: string; name: string; pl: number } | null>(null);
+  const [duelVs, setDuelVs] = useState<{ name: string; until: number } | null>(null);
+  const [duelNow, setDuelNow] = useState(Date.now());
+  const [prize, setPrize] = useState<{ code: string } | null>(null);
+  const [prizeOp, setPrizeOp] = useState<string>("Vodacom");
+  const [prizePhone, setPrizePhone] = useState("");
   const [quality, setQuality] = useState<"auto" | "low" | "medium" | "high">(
     () => (localStorage.getItem("bateu_world_quality") as any) || "auto"
   );
@@ -468,6 +554,11 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
     "☄️ ACONTECIMENTOS: chuva de meteoros, frenesi de roubos e enxames de elite surgem do nada — ficas atento!",
     "🎒 No PvP também podes ROUBAR ITENS da mochila do derrotado — esconde os teus melhores!",
     "⚙️ Ajusta a qualidade gráfica nas Definições se o jogo abrandar",
+    "⚡ TRANSFORMAÇÕES estilo Dragon Ball: no nível 5 desbloqueias a 1ª forma — toca no botão ⚡ ou prime T. Drena KI!",
+    "📡 POWER LEVEL: cada herói e criatura tem PL — vê acima das cabeças e no Ranking. Sobe o teu!",
+    "⚔️ DUELOS: painel Heróis → escolhe um herói online → Desafiar. 1 contra 1, vencedor leva créditos!",
+    "💎 CRÉDITOS: chefes e duelos pagam créditos. E o prémio MÁXIMO... 1GB na tua operadora (raríssimo!)",
+    "🦕 Cada território tem os SEUS monstros: lobos na Planície, aranhas na Floresta, escorpiões nas Dunas, dragões nas Vulcânicas...",
     "❤️ A Fonte da Vida (junto ao Banco) cura-te de graça",
   ];
 
@@ -558,7 +649,31 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       const cp = eng.getCompass?.() || null;
       setCompass(cp && cp.dist > 3 ? { angle: cp.angle, dist: cp.dist } : null);
       setGuardOn(eng.isGuarding?.() || false);
+      // v17: forma + KI + Power Level (scouter vivo) — só atualiza se MUDOU
+      // (seters condicionais evitam re-renders 3×/s do componente gigante)
+      const f = eng.formLevel ?? 0;
+      setForm((prev) => (prev === f ? prev : f));
+      const kv = eng.kiLevel ?? 100;
+      setKi((prev) => (prev === kv ? prev : kv));
+      const plv = eng.getPowerLevel?.() ?? 0;
+      setMyPl((prev) => (prev === plv ? prev : plv));
+      const dr = eng.pendingDuelReq ?? null;
+      setDuelReq((prev) => (prev?.from === dr?.from && prev?.pl === dr?.pl ? prev : dr));
     }, 300);
+    return () => clearInterval(iv);
+  }, [phase]);
+
+  // v17: heróis online perto (para duelos) — 1,5s, só se mudou
+  useEffect(() => {
+    if (phase !== "world") return;
+    const iv = setInterval(() => {
+      const list = engineRef.current?.getPlayersList?.() || [];
+      setPlayersNear((prev) => {
+        if (prev.length === list.length && prev.every((p, i) => p.id === list[i].id && p.pl === list[i].pl && p.dist === list[i].dist)) return prev;
+        return list;
+      });
+      if (engineRef.current?.duelOpponent) setDuelNow(Date.now());
+    }, 1500);
     return () => clearInterval(iv);
   }, [phase]);
 
@@ -680,14 +795,19 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       // v4: os efeitos colaterais do level-up são ADIADOS para fora da fase
       // de render (updaters têm de ser puros — evita o aviso do React e
       // atualizações cruzadas de componentes durante o render)
+      const gainedCredits = 3 * (level - (p.level || level)) || 3; // v17: +3 créditos por nível
       setTimeout(() => {
         confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 }, colors: ["#f43f5e", "#fbbf24", "#38bdf8"] });
         worldAudio.play("levelup"); // v13: fanfarra no pico emocional (regra pico-fim)
-        pushToast(`🎉 Subiste para o nível ${level}! ${titleFor(level)} · +3 pontos`, "good");
-        showBanner({ kind: "levelup", emoji: "⚡", title: `NÍVEL ${level}`, sub: `${titleFor(level)} · +3 pontos de atributo` });
+        pushToast(`🎉 Subiste para o nível ${level}! ${titleFor(level)} · +3 pontos · +${gainedCredits} 💎`, "good");
+        showBanner({ kind: "levelup", emoji: "⚡", title: `NÍVEL ${level}`, sub: `${titleFor(level)} · +3 pontos · +${gainedCredits} 💎 créditos` });
         engineRef.current?.levelFx();
         scoreRef.current?.("Bateu World", level * 1000);
         logWorldActivity(charRef.current?.uid || "anon", "level", `Subiu para o nível ${level}`, level);
+        // v17: nível múltiplo de 5 = conquista nos Stories
+        if (charRef.current?.shareWin && level % 5 === 0) {
+          publishWinStory(`⚡ Cheguei ao NÍVEL ${level} no Bateu World! ${titleFor(level)} — Power Level sempre a subir 🚀`, "from-violet-500 via-purple-600 to-indigo-700");
+        }
         // v4: o companheiro alado junta-se no nível 5
         if (level >= 5 && !petToastDone.current) {
           petToastDone.current = true;
@@ -704,7 +824,9 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         engineRef.current?.healFull();
       }, 40);
     }
-    return { ...p, xp, level, points };
+    // v17: +3 créditos por cada nível subido (os créditos são a moeda dos prémios)
+    const lvlCredits = 3 * Math.max(0, level - (p.level || level));
+    return { ...p, xp, level, points, credits: p.credits + lvlCredits };
   }, [pushToast, showBanner]);
 
   // ── v13: ONBOARDING "PRIMEIROS PASSOS" ─────────────────────
@@ -762,10 +884,11 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       c.streak = c.lastDaily === yesterday ? c.streak + 1 : 1;
       c.lastDaily = today;
-      const bonus = 150 + c.streak * 50;
+      // v17: presença diária mais modesta (subir tem de ser difícil)
+      const bonus = 80 + c.streak * 25;
       c.gold += bonus;
-      c.pts += 5;
-      setTimeout(() => pushToast(`🔥 Presença diária: +${bonus} ouro · +5 pts (streak ${c.streak})`, "good"), 900);
+      c.pts += 3;
+      setTimeout(() => pushToast(`🔥 Presença diária: +${bonus} ouro · +3 pts (streak ${c.streak})`, "good"), 900);
     }
     persist(c);
     setChar(c);
@@ -863,10 +986,26 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
               if (q.date === todayStr()) q.kills += 1; else { q.date = todayStr(); q.kills = 1; }
               const saga = { ...p.saga, kills: p.saga.kills + 1 };
               if (ev.boss) saga.bosses += 1;
-              return applyXp({ ...p, kills: p.kills + 1, pts: p.pts + (ev.pts || 1), quests: q, saga }, 0);
+              // v17: créditos de chefe/guardião/elite
+              const credits = p.credits + (ev.credits || 0);
+              return applyXp({ ...p, kills: p.kills + 1, pts: p.pts + (ev.pts || 1), credits, quests: q, saga }, 0);
             });
             onbAdvance(1);
-            if (ev.boss) pushToast(`👑 Derrotaste o ${ev.name}! +${ev.pts} pts`, "good");
+            if (ev.boss) {
+              pushToast(`👑 Derrotaste o ${ev.name}! +${ev.pts} pts${ev.credits ? ` · +${ev.credits} 💎` : ""}`, "good");
+              // v17: vitória sobre chefe vai para os Stories (com conta)
+              if (charRef.current?.shareWin) {
+                publishWinStory(`👑 Derrotei o ${ev.name} no Bateu World! Power Level em subida 🚀`, "from-amber-500 via-orange-600 to-red-700");
+              }
+            }
+            // v17: PRÉMIO MÁXIMO — 1GB (drop raríssimo)
+            if (ev.prizeGb) {
+              const code = newPrizeCode();
+              setChar((p) => (p ? { ...p, prizes: [...p.prizes, { id: "pz_" + Date.now().toString(36), code, op: "", ts: Date.now(), claimed: false }] } : p));
+              setPrize({ code });
+              confetti({ particleCount: 240, spread: 110, origin: { y: 0.4 }, colors: ["#22c55e", "#fbbf24", "#38bdf8"] });
+              worldAudio.play("coin");
+            }
             break;
           }
           case "loot": {
@@ -950,8 +1089,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
               const n = applyXp({ ...p, pts: p.pts + 10, discoveries: [...p.discoveries, ev.id], saga: { ...p.saga, discovers: p.saga.discovers + 1 } }, ev.xp);
               return n;
             });
-            showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: "Descoberta! +30 XP · +10 pts" });
-            confetti({ particleCount: 60, spread: 60, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8"] });
+            showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: `Descoberta! +${ev.xp} XP · +10 pts` });            confetti({ particleCount: 60, spread: 60, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8"] });
             break;
           }
           case "skill2": {
@@ -1102,6 +1240,60 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
             logWorldActivity(cur.uid, "death", `Derrotado por ${ev.by}`, 1);
             setTimeout(() => setDeathFx(false), 1600);
             break;
+          // ── v17: ERA DRAGON BALL ──
+          case "form": {
+            setForm(ev.form || 0);
+            setMyPl(ev.pl || 0);
+            if (ev.form > 0) {
+              showBanner({ kind: "levelup", emoji: "⚡", title: `POWER LEVEL: ${String(ev.pl)}`, sub: ev.form === 2 ? "SEGUNDA TRANSFORMAÇÃO!" : "PRIMEIRA TRANSFORMAÇÃO!" });
+              pushToast(`⚡ Transformação ativa — Power Level ${ev.pl}! (drena KI)`, "good");
+            } else {
+              pushToast("Voltaste à forma base — KI a recarregar", "info");
+            }
+            break;
+          }
+          case "duelreq": {
+            setDuelReq({ from: ev.from, name: ev.name, pl: ev.pl || 0 });
+            pushToast(`⚔️ ${ev.name} (PL ${ev.pl}) desafiou-te para um duelo!`, "info");
+            break;
+          }
+          case "duelreqend":
+            setDuelReq(null);
+            break;
+          case "duelstart": {
+            setDuelReq(null);
+            setDuelVs({ name: ev.vs, until: ev.until || Date.now() + 90000 });
+            showBanner({ kind: "wave", emoji: "⚔️", title: "DUELO INICIADO", sub: `Tu vs ${ev.vs} — 90 segundos!` });
+            break;
+          }
+          case "duelend": {
+            setDuelVs(null);
+            if (ev.won === true) {
+              const credits = 10 + Math.floor(Math.random() * 6); // 10-15
+              setChar((p) => (p ? { ...p, credits: p.credits + credits, pts: p.pts + 8, duelsWon: p.duelsWon + 1 } : p));
+              confetti({ particleCount: 150, spread: 85, origin: { y: 0.5 }, colors: ["#fbbf24", "#f43f5e", "#38bdf8"] });
+              showBanner({ kind: "levelup", emoji: "🏆", title: "VITÓRIA NO DUELO!", sub: `Derrotaste ${ev.vs} · +${credits} 💎 · +8 pts` });
+              logWorldActivity(cur.uid, "duel", `Venceu o duelo contra ${ev.vs}`, credits);
+              if (charRef.current?.shareWin) {
+                publishWinStory(`⚔️ Venci ${ev.vs} num DUELO 1v1 no Bateu World! Alguém me desafia? 💎+${credits}`, "from-red-500 via-rose-600 to-purple-700");
+              }
+            } else if (ev.won === false) {
+              pushToast(`💀 Perdeste o duelo contra ${ev.vs}... treina e volta!`, "bad");
+              logWorldActivity(cur.uid, "duel", `Perdeu o duelo contra ${ev.vs}`, 0);
+            } else {
+              pushToast(`⏳ Duelo contra ${ev.vs} terminou em empate`, "info");
+            }
+            break;
+          }
+          case "prize": {
+            // v17: 1GB — qualquer operadora (drop raríssimo / debug)
+            const code = newPrizeCode();
+            setChar((p) => (p ? { ...p, prizes: [...p.prizes, { id: "pz_" + Date.now().toString(36), code, op: "", ts: Date.now(), claimed: false }] } : p));
+            setPrize({ code });
+            confetti({ particleCount: 240, spread: 110, origin: { y: 0.4 }, colors: ["#22c55e", "#fbbf24", "#38bdf8"] });
+            worldAudio.play("coin");
+            break;
+          }
         }
       },
     });
@@ -1920,6 +2112,14 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
           <span className="inline-flex items-center gap-1"><Coins className="h-3 w-3 text-amber-400" />{char!.gold}</span>
           <span className="inline-flex items-center gap-1 font-black text-yellow-300">🏆 {char!.pts}</span>
         </div>
+        {/* v17: KI + Power Level + créditos — era Dragon Ball */}
+        <div className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <motion.div className={`h-full rounded-full ${form > 0 ? "bg-gradient-to-r from-amber-300 to-orange-400" : "bg-gradient-to-r from-cyan-400 to-violet-500"}`} animate={{ width: `${ki}%` }} transition={{ duration: 0.3 }} />
+        </div>
+        <div className="mt-1 flex items-center gap-2.5 text-[11px] text-white/80">
+          <span className="inline-flex items-center gap-1 font-black text-fuchsia-300" data-testid="bw-power-level" title="Power Level (scouter)">⚡ PL {myPl.toLocaleString("pt-PT")}{form > 0 ? (form === 2 ? " 💥" : " 🔥") : ""}</span>
+          <span className="inline-flex items-center gap-1 font-bold text-emerald-300" title="Créditos — moeda dos prémios">💎 {char!.credits}</span>
+        </div>
         {/* v3: chips de buffs ativos */}
         {(shieldActive || buffs.atk > 0 || buffs.hot > 0 || char!.pet) && (
           <div className="mt-1.5 flex flex-wrap gap-1">
@@ -2170,11 +2370,11 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* v16: FAIXA DE CONTROLO única — Sair (imersivo) + painéis + câmaras +
-          ecrã inteiro + música + foto + som numa só fila com scroll horizontal:
-          nada transborda, nada fica intocável, ecrã limpo e organizado. */}
+      {/* v16/v17: FAIXA DE CONTROLO única — Sair (imersivo) + painéis (Poderes/Heróis v17)
+          + câmaras + ecrã inteiro + música + foto + som numa só fila com scroll horizontal.
+          z-30: acima de qualquer chrome residual do wrapper. */}
       <div
-        className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-full bg-black/45 px-1.5 py-1 backdrop-blur-md [&::-webkit-scrollbar]:hidden"
+        className="absolute top-2 left-1/2 z-30 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-full bg-black/45 px-1.5 py-1 backdrop-blur-md [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none", ...(fill ? { top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : {}) }}
       >
           {immersive && onExit && (
@@ -2185,8 +2385,10 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
           )}
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
+          ["poderes", <Zap key="z" className="h-4 w-4" />, "Poderes"],
           ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
           ["quests", <ScrollText key="q" className="h-4 w-4" />, "Missões"],
+          ["heros", <Users key="h" className="h-4 w-4" />, "Heróis"],
           ["bank", <Landmark key="b" className="h-4 w-4" />, "Banco"],
           ["rank", <Trophy key="r" className="h-4 w-4" />, "Ranking"],
           ["map", <Map key="m" className="h-4 w-4" />, "Mapa"],
@@ -2196,13 +2398,14 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
             key={id}
             onClick={() => setPanel((p) => (p === id ? "none" : id))}
             aria-label={label}
-            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold backdrop-blur transition-colors ${panel === id ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
+            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-colors ${panel === id ? "bg-white text-slate-900" : "text-white/85 hover:text-white"}`}
             data-testid={`bw-nav-${id}`}
           >
             {icon}<span className="hidden lg:inline">{label}</span>
             {id === "char" && char!.points > 0 && <span className="ml-0.5 h-2 w-2 rounded-full bg-emerald-400" />}
             {id === "quests" && <span className="ml-0.5 h-2 w-2 rounded-full bg-amber-400" />}
             {id === "inv" && char!.inv.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{char!.inv.length}</span>}
+            {id === "heros" && playersNear.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{playersNear.length}</span>}
           </button>
         ))}
         <div className="mx-0.5 w-px shrink-0 self-stretch bg-white/20" />
@@ -2225,7 +2428,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         <button
           onClick={toggleFs}
           aria-label="Ecrã inteiro"
-          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full p-1.5 text-white transition-colors hover:text-amber-200"
           data-testid="bw-fs"
           title="Ecrã inteiro"
         >
@@ -2235,17 +2438,17 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         <button
           onClick={() => { setMusicOpen((v) => !v); worldAudio.ensure(); }}
           aria-label="Banda sonora"
-          className={`flex shrink-0 items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
+          className={`flex shrink-0 items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "text-white hover:text-fuchsia-200"}`}
           data-testid="bw-music"
           title="Banda sonora do mundo"
         >
           <Music className={`h-4 w-4 ${musicOpen ? "text-slate-900" : "text-fuchsia-300"}`} />
         </button>
-        {/* v10: modo foto + som mudaram da coluna direita para aqui */}
+        <div className="mx-0.5 w-px shrink-0 self-stretch bg-white/20" />
         <button
           onClick={togglePhoto}
           aria-label="Modo foto"
-          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full p-1.5 text-white transition-colors hover:text-amber-200"
           data-testid="bw-photo"
           title="Modo Foto (P)"
         >
@@ -2254,7 +2457,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         <button
           onClick={() => setMuted(worldAudio.toggleMute())}
           aria-label={muted ? "Ligar som" : "Desligar som"}
-          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full p-1.5 transition-colors"
           data-testid="bw-sound"
           title={muted ? "Ligar som (M)" : "Desligar som (M)"}
         >
@@ -2262,9 +2465,9 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         </button>
       </div>
 
-      {/* v9: chip de convidado — abaixo da faixa, sem flutuar sobre o HUD */}
+      {/* v9/v16: chip de convidado — lembra suave, nunca bloqueia */}
       {!user && (
-        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 top-[46px] z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : undefined}>
+        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 top-[46px] z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : undefined}>
           👤 CONVIDADO — criar conta para guardar na nuvem
         </button>
       )}
@@ -2378,6 +2581,19 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       {/* barra de poderes + botões de combate v3 (cooldown radial) */}
       <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2" style={fill ? { right: "calc(0.75rem + env(safe-area-inset-right, 0px))", bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
         <div className="flex flex-col items-center gap-2">
+          {/* v17: TRANSFORMAÇÃO estilo Dragon Ball (tecla T) */}
+          <button
+            onClick={() => engineRef.current?.cycleTransform()}
+            className={`relative flex h-11 w-11 items-center justify-center rounded-full border-2 text-lg font-black backdrop-blur transition-all ${form > 0 ? "border-amber-300 bg-amber-500/40 text-white shadow-[0_0_18px_rgba(251,191,36,0.7)]" : "border-fuchsia-300/70 bg-black/55 text-fuchsia-200 hover:bg-black/75"}`}
+            data-testid="bw-transform"
+            title="Transformação (T) — estilo Dragon Ball"
+          >
+            ⚡
+            {form > 0 && (
+              <motion.span className="absolute inset-0 rounded-full border-2 border-amber-300" animate={{ scale: [1, 1.35], opacity: [0.9, 0] }} transition={{ duration: 1, repeat: Infinity }} />
+            )}
+            {char!.level < 5 && <span className="absolute -bottom-1 rounded-full bg-black/80 px-1 text-[7px] font-black text-white/70">Nv5</span>}
+          </button>
           {mySkills.map((sk, i) => {
             const locked = char!.level < sk.lvl;
             const cd = skillCds[i] || 0;
@@ -2750,30 +2966,146 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         )}
 
         {panel === "rank" && (
-          <Panel title="Ranking do Mundo" onClose={() => setPanel("none")}>
+          <Panel title="🏆 Ranking por POWER LEVEL" onClose={() => setPanel("none")}>
             {(() => {
-              const rows = [...(platform?.leaderboard || [])];
+              // v17: ranking estilo scouter — ordena por Power Level
+              const myPlLocal = engineRef.current?.getPowerLevel?.() ?? Math.round(char ? (calcStats(char).atk * 7 + calcStats(char).maxHp * 0.55 + calcStats(char).def * 4 + calcStats(char).spd * 3 + char.level * 12) : 0);
+              const rows = [...(platform?.leaderboard || [])].map((r) => ({
+                ...r,
+                pl: r.pl ?? Math.round((r.level || 1) * 95 + (r.gold || 0) / 40 + (r.kills || 0) * 3),
+              }));
+              // heróis ONLINE entram também (sincronizados em tempo real)
+              for (const p of playersNear) {
+                if (!rows.some((r) => r.name === p.name)) rows.push({ name: p.name, classId: 0, level: p.level, gold: 0, kills: 0, pl: p.pl } as any);
+              }
               if (char) {
                 const i = rows.findIndex((r) => r.name === char.name);
-                if (i >= 0) rows[i] = { ...rows[i], level: char.level, gold: char.gold, kills: char.kills, classId: char.classId };
-                else rows.push({ name: char.name, classId: char.classId, level: char.level, gold: char.gold, kills: char.kills });
+                const me = { name: char.name, classId: char.classId, level: char.level, gold: char.gold, kills: char.kills, pl: myPlLocal };
+                if (i >= 0) rows[i] = { ...rows[i], ...me };
+                else rows.push(me as any);
               }
-              rows.sort((a, b) => b.level - a.level || b.gold - a.gold);
+              rows.sort((a: any, b: any) => (b.pl || 0) - (a.pl || 0) || b.level - a.level);
               return (
                 <div className="space-y-1">
-                  {rows.slice(0, 15).map((r, i) => (
+                  {rows.slice(0, 15).map((r: any, i: number) => (
                     <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${char && r.name === char.name ? "bg-rose-500/20 border border-rose-400/40" : "bg-white/5"}`}>
-                      <span className="w-5 text-center font-black text-white/50">{i === 0 ? "👑" : i + 1}</span>
+                      <span className="w-5 text-center font-black text-white/50">{i === 0 ? "👑" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
                       <span className="text-base">{CLS_EMOJIS[r.classId] || "⚔️"}</span>
                       <span className="flex-1 truncate font-bold">{r.name}</span>
                       <span className="text-white/60">Nv{r.level}</span>
-                      <span className="text-amber-400">{r.gold}💰</span>
+                      <span className="font-black text-fuchsia-300" title="Power Level">⚡{(r.pl || 0).toLocaleString("pt-PT")}</span>
+                      <span className="hidden text-amber-400 sm:inline">{r.gold}💰</span>
                     </div>
                   ))}
                   {rows.length === 0 && <p className="text-xs text-muted-foreground">Sê o primeiro do ranking!</p>}
+                  <p className="pt-1 text-[10px] text-muted-foreground">
+                    📡 O Power Level cresce com ataque, vida, defesa, velocidade, nível e TRANSFORMAÇÕES. Derrota criaturas de territórios perigosos para o fazer explodir!
+                  </p>
                 </div>
               );
             })()}
+          </Panel>
+        )}
+
+        {/* ── v17: PODERES & ARMAS — o manual estilo Dragon Ball ── */}
+        {panel === "poderes" && char && (
+          <Panel title="⚡ Poderes, Transformações & Armas" onClose={() => setPanel("none")}>
+            <div className="mb-3 rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-2.5 text-center" data-testid="bw-poderes-pl">
+              <p className="text-[10px] font-black uppercase tracking-wider text-fuchsia-200">O teu Power Level (scouter)</p>
+              <p className="text-2xl font-black text-white">⚡ {myPl.toLocaleString("pt-PT")}</p>
+              <p className="text-[10px] text-white/60">Ataque×7 + Vida×0.55 + Defesa×4 + Velocidade×3 + Nível×12 — multiplicado pelas transformações</p>
+            </div>
+
+            <p className="mb-1.5 text-xs font-black text-amber-300">🔥 TRANSFORMAÇÕES (estilo Dragon Ball)</p>
+            <div className="mb-3 space-y-1.5">
+              {TRANSFORMS[char.classId].map((tf, ti) => {
+                const unlocked = char.level >= tf.lvl;
+                const active = form === ti + 1;
+                return (
+                  <div key={tf.name} className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${active ? "border-amber-400/60 bg-amber-500/15" : unlocked ? "border-white/10 bg-white/5" : "border-white/5 bg-white/[0.02] opacity-60"}`}>
+                    <span className="text-lg">{tf.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold">{tf.name} {active && <span className="text-amber-300">· ATIVA</span>}</p>
+                      <p className="text-[10px] text-white/60">{unlocked ? `×${tf.mult} de ataque · ×${tf.mult === 1.8 ? 1.22 : 1.12} de velocidade · drena KI` : `Desbloqueia no nível ${tf.lvl}`}</p>
+                    </div>
+                    <button
+                      onClick={() => engineRef.current?.transform(unlocked ? (active ? ti : ti + 1) : ti + 1)}
+                      className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-black ${active ? "bg-white/20 text-white" : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900"}`}
+                      data-testid={`bw-transform-${ti}`}
+                    >
+                      {active ? "Desativar" : "Transformar"}
+                    </button>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-muted-foreground">Como usar: toca no botão ⚡ da barra de combate ou prime <b>T</b> (base → 1ª → 2ª → base). O KI drena em forma transformada — quando acabar, voltas à base e ele recarrega sozinho.</p>
+            </div>
+
+            <p className="mb-1.5 text-xs font-black text-violet-300">🔮 OS TEUS PODERES ({CLASSES[char.classId].name})</p>
+            <div className="mb-3 space-y-1.5">
+              {mySkills.map((sk, i) => {
+                const unlocked = char.level >= sk.lvl;
+                return (
+                  <div key={sk.name} className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${unlocked ? "border-white/10 bg-white/5" : "border-white/5 bg-white/[0.02] opacity-60"}`}>
+                    <span className="text-lg">{sk.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold">{sk.name} <span className="text-white/40">· tecla {i + 1}</span></p>
+                      <p className="text-[10px] text-white/60">{unlocked ? `${sk.desc} · recarga ${sk.cd}s` : `Desbloqueia no nível ${sk.lvl}`}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mb-1.5 text-xs font-black text-sky-300">🗡️ ARMAS & EQUIPAMENTO</p>
+            <div className="mb-3 space-y-1 text-[11px] text-white/70">
+              <p>• Slots: <b>arma</b> (ataque), <b>armadura</b> (vida), <b>amuleto</b> (velocidade) e <b>escudo</b> (defesa) — equipa na <b>Mochila</b>.</p>
+              <p>• Raridades: <span className="text-white/60">Comum</span> → <span className="text-sky-300">Raro</span> → <span className="text-purple-300">Épico</span> → <span className="text-amber-300">Lendário</span>. Quanto mais raro, mais stats.</p>
+              <p>• Criaturas de territórios perigosos (Montanhas, Vulcânicas) e chefes dropam itens melhores.</p>
+              <p>• <b>Guerreiro</b> usa espada corpo a corpo · <b>Mago/Arqueiro/Curandeiro</b> atiram projéteis à distância (8.5m).</p>
+              <p>• <b>Guarda (Shift)</b> bloqueia 40% do dano — combina com transformação para duelos!</p>
+            </div>
+
+            <p className="mb-1.5 text-xs font-black text-emerald-300">💎 CRÉDITOS & PRÉMIO 1GB</p>
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 text-[11px] text-white/75">
+              <p className="mb-1">Saldo: <b className="text-emerald-300">{char.credits} 💎 créditos</b> (ganho em chefes, duelos e níveis)</p>
+              <p className="mb-1">🎁 O drop mais raro do mundo: <b>1GB em qualquer operadora</b> (Vodacom, Movitel, Tmcel) — cai de <b>chefes (0,5%)</b> e guardiões (0,2%). Ganhar é MESMO difícil.</p>
+              <p>Quando ganhares, abre-se um bilhete com mensagem automática pronta para o suporte no WhatsApp <b>+258 84 854 7887</b> — só escolhes a operadora e o teu número e envias. Levas o 1GB direto!</p>
+            </div>
+          </Panel>
+        )}
+
+        {/* ── v17: HERÓIS ONLINE — encontra jogadores e desafia 1v1 ── */}
+        {panel === "heros" && char && (
+          <Panel title="⚔️ Heróis no Mundo" onClose={() => setPanel("none")}>
+            {playersNear.length === 0 ? (
+              <div className="space-y-2 text-center" data-testid="bw-heros-empty">
+                <p className="text-3xl">🌍</p>
+                <p className="text-xs font-bold">Nenhum herói por perto agora</p>
+                <p className="text-[10px] text-muted-foreground">Os heróis online aparecem aqui em tempo real com o Power Level sincronizado. Convida amigos para se encontrarem no mundo!</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5" data-testid="bw-heros-list">
+                {playersNear.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs">
+                    <span className="text-base">🧑‍🚀</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold">{p.name}</p>
+                      <p className="text-[10px] text-white/60">Nv{p.level} · ⚡PL {p.pl.toLocaleString("pt-PT")} · a {p.dist}m</p>
+                    </div>
+                    <button
+                      onClick={() => engineRef.current?.requestDuel(p.id)}
+                      disabled={!!duelVs}
+                      className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-black ${duelVs ? "bg-white/10 text-white/40" : "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:brightness-110"}`}
+                      data-testid={`bw-duel-${p.name}`}
+                    >
+                      Desafiar
+                    </button>
+                  </div>
+                ))}
+                <p className="pt-1 text-[10px] text-muted-foreground">Duelo 1v1: 90 segundos, mesmo na praça. O vencedor leva <b className="text-emerald-300">10-15 💎 créditos</b> + 8 pts e pode publicar a vitória nos Stories!</p>
+              </div>
+            )}
           </Panel>
         )}
 
@@ -2990,6 +3322,52 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
                   data-testid="bw-sync-now"
                 >Sincronizar</button>
               </div>
+              {/* v17: publicar conquistas nos Stories */}
+              <div className="flex items-center gap-2 rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/10 px-2.5 py-2" data-testid="bw-set-stories">
+                <Sparkles className="h-4 w-4 text-fuchsia-400" />
+                <span className="flex-1 text-xs font-bold">
+                  Publicar conquistas nos Stories
+                  <span className="block text-[9px] font-normal text-fuchsia-300/80">níveis múltiplos de 5, chefes e duelos vencidos</span>
+                </span>
+                <button
+                  onClick={() => {
+                    setChar((p) => (p ? { ...p, shareWin: !p.shareWin } : p));
+                    worldAudio.play("click");
+                    pushToast(char?.shareWin ? "Stories: desligado" : "Stories: ligado — as tuas conquistas vão para o perfil!", "good");
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black ${char?.shareWin ? "bg-fuchsia-500 text-white" : "bg-white/10 text-white/50"}`}
+                  data-testid="bw-set-stories-toggle"
+                >
+                  {char?.shareWin ? "Ligado" : "Desligado"}
+                </button>
+              </div>
+              {/* v17: prémios 1GB guardados */}
+              {char && char.prizes.length > 0 && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2" data-testid="bw-set-prizes">
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-bold text-amber-200">🎁 Os teus prémios 1GB ({char.prizes.length})</p>
+                  <div className="space-y-1">
+                    {char.prizes.map((pz) => (
+                      <div key={pz.id} className="flex items-center gap-2 text-[10px]">
+                        <span className="font-mono font-black text-amber-300">{pz.code}</span>
+                        <span className="text-white/50">{pz.op || "sem operadora"}</span>
+                        <a
+                          href={prizeWhatsAppLink(pz.code, pz.op || prizeOp, prizePhone.trim() || "—", char.name)}
+                          target="_blank" rel="noreferrer"
+                          className="ml-auto rounded bg-green-600 px-1.5 py-0.5 font-black text-white"
+                        >
+                          WhatsApp
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                  <input
+                    value={prizePhone}
+                    onChange={(e) => setPrizePhone(e.target.value.replace(/[^0-9+ ]/g, "").slice(0, 13))}
+                    placeholder="o teu número p/ receber"
+                    className="mt-1.5 w-full rounded-lg border border-white/15 bg-black/40 px-2 py-1 text-[11px] font-bold text-white outline-none placeholder:text-white/25 focus:border-amber-400"
+                  />
+                </div>
+              )}
             </div>
             <p className="mt-3 text-[10px] text-muted-foreground">Teclas: WASD mover · F/clique atacar · 1/2/3 poderes · E interagir · Shift escudo · Tab mapa · M som · P foto.</p>
           </Panel>
@@ -3068,6 +3446,138 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── v17: DUELO — HUD do duelo ativo + pedido de duelo ── */}
+      <AnimatePresence>
+        {duelVs && (
+          <motion.div
+            key="duel-hud"
+            initial={{ opacity: 0, y: -14, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14 }}
+            className="pointer-events-none absolute left-1/2 top-16 z-20 -translate-x-1/2"
+            data-testid="bw-duel-hud"
+          >
+            <motion.div
+              className="flex items-center gap-2 rounded-full border border-red-400/60 bg-black/80 px-4 py-1.5 backdrop-blur"
+              animate={{ boxShadow: ["0 0 14px rgba(248,113,113,0.4)", "0 0 30px rgba(248,113,113,0.7)", "0 0 14px rgba(248,113,113,0.4)"] }}
+              transition={{ duration: 1.1, repeat: Infinity }}
+            >
+              <Swords className="h-3.5 w-3.5 text-red-300" />
+              <span className="text-xs font-black uppercase tracking-wider text-red-200">DUELO vs {duelVs.name}</span>
+              <span className="h-3 w-px bg-white/25" />
+              <span className="text-[11px] font-black tabular-nums text-white/85">{Math.max(0, Math.ceil((duelVs.until - duelNow) / 1000))}s</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {duelReq && !duelVs && (
+          <motion.div
+            key="duel-req"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-36 left-1/2 z-30 -translate-x-1/2"
+            data-testid="bw-duel-req"
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-400/50 bg-slate-900/95 px-3 py-2 shadow-2xl backdrop-blur">
+              <span className="text-lg">⚔️</span>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-white">{duelReq.name} desafiou-te!</p>
+                <p className="text-[10px] text-amber-300">⚡ PL {duelReq.pl.toLocaleString("pt-PT")} · aceita o duelo 1v1</p>
+              </div>
+              <button
+                onClick={() => { engineRef.current?.acceptDuel(duelReq.from); setDuelReq(null); }}
+                className="shrink-0 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 px-2.5 py-1.5 text-[11px] font-black text-white hover:brightness-110"
+                data-testid="bw-duel-accept"
+              >
+                Aceitar
+              </button>
+              <button
+                onClick={() => { engineRef.current?.declineDuel(duelReq.from); setDuelReq(null); }}
+                className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-black text-white/70 hover:bg-white/20"
+                data-testid="bw-duel-decline"
+              >
+                Recusar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── v17: PRÉMIO 1GB — bilhete com mensagem automática para o suporte ── */}
+      <AnimatePresence>
+        {prize && (
+          <motion.div
+            key="prize-modal"
+            className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            data-testid="bw-prize-modal"
+          >
+            <motion.div
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-emerald-400/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl"
+              initial={{ scale: 0.8, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}
+            >
+              <div className="relative bg-gradient-to-r from-emerald-600 via-green-500 to-lime-500 px-5 py-4 text-center">
+                <motion.p className="text-4xl" animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.15, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>🎁</motion.p>
+                <p className="font-display text-2xl font-black text-white drop-shadow">GANHASTE 1GB!</p>
+                <p className="text-[11px] font-bold text-emerald-100">Drop raríssimo do Bateu World — qualquer operadora</p>
+                <motion.div className="absolute inset-0 bg-white/10" animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 2.2, repeat: Infinity }} />
+              </div>
+              <div className="space-y-3 p-4 text-white">
+                <div className="rounded-xl bg-white/5 p-2.5 text-center">
+                  <p className="text-[10px] uppercase tracking-wider text-white/50">Código do prémio</p>
+                  <p className="font-mono text-lg font-black tracking-wider text-emerald-300" data-testid="bw-prize-code">{prize.code}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] font-bold text-white/70">1. Escolhe a operadora</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {OPERATORS.map((op) => (
+                      <button
+                        key={op}
+                        onClick={() => setPrizeOp(op)}
+                        className={`rounded-lg py-1.5 text-[11px] font-black transition-colors ${prizeOp === op ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
+                        data-testid={`bw-prize-op-${op.toLowerCase()}`}
+                      >
+                        {op}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] font-bold text-white/70">2. O teu número ({prizeOp})</p>
+                  <input
+                    value={prizePhone}
+                    onChange={(e) => setPrizePhone(e.target.value.replace(/[^0-9+ ]/g, "").slice(0, 13))}
+                    placeholder="84 123 4567"
+                    className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-emerald-400"
+                    data-testid="bw-prize-phone"
+                  />
+                </div>
+                <a
+                  href={prizeWhatsAppLink(prize.code, prizeOp, prizePhone.trim() || "—", char?.name || "Herói")}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-500/30 hover:brightness-110"
+                  data-testid="bw-prize-whatsapp"
+                >
+                  📲 Pedir pelo WhatsApp (+258 84 854 7887)
+                </a>
+                <p className="text-center text-[10px] text-white/45">
+                  A mensagem já vai escrita e pronta — o suporte confirma o código e ativa os teus 1GB.
+                </p>
+                <button
+                  onClick={() => { setPrize(null); pushToast("💎 Prémio guardado — também está no painel Definições!", "good"); }}
+                  className="w-full rounded-xl bg-white/10 py-2 text-xs font-black text-white/70 hover:bg-white/20"
+                  data-testid="bw-prize-close"
+                >
+                  Guardar para depois
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* v17: SAIR do ecrã inteiro (só no modo imersivo do telemóvel) — entra
+          na faixa de navegação como primeiro botão para não colidir com a HUD */}
     </div>
   ));
 }

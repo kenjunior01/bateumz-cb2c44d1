@@ -1,0 +1,31 @@
+import { chromium } from "playwright";
+const BASE = "http://localhost:8099";
+const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const errs = [];
+page.on("pageerror", (e) => errs.push("PAGEERROR: " + String(e)));
+page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errs.push(m.type().toUpperCase() + ": " + m.text()); });
+
+await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
+const nameInput = page.locator('input[placeholder="Nome do teu herói"]');
+await nameInput.waitFor({ state: "visible", timeout: 40000 }).catch(() => {});
+await nameInput.fill("ProbeHero");
+await page.locator('button:has-text("ENTRAR NO MUNDO")').first().click().catch(() => {});
+await page.locator('[data-testid="bateu-world"] canvas').waitFor({ state: "visible", timeout: 40000 }).catch(() => {});
+await page.waitForTimeout(7000);
+
+const mark = errs.length;
+await page.evaluate(() => { const e = window.__bw; e.debugForceDuelReq(); });
+await page.waitForTimeout(800);
+await page.locator('[data-testid="bw-duel-accept"]').click({ force: true }).catch(() => {});
+await page.waitForTimeout(600);
+await page.evaluate(() => { const e = window.__bw; e.debugEndDuel(); });
+await page.waitForTimeout(1500);
+console.log("=== erros durante o ciclo de duelo ===");
+for (const e of errs.slice(mark)) console.log(e.slice(0, 250));
+console.log("=== react root vivo? ===");
+console.log("bw-photo count:", await page.locator('[data-testid="bw-photo"]').count());
+await page.locator('[data-testid="bw-nav-char"]').click({ force: true }).catch(() => {});
+await page.waitForTimeout(600);
+console.log("painel herói abre?", (await page.locator('[data-testid="bw-panel"]').count()));
+await browser.close();

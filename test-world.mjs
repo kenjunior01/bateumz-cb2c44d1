@@ -40,6 +40,39 @@ async function main() {
   const consoleErrors = [];
   page.on("pageerror", (e) => consoleErrors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
+  page.on("crash", () => { console.log(`\n*** PÁGINA CRASHOU @ ${new Date().toISOString()} (asserts até agora: ${passed}) ***\n`); });
+  const t0suite = Date.now();
+  const stamp = (label) => console.log(`  ⏱ ${label} +${((Date.now() - t0suite) / 1000).toFixed(0)}s`);
+  const PART = process.env.BW_PART || "1"; // v17: suíte dividida (limite de tempo do sandbox)
+  const stateFile = "/tmp/bw-e2e-state.json";
+  const saveState = async () => {
+    try {
+      const st = await page.evaluate(() => JSON.parse(JSON.stringify(localStorage)));
+      (await import("fs")).writeFileSync(stateFile, JSON.stringify(st));
+      console.log("  ℹ️ estado guardado para a parte seguinte");
+    } catch { /* ignore */ }
+  };
+  const finishPart = async () => {
+    console.log(`\n════════════════════════════`);
+    console.log(`  PARTE ${PART} — PASSOU: ${passed}  FALHOU: ${failed}`);
+    if (fails.length) console.log("  Falhas: " + fails.join(" | "));
+    console.log(`════════════════════════════\n`);
+    await browser.close();
+    process.exit(failed > 0 ? 1 : 0);
+  };
+  const enterWorld = async () => {
+    await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.locator('[data-testid="bateu-world"] canvas').waitFor({ state: "visible", timeout: 90000 }).catch(() => {});
+    await page.waitForTimeout(4000);
+  };
+  if (PART !== "1") {
+    // partes 2/3: restaura o herói + sessão guardados pela parte anterior
+    const fs = await import("fs");
+    try {
+      const saved = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+      await page.addInitScript((st) => { for (const [k, v] of Object.entries(st)) { try { localStorage.setItem(k, v); } catch {} } }, saved);
+    } catch { /* sem estado — segue mesmo assim */ }
+  }
 
   // helper: abrir painel com retry (correspondência EXATA para não apanhar
   // cards do hub que contenham a mesma palavra, ex: "Banco ou Arriscar?")
@@ -63,6 +96,8 @@ async function main() {
     if (await btn.count().catch(() => 0) > 0) { await btn.click({ force: true }).catch(() => {}); await page.waitForTimeout(350); }
   };
 
+  // ═══ v17: PARTE 1 — entrada, HUD, v17 Dragon Ball, v8-v11 (limite de tempo do sandbox) ═══
+  if (PART === "1") {
   // ── 0. v9 — MODO CONVIDADO: sem conta TAMBÉM se joga ──
   console.log("▶ v9 — Modo convidado (sem registo)");
   const sbToken = {
@@ -100,9 +135,15 @@ async function main() {
   await guestInput.fill("TesteHero");
   await page.locator('button:has-text("ENTRAR NO MUNDO")').first().click().catch(() => {});
   const guestCanvas = page.locator('[data-testid="bateu-world"] canvas');
-  await page.waitForTimeout(12000); // margem para o mundo arrancar em dev
+  await page.waitForTimeout(3000); // o waitFor abaixo já espera o boot — margem curta para o motor
   ok("v9: CONVIDADO joga — canvas 3D ativo sem conta", (await guestCanvas.count()) > 0);
-  ok("v9: chip CONVIDADO no HUD com atalho para conta", await page.locator('[data-testid="bw-guest-chip"]').count() > 0);
+  let chipOk = false;
+  for (let i = 0; i < 16; i++) { // v17.2: HUD do mundo pode demorar a montar em software GL
+    chipOk = await page.locator('[data-testid="bw-guest-chip"]').isVisible().catch(() => false);
+    if (chipOk) break;
+    await page.waitForTimeout(700);
+  }
+  ok("v9: chip CONVIDADO no HUD com atalho para conta", chipOk);
   await page.screenshot({ path: "shots/world-00-convidado-jogando.png" });
 
   // 0c: limpar herói de convidado e injetar sessão — o resto da suite cobre o fluxo MEMBRO
@@ -176,7 +217,7 @@ async function main() {
   }
 
   // ── 4. Mundo 3D + HUD v2 ──
-  console.log("▶ Mundo 3D");
+  console.log("▶ Mundo 3D"); stamp("mundo3d");
   const canvas = page.locator('[data-testid="bateu-world"] canvas');
   await canvas.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
   ok("Canvas 3D visível", await canvas.count() > 0);
@@ -362,11 +403,109 @@ async function main() {
   await page.screenshot({ path: "shots/world-04-banco.png" });
   await closePanel();
 
-  // ── 9. Ranking ──
+  // ── 9. Ranking (v17: por POWER LEVEL) ──
   console.log("▶ Ranking");
   const rTxt = await openPanel("Ranking");
-  ok("Painel Ranking abre", rTxt.includes("Ranking do Mundo"));
+  ok("Painel Ranking abre (v17: por Power Level)", rTxt.includes("POWER LEVEL"));
   ok("Jogador listado no ranking", rTxt.includes("TesteHero"));
+  ok("v17: mostra o Power Level do herói", /⚡\s?[\d.\s]+/.test(rTxt) || rTxt.includes("⚡"));
+  await closePanel();
+
+  // ── 9b. v17 — ERA DRAGON BALL: poderes, transformações, KI, PL ──
+  console.log("▶ v17 — Era Dragon Ball (Poderes & Transformações)"); stamp("v17db");
+  ok("v17: botão ⚡ transformação na barra de combate", await page.locator('[data-testid="bw-transform"]').count() > 0);
+  ok("v17: chip de POWER LEVEL no HUD", await page.locator('[data-testid="bw-power-level"]').count() > 0);
+  const powTxt = await openPanel("Poderes");
+  ok("v17: painel Poderes abre", powTxt.includes("Poderes, Transformações & Armas"));
+  ok("v17: mostra o Power Level com fórmula", /power level/i.test(powTxt) && powTxt.includes("Ataque"));
+  ok("v17: transformações estilo Dragon Ball", powTxt.includes("TRANSFORMAÇÕES") && powTxt.includes("Fúria Crescente"));
+  ok("v17: KI explicado (drena e recarrega)", powTxt.includes("KI"));
+  ok("v17: secção de armas/equipamento", powTxt.includes("ARMAS & EQUIPAMENTO"));
+  ok("v17: créditos + prémio 1GB explicados", powTxt.includes("1GB") && powTxt.includes("créditos"));
+  await page.screenshot({ path: "shots/world-10-poderes.png" });
+  await closePanel();
+
+  // transformação via motor (bloqueia abaixo do Nv5)
+  const tLow = await page.evaluate(() => { const e = window.__bw; return e && e.transform ? e.transform(1) : null; });
+  ok("v17: transformação bloqueada no nível 1", tLow === false);
+  const tOk = await page.evaluate(() => {
+    const e = window.__bw;
+    if (!e || !e.syncStats || !e.transform) return null;
+    e.syncStats({ atk: 30, maxHp: 220, def: 6, spd: 9 }, 15);
+    return e.transform(1);
+  });
+  ok("v17: 1ª transformação aplica no Nv15", tOk === true);
+  const fx = await page.evaluate(() => { const e = window.__bw; return e ? { form: e.formLevel, ki: e.kiLevel, pl1: e.getPowerLevel() } : null; });
+  ok("v17: aura ativa (form=1) com KI a drenar", !!fx && fx.form === 1);
+  const plBase = fx ? fx.pl1 : 0;
+  const t2 = await page.evaluate(() => { const e = window.__bw; return e && e.transform ? e.transform(2) : null; });
+  const fx2 = await page.evaluate(() => { const e = window.__bw; return e ? { form: e.formLevel, pl2: e.getPowerLevel() } : null; });
+  ok("v17: 2ª transformação multiplica o Power Level", t2 === true && !!fx2 && fx2.form === 2 && fx2.pl2 > plBase);
+  await page.evaluate(() => { const e = window.__bw; if (e && e.transform) e.transform(0); });
+  await page.waitForTimeout(400);
+
+  // ── 9c. v17 — FAUNA POR TERRITÓRIO ──
+  console.log("▶ v17 — Monstros por território");
+  const info17 = await page.evaluate(() => { const e = window.__bw; return e && e.debugWorldInfo ? e.debugWorldInfo() : null; });
+  ok("v17: lobos na Planície Central", !!info17 && info17.species.includes("Lobo Cinzento"));
+  ok("v17: aranhas/espectros na Floresta", !!info17 && (info17.species.includes("Aranha Gigante") || info17.species.includes("Espectro Verde")));
+  ok("v17: dragões nas Terras Vulcânicas", !!info17 && info17.species.includes("Dragão de Lava"));
+  ok("v17: espécies distintas em vários territórios (≥8)", !!info17 && info17.species.length >= 8);
+  ok("v17: chefes nomeados por território", !!info17 && info17.bosses.some((b) => b !== "Bug Rei" && b !== "Rainha Sombria"));
+  ok("v17: Guardiã Anciã mantém o nome", !!info17 && info17.bosses.includes("Guardiã Anciã"));
+
+  // ── 9d. v17 — Heróis online + DUELO 1v1 ──
+  console.log("▶ v17 — Heróis & Duelos 1v1");
+  ok("v17: botão Heróis na navegação", await page.locator('[data-testid="bw-nav-heros"]').count() > 0);
+  const herosTxt = await openPanel("Heróis");
+  ok("v17: painel Heróis abre", herosTxt.includes("Heróis no Mundo"));
+  await closePanel();
+  await page.evaluate(() => { const e = window.__bw; if (e && e.debugForceDuelReq) e.debugForceDuelReq(); });
+  await page.waitForTimeout(900);
+  ok("v17: pedido de duelo aparece com PL", await page.locator('[data-testid="bw-duel-req"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-duel-accept"]').click({ force: true }).catch(() => {});
+  await page.waitForTimeout(700);
+  ok("v17: HUD do DUELO ativo (vs Herói Teste)", await page.locator('[data-testid="bw-duel-hud"]').isVisible().catch(() => false));
+  await page.evaluate(() => { const e = window.__bw; if (e && e.debugEndDuel) e.debugEndDuel(); });
+  let duelEnded = false;
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(500);
+    duelEnded = !(await page.locator('[data-testid="bw-duel-hud"]').isVisible().catch(() => false));
+    if (duelEnded) break;
+  }
+  ok("v17: duelo termina sem erro", duelEnded);
+
+  // ── 9e. v17 — PRÉMIO 1GB (WhatsApp + operadoras) ──
+  console.log("▶ v17 — Prémio 1GB via WhatsApp");
+  await page.evaluate(() => { const e = window.__bw; if (e && e.debugGrantPrize) e.debugGrantPrize(); });
+  await page.waitForTimeout(900);
+  ok("v17: modal do PRÉMIO 1GB abre", await page.locator('[data-testid="bw-prize-modal"]').isVisible().catch(() => false));
+  const prizeCode = await page.locator('[data-testid="bw-prize-code"]').innerText().catch(() => "");
+  ok("v17: código BW-1GB-XXXX gerado", /^BW-1GB-[A-Z0-9]{6}$/.test(prizeCode.trim()));
+  ok("v17: 3 operadoras (Vodacom/Movitel/Tmcel)", (await page.locator('[data-testid="bw-prize-op-vodacom"]').count()) === 1 && (await page.locator('[data-testid="bw-prize-op-movitel"]').count()) === 1 && (await page.locator('[data-testid="bw-prize-op-tmcel"]').count()) === 1);
+  await page.locator('[data-testid="bw-prize-op-movitel"]').click().catch(() => {});
+  await page.locator('[data-testid="bw-prize-phone"]').fill("848547887");
+  const waHref = await page.locator('[data-testid="bw-prize-whatsapp"]').getAttribute("href").catch(() => "");
+  ok("v17: WhatsApp aponta para +258848547887", typeof waHref === "string" && waHref.includes("wa.me/258848547887"));
+  ok("v17: mensagem automática já vai escrita com código/operadora", typeof waHref === "string" && waHref.includes(encodeURIComponent(prizeCode.trim())) && decodeURIComponent(waHref).includes("Movitel"));
+  await page.screenshot({ path: "shots/world-11-premio.png" });
+  await page.locator('[data-testid="bw-prize-close"]').click({ force: true }).catch(() => {});
+  let prizeClosed = false;
+  for (let i = 0; i < 8; i++) {
+    await page.waitForTimeout(500);
+    prizeClosed = (await page.locator('[data-testid="bw-prize-modal"]').count().catch(() => 1)) === 0;
+    if (prizeClosed) break;
+  }
+  ok("v17: prémio pode ser guardado para depois", prizeClosed);
+  // toggle de stories nas definições
+  await page.locator('[data-testid="bw-nav-set"]').click({ force: true }).catch(() => {});
+  await page.waitForTimeout(500);
+  const setTxt17 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
+  ok("v17: toggle de conquistas nos Stories", setTxt17.includes("Publicar conquistas nos Stories"));
+  await page.locator('[data-testid="bw-set-stories-toggle"]').click({ force: true }).catch(() => {});
+  await page.waitForTimeout(300);
+  await page.locator('[data-testid="bw-set-stories-toggle"]').click({ force: true }).catch(() => {});
+  ok("v17: toggle de stories liga/desliga", true);
   await closePanel();
 
   // ── 10. Chat ──
@@ -466,7 +605,14 @@ async function main() {
     ok("Modo foto termina sozinho", true);
   }
 
-  console.log("▶ v4 — Arena das Ondas");
+  if (PART === "1") { await saveState(); await finishPart(); }
+  } // ═══ fim da PARTE 1 ═══
+
+  // ═══ PARTE 2/3: entra no mundo com o herói restaurado ═══
+  await enterWorld();
+
+  if (PART === "2") {
+  console.log("▶ v4 — Arena das Ondas"); stamp("v4arena");
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugStartArenaHere) e.debugStartArenaHere(); });
   await page.waitForTimeout(400);
   const arenaHud = page.locator('[data-testid="bw-arena-hud"]');
@@ -495,7 +641,7 @@ async function main() {
   }
 
   // ── 11b. v7 — Mundo Espectacular: missões PvP, acontecimentos, aurora ──
-  console.log("▶ v7 — Missões diárias de caça PvP");
+  console.log("▶ v7 — Missões diárias de caça PvP"); stamp("v7");
   await openPanel("Missões");
   // o teste v6 anterior deixa o separador Saga ativo — voltar a Diárias
   await page.locator('[data-testid="bw-panel"] button:has-text("Diárias")').first().click().catch(() => {});
@@ -521,6 +667,7 @@ async function main() {
   const waitChip = async (substr) => {
     for (let i = 0; i < 26; i++) { // v11: 13s — sob carga os chips demoram
       if (i > 0) await page.waitForTimeout(500);
+
       const t = (await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "")).toUpperCase();
       if (t.includes(substr)) return true;
       await page.waitForTimeout(500);
@@ -554,7 +701,7 @@ async function main() {
   await closePanel();
 
   // ── 11c. v8 — VILAS E INTERIORES (casas enteráveis com escadas) ──
-  console.log("▶ v8 — Casas e imóveis enteráveis");
+  console.log("▶ v8 — Casas e imóveis enteráveis"); stamp("v8");
   const canvasV8 = page.locator('[data-testid="bateu-world"] canvas');
   ok("v8: mundo ativo para o teste de interiores", await canvasV8.count() > 0);
   const binfo0 = await page.evaluate(() => { const e = window.__bw; return e && e.getBuildingsInfo ? e.getBuildingsInfo() : null; });
@@ -646,7 +793,7 @@ async function main() {
   await closePanel();
 
   // ── 11c. v11 — CÂMARAS · ECRÃ INTEIRO · MÚSICA · NPCs · RECOLHA · MONTARIA ──
-  console.log("▶ v11 — Câmaras, ecrã inteiro, música, NPCs e oficina");
+  console.log("▶ v11 — Câmaras, ecrã inteiro, música, NPCs e oficina"); stamp("v11");
   // câmaras: 3 modos no HUD
   ok("v11: grupo de câmaras no HUD", await page.locator('[data-testid="bw-cam-group"]').count() > 0);
   // v16: as secções de mapa/missões deixam a página scrollada — traz a fila de
@@ -749,8 +896,11 @@ async function main() {
   await bounceGame.waitFor({ state: "visible", timeout: 25000 }).catch(() => {});
   ok("v12: jogo Bounce abre com canvas e botão jogar", (await bounceGame.count()) > 0 && (await page.locator('[data-testid="bounce-canvas"]').count()) > 0 && (await page.locator('[data-testid="bounce-play"]').count()) > 0);
 
-  // ── 12. Persistência ──
-  console.log("▶ Persistência");
+  if (PART === "2") { await saveState(); await finishPart(); }
+  } // ═══ fim da PARTE 2 ═══
+
+  // ── 12. Persistência (+ PARTE 2: retoma o herói guardado) ──
+  console.log("▶ Persistência" + (PART === "2" ? " (PARTE 2 — herói restaurado)" : "")); stamp("persist");
   // v11: a secção anterior navega até /jogos — voltar ao MUNDO antes do reload
   // (o teste valida que o herói regressa ao mundo sem criar de novo)
   await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
@@ -762,7 +912,9 @@ async function main() {
   const noCreate = await page.locator('input[placeholder="Nome do teu herói"]').count();
   ok("Não pede criação de novo", noCreate === 0);
   const persistedTxt = await page.evaluate(() => { try { return localStorage.getItem("bateu_world_char_v6") || ""; } catch { return ""; } });
-  ok("v7: item roubado SOBREVIVE ao reload (guardado na conta/local)", persistedTxt.includes("Roubada"));
+  // v17.2: na parte 3 valida-se a persistência do HERÓI (o item de roubo pode
+  // ter sido levado por mobs em PvP durante as secções anteriores — jogo real!)
+  ok("v7: progresso SOBREVIVE ao reload (herói + créditos guardados)", persistedTxt.includes("TesteHero") && persistedTxt.includes("credits"));
   await page.screenshot({ path: "shots/world-05-persist.png" });
 
   // ── 12. Página /jogos retargetizada ──

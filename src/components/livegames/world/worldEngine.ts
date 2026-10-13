@@ -226,6 +226,8 @@ interface Mob {
   stunUntil: number;
   slowUntil: number;
   name: string;
+  color: number; // v17: cor da espécie (para flash de dano/partículas)
+  pl: number;    // v17: Power Level da criatura (scouter)
   arena?: boolean;
   elite?: boolean; // v11: variante rara — mais forte e recompensada
   event?: boolean; // v7: mob de Acontecimento (recompensas x2, desaparece no fim)
@@ -249,6 +251,9 @@ interface RemotePlayer {
   walkT: number;
   avKey: string;
   emoteSpr: THREE.Sprite | null;
+  // v17: nível e Power Level sincronizados do outro herói
+  lv?: number;
+  pl?: number;
   emoteUntil: number;
 }
 
@@ -361,15 +366,71 @@ interface ArenaState {
   cooldown: boolean;
 }
 
-// ── Balanceamento v2: 5 tiers + guardiões + 2 chefes ─────────
-const MOB_TIERS = [
-  // v16: progressão mais exigente — XP por morte reduzido ~35% (ouro mantém)
-  { hp: 40, atk: 6, xp: 9, gold: 10, pts: 1, speed: 2.2, color: 0x4ade80, name: "Bug Verde", scale: 1 },
-  { hp: 95, atk: 12, xp: 22, gold: 24, pts: 2, speed: 2.8, color: 0xf97316, name: "Bug Laranja", scale: 1.25 },
-  { hp: 190, atk: 20, xp: 48, gold: 55, pts: 4, speed: 3.3, color: 0xa855f7, name: "Bug Sombrio", scale: 1.5 },
-  { hp: 340, atk: 30, xp: 90, gold: 100, pts: 7, speed: 3.6, color: 0x38bdf8, name: "Bug Gélido", scale: 1.7 },
-  { hp: 520, atk: 42, xp: 155, gold: 180, pts: 10, speed: 3.9, color: 0xf43f5e, name: "Bug Infernal", scale: 1.9 },
+// ── Balanceamento v2: 5 tiers (agora só na ARENA — criaturas clássicas) ──
+export interface MobSpecies {
+  name: string;
+  color: number;
+  danger: number; // 0..4 — determina loot/loot-rarity
+  hp: number; atk: number; xp: number; gold: number; pts: number;
+  speed: number; scale: number;
+  feature: "none" | "horns" | "spikes" | "ears" | "fins" | "shell" | "crystals";
+  shape: "round" | "tall" | "wide";
+}
+const MOB_TIERS: MobSpecies[] = [
+  { name: "Bug Verde", color: 0x4ade80, danger: 0, hp: 40, atk: 6, xp: 9, gold: 10, pts: 1, speed: 2.2, scale: 1, feature: "none", shape: "round" },
+  { name: "Bug Laranja", color: 0xf97316, danger: 1, hp: 95, atk: 12, xp: 22, gold: 24, pts: 2, speed: 2.8, scale: 1.25, feature: "horns", shape: "round" },
+  { name: "Bug Sombrio", color: 0xa855f7, danger: 2, hp: 190, atk: 20, xp: 48, gold: 55, pts: 4, speed: 3.3, scale: 1.5, feature: "spikes", shape: "round" },
+  { name: "Bug Gélido", color: 0x38bdf8, danger: 3, hp: 340, atk: 30, xp: 90, gold: 100, pts: 7, speed: 3.6, scale: 1.7, feature: "spikes", shape: "round" },
+  { name: "Bug Infernal", color: 0xf43f5e, danger: 4, hp: 520, atk: 42, xp: 155, gold: 180, pts: 10, speed: 3.9, scale: 1.9, feature: "spikes", shape: "round" },
 ];
+
+// ── v17: FAUNA POR TERRITÓRIO — cada região tem as suas próprias criaturas ──
+// XP já reduzido ~35% (subida de nível DIFÍCIL como o utilizador pediu)
+const MOB_SPECIES: MobSpecies[] = [
+  // Planície Central — zona inicial
+  { name: "Lobo Cinzento", color: 0x94a3b8, danger: 0, hp: 40, atk: 6, xp: 9, gold: 12, pts: 1, speed: 2.7, scale: 1, feature: "ears", shape: "round" },
+  { name: "Javali Selvagem", color: 0xb45309, danger: 1, hp: 95, atk: 12, xp: 22, gold: 26, pts: 2, speed: 2.6, scale: 1.2, feature: "horns", shape: "wide" },
+  // Floresta Ancestral
+  { name: "Aranha Gigante", color: 0x166534, danger: 1, hp: 110, atk: 13, xp: 24, gold: 28, pts: 2, speed: 3.1, scale: 1.1, feature: "spikes", shape: "wide" },
+  { name: "Espectro Verde", color: 0x4ade80, danger: 2, hp: 190, atk: 20, xp: 48, gold: 58, pts: 4, speed: 2.9, scale: 1.4, feature: "none", shape: "tall" },
+  // Dunas Escaldantes
+  { name: "Escorpião de Areia", color: 0xf59e0b, danger: 2, hp: 210, atk: 21, xp: 50, gold: 60, pts: 4, speed: 3.2, scale: 1.3, feature: "spikes", shape: "wide" },
+  { name: "Serpente do Deserto", color: 0xfb923c, danger: 2, hp: 175, atk: 23, xp: 52, gold: 55, pts: 4, speed: 3.6, scale: 1.3, feature: "none", shape: "tall" },
+  // Litoral das Ondas
+  { name: "Caranguejo Colossal", color: 0x38bdf8, danger: 2, hp: 230, atk: 18, xp: 50, gold: 62, pts: 4, speed: 2.3, scale: 1.35, feature: "shell", shape: "wide" },
+  { name: "Harpia do Mar", color: 0x7dd3fc, danger: 3, hp: 340, atk: 28, xp: 92, gold: 105, pts: 7, speed: 3.9, scale: 1.4, feature: "fins", shape: "tall" },
+  // Pântano Sombrio
+  { name: "Slime Tóxico", color: 0x7c3aed, danger: 2, hp: 260, atk: 17, xp: 50, gold: 58, pts: 4, speed: 2.1, scale: 1.4, feature: "none", shape: "round" },
+  { name: "Cobra do Pântano", color: 0x84cc16, danger: 3, hp: 330, atk: 31, xp: 92, gold: 100, pts: 7, speed: 3.4, scale: 1.4, feature: "horns", shape: "tall" },
+  // Montanhas Negras
+  { name: "Golem de Pedra", color: 0x64748b, danger: 3, hp: 420, atk: 27, xp: 92, gold: 110, pts: 7, speed: 2.1, scale: 1.65, feature: "crystals", shape: "wide" },
+  { name: "Grifo Rochoso", color: 0xa8a29e, danger: 4, hp: 520, atk: 40, xp: 158, gold: 185, pts: 10, speed: 4.0, scale: 1.5, feature: "fins", shape: "tall" },
+  // Terras Vulcânicas — o território mais hostil
+  { name: "Demónio Ígneo", color: 0xf43f5e, danger: 4, hp: 540, atk: 41, xp: 158, gold: 190, pts: 10, speed: 3.7, scale: 1.55, feature: "horns", shape: "tall" },
+  { name: "Dragão de Lava", color: 0xdc2626, danger: 4, hp: 640, atk: 46, xp: 175, gold: 210, pts: 12, speed: 3.4, scale: 1.7, feature: "spikes", shape: "wide" },
+];
+// espécie por região (índices em MOB_SPECIES)
+const REGION_SPECIES: Record<string, number[]> = {
+  planicie: [0, 1],
+  floresta: [2, 3],
+  dunas: [4, 5],
+  litoral: [6, 7],
+  pantano: [8, 9],
+  montanhas: [10, 11],
+  vulcanicas: [12, 13],
+};
+const BOSS_NAME_BY_REGION: Record<string, string> = {
+  planicie: "Rei dos Lobos", floresta: "Rainha das Aranhas", dunas: "Escorpião Ancião",
+  litoral: "Leviatã do Recife", pantano: "Mãe dos Slimes", montanhas: "Golem Titã",
+  vulcanicas: "Dragão Ancestral",
+};
+function speciesForRegion(regionId: string | undefined, danger: number, variant = 0): MobSpecies {
+  const pool = (regionId && REGION_SPECIES[regionId]) || [];
+  if (pool.length === 0) return MOB_TIERS[Math.max(0, Math.min(4, danger))];
+  // v17.1: alterna as 2 espécies da região (variant par/ímpar) — antes só a
+  // primeira saía quando as duas tinham o mesmo nível de perigo
+  return MOB_SPECIES[pool[Math.abs(variant) % pool.length]];
+}
 
 const CLASS_COLORS = [0xef4444, 0x8b5cf6, 0x22c55e, 0x06b6d4];
 const WORLD_RADIUS = 230;
@@ -573,6 +634,7 @@ export class WorldEngine {
   private fpsT = 0;
   private dynScale = 1;
   private basePR = 1.5;
+  private isSoftwareGL = false; // v17.2: renderer por software (headless/sem GPU)
   private disposed = false;
   private resizeObs!: ResizeObserver;
   private myId: string;
@@ -584,6 +646,15 @@ export class WorldEngine {
   private dashUntil = 0;
   private pvpShieldUntil = 0;
   private lastPvpHpSent = 0;
+  // ── v17: TRANSFORMAÇÃO estilo Dragon Ball + KI + Power Level ──
+  private form = 0;   // 0 base · 1ª transformação · 2ª transformação
+  private ki = 100;   // energia KI 0-100 (drena em forma transformada)
+  private auraMesh: THREE.Mesh | null = null;
+  private auraLight: THREE.PointLight | null = null;
+  private auraSparks: THREE.Points | null = null;
+  // ── v17: DUELO 1v1 (desafio entre heróis) ──
+  private duel: { opponentId: string; opponentName: string; until: number } | null = null;
+  private duelReq: { from: string; name: string; pl: number; until: number } | null = null;
   private dustTimer = 0;
 
   // PvP
@@ -705,20 +776,30 @@ export class WorldEngine {
 
   private init(): void {
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    // v16: antialias SEMPRE — no mobile era desligado e o mundo ficava serrilhado/embaciado
+    // v17: NÍTIDO — antialias SEMPRE ligado (antes: desligado no telemóvel = serrilhado)
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
       powerPreference: "high-performance",
     });
+    // v17.2: deteta RENDERER POR SOFTWARE (SwiftShader/llvmpipe — headless e
+    // telemóveis sem GPU). Nesse caso baixa o pixel ratio e desliga o MSAA do
+    // composer: os buffers HalfFloat+MSAA em software rebentam com a memória
+    // em sessões longas (crash do separador). Em GPU real mantém tudo nítido.
+    try {
+      const gl = this.renderer.getContext();
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      const rendererName = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : "";
+      this.isSoftwareGL = /swiftshader|llvmpipe|software|basic render/i.test(rendererName);
+      if (this.isSoftwareGL) console.info("[BateuWorld] GPU por software detetada — modo leve");
+    } catch { this.isSoftwareGL = false; }
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x8fc8e8);
-    // v16: névoa 33% mais leve — o mundo fica nítido ao longe (antes «nublado»)
-    this.scene.fog = new THREE.FogExp2(0xb2d8ea, 0.0028);
+    this.scene.background = new THREE.Color(0x87ceeb);
+    // v17: névoa 2× mais leve (0.0052 → 0.0026) — fim do ar "nublado"
+    this.scene.fog = new THREE.FogExp2(0x9bd0e8, 0.0026);
 
-    // v16: horizonte mais longe — com a névoa leve já se vê o fim do mundo sem cortes
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 720);
+    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 720); // v17: vê-se muito mais longe
 
     this.hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3d6b35, 0.95);
     this.scene.add(this.hemi);
@@ -775,28 +856,32 @@ export class WorldEngine {
   private setupPostFx(isTouch: boolean): void {
     try {
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      // v16: exposição mais alta — imagem viva e clara, sem sensação «ofuscada»
-      this.renderer.toneMappingExposure = 1.14;
+      this.renderer.toneMappingExposure = 1.15; // v17: mais luz natural
       const size = new THREE.Vector2();
       this.renderer.getSize(size);
-      // v16: MSAA no composer — sem isto, o pós-processamento anulava o antialias
-      // e o mundo ficava desfocado/serrilhado mesmo com antialias ligado
-      const bufSize = this.renderer.getDrawingBufferSize(new THREE.Vector2());
-      const msaaRt = new THREE.WebGLRenderTarget(bufSize.x, bufSize.y, {
-        type: THREE.HalfFloatType,
-        samples: isTouch ? 2 : 4,
-      });
-      this.composer = new EffectComposer(this.renderer, msaaRt);
+      // v17: MSAA real no composer — o antialias do renderer era ANULADO
+      // pelo EffectComposer (sem samples tudo ficava serrilhado/fofo)
+      const dpr = window.devicePixelRatio || 1;
+      const rt = new THREE.WebGLRenderTarget(
+        Math.max(2, Math.floor(size.x * dpr)),
+        Math.max(2, Math.floor(size.y * dpr)),
+        this.isSoftwareGL
+          ? { type: THREE.HalfFloatType } // v17.2: sem MSAA em software (memória)
+          : { samples: isTouch ? 2 : 4, type: THREE.HalfFloatType }
+      );
+      this.composer = new EffectComposer(this.renderer, rt);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.bloomPass = new UnrealBloomPass(size, 0.14, 0.5, 0.88); // v16: brilho ainda mais subtil — nitidez primeiro
+      // v17: bloom 0.42 → 0.12 — brilho cinematográfico deixava tudo "lavado"
+      this.bloomPass = new UnrealBloomPass(size, 0.12, 0.5, 0.88);
       this.composer.addPass(this.bloomPass);
-      // vinheta + saturação suave (film look)
+      // vinheta MUITO mais leve (0.62 → 0.28) — não escurece as bordas
       this.vignettePass = new ShaderPass({
         uniforms: {
           tDiffuse: { value: null },
           offset: { value: 1.22 },
           darkness: { value: 0.2 },   // v16: vinheta quase impercetível — cantos limpos
           saturation: { value: 1.06 }, // v16: cores um pouco mais vivas — mundo radiante
+
         },
         vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `
@@ -827,17 +912,18 @@ export class WorldEngine {
 
   private applyQuality(q: "auto" | "low" | "medium" | "high", isTouch: boolean): void {
     this.quality = q;
-    const autoTier: "low" | "medium" | "high" = isTouch ? (window.devicePixelRatio > 2 ? "medium" : "high") : "high";
+    const autoTier: "low" | "medium" | "high" = "high"; // v17: auto = sempre alta (nítido)
     const tier = q === "auto" ? autoTier : q;
-    // v16: resolução mais alta em TODOS os níveis touch — o mundo tinha de ser nítido
-    // (antes: 1.25/1.5 no telemóvel → renderizado a metade da resolução nativa)
-    if (tier === "low") this.pq = { bloom: false, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) };
-    else if (tier === "medium") this.pq = { bloom: true, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75) };
+    // v17: pixel ratio NATIVO em todos os tiers (1.5/1.25 no telemóvel = metade
+    // da resolução real — a causa nº1 do "desfocado")
+    if (this.isSoftwareGL) {
+      // v17.2: renderer por software — nítido mas leve (evita OOM em sessões longas)
+      this.pq = { bloom: false, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) };
+    } else if (tier === "low") this.pq = { bloom: false, vignette: false, pixelRatio: Math.max(1.25, Math.min(window.devicePixelRatio || 1, 1.75)) };
+    else if (tier === "medium") this.pq = { bloom: true, vignette: false, pixelRatio: Math.max(1.5, Math.min(window.devicePixelRatio || 1, 2)) };
     else this.pq = { bloom: true, vignette: true, pixelRatio: Math.min(window.devicePixelRatio || 1, 2) };
-    this.basePR = this.pq.pixelRatio;
-    this.dynScale = 1; // nova qualidade → governador recomeça
-    this.renderer.setPixelRatio(this.basePR * this.dynScale);
-    if (this.composer) this.composer.setPixelRatio(this.basePR * this.dynScale);
+    this.renderer.setPixelRatio(this.pq.pixelRatio);
+    if (this.composer) this.composer.setPixelRatio(this.pq.pixelRatio);
     if (this.bloomPass) this.bloomPass.enabled = this.pq.bloom;
     if (this.vignettePass) this.vignettePass.enabled = this.pq.vignette;
     if (this.composer) this.composer.setSize(this.canvas.parentElement?.clientWidth || window.innerWidth, this.canvas.parentElement?.clientHeight || window.innerHeight);
@@ -845,7 +931,9 @@ export class WorldEngine {
 
   /** v13: aplica a resolução interna do governador adaptativo (renderer + composer). */
   private applyDynRes(): void {
-    const pr = this.basePR * this.dynScale;
+    // v17: o basePR segue o nível de qualidade (nativo!) — o governador só
+    // desce até 0.8× EM CIMA do PR nativo quando o dispositivo luta (<42fps)
+    const pr = this.pq.pixelRatio * this.dynScale;
     this.renderer.setPixelRatio(pr);
     if (this.composer) this.composer.setPixelRatio(pr);
   }
@@ -1890,7 +1978,7 @@ export class WorldEngine {
           this.insideSeen.add(inside.id);
           worldAudio.play("discover");
           this.discoverFx();
-          this.opts.onEvent({ type: "discover", id: "bld-" + inside.id, name: inside.name, emoji: "🏠", xp: 25 });
+          this.opts.onEvent({ type: "discover", id: "bld-" + inside.id, name: inside.name, emoji: "🏠", xp: 25 }); // v17
         }
       } else {
         this.opts.onEvent({ type: "inside", name: "", desc: "", on: false });
@@ -3246,54 +3334,79 @@ export class WorldEngine {
   }
 
   private buildMobs(): void {
-    // v6: mundo 230 → mais inimigos em todas as faixas + 2 chefes e
-    // 2 guardas extra nas terras distantes (Portal do Eclipse / Gruta do Eco)
-    const defs: { tier: number; count: number; boss?: boolean; guard?: boolean; pos?: [number, number] }[] = [
-      { tier: 0, count: 26 },
-      { tier: 1, count: 20 },
-      { tier: 2, count: 14 },
-      { tier: 3, count: 10 },
-      { tier: 4, count: 7 },
-      { tier: 2, count: 1, boss: true, pos: [112, -112] },
-      { tier: 4, count: 1, boss: true, pos: [-112, 112] },
-      { tier: 4, count: 1, boss: true, pos: [-150, -140] },  // Portal do Eclipse
-      { tier: 3, count: 1, boss: true, pos: [155, -70] },    // Gruta do Eco
-      { tier: 4, count: 1, boss: true, pos: [-131, -52] },   // v10: Guardiã Anciã do Coração da Floresta
-      { tier: 2, count: 1, guard: true, pos: [0, -45] },
-      { tier: 2, count: 1, guard: true, pos: [0, 45] },
-      { tier: 3, count: 1, guard: true, pos: [-140, 20] },   // Torre de Vigia
-      { tier: 3, count: 1, guard: true, pos: [150, 90] },    // Acampamento
+    // v17: FAUNA POR TERRITÓRIO — cada região tem as SUAS criaturas.
+    // [danger, count] por região + 1 chefe nomeado por região de perigo alto.
+    const plan: { region: string; danger: number; count: number }[] = [
+      { region: "planicie", danger: 0, count: 10 },
+      { region: "planicie", danger: 1, count: 7 },
+      { region: "floresta", danger: 1, count: 9 },
+      { region: "floresta", danger: 2, count: 7 },
+      { region: "dunas", danger: 2, count: 9 },
+      { region: "dunas", danger: 2, count: 0 }, // reservado
+      { region: "litoral", danger: 2, count: 8 },
+      { region: "litoral", danger: 3, count: 6 },
+      { region: "pantano", danger: 2, count: 8 },
+      { region: "pantano", danger: 3, count: 6 },
+      { region: "montanhas", danger: 3, count: 8 },
+      { region: "montanhas", danger: 4, count: 5 },
+      { region: "vulcanicas", danger: 4, count: 10 },
     ];
-    for (const d of defs) {
+    for (const d of plan) {
+      if (d.count <= 0) continue;
+      const region = REGIONS.find((r) => r.id === d.region);
+      if (!region) continue;
       for (let i = 0; i < d.count; i++) {
-        let x: number, z: number;
-        if (d.pos) { [x, z] = d.pos; }
-        else {
-          const a = Math.random() * Math.PI * 2;
-          const r = d.tier === 0 ? 30 + Math.random() * 40
-            : d.tier === 1 ? 66 + Math.random() * 55
-            : d.tier === 2 ? 108 + Math.random() * 62
-            : d.tier === 3 ? 92 + Math.random() * 80
-            : 122 + Math.random() * 95;
-          x = Math.cos(a) * r;
-          z = Math.sin(a) * r;
-        }
-        this.spawnMob(d.tier, x, z, !!d.boss, !!d.guard);
+        const a = Math.random() * Math.PI * 2;
+        const rr = region.r * (0.25 + Math.random() * 0.6);
+        let x = region.cx + Math.cos(a) * rr;
+        let z = region.cz + Math.sin(a) * rr;
+        // nunca nascer na praça (zona segura)
+        if (Math.hypot(x, z) < 26) { x = x * 0.15 + 30 * Math.sign(x || 1); z = z * 0.15 + 30 * Math.sign(z || 1); }
+        // v17.1: alterna as espécies da região (i par → 1ª, ímpar → 2ª)
+        this.spawnMob(d.danger, x, z, false, false, false, d.region, undefined, i % 2);
       }
+    }
+    // ── Chefes nomeados por território + Guardiã Anciã (v10) ──
+    const bosses: { tier: number; pos: [number, number]; fixed?: string }[] = [
+      { tier: 2, pos: [112, -112] },   // Terras Vulcânicas
+      { tier: 4, pos: [-112, 112] },   // Montanhas Negras
+      { tier: 4, pos: [-150, -140] },  // Dunas — Portal do Eclipse
+      { tier: 3, pos: [155, -70] },    // Litoral — Gruta do Eco
+      { tier: 4, pos: [-131, -52], fixed: "Guardiã Anciã" }, // Coração da Floresta
+    ];
+    for (const b of bosses) {
+      const region = REGIONS.find((r) => Math.hypot(b.pos[0] - r.cx, b.pos[1] - r.cz) < r.r);
+      this.spawnMob(b.tier, b.pos[0], b.pos[1], true, false, false, region?.id, b.fixed || (region ? BOSS_NAME_BY_REGION[region.id] : undefined));
+    }
+    // ── Guardiões de território ──
+    const guards: { tier: number; pos: [number, number] }[] = [
+      { tier: 2, pos: [0, -45] }, { tier: 2, pos: [0, 45] },
+      { tier: 3, pos: [-140, 20] }, { tier: 3, pos: [150, 90] },
+    ];
+    for (const gg of guards) {
+      const region = REGIONS.find((r) => Math.hypot(gg.pos[0] - r.cx, gg.pos[1] - r.cz) < r.r);
+      this.spawnMob(gg.tier, gg.pos[0], gg.pos[1], false, true, false, region?.id);
     }
   }
 
-  private spawnMob(tier: number, x: number, z: number, boss = false, isGuard = false, isArena = false): void {
+  private spawnMob(tier: number, x: number, z: number, boss = false, isGuard = false, isArena = false, regionId?: string, bossName?: string, variant = 0): void {
     // v8: não nascer dentro de edifícios — empurra para fora
     const fb = this.insideFootprint(x, z);
     if (fb) { x = fb.maxX + 4 + Math.random() * 3; z = fb.maxZ + 4 + Math.random() * 3; }
-    const t = MOB_TIERS[tier];
+    // v17: espécie do território (fora do mundo = criaturas clássicas da Arena)
+    const t = regionId ? speciesForRegion(regionId, tier, variant) : MOB_TIERS[Math.max(0, Math.min(4, tier))];
+    const regionOf = REGIONS.find((r) => r.id === regionId);
+    const dispName = boss ? (bossName || BOSS_NAME_BY_REGION[regionId || ""] || "Bug Rei") : isGuard ? "Guardião" : t.name;
     const g = new THREE.Group();
     const scale = boss ? 2.4 : isGuard ? t.scale * 1.35 : t.scale;
-    const mat = new THREE.MeshLambertMaterial({ color: boss ? 0xdc2626 : isGuard ? 0xfacc15 : t.color });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 10), mat);
+    const baseColor = boss ? 0xdc2626 : isGuard ? 0xfacc15 : t.color;
+    const mat = new THREE.MeshLambertMaterial({ color: baseColor });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.65, 14, 12), mat);
     body.position.y = 0.75;
-    body.scale.set(scale, scale * 0.85, scale);
+    // v17: forma do corpo por espécie (tall/wide/round)
+    const shapeY = t.shape === "tall" ? 1.22 : t.shape === "wide" ? 0.7 : 0.85;
+    const shapeXZ = t.shape === "wide" ? 1.22 : t.shape === "tall" ? 0.8 : 1;
+    body.scale.set(scale * shapeXZ, scale * shapeY, scale * shapeXZ);
     const eyeW = new THREE.SphereGeometry(0.13, 6, 6);
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const pupil = new THREE.SphereGeometry(0.06, 6, 6);
@@ -3302,8 +3415,9 @@ export class WorldEngine {
     const e2 = new THREE.Mesh(eyeW, eyeMat); e2.position.set(0.22 * scale, 0.95 * scale, 0.5 * scale);
     const p1 = new THREE.Mesh(pupil, puMat); p1.position.set(-0.22 * scale, 0.95 * scale, 0.6 * scale);
     const p2 = new THREE.Mesh(pupil, puMat); p2.position.set(0.22 * scale, 0.95 * scale, 0.6 * scale);
-    // espinhos para tiers altos
-    if (tier >= 3) {
+    // v17: traços por espécie — cada território tem silhueta própria
+    const feature = boss || isGuard ? (boss ? "spikes" : "horns") : t.feature;
+    if (feature === "spikes" || t.danger >= 3) {
       const spikeMat = new THREE.MeshBasicMaterial({ color: 0x1f2937 });
       for (let si = 0; si < 4; si++) {
         const sp = new THREE.Mesh(new THREE.ConeGeometry(0.12 * scale, 0.5 * scale, 5), spikeMat);
@@ -3312,14 +3426,48 @@ export class WorldEngine {
         g.add(sp);
       }
     }
-    // v3: cornos para tiers médios
-    if (tier >= 1 && tier < 3) {
+    if (feature === "horns") {
       const hornMat = new THREE.MeshLambertMaterial({ color: 0x3f2d1d });
       for (const hx of [-1, 1]) {
         const horn = new THREE.Mesh(new THREE.ConeGeometry(0.09 * scale, 0.42 * scale, 5), hornMat);
         horn.position.set(hx * 0.3 * scale, 1.35 * scale, 0.1 * scale);
         horn.rotation.z = -hx * 0.5;
         g.add(horn);
+      }
+    }
+    if (feature === "ears") {
+      const earMat = new THREE.MeshLambertMaterial({ color: baseColor });
+      for (const hx of [-1, 1]) {
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.11 * scale, 0.4 * scale, 5), earMat);
+        ear.position.set(hx * 0.34 * scale, 1.42 * scale, 0);
+        g.add(ear);
+      }
+    }
+    if (feature === "fins") {
+      const finMat = new THREE.MeshLambertMaterial({ color: baseColor, transparent: true, opacity: 0.85 });
+      const fin = new THREE.Mesh(new THREE.ConeGeometry(0.3 * scale, 0.62 * scale, 4), finMat);
+      fin.position.set(0, 1.5 * scale, -0.2 * scale);
+      fin.rotation.x = -0.35;
+      g.add(fin);
+      const finL = new THREE.Mesh(new THREE.ConeGeometry(0.16 * scale, 0.42 * scale, 4), finMat);
+      finL.position.set(-0.55 * scale, 1.0 * scale, 0); finL.rotation.z = Math.PI / 2.2;
+      const finR = finL.clone(); finR.position.x = 0.55 * scale; finR.rotation.z = -Math.PI / 2.2;
+      g.add(finL, finR);
+    }
+    if (feature === "shell") {
+      const shellMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(0.52 * scale, 10, 8), shellMat);
+      shell.position.y = 1.08 * scale;
+      shell.scale.set(1.1, 0.55, 1.1);
+      g.add(shell);
+    }
+    if (feature === "crystals") {
+      const cryMat = new THREE.MeshLambertMaterial({ color: 0x818cf8, emissive: 0x4338ca });
+      for (let ci = 0; ci < 3; ci++) {
+        const cr = new THREE.Mesh(new THREE.ConeGeometry(0.1 * scale, (0.3 + Math.random() * 0.25) * scale, 4), cryMat);
+        cr.position.set((ci - 1) * 0.26 * scale, (1.32 + Math.random() * 0.12) * scale, (Math.random() - 0.5) * 0.3 * scale);
+        cr.rotation.z = (ci - 1) * 0.25;
+        g.add(cr);
       }
     }
     // v3: coroa 3D nos chefes
@@ -3353,7 +3501,10 @@ export class WorldEngine {
     hpBar.position.y = 1.7 * scale + 0.35;
     g.add(hpBar);
 
-    const nm = makeTextSprite(`${boss ? "👑 " : isGuard ? "🛡️ " : ""}${boss ? (tier >= 4 ? "Rainha Sombria" : "Bug Rei") : isGuard ? "Guardião" : t.name}${boss ? " · CHEFE" : ""}`, {
+    // v17: POWER LEVEL da criatura (estilo scouter) — hp/4 + atk*6
+    const mult = boss ? 10 : isGuard ? 2.2 : 1;
+    const mobPl = Math.round((t.hp / 4 + t.atk * 6) * (boss ? 3.2 : isGuard ? 1.8 : 1) + (regionOf ? 0 : 0));
+    const nm = makeTextSprite(`${boss ? "👑 " : isGuard ? "🛡️ " : ""}${dispName}${boss ? " · CHEFE" : ""} · PL ${mobPl}`, {
       size: 24, bg: true, accent: boss ? "#f87171" : isGuard ? "#facc15" : undefined,
     });
     nm.scale.set(3.4, 0.85, 1);
@@ -3365,7 +3516,6 @@ export class WorldEngine {
     this.scene.add(g);
     this.addShadow(x, y, z, scale);
 
-    const mult = boss ? 10 : isGuard ? 2.2 : 1;
     const mob: Mob = {
       group: g, hpBar, hpCanvas, hpTex,
       tier, isBoss: boss, isGuard,
@@ -3379,7 +3529,9 @@ export class WorldEngine {
       state: "idle",
       nextThink: 0, atkCd: 0, respawnAt: 0, hitFlash: 0, bob: Math.random() * 10,
       stunUntil: 0, slowUntil: 0,
-      name: boss ? (tier >= 4 ? "Rainha Sombria" : "Bug Rei") : isGuard ? "Guardião" : t.name,
+      name: dispName,
+      color: baseColor,
+      pl: mobPl,
     };
     // v11: ELITE — ~9% dos bugs comuns nascem como variante rara
     // (maiores, aura roxa, +85% vida, +40% ataque, recompensas x2.4)
@@ -3637,6 +3789,35 @@ export class WorldEngine {
           this.opts.onEvent({ type: "pvp", action: "feed", kn: payload.kn, vn: payload.vn });
         }
       });
+      // ── v17: DUELOS 1v1 ──
+      ch.on("broadcast", { event: "duelreq" }, ({ payload }: any) => {
+        if (!payload || payload.t !== this.myId) return;
+        if (this.duel) return;
+        this.duelReq = { from: payload.f, name: payload.fn || "Herói", pl: payload.pl || 0, until: performance.now() + 60000 };
+        this.opts.onEvent({ type: "duelreq", from: payload.f, name: payload.fn || "Herói", pl: payload.pl || 0 });
+        worldAudio.play("join");
+      });
+      ch.on("broadcast", { event: "duelacc" }, ({ payload }: any) => {
+        if (!payload || payload.t !== this.myId) return;
+        if (this.duel) return;
+        this.duel = { opponentId: payload.f, opponentName: payload.fn || "Herói", until: performance.now() + 90000 };
+        this.opts.onEvent({ type: "duelstart", vs: payload.fn || "Herói", until: this.duel.until });
+        worldAudio.play("steal");
+      });
+      ch.on("broadcast", { event: "dueldec" }, ({ payload }: any) => {
+        if (!payload || payload.t !== this.myId) return;
+        this.opts.onEvent({ type: "notify", msg: "🙏 Desafio recusado — o herói não aceitou o duelo.", tone: "info" });
+      });
+      ch.on("broadcast", { event: "duelend" }, ({ payload }: any) => {
+        if (!payload) return;
+        if (payload.w === this.myId) {
+          const vs = payload.ln || "oponente";
+          this.duel = null;
+          this.opts.onEvent({ type: "duelend", won: true, vs, reason: "vitoria" });
+        } else if (payload.l === this.myId) {
+          this.duel = null; // derrota própria já emitida em receivePvpHit
+        }
+      });
       ch.on("presence", { event: "sync" }, () => {
         try {
           const st = ch.presenceState();
@@ -3686,7 +3867,7 @@ export class WorldEngine {
     r.hpTex.needsUpdate = true;
   }
 
-  private upsertRemote(p: { id: string; n: string; cl?: number; lv?: number; x: number; z: number; ry?: number; mv?: boolean; hp?: number; mhp?: number; sh?: boolean; av?: string }): void {
+  private upsertRemote(p: { id: string; n: string; cl?: number; lv?: number; x: number; z: number; ry?: number; mv?: boolean; hp?: number; mhp?: number; sh?: boolean; av?: string; pl?: number; fm?: number }): void {
     let r = this.remotes.get(p.id);
     if (!r) {
       const g = new THREE.Group();
@@ -3710,7 +3891,7 @@ export class WorldEngine {
         head.position.y = 1.95;
         g.add(body, head);
       }
-      const nameSpr = makeTextSprite(`${(p.n || "Jogador").slice(0, 14)} · Nv${p.lv ?? 1}`, { size: 30, bg: true });
+      const nameSpr = makeTextSprite(`${(p.n || "Jogador").slice(0, 14)} · Nv${p.lv ?? 1} · PL ${p.pl ?? "?"}`, { size: 30, bg: true });
       nameSpr.scale.set(3.6, 0.9, 1);
       nameSpr.position.y = 2.95;
       nameSpr.name = "nameTag";
@@ -3733,6 +3914,7 @@ export class WorldEngine {
         lastSeen: performance.now(), name: p.n,
         hp: p.hp ?? 100, maxHp: p.mhp ?? 100, shield: !!p.sh,
         parts, walkT: 0, avKey: key, emoteSpr: null, emoteUntil: 0,
+        lv: p.lv ?? 1, pl: p.pl ?? 0,
       };
       g.position.set(p.x, groundY(p.x, p.z), p.z);
       this.remotes.set(p.id, r);
@@ -3752,8 +3934,8 @@ export class WorldEngine {
         r.avKey = avatarKey(cfg);
       }
     }
-    // nome/nível/escudo atualizam-se se mudaram
-    const wantText = `${(p.n || "Jogador").slice(0, 14)} · Nv${p.lv ?? 1}${p.sh ? " 🛡️" : ""}`;
+    // nome/nível/PL/escudo atualizam-se se mudaram
+    const wantText = `${(p.n || "Jogador").slice(0, 14)} · Nv${p.lv ?? 1}${(p as any).fm ? " ⚡" : ""} · PL ${p.pl ?? (r as any).pl ?? "?"}${p.sh ? " 🛡️" : ""}`;
     const tag = r.group.children.find((c) => c.name === "nameTag") as THREE.Sprite | undefined;
     if (tag && (tag as any).__txt !== wantText) {
       (tag as any).__txt = wantText;
@@ -3767,6 +3949,8 @@ export class WorldEngine {
     r.targetRy = p.ry ?? r.targetRy;
     r.moving = !!p.mv;
     r.lastSeen = performance.now();
+    if (typeof p.lv === "number") (r as any).lv = p.lv;
+    if (typeof p.pl === "number") (r as any).pl = p.pl;
     if (typeof p.hp === "number") { r.hp = p.hp; r.maxHp = p.mhp ?? r.maxHp; r.shield = !!p.sh; this.drawRemoteHp(r); }
   }
 
@@ -3779,6 +3963,7 @@ export class WorldEngine {
       hp: Math.round(this.hp), mhp: Math.round(this.opts.stats.maxHp),
       sh: performance.now() < this.pvpShieldUntil,
       av: this.avKey, // v5: aparência do avatar
+      pl: this.getPowerLevel(), fm: this.form, // v17: Power Level + transformação
     };
     try { this.chan.send({ type: "broadcast", event: "pos", payload }); } catch { /* ignore */ }
   }
@@ -3812,12 +3997,236 @@ export class WorldEngine {
   private effAtk(): number {
     const buff = performance.now() < this.atkBuffUntil ? 1.5 : 1;
     const petBonus = this.hasPet ? 1.08 : 1; // v4: o companheiro incentiva o ataque
-    return this.opts.stats.atk * buff * petBonus;
+    const formMult = this.form === 2 ? 1.8 : this.form === 1 ? 1.35 : 1; // v17: transformações
+    return this.opts.stats.atk * buff * petBonus * formMult;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── v17: TRANSFORMAÇÕES estilo Dragon Ball ────────────────
+  // Cada classe desbloqueia 2 formas (Nv5 e Nv14). Transformar
+  // multiplica ataque/velocidade, drena KI e muda a aura.
+  // ═══════════════════════════════════════════════════════════
+
+  static readonly FORM_UNLOCK = [0, 5, 14];
+  static readonly FORM_MULT = [1, 1.35, 1.8];
+
+  get formLevel(): number { return this.form; }
+  get kiLevel(): number { return Math.round(this.ki); }
+  get duelOpponent(): string | null { return this.duel?.opponentId ?? null; }
+  get pendingDuelReq(): { from: string; name: string; pl: number } | null {
+    if (this.duelReq && performance.now() < this.duelReq.until) return { from: this.duelReq.from, name: this.duelReq.name, pl: this.duelReq.pl };
+    return null;
+  }
+
+  /** Nível de poder do herói (estilo scouter) — usado no HUD, ranking e name tags. */
+  getPowerLevel(): number {
+    const s = this.opts.stats;
+    const base = Math.round(s.atk * 7 + s.maxHp * 0.55 + s.def * 4 + Math.round(s.spd) * 3 + this.opts.level * 12);
+    return Math.round(base * (WorldEngine.FORM_MULT[this.form] ?? 1));
+  }
+
+  /** Tenta transformar (stage 0-2). Devolve true se aplicou. */
+  transform(stage: number): boolean {
+    const target = Math.max(0, Math.min(2, stage));
+    if (target === this.form) return false;
+    if (target > this.form) {
+      const need = WorldEngine.FORM_UNLOCK[target];
+      if (this.opts.level < need) {
+        this.opts.onEvent({ type: "notify", msg: `⚡ Essa transformação desbloqueia no nível ${need}!`, tone: "info" });
+        return false;
+      }
+      if (this.ki < 25) {
+        this.opts.onEvent({ type: "notify", msg: "⚡ KI insuficiente — espera recarregar!", tone: "info" });
+        return false;
+      }
+    }
+    this.form = target;
+    if (target === 0) {
+      this.disposeFormAura();
+      this.opts.onEvent({ type: "form", form: 0, pl: this.getPowerLevel() });
+    } else {
+      this.buildFormAura();
+      this.burst(this.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), this.form === 2 ? 0xf87171 : 0xfde047, 34, 5, 0.8, 0.1, 8);
+      this.shake(0.24);
+      this.ringEffect(this.form === 2 ? 0xf87171 : 0xfde047, 5);
+      worldAudio.play("combo");
+      this.opts.onEvent({ type: "form", form: this.form, pl: this.getPowerLevel() });
+    }
+    this.updateMyNameTag();
+    this.broadcastPos();
+    return true;
+  }
+
+  /** Alterna: base → 1ª → 2ª → base. */
+  cycleTransform(): boolean {
+    const next = (this.form + 1) % 3;
+    return this.transform(next);
+  }
+
+  private buildFormAura(): void {
+    this.disposeFormAura();
+    const color = this.form === 2 ? 0xf87171 : 0xfde047;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.15, 0.1, 8, 28),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.18;
+    ring.name = "formAura";
+    const light = new THREE.PointLight(color, 20, 11);
+    light.position.y = 1.7;
+    light.name = "formLight";
+    const N = 30;
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const rr = Math.random() * 1.1;
+      pos[i * 3] = Math.cos(a) * rr;
+      pos[i * 3 + 1] = Math.random() * 2.6;
+      pos[i * 3 + 2] = Math.sin(a) * rr;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ color, size: 0.16, transparent: true, opacity: 0.95, depthWrite: false }));
+    sparks.name = "formSparks";
+    this.player.add(ring, light, sparks);
+    this.auraMesh = ring;
+    this.auraLight = light;
+    this.auraSparks = sparks;
+  }
+
+  private disposeFormAura(): void {
+    for (const nm of ["formAura", "formLight", "formSparks"]) {
+      const o = this.player.children.find((c) => c.name === nm);
+      if (o) { this.player.remove(o); (o as any).geometry?.dispose?.(); }
+    }
+    this.auraMesh = null;
+    this.auraLight = null;
+    this.auraSparks = null;
+  }
+
+  private updateFormFx(dt: number): void {
+    if (this.form === 0) {
+      // recarrega KI em forma base
+      if (this.ki < 100) this.ki = Math.min(100, this.ki + 3.2 * dt);
+      return;
+    }
+    // dreno de KI — transformar tem custo; se acabar, volta à base
+    this.ki = Math.max(0, this.ki - (this.form === 2 ? 3.4 : 2.1) * dt);
+    if (this.ki <= 0) {
+      this.form = 0;
+      this.disposeFormAura();
+      this.updateMyNameTag();
+      this.opts.onEvent({ type: "form", form: 0, pl: this.getPowerLevel() });
+      this.opts.onEvent({ type: "notify", msg: "⚡ O KI acabou — voltaste à forma base!", tone: "info" });
+      return;
+    }
+    const t = performance.now() / 1000;
+    if (this.auraMesh) {
+      this.auraMesh.rotation.z = t * 2.4;
+      const m = this.auraMesh.material as THREE.MeshBasicMaterial;
+      m.opacity = 0.72 + Math.sin(t * 7) * 0.2;
+    }
+    if (this.auraLight) this.auraLight.intensity = 16 + Math.sin(t * 9) * 6;
+    if (this.auraSparks) {
+      const attr = this.auraSparks.geometry.getAttribute("position") as THREE.BufferAttribute;
+      for (let i = 0; i < attr.count; i++) {
+        let y = attr.getY(i) + dt * (1.6 + (i % 5) * 0.35);
+        if (y > 2.7) y = 0;
+        attr.setY(i, y);
+      }
+      attr.needsUpdate = true;
+    }
+  }
+
+  private updateMyNameTag(): void {
+    const tag = this.player.children.find((c) => c.name === "nameTag") as THREE.Sprite | undefined;
+    if (!tag) return;
+    const wantText = `${this.opts.name} · Nv${this.opts.level}${this.form > 0 ? " ⚡".repeat(this.form) : ""} · PL ${this.getPowerLevel()}`;
+    if ((tag as any).__txt !== wantText) {
+      (tag as any).__txt = wantText;
+      const newMat = makeTextSprite(wantText, { size: 30, bg: true });
+      tag.material.dispose();
+      tag.material = newMat.material;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── v17: DUELOS 1v1 — desafio entre heróis ────────────────
+  // ═══════════════════════════════════════════════════════════
+
+  /** Lista de heróis online perto de ti (para o painel Heróis). */
+  getPlayersList(): { id: string; name: string; level: number; pl: number; dist: number }[] {
+    const now = performance.now();
+    const list: { id: string; name: string; level: number; pl: number; dist: number }[] = [];
+    for (const [id, r] of this.remotes) {
+      if (now - r.lastSeen > 30000) continue;
+      list.push({
+        id,
+        name: r.name,
+        level: (r as any).lv ?? 1,
+        pl: (r as any).pl ?? 0,
+        dist: Math.round(Math.hypot(r.group.position.x - this.pos.x, r.group.position.z - this.pos.z)),
+      });
+    }
+    return list.sort((a, b) => a.dist - b.dist);
+  }
+
+  requestDuel(id: string): void {
+    if (this.duel) { this.opts.onEvent({ type: "notify", msg: "⚔️ Já estás num duelo!", tone: "info" }); return; }
+    const r = this.remotes.get(id);
+    if (!r) return;
+    try { this.chan?.send({ type: "broadcast", event: "duelreq", payload: { f: this.myId, fn: this.opts.name, t: id, pl: this.getPowerLevel() } }); } catch { /* ignore */ }
+    this.opts.onEvent({ type: "notify", msg: `⚔️ Desafio enviado a ${r.name}!`, tone: "good" });
+  }
+
+  acceptDuel(id: string): void {
+    const r = this.remotes.get(id);
+    const req = this.duelReq;
+    if (!req || req.from !== id) return;
+    this.duelReq = null;
+    this.duel = { opponentId: id, opponentName: r?.name || req.name, until: performance.now() + 90000 };
+    try { this.chan?.send({ type: "broadcast", event: "duelacc", payload: { f: this.myId, fn: this.opts.name, t: id, pl: this.getPowerLevel() } }); } catch { /* ignore */ }
+    this.opts.onEvent({ type: "duelstart", vs: this.duel.opponentName, until: this.duel.until });
+    worldAudio.play("steal");
+  }
+
+  declineDuel(id: string): void {
+    if (this.duelReq?.from === id) {
+      this.duelReq = null;
+      try { this.chan?.send({ type: "broadcast", event: "dueldec", payload: { f: this.myId, t: id } }); } catch { /* ignore */ }
+    }
+  }
+
+  private updateDuel(): void {
+    const now = performance.now();
+    if (this.duelReq && now >= this.duelReq.until) {
+      this.duelReq = null;
+      this.opts.onEvent({ type: "duelreqend" });
+    }
+    if (this.duel && now >= this.duel.until) {
+      const vs = this.duel.opponentName;
+      this.duel = null;
+      this.opts.onEvent({ type: "duelend", won: null as any, vs, reason: "tempo" });
+      this.opts.onEvent({ type: "notify", msg: `⏳ O duelo contra ${vs} terminou em empate!`, tone: "info" });
+    }
+  }
+
+  /** debug: simula um pedido de duelo (testes E2E). */
+  debugForceDuelReq(): void {
+    this.duelReq = { from: "bw_test_opponent", name: "Herói Teste", pl: 9001, until: performance.now() + 60000 };
+    this.opts.onEvent({ type: "duelreq", from: "bw_test_opponent", name: "Herói Teste", pl: 9001 });
+  }
+
+  /** debug: simula a vitória no prémio 1GB (testes E2E). */
+  debugGrantPrize(): void {
+    this.opts.onEvent({ type: "prize", kind: "gb" });
   }
 
   private receivePvpHit(p: { a: string; an: string; d: number }): void {
     if (this.dead) return;
-    if (this.inSafeZone) {
+    const isDuelHit = this.duel?.opponentId === p.a; // v17: golpes de duelo ignoram zona segura
+    if (!isDuelHit && this.inSafeZone) {
       this.opts.onEvent({ type: "notify", msg: "🛡️ Zona segura — ninguém te pode ferir aqui!", tone: "info" });
       return;
     }
@@ -3848,6 +4257,13 @@ export class WorldEngine {
     if (this.hp <= 0) {
       this.dead = true;
       this.shake(0.4);
+      // v17: se foi o meu oponente de DUELO que me matou, termina o duelo
+      if (isDuelHit && this.duel) {
+        const vs = this.duel.opponentName;
+        this.duel = null;
+        try { this.chan?.send({ type: "broadcast", event: "duelend", payload: { w: p.a, wn: p.an, l: this.myId, ln: this.opts.name } }); } catch { /* ignore */ }
+        this.opts.onEvent({ type: "duelend", won: false, vs, reason: "derrota" });
+      }
       this.opts.onEvent({ type: "pvp", action: "death", by: p.an, killerId: p.a });
     }
   }
@@ -3860,6 +4276,7 @@ export class WorldEngine {
 
   private tryPvpStrike(): boolean {
     // alvo: jogador remoto vivo mais próximo (fora de zona segura)
+    // v17: em DUELO o alvo é sempre o oponente, mesmo na praça
     let best: RemotePlayer | null = null;
     let bestD = 9;
     for (const r of this.remotes.values()) {
@@ -3870,7 +4287,8 @@ export class WorldEngine {
     const melee = this.opts.classId === 0;
     const range = melee ? 3.4 : 8.5;
     if (bestD > range) return false;
-    if (this.inSafeZone) {
+    const isDuelTarget = this.duel?.opponentId === this.remoteIdOf(best);
+    if (!isDuelTarget && this.inSafeZone) {
       this.opts.onEvent({ type: "notify", msg: "Saia da praça para desafiar outros heróis (PvP)!", tone: "info" });
       return true; // consumiu o ataque
     }
@@ -3936,6 +4354,8 @@ export class WorldEngine {
     if (e.key.toLowerCase() === "v") this.toggleMount();
     // v6: Shift = erguer/abaixar o escudo (modo guarda)
     if (e.key === "Shift") { e.preventDefault(); this.toggleGuard(); }
+    // v17: T = transformação estilo Dragon Ball (base → 1ª → 2ª → base)
+    if (e.key.toLowerCase() === "t") this.cycleTransform();
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
@@ -4249,7 +4669,7 @@ export class WorldEngine {
     setTimeout(() => {
       if (!this.disposed && m.state !== "dead") {
         (m.group.children[0] as THREE.Mesh).material = new THREE.MeshLambertMaterial({
-          color: m.isBoss ? 0xdc2626 : m.isGuard ? 0xfacc15 : MOB_TIERS[m.tier].color,
+          color: m.color,
         });
       }
     }, 90);
@@ -4270,7 +4690,7 @@ export class WorldEngine {
     }
     const comboMult = 1 + Math.min(0.5, (this.combo - 1) * 0.1);
     this.spawnOrbs(m.group.position.clone(), gold, m.xp, m.isBoss ? 5 : 3, comboMult);
-    this.burst(m.group.position.clone().add(new THREE.Vector3(0, 0.9, 0)), m.isBoss ? 0xdc2626 : m.isGuard ? 0xfacc15 : MOB_TIERS[m.tier].color, m.isBoss ? 40 : 16, 4.5, 0.7, 0.12, 6);
+    this.burst(m.group.position.clone().add(new THREE.Vector3(0, 0.9, 0)), m.color, m.isBoss ? 40 : 16, 4.5, 0.7, 0.12, 6);
     if (m.isBoss || m.isGuard) this.shake(0.3);
     // v4: loot com raridades
     let loot = rollLoot(m.tier, m.isBoss, m.isGuard, this.opts.level);
@@ -4300,7 +4720,20 @@ export class WorldEngine {
     };
     anim();
     worldAudio.play(m.isBoss ? "death" : "hit");
-    this.opts.onEvent({ type: "kill", tier: m.tier, gold, xp: m.xp, pts: m.pts, boss: m.isBoss, guard: m.isGuard, name: m.name, combo: this.combo, comboMult, arena: !!m.arena });
+    // v17: CRÉDITOS — chefes/guardiões pagam créditos; drop MUITO raro do
+    // prémio 1GB (qualquer operadora, pedido pelo suporte WhatsApp)
+    let credits = 0;
+    let prizeGb = false;
+    if (m.isBoss) {
+      credits = 15 + Math.floor(Math.random() * 16); // 15-30
+      prizeGb = Math.random() < 0.005;               // 0,5% — muito difícil
+    } else if (m.isGuard) {
+      credits = 5 + Math.floor(Math.random() * 6);   // 5-10
+      prizeGb = Math.random() < 0.002;               // 0,2%
+    } else if (m.tier >= 3 && Math.random() < 0.02) {
+      credits = 2; // ninharia rara de elite
+    }
+    this.opts.onEvent({ type: "kill", tier: m.tier, gold, xp: m.xp, pts: m.pts, boss: m.isBoss, guard: m.isGuard, name: m.name, combo: this.combo, comboMult, arena: !!m.arena, credits, prizeGb, pl: m.pl });
   }
 
   private spawnOrbs(at: THREE.Vector3, gold: number, xp: number, n: number, mult = 1): void {
@@ -4451,16 +4884,28 @@ export class WorldEngine {
   }
 
   /** v7: debug/testes — info do mundo para os testes E2E. */
-  debugWorldInfo(): { aurora: boolean; mobs: number; eventMobs: number; trees: number; event: string } {
+  debugWorldInfo(): { aurora: boolean; mobs: number; eventMobs: number; trees: number; event: string; species: string[]; bosses: string[] } {
     let eventMobs = 0;
     for (const m of this.mobs) if (m.event && m.state !== "dead") eventMobs++;
+    const species = [...new Set(this.mobs.filter((m) => !m.isBoss && !m.isGuard).map((m) => m.name))];
+    const bosses = this.mobs.filter((m) => m.isBoss).map((m) => m.name);
     return {
       aurora: !!this.aurora,
       mobs: this.mobs.length,
       eventMobs,
       trees: this.scene.children.length,
       event: this.wEvent.kind,
+      species,
+      bosses,
     };
+  }
+
+  /** v17: termina o duelo ativo (testes E2E). */
+  debugEndDuel(): void {
+    if (this.duel) {
+      this.opts.onEvent({ type: "duelend", won: null as any, vs: this.duel.opponentName, reason: "tempo" });
+      this.duel = null;
+    }
   }
 
   // ── Efeitos ─────────────────────────────────────────────────
@@ -4676,7 +5121,7 @@ export class WorldEngine {
         this.discovered.add(l.id);
         worldAudio.play("discover");
         this.discoverFx();
-        this.opts.onEvent({ type: "discover", id: l.id, name: l.name, emoji: l.emoji, xp: 30 });
+        this.opts.onEvent({ type: "discover", id: l.id, name: l.name, emoji: l.emoji, xp: 30 }); // v17: descobertas mais modestas
       }
     }
     // v6: entrada numa nova região — banner com nome e significado
@@ -4740,6 +5185,8 @@ export class WorldEngine {
     this.updateLoot(dt);
     this.updateArena(t);
     this.updateWorldEvent(t, dt);
+    this.updateFormFx(dt); // v17: aura de transformação + dreno de KI
+    this.updateDuel();     // v17: timeout de duelos
     this.updateCamera(dt);
     this.checkDiscoveries(t);
 
@@ -4827,13 +5274,14 @@ export class WorldEngine {
     this.opts.onEvent({ type: "worldevent", kind, name: meta.name, emoji: meta.emoji, desc: meta.desc, dur: meta.dur });
     worldAudio.play("event");
     if (kind === "swarm") {
-      // 5 bugs de elite x2 perto do herói
+      // v17: 5 criaturas de elite DO TERRITÓRIO atual cercam o herói
+      const region = this.currentRegion().id;
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2 + Math.random() * 0.5;
         const rr = 9 + Math.random() * 5;
         const x = Math.max(-220, Math.min(220, this.pos.x + Math.cos(a) * rr));
         const z = Math.max(-220, Math.min(220, this.pos.z + Math.sin(a) * rr));
-        this.spawnMob(2, x, z);
+        this.spawnMob(2, x, z, false, false, false, region);
         const m = this.mobs[this.mobs.length - 1];
         m.event = true;
         m.xp *= 2; m.gold *= 2; m.pts *= 2;
@@ -4948,7 +5396,8 @@ export class WorldEngine {
     if (len > 1) { ix /= len; iy /= len; }
 
     const speed = (4 + this.opts.stats.spd * 0.35) * (this.dead ? 0 : 1) * (this.guarding ? 0.45 : 1)
-      * (this.mounted ? 1.75 : 1) * (performance.now() < this.spdBuffUntil ? 1.25 : 1); // v11: montaria + poção do vento
+      * (this.mounted ? 1.75 : 1) * (performance.now() < this.spdBuffUntil ? 1.25 : 1) // v11: montaria + poção do vento
+      * (this.form === 2 ? 1.22 : this.form === 1 ? 1.12 : 1); // v17: transformação Dragon Ball
     const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
     const right = new THREE.Vector3(fwd.z * -1, 0, fwd.x);
     const move = new THREE.Vector3()

@@ -23,7 +23,7 @@ export default function AdminRevenue() {
       const [rafflesRes, participantsRes, earningsRes] = await Promise.all([
         supabase.from("raffles").select("*").order("created_at", { ascending: false }),
         supabase.from("participants").select("*, raffles(title, ticket_price)").order("created_at", { ascending: false }).limit(100),
-        supabase.from("creator_earnings").select("*").order("created_at", { ascending: false }).limit(500),
+        (supabase as any).from("creator_earnings").select("*").order("created_at", { ascending: false }).limit(500),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data);
       if (participantsRes.data) setParticipants(participantsRes.data);

@@ -1264,7 +1264,7 @@ const LiveHub = () => {
                     </button>
                   </div>
                   <GameErrorBoundary gameName="Bateu World 3D">
-                  <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} />
+                  <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => setActive("bounce" as GameId)} />
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "p2pbet" && (

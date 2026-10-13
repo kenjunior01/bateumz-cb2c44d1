@@ -185,6 +185,7 @@ function DestaqueCard({ r }: { r: RaffleRow }) {
 
 /* ─── cartão da Descoberta ao Vivo ─── */
 function DiscoveryCard({ r }: { r: RaffleRow }) {
+  const { t } = useLanguage(); // v16 fix: usava t() sem ter o tradutor em âmbito
   const { sfx } = useSoundEffects();
   const pct = r.total_tickets > 0 ? Math.min(100, Math.round((r.sold_tickets / r.total_tickets) * 100)) : 0;
   const rarity = rarityOf(r);

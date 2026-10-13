@@ -44,7 +44,9 @@ export default function ActivityFeed({ limit = 6, compact = false }: Props) {
     let alive = true;
     const load = async () => {
       try {
-        const { data, error } = await supabase
+        // v16: view criada por migration no Supabase — o gerador de tipos local
+        // ainda não a conhece, por isso o acesso é feito sem tipagem estrita
+        const { data, error } = await (supabase as any)
           .from("platform_recent_activity")
           .select("type, title, detail, href, created_at")
           .order("created_at", { ascending: false })

@@ -22,6 +22,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Swords, Sparkles, ArrowUp, User, ScrollText, Trophy, MessageSquare,
@@ -50,6 +51,8 @@ interface Props {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
   onNavigate?: (route: string) => void;
+  /** v16: volta ao hub — usada pelo botão «Sair» no modo imersivo do telemóvel */
+  onExit?: () => void;
 }
 
 interface Char {
@@ -120,7 +123,10 @@ function titleFor(level: number): string {
 }
 
 function xpNeeded(level: number): number {
-  return Math.round(80 * Math.pow(level, 1.45));
+  // v16: curva MUITO mais exigente — o utilizador pediu evolução difícil,
+  // sem subir de nível «a toda a hora»: 105·L^1.8 → Nv2 = 363 XP,
+  // Nv10 ≈ 6 600 XP, Nv20 ≈ 23 600 XP (antes: 80·L^1.45)
+  return Math.round(105 * Math.pow(level, 1.8));
 }
 
 function todayStr(): string {
@@ -338,7 +344,7 @@ const EXCHANGES = [
   { id: "cash", cost: 250, emoji: "💵", title: "10 MT na Carteira", desc: "Moeda real da plataforma — requer conta com carteira" },
 ];
 
-export default function BateuWorld({ onScore, onNavigate }: Props) {
+export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
   const { user, profile, loading: authLoading } = useAuth();
   const [phase, setPhase] = useState<"boot" | "create" | "world">("boot");
   const [char, setChar] = useState<Char | null>(null);
@@ -412,6 +418,19 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
   // v11 — câmaras, ecrã inteiro, leitor de música, clima, diálogo, montaria
   const [camMode, setCamMode] = useState<0 | 1 | 2>(0);
   const [isFs, setIsFs] = useState(false);
+  // v16 — MODO IMERSIVO: no telemóvel o mundo abre SEMPRE em ecrã inteiro.
+  // O Fullscreen API é instável no browser do celular (iOS nem o tem), por isso
+  // o ecrã inteiro é feito por CSS: fixed inset-0 + 100dvh + safe-areas.
+  const [immersive] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse) and (max-width: 1024px)").matches
+  );
+  // v16: «fill» = ocupar o ecrã todo (nativo OU imersivo) — HUD usa safe-areas
+  const fill = isFs || immersive;
+  // v16: PORTAL — ancestrais do hub com transform/filter (framer-motion, blur)
+  // criam «containing blocks» que roubam o position:fixed e reduzem o mundo a
+  // uma caixa; com o portal o ecrã vive diretamente no <body> — ecrã inteiro
+  // verdadeiro em qualquer página da plataforma.
+  const withPortal = (node: any) => (fill ? createPortal(node, document.body) : node);
   const fsSeq = useRef(0); // v13: sequência de toggles (cancela fallbacks obsoletos)
   const [musicOpen, setMusicOpen] = useState(false);
   const [trackIdx, setTrackIdx] = useState(worldAudio.getTrackIdx());
@@ -699,12 +718,12 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     const finished = step + 1 >= ONB_STEPS.length;
     setChar((p) => {
       if (!p?.onb || p.onb.done || step < p.onb.step) return p;
-      const n = { ...p, onb: finished ? { done: true, step } : { done: false, step: step + 1 }, gold: p.gold + 60 * gained };
-      return applyXp(n, 40 * gained);
+      const n = { ...p, onb: finished ? { done: true, step } : { done: false, step: step + 1 }, gold: p.gold + 40 * gained };
+      return applyXp(n, 20 * gained);
     });
     const st = ONB_STEPS[step];
     setTimeout(() => {
-      pushToast(`✅ ${st.emoji} ${st.title} — +${40 * gained} XP · +${60 * gained} ouro`, "good");
+      pushToast(`✅ ${st.emoji} ${st.title} — +${20 * gained} XP · +${40 * gained} ouro`, "good");
       worldAudio.play("coin");
       if (finished) {
         pushToast("🎓 Aventureiro de Bateu formado! O mundo é teu.", "good");
@@ -931,7 +950,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               const n = applyXp({ ...p, pts: p.pts + 10, discoveries: [...p.discoveries, ev.id], saga: { ...p.saga, discovers: p.saga.discovers + 1 } }, ev.xp);
               return n;
             });
-            showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: "Descoberta! +60 XP · +10 pts" });
+            showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: "Descoberta! +30 XP · +10 pts" });
             confetti({ particleCount: 60, spread: 60, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8"] });
             break;
           }
@@ -1276,19 +1295,19 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       (q as any)[key] = true;
       let { gold, xp, pts } = p;
       if (k === "K") { gold += 250; }
-      if (k === "C") { xp += 120; }
-      if (k === "V") { xp += 80; }
+      if (k === "C") { xp += 60; }
+      if (k === "V") { xp += 40; }
       if (k === "S") { gold += 150; }
       if (k === "W") { gold += 350; pts += 20; }
       if (k === "I") { gold += 300; pts += 20; }
       if (k === "D") { gold += 250; pts += 15; }
       if (k === "A") { gold += 200; pts += 10; }
       if (k === "H") { gold += 150; pts += 10; }
-      if (k === "G") { gold += 180; xp += 150; }
+      if (k === "G") { gold += 180; xp += 70; }
       const n = applyXp({ ...p, gold, xp, pts, quests: q }, 0);
       if (k === "H") logWorldActivity(p.uid, "quest", "Missão de interiores concluída", 10);
       if (k === "G") logWorldActivity(p.uid, "quest", "Missão de recolha concluída", 10);
-      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "G" ? "✅ Colheita Dourada: +180 ouro · +150 XP" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
+      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "G" ? "✅ Colheita Dourada: +180 ouro · +70 XP" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
       return n;
     });
   };
@@ -1378,9 +1397,9 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       const npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false, ...(p.npcDay || {}), [npc]: true };
       npcDay.date = todayStr();
       const n = { ...p, npcDay } as Char;
-      if (npc === "gomas") { n.gold += 120; n.xp += 100; pushToast("🧙 Mestre Gomas: +120 ouro · +100 XP — volta amanhã!", "good"); }
+      if (npc === "gomas") { n.gold += 120; n.xp += 50; pushToast("🧙 Mestre Gomas: +120 ouro · +50 XP — volta amanhã!", "good"); }
       if (npc === "lurdes") { n.pot = { ...n.pot, vida: n.pot.vida + 1 }; pushToast("🛠️ Ferreira Lurdes ofereceu-te uma Poção de Vida!", "good"); }
-      if (npc === "sabio") { n.pts += 5; n.xp += 60; pushToast("📜 O Velho Sábio partilhou sabedoria: +5 pts · +60 XP", "good"); }
+      if (npc === "sabio") { n.pts += 5; n.xp += 30; pushToast("📜 O Velho Sábio partilhou sabedoria: +5 pts · +30 XP", "good"); }
       worldAudio.play("heal");
       return applyXp(n, 0);
     });
@@ -1460,8 +1479,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
 
   // ── Render ─────────────────────────────────────────────────
   if (phase === "boot") {
-    return (
-      <div className="relative z-10 w-full h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center gap-4 text-white">
+    return withPortal((
+      <div className={"relative z-10 w-full overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center gap-4 text-white " + (immersive ? "fixed inset-0 z-[90] h-[100dvh] !rounded-none" : "h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl")}>
         <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle at 50% 60%, rgba(244,63,94,0.12) 0%, transparent 55%), radial-gradient(circle at 30% 30%, rgba(56,189,248,0.1) 0%, transparent 45%)" }} />
         <motion.div className="text-5xl" animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}>🌍</motion.div>
         <p className="font-display font-bold text-xl bg-gradient-to-r from-rose-300 to-amber-200 bg-clip-text text-transparent">Bateu World</p>
@@ -1473,7 +1492,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <motion.div className="h-full w-1/3 rounded-full bg-gradient-to-r from-rose-400 to-amber-300" animate={{ x: ["-100%", "300%"] }} transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }} />
         </div>
       </div>
-    );
+    ));
   }
 
   // ── v9: SEM GATE — convidados entram direto na criação de herói ──
@@ -1482,8 +1501,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     const sel = CLASSES[pickClass];
     // v13 MOBILE: criação em altura quase plena (76svh) — caixa 4/3 de 292px
     // obrigava a scroll interno minúsculo no telemóvel (1.ª impressão do jogo!)
-    return (
-      <div className="relative z-10 w-full h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl overflow-hidden text-white bg-slate-950" data-testid="bateu-create">
+    return withPortal((
+      <div className={"relative z-10 w-full rounded-2xl overflow-hidden text-white bg-slate-950 " + (immersive ? "fixed inset-0 z-[90] h-[100dvh] !rounded-none flex flex-col" : "h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video")} data-testid="bateu-create">
         {/* fundo animado v3 */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
         <motion.div
@@ -1621,7 +1640,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <p className="max-w-lg text-center text-[10px] text-white/45">12 descobertas no mapa · pet companheiro no nível 5 · combo de mortes com XP bónus · troca pontos por moeda real no Banco</p>
         </div>
       </div>
-    );
+    ));
   }
 
   const stats = char ? calcStats(char) : { atk: 0, maxHp: 100, spd: 6, def: 2 };
@@ -1719,12 +1738,12 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
     }
   }
 
-  return (
+  return withPortal((
     <div
       ref={worldWrapRef}
       data-bw-fs={isFs ? "1" : undefined}
-      style={isFs ? { height: "100dvh", width: "100vw" } : undefined}
-      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${isFs ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "h-[72svh] min-h-[480px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl"}`}
+      style={fill ? { height: "100dvh", width: "100vw" } : undefined}
+      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${fill ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "h-[72svh] min-h-[480px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl"}`}
       data-testid="bateu-world"
     >
       {/* v13 MOBILE: touch-none impede o browser de roubar o arrasto (zoom/scroll) — câmara contínua no dedo */}
@@ -1735,8 +1754,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {hud.hit > 0 && (
           <motion.div key={`hit-${hud.hit}`} className="pointer-events-none absolute inset-0 bg-red-600/25" initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.4 }} />
         )}
-        {/* v3: vinheta permanente subtil para foco */}
-        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: "inset 0 0 90px 20px rgba(2,6,23,0.55)" }} />
+        {/* v16: vinheta mais leve — tela limpa, cantos nítidos */}
+        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: "inset 0 0 64px 12px rgba(2,6,23,0.35)" }} />
         {deathFx && (
           <motion.div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2 bg-red-950/70 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.p className="font-display text-3xl md:text-4xl font-black text-red-300 drop-shadow-[0_0_18px_rgba(248,113,113,0.8)]" initial={{ scale: 0.6, rotate: -6 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 14 }}>
@@ -1776,7 +1795,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             <motion.div
               key="world-event"
               initial={{ opacity: 0, y: -14, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14 }}
-              className="pointer-events-none absolute left-1/2 top-16 z-20 -translate-x-1/2"
+              className={`pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 ${fill ? "top-[46px]" : "top-16"}`}
               data-testid="bw-world-event"
             >
               <motion.div
@@ -1785,7 +1804,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
                 transition={{ duration: 1.3, repeat: Infinity }}
               >
                 <motion.span className="text-base" animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.15, 1] }} transition={{ duration: 1.1, repeat: Infinity }}>{worldEvent.emoji}</motion.span>
-                <span className="text-xs font-black uppercase tracking-wider text-fuchsia-200">{worldEvent.name}</span>
+                <span className="max-w-[38vw] truncate text-xs font-black uppercase tracking-wider text-fuchsia-200">{worldEvent.name}</span>
                 <span className="h-3 w-px bg-white/25" />
                 <span className="text-[11px] font-black tabular-nums text-white/85">{Math.max(0, Math.ceil((worldEvent.until - eventNow) / 1000))}s</span>
               </motion.div>
@@ -1876,7 +1895,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       {!photoMode && (
         <>
       {/* HUD topo-esquerda v3 (vidro + anel de classe + buffs) */}
-      <div className="pointer-events-none absolute left-2 top-2 w-[214px] rounded-2xl border border-white/15 bg-black/55 p-2.5 text-white shadow-xl backdrop-blur-md" style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))", top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : undefined}>
+      <div className={`pointer-events-none absolute left-2 w-[214px] rounded-2xl border border-white/15 bg-black/55 p-2.5 text-white shadow-xl backdrop-blur-md ${fill ? "top-[46px]" : "top-2"}`} style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
         <div className="flex items-center gap-2">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ background: CLASSES[char!.classId]?.color + "33", border: `1.5px solid ${CLASSES[char!.classId]?.color}` }}>
             {CLS_EMOJIS[char!.classId]}
@@ -1933,8 +1952,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <motion.button
           onClick={() => setPanel("quests")}
           initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-          className="absolute left-2 top-[118px] z-10 w-[214px] rounded-xl border border-amber-400/30 bg-black/50 p-2 text-left text-white backdrop-blur-md hover:bg-black/70 transition-colors"
-          style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}
+          className={`absolute left-2 z-10 w-[214px] rounded-xl border border-amber-400/30 bg-black/50 p-2 text-left text-white backdrop-blur-md hover:bg-black/70 transition-colors ${fill ? "top-[152px]" : "top-[118px]"}`}
+          style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}
           data-testid="bw-tracker"
         >
           <p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-300"><Target className="h-2.5 w-2.5" /> Objetivo da Saga</p>
@@ -1951,22 +1970,37 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
               </div>
             );
           })()}
+          {(() => {
+            // v16: «coisas por fazer» à vista — missões diárias prontas para levantar
+            const q = char.quests;
+            const ready = (q.kills >= 10 && !q.cK ? 1 : 0) + (q.chest >= 1 && !q.cC ? 1 : 0) + (q.visit >= 1 && !q.cV ? 1 : 0)
+              + (q.steal >= 1 && !q.cS ? 1 : 0) + (q.waves >= 3 && !q.cW ? 1 : 0) + (q.item >= 1 && !q.cI ? 1 : 0)
+              + (q.duel >= 3 && !q.cD ? 1 : 0) + (q.atk >= 5 && !q.cA ? 1 : 0) + (q.home >= 2 && !q.cH ? 1 : 0)
+              + (q.gather >= 6 && !q.cG ? 1 : 0);
+            return (
+              <p className="mt-1 flex items-center gap-1 border-t border-white/10 pt-1 text-[9px] font-bold text-white/75">
+                <ScrollText className="h-2.5 w-2.5 shrink-0 text-sky-300" />
+                {ready > 0 ? <span className="text-amber-300">{ready} missão{ready > 1 ? "es" : ""} pronta{ready > 1 ? "s" : ""} para levantar 🎁</span> : <span className="text-white/50">Missões diárias em curso…</span>}
+              </p>
+            );
+          })()}
         </motion.button>
       )}
 
       {/* v10: topo-direita desce para debaixo da barra de navegação —
           em ecrãs estreitos as duas linhas sobrepunham-se (foto/som
           ficavam escondidas atrás de Definições — bug visual) */}
-      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5" style={isFs ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
-        <div className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm sm:flex">
+      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5" style={fill ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
+        <div className="pointer-events-none flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm sm:text-[11px]">
           <Users className="h-3 w-3 text-sky-400" /> {online} online
           {platform?.live && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
         </div>
-        <div className="relative hidden sm:block">
-          <canvas id="bw-minimap" width={100} height={100} className="rounded-xl border border-white/25 shadow-lg" />
+        {/* v16: minimapa SEMPRE visível (no telemóvel também!) — era hidden sm:block */}
+        <div className="relative">
+          <canvas id="bw-minimap" width={100} height={100} className="h-[76px] w-[76px] rounded-xl border border-white/25 shadow-lg sm:h-[100px] sm:w-[100px]" />
           <span className="pointer-events-none absolute left-1/2 top-0.5 -translate-x-1/2 text-[7px] font-black text-white/80">N</span>
         </div>
-        <div className="pointer-events-none hidden rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-sm sm:block">
+        <div className="pointer-events-none flex rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-sm">
           <MapPin className="mr-0.5 inline h-2.5 w-2.5 text-amber-300" />{char!.discoveries.length}/{LANDMARKS.length} descobertas
         </div>
         {/* v3: roda de emotes */}
@@ -2000,8 +2034,8 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         </div>
       </div>
 
-      {/* toasts */}
-      <div className="pointer-events-none absolute left-1/2 top-11 z-20 flex w-[300px] -translate-x-1/2 flex-col items-center gap-1">
+      {/* toasts (v16: abaixo das duas filas do topo) */}
+      <div className="pointer-events-none absolute left-1/2 top-[84px] z-20 flex w-[300px] -translate-x-1/2 flex-col items-center gap-1">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
@@ -2018,7 +2052,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       </div>
 
       {/* chat */}
-      <div className="absolute bottom-2 right-2 z-10 w-[220px]" style={isFs ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
+      <div className="absolute bottom-2 right-2 z-10 w-[220px]" style={fill ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
         {chatOpen ? (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-black/65 p-2 text-white backdrop-blur">
             <div className="mb-1 flex items-center justify-between">
@@ -2056,10 +2090,10 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <motion.button
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
             onClick={() => engineRef.current?.interact()}
-            className={`absolute left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-5 py-2 text-sm font-black text-slate-900 shadow-xl hover:scale-105 transition-transform ${char?.onb && !char.onb.done ? "bottom-[7.5rem]" : "bottom-24"}`}
+            className={`absolute left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-xl hover:scale-105 transition-transform ${char?.onb && !char.onb.done ? "bottom-[7.5rem]" : "bottom-24"}`}
             data-testid="bw-interact"
           >
-            {near} <span className="ml-1 text-slate-400">[E]</span>
+            {near && <span className="inline-block max-w-[44vw] truncate align-middle">{near}</span>} <span className="ml-1 text-slate-400">[E]</span>
           </motion.button>
         )}
       </AnimatePresence>
@@ -2069,7 +2103,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {compass && (
           <motion.div
             initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
-            className="absolute left-2 top-14 z-10 flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/60 px-3 py-1.5 backdrop-blur"
+            className={`absolute left-2 z-10 flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/60 px-3 py-1.5 backdrop-blur ${fill ? "top-[300px]" : "top-14"}`}
             data-testid="bw-compass"
           >
             <span className="relative flex h-7 w-7 items-center justify-center">
@@ -2091,7 +2125,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         {guardOn && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="absolute left-2 top-24 z-10 rounded-full border border-amber-400/50 bg-amber-500/20 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur"
+            className={`absolute left-2 z-10 rounded-full border border-amber-400/50 bg-amber-500/20 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur ${fill ? "top-[300px]" : "top-24"}`}
             data-testid="bw-guard-indicator"
           >
             🛡️ GUARDA — bloqueando 40%
@@ -2120,7 +2154,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
       </AnimatePresence>
 
       {/* v8: ticker da plataforma ao vivo — o que acontece fora aparece aqui */}
-      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1" style={isFs ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}>
+      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1" style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}>
         <AnimatePresence>
           {ticker.map((t) => (
             <motion.div
@@ -2136,11 +2170,19 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* painel de navegação superior — v10: foto e som vivem aqui para
-          nunca colidirem com a coluna direita; rótulos só em ecrãs largos
-          v13 MOBILE: flex-wrap — em 390px a linha transbordava e os últimos
-          botões (ecrã inteiro/foto/som) ficavam CORTADOS e intocáveis */}
-      <div className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 flex-wrap justify-center gap-1.5" style={isFs ? { top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : undefined}>
+      {/* v16: FAIXA DE CONTROLO única — Sair (imersivo) + painéis + câmaras +
+          ecrã inteiro + música + foto + som numa só fila com scroll horizontal:
+          nada transborda, nada fica intocável, ecrã limpo e organizado. */}
+      <div
+        className="absolute top-2 left-1/2 z-10 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-full bg-black/45 px-1.5 py-1 backdrop-blur-md [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none", ...(fill ? { top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : {}) }}
+      >
+          {immersive && onExit && (
+            <button onClick={onExit} aria-label="Sair do mundo" data-testid="bw-exit" title="Voltar aos jogos"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-rose-600/85 px-2.5 py-1.5 text-[11px] font-black text-white backdrop-blur transition-colors hover:bg-rose-500 active:scale-95">
+              <ChevronLeft className="h-4 w-4" /> Sair
+            </button>
+          )}
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
           ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
@@ -2154,7 +2196,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             key={id}
             onClick={() => setPanel((p) => (p === id ? "none" : id))}
             aria-label={label}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold backdrop-blur transition-colors ${panel === id ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
+            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold backdrop-blur transition-colors ${panel === id ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
             data-testid={`bw-nav-${id}`}
           >
             {icon}<span className="hidden lg:inline">{label}</span>
@@ -2163,9 +2205,9 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
             {id === "inv" && char!.inv.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{char!.inv.length}</span>}
           </button>
         ))}
-        <div className="mx-0.5 w-px self-stretch bg-white/20" />
+        <div className="mx-0.5 w-px shrink-0 self-stretch bg-white/20" />
         {/* v11: CÂMARAS — orbital · 1ª pessoa Minecraft · 3ª pessoa GTA */}
-        <div className="flex items-center gap-0.5 rounded-full bg-black/55 p-0.5 backdrop-blur" data-testid="bw-cam-group">
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-black/55 p-0.5 backdrop-blur" data-testid="bw-cam-group">
           {([0, 1, 2] as const).map((m) => (
             <button
               key={m}
@@ -2183,7 +2225,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <button
           onClick={toggleFs}
           aria-label="Ecrã inteiro"
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-fs"
           title="Ecrã inteiro"
         >
@@ -2193,7 +2235,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <button
           onClick={() => { setMusicOpen((v) => !v); worldAudio.ensure(); }}
           aria-label="Banda sonora"
-          className={`flex items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
+          className={`flex shrink-0 items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
           data-testid="bw-music"
           title="Banda sonora do mundo"
         >
@@ -2203,7 +2245,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <button
           onClick={togglePhoto}
           aria-label="Modo foto"
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-photo"
           title="Modo Foto (P)"
         >
@@ -2212,13 +2254,20 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <button
           onClick={() => setMuted(worldAudio.toggleMute())}
           aria-label={muted ? "Ligar som" : "Desligar som"}
-          className="flex items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
+          className="flex shrink-0 items-center rounded-full bg-black/55 p-1.5 text-white backdrop-blur transition-colors hover:bg-black/75"
           data-testid="bw-sound"
           title={muted ? "Ligar som (M)" : "Desligar som (M)"}
         >
           {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
         </button>
       </div>
+
+      {/* v9: chip de convidado — abaixo da faixa, sem flutuar sobre o HUD */}
+      {!user && (
+        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 top-[46px] z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : undefined}>
+          👤 CONVIDADO — criar conta para guardar na nuvem
+        </button>
+      )}
 
       {/* v11: LEITOR DE MÚSICA — 5 faixas ORIGINAIS (0% direitos de autor) */}
       <AnimatePresence>
@@ -2266,7 +2315,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
           <motion.div
             key="weather-chip"
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2"
+            className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 ${fill ? "top-[46px]" : "top-24"}`}
             data-testid="bw-weather"
           >
             <div className="flex items-center gap-2 rounded-full border border-sky-300/40 bg-black/70 px-3 py-1 text-[10px] font-black text-sky-100 backdrop-blur">
@@ -2321,22 +2370,13 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         )}
       </AnimatePresence>
 
-      {/* v9: chip de convidado — lembra suave, nunca bloqueia */}
-      {!user && (
-        <button
-          onClick={() => go("/register")}
-          data-testid="bw-guest-chip"
-          className="absolute top-[84px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25 sm:top-11"
-        >
-          👤 CONVIDADO — criar conta para guardar na nuvem
-        </button>
-      )}
+      {/* v9: chip de convidado removido daqui — agora vive na coluna do topo */}
 
       {/* joystick (mobile) */}
-      <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} fs={isFs} />
+      <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} fs={fill} />
 
       {/* barra de poderes + botões de combate v3 (cooldown radial) */}
-      <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2" style={isFs ? { right: "calc(0.75rem + env(safe-area-inset-right, 0px))", bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
+      <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2" style={fill ? { right: "calc(0.75rem + env(safe-area-inset-right, 0px))", bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
         <div className="flex flex-col items-center gap-2">
           {mySkills.map((sk, i) => {
             const locked = char!.level < sk.lvl;
@@ -2431,7 +2471,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-3 left-1/2 z-20 w-[290px] max-w-[86vw] -translate-x-1/2 rounded-2xl border border-amber-300/40 bg-slate-950/85 p-2.5 text-white shadow-2xl backdrop-blur-md"
+          className={`absolute left-1/2 z-20 w-[290px] max-w-[86vw] -translate-x-1/2 rounded-2xl border border-amber-300/40 bg-slate-950/85 p-2.5 text-white shadow-2xl backdrop-blur-md ${fill ? "top-[150px]" : "bottom-3"}`}
           data-testid="bw-onb"
         >
           <div className="flex items-center justify-between gap-2">
@@ -3029,7 +3069,7 @@ export default function BateuWorld({ onScore, onNavigate }: Props) {
         )}
       </AnimatePresence>
     </div>
-  );
+  ));
 }
 
 // ── Sub-componentes ──────────────────────────────────────────

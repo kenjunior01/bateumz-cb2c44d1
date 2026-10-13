@@ -100,7 +100,7 @@ export default function ContestDetail() {
       /* taxa de inscrição — paga com o saldo da carteira (v14 harmonia) */
       const fee = Number((contest as any).entry_fee) || 0;
       if (fee > 0) {
-        const { data: payRes, error: payErr } = await supabase.rpc("pay_contest_entry", {
+        const { data: payRes, error: payErr } = await (supabase as any).rpc("pay_contest_entry", {
           p_contest_id: contest.id,
         });
         const pr: any = payRes;

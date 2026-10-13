@@ -91,6 +91,22 @@ async function main() {
   ok("Mundo 3D ativo em telemóvel", (await canvas.count()) > 0);
   await page.screenshot({ path: "shots/mobile-01-mundo.png" });
 
+  // ── 1.b v16: MODO IMERSIVO — o mundo abre em ecrã inteiro SEM clicar nada ──
+  console.log("▶ Modo imersivo (v16): ecrã inteiro por omissão");
+  const imm = await page.evaluate(() => {
+    const w = document.querySelector('[data-testid="bateu-world"]');
+    if (!w) return null;
+    const cs = getComputedStyle(w);
+    const r = w.getBoundingClientRect();
+    return { pos: cs.position, h: r.height, wd: r.width, vh: window.innerHeight, vw: window.innerWidth, rounded: parseFloat(cs.borderRadius) || 0 };
+  });
+  ok("Container do mundo é fixed (ecrã inteiro por omissão)", !!imm && imm.pos === "fixed");
+  ok("Ocupa a altura toda (≈100dvh, sem quadrado)", !!imm && Math.abs(imm.h - imm.vh) < 40);
+  ok("Ocupa a largura toda (390px)", !!imm && Math.abs(imm.wd - imm.vw) < 8);
+  ok("Sem cantos arredondados (não é uma caixa)", !!imm && imm.rounded < 2);
+  ok("Minimapa visível no telemóvel (v16)", await page.locator("#bw-minimap").isVisible().catch(() => false));
+  ok("Botão «Sair» disponível no modo imersivo", await page.locator('[data-testid="bw-exit"]').isVisible().catch(() => false));
+
   // ── 2. Touch-action e canvas ──────────────────────────────
   console.log("▶ Canvas pronto para dedos");
   const touchAction = await page.evaluate(() => {
@@ -162,8 +178,13 @@ async function main() {
   ok("Joystick move o herói (Δpos > 0.2 unidades)", typeof moved === "object" && moved.d > 0.2);
   // headless throttled não anda 16 unidades — teleporta (hook tp) para testar o avanço automático
   await page.evaluate(() => window.__bw.tp(30, 30));
-  await page.waitForTimeout(2800); // polling do onboarding (700ms; throttled ~1s em headless)
-  const onbTitle2 = await page.locator('[data-testid="bw-onb-title"]').innerText().catch(() => "");
+  // v16: poll resiliente (o motor pode estar ocupado a sincronizar/criar objetos
+  // da plataforma — o avanço por polling de 700ms pode tardar para além de 2.8s)
+  let onbTitle2 = "";
+  for (let i = 0; i < 14 && !onbTitle2.includes("Primeira vitória"); i++) {
+    await page.waitForTimeout(700);
+    onbTitle2 = await page.locator('[data-testid="bw-onb-title"]').innerText().catch(() => "");
+  }
   ok("Onboarding avançou sozinho → passo 2 «Primeira vitória»", onbTitle2.includes("Primeira vitória"));
   await page.screenshot({ path: "shots/mobile-02-onboarding.png" });
 
@@ -235,6 +256,17 @@ async function main() {
   const realErrors = consoleErrors.filter((e) => !NOISE.some((n) => e.includes(n)));
   ok("0 erros de página reais (touch completo)", realErrors.length === 0);
   if (realErrors.length) console.log("   erros:", realErrors.slice(0, 4));
+
+  // ── 12. v16: SAIR do mundo volta aos jogos ────────────────
+  console.log("▶ Botão Sair do modo imersivo");
+  const exitVisible = await page.locator('[data-testid="bw-exit"]').isVisible().catch(() => false);
+  if (exitVisible) {
+    await page.locator('[data-testid="bw-exit"]').click({ force: true }).catch(() => {});
+    await page.waitForTimeout(1500);
+    ok("Sair fecha o mundo e volta aos jogos", (await page.locator('[data-testid="bateu-world"]').count()) === 0);
+  } else {
+    ok("Sair fecha o mundo e volta aos jogos", false);
+  }
 
   await page.screenshot({ path: "shots/mobile-04-final.png" });
   await browser.close();

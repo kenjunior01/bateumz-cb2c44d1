@@ -649,6 +649,11 @@ async function main() {
   console.log("▶ v11 — Câmaras, ecrã inteiro, música, NPCs e oficina");
   // câmaras: 3 modos no HUD
   ok("v11: grupo de câmaras no HUD", await page.locator('[data-testid="bw-cam-group"]').count() > 0);
+  // v16: as secções de mapa/missões deixam a página scrollada — traz a fila de
+  // controlos do topo de volta ao viewport antes de clicar (clique fora do
+  // ecrã não chega ao botão)
+  await page.evaluate(() => document.querySelector('[data-testid="bw-cam-group"]')?.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(250);
   await page.locator('[data-testid="bw-cam-1"]').click({ force: true }).catch(() => {});
   await page.waitForTimeout(400);
   ok("v11: câmara 1ª PESSOA ativa (estilo Minecraft)", await page.evaluate(() => window.__bw?.getCamMode?.() === 1));

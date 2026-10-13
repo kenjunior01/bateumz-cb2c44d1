@@ -363,11 +363,12 @@ interface ArenaState {
 
 // ── Balanceamento v2: 5 tiers + guardiões + 2 chefes ─────────
 const MOB_TIERS = [
-  { hp: 40, atk: 6, xp: 14, gold: 10, pts: 1, speed: 2.2, color: 0x4ade80, name: "Bug Verde", scale: 1 },
-  { hp: 95, atk: 12, xp: 34, gold: 24, pts: 2, speed: 2.8, color: 0xf97316, name: "Bug Laranja", scale: 1.25 },
-  { hp: 190, atk: 20, xp: 75, gold: 55, pts: 4, speed: 3.3, color: 0xa855f7, name: "Bug Sombrio", scale: 1.5 },
-  { hp: 340, atk: 30, xp: 140, gold: 100, pts: 7, speed: 3.6, color: 0x38bdf8, name: "Bug Gélido", scale: 1.7 },
-  { hp: 520, atk: 42, xp: 240, gold: 180, pts: 10, speed: 3.9, color: 0xf43f5e, name: "Bug Infernal", scale: 1.9 },
+  // v16: progressão mais exigente — XP por morte reduzido ~35% (ouro mantém)
+  { hp: 40, atk: 6, xp: 9, gold: 10, pts: 1, speed: 2.2, color: 0x4ade80, name: "Bug Verde", scale: 1 },
+  { hp: 95, atk: 12, xp: 22, gold: 24, pts: 2, speed: 2.8, color: 0xf97316, name: "Bug Laranja", scale: 1.25 },
+  { hp: 190, atk: 20, xp: 48, gold: 55, pts: 4, speed: 3.3, color: 0xa855f7, name: "Bug Sombrio", scale: 1.5 },
+  { hp: 340, atk: 30, xp: 90, gold: 100, pts: 7, speed: 3.6, color: 0x38bdf8, name: "Bug Gélido", scale: 1.7 },
+  { hp: 520, atk: 42, xp: 155, gold: 180, pts: 10, speed: 3.9, color: 0xf43f5e, name: "Bug Infernal", scale: 1.9 },
 ];
 
 const CLASS_COLORS = [0xef4444, 0x8b5cf6, 0x22c55e, 0x06b6d4];
@@ -704,17 +705,20 @@ export class WorldEngine {
 
   private init(): void {
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    // v16: antialias SEMPRE — no mobile era desligado e o mundo ficava serrilhado/embaciado
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: !isTouch,
+      antialias: true,
       powerPreference: "high-performance",
     });
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8fc8e8);
-    this.scene.fog = new THREE.FogExp2(0xb2d8ea, 0.0042); // v11: névoa clara e moderna
+    // v16: névoa 33% mais leve — o mundo fica nítido ao longe (antes «nublado»)
+    this.scene.fog = new THREE.FogExp2(0xb2d8ea, 0.0028);
 
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 560);
+    // v16: horizonte mais longe — com a névoa leve já se vê o fim do mundo sem cortes
+    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 720);
 
     this.hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3d6b35, 0.95);
     this.scene.add(this.hemi);
@@ -771,20 +775,28 @@ export class WorldEngine {
   private setupPostFx(isTouch: boolean): void {
     try {
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.08;
+      // v16: exposição mais alta — imagem viva e clara, sem sensação «ofuscada»
+      this.renderer.toneMappingExposure = 1.14;
       const size = new THREE.Vector2();
       this.renderer.getSize(size);
-      this.composer = new EffectComposer(this.renderer);
+      // v16: MSAA no composer — sem isto, o pós-processamento anulava o antialias
+      // e o mundo ficava desfocado/serrilhado mesmo com antialias ligado
+      const bufSize = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+      const msaaRt = new THREE.WebGLRenderTarget(bufSize.x, bufSize.y, {
+        type: THREE.HalfFloatType,
+        samples: isTouch ? 2 : 4,
+      });
+      this.composer = new EffectComposer(this.renderer, msaaRt);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.bloomPass = new UnrealBloomPass(size, 0.18, 0.5, 0.88); // v11: brilho subtil — visual limpo
+      this.bloomPass = new UnrealBloomPass(size, 0.14, 0.5, 0.88); // v16: brilho ainda mais subtil — nitidez primeiro
       this.composer.addPass(this.bloomPass);
       // vinheta + saturação suave (film look)
       this.vignettePass = new ShaderPass({
         uniforms: {
           tDiffuse: { value: null },
-          offset: { value: 1.16 },
-          darkness: { value: 0.3 },   // v11: vinheta muito mais leve
-          saturation: { value: 1.02 }, // v11: cores naturais, sem exagero
+          offset: { value: 1.22 },
+          darkness: { value: 0.2 },   // v16: vinheta quase impercetível — cantos limpos
+          saturation: { value: 1.06 }, // v16: cores um pouco mais vivas — mundo radiante
         },
         vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `
@@ -817,9 +829,11 @@ export class WorldEngine {
     this.quality = q;
     const autoTier: "low" | "medium" | "high" = isTouch ? (window.devicePixelRatio > 2 ? "medium" : "high") : "high";
     const tier = q === "auto" ? autoTier : q;
-    if (tier === "low") this.pq = { bloom: false, vignette: false, pixelRatio: 1 };
-    else if (tier === "medium") this.pq = { bloom: true, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) };
-    else this.pq = { bloom: true, vignette: true, pixelRatio: Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2) };
+    // v16: resolução mais alta em TODOS os níveis touch — o mundo tinha de ser nítido
+    // (antes: 1.25/1.5 no telemóvel → renderizado a metade da resolução nativa)
+    if (tier === "low") this.pq = { bloom: false, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) };
+    else if (tier === "medium") this.pq = { bloom: true, vignette: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75) };
+    else this.pq = { bloom: true, vignette: true, pixelRatio: Math.min(window.devicePixelRatio || 1, 2) };
     this.basePR = this.pq.pixelRatio;
     this.dynScale = 1; // nova qualidade → governador recomeça
     this.renderer.setPixelRatio(this.basePR * this.dynScale);
@@ -1876,7 +1890,7 @@ export class WorldEngine {
           this.insideSeen.add(inside.id);
           worldAudio.play("discover");
           this.discoverFx();
-          this.opts.onEvent({ type: "discover", id: "bld-" + inside.id, name: inside.name, emoji: "🏠", xp: 45 });
+          this.opts.onEvent({ type: "discover", id: "bld-" + inside.id, name: inside.name, emoji: "🏠", xp: 25 });
         }
       } else {
         this.opts.onEvent({ type: "inside", name: "", desc: "", on: false });
@@ -4662,7 +4676,7 @@ export class WorldEngine {
         this.discovered.add(l.id);
         worldAudio.play("discover");
         this.discoverFx();
-        this.opts.onEvent({ type: "discover", id: l.id, name: l.name, emoji: l.emoji, xp: 60 });
+        this.opts.onEvent({ type: "discover", id: l.id, name: l.name, emoji: l.emoji, xp: 30 });
       }
     }
     // v6: entrada numa nova região — banner com nome e significado
@@ -4698,10 +4712,12 @@ export class WorldEngine {
     this.fpsT += rawDt;
     if (this.fpsT >= 2) {
       this.fpsT = 0;
-      if (this.fpsEma < 46 && this.dynScale > 0.55) {
-        this.dynScale = Math.max(0.55, this.dynScale - 0.15);
+      // v16: piso de resolução 0.8 (antes 0.55 — fonte principal do «desfocado»).
+      // Só desce quando está mesmo a lutar (<42fps) e desce devagar.
+      if (this.fpsEma < 42 && this.dynScale > 0.8) {
+        this.dynScale = Math.max(0.8, this.dynScale - 0.1);
         this.applyDynRes();
-      } else if (this.fpsEma > 57.5 && this.dynScale < 1) {
+      } else if (this.fpsEma > 55 && this.dynScale < 1) {
         this.dynScale = Math.min(1, this.dynScale + 0.08);
         this.applyDynRes();
       }
@@ -5800,11 +5816,12 @@ export class WorldEngine {
     const fog = this.scene.fog as THREE.FogExp2;
     if (this.weather === "clear") {
       // transição suave da névoa de volta ao normal
-      fog.density += (0.0042 - fog.density) * Math.min(1, dt * 1.2);
+      fog.density += (0.0028 - fog.density) * Math.min(1, dt * 1.2);
       if (t > this.weatherNext && !this.dead) {
-        const storm = Math.random() < 0.32;
+        // v16: céu limpo é o estado normal — chuva rara e curta (32%→22%, 55-105s→40-75s)
+        const storm = Math.random() < 0.22;
         this.weather = storm ? "storm" : "rain";
-        this.weatherUntil = t + 55000 + Math.random() * 50000;
+        this.weatherUntil = t + 40000 + Math.random() * 35000;
         if (this.rain) this.rain.visible = true;
         worldAudio.setRain(true);
         this.opts.onEvent({
@@ -5818,13 +5835,13 @@ export class WorldEngine {
     // ── chuva/tempestade ativa ──
     if (t > this.weatherUntil) {
       this.weather = "clear";
-      this.weatherNext = t + 150000 + Math.random() * 210000;
+      this.weatherNext = t + 240000 + Math.random() * 300000;
       if (this.rain) this.rain.visible = false;
       worldAudio.setRain(false);
       this.opts.onEvent({ type: "weather", kind: "clear", name: "Céu Limpo", emoji: "☀️", desc: "O tempo abriu — o mundo volta a brilhar." });
       return;
     }
-    const targetD = this.weather === "storm" ? 0.0078 : 0.0058;
+    const targetD = this.weather === "storm" ? 0.0055 : 0.0043;
     fog.density += (targetD - fog.density) * Math.min(1, dt * 1.2);
     if (this.rain && this.rainGeo) {
       const p = this.rainGeo.attributes.position as THREE.BufferAttribute;

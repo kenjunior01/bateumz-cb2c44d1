@@ -168,7 +168,7 @@ const RaffleDetail = () => {
     if (!user) { navigate("/login"); return; }
     if (!raffle || buyingPoints) return;
     setBuyingPoints(true);
-    const { data, error } = await supabase.rpc("buy_points_raffle_tickets", {
+    const { data, error } = await (supabase as any).rpc("buy_points_raffle_tickets", {
       p_raffle_id: raffle.id,
       p_count: pointsQty,
     });

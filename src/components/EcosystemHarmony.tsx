@@ -29,6 +29,8 @@ const FALLBACK_PULSE: EcosystemPulse = {
   creators_net: 0,
   platform_commissions: 0,
   earnings_records: 0,
+  business_subscribers: 0,
+  monthly_revenue: 0,
 };
 
 export default function EcosystemHarmony() {
@@ -51,7 +53,7 @@ export default function EcosystemHarmony() {
     { label: "Sorteios ativos", value: pulse.active_raffles },
     { label: "Concursos", value: pulse.active_contests },
     { label: "Campeonatos", value: pulse.active_tournaments },
-    { label: "Empresas & criadores", value: pulse.businesses },
+    { label: "Empresas subscritas", value: pulse.business_subscribers ?? pulse.businesses },
   ];
 
   return (
@@ -70,8 +72,8 @@ export default function EcosystemHarmony() {
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-300 md:text-base">
           Os pontos que ganha a jogar alimentam os sorteios; os sorteios dão palco às
-          empresas; as empresas criam campeonatos e concursos; e cada transação sustenta
-          a plataforma com uma comissão mínima e transparente.
+          empresas; as empresas criam campeonatos e concursos. E o equilíbrio é simples:
+          só as empresas pagam uma mensalidade fixa — ninguém paga comissão pelo que vende.
         </p>
       </div>
 
@@ -96,7 +98,7 @@ export default function EcosystemHarmony() {
             <HandCoins className="mb-1 h-6 w-6 text-emerald-300 md:h-8 md:w-8" />
             <span className="text-sm font-black tracking-wide md:text-base">BATEU</span>
             <span className="px-2 text-[10px] leading-tight text-slate-400 md:text-xs">
-              comissão justa {`·`} tudo em equilíbrio
+              mensalidade {`·`} 0% comissão {`·`} equilíbrio
             </span>
           </a>
 

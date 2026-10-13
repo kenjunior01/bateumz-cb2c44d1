@@ -21,7 +21,7 @@ interface Props {
  * Destaques de Stories — coleções permanentes no perfil
  * (estilo Instagram Highlights).
  */
-const StoryHighlights = ({ userId, isOwner }: Props) => {
+const StoryHighlights = ({ userId, isOwner, refreshKey = 0 }: Props) => {
   const { user } = useAuth();
   const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +31,7 @@ const StoryHighlights = ({ userId, isOwner }: Props) => {
 
   useEffect(() => {
     load();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   const load = async () => {
     setLoading(true);
@@ -45,17 +45,18 @@ const StoryHighlights = ({ userId, isOwner }: Props) => {
     setViewerOpen(true);
   };
 
+  // lista visível (só destaques com stories) — índices sempre coerentes
+  const visibleHighlights = highlights.filter((h) => (h.stories || []).length > 0);
+
   const groupsFromHighlights = (): StoryAuthorGroup[] => {
-    return highlights
-      .filter((h) => (h.stories || []).length > 0)
-      .map((h) => ({
-        author: {
-          id: h.id,
-          name: h.title,
-          avatar: h.cover_image || h.stories?.[0]?.image_url || undefined,
-        },
-        stories: (h.stories as UserStory[]) || [],
-      }));
+    return visibleHighlights.map((h) => ({
+      author: {
+        id: h.id,
+        name: h.title,
+        avatar: h.cover_image || h.stories?.[0]?.image_url || undefined,
+      },
+      stories: (h.stories as UserStory[]) || [],
+    }));
   };
 
   /** Adiciona os stories ativos (últimas 24h) a um destaque novo ou existente */
@@ -136,7 +137,7 @@ const StoryHighlights = ({ userId, isOwner }: Props) => {
           </button>
         )}
 
-        {highlights.map((h, idx) => {
+        {visibleHighlights.map((h, idx) => {
           const cover = h.cover_image || h.stories?.[h.stories.length - 1]?.image_url;
           return (
             <motion.button

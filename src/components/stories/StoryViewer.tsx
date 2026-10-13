@@ -42,10 +42,11 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
   const [showReplies, setShowReplies] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [showViewers, setShowViewers] = useState(false);
-  const [viewers, setViewers] = useState<{ viewer_id: string; profiles: { display_name: string | null; avatar_url: string | null } }[]>([]);
+  const [viewers, setViewers] = useState<{ viewer_id: string; profiles_public: { display_name: string | null; avatar_url: string | null } }[]>([]);
   const [pollResults, setPollResults] = useState<Record<number, number> | null>(null);
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
   const [quizWon, setQuizWon] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [floatEmojis, setFloatEmojis] = useState<{ id: number; emoji: string; x: number }[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +60,7 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
   // Reset interações ao mudar de story
   useEffect(() => {
     setPollResults(null);
-    setQuizAnswered(story?.myVote ?? null);
+    setQuizAnswered(story?.myQuizAnswer ?? null);
     setQuizWon(false);
     setShowReplies(false);
     setShowReactions(false);
@@ -161,7 +162,7 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
 
   const handlePollVote = async (option: number) => {
     if (!story?.poll) return;
-    if (story.myVote !== null) return;
+    if ((story.myVote ?? null) !== null) return;
     await voteStoryInteraction(story.id, "poll", option);
     story.myVote = option;
     const results = await getStoryResults(story.id);
@@ -184,7 +185,7 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
     if (!story) return;
     if (showViewers) return setShowViewers(false);
     const list = await getStoryViewers(story.id);
-    setViewers(list);
+    setViewers(list as unknown as typeof viewers);
     setShowViewers(true);
   };
 
@@ -200,6 +201,17 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
   const copyDealCode = (code: string) => {
     navigator.clipboard?.writeText(code);
     toast.success(`Código ${code} copiado!`);
+  };
+
+  const sendQuickReply = async (emoji: string) => {
+    try {
+      const ok = await replyToStory(story.id, emoji, emoji);
+      if (ok) { toast.success("Enviado!"); setShowReplies(false); }
+      else toast.error("Não foi possível enviar");
+    } catch {
+      toast.error("Inicie sessão para responder");
+      setShowReplies(false);
+    }
   };
 
   if (!group || !story) return null;
@@ -221,8 +233,8 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] bg-black flex items-center justify-center select-none"
     >
-      {/* Barras de progresso */}
-      <div className="absolute top-3 left-3 right-3 flex gap-1 z-20">
+      {/* Barras de progresso — respeitam o notch */}
+      <div className="absolute left-3 right-3 flex gap-1 z-20" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
         {group.stories.map((_, i) => (
           <div key={i} className="flex-1 h-[3px] rounded-full bg-white/25 overflow-hidden">
             <div
@@ -234,7 +246,7 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
       </div>
 
       {/* Header */}
-      <div className="absolute top-6 left-4 right-4 z-20 flex items-center justify-between">
+      <div className="absolute left-4 right-4 z-20 flex items-center justify-between" style={{ top: "calc(max(0.75rem, env(safe-area-inset-top)) + 1.5rem)"}}>
         <div className="flex items-center gap-2.5 min-w-0">
           {group.author.avatar ? (
             <OptimizedImage src={group.author.avatar} alt="" optimizeWidth={80} className="h-9 w-9 rounded-full ring-2 ring-white/60 object-cover" />
@@ -292,12 +304,12 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
             ) : (
               viewers.map((v) => (
                 <div key={v.viewer_id} className="flex items-center gap-2 py-1">
-                  {v.profiles?.avatar_url ? (
-                    <img src={v.profiles.avatar_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                  {v.profiles_public?.avatar_url ? (
+                    <img src={v.profiles_public.avatar_url} alt="" className="h-6 w-6 rounded-full object-cover" />
                   ) : (
                     <div className="h-6 w-6 rounded-full bg-white/20" />
                   )}
-                  <span className="text-white text-xs truncate">{v.profiles?.display_name || "Utilizador"}</span>
+                  <span className="text-white text-xs truncate">{v.profiles_public?.display_name || "Utilizador"}</span>
                 </div>
               ))
             )}
@@ -305,22 +317,24 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
         )}
       </AnimatePresence>
 
-      {/* CONTEÚDO */}
+      {/* CONTEÚDO — altura limitada por dvh (não transborda em ecrãs baixos) */}
       <div
-        className="relative w-full max-w-[400px] aspect-[9/16] overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 to-black shadow-2xl"
+        className="relative w-full max-w-[min(400px,calc((100dvh-4rem)*9/16))] aspect-[9/16] overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 to-black shadow-2xl"
         onPointerDown={(e) => { if (e.pointerType === "touch") setPaused(true); }}
         onPointerUp={(e) => { if (e.pointerType === "touch") setPaused(false); }}
       >
-        {story.media_type === "video" && story.video_url ? (
+        {story.media_type === "video" && story.video_url && !videoFailed ? (
           <video
             src={story.video_url}
             className="absolute inset-0 h-full w-full object-cover"
             style={{ filter: filterCss }}
             autoPlay
+            muted
             playsInline
             loop
+            onError={() => setVideoFailed(true)}
           />
-        ) : story.image_url ? (
+        ) : story.image_url && story.media_type !== "video" ? (
           <OptimizedImage
             src={story.image_url}
             alt=""
@@ -454,8 +468,8 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
           </div>
         )}
 
-        {/* QUIZ */}
-        {story.quiz && (
+        {/* QUIZ — separado da enquete (nunca se sobrepõem) */}
+        {story.quiz && !story.poll && (
           <div className="absolute bottom-32 left-4 right-4 z-10 space-y-2">
             <p className="text-white text-sm font-semibold drop-shadow text-center">{story.quiz.question}</p>
             <div className="grid grid-cols-2 gap-2">
@@ -624,10 +638,7 @@ const StoryViewer = ({ groups, startGroup, onClose, onDeleted }: Props) => {
                 {["❤️", "🔥", "😂", "😮", "🎉"].map((e) => (
                   <button
                     key={e}
-                    onClick={async () => {
-                      const ok = await replyToStory(story.id, e, e);
-                      if (ok) { toast.success("Enviado!"); setShowReplies(false); }
-                    }}
+                    onClick={() => sendQuickReply(e)}
                     className="shrink-0 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-xl hover:bg-white/20"
                   >
                     {e}

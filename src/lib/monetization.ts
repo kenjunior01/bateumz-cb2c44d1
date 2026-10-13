@@ -1,7 +1,8 @@
 // ============================================================
-// BATEU v14 — ECOSSISTEMA EM HARMONIA
-// Fonte única de verdade das comissões da plataforma e dos
-// ganhos de criadores/empresas. Toda a plataforma lê daqui.
+// BATEU v15 — MENSALIDADE + ECOSSISTEMA EM HARMONIA
+// Modelo: empresas pagam uma mensalidade; todas as outras pessoas
+// usam a plataforma GRÁTIS para os seus fins (0% de comissão).
+// Fonte única de verdade — toda a plataforma lê daqui.
 // ============================================================
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,25 +29,25 @@ export interface CommissionConfig {
   currency: string;
 }
 
-/** Comissões por omissão — coerentes com o resto da plataforma (5%) */
+/** Comissões por omissão — 0% em tudo: o sustento é a mensalidade das empresas */
 export const DEFAULT_COMMISSIONS: CommissionConfig = {
-  raffle: 5,
-  contest: 5,
-  tournament: 5,
-  marketplace: 10,
-  sale: 10,
-  challenge: 5,
-  esports: 5,
+  raffle: 0,
+  contest: 0,
+  tournament: 0,
+  marketplace: 0,
+  sale: 0,
+  challenge: 0,
+  esports: 0,
   currency: "MZN",
 };
 
-/** Divide um montante entre criador e plataforma de forma transparente */
+/** Divide um montante entre criador e plataforma de forma transparente (0% hoje) */
 export function computeSplit(
   amount: number,
   source: EarningSource,
   commissions: CommissionConfig = DEFAULT_COMMISSIONS
 ): { gross: number; fee: number; net: number; percent: number } {
-  const percent = commissions[source] ?? 5;
+  const percent = commissions[source] ?? 0;
   const fee = Math.round(amount * (percent / 100) * 100) / 100;
   return { gross: amount, fee, net: Math.round((amount - fee) * 100) / 100, percent };
 }
@@ -128,6 +129,141 @@ export interface EcosystemPulse {
   creators_net: number;
   platform_commissions: number;
   earnings_records: number;
+  business_subscribers?: number;
+  monthly_revenue?: number;
+}
+
+// ============================================================
+// MENSALIDADE — planos da plataforma
+// ============================================================
+export type PlanKey = "free" | "business" | "corporate";
+
+export interface PlatformPlan {
+  key: PlanKey;
+  name: string;
+  price: number;
+  tagline: string;
+  features: string[];
+}
+
+export const PLATFORM_PLANS: PlatformPlan[] = [
+  {
+    key: "free",
+    name: "Grátis",
+    price: 0,
+    tagline: "Para pessoas usarem a plataforma para os seus fins",
+    features: [
+      "Jogos e RPG 3D",
+      "Stories, feed e lives",
+      "Participar em sorteios e concursos",
+      "Criar eventos gratuitos",
+      "Carteira e pontos",
+    ],
+  },
+  {
+    key: "business",
+    name: "Empresarial",
+    price: 1500,
+    tagline: "Para empresas venderem e promoverem todos os dias",
+    features: [
+      "Tudo do Grátis",
+      "Sorteios, concursos e campeonatos ilimitados",
+      "Loja + prestações + alienação com a sua marca",
+      "Stories comerciais com ofertas relâmpago",
+      "Em destaque na home e no diretório",
+      "Selo de empresa verificada",
+    ],
+  },
+  {
+    key: "corporate",
+    name: "Corporativa",
+    price: 4500,
+    tagline: "Para marcas que querem o palco inteiro",
+    features: [
+      "Tudo do Empresarial",
+      "Mega destaque na home (herói)",
+      "Campanhas com rodas e jogos da marca",
+      "White-label no perfil da empresa",
+      "Suporte prioritário dedicado",
+      "Relatórios de desempenho",
+    ],
+  },
+];
+
+/** Lê o catálogo de planos configurado pelo admin (com fallback) */
+export async function getPlansConfig(): Promise<PlatformPlan[]> {
+  try {
+    const { data } = await sb
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "plans")
+      .maybeSingle();
+    const cfg = data?.value as Record<string, { name?: string; price?: number; tagline?: string; features?: string[] }> | undefined;
+    if (cfg && typeof cfg === "object") {
+      return PLATFORM_PLANS.map((p) => ({
+        ...p,
+        name: cfg[p.key]?.name ?? p.name,
+        price: Number(cfg[p.key]?.price ?? p.price),
+        tagline: cfg[p.key]?.tagline ?? p.tagline,
+        features: cfg[p.key]?.features ?? p.features,
+      }));
+    }
+  } catch {
+    /* fallback silencioso */
+  }
+  return PLATFORM_PLANS;
+}
+
+export interface CompanySubscription {
+  id: string;
+  company_id: string;
+  plan_key: PlanKey;
+  status: "active" | "past_due" | "canceled";
+  price_mnt: number;
+  started_at: string;
+  current_period_end: string;
+  canceled_at: string | null;
+}
+
+/** A assinatura da empresa autenticada (null se nunca subscreveu) */
+export async function getMySubscription(userId: string): Promise<CompanySubscription | null> {
+  try {
+    const { data } = await sb
+      .from("company_subscriptions")
+      .select("*")
+      .eq("company_id", userId)
+      .maybeSingle();
+    return (data as CompanySubscription) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export interface SubscribeResult {
+  ok: boolean;
+  plan?: PlanKey;
+  price?: number;
+  period_end?: string;
+  error?: string;
+}
+
+/** Paga a mensalidade com o saldo da carteira (RPC atómico) */
+export async function subscribeCompany(planKey: PlanKey): Promise<SubscribeResult> {
+  try {
+    const { data, error } = await sb.rpc("subscribe_company" as any, { p_plan_key: planKey } as any);
+    if (error) return { ok: false, error: error.message };
+    return (data as SubscribeResult) ?? { ok: false, error: "Resposta vazia" };
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao subscrever" };
+  }
+}
+
+/** O plano está ativo (mensalidade paga e dentro do período)? */
+export function isSubscriptionActive(sub: CompanySubscription | null): boolean {
+  if (!sub) return false;
+  if (sub.status !== "active") return false;
+  if (sub.plan_key === "free") return true; // grátis não expira
+  return new Date(sub.current_period_end).getTime() > Date.now();
 }
 
 export async function getEcosystemPulse(): Promise<EcosystemPulse | null> {
@@ -165,7 +301,7 @@ export const ECOSYSTEM_PILLARS: EcosystemPillar[] = [
     id: "raffle",
     icon: "🎁",
     name: "Sorteios",
-    tagline: "Cria sorteios verificados e arrecada com 5% de comissão",
+    tagline: "Cria sorteios verificados e arrecada 100% do que vende",
     href: "/dashboard/raffles/create",
     color: "from-violet-500 to-purple-400",
     commissionKey: DEFAULT_COMMISSIONS,

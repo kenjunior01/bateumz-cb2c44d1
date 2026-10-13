@@ -16,6 +16,7 @@ const TrustSignals = lazy(() => import("@/components/TrustSignals").then(m => ({
 const PopularLeaderboard = lazy(() => import("@/components/PopularLeaderboard").then(m => ({ default: m.default })));
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
 const EcosystemHarmony = lazy(() => import("@/components/EcosystemHarmony").then(m => ({ default: m.default })));
+const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
 
 import { Button } from "@/components/ui/button";
 import {
@@ -555,6 +556,13 @@ export default function Index() {
       <div className="w-full max-w-6xl mx-auto px-4 pt-5">
         <StoriesCarousel />
       </div>
+
+      {/* ═══════════ ATIVIDADE AO VIVO — atualizações reais da plataforma ═══════════ */}
+      <AnimatedSection className="py-10 sm:py-14" style={{ background: `linear-gradient(180deg, #08060f, #050508)` }}>
+        <Suspense fallback={<div className="h-40" />}>
+          <ActivityFeed limit={6} />
+        </Suspense>
+      </AnimatedSection>
 
       {/* ═══════════ FEED SOCIAL "PARA TI" (mobile — psicologia de app social) ═══════════ */}
       <Suspense fallback={<div className="h-40" />}>

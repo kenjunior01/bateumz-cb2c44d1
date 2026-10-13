@@ -9,10 +9,16 @@ import StoryStudio from "@/components/stories/StoryStudio";
 import StoryViewer, { type StoryAuthorGroup } from "@/components/stories/StoryViewer";
 import OptimizedImage from "@/components/OptimizedImage";
 import { loadActiveStories, type UserStory } from "@/lib/stories";
+import bateuLogo from "@/assets/bateu-logo.png";
 
 const VIEWED_KEY = "bateu_stories_viewed_v2";
 
-const StoriesCarousel = () => {
+interface Props {
+  /** Embebido no home mobile: sem sticky, sem fundo sólido */
+  embedded?: boolean;
+}
+
+const StoriesCarousel = ({ embedded = false }: Props) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -85,24 +91,17 @@ const StoriesCarousel = () => {
       });
     });
 
-    const { data: winners } = await supabase
-      .from("participants")
-      .select("id, ticket_number, created_at, raffles(prize_title, title)")
-      .eq("status", "winner")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    (winners || []).forEach((w: Record<string, unknown>) => {
-      const r = w.raffles as { prize_title?: string; title?: string } | null;
+    const { data: winners } = await supabase.rpc("get_public_winners" as any, { p_limit: 1 } as any);
+    ((winners as unknown as { id: string; display_name: string; prize_title: string; won_at: string }[]) || []).forEach((w) => {
       platform.push({
         id: `winner-${w.id}`,
         user_id: "platform",
-        content: `🏆 VENCEDOR!\n${r?.prize_title || r?.title || "Prémio incrível"}`,
+        content: `🏆 VENCEDOR!\n${w.display_name} ganhou ${w.prize_title}`,
         media_type: "text",
         background: "from-yellow-400 via-amber-500 to-orange-600",
         link_url: "/historico",
         link_label: "Ver vencedores",
-        created_at: String(w.created_at),
+        created_at: String(w.won_at),
         expires_at: new Date(Date.now() + 864e5).toISOString(),
         duration_seconds: 6,
       });
@@ -139,7 +138,7 @@ const StoriesCarousel = () => {
   const allGroups: StoryAuthorGroup[] = useMemo(() => {
     const list: StoryAuthorGroup[] = [];
     if (platformStories.length > 0) {
-      list.push({ author: { id: "platform", name: "Bateu Oficial", avatar: "/bateu-logo.png" }, stories: platformStories });
+      list.push({ author: { id: "platform", name: "Bateu Oficial", avatar: bateuLogo }, stories: platformStories });
     }
     return [...list, ...groups];
   }, [platformStories, groups]);
@@ -173,7 +172,14 @@ const StoriesCarousel = () => {
   // autenticados veem tudo. Maximiza a descoberta dos stories.
   return (
     <>
-      <section className="sticky top-14 lg:top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-0 px-4 py-2 sm:py-3">
+      <section
+        className={
+          embedded
+            ? "px-4 py-2"
+            : "sticky top-14 lg:top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-0 px-4 py-2 sm:py-3"
+        }
+        data-testid={embedded ? "mh-stories" : "stories-carousel"}
+      >
         <div className="relative container mx-auto">
           <button onClick={() => scrollBy(-1)} className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-card/80 shadow-md text-foreground hover:bg-card" aria-label="Anterior">
             <ChevronLeft className="h-4 w-4" />

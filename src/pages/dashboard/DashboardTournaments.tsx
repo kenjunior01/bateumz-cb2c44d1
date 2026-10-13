@@ -231,7 +231,7 @@ export default function DashboardTournaments() {
                   onChange={(e) => update("entry_fee", e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Cada inscrito paga este valor com o saldo da carteira. A plataforma cobra 5% de comissão e o resto é seu.
+                  Cada inscrito paga este valor com o saldo da carteira. Sem comissão: 100% do valor arrecadado é seu (a mensalidade da empresa é o único custo).
                 </p>
               </div>
               <div className="space-y-1.5">

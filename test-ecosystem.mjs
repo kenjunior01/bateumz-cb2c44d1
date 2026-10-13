@@ -51,24 +51,25 @@ async function main() {
 
     console.log("🏦 /negocios — Centro de Ganhos");
     await page.goto(`${BASE}/negocios`, { waitUntil: "domcontentloaded" });
-    const heroOk = await waitBodyPattern(page, /Transforme a sua audiência/i);
+    const heroOk = await waitBodyPattern(page, /um único porcento|mensalidade/i);
     await page.waitForTimeout(1500);
 
     ok("página carrega com hero de rendimento", heroOk);
-    ok("badge de comissão 5% visível", await page.getByText(/comissão justa de 5%/i).first().isVisible().catch(() => false));
+    ok("badge de mensalidade visível", await page.getByText(/Empresas pagam mensalidade/i).first().isVisible().catch(() => false));
     ok("secção de 5 pilares", await page.getByText(/Cinco pilares/i).first().isVisible().catch(() => false));
+    ok("secção de planos (mensalidade)", await page.locator("#planos").isVisible().catch(() => false));
+    ok("cartões de plano Grátis/Empresarial/Corporativa", await page.locator("[data-testid='plan-card-free']").isVisible().catch(() => false) && await page.locator("[data-testid='plan-card-business']").isVisible().catch(() => false) && await page.locator("[data-testid='plan-card-corporate']").isVisible().catch(() => false));
+    ok("preço Empresarial 1.500 MT", await page.locator("[data-testid='plan-card-business']").getByText(/1.500|1500/i).first().isVisible().catch(() => false));
     ok("calculadora presente", await page.locator("#calculadora").isVisible().catch(() => false));
-    ok("tabela de comissões", await page.getByText(/Comissões 100% transparentes/i).first().isVisible().catch(() => false));
+    ok("tabela de custos com 0%", await page.getByText(/Custos 100% transparentes/i).first().isVisible().catch(() => false) && await page.locator("[data-testid='fee-raffle']").getByText("0%").isVisible().catch(() => false));
     ok("passos do zero ao primeiro ganho", await page.getByText(/Do zero ao primeiro ganho/i).first().isVisible().catch(() => false));
 
-    // calculadora interativa: mudar de pilar altera a percentagem (5% → 10%)
-    const pctBefore = await page.locator("#calculadora").getByText(/Comissão da plataforma \(\d+%\)/i).first().textContent({ timeout: 5000 }).catch(() => null);
-    await page.locator("#calculadora").getByRole("button", { name: /Vendas & Prestações/i }).click().catch(() => {});
-    await page.waitForTimeout(500);
-    const pctAfter = await page.locator("#calculadora").getByText(/Comissão da plataforma \(\d+%\)/i).first().textContent({ timeout: 5000 }).catch(() => null);
-    ok("calculadora reage à escolha de pilar", !!pctBefore && !!pctAfter && pctBefore !== pctAfter);
+    // calculadora interativa: 0% de comissão sempre + líquido reage ao slider
+    const zeroFee = await page.locator("#calculadora").getByText(/Comissão da plataforma \(0%\)/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    ok("calculadora mostra comissão 0%", zeroFee);
+    const netBefore = await page.locator("[data-testid='calc-net']").textContent({ timeout: 5000 }).catch(() => null);
 
-    // slider com evento nativo React
+    // slider com evento nativo React — o líquido deve mudar (100% vai para o criador)
     await page.locator("#calculadora input[type=range]").first().evaluate((el) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
       setter.call(el, "2000");
@@ -76,15 +77,15 @@ async function main() {
       el.dispatchEvent(new Event("change", { bubbles: true }));
     }).catch(() => {});
     await page.waitForTimeout(500);
-    const hasBruto = await page.locator("#calculadora").getByText(/Arrecadação bruta/i).first().isVisible().catch(() => false);
-    ok("resultado da simulação visível", hasBruto);
+    const netAfter = await page.locator("[data-testid='calc-net']").textContent({ timeout: 5000 }).catch(() => null);
+    ok("resultado da simulação reage aos valores", !!netBefore && !!netAfter && netBefore !== netAfter);
 
     // trocar pilar para Concursos
     await page.locator("#calculadora").getByRole("button", { name: "Concursos" }).click().catch(() => {});
     await page.waitForTimeout(300);
     ok("pilar Concursos selecionável", await page.locator("#calculadora").getByRole("button", { name: "Concursos" }).getAttribute("class").then((c) => c?.includes("bg-emerald-500")).catch(() => false));
 
-    ok("CTA para dashboard/registo", await page.locator("#calculadora ~ * , #calculadora").getByText(/Começar a ganhar|Ir para o painel|Abrir o meu painel/i).first().isVisible().catch(() => false) || await page.getByText(/Criar conta grátis|Ir para o painel/i).first().isVisible().catch(() => false));
+    ok("CTA para planos", await page.getByText(/Ver planos e mensalidades/i).first().isVisible().catch(() => false));
     ok("sem erros JS em /negocios", errors.length === 0);
     if (errors.length) console.log("   erros:", errors.slice(0, 3));
     await page.close();
@@ -106,6 +107,23 @@ async function main() {
 
     ok("secção harmonia presente", harmonyOk);
     ok("CTA 'Ganhe dinheiro com a Bateu'", await page.getByRole("link", { name: /Ganhe dinheiro com a Bateu/i }).first().isVisible().catch(() => false));
+    ok("copy do novo modelo (mensalidade)", await page.getByText(/só as empresas pagam uma mensalidade/i).first().isVisible().catch(() => false));
+
+    // feed de atividade ao vivo (real)
+    ok("feed de atividade ao vivo", await page.locator("[data-testid='activity-feed']").isVisible().catch(() => false));
+
+    // estado honesto: texto "aquecendo" OU eventos reais — com polling (lazy + rede)
+    let honest = false;
+    for (let i = 0; i < 12 && !honest; i++) {
+      const empty = await page.locator("[data-testid='activity-feed']").getByText(/aquecer/i).first().isVisible().catch(() => false);
+      const events = await page.locator("[data-testid='activity-feed'] button").count();
+      honest = empty || events > 0;
+      if (!honest) await page.waitForTimeout(1000);
+    }
+    ok("atividade: sem dados falsos (estado honesto)", honest);
+
+    // stories presentes na home desktop
+    ok("rail de stories na home", await page.locator("[data-testid='stories-carousel']").isVisible().catch(() => false));
 
     // roda: 5 pilares clicáveis à volta do centro
     const pillarLinks = await page.getByRole("link", { name: /Jogos|Sorteios|Concursos|Campeonatos|Vendas/i }).count();

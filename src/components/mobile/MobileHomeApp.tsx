@@ -26,6 +26,8 @@ import Footer from "@/components/Footer";
 import DailyMissions from "@/components/engagement/DailyMissions";
 
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
+const StoriesCarousel = lazy(() => import("@/components/StoriesCarousel").then(m => ({ default: m.default })));
+const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
 
 /* ─── tipos ─── */
 interface RaffleRow {
@@ -286,6 +288,13 @@ export default function MobileHomeApp() {
 
       {/* ═══ topo global MobileTopBar (pesquisa + sino + avatar + menu) ═══ */}
 
+      {/* ═══ STORIES — rail ao vivo (criadores + plataforma) ═══ */}
+      <div className="mt-2">
+        <Suspense fallback={<div className="h-24" />}>
+          <StoriesCarousel embedded />
+        </Suspense>
+      </div>
+
       {/* ═══ círculos de acesso rápido (rótulos PT + anéis B) ═══ */}
       <section className="px-4 pt-4" data-testid="mh-quick">
         <div className="flex items-start justify-between gap-1">
@@ -403,10 +412,17 @@ export default function MobileHomeApp() {
               Ganhe dinheiro com a Bateu
               <HeartPulse className="h-3.5 w-3.5 text-emerald-400" />
             </span>
-            <span className="mt-0.5 block truncate text-[11px] text-emerald-200/70">Vendas · Concursos · Sorteios · Campeonatos — comissão justa de 5%</span>
+            <span className="mt-0.5 block truncate text-[11px] text-emerald-200/70">Empresas pagam mensalidade · Todos os outros usam grátis</span>
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-emerald-300" />
         </button>
+      </section>
+
+      {/* ═══ ATIVIDADE AO VIVO — o que está a acontecer agora ═══ */}
+      <section className="mt-7">
+        <Suspense fallback={<div className="mx-4 h-24 rounded-2xl bg-white/5" />}>
+          <ActivityFeed compact limit={5} />
+        </Suspense>
       </section>
 
       {/* ═══ missões diárias + feed social (conteúdo real da plataforma) ═══ */}

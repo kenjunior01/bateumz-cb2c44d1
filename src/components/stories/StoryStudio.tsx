@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Type, Image as ImageIcon, Video, Smile, BarChart3, Brain, Zap, Link as LinkIcon,
   Music2, Palette, Loader2, X, Sparkles, Clock, AlignLeft, AlignCenter, AlignRight,
-  Wand2,
+  Wand2, Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,9 +35,12 @@ interface Props {
 type TabId = "media" | "text" | "stickers" | "interactive" | "extras";
 
 const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [tab, setTab] = useState<TabId>("media");
   const [saving, setSaving] = useState(false);
+  const isBusiness = role === "business";
+  const [myRaffles, setMyRaffles] = useState<{ id: string; title: string }[]>([]);
+  const [raffleId, setRaffleId] = useState<string>("");
 
   // Mídia
   const [mediaType, setMediaType] = useState<"text" | "image" | "video">("text");
@@ -80,6 +83,24 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
   const [music, setMusic] = useState<{ title: string; vibe: string } | null>(null);
   const [duration, setDuration] = useState(5);
 
+  // Ao abrir: empresas carregam os seus sorteios ativos (story promocional)
+  useEffect(() => {
+    if (!open || !user || !isBusiness) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("raffles")
+          .select("id, title, prize_title")
+          .eq("business_user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setMyRaffles(((data || []) as any[]).map((r) => ({ id: r.id, title: r.prize_title || r.title })));
+      } catch { /* silencioso */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const reset = () => {
     setTab("media");
     setMediaType("text");
@@ -94,6 +115,7 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
     setDeal(null); setDealLabel(""); setDealPct(20); setDealCode("");
     setLinkUrl(""); setLinkLabel("Ver mais");
     setMusic(null); setDuration(5);
+    setRaffleId("");
   };
 
   const handleImage = (f: File | undefined) => {
@@ -144,19 +166,30 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
       question: pollQ.trim(),
       options: pollOpts.filter((o) => o.trim()),
     });
+    // enquete e quiz são exclusivos (não se sobrepõem no ecrã)
+    setQuiz(null);
     toast.success("Enquete adicionada ✅");
   };
 
   const applyQuiz = () => {
-    if (!quizQ.trim() || quizOpts.filter((o) => o.trim()).length < 2) {
+    const opts = quizOpts
+      .map((o, i) => ({ text: o.trim(), i }))
+      .filter((x) => x.text);
+    if (!quizQ.trim() || opts.length < 2) {
       return toast.error("Pergunta + 2 opções mínimas");
+    }
+    // o índice da certa é remapeado depois de filtrar opções vazias
+    const correctIdx = opts.findIndex((x) => x.i === quizCorrect);
+    if (correctIdx < 0) {
+      return toast.error("Marque qual opção é a resposta certa");
     }
     setQuiz({
       question: quizQ.trim(),
-      options: quizOpts.filter((o) => o.trim()),
-      correct: quizCorrect,
+      options: opts.map((x) => x.text),
+      correct: correctIdx,
       reward: quizReward,
     });
+    setPoll(null); // exclusivo com a enquete
     toast.success("Quiz adicionado 🎯");
   };
 
@@ -206,6 +239,12 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
         videoUrl = await uploadFile("user-stories-video", videoFile);
       }
 
+      // link sempre com protocolo/rota válida
+      let safeLink = linkUrl.trim();
+      if (safeLink && !safeLink.startsWith("/") && !/^https?:\/\//i.test(safeLink)) {
+        safeLink = `https://${safeLink}`;
+      }
+
       const { error } = await supabase.from("user_stories").insert({
         user_id: user.id,
         content: content.trim() || null,
@@ -224,10 +263,12 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
         poll,
         quiz,
         flash_deal: deal,
-        link_url: linkUrl.trim() || null,
+        link_url: safeLink || null,
         link_label: linkLabel.trim() || null,
         music_track: music,
         duration_seconds: duration,
+        business_id: isBusiness ? user.id : null,
+        raffle_id: raffleId || null,
       });
       if (error) throw error;
 
@@ -628,6 +669,25 @@ const StoryStudio = ({ open, onOpenChange, onCreated }: Props) => {
 
               {/* EXTRAS */}
               <TabsContent value="extras" className="space-y-4 mt-3">
+                {isBusiness && (
+                  <div className="rounded-xl border border-border p-3 space-y-2">
+                    <Label className="text-xs flex items-center gap-1"><Store className="h-3.5 w-3.5" /> Promover sorteio da empresa</Label>
+                    {myRaffles.length > 0 ? (
+                      <select
+                        value={raffleId}
+                        onChange={(e) => setRaffleId(e.target.value)}
+                        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                      >
+                        <option value="">— Nenhum (story livre) —</option>
+                        {myRaffles.map((r) => (
+                          <option key={r.id} value={r.id}>{r.title}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">Sem sorteios ativos — crie um no painel para o promover aqui.</p>
+                    )}
+                  </div>
+                )}
                 <div className="rounded-xl border border-border p-3 space-y-2">
                   <Label className="text-xs flex items-center gap-1"><LinkIcon className="h-3.5 w-3.5" /> Link CTA</Label>
                   <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://... ou /rota-interna" className="text-sm" />

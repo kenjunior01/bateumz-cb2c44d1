@@ -76,6 +76,7 @@ export interface UserStory {
   allow_replies?: boolean;
   allow_share?: boolean;
   raffle_id?: string | null;
+  business_id?: string | null;
   highlight_id?: string | null;
   created_at: string;
   expires_at: string;
@@ -84,6 +85,7 @@ export interface UserStory {
   authorAvatar?: string;
   myReaction?: string | null;
   myVote?: number | null;
+  myQuizAnswer?: number | null;
 }
 
 export interface StoryHighlight {
@@ -156,26 +158,30 @@ export async function loadActiveStories(): Promise<Map<string, { author: { id: s
   const stories = (rows as unknown as UserStory[]) || [];
   if (stories.length === 0) return new Map();
 
-  // Perfis dos autores
+  // Perfis dos autores — profiles_public é legível por todos (RLS seguro)
   const ids = Array.from(new Set(stories.map((s) => s.user_id)));
   const { data: profs } = await supabase
-    .from("profiles")
+    .from("profiles_public")
     .select("user_id, display_name, avatar_url")
     .in("user_id", ids);
   const profById: Record<string, any> = {};
   (profs || []).forEach((p: any) => (profById[p.user_id] = p));
 
-  // Minhas interações
+  // Minhas interações (enquete e quiz separados — não se confundem)
   const { data: { user } } = await supabase.auth.getUser();
   let myReactions: Record<string, string> = {};
   let myVotes: Record<string, number> = {};
+  let myQuizVotes: Record<string, number> = {};
   if (user) {
     const [{ data: reacts }, { data: votes }] = await Promise.all([
       supabase.from("story_reactions").select("story_id, emoji").eq("user_id", user.id).in("story_id", stories.map((s) => s.id)),
-      supabase.from("story_interactions").select("story_id, option_index").eq("user_id", user.id).in("story_id", stories.map((s) => s.id)),
+      supabase.from("story_interactions").select("story_id, option_index, interaction_type").eq("user_id", user.id).in("story_id", stories.map((s) => s.id)),
     ]);
     (reacts || []).forEach((r: any) => { myReactions[r.story_id] = r.emoji; });
-    (votes || []).forEach((v: any) => { myVotes[v.story_id] = v.option_index; });
+    (votes || []).forEach((v: any) => {
+      if (v.interaction_type === "quiz") myQuizVotes[v.story_id] = v.option_index;
+      else myVotes[v.story_id] = v.option_index;
+    });
   }
 
   const groups = new Map<string, { author: { id: string; name: string; avatar?: string }; stories: UserStory[] }>();
@@ -185,6 +191,7 @@ export async function loadActiveStories(): Promise<Map<string, { author: { id: s
     s.authorAvatar = prof?.avatar_url || undefined;
     s.myReaction = myReactions[s.id] || null;
     s.myVote = myVotes[s.id] ?? null;
+    s.myQuizAnswer = myQuizVotes[s.id] ?? null;
 
     let g = groups.get(s.user_id);
     if (!g) {
@@ -204,8 +211,11 @@ export async function loadActiveStories(): Promise<Map<string, { author: { id: s
   }));
 }
 
-/** Marca story como visto (RPC atómico). */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Marca story como visto (RPC atómico). Ignora stories sintéticos da plataforma. */
 export async function markStoryViewed(storyId: string) {
+  if (!UUID_RE.test(storyId)) return; // ids "hot-…"/"announcement-…" não existem na BD
   try {
     await supabase.rpc("story_mark_viewed" as any, { p_story_id: storyId } as any);
   } catch { /* silencioso */ }
@@ -253,11 +263,11 @@ export async function getStoryResults(storyId: string): Promise<Record<number, n
 export async function getStoryViewers(storyId: string) {
   const { data } = await supabase
     .from("story_views")
-    .select("viewer_id, viewed_at, profiles(display_name, avatar_url)")
+    .select("viewer_id, viewed_at, profiles_public(display_name, avatar_url)")
     .eq("story_id", storyId)
     .order("viewed_at", { ascending: false })
     .limit(50);
-  return (data as unknown as { viewer_id: string; viewed_at: string; profiles: { display_name: string | null; avatar_url: string | null } }[]) || [];
+  return (data as unknown as { viewer_id: string; viewed_at: string; profiles_public: { display_name: string | null; avatar_url: string | null } }[]) || [];
 }
 
 /** Destaques de um utilizador. */

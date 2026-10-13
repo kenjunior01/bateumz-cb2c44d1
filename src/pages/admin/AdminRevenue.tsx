@@ -14,26 +14,45 @@ import { toast } from "sonner";
 export default function AdminRevenue() {
   const [raffles, setRaffles] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
+  const [earnings, setEarnings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [rafflesRes, participantsRes] = await Promise.all([
+      const [rafflesRes, participantsRes, earningsRes] = await Promise.all([
         supabase.from("raffles").select("*").order("created_at", { ascending: false }),
         supabase.from("participants").select("*, raffles(title, ticket_price)").order("created_at", { ascending: false }).limit(100),
+        supabase.from("creator_earnings").select("*").order("created_at", { ascending: false }).limit(500),
       ]);
       if (rafflesRes.data) setRaffles(rafflesRes.data);
       if (participantsRes.data) setParticipants(participantsRes.data);
+      if (earningsRes.data) setEarnings(earningsRes.data);
       setLoading(false);
     };
     fetchData();
   }, []);
 
   const totalRevenue = raffles.reduce((s, r) => s + r.sold_tickets * Number(r.ticket_price), 0);
-  const platformFee = totalRevenue * 0.05;
   const totalTickets = raffles.reduce((s, r) => s + r.sold_tickets, 0);
   const avgTicketPrice = totalTickets > 0 ? totalRevenue / totalTickets : 0;
+
+  /* comissões reais do ecossistema (v14) — fallback ao cálculo 5% se ainda sem registos */
+  const activeEarnings = earnings.filter((e) => e.status !== "cancelled");
+  const realFees = activeEarnings.reduce((s, e) => s + Number(e.platform_fee || 0), 0);
+  const creatorsNet = activeEarnings.reduce((s, e) => s + Number(e.net_amount || 0), 0);
+  const estimatedFee = totalRevenue * 0.05;
+  const platformFee = realFees > 0 ? realFees : estimatedFee;
+  const feeIsReal = realFees > 0;
+
+  const feeBySource = ("raffle contest tournament esports challenge sale marketplace"
+    .split(" ") as string[])
+    .map((src) => ({
+      name: src === "raffle" ? "Sorteios" : src === "contest" ? "Concursos" : src === "tournament" ? "Campeonatos" : src === "esports" ? "Esports" : src === "challenge" ? "Desafios" : "Vendas",
+      value: activeEarnings.filter((e) => e.source_type === src).reduce((s, e) => s + Number(e.platform_fee || 0), 0),
+      color: src === "raffle" ? "#8b5cf6" : src === "contest" ? "#f59e0b" : src === "tournament" ? "#10b981" : src === "esports" ? "#3b82f6" : "#ec4899",
+    }))
+    .filter((d) => d.value > 0);
 
   const handleExportTransactions = () => {
     const exportData = participants.map(p => ({
@@ -98,7 +117,7 @@ export default function AdminRevenue() {
       <div className="grid gap-4 sm:grid-cols-4">
         {[
           { label: "Receita Total", value: formatMZN(totalRevenue), icon: DollarSign, change: "+24%" },
-          { label: "Comissão (5%)", value: formatMZN(platformFee), icon: TrendingUp, change: "+24%" },
+          { label: feeIsReal ? "Comissão real (ecossistema)" : "Comissão (5% estimada)", value: formatMZN(platformFee), icon: TrendingUp, change: feeIsReal ? "REAL" : "est." },
           { label: "Bilhetes Vendidos", value: totalTickets.toLocaleString(), icon: Ticket, change: "+18%" },
           { label: "Preço Médio", value: formatMZN(avgTicketPrice), icon: CreditCard, change: "+5%" },
         ].map((s, i) => (
@@ -119,6 +138,51 @@ export default function AdminRevenue() {
             </Card>
           </motion.div>
         ))}
+      </div>
+
+      {/* ═══ ECOSSISTEMA v14: comissões reais e ganhos dos criadores ═══ */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="lg:col-span-2">
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle>Espírito do Ecossistema — comissões por pilar</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Cada inscrição/bilhete/sale gera um registo: bruto → comissão da plataforma → líquido do criador.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {feeBySource.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={feeBySource} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={4}>
+                      {feeBySource.map((d) => (
+                        <Cell key={d.name} fill={d.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }}
+                      formatter={(value: number) => formatMZN(value)}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  Ainda sem comissões registadas — pagam-se quando há concursos com taxa, torneios com inscrição e bilhetes vendidos.
+                </p>
+              )}
+              <div className="mt-2 grid grid-cols-2 gap-3 text-center">
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <p className="font-display text-xl font-bold text-foreground">{formatMZN(creatorsNet)}</p>
+                  <p className="text-xs text-muted-foreground">Já distribuído a criadores</p>
+                </div>
+                <div className="rounded-xl border border-accent/20 bg-accent/5 p-3">
+                  <p className="font-display text-xl font-bold text-foreground">{activeEarnings.length.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Registos de ganhos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

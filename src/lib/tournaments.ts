@@ -18,6 +18,8 @@ export interface Tournament {
   currency?: string;
   max_participants?: number;
   rules?: string;
+  entry_fee?: number;
+  game_hint?: string;
   created_at: string;
 }
 
@@ -174,4 +176,29 @@ export async function getTournamentParticipantCount(
     .eq("tournament_id", tournamentId);
   if (error) throw error;
   return count ?? 0;
+}
+
+/** Verifica se o utilizador já se inscreveu no torneio */
+export async function isTournamentJoined(
+  tournamentId: string,
+  userId: string
+): Promise<boolean> {
+  const { data } = await sb
+    .from("tournament_participants")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
+/** Inscrição em torneio — cobra a taxa com o saldo da carteira (RPC server-side) */
+export async function joinTournament(
+  tournamentId: string
+): Promise<{ ok: boolean; error?: string; fee_paid?: number }> {
+  const { data, error } = await sb.rpc("join_tournament", {
+    p_tournament_id: tournamentId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as { ok: boolean; error?: string; fee_paid?: number };
 }

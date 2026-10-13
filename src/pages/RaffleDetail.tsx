@@ -42,6 +42,7 @@ interface Raffle {
   tickets_threshold?: number | null;
   auto_draw_scheduled_at?: string | null;
   raffle_type?: string;
+  points_cost?: number;
   social_actions?: any[];
 }
 
@@ -122,6 +123,9 @@ const RaffleDetail = () => {
   const [slideDirection, setSlideDirection] = useState(1);
   const [bolaoOpen, setBolaoOpen] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [pointsBalance, setPointsBalance] = useState<number | null>(null);
+  const [pointsQty, setPointsQty] = useState(1);
+  const [buyingPoints, setBuyingPoints] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -147,6 +151,47 @@ const RaffleDetail = () => {
     };
     fetchData();
   }, [slug]);
+
+  /* saldo de pontos para sorteios por pontos */
+  useEffect(() => {
+    if (!user || raffle?.raffle_type !== "points") { setPointsBalance(null); return; }
+    supabase
+      .from("luck_points")
+      .select("points")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        setPointsBalance((data ?? []).reduce((acc: number, r: any) => acc + (Number(r.points) || 0), 0));
+      });
+  }, [user, raffle?.raffle_type]);
+
+  const handlePointsBuy = async () => {
+    if (!user) { navigate("/login"); return; }
+    if (!raffle || buyingPoints) return;
+    setBuyingPoints(true);
+    const { data, error } = await supabase.rpc("buy_points_raffle_tickets", {
+      p_raffle_id: raffle.id,
+      p_count: pointsQty,
+    });
+    setBuyingPoints(false);
+    const res: any = data;
+    if (error || !res?.ok) {
+      const map: Record<string, string> = {
+        insufficient_points: `Pontos insuficientes — tens ${res?.balance ?? 0} pts e precisa ${res?.cost ?? 0} pts.`,
+        sold_out: "Esgotou! Todos os bilhetes já foram vendidos.",
+        not_active: "Este sorteio já não está ativo.",
+        invalid_count: "Quantidade inválida.",
+        not_authenticated: "Entra na sua conta primeiro.",
+      };
+      toast.error(map[res?.error ?? ""] ?? error?.message ?? "Não foi possível comprar. Tenta novamente.");
+      if (res?.error === "insufficient_points" && pointsBalance !== null) setPointsBalance(res.balance);
+      return;
+    }
+    sfx.wagerPlace();
+    setPointsBalance((b) => (b !== null ? b - (res.cost ?? 0) : b));
+    setSoldNumbers((prev) => [...prev, ...(res.tickets ?? [])]);
+    setRaffle((r) => (r ? { ...r, sold_tickets: (r.sold_tickets ?? 0) + (res.tickets?.length ?? 0) } : r));
+    toast.success(`Bilhetes ${ (res.tickets ?? []).join(", ") } comprados por ${res.cost} pontos! Boa sorte 🍀`);
+  };
 
   useSEO({
     title: raffle?.title ? `${raffle.title} — Sorteio` : 'Sorteio',
@@ -352,7 +397,71 @@ const RaffleDetail = () => {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            {(raffle.raffle_type === "social" || (raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0)) ? (
+            {raffle.raffle_type === "points" ? (
+              /* ══════ PAINEL DE COMPRA POR PONTOS (v14) ══════ */
+              <motion.div className="rd-ticket-panel" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.2 }}>
+                <div className="relative z-10 p-6">
+                  <h2 className="font-display text-xl font-bold mb-1">Compra com Pontos da Sorte</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Este sorteio paga-se com pontos, sem dinheiro. Cada bilhete custa{" "}
+                    <span style={{ color: C_GOLD }} className="font-bold">⭐ {raffle.points_cost ?? 0} pontos</span>.
+                  </p>
+
+                  {user && pointsBalance !== null && (
+                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 mb-4">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">O teu saldo</span>
+                      <span className="font-display text-lg font-black" style={{ color: C_GOLD }}>⭐ {pointsBalance.toLocaleString("pt-PT")} pts</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-center gap-4 mb-5">
+                    <motion.button
+                      onClick={() => { sfx.click(); setPointsQty((q) => Math.max(1, q - 1)); }}
+                      className="h-11 w-11 rounded-xl border border-white/15 bg-white/5 text-xl font-bold"
+                      whileTap={{ scale: 0.9 }}
+                    >−</motion.button>
+                    <div className="text-center">
+                      <div className="font-display text-3xl font-black">{pointsQty}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">bilhete(s)</div>
+                    </div>
+                    <motion.button
+                      onClick={() => { sfx.click(); setPointsQty((q) => Math.min(10, q + 1)); }}
+                      className="h-11 w-11 rounded-xl border border-white/15 bg-white/5 text-xl font-bold"
+                      whileTap={{ scale: 0.9 }}
+                    >+</motion.button>
+                  </div>
+
+                  <div className="rd-order-summary mb-4">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Custo por bilhete</span><span style={{ color: C_GOLD }}>⭐ {raffle.points_cost ?? 0} pts</span></div>
+                    <div className="rd-order-total">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-display text-2xl font-black" style={{ color: C_GOLD }}>⭐ {(raffle.points_cost ?? 0) * pointsQty} pts</span>
+                    </div>
+                  </div>
+
+                  {!user ? (
+                    <button className="rd-buy-btn w-full" onClick={() => navigate("/login")}>Entrar para usar pontos</button>
+                  ) : (
+                    <motion.button
+                      onClick={handlePointsBuy}
+                      disabled={buyingPoints || pointsBalance !== null && pointsBalance < (raffle.points_cost ?? 0) * pointsQty}
+                      className="rd-buy-btn w-full disabled:opacity-50"
+                      style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+                      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    >
+                      <Sparkles className="h-5 w-5" /> {buyingPoints ? "A comprar..." : "Comprar com Pontos"}
+                    </motion.button>
+                  )}
+
+                  {pointsBalance !== null && pointsBalance < (raffle.points_cost ?? 0) * pointsQty && (
+                    <button onClick={() => navigate("/jogos")} className="mt-3 w-full text-center text-xs font-semibold" style={{ color: C_GOLD }}>
+                      Sem pontos suficientes? Joga grátis e ganha mais →
+                    </button>
+                  )}
+                  <p className="mt-3 text-center text-[10px] text-muted-foreground">Os números são atribuídos automaticamente após a compra.</p>
+                </div>
+              </motion.div>
+            ) : (raffle.raffle_type === "social" || (raffle.raffle_type === "free" && raffle.social_actions && raffle.social_actions.length > 0)) ? (
               <SocialRaffleEntry raffleId={raffle.id} socialActions={raffle.social_actions || []} totalTickets={raffle.total_tickets} soldTickets={raffle.sold_tickets} />
             ) : (
               <motion.div className="rd-ticket-panel" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.2 }}>

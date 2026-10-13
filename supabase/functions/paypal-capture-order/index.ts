@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     );
 
     // Get raffle details including ticket price
-    const { data: raffle } = await admin.from('raffles').select('id,currency,sold_tickets,ticket_price').eq('id', raffle_id).single();
+    const { data: raffle } = await admin.from('raffles').select('id,business_user_id,title,currency,sold_tickets,ticket_price').eq('id', raffle_id).single();
     if (!raffle) {
       return new Response(JSON.stringify({ error: 'Raffle not found' }), { status: 404, headers: corsHeaders });
     }
@@ -119,6 +119,32 @@ Deno.serve(async (req) => {
     if (insErr) return new Response(JSON.stringify({ error: 'Insert failed', detail: insErr.message }), { status: 500, headers: corsHeaders });
 
     await admin.from('raffles').update({ sold_tickets: (raffle?.sold_tickets ?? 0) + rows.length }).eq('id', raffle_id);
+
+    // ═══ ECOSSISTEMA v14 — ganho do criador com comissão da plataforma ═══
+    // gross = valor pago; fee = % configurada em platform_settings.commissions.raffle (default 5%)
+    try {
+      const gross = Number(raffle.ticket_price || 0) * rows.length;
+      if (gross > 0 && raffle.business_user_id) {
+        const { data: cfg } = await admin.from('platform_settings').select('value').eq('key', 'commissions').maybeSingle();
+        const pct = Number(cfg?.value?.raffle ?? 5);
+        const fee = Math.round(gross * (pct / 100) * 100) / 100;
+        const net = Math.round((gross - fee) * 100) / 100;
+        await admin.from('creator_earnings').insert({
+          user_id: raffle.business_user_id,
+          source_type: 'raffle',
+          source_id: raffle.id,
+          title: raffle.title ?? 'Sorteio',
+          gross_amount: gross,
+          platform_fee: fee,
+          net_amount: net,
+          currency: 'MZN',
+          commission_percent: pct,
+          status: 'available',
+        });
+      }
+    } catch (e) {
+      console.error('creator_earnings insert failed (non-fatal):', e);
+    }
 
     // === Referral first-purchase bonus campaign ===
     // If this is the buyer's first ever paid participant AND they were referred,

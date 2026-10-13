@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 const MobileTopBar = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -117,7 +117,12 @@ const MobileTopBar = () => {
             <Search className="h-[18px] w-[18px]" />
           </button>
           <button
-            onClick={() => { if (user) navigate("/dashboard/notifications"); else navigate("/login"); }}
+            onClick={() => {
+              if (!user) { navigate("/login"); return; }
+              /* só business/admin têm painel de notificações — users normais vão ao perfil (v14 fix) */
+              if (role === "business" || role === "admin" || role === "superadmin" || role === "regional_manager") navigate("/dashboard/notifications");
+              else navigate("/profile");
+            }}
             className="mob-topbar-icon-btn relative"
             aria-label={t("nav.notifications")}
           >

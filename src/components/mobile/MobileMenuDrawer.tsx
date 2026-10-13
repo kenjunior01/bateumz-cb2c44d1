@@ -6,7 +6,7 @@ import {
   MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen,
   Gift, Store, Gamepad2, Bell, Search, Flame, Wallet, Clock, Heart,
   BadgeCheck, LogOut, Settings, User, X, Home, Layers, TrendingUp,
-  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone
+  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -51,7 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Gamepad2,
     items: [
       { icon: Zap, labelKey: "menu.games", href: "/jogos", grad: "from-amber-400 to-yellow-600", badge: "NOVO" },
-      { icon: Swords, labelKey: "mob.battles", href: "/jogos", grad: "from-blue-600 to-indigo-800", trending: true },
+      { icon: Swords, labelKey: "mob.battles", href: "/batalhas", grad: "from-blue-600 to-indigo-800", trending: true },
       { icon: Dice5, labelKey: "mob.spinWheel", href: "/marketplace?tab=games", grad: "from-purple-500 to-pink-600" },
       { icon: Target, labelKey: "tournament.title", href: "/tournaments", grad: "from-emerald-500 to-teal-600", badge: "NOVO" },
     ],
@@ -61,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Building2,
     items: [
       { icon: Building2, labelKey: "menu.directory", href: "/empresas", grad: "from-blue-500 to-cyan-500" },
+      { icon: HandCoins, labelKey: "Ganhe dinheiro", href: "/negocios", grad: "from-emerald-500 to-teal-600", badge: "NOVO" },
       { icon: CreditCard, labelKey: "menu.installments", href: "/prestacoes/catalogo", grad: "from-rose-500 to-pink-500", badge: "NOVO" },
       { icon: Gift, labelKey: "menu.createRaffle", href: "/dashboard/raffles/create", grad: "from-yellow-500 to-amber-500" },
     ],
@@ -160,6 +161,7 @@ const ROUTE_META: Record<string, { icon: typeof Home; labelKey: string; grad: st
   "/instant-win": { icon: Sparkles, labelKey: "menu.instantWin", grad: "from-violet-500 to-fuchsia-500" },
   "/tournaments": { icon: Target, labelKey: "tournament.title", grad: "from-emerald-500 to-teal-600" },
   "/batalhas": { icon: Swords, labelKey: "Batalhas", grad: "from-red-500 to-orange-600" },
+  "/negocios": { icon: HandCoins, labelKey: "Ganhe dinheiro", grad: "from-emerald-500 to-teal-600" },
   "/referral": { icon: Users, labelKey: "menu.referral", grad: "from-fuchsia-500 to-pink-500" },
   "/historico": { icon: History, labelKey: "menu.winners", grad: "from-amber-500 to-yellow-500" },
   "/prestacoes/catalogo": { icon: CreditCard, labelKey: "menu.installments", grad: "from-rose-500 to-pink-500" },

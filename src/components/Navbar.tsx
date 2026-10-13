@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -211,6 +211,7 @@ const Navbar = () => {
         cta: t("nav.spotlight.cta"),
       },
       items: [
+        { label: "Ganhe Dinheiro", href: "/negocios", icon: HandCoins, desc: "O ecossistema completo de rendimento: vendas, concursos, sorteios, campeonatos e desafios", badge: "NOVO" },
         { label: t("nav.directory"), href: "/empresas", icon: Building2, desc: t("nav.directory.desc") },
         { label: "Alienação de Bens", href: "/alienacao", icon: KeyRound, desc: "Leasing, leilões e rent-to-own de viaturas, imóveis e equipamentos", badge: "NOVO" },
         { label: t("nav.installments.catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: t("nav.installments.catalog.desc"), badge: t("nav.badge.new") },
@@ -275,6 +276,7 @@ const Navbar = () => {
     { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
     { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
     { label: "Alienação", href: "/alienacao", icon: KeyRound },
+    { label: "Ganhe Dinheiro", href: "/negocios", icon: HandCoins },
   ];
 
   // Show/hide navbar on specific routes (overlay, dashboard, admin)

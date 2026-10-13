@@ -15,6 +15,7 @@ const WinnersSection = lazy(() => import("@/components/WinnersSection").then(m =
 const TrustSignals = lazy(() => import("@/components/TrustSignals").then(m => ({ default: m.default })));
 const PopularLeaderboard = lazy(() => import("@/components/PopularLeaderboard").then(m => ({ default: m.default })));
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
+const EcosystemHarmony = lazy(() => import("@/components/EcosystemHarmony").then(m => ({ default: m.default })));
 
 import { Button } from "@/components/ui/button";
 import {
@@ -941,6 +942,9 @@ export default function Index() {
             </ScrollReveal>
           </div>
         </AnimatedSection>
+
+        {/* ═══════════ ECOSSISTEMA EM HARMONIA (v14) ═══════════ */}
+        <Suspense fallback={<div className="h-96" />}><EcosystemHarmony /></Suspense>
 
         {/* ═══════════ FAIR PLAY SHIELD (confiança) ═══════════ */}
         <AnimatedSection className="relative py-16 sm:py-24 hidden md:block" delay={0.1} style={{ background: `radial-gradient(ellipse 80% 50% at 50% 50%, rgba(168,85,247,0.05), transparent), linear-gradient(180deg, #050508, #08060f, #050508)` }}>

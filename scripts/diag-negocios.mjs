@@ -1,0 +1,14 @@
+import { chromium } from "playwright";
+const b = await chromium.launch({ args: ["--no-sandbox"] });
+const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+const errs = [];
+p.on("pageerror", (e) => errs.push("PAGEERROR: " + String(e)));
+p.on("console", (m) => { if (m.type() === "error") errs.push("CONSOLE: " + m.text().slice(0, 200)); });
+await p.goto("http://localhost:8099/negocios", { waitUntil: "networkidle", timeout: 30000 }).catch((e) => errs.push("GOTO: " + e));
+await p.waitForTimeout(4000);
+const txt = await p.locator("body").textContent().catch(() => "");
+console.log("BODY LEN:", (txt || "").length);
+console.log("BODY SNIPPET:", (txt || "").slice(0, 400).replace(/\s+/g, " "));
+console.log("HAS HERO:", /Transforme a sua audiência/i.test(txt || ""));
+console.log("ERRORS:", JSON.stringify(errs.slice(0, 8), null, 2));
+await b.close();

@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Inbox } from "lucide-react";
+import { Trophy, Inbox, HandCoins } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import { getTournaments, type Tournament } from "@/lib/tournaments";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
 
 export default function TournamentsList() {
   useSEO({ title: 'Torneios', description: 'Participe em torneios competitivos na Bateu. Classificações em tempo real, prémios em dinheiro e competição justa.', canonicalPath: '/tournaments' });
@@ -66,17 +69,25 @@ export default function TournamentsList() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Navbar />
       <div className="mx-auto max-w-5xl px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-md shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-md shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+                <Trophy className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold">{t("tournament.title")}</h1>
             </div>
-            <h1 className="text-2xl font-bold">{t("tournament.title")}</h1>
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <a href="/negocios">
+                <HandCoins className="h-4 w-4" /> Ganhe dinheiro organizando
+              </a>
+            </Button>
           </div>
           <p className="text-sm text-muted-foreground">
             {t("tournament.subtitle")}
@@ -101,6 +112,7 @@ export default function TournamentsList() {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -117,6 +117,7 @@ const AdminContests = lazy(() => import("./pages/admin/AdminContests.tsx"));
 const DashboardContests = lazy(() => import("./pages/dashboard/DashboardContests.tsx"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile.tsx"));
 const BusinessDirectory = lazy(() => import("./pages/BusinessDirectory.tsx"));
+const BusinessEcosystem = lazy(() => import("./pages/BusinessEcosystem.tsx"));
 const LiveHub = lazy(() => import("./pages/LiveHub.tsx"));
 const LiveOverlay = lazy(() => import("./pages/LiveOverlay.tsx"));
 const InstantWin = lazy(() => import("./pages/InstantWin.tsx"));
@@ -230,6 +231,7 @@ function AnimatedRoutes() {
             <Route path="/instant-win" element={<SorteiosLayout />}>            <Route index element={<InstantWin />} />          </Route>
             <Route path="/concursos/:id" element={<ContestDetail />} />
             <Route path="/empresas" element={<BusinessDirectory />} />
+            <Route path="/negocios" element={<BusinessEcosystem />} />
             <Route path="/empresa/:id" element={<BusinessProfile />} />
             <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
             <Route path="/life" element={<Navigate to="/lives?game=mmorpg" replace />} />

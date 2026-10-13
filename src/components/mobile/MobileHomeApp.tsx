@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import {
   Radio, Ticket, Gamepad2, Crown, Play,
   MoreHorizontal, Flame, Clock, Sparkles, ChevronRight, Gem,
+  HandCoins, HeartPulse,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -384,6 +385,27 @@ export default function MobileHomeApp() {
             <span className="mt-0.5 block truncate text-[11px] text-violet-200/70">{t("mh.worldSub")}</span>
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-violet-300" />
+        </button>
+      </section>
+
+      {/* ═══ ECOSSISTEMA EM HARMONIA (v14) ═══ */}
+      <section className="mt-7 px-4">
+        <button
+          onClick={() => { sfx.whoosh(); navigate("/negocios"); }}
+          data-testid="mh-earnings-banner"
+          className="relative flex w-full items-center gap-3 overflow-hidden rounded-3xl border border-emerald-400/25 bg-gradient-to-r from-[#0d2b1e] via-[#123324] to-[#0d2029] p-4 text-left shadow-lg shadow-emerald-900/30 active:scale-[0.98] transition-transform"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-600/40">
+            <HandCoins className="h-5 w-5 text-white" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 text-[15px] font-black text-white">
+              Ganhe dinheiro com a Bateu
+              <HeartPulse className="h-3.5 w-3.5 text-emerald-400" />
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] text-emerald-200/70">Vendas · Concursos · Sorteios · Campeonatos — comissão justa de 5%</span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-emerald-300" />
         </button>
       </section>
 

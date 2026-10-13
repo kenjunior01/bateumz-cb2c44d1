@@ -41,6 +41,7 @@ interface CreateForm {
   prize_value: string;
   currency: string;
   max_participants: string;
+  entry_fee: string;
   rules: string;
 }
 
@@ -53,6 +54,7 @@ const emptyForm: CreateForm = {
   prize_value: "",
   currency: "AOA",
   max_participants: "",
+  entry_fee: "",
   rules: "",
 };
 
@@ -103,6 +105,7 @@ export default function DashboardTournaments() {
         prize_value: form.prize_value ? Number(form.prize_value) : undefined,
         currency: form.currency || undefined,
         max_participants: form.max_participants ? Number(form.max_participants) : undefined,
+        entry_fee: form.entry_fee ? Number(form.entry_fee) : 0,
         rules: form.rules || undefined,
       });
       toast({ title: t("tournament.createSuccess") });
@@ -217,6 +220,19 @@ export default function DashboardTournaments() {
                   value={form.max_participants}
                   onChange={(e) => update("max_participants", e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Taxa de inscrição (0 = grátis)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Ex.: 100"
+                  value={form.entry_fee}
+                  onChange={(e) => update("entry_fee", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cada inscrito paga este valor com o saldo da carteira. A plataforma cobra 5% de comissão e o resto é seu.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>{t("tournament.formRules")}</Label>

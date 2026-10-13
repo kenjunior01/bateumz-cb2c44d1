@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trophy, Users, Calendar, Gift, ArrowLeft, BookOpen, Building2,
-  Medal, Flame,
+  Medal, Flame, HandCoins, Loader2, CheckCircle2,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -18,9 +18,12 @@ import {
   getTournamentById,
   getTournamentStandings,
   getTournamentParticipantCount,
+  isTournamentJoined,
+  joinTournament,
   type Tournament,
   type TournamentStanding,
 } from "@/lib/tournaments";
+import { toast } from "sonner";
 
 export default function TournamentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +35,8 @@ export default function TournamentDetail() {
   const [participantCount, setParticipantCount] = useState(0);
   const location = useLocation();
   const [loading, setLoading] = useState(true);
+  const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -48,6 +53,49 @@ export default function TournamentDetail() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !user) {
+      setJoined(false);
+      return;
+    }
+    isTournamentJoined(id, user.id).then(setJoined).catch(() => {});
+  }, [id, user]);
+
+  const handleJoin = async () => {
+    if (!user) {
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    if (joined || joining) return;
+    setJoining(true);
+    const res = await joinTournament(id!);
+    setJoining(false);
+    if (!res.ok) {
+      const map: Record<string, string> = {
+        already_joined: "Já está inscrito neste torneio!",
+        full: "O torneio está cheio — esgotou o limite de participantes.",
+        not_active: "O torneio ainda não está ativo.",
+        already_ended: "O torneio já terminou.",
+        no_wallet: "Crie a sua carteira primeiro na Carteira.",
+        insufficient_balance: "Saldo insuficiente — carregue a carteira por M-Pesa ou e-Mola.",
+      };
+      toast.error(map[res.error ?? ""] ?? "Não foi possível inscrever. Tente novamente.");
+      if (res.error === "insufficient_balance" || res.error === "no_wallet") {
+        setTimeout(() => navigate("/wallet"), 1200);
+        return;
+      }
+      if (res.error === "already_joined") setJoined(true);
+      return;
+    }
+    setJoined(true);
+    setParticipantCount((c) => c + 1);
+    toast.success(
+      res.fee_paid && res.fee_paid > 0
+        ? `Inscrição confirmada! Taxa: ${res.fee_paid.toLocaleString("pt-PT")} ${tournament?.currency ?? "MZN"}`
+        : "Inscrição confirmada — boa sorte!"
+    );
+  };
 
   useSEO({
     title: tournament?.name ? `${tournament.name} — Torneio` : 'Torneio',
@@ -182,6 +230,15 @@ export default function TournamentDetail() {
                   label={t("tournament.rankings")}
                   value={`${standings.length} ${t("tournament.participants").toLowerCase()}`}
                 />
+                <InfoItem
+                  icon={<HandCoins className="h-4 w-4" />}
+                  label="Taxa de inscrição"
+                  value={
+                    (tournament as any).entry_fee != null && (tournament as any).entry_fee > 0
+                      ? `${Number((tournament as any).entry_fee).toLocaleString("pt-PT")} ${tournament.currency || "MZN"}`
+                      : "Grátis"
+                  }
+                />
               </div>
 
               {tournament.rules && (
@@ -214,9 +271,29 @@ export default function TournamentDetail() {
               </div>
 
               {tournament.status === "active" && (
-                <Button className="w-full" size="lg">
-                  <Trophy className="h-4 w-4 mr-2" />
-                  {t("tournament.join")}
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleJoin}
+                  disabled={joined || joining}
+                  data-testid="tournament-join"
+                >
+                  {joining ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A processar inscrição...
+                    </>
+                  ) : joined ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Inscrito — boa sorte!
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="h-4 w-4 mr-2" />
+                      {(tournament as any).entry_fee > 0
+                        ? `Participar — ${Number((tournament as any).entry_fee).toLocaleString("pt-PT")} ${tournament.currency || "MZN"}`
+                        : t("tournament.join")}
+                    </>
+                  )}
                 </Button>
               )}
             </CardContent>

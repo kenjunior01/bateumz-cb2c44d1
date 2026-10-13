@@ -97,6 +97,34 @@ export default function ContestDetail() {
     if (!user || !contest || !name.trim()) return;
     setSubmitting(true);
     try {
+      /* taxa de inscrição — paga com o saldo da carteira (v14 harmonia) */
+      const fee = Number((contest as any).entry_fee) || 0;
+      if (fee > 0) {
+        const { data: payRes, error: payErr } = await supabase.rpc("pay_contest_entry", {
+          p_contest_id: contest.id,
+        });
+        const pr: any = payRes;
+        if (payErr || !pr?.ok) {
+          const map: Record<string, string> = {
+            insufficient_balance: "Saldo insuficiente na carteira — carregue por M-Pesa ou e-Mola e volte.",
+            no_wallet: "Crie a sua carteira primeiro (menu → Carteira).",
+            not_authenticated: "Entra na sua conta primeiro.",
+          };
+          toast({
+            title: pr?.error === "insufficient_balance" || pr?.error === "no_wallet" ? "Carteira sem saldo" : "Pagamento recusado",
+            description: map[pr?.error ?? ""] ?? payErr?.message ?? "Não foi possível cobrar a taxa de inscrição.",
+            variant: "destructive",
+          });
+          setSubmitting(false);
+          return;
+        }
+        if (pr.already_paid) {
+          toast({ title: "Taxa já paga", description: "A sua taxa de inscrição estava confirmada — continue." });
+        } else {
+          toast({ title: "Taxa paga", description: `${fee.toLocaleString("pt-PT")} MZN debitados da carteira com sucesso.` });
+        }
+      }
+
       let photo_url: string | null = null;
       let video_url: string | null = null;
 
@@ -157,7 +185,6 @@ export default function ContestDetail() {
     }
     setSubmitting(false);
   };
-
   const handleVote = async (submissionId: string) => {
     if (!user) {
       toast({ title: "Inicie sessão", description: "Precisa de estar autenticado para votar.", variant: "destructive" });

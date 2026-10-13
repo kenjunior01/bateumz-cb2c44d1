@@ -28,6 +28,8 @@ import DailyMissions from "@/components/engagement/DailyMissions";
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
 const StoriesCarousel = lazy(() => import("@/components/StoriesCarousel").then(m => ({ default: m.default })));
 const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
+const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
+const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
 
 /* ─── tipos ─── */
 interface RaffleRow {
@@ -377,6 +379,11 @@ export default function MobileHomeApp() {
         )}
       </section>
 
+      {/* ═══ JOGOS & TORNEIOS — roll-up dinâmico (dados reais) ═══ */}
+      <Suspense fallback={<div className="h-56" />}>
+        <GamesTournamentsRollUp />
+      </Suspense>
+
       {/* ═══ faixa MUNDO 3D ═══ */}
       <section className="mt-7 px-4">
         <button
@@ -418,6 +425,11 @@ export default function MobileHomeApp() {
           <ChevronRight className="h-5 w-5 shrink-0 text-emerald-300" />
         </button>
       </section>
+
+      {/* ═══ COISAS À VENDA — roll-up do marketplace (dados reais) ═══ */}
+      <Suspense fallback={<div className="h-56" />}>
+        <VendasRollUp />
+      </Suspense>
 
       {/* ═══ ATIVIDADE AO VIVO — o que está a acontecer agora ═══ */}
       <section className="mt-7">

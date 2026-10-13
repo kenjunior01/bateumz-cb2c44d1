@@ -7,16 +7,19 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import StoriesCarousel from "@/components/StoriesCarousel";
 import DailyMissions from "@/components/engagement/DailyMissions";
-import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import { getTournaments, getTournamentStandings } from "@/lib/tournaments";
-const ActiveRaffles = lazy(() => import("@/components/ActiveRaffles").then(m => ({ default: m.default })));
 const WinnersSection = lazy(() => import("@/components/WinnersSection").then(m => ({ default: m.default })));
 const TrustSignals = lazy(() => import("@/components/TrustSignals").then(m => ({ default: m.default })));
 const PopularLeaderboard = lazy(() => import("@/components/PopularLeaderboard").then(m => ({ default: m.default })));
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
 const EcosystemHarmony = lazy(() => import("@/components/EcosystemHarmony").then(m => ({ default: m.default })));
 const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
+const DestaquesRollUp = lazy(() => import("@/components/home/DestaquesRollUp").then(m => ({ default: m.default })));
+const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
+const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
+const SorteiosConcursosRollUp = lazy(() => import("@/components/home/SorteiosConcursosRollUp").then(m => ({ default: m.default })));
+const PlatformFeed = lazy(() => import("@/components/home/PlatformFeed").then(m => ({ default: m.default })));
 
 import { Button } from "@/components/ui/button";
 import {
@@ -543,14 +546,14 @@ export default function Index() {
         </div>
       </div>
 
-      {/* ═══════════ SORTEIOS ATIVOS — conteúdo real logo acima da dobra ═══════════
-           Estratégia "mostrar, não contar": o utilizador vê prémios reais ANTES
-           de qualquer secção de marketing. Maior impacto de conversão. */}
-      <AnimatedSection className="py-10 sm:py-14" style={{ background: `linear-gradient(180deg, #050508, #08060f)` }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <Suspense fallback={<div className="h-40" />}><ActiveRaffles /></Suspense>
-        </div>
-      </AnimatedSection>
+      {/* ═══════════ ROLL-UPS DINÂMICOS — a homepage que engloba tudo ═══════════
+           Ordem: Destaques & Features → Jogos & Torneios → Vendas →
+                  Sorteios & Concursos → Feed da Plataforma (tudo num só fluxo). */}
+      <Suspense fallback={<div className="h-48" />}><DestaquesRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><GamesTournamentsRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><VendasRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><SorteiosConcursosRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><PlatformFeed /></Suspense>
 
       {/* ═══════════ STORIES (social hook, após a primeira impressão) ═══════════ */}
       <div className="w-full max-w-6xl mx-auto px-4 pt-5">
@@ -572,375 +575,12 @@ export default function Index() {
       {/* ═══════════ MAIN CONTENT ═══════════ */}
       <main className="flex-1">
 
-        {/* ─── PILLAR 1: ESPORTS (dados reais; fallback honesto) ─── */}
-        <AnimatedSection className="relative overflow-hidden py-16 sm:py-24 hidden md:block" style={{ background: `radial-gradient(ellipse 60% 40% at 15% 50%, ${CYAN}08, transparent), linear-gradient(180deg, #050508 0%, #060610 50%, #050508 100%)` }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${CYAN}25, ${DEEP_PURPLE}20)`, border: `1px solid ${CYAN}30`, boxShadow: `0 0 25px ${CYAN}15` }}>
-                  <Swords className="h-5 w-5" style={{ color: CYAN }} />
-                </div>
-                <div>
-                  <ShimmerText colors={['#00d4ff', '#7b2ff7', '#00d4ff']} speed={3} className="text-2xl sm:text-3xl font-black tracking-tight">ESPORTS</ShimmerText>
-                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Competições • Campeonatos • Ligas</p>
-                </div>
-              </div>
-              <Link to="/esports" className="group flex items-center gap-1.5 text-sm font-bold" style={{ color: CYAN }} onClick={() => sfx.whoosh()}>
-                Ver Torneios <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </div>
-
-            <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-3"} gap-4 sm:gap-6`}>
-              {esports ? (
-                <>
-                  {/* Torneio ativo real */}
-                  <motion.div whileHover={{ scale: 1.02 }} className={`${isMobile ? "" : "col-span-2"} relative rounded-2xl overflow-hidden cursor-pointer`} style={{ background: "linear-gradient(135deg, #0a0f1a, #0d1525)", border: `1px solid ${CYAN}15` }} onClick={() => { sfx.whoosh(); navigate("/esports"); }}>
-                    <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(ellipse at 80% 20%, ${CYAN}15, transparent 60%)` }} />
-                    <div className="relative p-6 sm:p-8">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: `${CYAN}15`, color: CYAN, border: `1px solid ${CYAN}25` }}><Radio className="h-3 w-3" /> TORNEIO ATIVO</span>
-                        {esports.ends && <span className="text-xs text-zinc-500">termina {esports.ends}</span>}
-                      </div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{esports.name}</h3>
-                      {esports.prize && <p className="text-sm text-zinc-400 mb-4">{esports.prize}</p>}
-                      <p className="text-sm text-zinc-500">Acompanha as classificações em tempo real e apoia os teus jogadores favoritos.</p>
-                    </div>
-                  </motion.div>
-                  {/* Ranking real do torneio */}
-                  <NeonBorder colors={[CYAN, DEEP_PURPLE]} speed={6} glowIntensity={0.4} borderWidth={1} borderRadius="1rem">
-                    <div className="rounded-2xl p-5" style={{ background: "linear-gradient(180deg, #0a0f1a, #080c16)", border: `1px solid ${CYAN}10` }}>
-                      <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Trophy className="h-4 w-4" style={{ color: GOLD }} /> Ranking Real</h4>
-                      <div className="space-y-3">
-                        {esports.standings.map((s, i) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <span className="h-7 w-7 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: i < 3 ? `linear-gradient(135deg, ${GOLD}30, ${GOLD}10)` : "rgba(255,255,255,0.05)", color: i < 3 ? GOLD : "#71717a", border: `1px solid ${i < 3 ? GOLD + "25" : "rgba(255,255,255,0.08)"}` }}>{i + 1}</span>
-                            <span className="text-sm font-semibold text-zinc-300 flex-1 truncate">{s.name}</span>
-                            <span className="text-xs font-bold text-zinc-500">{s.pts} pts</span>
-                          </div>
-                        ))}
-                        {esports.standings.length === 0 && <p className="text-xs text-zinc-500">As classificações serão publicadas no início das partidas.</p>}
-                      </div>
-                      <Link to="/esports" className="mt-4 block text-center text-xs font-bold py-2 rounded-lg transition-all duration-300 hover:opacity-80" style={{ color: CYAN, background: `${CYAN}08`, border: `1px solid ${CYAN}15` }} onClick={() => sfx.whoosh()}>Ver Ranking Completo</Link>
-                    </div>
-                  </NeonBorder>
-                </>
-              ) : (
-                <>
-                  {/* Fallback honesto: funcionalidades reais do hub */}
-                  <motion.div whileHover={{ scale: 1.02 }} className={`${isMobile ? "" : "col-span-2"} relative rounded-2xl overflow-hidden cursor-pointer`} style={{ background: "linear-gradient(135deg, #0a0f1a, #0d1525)", border: `1px solid ${CYAN}15` }} onClick={() => { sfx.whoosh(); navigate("/esports"); }}>
-                    <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(ellipse at 80% 20%, ${CYAN}15, transparent 60%)` }} />
-                    <div className="relative p-6 sm:p-8">
-                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Compete contra jogadores reais</h3>
-                      <div className="space-y-3">
-                        {[
-                          { icon: Swords, label: "Duelos P2P — desafia qualquer jogador", color: CYAN },
-                          { icon: Trophy, label: "Torneios com ranking real e prémios", color: GOLD },
-                          { icon: Crown, label: "Ligas por temporada com promoções", color: PURPLE },
-                        ].map((f, i) => {
-                          const FIcon = f.icon;
-                          return (
-                            <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${f.color}12` }}>
-                              <FIcon className="h-4 w-4 shrink-0" style={{ color: f.color }} />
-                              <span className="text-sm text-zinc-300 font-medium">{f.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </motion.div>
-                  <NeonBorder colors={[CYAN, DEEP_PURPLE]} speed={6} glowIntensity={0.4} borderWidth={1} borderRadius="1rem">
-                    <div className="rounded-2xl p-5 flex flex-col items-center justify-center text-center h-full" style={{ background: "linear-gradient(180deg, #0a0f1a, #080c16)", border: `1px solid ${CYAN}10` }}>
-                      <div className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: `linear-gradient(135deg, ${CYAN}20, ${DEEP_PURPLE}15)`, border: `1px solid ${CYAN}30` }}>
-                        <Swords className="h-7 w-7" style={{ color: CYAN }} />
-                      </div>
-                      <p className="text-sm text-zinc-400 mb-4">Entra na arena e mostra as tuas habilidades contra a comunidade.</p>
-                      <Button size="sm" onClick={() => { sfx.buttonClick(); navigate("/esports"); }} className="font-bold rounded-lg" style={{ background: `linear-gradient(135deg, ${CYAN}, ${DEEP_PURPLE})` }}>
-                        Entrar na Arena
-                      </Button>
-                    </div>
-                  </NeonBorder>
-                </>
-              )}
-            </div>
-          </div>
-        </AnimatedSection>
-
-        {/* Divider */}
-        <div className="h-px mx-auto max-w-md" style={{ background: `linear-gradient(90deg, transparent, ${CYAN}20, ${PURPLE}20, transparent)` }} />
-
-        {/* ─── PILLAR 2: SORTEIOS (100% dados reais) ─── */}
-        <AnimatedSection className="relative overflow-hidden py-16 sm:py-24 hidden md:block" delay={0.1} style={{ background: `radial-gradient(ellipse 60% 40% at 85% 50%, ${PURPLE}08, transparent), linear-gradient(180deg, #050508 0%, #0a0814 50%, #050508 100%)` }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}25, ${GOLD}15)`, border: `1px solid ${PURPLE}30`, boxShadow: `0 0 25px ${PURPLE}15` }}>
-                  <Gift className="h-5 w-5" style={{ color: PURPLE }} />
-                </div>
-                <div>
-                  <ShimmerText colors={['#a855f7', '#fbbf24', '#a855f7']} speed={3.5} className="text-2xl sm:text-3xl font-black tracking-tight">SORTEIOS & PRÉMIOS</ShimmerText>
-                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Sorteios Verificados • Prémios Reais</p>
-                </div>
-              </div>
-              <Link to="/marketplace" className="group flex items-center gap-1.5 text-sm font-bold" style={{ color: PURPLE }} onClick={() => sfx.whoosh()}>
-                Ver Sorteios <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </div>
-
-            <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-3"} gap-4 sm:gap-6`}>
-              {/* Jackpot real (soma dos sorteios ativos) + sorteios reais */}
-              <motion.div whileHover={{ scale: 1.02 }} className={`${isMobile ? "" : "col-span-2"} relative rounded-2xl overflow-hidden`} style={{ background: "linear-gradient(135deg, #0f0a1a, #140e20)", border: `1px solid ${PURPLE}15` }}>
-                <div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(ellipse at 70% 30%, ${GOLD}10, transparent 60%)` }} />
-                <div className="relative p-6 sm:p-8">
-                  {jackpotTotal > 0 && (
-                    <>
-                      <div className="flex items-center gap-2 mb-6"><Diamond className="h-4 w-4" style={{ color: GOLD }} /><span className="text-xs font-bold uppercase tracking-wider" style={{ color: GOLD }}>Prémios em Jogo Agora</span></div>
-                      <motion.div className="text-4xl sm:text-6xl font-black mb-2" style={{ background: `linear-gradient(135deg, ${GOLD}, #f59e0b, ${GOLD})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }} animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-                        <AnimatedNumber value={jackpotTotal} duration={3} prefix="MT " locale="pt-BR" className="inline" />
-                      </motion.div>
-                      <p className="text-sm text-zinc-500 mb-8">soma real dos sorteios ativos neste momento</p>
-                    </>
-                  )}
-                  <div className={`grid ${featuredRaffles.length > 0 ? "grid-cols-2 sm:grid-cols-3" : ""} gap-3`}>
-                    {featuredRaffles.map((raffle, i) => (
-                      <motion.div key={raffle.id || i} whileHover={{ scale: 1.03, y: -2 }} className="rounded-xl p-4 cursor-pointer transition-all duration-300" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${GOLD}18` }} onClick={() => { sfx.whoosh(); navigate(raffle.id ? `/raffle/${raffle.id}` : "/marketplace"); }}>
-                        <span className="text-2xl block mb-1">🎁</span>
-                        <p className="text-xs font-bold text-white mb-1 leading-tight line-clamp-1">{raffle.title || "Sorteio"}</p>
-                        {raffle.prize_title && <p className="text-[10px] text-zinc-400 mb-2 line-clamp-1">{raffle.prize_title}</p>}
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-zinc-500">{raffle.sold_tickets ?? 0} bilhetes</span>
-                          {raffle.end_date && <span className="text-[10px] font-bold" style={{ color: PURPLE }}>{new Date(raffle.end_date).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}</span>}
-                        </div>
-                      </motion.div>
-                    ))}
-                    {featuredRaffles.length === 0 && (
-                      <div className="col-span-full rounded-xl p-5 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <Gift className="h-8 w-8 mx-auto mb-3" style={{ color: PURPLE }} />
-                        <p className="text-sm font-semibold text-zinc-300 mb-1">Ainda não há sorteios ativos</p>
-                        <p className="text-xs text-zinc-500 mb-4">Cria o teu próprio sorteio ou volta em breve para ver os novos prémios.</p>
-                        <Button size="sm" onClick={() => { sfx.buttonClick(); navigate("/dashboard/raffles"); }} className="font-bold rounded-lg" style={{ background: `linear-gradient(135deg, ${PURPLE}, ${GOLD})` }}>
-                          Criar Sorteio
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Como Funciona (substitui lista falsa de vencedores) */}
-              <NeonBorder colors={[PURPLE, GOLD]} speed={7} glowIntensity={0.35} borderWidth={1} borderRadius="1rem">
-                <div className="rounded-2xl p-5 h-full flex flex-col" style={{ background: "linear-gradient(180deg, #0f0a1a, #0c0816)", border: `1px solid ${PURPLE}10` }}>
-                  <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2"><CheckCircle2 className="h-4 w-4" style={{ color: GREEN }} /> Como Funciona</h4>
-                  <div className="space-y-4 flex-1">
-                    {HOW_IT_WORKS_STEPS.map((step, i) => {
-                      const SIcon = step.icon;
-                      return (
-                        <motion.div key={step.title} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.12, duration: 0.4 }} viewport={{ once: true }} className="flex items-start gap-3">
-                          <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${step.color}15`, border: `1px solid ${step.color}25` }}>
-                            <SIcon className="h-4 w-4" style={{ color: step.color }} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-zinc-300 leading-tight">{step.title}</p>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">{step.desc}</p>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${PURPLE}10` }}>
-                    <Link to="/how-it-works" className="flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg transition-all duration-300 hover:opacity-80" style={{ color: PURPLE, background: `${PURPLE}08`, border: `1px solid ${PURPLE}15` }} onClick={() => sfx.whoosh()}>
-                      Saber mais <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                </div>
-              </NeonBorder>
-            </div>
-          </div>
-        </AnimatedSection>
-
-        {/* Divider */}
-        <div className="h-px mx-auto max-w-md" style={{ background: `linear-gradient(90deg, transparent, ${PURPLE}20, ${GREEN}20, transparent)` }} />
-
-        {/* ─── PILLAR 3: JOGOS (catálogo real — jogos famosos primeiro) ─── */}
-        <AnimatedSection className="relative overflow-hidden py-16 sm:py-24 hidden md:block" delay={0.2} style={{ background: `radial-gradient(ellipse 60% 40% at 50% 80%, ${GREEN}08, transparent), linear-gradient(180deg, #050508 0%, #060a08 50%, #050508 100%)` }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${GREEN}25, ${BLUE}15)`, border: `1px solid ${GREEN}30`, boxShadow: `0 0 25px ${GREEN}15` }}>
-                  <Gamepad2 className="h-5 w-5" style={{ color: GREEN }} />
-                </div>
-                <div>
-                  <ShimmerText colors={['#2ea043', '#58a6ff', '#2ea043']} speed={4} className="text-2xl sm:text-3xl font-black tracking-tight">JOGOS ONLINE</ShimmerText>
-                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">80+ Jogos • Multiplayer • Skill-Based</p>
-                </div>
-              </div>
-              <Link to="/jogos" className="group flex items-center gap-1.5 text-sm font-bold" style={{ color: GREEN }} onClick={() => sfx.whoosh()}>
-                Ver Todos os Jogos <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </div>
-
-            {/* Categorias reais (contagens do catálogo) */}
-            <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-4"} gap-3 mb-6`}>
-              {PILLAR_CATEGORIES.map((cat, i) => {
-                const Icon = cat.icon;
-                return (
-                  <motion.button key={cat.label} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }} className="rounded-xl p-4 text-left transition-all duration-300" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${cat.color}15` }} onClick={() => { sfx.whoosh(); navigate("/jogos"); }}>
-                    <Icon className="h-5 w-5 mb-2" style={{ color: cat.color }} />
-                    <p className="text-sm font-bold text-zinc-200">{cat.label}</p>
-                    <p className="text-[11px] text-zinc-500">{cat.count} jogos</p>
-                  </motion.button>
-                );
-              })}
-            </div>
-
-            {/* Jogos famosos em destaque — Ludo, Dominó, Xadrez… */}
-            <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-4"} gap-3 sm:gap-4`}>
-              {/* BATEU WORLD 3D — jogo permanente em destaque */}
-              <motion.div custom={0} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true }} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.97 }} className="relative rounded-xl p-4 cursor-pointer overflow-hidden transition-all duration-300 col-span-2 sm:col-span-2" style={{ background: "linear-gradient(135deg, #4c0519 0%, #9f1239 55%, #312e81 100%)", border: `2px solid rgba(244,63,94,0.5)`, boxShadow: "0 0 30px rgba(244,63,94,0.35)" }} onClick={() => { sfx.whoosh(); navigate("/world"); }}>
-                <span className="absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse" style={{ background: "linear-gradient(90deg,#f43f5e,#fb923c)", color: "#fff" }}>MMO 3D · DESTAQUE</span>
-                <div className="flex items-start gap-3">
-                  <span className="text-3xl">🌍</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-white mb-0.5 leading-tight">BATEU WORLD 3D</p>
-                    <p className="text-[10px] font-semibold text-white/75 leading-snug mb-1">Mundo 3D em tempo real, jogadores ao vivo, sorteios e cupões reais — o jogo permanente da Bateu.</p>
-                    <div className="flex items-center gap-1"><Users className="h-3 w-3" style={{ color: "#fda4af" }} /><span className="text-[10px] font-bold" style={{ color: "#fda4af" }}>Continua a tua aventura</span></div>
-                  </div>
-                </div>
-              </motion.div>
-              {FEATURED_GAMES.map((game, i) => (
-                <motion.div key={game.name} custom={i + 1} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true }} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.97 }} className="relative rounded-xl p-4 cursor-pointer overflow-hidden transition-all duration-300" style={{ background: game.grad, border: `1px solid ${game.border}15` }} onClick={() => { sfx.whoosh(); navigate("/jogos"); }}>
-                  {game.novo && <span className="absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: `${PURPLE}20`, color: PURPLE, border: `1px solid ${PURPLE}35` }}>NOVO</span>}
-                  <span className="text-3xl block mb-3">{game.emoji}</span>
-                  <p className="text-sm font-bold text-zinc-200 mb-1 leading-tight">{game.name}</p>
-                  <div className="flex items-center gap-1"><Dices className="h-3 w-3 text-zinc-500" /><span className="text-[11px] text-zinc-500">{game.mode}</span></div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Barra de atividade — contagem real de sessões 24h */}
-            <NeonBorder colors={[GREEN, BLUE]} speed={8} glowIntensity={0.3} borderWidth={1} borderRadius="0.75rem">
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${GREEN}10` }}>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="h-3 w-3 rounded-full" style={{ background: GREEN, boxShadow: `0 0 10px ${GREEN}60` }} />
-                    <motion.div className="absolute inset-0 h-3 w-3 rounded-full" style={{ background: GREEN }} animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
-                  </div>
-                  <span className="text-sm text-zinc-400">
-                    {recentMatches !== null && recentMatches > 0
-                      ? <><span className="font-bold text-white">{recentMatches.toLocaleString("pt-BR")}</span> {recentMatches === 1 ? "partida nas últimas 24h" : "partidas nas últimas 24h"}</>
-                      : "80+ jogos à tua espera — desafia um amigo ou o bot"}
-                  </span>
-                </div>
-                <Button size="sm" onClick={() => { sfx.buttonClick(); navigate("/jogos"); }} className="font-bold rounded-lg" style={{ background: `linear-gradient(135deg, ${GREEN}, ${BLUE})` }}>
-                  <Play className="h-3.5 w-3.5 mr-1.5" /> Jogar Agora
-                </Button>
-              </motion.div>
-            </NeonBorder>
-          </div>
-        </AnimatedSection>
-
-        {/* ═══════════ MMORPG FEATURED BANNER ═══════════ */}
-        <AnimatedSection className="relative overflow-hidden py-10 sm:py-16" style={{ background: `linear-gradient(180deg, #050508 0%, #0a0520 50%, #050508 100%)` }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="relative rounded-3xl overflow-hidden cursor-pointer"
-              style={{
-                background: `linear-gradient(135deg, #0a0520 0%, #150a30 30%, #0d1a3a 60%, #0a0520 100%)`,
-                border: `1px solid ${PURPLE}25`,
-                boxShadow: `0 0 60px ${PURPLE}15, 0 0 120px ${CYAN}08, 0 20px 60px rgba(0,0,0,0.5)`,
-              }}
-              onClick={() => { sfx.buttonClick(); navigate("/lives?game=mmorpg"); }}
-            >
-              {/* Animated glow border */}
-              <motion.div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ border: `2px solid ${PURPLE}` }} animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 3, repeat: Infinity }} />
-              <motion.div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ border: `1px solid ${CYAN}` }} animate={{ opacity: [0, 0.2, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 1 }} />
-
-              {/* Background orbs */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <motion.div className="absolute rounded-full blur-[80px]" style={{ background: `${PURPLE}20`, width: 300, height: 300, left: "-5%", top: "-20%" }} animate={{ y: [0, -30, 0], scale: [1, 1.2, 1] }} transition={{ duration: 8, repeat: Infinity }} />
-                <motion.div className="absolute rounded-full blur-[80px]" style={{ background: `${CYAN}15`, width: 250, height: 250, right: "-5%", bottom: "-20%" }} animate={{ y: [0, 20, 0], scale: [1, 1.15, 1] }} transition={{ duration: 10, repeat: Infinity, delay: 2 }} />
-                <motion.div className="absolute rounded-full blur-[60px]" style={{ background: `${GOLD}10`, width: 200, height: 200, left: "50%", top: "50%" }} animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 6, repeat: Infinity, delay: 1 }} />
-              </div>
-
-              <div className="relative z-10 p-6 sm:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
-                {/* Left: Icon & Text */}
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
-                    <span className="text-[10px] font-black tracking-widest px-3 py-1 rounded-full animate-pulse" style={{ background: "rgba(250,204,21,0.18)", color: "#facc15", border: "1px solid rgba(250,204,21,0.4)" }}>JOGO EM DESTAQUE</span>
-                    <span className="text-[10px] font-black tracking-widest px-3 py-1 rounded-full" style={{ background: `${GREEN}20`, color: GREEN, border: `1px solid ${GREEN}30` }}>MUNDO REAL</span>
-                  </div>
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mb-3 leading-tight">
-                    <span style={{ background: `linear-gradient(135deg, #fff, ${GOLD}, ${CYAN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Bateu World 3D</span>
-                  </h2>
-                  <p className="text-sm sm:text-base text-zinc-400 max-w-lg mb-5 leading-relaxed">
-                    O MMO oficial da Bateu! Entra num mundo 3D ao vivo: sobe de nível, desbloqueia poderes, derrota monstros e outros jogadores para roubar os cupões deles, troca pontos por moeda da plataforma, explora terras secretas e participa em sorteios reais.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mb-5">
-                    {[
-                      { icon: Swords, label: "Níveis & Poderes", color: GOLD },
-                      { icon: Users, label: "Jogadores ao Vivo", color: CYAN },
-                      { icon: Coins, label: "Pontos → Moeda", color: GREEN },
-                      { icon: Globe, label: "Exploração", color: PURPLE },
-                    ].map((f) => {
-                      const FIcon = f.icon;
-                      return (
-                        <div key={f.label} className="flex items-center gap-1.5">
-                          <FIcon className="h-3.5 w-3.5" style={{ color: f.color }} />
-                          <span className="text-xs font-semibold text-zinc-300">{f.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <Button size="lg" className="font-bold rounded-xl h-auto px-8 py-4 text-base transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${PURPLE}, ${CYAN})`, boxShadow: `0 0 30px ${PURPLE}30, 0 8px 32px rgba(0,0,0,0.4)` }}>
-                    <Rocket className="mr-2 h-5 w-5" /> Entrar no Mundo
-                  </Button>
-                </div>
-
-                {/* Right: Visual showcase */}
-                <div className="relative shrink-0">
-                  <motion.div
-                    className="text-8xl sm:text-9xl md:text-[10rem] select-none"
-                    animate={{ y: [0, -10, 0], rotate: [0, 2, -2, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    🌍
-                  </motion.div>
-                  {/* Floating class icons */}
-                  {!isMobile && [
-                    { emoji: "⚔️", x: "-20px", y: "-10px", delay: 0 },
-                    { emoji: "🔮", x: "60px", y: "-30px", delay: 0.5 },
-                    { emoji: "🏹", x: "-40px", y: "40px", delay: 1 },
-                    { emoji: "🗡️", x: "50px", y: "50px", delay: 1.5 },
-                    { emoji: "🛡️", x: "-10px", y: "70px", delay: 2 },
-                    { emoji: "💪", x: "70px", y: "20px", delay: 2.5 },
-                  ].map((item, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute text-2xl sm:text-3xl select-none will-optimize"
-                      style={{ left: item.x, top: item.y }}
-                      animate={{ y: [0, -8, 0], opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
-                      transition={{ duration: 3, repeat: Infinity, delay: item.delay, ease: "easeInOut" }}
-                    >
-                      {item.emoji}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </AnimatedSection>
-
         {/* ─── MISSÕES DIÁRIAS (engagement — antes da prova social) ─── */}
         <AnimatedSection className="relative py-10" style={{ background: "#050508" }}>
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <DailyMissions />
           </div>
         </AnimatedSection>
-
-        {/* ═══════════ CATEGORY NAV (atalhos de categorias) ═══════════ */}
-        <ScrollReveal direction='up' delay={100}>
-          <CategoryNav />
-        </ScrollReveal>
 
         {/* ═══════════ POPULAR LEADERBOARD ═══════════ */}
         <AnimatedSection className="py-12 sm:py-16" style={{ background: `linear-gradient(180deg, #08060f, #050508)` }}>

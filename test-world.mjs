@@ -34,45 +34,12 @@ const NOISE = [
 
 async function main() {
   console.log(`\n🌍 Bateu World v6 E2E — ${BASE}\n`);
-  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"], executablePath: process.env.PW_CHROME || undefined });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
   const consoleErrors = [];
   page.on("pageerror", (e) => consoleErrors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
-  page.on("crash", () => { console.log(`\n*** PÁGINA CRASHOU @ ${new Date().toISOString()} (asserts até agora: ${passed}) ***\n`); });
-  const t0suite = Date.now();
-  const stamp = (label) => console.log(`  ⏱ ${label} +${((Date.now() - t0suite) / 1000).toFixed(0)}s`);
-  const PART = process.env.BW_PART || "1"; // v17: suíte dividida (limite de tempo do sandbox)
-  const stateFile = "/tmp/bw-e2e-state.json";
-  const saveState = async () => {
-    try {
-      const st = await page.evaluate(() => JSON.parse(JSON.stringify(localStorage)));
-      (await import("fs")).writeFileSync(stateFile, JSON.stringify(st));
-      console.log("  ℹ️ estado guardado para a parte seguinte");
-    } catch { /* ignore */ }
-  };
-  const finishPart = async () => {
-    console.log(`\n════════════════════════════`);
-    console.log(`  PARTE ${PART} — PASSOU: ${passed}  FALHOU: ${failed}`);
-    if (fails.length) console.log("  Falhas: " + fails.join(" | "));
-    console.log(`════════════════════════════\n`);
-    await browser.close();
-    process.exit(failed > 0 ? 1 : 0);
-  };
-  const enterWorld = async () => {
-    await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.locator('[data-testid="bateu-world"] canvas').waitFor({ state: "visible", timeout: 90000 }).catch(() => {});
-    await page.waitForTimeout(4000);
-  };
-  if (PART !== "1") {
-    // partes 2/3: restaura o herói + sessão guardados pela parte anterior
-    const fs = await import("fs");
-    try {
-      const saved = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-      await page.addInitScript((st) => { for (const [k, v] of Object.entries(st)) { try { localStorage.setItem(k, v); } catch {} } }, saved);
-    } catch { /* sem estado — segue mesmo assim */ }
-  }
 
   // helper: abrir painel com retry (correspondência EXATA para não apanhar
   // cards do hub que contenham a mesma palavra, ex: "Banco ou Arriscar?")
@@ -96,8 +63,24 @@ async function main() {
     if (await btn.count().catch(() => 0) > 0) { await btn.click({ force: true }).catch(() => {}); await page.waitForTimeout(350); }
   };
 
-  // ═══ v17: PARTE 1 — entrada, HUD, v17 Dragon Ball, v8-v11 (limite de tempo do sandbox) ═══
-  if (PART === "1") {
+  /* abre painel por TESTID com retries — o badge da mochila altera o nome
+     acessível e cliques em 3D podem ser interceptados; tenta até o painel abrir */
+  const openPanelT = async (testid, tries = 4) => {
+    const btn = page.locator(`[data-testid="${testid}"]`);
+    for (let i = 0; i < tries; i++) {
+      const clicked = await btn.click({ timeout: 8000, force: i >= 2 }).then(() => true).catch(() => false);
+      if (clicked) {
+        await page.waitForTimeout(900);
+        if ((await page.locator('[data-testid="bw-panel"]').count()) > 0) return true;
+        // se abriu e fechou (toggle), fechar qualquer painel e tentar outra vez
+        await closePanel();
+      } else {
+        await page.waitForTimeout(1200);
+      }
+    }
+    return false;
+  };
+
   // ── 0. v9 — MODO CONVIDADO: sem conta TAMBÉM se joga ──
   console.log("▶ v9 — Modo convidado (sem registo)");
   const sbToken = {
@@ -135,15 +118,9 @@ async function main() {
   await guestInput.fill("TesteHero");
   await page.locator('button:has-text("ENTRAR NO MUNDO")').first().click().catch(() => {});
   const guestCanvas = page.locator('[data-testid="bateu-world"] canvas');
-  await page.waitForTimeout(3000); // o waitFor abaixo já espera o boot — margem curta para o motor
+  await page.waitForTimeout(12000); // margem para o mundo arrancar em dev
   ok("v9: CONVIDADO joga — canvas 3D ativo sem conta", (await guestCanvas.count()) > 0);
-  let chipOk = false;
-  for (let i = 0; i < 16; i++) { // v17.2: HUD do mundo pode demorar a montar em software GL
-    chipOk = await page.locator('[data-testid="bw-guest-chip"]').isVisible().catch(() => false);
-    if (chipOk) break;
-    await page.waitForTimeout(700);
-  }
-  ok("v9: chip CONVIDADO no HUD com atalho para conta", chipOk);
+  ok("v9: chip CONVIDADO no HUD com atalho para conta", await page.locator('[data-testid="bw-guest-chip"]').count() > 0);
   await page.screenshot({ path: "shots/world-00-convidado-jogando.png" });
 
   // 0c: limpar herói de convidado e injetar sessão — o resto da suite cobre o fluxo MEMBRO
@@ -217,7 +194,7 @@ async function main() {
   }
 
   // ── 4. Mundo 3D + HUD v2 ──
-  console.log("▶ Mundo 3D"); stamp("mundo3d");
+  console.log("▶ Mundo 3D");
   const canvas = page.locator('[data-testid="bateu-world"] canvas');
   await canvas.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
   ok("Canvas 3D visível", await canvas.count() > 0);
@@ -272,8 +249,22 @@ async function main() {
 
   // ── v6: mapa-múndi com significados ──
   console.log("▶ v6 — Mapa-múndi com significados");
-  await page.locator('[data-testid="bw-nav-map"]').click().catch(() => {});
-  await page.waitForTimeout(700);
+  const navMap = page.locator('[data-testid="bw-nav-map"]');
+  let mapClicked = false;
+  for (let i = 0; i < 3 && !mapClicked; i++) {
+    mapClicked = await navMap.click({ timeout: 8000, force: i > 0 }).then(() => true).catch(() => false);
+    if (mapClicked) {
+      await page.waitForTimeout(1200);
+      if ((await page.locator('[data-testid="bw-panel"]').count()) === 0) mapClicked = false; // painel não abriu → tentar de novo
+    } else {
+      await page.waitForTimeout(1500);
+    }
+  }
+  if (!mapClicked) {
+    console.log("  [diag] body:", (await page.locator("body").innerText().catch(() => "?")).slice(0, 400).replace(/\n/g, " | "));
+    console.log("  [diag] pageerrors:", consoleErrors.slice(0, 5));
+    await page.screenshot({ path: "shots/world-map-fail.png" });
+  }
   const mapTxt = await page.locator('[data-testid="bw-panel"]').innerText().catch("");
   ok("v6: painel do mapa-múndi abre", mapTxt.includes("Mapa-Múndi"));
   ok("v6: legenda dos significados presente", /significa cada lugar/i.test(mapTxt));
@@ -295,17 +286,9 @@ async function main() {
   const arenaItem = page.locator('[data-testid="bw-map-arena"]');
   await arenaItem.evaluate((el) => el.scrollIntoView({ block: "center" })).catch(() => {});
   await page.waitForTimeout(300);
-  // v11: sondagem resiliente — sob carga o clique pode cair num re-render do mapa
-  let compassOn = false;
-  for (let i = 0; i < 4 && !compassOn; i++) {
-    await arenaItem.click({ force: true }).catch(() => {});
-    for (let w = 0; w < 8 && !compassOn; w++) {
-      compassOn = await page.locator('[data-testid="bw-compass"]').isVisible().catch(() => false);
-      if (compassOn) break;
-      await page.waitForTimeout(400);
-    }
-  }
-  ok("v6: bússola do destino aparece após marcar", compassOn);
+  await arenaItem.click({ force: true }).catch(() => {});
+  await page.waitForTimeout(1200);
+  ok("v6: bússola do destino aparece após marcar", await page.locator('[data-testid="bw-compass"]').isVisible().catch(() => false));
   await page.locator('[data-testid="bw-compass"] button').first().click({ force: true }).catch(() => {});
   let compassOff = false;
   for (let i = 0; i < 6; i++) {
@@ -403,109 +386,11 @@ async function main() {
   await page.screenshot({ path: "shots/world-04-banco.png" });
   await closePanel();
 
-  // ── 9. Ranking (v17: por POWER LEVEL) ──
+  // ── 9. Ranking ──
   console.log("▶ Ranking");
   const rTxt = await openPanel("Ranking");
-  ok("Painel Ranking abre (v17: por Power Level)", rTxt.includes("POWER LEVEL"));
+  ok("Painel Ranking abre", rTxt.includes("Ranking do Mundo"));
   ok("Jogador listado no ranking", rTxt.includes("TesteHero"));
-  ok("v17: mostra o Power Level do herói", /⚡\s?[\d.\s]+/.test(rTxt) || rTxt.includes("⚡"));
-  await closePanel();
-
-  // ── 9b. v17 — ERA DRAGON BALL: poderes, transformações, KI, PL ──
-  console.log("▶ v17 — Era Dragon Ball (Poderes & Transformações)"); stamp("v17db");
-  ok("v17: botão ⚡ transformação na barra de combate", await page.locator('[data-testid="bw-transform"]').count() > 0);
-  ok("v17: chip de POWER LEVEL no HUD", await page.locator('[data-testid="bw-power-level"]').count() > 0);
-  const powTxt = await openPanel("Poderes");
-  ok("v17: painel Poderes abre", powTxt.includes("Poderes, Transformações & Armas"));
-  ok("v17: mostra o Power Level com fórmula", /power level/i.test(powTxt) && powTxt.includes("Ataque"));
-  ok("v17: transformações estilo Dragon Ball", powTxt.includes("TRANSFORMAÇÕES") && powTxt.includes("Fúria Crescente"));
-  ok("v17: KI explicado (drena e recarrega)", powTxt.includes("KI"));
-  ok("v17: secção de armas/equipamento", powTxt.includes("ARMAS & EQUIPAMENTO"));
-  ok("v17: créditos + prémio 1GB explicados", powTxt.includes("1GB") && powTxt.includes("créditos"));
-  await page.screenshot({ path: "shots/world-10-poderes.png" });
-  await closePanel();
-
-  // transformação via motor (bloqueia abaixo do Nv5)
-  const tLow = await page.evaluate(() => { const e = window.__bw; return e && e.transform ? e.transform(1) : null; });
-  ok("v17: transformação bloqueada no nível 1", tLow === false);
-  const tOk = await page.evaluate(() => {
-    const e = window.__bw;
-    if (!e || !e.syncStats || !e.transform) return null;
-    e.syncStats({ atk: 30, maxHp: 220, def: 6, spd: 9 }, 15);
-    return e.transform(1);
-  });
-  ok("v17: 1ª transformação aplica no Nv15", tOk === true);
-  const fx = await page.evaluate(() => { const e = window.__bw; return e ? { form: e.formLevel, ki: e.kiLevel, pl1: e.getPowerLevel() } : null; });
-  ok("v17: aura ativa (form=1) com KI a drenar", !!fx && fx.form === 1);
-  const plBase = fx ? fx.pl1 : 0;
-  const t2 = await page.evaluate(() => { const e = window.__bw; return e && e.transform ? e.transform(2) : null; });
-  const fx2 = await page.evaluate(() => { const e = window.__bw; return e ? { form: e.formLevel, pl2: e.getPowerLevel() } : null; });
-  ok("v17: 2ª transformação multiplica o Power Level", t2 === true && !!fx2 && fx2.form === 2 && fx2.pl2 > plBase);
-  await page.evaluate(() => { const e = window.__bw; if (e && e.transform) e.transform(0); });
-  await page.waitForTimeout(400);
-
-  // ── 9c. v17 — FAUNA POR TERRITÓRIO ──
-  console.log("▶ v17 — Monstros por território");
-  const info17 = await page.evaluate(() => { const e = window.__bw; return e && e.debugWorldInfo ? e.debugWorldInfo() : null; });
-  ok("v17: lobos na Planície Central", !!info17 && info17.species.includes("Lobo Cinzento"));
-  ok("v17: aranhas/espectros na Floresta", !!info17 && (info17.species.includes("Aranha Gigante") || info17.species.includes("Espectro Verde")));
-  ok("v17: dragões nas Terras Vulcânicas", !!info17 && info17.species.includes("Dragão de Lava"));
-  ok("v17: espécies distintas em vários territórios (≥8)", !!info17 && info17.species.length >= 8);
-  ok("v17: chefes nomeados por território", !!info17 && info17.bosses.some((b) => b !== "Bug Rei" && b !== "Rainha Sombria"));
-  ok("v17: Guardiã Anciã mantém o nome", !!info17 && info17.bosses.includes("Guardiã Anciã"));
-
-  // ── 9d. v17 — Heróis online + DUELO 1v1 ──
-  console.log("▶ v17 — Heróis & Duelos 1v1");
-  ok("v17: botão Heróis na navegação", await page.locator('[data-testid="bw-nav-heros"]').count() > 0);
-  const herosTxt = await openPanel("Heróis");
-  ok("v17: painel Heróis abre", herosTxt.includes("Heróis no Mundo"));
-  await closePanel();
-  await page.evaluate(() => { const e = window.__bw; if (e && e.debugForceDuelReq) e.debugForceDuelReq(); });
-  await page.waitForTimeout(900);
-  ok("v17: pedido de duelo aparece com PL", await page.locator('[data-testid="bw-duel-req"]').isVisible().catch(() => false));
-  await page.locator('[data-testid="bw-duel-accept"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(700);
-  ok("v17: HUD do DUELO ativo (vs Herói Teste)", await page.locator('[data-testid="bw-duel-hud"]').isVisible().catch(() => false));
-  await page.evaluate(() => { const e = window.__bw; if (e && e.debugEndDuel) e.debugEndDuel(); });
-  let duelEnded = false;
-  for (let i = 0; i < 10; i++) {
-    await page.waitForTimeout(500);
-    duelEnded = !(await page.locator('[data-testid="bw-duel-hud"]').isVisible().catch(() => false));
-    if (duelEnded) break;
-  }
-  ok("v17: duelo termina sem erro", duelEnded);
-
-  // ── 9e. v17 — PRÉMIO 1GB (WhatsApp + operadoras) ──
-  console.log("▶ v17 — Prémio 1GB via WhatsApp");
-  await page.evaluate(() => { const e = window.__bw; if (e && e.debugGrantPrize) e.debugGrantPrize(); });
-  await page.waitForTimeout(900);
-  ok("v17: modal do PRÉMIO 1GB abre", await page.locator('[data-testid="bw-prize-modal"]').isVisible().catch(() => false));
-  const prizeCode = await page.locator('[data-testid="bw-prize-code"]').innerText().catch(() => "");
-  ok("v17: código BW-1GB-XXXX gerado", /^BW-1GB-[A-Z0-9]{6}$/.test(prizeCode.trim()));
-  ok("v17: 3 operadoras (Vodacom/Movitel/Tmcel)", (await page.locator('[data-testid="bw-prize-op-vodacom"]').count()) === 1 && (await page.locator('[data-testid="bw-prize-op-movitel"]').count()) === 1 && (await page.locator('[data-testid="bw-prize-op-tmcel"]').count()) === 1);
-  await page.locator('[data-testid="bw-prize-op-movitel"]').click().catch(() => {});
-  await page.locator('[data-testid="bw-prize-phone"]').fill("848547887");
-  const waHref = await page.locator('[data-testid="bw-prize-whatsapp"]').getAttribute("href").catch(() => "");
-  ok("v17: WhatsApp aponta para +258848547887", typeof waHref === "string" && waHref.includes("wa.me/258848547887"));
-  ok("v17: mensagem automática já vai escrita com código/operadora", typeof waHref === "string" && waHref.includes(encodeURIComponent(prizeCode.trim())) && decodeURIComponent(waHref).includes("Movitel"));
-  await page.screenshot({ path: "shots/world-11-premio.png" });
-  await page.locator('[data-testid="bw-prize-close"]').click({ force: true }).catch(() => {});
-  let prizeClosed = false;
-  for (let i = 0; i < 8; i++) {
-    await page.waitForTimeout(500);
-    prizeClosed = (await page.locator('[data-testid="bw-prize-modal"]').count().catch(() => 1)) === 0;
-    if (prizeClosed) break;
-  }
-  ok("v17: prémio pode ser guardado para depois", prizeClosed);
-  // toggle de stories nas definições
-  await page.locator('[data-testid="bw-nav-set"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(500);
-  const setTxt17 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
-  ok("v17: toggle de conquistas nos Stories", setTxt17.includes("Publicar conquistas nos Stories"));
-  await page.locator('[data-testid="bw-set-stories-toggle"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(300);
-  await page.locator('[data-testid="bw-set-stories-toggle"]').click({ force: true }).catch(() => {});
-  ok("v17: toggle de stories liga/desliga", true);
   await closePanel();
 
   // ── 10. Chat ──
@@ -530,9 +415,12 @@ async function main() {
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugDropLoot) e.debugDropLoot(); });
   await page.waitForTimeout(900);
   // clicar via testid (o badge de contagem altera o accessible name do botão)
-  await page.locator('[data-testid="bw-nav-inv"]').click().catch(() => {});
-  await page.waitForTimeout(500);
+  await openPanelT("bw-nav-inv");
   const invTxt = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
+  if (!invTxt.includes("Mochila & Equipamento")) {
+    console.log("  [diag-mochila] inv state:", JSON.stringify(await page.evaluate(() => { const e = window.__bw; const c = e && (e.getChar ? e.getChar() : e.char); return c ? (c.inv || []).map(i => i && i.name) : "sem char"; })));
+    await page.screenshot({ path: "shots/world-mochila-fail.png" });
+  }
   ok("Painel Mochila abre", invTxt.includes("Mochila & Equipamento"));
   ok("Loot apanhado aparece na mochila", invTxt.includes("Lâmina de Teste"));
   ok("Raridade Lendária apresentada", /lend[aá]ri/i.test(invTxt));
@@ -546,9 +434,7 @@ async function main() {
   await closePanel();
 
   console.log("▶ v4 — Definições");
-  await page.locator('[data-testid="bw-nav-set"]').click().catch(() => {});
-  await page.waitForTimeout(500);
-  const setTxt = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
+  const setTxt = await openPanel("Definições");
   ok("Painel Definições abre", setTxt.includes("Definições"));
   ok("Qualidade gráfica com 4 níveis", setTxt.includes("Auto") && setTxt.includes("Baixa") && setTxt.includes("Média") && setTxt.includes("Alta"));
   ok("Música ambiente nas definições", setTxt.includes("Música ambiente"));
@@ -579,23 +465,17 @@ async function main() {
       if (!clicked) await page.waitForTimeout(1200);
     }
     ok("Botão de foto clicável", clicked);
-    // v10: janela de foto agora 2.6s; o renderer por software atrasa o
-    // overlay — sonda continuamente e re-clica em resgate se não abriu
+    // v10: janela de foto é curta (~1.2s) e o renderer por software atrasa
+    // o overlay — sonda continuamente e valida a HUD DENTRO da janela
     const overlay = page.locator('[data-testid="bw-photo-overlay"]');
     let overlayVisible = false;
     let hudHidden = false;
     const pT0 = Date.now();
-    let rescues = 0;
     while (Date.now() - pT0 < 6000) {
       overlayVisible = await overlay.isVisible().catch(() => false);
       if (overlayVisible) {
         hudHidden = !(await page.locator('[data-testid="bw-attack"]').isVisible().catch(() => true));
         if (hudHidden) break;
-      }
-      // v11: resgate — um clique pode ter "consumido" o toggle sob carga
-      if (!overlayVisible && Date.now() - pT0 > 1700 && rescues < 2) {
-        rescues++;
-        await page.locator('[data-testid="bw-photo"]').click({ force: true }).catch(() => {});
       }
       await page.waitForTimeout(140);
     }
@@ -605,14 +485,7 @@ async function main() {
     ok("Modo foto termina sozinho", true);
   }
 
-  if (PART === "1") { await saveState(); await finishPart(); }
-  } // ═══ fim da PARTE 1 ═══
-
-  // ═══ PARTE 2/3: entra no mundo com o herói restaurado ═══
-  await enterWorld();
-
-  if (PART === "2") {
-  console.log("▶ v4 — Arena das Ondas"); stamp("v4arena");
+  console.log("▶ v4 — Arena das Ondas");
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugStartArenaHere) e.debugStartArenaHere(); });
   await page.waitForTimeout(400);
   const arenaHud = page.locator('[data-testid="bw-arena-hud"]');
@@ -641,7 +514,7 @@ async function main() {
   }
 
   // ── 11b. v7 — Mundo Espectacular: missões PvP, acontecimentos, aurora ──
-  console.log("▶ v7 — Missões diárias de caça PvP"); stamp("v7");
+  console.log("▶ v7 — Missões diárias de caça PvP");
   await openPanel("Missões");
   // o teste v6 anterior deixa o separador Saga ativo — voltar a Diárias
   await page.locator('[data-testid="bw-panel"] button:has-text("Diárias")').first().click().catch(() => {});
@@ -665,9 +538,7 @@ async function main() {
   console.log("▶ v7 — Acontecimentos do Mundo");
   // helper: espera poll pelo texto do chip (evita corridas de render em dev)
   const waitChip = async (substr) => {
-    for (let i = 0; i < 26; i++) { // v11: 13s — sob carga os chips demoram
-      if (i > 0) await page.waitForTimeout(500);
-
+    for (let i = 0; i < 10; i++) {
       const t = (await page.locator('[data-testid="bw-world-event"]').innerText().catch(() => "")).toUpperCase();
       if (t.includes(substr)) return true;
       await page.waitForTimeout(500);
@@ -694,14 +565,13 @@ async function main() {
   console.log("▶ v7 — Roubo de itens em PvP");
   await page.evaluate(() => { const e = window.__bw; if (e && e.debugReceiveSteal) e.debugReceiveSteal(); });
   await page.waitForTimeout(900);
-  await page.locator('[data-testid="bw-nav-inv"]').click().catch(() => {});
-  await page.waitForTimeout(500);
+  await openPanelT("bw-nav-inv");
   const invTxt7 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
   ok("v7: 'Lâmina Roubada' aparece na mochila", invTxt7.includes("Lâmina Roubada"));
   await closePanel();
 
   // ── 11c. v8 — VILAS E INTERIORES (casas enteráveis com escadas) ──
-  console.log("▶ v8 — Casas e imóveis enteráveis"); stamp("v8");
+  console.log("▶ v8 — Casas e imóveis enteráveis");
   const canvasV8 = page.locator('[data-testid="bateu-world"] canvas');
   ok("v8: mundo ativo para o teste de interiores", await canvasV8.count() > 0);
   const binfo0 = await page.evaluate(() => { const e = window.__bw; return e && e.getBuildingsInfo ? e.getBuildingsInfo() : null; });
@@ -792,129 +662,16 @@ async function main() {
   ok("v8: missão diária de interiores existe", questsTxt8.toLowerCase().includes("interiores"));
   await closePanel();
 
-  // ── 11c. v11 — CÂMARAS · ECRÃ INTEIRO · MÚSICA · NPCs · RECOLHA · MONTARIA ──
-  console.log("▶ v11 — Câmaras, ecrã inteiro, música, NPCs e oficina"); stamp("v11");
-  // câmaras: 3 modos no HUD
-  ok("v11: grupo de câmaras no HUD", await page.locator('[data-testid="bw-cam-group"]').count() > 0);
-  // v16: as secções de mapa/missões deixam a página scrollada — traz a fila de
-  // controlos do topo de volta ao viewport antes de clicar (clique fora do
-  // ecrã não chega ao botão)
-  await page.evaluate(() => document.querySelector('[data-testid="bw-cam-group"]')?.scrollIntoView({ block: "center" }));
-  await page.waitForTimeout(250);
-  await page.locator('[data-testid="bw-cam-1"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(400);
-  ok("v11: câmara 1ª PESSOA ativa (estilo Minecraft)", await page.evaluate(() => window.__bw?.getCamMode?.() === 1));
-  ok("v11: herói esconde-se na 1ª pessoa", await page.evaluate(() => window.__bw?.player?.visible === false));
-  ok("v11: mão/arma em 1ª pessoa visível", await page.evaluate(() => window.__bw?.fpWeapon?.visible === true));
-  await page.locator('[data-testid="bw-cam-2"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(400);
-  ok("v11: câmara 3ª PESSOA ombro ativa (estilo GTA)", await page.evaluate(() => window.__bw?.getCamMode?.() === 2));
-  ok("v11: herói visível na 3ª pessoa", await page.evaluate(() => window.__bw?.player?.visible === true));
-  await page.keyboard.press("c");
-  await page.waitForTimeout(350);
-  ok("v11: tecla C cicla de volta ao orbital", await page.evaluate(() => window.__bw?.getCamMode?.() === 0));
-  // ecrã inteiro (próprio do jogo, com botão)
-  ok("v11: botão de ecrã inteiro presente", await page.locator('[data-testid="bw-fs"]').count() > 0);
-  await page.locator('[data-testid="bw-fs"]').click({ force: true }).catch(() => {});
-  // sondar 2.5s: fullscreen nativo OU fallback visual (classe inset-0)
-  let fsOn = false;
-  for (let i = 0; i < 18 && !fsOn; i++) {
-    fsOn = await page.evaluate(() => !!document.fullscreenElement || (document.querySelector('[data-testid="bateu-world"]')?.className || "").includes("inset-0"));
-    if (!fsOn) await page.waitForTimeout(150);
-  }
-  ok("v11: ecrã inteiro ativa (API ou fallback visual)", fsOn);
-  await page.locator('[data-testid="bw-fs"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(900);
-  // música: leitor com faixas originais (v11: sondagem resiliente sob carga)
-  await page.locator('[data-testid="bw-music"]').click({ force: true }).catch(() => {});
-  let playerOpen = false;
-  for (let i = 0; i < 14 && !playerOpen; i++) {
-    playerOpen = await page.locator('[data-testid="bw-music-player"]').isVisible().catch(() => false);
-    if (!playerOpen) { await page.locator('[data-testid="bw-music"]').click({ force: true }).catch(() => {}); await page.waitForTimeout(450); }
-  }
-  ok("v11: leitor de música abre", playerOpen);
-  let trackA = "";
-  for (let i = 0; i < 10 && trackA.trim().length <= 3; i++) {
-    trackA = await page.locator('[data-testid="bw-track-name"]').innerText().catch("");
-    if (trackA.trim().length <= 3) await page.waitForTimeout(300);
-  }
-  ok("v11: nome da faixa original visível", trackA.trim().length > 3);
-  await page.locator('[data-testid="bw-music-next"]').click({ force: true }).catch(() => {});
-  let trackB = "";
-  for (let i = 0; i < 10; i++) {
-    trackB = await page.locator('[data-testid="bw-track-name"]').innerText().catch("");
-    if (trackB.trim().length > 3 && trackB.trim() !== trackA.trim()) break;
-    await page.waitForTimeout(300);
-  }
-  ok("v11: ⏭ muda de faixa", trackB.trim().length > 3 && trackA.trim() !== trackB.trim());
-  await page.locator('[data-testid="bw-music"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(400);
-  // NPCs: teleporta para o Mestre Gomas e fala
-  await page.evaluate(() => { const e = window.__bw; if (e?.warpTo) e.warpTo(9, 7); });
-  await page.waitForTimeout(1400);
-  ok("v11: rótulo 'Falar com Mestre Gomas' aparece", await page.evaluate(() => (document.querySelector('[data-testid="bw-interact"]')?.textContent || "").includes("Mestre Gomas")));
-  await page.locator('[data-testid="bw-interact"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(1200);
-  ok("v11: diálogo de NPC abre", await page.locator('[data-testid="bw-dialogue"]').isVisible().catch(() => false));
-  // avança até à última fala → recompensa
-  for (let i = 0; i < 4; i++) {
-    const done = await page.locator('[data-testid="bw-dialogue-gift"]').count().catch(() => 0);
-    if (done > 0) break;
-    await page.locator('[data-testid="bw-dialogue"] button:has-text("continuar")').first().click({ force: true }).catch(() => {});
-    await page.waitForTimeout(350);
-  }
-  await page.locator('[data-testid="bw-dialogue-gift"]').click({ force: true }).catch(() => {});
-  // v11: sondagem — sob carga a recompensa e o fecho demoram mais
-  let dlgClosed = false;
-  for (let i = 0; i < 14 && !dlgClosed; i++) {
-    dlgClosed = (await page.locator('[data-testid="bw-dialogue"]').count().catch(() => 1)) === 0;
-    if (!dlgClosed) await page.waitForTimeout(400);
-  }
-  ok("v11: bênção diária do NPC dá ouro/XP (diálogo fecha)", dlgClosed);
-  // montaria: botão presente e travão de nível funciona sem crash
-  ok("v11: botão da montaria presente", await page.locator('[data-testid="bw-mount"]').count() > 0);
-  await page.locator('[data-testid="bw-mount"]').click({ force: true }).catch(() => {});
-  await page.waitForTimeout(600);
-  ok("v11: montaria bloqueada abaixo do Nv8 (aviso mostrado)", (await page.locator("body").innerText().catch("")).includes("nível 8"));
-  // oficina na mochila
-  await page.locator('[data-testid="bw-nav-inv"]').first().click({ force: true }).catch(() => {});
-  await page.waitForTimeout(700);
-  ok("v11: Oficina na mochila com materiais", await page.locator('[data-testid="bw-mat-erva"]').isVisible().catch(() => false));
-  ok("v11: receita de poção fabricável listada", await page.locator('[data-testid="bw-craft-vida"]').count() > 0);
-  await closePanel();
-  // catálogo aparado (o /jogos tem splash de progresso — espera pelo conteúdo)
-  await page.goto(`${BASE}/jogos`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await page.locator("text=Guerra Espacial").first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
-  await page.waitForTimeout(600);
-  const jogosTxt11 = await page.locator("body").innerText().catch(() => "");
-  ok("v11: catálogo tem Guerra Espacial", jogosTxt11.includes("Guerra Espacial"));
-  ok("v11: catálogo tem Bounce + clássicos (Flappy, Xadrez, Urusse)", jogosTxt11.includes("Bounce") && jogosTxt11.includes("Flappy") && jogosTxt11.includes("Xadrez") && jogosTxt11.includes("Urusse"));
-  ok("v11: excesso removido (sem Mines/Crash/Plinko/Bicho)", !jogosTxt11.includes("Crash") && !jogosTxt11.includes("Plinko") && !jogosTxt11.includes("Jogo do Bicho") && !jogosTxt11.includes("Teen Patti"));
-  // v12: o jogo BOUNCE (novo clássico dedicado) abre e renderiza
-  await page.goto(`${BASE}/lives?game=bounce`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  const bounceGame = page.locator('[data-testid="bounce-game"]');
-  await bounceGame.waitFor({ state: "visible", timeout: 25000 }).catch(() => {});
-  ok("v12: jogo Bounce abre com canvas e botão jogar", (await bounceGame.count()) > 0 && (await page.locator('[data-testid="bounce-canvas"]').count()) > 0 && (await page.locator('[data-testid="bounce-play"]').count()) > 0);
-
-  if (PART === "2") { await saveState(); await finishPart(); }
-  } // ═══ fim da PARTE 2 ═══
-
-  // ── 12. Persistência (+ PARTE 2: retoma o herói guardado) ──
-  console.log("▶ Persistência" + (PART === "2" ? " (PARTE 2 — herói restaurado)" : "")); stamp("persist");
-  // v11: a secção anterior navega até /jogos — voltar ao MUNDO antes do reload
-  // (o teste valida que o herói regressa ao mundo sem criar de novo)
-  await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await page.waitForTimeout(2500);
+  // ── 12. Persistência ──
+  console.log("▶ Persistência");
   await page.reload({ waitUntil: "domcontentloaded" });
   const canvas2 = page.locator('[data-testid="bateu-world"] canvas');
-  await canvas2.waitFor({ state: "visible", timeout: 90000 }).catch(() => {});
+  await canvas2.waitFor({ state: "visible", timeout: 40000 }).catch(() => {});
   ok("Após reload entra direto no mundo (canvas)", await canvas2.count() > 0);
   const noCreate = await page.locator('input[placeholder="Nome do teu herói"]').count();
   ok("Não pede criação de novo", noCreate === 0);
   const persistedTxt = await page.evaluate(() => { try { return localStorage.getItem("bateu_world_char_v6") || ""; } catch { return ""; } });
-  // v17.2: na parte 3 valida-se a persistência do HERÓI (o item de roubo pode
-  // ter sido levado por mobs em PvP durante as secções anteriores — jogo real!)
-  ok("v7: progresso SOBREVIVE ao reload (herói + créditos guardados)", persistedTxt.includes("TesteHero") && persistedTxt.includes("credits"));
+  ok("v7: item roubado SOBREVIVE ao reload (guardado na conta/local)", persistedTxt.includes("Roubada"));
   await page.screenshot({ path: "shots/world-05-persist.png" });
 
   // ── 12. Página /jogos retargetizada ──

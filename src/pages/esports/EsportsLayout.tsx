@@ -18,12 +18,16 @@ import {
   X,
   Shield,
   Flame,
+  GitBranch,
+  Sparkles,
 } from 'lucide-react';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import SoundSettings from '@/components/SoundSettings';
 
 const NAV_ITEMS = [
   { icon: Trophy, label: 'Campeonatos', path: '/esports' },
+  { icon: GitBranch, label: 'Grelhas', path: '/esports/brackets' },
+  { icon: Sparkles, label: 'Fantasy', path: '/esports/fantasy' },
   { icon: Swords, label: 'Ligas', path: '/esports/seasons' },
   { icon: Target, label: 'Previsoes', path: '/esports/betting' },
   { icon: Flame, label: 'Duelos P2P', path: '/esports/duelos' },
@@ -128,8 +132,8 @@ export default function EsportsLayout() {
             </button>
           </div>
 
-          {/* Center: Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
+          {/* Center: Desktop Nav (apenas em ecrãs largos — evita sobreposição) */}
+          <div className="hidden min-[1330px]:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -192,7 +196,7 @@ export default function EsportsLayout() {
                 if (!mobileMenuOpen) { sfx.modalOpen(); } else { sfx.modalClose(); }
                 setMobileMenuOpen(!mobileMenuOpen);
               }}
-              className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:text-[#00d4ff] hover:bg-[#00d4ff]/5 transition-all duration-200"
+              className="min-[1330px]:hidden flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:text-[#00d4ff] hover:bg-[#00d4ff]/5 transition-all duration-200"
               aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -208,7 +212,7 @@ export default function EsportsLayout() {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="lg:hidden overflow-hidden"
+              className="min-[1330px]:hidden overflow-hidden"
               style={{
                 background: 'rgba(10,10,15,0.98)',
                 borderBottom: '1px solid rgba(0, 212, 255, 0.06)',

@@ -193,8 +193,15 @@ async function main() {
     await waitBodyPattern(page, /Torneio|torneios|Nenhum|Aquecendo|Iniciando/i);
     await page.waitForTimeout(1500);
     ok("rota /tournaments responde", !!res && res.status() < 500);
-    const bodyText = await page.locator("body").textContent().catch(() => "");
-    ok("sem crash (página renderiza corpo)", (bodyText || "").length > 100);
+    // polling robusto: dev compile + supabase podem demorar alguns segundos
+    let bodyLen = 0;
+    for (let i = 0; i < 20; i++) {
+      bodyLen = (await page.locator("body").textContent().catch(() => "")).length;
+      if (bodyLen > 100) break;
+      await page.waitForTimeout(1000);
+    }
+    ok("sem crash (página renderiza corpo)", bodyLen > 100);
+    await page.waitForTimeout(800);
 
     // Navbar desktop: item Ganhe Dinheiro (abre grupo Negócio)
     const bizBtn = page.getByRole("button", { name: /negócio/i }).first();

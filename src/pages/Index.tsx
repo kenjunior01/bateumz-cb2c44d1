@@ -18,6 +18,7 @@ const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({
 const DestaquesRollUp = lazy(() => import("@/components/home/DestaquesRollUp").then(m => ({ default: m.default })));
 const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
 const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
+const LeiloesRollUp = lazy(() => import("@/components/home/LeiloesRollUp").then(m => ({ default: m.default })));
 const SorteiosConcursosRollUp = lazy(() => import("@/components/home/SorteiosConcursosRollUp").then(m => ({ default: m.default })));
 const PlatformFeed = lazy(() => import("@/components/home/PlatformFeed").then(m => ({ default: m.default })));
 
@@ -547,11 +548,12 @@ export default function Index() {
       </div>
 
       {/* ═══════════ ROLL-UPS DINÂMICOS — a homepage que engloba tudo ═══════════
-           Ordem: Destaques & Features → Jogos & Torneios → Vendas →
+           Ordem: Destaques & Features → Jogos & Torneios → Vendas → Leilões →
                   Sorteios & Concursos → Feed da Plataforma (tudo num só fluxo). */}
       <Suspense fallback={<div className="h-48" />}><DestaquesRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><GamesTournamentsRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><VendasRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><LeiloesRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><SorteiosConcursosRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><PlatformFeed /></Suspense>
 

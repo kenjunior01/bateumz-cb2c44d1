@@ -168,6 +168,10 @@ const RegionalManagerPanel = lazy(() => import("./pages/RegionalManagerPanel.tsx
 const AlienacaoCatalogo = lazy(() => import("./pages/AlienacaoCatalogo.tsx"));
 const AlienacaoDetalhe = lazy(() => import("./pages/AlienacaoDetalhe.tsx"));
 const DashboardAlienacao = lazy(() => import("./pages/dashboard/DashboardAlienacao.tsx"));
+const Leiloes = lazy(() => import("./pages/Leiloes.tsx"));
+const LeilaoDetalhe = lazy(() => import("./pages/LeilaoDetalhe.tsx"));
+const BracketsPage = lazy(() => import("./pages/esports/BracketsPage.tsx"));
+const FantasyPage = lazy(() => import("./pages/esports/FantasyPage.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -252,6 +256,8 @@ function AnimatedRoutes() {
             <Route path="/prestacoes/:id" element={<PrestacoesProduto />} />
             <Route path="/alienacao" element={<AlienacaoCatalogo />} />
             <Route path="/alienacao/:id" element={<AlienacaoDetalhe />} />
+            <Route path="/leiloes" element={<Leiloes />} />
+            <Route path="/leiloes/:id" element={<LeilaoDetalhe />} />
             <Route path="/e/:businessId/:refCode" element={<AmbassadorRedirect />} />
             <Route path="/live-evento/:slug" element={<ScheduledLivePage />} />
             <Route path="/lives-agora" element={<LivesAgora />} />
@@ -260,7 +266,7 @@ function AnimatedRoutes() {
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/ligas" element={<LeaguesListPage />} />
             <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
-            <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
+            <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="brackets" element={<BracketsPage />} />            <Route path="fantasy" element={<FantasyPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>
             <Route
               path="/profile"
               element={

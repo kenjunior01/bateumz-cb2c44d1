@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useCallback } from "react";
+import { memo, useEffect, useRef, useCallback, useState } from "react";
 import { motion } from "framer-motion";
 
 interface Particle {
@@ -230,7 +230,22 @@ const orbPulse = (delay: number, dur: number, xR: number[], yR: number[], sR: nu
   transition: { duration: dur, delay, repeat: Infinity, ease: "easeInOut" as const },
 });
 
-const BackgroundDecorations = memo(() => (
+/* PERF: no celular (WebView) o canvas O(n²) + orbs com blur 50-90px + 7 SVGs
+   animados derrubavam o desempenho. No mobile fica apenas decoração ESTÁTICA
+   barata; a versão completa continua no desktop. */
+const MobileDecorations = memo(() => (
+  <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+    <div className="bg-noise-overlay" />
+    <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.04]" />
+    <div className="vignette-overlay" />
+  </div>
+));
+MobileDecorations.displayName = "MobileDecorations";
+
+const BackgroundDecorations = memo(() => {
+  const [isMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  if (isMobile) return <MobileDecorations />;
+  return (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
     <ParticleCanvas />
 
@@ -314,7 +329,8 @@ const BackgroundDecorations = memo(() => (
       style={{ backgroundImage: "radial-gradient(hsl(var(--primary)) 0.4px, transparent 0.4px)", backgroundSize: "48px 48px" }}
     />
   </div>
-));
+  );
+});
 
 BackgroundDecorations.displayName = "BackgroundDecorations";
 export default BackgroundDecorations;

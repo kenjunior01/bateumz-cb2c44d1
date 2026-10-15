@@ -61,9 +61,14 @@ const variants: Record<PageTransitionVariant, any> = {
 };
 
 export default function PageTransition({ children, variant = 'default', className = '', delay = 0 }: PageTransitionProps) {
-  const v = variants[variant];
   const location = useLocation();
-  const isGlitch = variant === 'glitch';
+  // PERF mobile: blur() em páginas inteiras é o maior custo de render em
+  // WebView low-end. No celular TODAS as variantes caem num fade simples,
+  // sem filter e sem spring (compositor mais leve, transição mais suave).
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  const safeVariant: PageTransitionVariant = isMobileDevice && variant !== 'fade' ? 'fade' : variant;
+  const v = variants[safeVariant];
+  const isGlitch = safeVariant === 'glitch';
   const glitchLabel = location.pathname.replace(/^\//, '').charAt(0).toUpperCase() || 'P';
   const hasPlayedSound = useRef(false);
   // PERF: após a animação de entrada, remover o filter da página inteira.
@@ -81,12 +86,12 @@ export default function PageTransition({ children, variant = 'default', classNam
       hasPlayedSound.current = true;
       try { sfx.transition(); } catch { /* ignore */ }
       // Slightly louder pageLoad for hero-type transitions
-      if (variant === 'hero') {
+      if (safeVariant === 'hero') {
         setTimeout(() => { try { sfx.pageLoad(); } catch { /* ignore */ } }, 150);
       }
     }
     return () => { hasPlayedSound.current = false; };
-  }, [location.pathname, variant]);
+  }, [location.pathname, safeVariant]);
 
   return (
     <motion.div
@@ -95,7 +100,7 @@ export default function PageTransition({ children, variant = 'default', classNam
       animate="animate"
       exit="exit"
       className={combinedClassName}
-      style={{ animationDelay: `${delay}s`, boxShadow: '0 0 30px hsl(var(--primary) / 0.06)', ...(fxDone ? { filter: 'none' } : {}) }}
+      style={{ animationDelay: `${delay}s`, boxShadow: '0 0 30px hsl(var(--primary) / 0.06)', ...(isMobileDevice ? { filter: 'none' } : fxDone ? { filter: 'none' } : {}) }}
       onAnimationStart={() => {
         try { sfx.sectionReveal(); } catch { /* ignore */ }
       }}

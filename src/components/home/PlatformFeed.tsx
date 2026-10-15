@@ -80,7 +80,8 @@ export default function PlatformFeed() {
 
       /* ── torneios ativos ── */
       try {
-        const { data } = await supabase.from("tournaments").select("id,name,prize_description,end_date").eq("status", "active").order("created_at", { ascending: false }).limit(2);
+        // "tournaments" ainda não está no tipo gerado do cliente — cast seguro
+        const { data } = await (supabase as any).from("tournaments").select("id,name,prize_description,end_date").eq("status", "active").order("created_at", { ascending: false }).limit(2);
         ((data || []) as any[]).forEach((t) => out.push({
           key: `tour-${t.id}`, type: "torneios", icon: Gamepad2, color: PURPLE,
           text: `Torneio "${t.name}" está a decorrer`,

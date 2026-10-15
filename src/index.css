@@ -5781,3 +5781,10 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .cursor-glow { display: none; }
 }
+/* PERF: secções abaixo da dobra só renderizam quando se aproximam do viewport */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

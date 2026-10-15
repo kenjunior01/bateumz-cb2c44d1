@@ -1717,8 +1717,11 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
           />
         ))}
 
-        <div className="relative h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-4">
-          <div className="text-center">
+        {/* FIX mobile: justify-center + overflow-y-auto corta o topo do conteúdo
+            (flex empurra metade do overflow para cima, inalcançável pelo scroll).
+            Sem justify-center, o conteúdo começa no topo e o scroll alcança tudo. */}
+        <div className="relative h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center gap-3 md:gap-4">
+          <div className="w-full flex flex-col items-center text-center shrink-0">
             <motion.div
               className="mx-auto mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500/30 to-amber-500/30 border border-white/20 text-3xl shadow-lg shadow-rose-500/20"
               animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}

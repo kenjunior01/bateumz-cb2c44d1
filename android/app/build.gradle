@@ -7,8 +7,8 @@ android {
         applicationId "online.bateu.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 19
-        versionName "2.19"
+        versionCode 20
+        versionName "2.20"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     // v13: AGP 8.x — ignoreAssetsPattern vive em androidResources (aaptOptions

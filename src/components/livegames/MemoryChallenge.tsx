@@ -5,6 +5,7 @@ import { Brain, RotateCcw, Trophy, Clock, Star, Swords, Grid3X3, LayoutGrid } fr
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { playSfx, haptic } from '@/components/games/kit';
 
 interface MemoryChallengeProps { onScore?: (name: string, score: number) => void; liveCode?: string; }
 
@@ -51,18 +52,22 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
     const newFlipped = [...flipped, id];
     const updated = cards.map(c => c.id === id ? { ...c, flipped: true } : c);
     setCards(updated); setFlipped(newFlipped);
+    playSfx('pop', { volume: 0.4 });
     if (newFlipped.length === 2) {
       setCanFlip(false);
       const pi = currentPlayer - 1;
       setMoves(m => { const n = [...m]; n[pi]++; return n; });
       const [a, b] = newFlipped;
       if (updated[a].emoji === updated[b].emoji) {
+        playSfx('coin', { volume: 0.55 });
+        haptic(12);
         setTimeout(() => {
           setCards(prev => prev.map(c => (c.id === a || c.id === b) ? { ...c, matched: true } : c));
           setScores(s => { const n = [...s]; n[pi]++; return n; });
           setFlipped([]); setCanFlip(true);
         }, 500);
       } else {
+        playSfx('lose', { volume: 0.18, pitch: 1.6 });
         setTimeout(() => {
           setCards(prev => prev.map(c => (c.id === a || c.id === b) ? { ...c, flipped: false } : c));
           setFlipped([]); setCurrentPlayer(p => p === 1 ? 2 : 1); setCanFlip(true);
@@ -80,6 +85,8 @@ export default function MemoryChallenge({ onScore, liveCode }: MemoryChallengePr
       const winner = scores[0] > scores[1] ? p1Name : scores[1] > scores[0] ? p2Name : 'Empate';
       onScore?.(winner, Math.max(scores[0], scores[1]) * 100 - elapsed);
       if (winner !== 'Empate') {
+        playSfx('win');
+        haptic([30, 40, 30]);
         confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#6366f1', '#a855f7', '#fbbf24'] });
       }
     }

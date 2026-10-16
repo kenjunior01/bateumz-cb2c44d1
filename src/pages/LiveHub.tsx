@@ -107,6 +107,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MissionsBar, reportUniversalScore } from "@/components/games/kit/MissionsBar";
 import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper";
 import EngagementBar from "@/components/engagement/EngagementBar";
 import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
@@ -392,13 +393,18 @@ const LiveHub = () => {
     }
   }, [active]);
 
+  const activeMeta = useMemo(() => GAMES.find((g) => g.id === active), [GAMES, active]);
+
   const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
     setLeaderboard((prev) => [
       ...prev,
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
     ]);
-  }, []);
+    // v20 PRO KIT: TODOS os jogos alimentam missões/XP/créditos universalmente
+    // (MMORPG tem progressão RPG própria via platformSync)
+    if (active !== "mmorpg") reportUniversalScore(active, activeMeta?.label ?? game, score);
+  }, [active, activeMeta]);
 
   const broadcastWinner = (name: string, meta?: string) => {
     const w = { name, meta, at: Date.now() };
@@ -484,7 +490,6 @@ const LiveHub = () => {
   };
 
   const fmtTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-  const activeMeta = GAMES.find((g) => g.id === active);
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
@@ -667,6 +672,12 @@ const LiveHub = () => {
 
         <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
+            {/* v20 PRO KIT: progressão universal — missões diárias do jogo activo */}
+            {active !== "mmorpg" && (
+              <div className="mb-3">
+                <MissionsBar gameId={active} gameName={activeMeta?.label ?? "Jogo"} />
+              </div>
+            )}
             {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
             <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>

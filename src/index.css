@@ -5788,3 +5788,15 @@ select:focus-visible {
 }
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ── BATEU PRO KIT: animações de juice dos jogos ── */
+@keyframes fxComboPop {
+  0% { transform: scale(.4); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fxScorePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}

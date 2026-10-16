@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { playSfx, haptic } from "@/components/games/kit";
 
 interface PongVSProps {
   onScore?: (name: string, score: number) => void;
@@ -562,6 +563,8 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       b.vx = Math.cos(angle) * b.speed;
       b.vy = Math.sin(angle) * b.speed;
       p1FlashRef.current = 12;
+      playSfx("tick", { pitch: 1.1 });
+      haptic(5);
     }
 
     // Paddle 2 collision (right)
@@ -579,6 +582,8 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       b.vx = -Math.cos(angle) * b.speed;
       b.vy = Math.sin(angle) * b.speed;
       p2FlashRef.current = 12;
+      playSfx("tick", { pitch: 0.9 });
+      haptic(5);
     }
 
     // Score detection
@@ -586,6 +591,8 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       p2.score++;
       setP2Score(p2.score);
       shakeFramesRef.current = 10;
+      playSfx("explosion", { volume: 0.4 });
+      haptic(25);
       setScorePopP2(true);
       setTimeout(() => setScorePopP2(false), 400);
       if (p2.score >= WIN_SCORE) {
@@ -606,6 +613,8 @@ const PongVS = ({ onScore, liveCode }: PongVSProps) => {
       p1.score++;
       setP1Score(p1.score);
       shakeFramesRef.current = 10;
+      playSfx("explosion", { volume: 0.4 });
+      haptic(25);
       setScorePopP1(true);
       setTimeout(() => setScorePopP1(false), 400);
       if (p1.score >= WIN_SCORE) {

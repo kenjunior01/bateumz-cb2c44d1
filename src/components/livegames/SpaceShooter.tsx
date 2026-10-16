@@ -4,6 +4,7 @@ import { RotateCcw, Coins, Zap, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { playSfx, haptic, unlockAudio } from "@/components/games/kit";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -103,6 +104,18 @@ const WAVE_DURATION = 900;
 const POINTS_NORMAL = 10;
 const POINTS_BONUS = 30;
 
+// ── v20 PRO: chefes + power-ups (padrão arcade avançado dos líderes) ──
+const BOSS_EVERY_WAVES = 4;
+const BOSS_Y = 90;
+const POWERUP_CHANCE = 0.12;
+
+interface Boss {
+  x: number; y: number; hp: number; maxHp: number;
+  dir: number; speed: number; fireCd: number; phase: number; entering: boolean;
+}
+interface PowerUp { x: number; y: number; vy: number; kind: "shield" | "rapid" | "life"; phase: number; }
+interface BossBullet { x: number; y: number; vx: number; vy: number; }
+
 const createStars = (): Star[] => {
   const stars: Star[] = [];
   for (let i = 0; i < STAR_COUNT; i++) {
@@ -184,6 +197,10 @@ interface GameState {
   shakeY: number;
   shakeMagnitude: number;
   vignettePulse: number;
+  boss: Boss | null;
+  bossBullets: BossBullet[];
+  powerUps: PowerUp[];
+  rapidUntil: [number, number];
 }
 
 const SpaceShooter = ({ onScore, liveCode }: Props) => {
@@ -211,6 +228,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       onScore?.("Jogador 1", p1Score);
       onScore?.("Jogador 2", p2Score);
       setShakeStyle({ x: 0, y: 0 });
+      playSfx(w ? "win" : "lose");
+      haptic(w ? [30, 50, 30] : 60);
     },
     [onScore]
   );
@@ -253,6 +272,45 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         g.wave++;
         g.waveFrame = 0;
         setWave(g.wave);
+        playSfx("powerup");
+      }
+
+      const p1 = g.players[0];
+      const p2 = g.players[1];
+
+      // ── v20 PRO: CHEFE a cada 4 ondas — entrada dramática + barra de vida ──
+      if (g.wave % BOSS_EVERY_WAVES === 0 && g.waveFrame === 2 && !g.boss) {
+        const maxHp = 26 + g.wave * 4;
+        g.boss = { x: CANVAS_W / 2, y: -60, hp: maxHp, maxHp, dir: Math.random() < 0.5 ? 1 : -1, speed: 1.1 + g.wave * 0.06, fireCd: 90, phase: 0, entering: true };
+        g.screenFlash = 14;
+        playSfx("explosion", { volume: 0.7 });
+        haptic([25, 40, 25]);
+      }
+
+      if (g.boss) {
+        const b = g.boss;
+        if (b.entering) {
+          b.y += 1.6;
+          if (b.y >= BOSS_Y) { b.y = BOSS_Y; b.entering = false; }
+        } else {
+          b.phase += 0.02;
+          b.x += b.dir * b.speed;
+          if (b.x > CANVAS_W - 70) { b.x = CANVAS_W - 70; b.dir = -1; }
+          if (b.x < 70) { b.x = 70; b.dir = 1; }
+          // padrão de tiro: leque em direcção às metades dos jogadores
+          if (--b.fireCd <= 0) {
+            const enraged = b.hp / b.maxHp < 0.4;
+            const shots = enraged ? 3 : 2;
+            for (let s = 0; s < shots; s++) {
+              const target = s === 0 ? p1 : s === 1 ? p2 : { x: b.x + (Math.random() - 0.5) * 300, y: CANVAS_H };
+              const dx = target.x - b.x, dy = (CANVAS_H - b.y);
+              const len = Math.hypot(dx, dy) || 1;
+              g.bossBullets.push({ x: b.x, y: b.y + 26, vx: (dx / len) * 2.2, vy: Math.max(1.6, (dy / len) * 2.6) });
+            }
+            b.fireCd = enraged ? 55 : 85;
+            playSfx("shoot", { volume: 0.5, pitch: 0.5 });
+          }
+        }
       }
 
       const spawnInterval = Math.max(MIN_ENEMY_INTERVAL, INITIAL_ENEMY_INTERVAL - (g.wave - 1) * 5);
@@ -266,8 +324,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         if (v) keys.add(k);
       }
 
-      const p1 = g.players[0];
-      const p2 = g.players[1];
+      const p1Rapid = g.frame < g.rapidUntil[0];
+      const p2Rapid = g.frame < g.rapidUntil[1];
 
       if (keys.has("a") || keys.has("A")) p1.x = Math.max(SHIP_SIZE, p1.x - PLAYER_SPEED);
       if (keys.has("d") || keys.has("D")) p1.x = Math.min(CANVAS_W - SHIP_SIZE, p1.x + PLAYER_SPEED);
@@ -278,7 +336,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p1.lives > 0
       ) {
         g.bullets.push({ x: p1.x, y: p1.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 1, trail: [] });
-        p1.shootCooldown = BULLET_COOLDOWN;
+        p1.shootCooldown = p1Rapid ? 5 : BULLET_COOLDOWN;
+        playSfx("shoot", { volume: 0.25 });
       }
       if (p1.invincible > 0) p1.invincible--;
       if (p1.damageFlash > 0) p1.damageFlash--;
@@ -292,7 +351,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p2.lives > 0
       ) {
         g.bullets.push({ x: p2.x, y: p2.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 2, trail: [] });
-        p2.shootCooldown = BULLET_COOLDOWN;
+        p2.shootCooldown = p2Rapid ? 5 : BULLET_COOLDOWN;
+        playSfx("shoot", { volume: 0.25, pitch: 1.15 });
       }
       if (p2.invincible > 0) p2.invincible--;
       if (p2.damageFlash > 0) p2.damageFlash--;
@@ -380,9 +440,17 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
               g.particles.push(...createExplosion(e.x, e.y, e.color, isBonus));
               g.shockwaves.push(createShockwave(e.x, e.y, e.color, isBonus));
               g.floatingTexts.push(createScoreText(e.x, e.y - 10, totalPts, isBonus));
+              // v20 PRO: queda de power-up + resposta sonora a cada abate
+              if (Math.random() < POWERUP_CHANCE && g.powerUps.length < 3) {
+                const kinds = ["shield", "rapid", "life"] as const;
+                const kind = kinds[Math.floor(Math.random() * kinds.length)];
+                g.powerUps.push({ x: e.x, y: e.y, vy: 1.6, kind, phase: 0 });
+              }
+              playSfx(isBonus ? "coin" : "hit", { volume: isBonus ? 0.6 : 0.4, pitch: isBonus ? 1.2 : 1 });
               if (isBonus) {
                 g.screenFlash = 10;
                 g.vignettePulse = 15;
+                haptic(12);
               }
               scoreChanged = true;
             }
@@ -397,6 +465,78 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
 
       g.bullets = g.bullets.filter((_, i) => !bulletsToRemove.has(i));
       g.enemies = g.enemies.filter((_, i) => !enemiesToRemove.has(i));
+
+      // ── v20 PRO: balas dos jogadores acertam o CHEFE ──
+      if (g.boss && !g.boss.entering) {
+        const bs = g.boss;
+        for (let bi = g.bullets.length - 1; bi >= 0; bi--) {
+          const bu = g.bullets[bi];
+          if (Math.hypot(bu.x - bs.x, bu.y - bs.y) < 36) {
+            g.bullets.splice(bi, 1);
+            bs.hp--;
+            g.particles.push(...createExplosion(bu.x, bu.y, "#f43f5e", false));
+            g.shakeMagnitude = Math.max(g.shakeMagnitude, 2.5);
+            playSfx("hit", { volume: 0.35, pitch: 0.7 });
+            if (bs.hp <= 0) {
+              const pts = 150 + g.wave * 10;
+              if (bu.owner === 1) p1.score += pts; else p2.score += pts;
+              scoreChanged = true;
+              g.floatingTexts.push(createScoreText(bs.x, bs.y - 20, pts, true));
+              g.particles.push(...createExplosion(bs.x, bs.y, "#fb923c", true));
+              g.particles.push(...createExplosion(bs.x - 20, bs.y + 10, "#f43f5e", true));
+              g.particles.push(...createExplosion(bs.x + 20, bs.y + 10, "#fde047", true));
+              g.shockwaves.push(createShockwave(bs.x, bs.y, "#fb923c", true));
+              g.shockwaves.push(createShockwave(bs.x, bs.y, "#ffffff", false));
+              g.screenFlash = 16;
+              g.shakeMagnitude = 14;
+              g.boss = null;
+              playSfx("explosion");
+              haptic([40, 60, 40]);
+              break;
+            }
+          }
+        }
+      }
+
+      // ── v20 PRO: balas do chefe — esquiva obrigatória ──
+      g.bossBullets = g.bossBullets.filter((bb) => {
+        bb.x += bb.vx; bb.y += bb.vy;
+        if (bb.y > CANVAS_H + 10 || bb.x < -10 || bb.x > CANVAS_W + 10) return false;
+        for (const p of [p1, p2]) {
+          if (p.lives <= 0 || p.invincible > 0) continue;
+          if (Math.hypot(p.x - bb.x, p.y - bb.y) < SHIP_SIZE + 5) {
+            p.lives--;
+            p.invincible = 60;
+            p.damageFlash = 12;
+            g.shakeMagnitude = 8;
+            setLives({ p1: p1.lives, p2: p2.lives });
+            playSfx("explosion", { volume: 0.55 });
+            haptic(35);
+            return false;
+          }
+        }
+        return true;
+      });
+
+      // ── v20 PRO: power-ups caem e são apanhados ──
+      g.powerUps = g.powerUps.filter((pu) => {
+        pu.y += pu.vy;
+        pu.phase += 0.1;
+        if (pu.y > CANVAS_H + 10) return false;
+        for (const p of [p1, p2]) {
+          if (p.lives <= 0) continue;
+          if (Math.hypot(p.x - pu.x, p.y - pu.y) < SHIP_SIZE + 12) {
+            if (pu.kind === "shield") p.invincible = Math.max(p.invincible, 240);
+            else if (pu.kind === "rapid") g.rapidUntil[p === p1 ? 0 : 1] = g.frame + 300;
+            else if (p.lives < 5) p.lives += 1;
+            setLives({ p1: p1.lives, p2: p2.lives });
+            playSfx("powerup");
+            haptic(15);
+            return false;
+          }
+        }
+        return true;
+      });
 
       g.particles = g.particles.filter((p) => {
         p.x += p.vx;
@@ -579,6 +719,90 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.stroke();
       });
       ctx.globalAlpha = 1;
+
+      // ── v20 PRO: CHEFE — corpo, aura e barra de vida ──
+      if (g.boss) {
+        const b = g.boss;
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        const aura = ctx.createRadialGradient(0, 0, 10, 0, 0, 64);
+        aura.addColorStop(0, "rgba(244,63,94,0.35)");
+        aura.addColorStop(1, "rgba(244,63,94,0)");
+        ctx.fillStyle = aura;
+        ctx.beginPath(); ctx.arc(0, 0, 64, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#7f1d1d";
+        ctx.strokeStyle = "#fb7185";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 30);
+        ctx.lineTo(-34, 6);
+        ctx.lineTo(-46, -14);
+        ctx.lineTo(-18, -22);
+        ctx.lineTo(0, -12);
+        ctx.lineTo(18, -22);
+        ctx.lineTo(46, -14);
+        ctx.lineTo(34, 6);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        const coreR = 10 + Math.sin(b.phase * 3) * 2.5;
+        const core = ctx.createRadialGradient(0, 4, 1, 0, 4, coreR);
+        core.addColorStop(0, "#fff");
+        core.addColorStop(0.4, "#f43f5e");
+        core.addColorStop(1, "rgba(244,63,94,0)");
+        ctx.fillStyle = core;
+        ctx.beginPath(); ctx.arc(0, 4, coreR, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        const pct = Math.max(0, b.hp / b.maxHp);
+        const barW = 180, barX = (CANVAS_W - barW) / 2, barY = 14;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(barX - 2, barY - 2, barW + 4, 12);
+        ctx.fillStyle = pct > 0.4 ? "#f43f5e" : "#ef4444";
+        ctx.fillRect(barX, barY, barW * pct, 8);
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX - 2, barY - 2, barW + 4, 12);
+        ctx.fillStyle = "#fecdd3";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("⚠ CHEFE DA GALÁXIA", CANVAS_W / 2, barY + 22);
+      }
+
+      // balas do chefe
+      g.bossBullets.forEach((bb) => {
+        const gl = ctx.createRadialGradient(bb.x, bb.y, 0, bb.x, bb.y, 9);
+        gl.addColorStop(0, "#fff");
+        gl.addColorStop(0.3, "#f43f5e");
+        gl.addColorStop(1, "rgba(244,63,94,0)");
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.arc(bb.x, bb.y, 9, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // power-ups
+      const PU_STYLE = { shield: { g: "S", color: "#22d3ee" }, rapid: { g: "R", color: "#a78bfa" }, life: { g: "+", color: "#34d399" } } as const;
+      g.powerUps.forEach((pu) => {
+        const s = PU_STYLE[pu.kind];
+        const bob = Math.sin(pu.phase) * 3;
+        ctx.save();
+        ctx.translate(pu.x, pu.y + bob);
+        const gl = ctx.createRadialGradient(0, 0, 2, 0, 0, 18);
+        gl.addColorStop(0, s.color + "aa");
+        gl.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(2,6,23,0.85)";
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        (ctx as any).roundRect ? (ctx as any).roundRect(-9, -9, 18, 18, 5) : ctx.rect(-9, -9, 18, 18);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = s.color;
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.g, 0, 1);
+        ctx.restore();
+      });
 
       // Bullets with trails
       g.bullets.forEach((b) => {
@@ -867,6 +1091,10 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         shakeY: 0,
         shakeMagnitude: 0,
         vignettePulse: 0,
+        boss: null,
+        bossBullets: [],
+        powerUps: [],
+        rapidUntil: [0, 0],
       };
       gameRef.current = g;
       setLives({ p1: 3, p2: 3 });
@@ -879,6 +1107,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
   );
 
   const startGame = useCallback(() => {
+    unlockAudio();
+    playSfx("click");
     if (gameRef.current) cancelAnimationFrame(gameRef.current.animId);
     const g = initGame({ p1: 0, p2: 0 }, 1);
     g.animId = requestAnimationFrame(() => gameLoop(g));
@@ -929,7 +1159,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
   }, []);
 
   const renderLives = (count: number, color: "cyan" | "pink") =>
-    Array.from({ length: 3 }, (_, i) => (
+    Array.from({ length: Math.max(3, count) }, (_, i) => (
       <motion.span
         key={i}
         initial={i < count ? { scale: 0 } : { scale: 1 }}

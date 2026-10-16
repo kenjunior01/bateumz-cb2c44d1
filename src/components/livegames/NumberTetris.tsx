@@ -5,6 +5,7 @@ import { RotateCcw, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { playSfx, haptic } from "@/components/games/kit";
 
 interface NumberTetrisProps {
   onScore?: (name: string, score: number) => void;
@@ -143,6 +144,10 @@ function landPiece(player: PlayerState): PlayerState {
   const newPiece = spawnPiece(mergedBoard);
   const isGameOver = newPiece === null;
 
+  if (scoreGain > 0) {
+    playSfx("coin", { volume: 0.4, pitch: 1 + Math.min(0.5, scoreGain / 400) });
+    haptic(8);
+  }
   const newPopups: ScorePopup[] =
     scoreGain > 0
       ? [
@@ -524,6 +529,8 @@ export default function NumberTetris({
     if (p1.gameOver && !scoreCalledRef.current.p1) {
       scoreCalledRef.current.p1 = true;
       onScore?.("Jogador 1", p1.score);
+      playSfx("lose", { volume: 0.5 });
+      haptic(40);
     }
   }, [p1.gameOver, p1.score, onScore]);
 

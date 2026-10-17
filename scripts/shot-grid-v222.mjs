@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-gpu"] });
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const page = await ctx.newPage();
+await page.goto("http://localhost:8099/jogos", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(6000);
+await page.evaluate(() => window.scrollTo(0, 950));
+await page.waitForTimeout(1200);
+await page.addStyleTag({ content: "*{opacity:1 !important; filter:none !important; transition:none !important}" });
+await page.screenshot({ path: "/tmp/vis-jogos-grid.png" });
+await ctx.close();
+await browser.close();
+console.log("OK");

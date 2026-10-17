@@ -32,7 +32,7 @@ export default function JogosLayout() {
 
   const isActive = (path: string) => {
     if (path === '/jogos') {
-      return location.pathname === '/jogos' || location.pathname === '/jogos/';
+      return location.pathname === '/jogos' || location.pathname === '/jogos/' || location.pathname.startsWith('/jogo/');
     }
     return location.pathname.startsWith(path);
   };

@@ -15,6 +15,7 @@ import {
   CommandGroup, CommandItem, CommandSeparator,
 } from "@/components/ui/command";
 import { ALL_GAMES, normalize } from "@/lib/gamesCatalog";
+import { GameArtChip } from "@/components/games/GameArt";
 import { listLeiloes, subscribeLeiloes, tempoRestante } from "@/lib/leiloes";
 import {
   Gamepad2, Gavel, Trophy, Ticket, Store, Globe, Home, Swords, Radio,
@@ -39,11 +40,13 @@ interface SearchEntry {
   route: string;
   keywords?: string;
   badge?: string;
+  /** id de jogo — quando presente, a linha mostra a ARTE do jogo */
+  artId?: string;
 }
 
 const PAGINAS: SearchEntry[] = [
   { id: "pg-home", label: "Página Inicial", group: "Páginas", icon: Home, route: "/", keywords: "home inicio principal" },
-  { id: "pg-jogos", label: "Todos os Jogos", group: "Páginas", icon: Gamepad2, route: "/jogos", keywords: "jogos catalogo classicos arcade" },
+  { id: "pg-jogos", label: "Todos os Jogos", group: "Páginas", icon: Gamepad2, route: "/jogos", keywords: "jogos catalogo classicos arcade todos-jogos" },
   { id: "pg-world", label: "Bateu World 3D — Mundo Aberto", group: "Páginas", icon: Globe, route: "/lives?game=mmorpg", keywords: "mmo mundo aberto 3d world mmorpg" },
   { id: "pg-leiloes", label: "Leilões ao Vivo", group: "Páginas", icon: Gavel, route: "/leiloes", keywords: "leiloes leilao lances arrematar" },
   { id: "pg-marketplace", label: "Marketplace — Vendas", group: "Páginas", icon: Store, route: "/marketplace", keywords: "loja vendas marketplace comprar produtos" },
@@ -97,13 +100,14 @@ export default function GlobalSearch() {
   const entries: SearchEntry[] = useMemo(() => {
     const jogos: SearchEntry[] = ALL_GAMES.map((g) => ({
       id: `jogo-${g.id}`,
-      label: `${g.emoji} ${g.label}`,
+      label: g.label,
       sub: `${g.category} · ${g.players}${g.hasBot ? " · Bot IA" : ""}`,
       group: "Jogos",
       icon: Gamepad2,
       route: `/lives?game=${g.id}`,
       keywords: `${g.id} ${g.desc} ${g.category}`,
       badge: g.id === "mmorpg" ? "MMO" : undefined,
+      artId: g.id,
     }));
     const leiloes: SearchEntry[] = listLeiloes()
       .filter((l: any) => l.status === "ao_vivo" || l.status === "terminando" || l.status === "agendado")
@@ -189,7 +193,11 @@ export default function GlobalSearch() {
                   const Icon = iconFor(e);
                   return (
                     <CommandItem key={e.id} value={`${e.label} ${e.sub || ""} ${e.keywords || ""}`} onSelect={() => select(e)} data-testid={`busca-item-${e.id}`}>
-                      <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      {e.artId ? (
+                        <GameArtChip id={e.artId} size={26} className="mr-2" />
+                      ) : (
+                        <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      )}
                       <span className="flex-1 truncate">
                         {e.label}
                         {e.sub && <span className="ml-2 text-[10px] text-muted-foreground">{e.sub}</span>}

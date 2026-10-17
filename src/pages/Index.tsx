@@ -36,6 +36,7 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useSEO } from "@/hooks/useSEO";
 import MobileHomeApp from "@/components/mobile/MobileHomeApp";
 import { ALL_GAMES, categoryCounts } from "@/lib/gamesCatalog";
+import { GameArtChip } from "@/components/games/GameArt";
 import bateuLogo from "@/assets/bateu-logo.png";
 import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
@@ -490,7 +491,7 @@ export default function Index() {
                 transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
               />
               <span className="relative z-10 flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl">🌍</span> JOGAR AGORA — BATEU WORLD 3D
+                <GameArtChip id="mmorpg" size={30} className="rounded-xl" /> JOGAR AGORA — BATEU WORLD 3D
                 <span className="text-2xl sm:text-3xl">▶</span>
               </span>
             </motion.button>

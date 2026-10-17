@@ -61,6 +61,7 @@ const EngagementLeaderboard = lazy(() => import("./pages/EngagementLeaderboard.t
 const AdminMillionaireManager = lazy(() => import("./pages/admin/AdminMillionaireManager.tsx"));
 const AdminSpinWheelManager = lazy(() => import("./pages/admin/AdminSpinWheelManager.tsx"));
 const Index = lazy(() => import("./pages/Index.tsx"));
+const GameDetail = lazy(() => import("./pages/GameDetail.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
 const Register = lazy(() => import("./pages/Register.tsx"));
@@ -230,6 +231,8 @@ function AnimatedRoutes() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPostDetail />} />
             <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
+            <Route path="/todos-jogos" element={<Navigate to="/jogos" replace />} />
+            <Route path="/jogo/:id" element={<JogosLayout />}>            <Route index element={<GameDetail />} />          </Route>
             <Route path="/pontos" element={<EngagementLeaderboard />} />
             <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
             <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />

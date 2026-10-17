@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Sus
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -569,7 +570,11 @@ const LiveHub = () => {
             {activeMeta && (
               <NeonBorder colors={['#00d4ff', '#7b2ff7']} speed={3} borderRadius="1rem" glowIntensity={0.4}>
               <div className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-2.5">
-                <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
+                {hasArt(activeMeta.id) ? (
+                  <GameArtChip id={activeMeta.id} size={36} />
+                ) : (
+                  <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${activeMeta.grad} flex items-center justify-center text-lg`}>{activeMeta.emoji}</div>
+                )}
                 <div className="text-left">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">A jogar agora</p>
                   <p className="text-sm font-bold leading-tight">{activeMeta.label}</p>
@@ -602,7 +607,7 @@ const LiveHub = () => {
             searchValue=""
             onSearchChange={() => {}}
             searchPlaceholder={t("livehub.search")}
-            categories={GAMES.map((g) => ({ id: g.id, label: g.label, icon: g.emoji }))}
+            categories={GAMES.map((g) => ({ id: g.id, label: g.label, icon: hasArt(g.id) ? <GameArtChip id={g.id} size={18} /> : g.emoji }))}
             activeCategory={active}
             onCategoryChange={(id) => setActive(id as GameId)}
           />

@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { History, ChevronRight, Flame } from "lucide-react";
 import { ALL_GAMES, recentGames, playsOf, bestOf, weeklyPopular } from "@/lib/gamesCatalog";
+import GameArt from "@/components/games/GameArt";
 
 const GRADS: Record<string, string> = ALL_GAMES.reduce((m, g) => { m[g.id] = g.grad; return m; }, {} as Record<string, string>);
 
@@ -64,10 +65,10 @@ export default function ContinuePlayRail() {
                 className="group block rounded-2xl overflow-hidden transition-transform hover:-translate-y-0.5"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
               >
-                <div className={`relative h-[74px] flex items-center justify-center bg-gradient-to-br ${GRADS[g.id] || "from-zinc-700 to-zinc-900"}`}>
-                  <span className="text-3xl drop-shadow-lg group-hover:scale-110 transition-transform">{g.emoji}</span>
+                <div className={`relative h-[74px] overflow-hidden bg-gradient-to-br ${GRADS[g.id] || "from-zinc-700 to-zinc-900"}`}>
+                  <GameArt id={g.id} className="w-full h-full transition-transform duration-300 group-hover:scale-105" animate={false} />
                   {hot.has(g.id) && (
-                    <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur text-[8px] font-black text-orange-300">
+                    <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur text-[8px] font-black text-orange-300">
                       <Flame className="h-2.5 w-2.5" /> EM ALTA
                     </span>
                   )}

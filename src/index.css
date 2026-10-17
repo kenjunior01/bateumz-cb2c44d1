@@ -5800,3 +5800,17 @@ select:focus-visible {
   50% { transform: scale(1.22); }
   100% { transform: scale(1); }
 }
+
+/* ═══ GAME ART (arte vetorial dos jogos) — micro-animações baratas ═══ */
+.game-art { display: block; width: 100%; height: 100%; }
+.game-art.ga-animated .ga-float { animation: gaFloat 3.2s ease-in-out infinite; }
+.game-art.ga-animated .ga-pulse { animation: gaPulse 2.6s ease-in-out infinite; }
+.game-art.ga-animated .ga-wheel { animation: gaWheel 14s linear infinite; }
+.game-art.ga-animated .ga-stars { animation: gaTwinkle 4s ease-in-out infinite alternate; }
+@keyframes gaFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes gaPulse { 0%, 100% { opacity: 0.55; transform: scale(0.94); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes gaWheel { to { transform: rotate(360deg); } }
+@keyframes gaTwinkle { from { opacity: 0.55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .game-art .ga-float, .game-art .ga-pulse, .game-art .ga-wheel, .game-art .ga-stars { animation: none !important; }
+}

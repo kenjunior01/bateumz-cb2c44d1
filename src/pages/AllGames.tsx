@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Zap, Swords, Radio, Flame, ChevronRight, TrendingUp, Globe } from "lucide-react";
+import { Search, Gamepad2, Users, Zap, Swords, Radio, Flame, ChevronRight, TrendingUp, Globe, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -11,6 +11,7 @@ import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
 import HolographicCard from '@/components/ui/HolographicCard';
 import ChallengeModal from '@/components/games/ChallengeModal';
+import GameArt, { GameArtChip } from '@/components/games/GameArt';
 import { getPlayerIdentity } from '@/lib/challenges';
 import { ALL_GAMES, CATEGORIES, weeklyPopular, popularityScore, playsOf, bestOf } from '@/lib/gamesCatalog';
 
@@ -174,25 +175,27 @@ const AllGames = () => {
             animate={{ opacity: [0.5, 0.85, 0.5] }}
             transition={{ duration: 4, repeat: Infinity }}
           />
-          <div className="relative z-10 p-4 sm:p-5 flex items-center gap-4">
+          <div className="relative z-10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <motion.div
-              className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-3xl sm:text-4xl"
+              className="h-20 w-28 sm:h-20 sm:w-32 shrink-0 rounded-2xl overflow-hidden border border-white/25"
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             >
-              🌍
+              <GameArt id="mmorpg" className="w-full h-full" />
             </motion.div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">🌍 BATEU WORLD 3D</span>
+                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">BATEU WORLD 3D</span>
                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[9px] font-black animate-pulse">MMO DA PLATAFORMA · JOGO EM DESTAQUE</span>
               </div>
               <p className="text-[11px] sm:text-xs font-semibold text-white/80 mt-1 leading-snug">
                 Níveis, poderes, missões e exploração num mundo 3D ao vivo — derrota jogadores e rouba os cupões deles, troca pontos por moeda da plataforma e ganha prémios reais.
               </p>
             </div>
-            <div className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 text-white font-black text-[11px] sm:text-xs shadow-lg">
-              JOGAR AGORA ▶
+            <div className="shrink-0 self-stretch sm:self-auto flex">
+              <span className="flex-1 sm:flex-none text-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 text-white font-black text-[11px] sm:text-xs shadow-lg">
+                JOGAR AGORA ▶
+              </span>
             </div>
           </div>
         </motion.div>
@@ -287,8 +290,8 @@ const AllGames = () => {
                   className="game-card-v2 shrink-0 w-[168px] rounded-2xl overflow-hidden card-hover-lift btn-press"
                   style={{ border: "1px solid rgba(255,255,255,0.06)" }}
                 >
-                  <div className={`relative h-[86px] flex items-center justify-center bg-gradient-to-br ${g.grad}`}>
-                    <span className="text-4xl drop-shadow-lg">{g.emoji}</span>
+                  <div className={`relative h-[86px] overflow-hidden bg-gradient-to-br ${g.grad}`}>
+                    <GameArt id={g.id} className="w-full h-full" animate={false} />
                     <span className="absolute top-1.5 left-1.5 h-6 w-6 rounded-lg bg-black/45 backdrop-blur flex items-center justify-center text-[11px] font-black text-white">{i + 1}</span>
                     {i === 0 && <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-400 text-[8px] font-black text-black">🔥 TOP 1</span>}
                   </div>
@@ -329,17 +332,21 @@ const AllGames = () => {
                 >
                   <Link
                     to={`/lives?game=${game.id}`}
-                    className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl"
+                    className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl overflow-hidden"
                     style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
                     onClick={() => sfx.click()}
                   >
-                    <div className={`h-1.5 bg-gradient-to-r ${game.grad} rounded-t-xl`} />
-                    <div className="p-3 md:p-4">
-                      <div className={`game-visual inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${game.grad} mb-3 text-xl shadow-lg`}>
-                        {game.emoji}
-                      </div>
+                    {/* ARTE do jogo (padrão CrazyGames) + CTA por cima */}
+                    <div className="relative h-24 sm:h-28 overflow-hidden">
+                      <GameArt id={game.id} className="w-full h-full transition-transform duration-300 hover:scale-[1.04]" animate={false} />
+                      <span className="absolute inset-x-0 bottom-0 h-10 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(13,17,23,0.85))" }} />
+                      <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ background: "rgba(46,160,67,0.92)" }}>
+                        JOGAR ▶
+                      </span>
+                    </div>
+                    <div className="p-3 md:p-4 pt-2.5">
                       <h3 className="text-sm font-bold leading-tight mb-1 line-clamp-1">{game.label}</h3>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{game.desc}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{game.desc}</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
                           {game.players}
@@ -359,7 +366,7 @@ const AllGames = () => {
                           </span>
                         )}
                       </div>
-                      <div className="mt-3 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="mt-2.5 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                         <span className="text-[10px] text-muted-foreground/50">{game.category}</span>
                         <span className="flex items-center gap-2">
                           <motion.button
@@ -371,9 +378,16 @@ const AllGames = () => {
                           >
                             <Swords className="h-3 w-3" /> Desafiar
                           </motion.button>
-                          <motion.span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: THEME_P }}>
-                            Jogar <ChevronRight className="h-3 w-3" />
-                          </motion.span>
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); sfx.click(); navigate(`/jogo/${game.id}`); }}
+                            title={`Detalhes do ${game.label}`}
+                            data-testid={`info-${game.id}`}
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                            style={{ color: THEME_S, background: "rgba(88,166,255,0.1)" }}
+                          >
+                            <Info className="h-3 w-3" /> Detalhes
+                          </motion.button>
                         </span>
                       </div>
                     </div>
@@ -429,7 +443,7 @@ const AllGames = () => {
                         style={{ border: "1px solid rgba(255,255,255,0.05)" }}
                         onClick={() => sfx.click()}
                       >
-                        <span>{g.emoji}</span> <span>{g.label}</span>
+                        <GameArtChip id={g.id} size={20} /> <span>{g.label}</span>
                       </Link>
                     ))}
                     {botGames.length > 8 && (

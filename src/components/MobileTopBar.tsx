@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileNav } from "@/contexts/MobileNavigationContext";
 import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
+import { abrirBuscaGlobal } from "@/components/search/GlobalSearch";
 
 const MobileTopBar = () => {
   const { user, role } = useAuth();
@@ -110,9 +111,10 @@ const MobileTopBar = () => {
           )}
           {/* pesquisa — versão de exemplo B */}
           <button
-            onClick={() => navigate("/marketplace")}
+            onClick={() => abrirBuscaGlobal()}
             className="mob-topbar-icon-btn"
             aria-label={t("nav.search")}
+            data-testid="topbar-busca"
           >
             <Search className="h-[18px] w-[18px]" />
           </button>

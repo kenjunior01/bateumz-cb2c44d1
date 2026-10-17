@@ -172,6 +172,7 @@ const Leiloes = lazy(() => import("./pages/Leiloes.tsx"));
 const LeilaoDetalhe = lazy(() => import("./pages/LeilaoDetalhe.tsx"));
 const BracketsPage = lazy(() => import("./pages/esports/BracketsPage.tsx"));
 const FantasyPage = lazy(() => import("./pages/esports/FantasyPage.tsx"));
+const GlobalSearch = lazy(() => import("./components/search/GlobalSearch.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -472,6 +473,8 @@ function AppShell() {
       </>}
       </div>
       <AnimatedRoutes />
+      {/* ⭐ Busca global ⌘K — jogos, leilões ao vivo, esports, sorteios e páginas */}
+      <Suspense fallback={null}><GlobalSearch /></Suspense>
       {!isOverlay && <>
       {/* Assistente único (MascotBuddy): sem pop-ups automáticos — apenas
           celebrações de vitórias reais e chat ao toque do utilizador. */}

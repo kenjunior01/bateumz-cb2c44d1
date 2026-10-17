@@ -21,6 +21,7 @@ const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m 
 const LeiloesRollUp = lazy(() => import("@/components/home/LeiloesRollUp").then(m => ({ default: m.default })));
 const SorteiosConcursosRollUp = lazy(() => import("@/components/home/SorteiosConcursosRollUp").then(m => ({ default: m.default })));
 const PlatformFeed = lazy(() => import("@/components/home/PlatformFeed").then(m => ({ default: m.default })));
+const ContinuePlayRail = lazy(() => import("@/components/home/ContinuePlayRail").then(m => ({ default: m.default })));
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ import { motion, useInView } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useSEO } from "@/hooks/useSEO";
 import MobileHomeApp from "@/components/mobile/MobileHomeApp";
+import { ALL_GAMES, categoryCounts } from "@/lib/gamesCatalog";
 import bateuLogo from "@/assets/bateu-logo.png";
 import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
@@ -168,7 +170,7 @@ function BanIcon(props: any) {
 /* ─── Ticker: mensagens honestas (fallback) + eventos reais do Supabase ─── */
 interface TickerItem { type: string; text: string; color: string; }
 const TICKER_FALLBACK: TickerItem[] = [
-  { type: "game", text: "80+ jogos gratuitos — multiplayer, bots e solo", color: GREEN },
+  { type: "game", text: `16 jogos clássicos + MMO 3D — multiplayer, bots e solo`, color: GREEN },
   { type: "win", text: "Resultados de sorteios 100% verificáveis", color: GOLD },
   { type: "live", text: "Lives da comunidade em directo", color: CYAN },
   { type: "game", text: "Bónus de boas-vindas: 20 MZN + 50 pontos da sorte", color: PURPLE },
@@ -214,27 +216,17 @@ const GATEWAY_CARDS = [
     secondaryColor: BLUE,
     borderGlow: GREEN,
     statLabel: "Multiplayer, bots e solo",
-    badge: "80+ JOGOS",
+    badge: `${ALL_GAMES.length} CLÁSSICOS`,
   },
 ];
 
-/* ─── Categorias reais (contagens do catálogo AllGames) ─── */
-const PILLAR_CATEGORIES = [
-  { label: "Estratégia", icon: Brain, count: 10, color: CYAN },
-  { label: "Puzzle", icon: Zap, count: 10, color: PURPLE },
-  { label: "Arcade", icon: Gamepad2, count: 8, color: GREEN },
-  { label: "Social", icon: Users, count: 8, color: BLUE },
-];
-
-/* ─── Jogos famosos em destaque (catálogo real — sem contagens falsas) ─── */
-const FEATURED_GAMES = [
-  { name: "Ludo Clássico", emoji: "🎲", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${GREEN}20, ${BLUE}10)`, border: GREEN, novo: false },
-  { name: "Dominó", emoji: "⚫", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${CYAN}15, ${DEEP_PURPLE}10)`, border: CYAN, novo: false },
-  { name: "Xadrez", emoji: "♞", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${BLUE}15, ${GREEN}10)`, border: BLUE, novo: false },
-  { name: "Galo PRO", emoji: "✖", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${GOLD}15, ${PURPLE}10)`, border: GOLD, novo: false },
-  { name: "Ligar 4", emoji: "🔴", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${CYAN}10, ${GREEN}15)`, border: CYAN, novo: false },
-  { name: "Batalha de Cobras", emoji: "🐍", mode: "1v1 / Bot", grad: `linear-gradient(135deg, ${GREEN}20, ${BLUE}10)`, border: GREEN, novo: true },
-  { name: "UNO", emoji: "🃏", mode: "Multijogador", grad: `linear-gradient(135deg, ${PURPLE}15, ${CYAN}10)`, border: PURPLE, novo: false },
+/* ─── Categorias reais (chips do hero — contagens do catálogo, nada inventado) ─── */
+const HERO_CATEGORIAS = [
+  { id: "Arcade", label: "Arcade", emoji: "👾", color: GREEN },
+  { id: "Estratégia", label: "Estratégia", emoji: "♟️", color: CYAN },
+  { id: "Puzzle", label: "Puzzle", emoji: "🧩", color: PURPLE },
+  { id: "Mundo Aberto", label: "Mundo Aberto", emoji: "🗺️", color: GOLD },
+  { id: "Moçambicano", label: "Moçambicano", emoji: "🇲🇿", color: BLUE },
 ];
 
 /* ─── Como Funciona (passos honestos) ─── */
@@ -377,6 +369,7 @@ export default function Index() {
   }, []);
 
   const quadrupledTicker = [...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems];
+  const catCounts = categoryCounts();
 
   /* ═══ MOBILE — home estilo app nativo (o melhor das duas versões de exemplo) ═══ */
   if (isMobile) {
@@ -448,6 +441,27 @@ export default function Index() {
             <span className="text-zinc-300 font-semibold"><TypingText texts={['Apostas entre jogadores', 'Sorteios ao vivo', 'Jogos exclusivos', 'Torneios de eSports']} typingSpeed={70} deleteSpeed={35} pauseDuration={2500} cursorColor={CYAN} soundEnabled={false} className="text-lg sm:text-xl md:text-2xl font-bold" /> — 100% transparente.</span>
           </motion.p>
 
+          {/* ⭐ Categorias do catálogo — padrão Poki "o que vais jogar hoje?" (REA) */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48, duration: 0.5 }}
+            className="flex flex-wrap items-center justify-center gap-2 mb-7"
+            data-testid="hero-categorias"
+          >
+            {HERO_CATEGORIAS.map((cat) => (
+              <Link
+                key={cat.id}
+                to={`/jogos?cat=${encodeURIComponent(cat.id)}`}
+                onClick={() => sfx.tabClick()}
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all hover:scale-105"
+                style={{ background: `${cat.color}10`, border: `1px solid ${cat.color}28`, color: "#e4e4e7" }}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+                <span className="text-[10px] opacity-60">({catCounts[cat.id] || 0})</span>
+              </Link>
+            ))}
+          </motion.div>
+
           {/* CTA Buttons */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }} className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
             <Button size="lg" onClick={() => { sfx.buttonClick(); setConfettiActive(true); setTimeout(() => setConfettiActive(false), 100); navigate("/register"); }} className="text-base font-bold px-8 py-6 rounded-xl h-auto shadow-lg transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${CYAN}, ${DEEP_PURPLE})`, boxShadow: `0 0 30px ${CYAN}30, 0 8px 32px rgba(0,0,0,0.4)` }}>
@@ -480,6 +494,38 @@ export default function Index() {
                 <span className="text-2xl sm:text-3xl">▶</span>
               </span>
             </motion.button>
+          </motion.div>
+
+          {/* ⭐ CONTADORES AO VIVO — padrão Roblox (REA): números reais do Supabase */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85, duration: 0.5 }}
+            className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 mb-10"
+            data-testid="hero-stats-live"
+          >
+            {liveNowCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.22)", color: CYAN }}>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: CYAN }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: CYAN }} />
+                </span>
+                {liveNowCount} ao vivo agora
+              </span>
+            )}
+            {(recentMatches ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "rgba(46,160,67,0.08)", border: "1px solid rgba(46,160,67,0.22)", color: GREEN }}>
+                <Gamepad2 className="h-3.5 w-3.5" /> {recentMatches.toLocaleString("pt-PT")} partidas em 24h
+              </span>
+            )}
+            {jackpotTotal > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)", color: GOLD }}>
+                <Trophy className="h-3.5 w-3.5" /> {jackpotTotal.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} MT em prémios
+              </span>
+            )}
+            {liveNowCount === 0 && !recentMatches && jackpotTotal === 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#a1a1aa" }}>
+                <Gamepad2 className="h-3.5 w-3.5" /> {ALL_GAMES.length} jogos clássicos · MMO 3D · sorteios verificados
+              </span>
+            )}
           </motion.div>
 
           {/* ── Gateway Cards ── */}
@@ -546,6 +592,9 @@ export default function Index() {
           ))}
         </div>
       </div>
+
+      {/* ⭐ CONTINUAR A JOGAR — padrão Steam/Roblox (REA): só aparece se já jogaste */}
+      <Suspense fallback={<div className="h-24" />}><ContinuePlayRail /></Suspense>
 
       {/* ═══════════ ROLL-UPS DINÂMICOS — a homepage que engloba tudo ═══════════
            Ordem: Destaques & Features → Jogos & Torneios → Vendas → Leilões →
@@ -642,8 +691,8 @@ export default function Index() {
                   { icon: Users, value: realStats.users, suffix: "", label: "Utilizadores Registados", color: CYAN },
                   { icon: Trophy, value: realStats.raffles, suffix: "", label: "Sorteios Ativos Agora", color: GOLD },
                   { icon: Globe, value: realStats.regions, suffix: "", label: "Países", color: GREEN },
-                  { icon: Monitor, value: 80, suffix: "+", label: "Jogos Disponíveis", color: PURPLE },
-                ].filter(stat => stat.value > 0 || stat.label === "Jogos Disponíveis").map((stat, i) => {
+                  { icon: Monitor, value: ALL_GAMES.length, suffix: "", label: "Jogos Clássicos + MMO", color: PURPLE },
+                ].filter(stat => stat.value > 0 || stat.label === "Jogos Clássicos + MMO").map((stat, i) => {
                   const Icon = stat.icon;
                   return (
                     <motion.div key={stat.label} custom={i} variants={scaleIn} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-2xl p-5 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${stat.color}10` }}>

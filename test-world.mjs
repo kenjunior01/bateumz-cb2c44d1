@@ -195,6 +195,21 @@ async function main() {
 
   // ── 4. Mundo 3D + HUD v2 ──
   console.log("▶ Mundo 3D");
+  // ⛏ v20: o modo padrão agora é o BATEUCRAFT (Super Minecraft).
+  // Esta suíte valida o MUNDO CLÁSSICO → alternar de modo antes do HUD.
+  const craftCanvas = page.locator('[data-testid="bw-craft-canvas"]');
+  await craftCanvas.waitFor({ state: "attached", timeout: 20000 }).catch(() => {});
+  const craftVisible = await craftCanvas.count() > 0;
+  if (craftVisible) {
+    const classicBtn = page.locator('[data-testid="bw-mode-classic"]');
+    await classicBtn.click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(2500); // motor clássico a arrancar
+    ok("v20: BateuCraft era o modo padrão ao entrar", true);
+    ok("v20: alternância para o Mundo Clássico funcionou", await page.locator('[data-testid="bw-mode-craft"]').count() > 0);
+  } else {
+    ok("v20: BateuCraft era o modo padrão ao entrar", false);
+    ok("v20: alternância para o Mundo Clássico funcionou", false);
+  }
   const canvas = page.locator('[data-testid="bateu-world"] canvas');
   await canvas.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
   ok("Canvas 3D visível", await canvas.count() > 0);

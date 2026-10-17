@@ -21,7 +21,7 @@
 // e super-sincronização com a conta (progresso na nuvem).
 // ============================================================
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,6 +32,8 @@ import {
   Maximize2, Minimize2, Video, Eye, Gamepad2, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import confetti from "canvas-confetti";
+// ⛏ BATEUCRAFT — Super Minecraft (REA de Minecraft), carregado sob demanda (peso zero no arranque)
+const CraftView = lazy(() => import("./craft/CraftView"));
 import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, BUILDINGS, type LootItem } from "./worldEngine";
 import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
 import { AvatarPreview, AvatarSwatches } from "./AvatarEditor";
@@ -431,6 +433,12 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
   const [platform, setPlatform] = useState<PlatformData | null>(null);
   const [bootMsg, setBootMsg] = useState("A preparar o mundo...");
 
+  // ⛏ v20: MODO DO MUNDO — BateuCraft (Super Minecraft) é o padrão;
+  // o Mundo Clássico 3D continua disponível com um toque
+  const [wMode, setWMode] = useState<"craft" | "classico">(() => {
+    try { return localStorage.getItem("bateu_wmode") === "classico" ? "classico" : "craft"; } catch { return "craft"; }
+  });
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WorldEngine | null>(null);
   const charRef = useRef<Char | null>(null);
@@ -575,6 +583,13 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
     setBanner(b);
     bannerTimer.current = setTimeout(() => setBanner(null), b.kind === "levelup" ? 1900 : b.kind === "wave" ? 2200 : 2600);
   }, []);
+
+  // ⛏ v20: alternar entre BateuCraft e Mundo Clássico (guarda a preferência)
+  const switchMode = useCallback((m: "craft" | "classico") => {
+    setWMode(m);
+    try { localStorage.setItem("bateu_wmode", m); } catch { /* ignore */ }
+    pushToast(m === "craft" ? "⛏️ BATEUCRAFT — Super Minecraft! Minera, constrói, sobrevive!" : "🌍 Mundo Clássico 3D — bem-vindo de volta, herói!", "good");
+  }, [pushToast]);
 
   // v3: desbloquear áudio no primeiro gesto + atalhos M (mute) e P (foto)
   useEffect(() => {
@@ -919,7 +934,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       }
       if (id === "ticket") {
         pushToast("🎫 Bilhete garantido! Boa sorte no sorteio.", "good");
-        setTimeout(() => go("/sorteios"), 800);
+        setTimeout(() => go("/marketplace?tab=raffles"), 800);
       }
       if (id === "voucher") {
         const pd = platformRef.current;
@@ -955,9 +970,80 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
     });
   }, [pushToast]);
 
-  // ── Motor 3D ───────────────────────────────────────────────
+  // ── ⛏ Adapter: eventos do BateuCraft → MESMA conta, XP, missões e prémios ──
+  const craftOnEvent = useCallback((ev: any) => {
+    const cur = charRef.current;
+    if (!cur) {
+      if (ev?.type === "hp") setHud({ hp: Math.round(ev.hp), maxHp: Math.round(ev.maxHp), hit: ev.hit ? Date.now() : 0 });
+      return;
+    }
+    switch (ev.type) {
+      case "hp":
+        setHud({ hp: Math.round(ev.hp), maxHp: Math.round(ev.maxHp), hit: ev.hit ? Date.now() : 0 });
+        break;
+      case "gain":
+        setChar((p) => (p ? applyXp({ ...p, xp: p.xp + (ev.xp || 0), gold: p.gold + (ev.gold || 0) }, 0) : p));
+        break;
+      case "kill": {
+        setChar((p) => {
+          if (!p) return p;
+          const q = { ...p.quests };
+          if (q.date === todayStr()) q.kills += 1; else { q.date = todayStr(); q.kills = 1; }
+          const saga = { ...p.saga, kills: p.saga.kills + 1 };
+          return applyXp({ ...p, kills: p.kills + 1, pts: p.pts + (ev.pts || 1), quests: q, saga }, 0);
+        });
+        onbAdvance(1);
+        break;
+      }
+      case "discover": {
+        logWorldActivity(cur.uid, "discover", ev.name, 10);
+        setChar((p) => {
+          if (!p || p.discoveries.includes(ev.id)) return p;
+          return applyXp({ ...p, pts: p.pts + 10, discoveries: [...p.discoveries, ev.id], saga: { ...p.saga, discovers: p.saga.discovers + 1 } }, ev.xp);
+        });
+        showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: `Descoberta! +${ev.xp} XP · +10 pts` });
+        break;
+      }
+      case "gather":
+        setChar((p) => {
+          if (!p) return p;
+          const mat = { ...p.mat };
+          if (ev.kind === "erva") mat.erva += 1;
+          else if (ev.kind === "minério") mat.minerio += 1;
+          else mat.cristal += 1;
+          const q = { ...p.quests };
+          if (q.date === todayStr()) q.gather += 1; else { q.date = todayStr(); q.gather = 1; }
+          return { ...p, mat, quests: q };
+        });
+        pushToast(`${ev.kind === "erva" ? "🌿" : ev.kind === "minério" ? "⛏️" : "💎"} +1 ${ev.name} — material para a Oficina!`, "good");
+        worldAudio.play("coin");
+        break;
+      case "notify":
+        pushToast(ev.msg, ev.tone || "info");
+        break;
+      case "death":
+        setDeathFx(true);
+        pushToast(`💀 Foste derrotado por ${ev.by}...`, "bad");
+        setChar((p) => (p ? { ...p, deaths: p.deaths + 1 } : p));
+        logWorldActivity(cur.uid, "death", `Derrotado por ${ev.by}`, 1);
+        setTimeout(() => setDeathFx(false), 2400);
+        break;
+      case "prize": {
+        const code = ev.code || newPrizeCode();
+        setChar((p) => (p ? { ...p, prizes: [...p.prizes, { id: "pz_" + Date.now().toString(36), code, op: "", ts: Date.now(), claimed: false }] } : p));
+        setPrize({ code });
+        confetti({ particleCount: 240, spread: 110, origin: { y: 0.4 }, colors: ["#22c55e", "#fbbf24", "#38bdf8"] });
+        worldAudio.play("coin");
+        break;
+      }
+      default: break;
+    }
+  }, [applyXp, pushToast, showBanner, onbAdvance]);
+
+  // ── Motor 3D (Mundo Clássico — só monta no modo clássico) ──
   useEffect(() => {
     if (phase !== "world" || !canvasRef.current || !char || engineRef.current) return;
+    if (wMode !== "classico") return; // ⛏ no BateuCraft o motor clássico não gasta bateria
     const c = charRef.current!;
 
     const eng = new WorldEngine(canvasRef.current, {
@@ -1348,7 +1434,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       eng.dispose();
       engineRef.current = null;
     };
-  }, [phase, char?.uid]);
+  }, [phase, char?.uid, wMode]);
 
   const handleOpen = useCallback((kind: string, id: string) => {
     const c = charRef.current;
@@ -1941,9 +2027,39 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
       className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${fill ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "h-[72svh] min-h-[480px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl"}`}
       data-testid="bateu-world"
     >
-      {/* v13 MOBILE: touch-none impede o browser de roubar o arrasto (zoom/scroll) — câmara contínua no dedo */}
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full touch-none" />
+      {/* ⛏ v20: canvas do modo ATIVO — BateuCraft (Super Minecraft) ou Clássico */}
+      {wMode === "craft" ? (
+        <Suspense fallback={<div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950"><div className="flex items-center gap-2 text-sm font-black text-amber-300"><span className="animate-pulse">⛏️</span> A carregar o BateuCraft…</div></div>}>
+          <CraftView
+            name={char?.name || "Herói"}
+            level={char?.level || 1}
+            xp={char?.xp || 0}
+            gold={char?.gold || 0}
+            uid={char?.uid || (user ? "bw_" + user.id : "guest")}
+            isTouch={immersive}
+            onEvent={craftOnEvent}
+            onNavigate={go}
+            onStory={(txt: string) => publishWinStory(txt, "from-emerald-500 via-teal-600 to-cyan-700")}
+            toast={pushToast}
+            onClassic={() => switchMode("classico")}
+            onExit={onExit}
+          />
+        </Suspense>
+      ) : (
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full touch-none" />
+      )}
 
+      {/* ⛏ v20: atalho para o Mundo Clássico (dentro do BateuCraft) */}
+      {wMode === "craft" && (
+        <button data-testid="bw-mode-classic" onClick={() => switchMode("classico")}
+          className="absolute right-2 z-20 flex h-9 items-center gap-1 rounded-full border border-sky-300/40 bg-sky-500/25 px-3 text-[11px] font-black text-sky-100 backdrop-blur active:scale-95"
+          style={{ top: "calc(3.25rem + env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}>
+          🌍 CLÁSSICO
+        </button>
+      )}
+      {/* ⛏ v20: no clássico, o botão ⛏ Craft vive na FAIXA DE CONTROLO (bw-mode-craft) */}
+
+      {wMode === "classico" && (<>
       {/* flash de dano / morte */}
       <AnimatePresence>
         {hud.hit > 0 && (
@@ -2237,22 +2353,7 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         </div>
       </div>
 
-      {/* toasts (v16: abaixo das duas filas do topo) */}
-      <div className="pointer-events-none absolute left-1/2 top-[84px] z-20 flex w-[300px] -translate-x-1/2 flex-col items-center gap-1">
-        <AnimatePresence>
-          {toasts.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: -12, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur ${t.tone === "good" ? "bg-emerald-600/90" : t.tone === "bad" ? "bg-red-600/90" : "bg-slate-800/90"}`}
-            >
-              {t.msg}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      {/* ⛏ v20: toasts + chip de convidado foram movidos para a ZONA PARTILHADA no fim do shell */}
 
       {/* chat */}
       <div className="absolute bottom-2 right-2 z-10 w-[220px]" style={fill ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
@@ -2386,6 +2487,11 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
               <ChevronLeft className="h-4 w-4" /> Sair
             </button>
           )}
+          {/* ⛏ v20: atalho para o BATEUCRAFT dentro da faixa de controlo */}
+          <button onClick={() => switchMode("craft")} data-testid="bw-mode-craft" title="Ir para o BateuCraft (Super Minecraft)"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-600/85 px-2.5 py-1.5 text-[11px] font-black text-white backdrop-blur transition-colors hover:bg-emerald-500 active:scale-95">
+            ⛏ <span className="hidden lg:inline">Craft</span>
+          </button>
         {([
           ["char", <User key="u" className="h-4 w-4" />, "Herói"],
           ["poderes", <Zap key="z" className="h-4 w-4" />, "Poderes"],
@@ -2467,13 +2573,6 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
           {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
         </button>
       </div>
-
-      {/* v9/v16: chip de convidado — lembra suave, nunca bloqueia */}
-      {!user && (
-        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 top-[46px] z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : undefined}>
-          👤 CONVIDADO — criar conta para guardar na nuvem
-        </button>
-      )}
 
       {/* v11: LEITOR DE MÚSICA — 5 faixas ORIGINAIS (0% direitos de autor) */}
       <AnimatePresence>
@@ -3505,7 +3604,35 @@ export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── v17: PRÉMIO 1GB — bilhete com mensagem automática para o suporte ── */}
+      </>)}
+
+      {/* ══ v20: ZONA PARTILHADA — visível nos DOIS mundos (BateuCraft e Clássico) ══ */}
+
+      {/* toasts */}
+      <div className="pointer-events-none absolute left-1/2 top-[84px] z-20 flex w-[300px] -translate-x-1/2 flex-col items-center gap-1">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: -12, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur ${t.tone === "good" ? "bg-emerald-600/90" : t.tone === "bad" ? "bg-red-600/90" : "bg-slate-800/90"}`}
+            >
+              {t.msg}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* v9/v16: chip de convidado — lembra suave, nunca bloqueia */}
+      {!user && (
+        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={{ top: wMode === "craft" ? "calc(4.6rem + env(safe-area-inset-top, 0px))" : undefined, ...(fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : {}) } as any}>
+          👤 CONVIDADO — criar conta para guardar na nuvem
+        </button>
+      )}
+
+      {/* ── v17: PRÉMIO 1GB — bilhete com mensagem automática para o suporte (partilhado) ── */}
       <AnimatePresence>
         {prize && (
           <motion.div

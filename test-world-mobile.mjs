@@ -86,6 +86,15 @@ async function main() {
   await nameInput.fill("HeroiToco");
   await page.locator('button:has-text("Arqueiro")').first().click();
   await page.locator('button:has-text("ENTRAR NO MUNDO")').first().click();
+  // ⛏ v20: o modo padrão é o BATEUCRAFT — esta suíte testa o CLÁSSICO → alternar
+  const craftCv = page.locator('[data-testid="bw-craft-canvas"]');
+  await craftCv.waitFor({ state: "attached", timeout: 20000 }).catch(() => {});
+  if ((await craftCv.count()) > 0) {
+    await page.locator('[data-testid="bw-mode-classic"]').click({ timeout: 8000 }).catch(() => {});
+    ok("v20: BateuCraft abriu primeiro no telemóvel (modo padrão)", true);
+  } else {
+    ok("v20: BateuCraft abriu primeiro no telemóvel (modo padrão)", false);
+  }
   const canvas = page.locator('[data-testid="bateu-world"] canvas');
   await page.waitForTimeout(13000); // mundo a arrancar em dev
   ok("Mundo 3D ativo em telemóvel", (await canvas.count()) > 0);

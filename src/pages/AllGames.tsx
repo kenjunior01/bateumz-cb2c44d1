@@ -76,9 +76,9 @@ const AllGames = () => {
     <div className="min-h-screen pb-20 lg:pb-0" style={{ background: 'var(--area-bg, #0d1117)', color: 'var(--area-text, #e6edf3)' }}>
       <Helmet>
         <title>Jogos Clássicos Online Grátis — Bateu</title>
-        <meta name="description" content="Joga os melhores clássicos de sempre: Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas, Dominó e o MMO Bateu World 3D. Grátis, direto no navegador!" />
+        <meta name="description" content="Joga os melhores clássicos de sempre: Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas, Dominó e o MUNDO BATEU. Grátis, direto no navegador!" />
         <meta property="og:title" content="Jogos Clássicos Online Grátis — Bateu" />
-        <meta property="og:description" content="Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas e o MMO Bateu World 3D — grátis e direto no navegador!" />
+        <meta property="og:description" content="Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas e o MUNDO BATEU — grátis e direto no navegador!" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href={`${window.location.origin}/jogos`} />
       </Helmet>
@@ -127,7 +127,7 @@ const AllGames = () => {
               <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Jogos Clássicos</ShimmerText>
             </h1>
             <p className="text-base mb-6 max-w-xl" style={{ color: '#7d8590' }}>
-              Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MMO Bateu World 3D. Grátis, direto no navegador!
+              Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MUNDO BATEU. Grátis, direto no navegador!
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -185,7 +185,7 @@ const AllGames = () => {
             </motion.div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">BATEU WORLD 3D</span>
+                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">MUNDO BATEU</span>
                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[9px] font-black animate-pulse">MMO DA PLATAFORMA · JOGO EM DESTAQUE</span>
               </div>
               <p className="text-[11px] sm:text-xs font-semibold text-white/80 mt-1 leading-snug">

@@ -25,7 +25,8 @@ export interface GameDef {
 
 // CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o MMO da plataforma
 export const ALL_GAMES: GameDef[] = [
-  { id: "mmorpg", label: "Bateu World 3D", emoji: "🌍", desc: "O MMO oficial da Bateu — combate em tempo real, níveis e poderes, rouba cupões a outros jogadores e troca pontos por moeda da plataforma!", grad: "from-rose-600 via-orange-500 to-amber-500", category: "Mundo Aberto", players: "Multiplayer", icon: "globe", hasBot: false },
+  { id: "mmorpg", label: "Mundo Bateu", emoji: "🌍", desc: "O mundo aberto oficial da Bateu — constrói a tua casa, rouba baús, duela 1v1, derrota vilões e ganha cupões reais!", grad: "from-rose-600 via-orange-500 to-amber-500", category: "Mundo Aberto", players: "Multiplayer", icon: "globe", hasBot: false },
+  { id: "bateucraft", label: "BateuCraft", emoji: "⛏️", desc: "Mundo voxel estilo craft: minera, constrói, funde ferro e sobrevive à noite com os mobs!", grad: "from-emerald-600 via-green-500 to-lime-400", category: "Mundo Aberto", players: "Solo/Multi", icon: "globe", hasBot: false },
   { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false },
   { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },
   { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: "gamepad", hasBot: true },

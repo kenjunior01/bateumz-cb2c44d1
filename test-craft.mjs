@@ -43,7 +43,7 @@ async function newPage(ctx) {
 }
 
 async function createCharAndEnter(page) {
-  await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/lives?game=bateucraft`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
   // se já existe personagem → entra direto
   const hasCanvas = await page.locator('[data-testid="bw-craft-canvas"]').count() > 0;

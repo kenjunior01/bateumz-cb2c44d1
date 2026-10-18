@@ -330,7 +330,7 @@ export default function MobileMenuDrawer() {
                     ))}
                   </motion.div>
 
-                  {/* ⭐ BATEU WORLD 3D — jogo permanente em destaque no menu */}
+                  {/* ⭐ MUNDO BATEU — jogo permanente em destaque no menu */}
                   <motion.button
                     variants={itemVariants}
                     onClick={() => goOrAuth("/lives?game=mmorpg")}
@@ -355,7 +355,7 @@ export default function MobileMenuDrawer() {
                       </motion.div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-display text-[15px] font-black text-white leading-tight">BATEU WORLD 3D</span>
+                          <span className="font-display text-[15px] font-black text-white leading-tight">MUNDO BATEU</span>
                           <span className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-1.5 py-0.5 text-[8px] font-black text-white animate-pulse">MMO 3D · DESTAQUE</span>
                         </div>
                         <p className="text-[10.5px] font-semibold text-white/85 leading-tight mt-0.5 truncate">

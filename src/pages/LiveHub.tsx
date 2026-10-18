@@ -82,6 +82,7 @@ const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
 const BateuWorld = lazy(() => import("@/components/livegames/world/BateuWorld"));
+const BateuCraft = lazy(() => import("@/components/livegames/world/BateuCraft"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
 const DjikotaGame = lazy(() => import("@/components/livegames/DjikotaGame"));
@@ -143,7 +144,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "bateucraft" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -165,6 +166,7 @@ interface SavedWheelGame {
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-rose-600 via-orange-500 to-amber-400" },
+  { id: "bateucraft", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
@@ -628,11 +630,11 @@ const LiveHub = () => {
               <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>🌍</motion.span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-display text-base font-black text-white">🌍 BATEU WORLD 3D</span>
+                  <span className="font-display text-base font-black text-white">🌍 MUNDO BATEU</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[8px] font-black animate-pulse">MMO DA PLATAFORMA · DESTAQUE</span>
                 </div>
                 <p className="text-[10px] font-semibold text-white/80 truncate">
-                  MMO 3D ao vivo: loot lendário, Arena das Ondas, pet companheiro, rouba cupões no PvP e troca pontos por moeda real!
+                  Mundo aberto gigante: constrói a tua casa, rouba baús, duela 1v1, derrota vilões e ganha cupões reais!
                 </p>
               </div>
               <span className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[10px] font-black">JOGAR ▶</span>
@@ -685,7 +687,7 @@ const LiveHub = () => {
             )}
             {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
-            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg" || active === "bateucraft"}>
             <AnimatePresence mode="wait">
               <Suspense fallback={
                 <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
@@ -1268,8 +1270,15 @@ const LiveHub = () => {
                 </motion.div>              )}
               {active === "mmorpg" && (
                 <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className={typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse) and (max-width: 1024px)").matches ? "contents" : undefined}>
-                  <GameErrorBoundary gameName="Bateu World 3D">
+                  <GameErrorBoundary gameName="Mundo Bateu">
                   <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+
+                  </GameErrorBoundary>
+                </motion.div>              )}
+              {active === "bateucraft" && (
+                <motion.div key="bateucraft" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className={typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse) and (max-width: 1024px)").matches ? "contents" : undefined}>
+                  <GameErrorBoundary gameName="BateuCraft">
+                  <BateuCraft onScore={recordScore("BateuCraft")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
 
                   </GameErrorBoundary>
                 </motion.div>              )}

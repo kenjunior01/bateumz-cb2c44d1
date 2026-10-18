@@ -473,7 +473,7 @@ export default function Index() {
             </Button>
           </motion.div>
 
-          {/* ⭐ CTA central — entrar direto no jogo principal (Bateu World 3D) */}
+          {/* ⭐ CTA central — entrar direto no jogo principal (Mundo Bateu) */}
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7, duration: 0.5 }} className="flex justify-center mb-12">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -491,7 +491,7 @@ export default function Index() {
                 transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
               />
               <span className="relative z-10 flex items-center gap-3">
-                <GameArtChip id="mmorpg" size={30} className="rounded-xl" /> JOGAR AGORA — BATEU WORLD 3D
+                <GameArtChip id="mmorpg" size={30} className="rounded-xl" /> JOGAR AGORA — MUNDO BATEU
                 <span className="text-2xl sm:text-3xl">▶</span>
               </span>
             </motion.button>

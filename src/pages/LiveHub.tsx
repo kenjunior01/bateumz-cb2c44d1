@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Suspense, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
@@ -1250,13 +1251,15 @@ const LiveHub = () => {
                   <CampaignRPGGame onScore={recordScore("Campanha RPG")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
-              {active === "mmorpg" && (
-                <motion.div key="mmorpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className={typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse) and (max-width: 1024px)").matches ? "contents" : undefined}>
+              {active === "mmorpg" && createPortal(
+                /* ECRÃ INTEIRO REAL: portal no body + fixed inset-0 — o mundo nunca
+                   fica espremido no fluxo da página (bug "fica num quadrado") */
+                <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100] bg-black">
                   <GameErrorBoundary gameName="Bateu World 3D">
-                  <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-
+                    <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
-                </motion.div>              )}
+                </motion.div>, document.body)}
               {active === "p2pbet" && (
                 <motion.div key="p2pbet" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Arena de Apostas P2P">

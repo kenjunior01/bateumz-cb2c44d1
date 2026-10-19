@@ -1,3821 +1,1872 @@
 // @ts-nocheck
 // ============================================================
-// BATEU WORLD — MMO 3D da plataforma (estilo Hordes.io) · v6
-// Níveis, poderes por classe, missões/saga/desafios, PvP com
-// roubo de cupões e pontos, Banco de Pontos (moeda da
-// plataforma), descobertas, partículas e transições.
-// v4: MOCHILA com loot de raridades + equipamento, ARENA DAS
-// ONDAS (sobrevivência), combo de mortes com XP bónus, pet
-// companheiro, definições de qualidade gráfica, música
-// ambiente e MODO FOTO para partilhar o mundo.
-// v5: AVATARES customizáveis (pele, cabelo, traje, capa,
-// chapéu) com preview 3D ao vivo, editor de aparência dentro
-// do jogo e visual sincronizado entre todos os jogadores.
-// v6: SÓ MEMBROS REGISTADOS jogam (conta da plataforma),
-// ESCUDO + DEFESA (stat DEF, modo Guarda, loot de escudos),
-// v10: CORAÇÃO DA FLORESTA — a Floresta Ancestral agora espetacular:
-// 9 Árvores Anciãs colossais, god rays, cristal verde pulsante, runas,
-// esporos dia/noite, Guardiã Anciã e o 19º marco do mundo.
-// MUNDO 55% MAIOR com 7 regiões nomeadas e 19 marcos com
-// SIGNIFICADO, MAPA GRANDE com legenda e bússola de destino,
-// e super-sincronização com a conta (progresso na nuvem).
+// BATEU WORLD — ERA DAS LENDAS (v18) · UI DO MMO
+// Reconstrução total sobre o motor v18 (REA Hordes.io):
+//  · Criação com CLASSE + FACÇÃO + avatar articulado
+//  · HUD MMO: barras HP/Mana/XP, alvo, barra de CHEFE,
+//    minimapa ao vivo, tracker de missões, hotbar 6
+//    habilidades com cooldown, joystick + botões mobile
+//  · 12 painéis: Inventário, Habilidades, Missões, Mapa,
+//    Clã, Grupo, Loja, Oficina, Habitação, Cupões, Banco,
+//    Fama & Guerra
+//  · Loop da plataforma: cupões → leilões/loja, Banco de
+//    Pontos → créditos reais, prémio 1GB → WhatsApp,
+//    conquistas → Stories
 // ============================================================
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Swords, Sparkles, ArrowUp, User, ScrollText, Trophy, MessageSquare,
-  X, Copy, Coins, Heart, Zap, Crown, ExternalLink, Check, Wifi, Users,
-  Landmark, Map, Shield, Flame, Volume2, VolumeX, MapPin, Smile, Target,
-  Backpack, Settings, Camera, Music, PawPrint, Cloud,
-  Maximize2, Minimize2, Video, Eye, Gamepad2, ChevronLeft, ChevronRight,
+  Swords, Sparkles, X, Coins, Heart, Zap, Crown, Check, Users, Map,
+  Shield, Flame, MapPin, Backpack, Settings, Gamepad2, ChevronLeft,
+  Home, Store, Hammer, Ticket, Landmark, Trophy, Wand2, Skull, Star,
+  Compass, ScrollText, Volume2, VolumeX, Maximize2, Minimize2, Camera,
 } from "lucide-react";
-import confetti from "canvas-confetti";
-import { WorldEngine, SKILLS, LANDMARKS, REGIONS, PVP_SAFE_RADIUS, RARITY_META, BUILDINGS, type LootItem } from "./worldEngine";
+import { WorldEngine, type EngineStats } from "./worldEngine";
+import {
+  CLASSES, SKILLS, FACTIONS, REGIONS, TOWERS, DUNGEONS, MOUNTS, BUILDINGS,
+  RARITY_META, SLOTS, POTIONS, MATERIALS, CAMPAIGN, DAILY_QUESTS, TITLES,
+  FAME_RANKS, xpNeed, LEVEL_CAP, PVP_SAFE_RADIUS, type LootItem,
+} from "./mmo";
+import { statLabel, applyItemStats, upgradeCost, upgradeChance, upgradeGlow } from "./loot";
 import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
 import { AvatarPreview, AvatarSwatches } from "./AvatarEditor";
-import { defaultAvatar, randomAvatar, parseAvatarKey, type AvatarConfig } from "./avatar";
+import { defaultAvatar, randomAvatar, type AvatarConfig } from "./avatar";
 import {
-  fetchPlatformData, upsertCharacter, setCharacterOffline,
-  worldRoute, fmtMZN, voucherLabel, MODALITY_LABEL, exchangeWorldPoints,
-  fetchServerChar, flushPendingExchanges, claimWorldVoucher, upsertWorldProgress,
-  logWorldActivity, flushWorldActivity, subscribePlatformLive,
+  fetchPlatformData, upsertCharacter, setCharacterOffline, worldRoute,
+  fmtMZN, exchangeWorldPoints, claimWorldVoucher, fetchAccountVouchers,
+  upsertWorldProgress, logWorldActivity, flushWorldActivity,
   type PlatformData,
 } from "./platformSync";
 import { useAuth } from "@/contexts/AuthContext";
 
-// @ts-nocheck
-
-interface Props {
-  onScore?: (name: string, score: number) => void;
-  liveCode?: string;
-  onNavigate?: (route: string) => void;
-  /** v16: volta ao hub — usada pelo botão «Sair» no modo imersivo do telemóvel */
-  onExit?: () => void;
-}
+// ── Estado persistente do herói ─────────────────────────────
+const LS_KEY = "bateu_legends_v18";
 
 interface Char {
-  uid: string;
-  name: string;
-  classId: number;
-  level: number;
-  xp: number;
-  gold: number;
-  points: number;      // pontos de atributo
-  allocAtk: number;
-  allocHp: number;
-  allocSpd: number;
-  kills: number;
-  deaths: number;
-  streak: number;
-  lastDaily: string;
-  vouchers: { id: string; code: string; label: string }[];
-  quests: { date: string; kills: number; chest: number; visit: number; steal: number; waves: number; cK: boolean; cC: boolean; cV: boolean; cS: boolean; cW: boolean; item: number; duel: number; atk: number; cI: boolean; cD: boolean; cA: boolean; home: number; cH: boolean; gather: number; cG: boolean };
-  // v2
-  pts: number;         // Pontos de Troféu (economia do mundo)
-  discoveries: string[];
-  sagaIdx: number;
-  saga: { kills: number; bosses: number; chests: number; steals: number; discovers: number };
-  chal: { date: string; c1: boolean; c2: boolean };
-  stolenFrom: number;
-  lostTo: number;
-  shieldUntil: number;
-  // v4
-  inv: LootItem[];
-  equipped: { arma: LootItem | null; armadura: LootItem | null; amuleto: LootItem | null; escudo: LootItem | null };
-  pet: boolean;
-  wavesBest: number;
-  // v5
+  uid: string; name: string; classId: number; faction: number;
+  level: number; xp: number; gold: number;
+  skillPts: number; ranks: number[]; hotbar: (number | null)[];
+  alloc: { str: number; int: number; agi: number; vit: number };
+  inv: LootItem[]; equipped: Record<string, LootItem | null>;
+  mats: Record<string, number>;
+  pots: Record<string, number>;
+  coupons: number; credits: number;
+  fame: number; kills: number; deaths: number;
+  mounts: string[]; activeMount: string | null;
+  house: { built: Record<string, number>; vault: number } | null;
+  clan: { tag: string; name: string } | null;
+  campaign: { step: number; prog: number; done: boolean };
+  daily: { date: string; prog: Record<string, number>; claimed: string[] };
+  saga: { bosses: number; dungeons: number; duels: number; steals: number; towers: number; villains: number };
   avatar: AvatarConfig;
-  // v6
-  allocDef: number;    // pontos em defesa (redução de dano)
-  // v11 — RPG+: materiais de recolha, poções da Oficina e NPCs
-  mat: { erva: number; minerio: number; cristal: number };
-  pot: { vida: number; forca: number; vento: number };
-  npcDay: { date: string; gomas: boolean; lurdes: boolean; sabio: boolean };
-  // v13 — onboarding "Primeiros Passos" (novos jogadores)
-  onb?: { done: boolean; step: number };
-  // v17: ERA DRAGON BALL
-  credits: number;     // créditos da plataforma (moeda dos prémios)
-  prizes: { id: string; code: string; op: string; ts: number; claimed: boolean }[]; // prémios 1GB
-  shareWin: boolean;   // publicar conquistas nos Stories automaticamente
-  duelsWon: number;    // duelos 1v1 vencidos
+  musicOn: boolean;
+  duelWins: number;
+  createdAt: number;
 }
 
-const LS_KEY = "bateu_world_char_v6";
-const LS_KEY_V5 = "bateu_world_char_v5";
-const LS_KEY_V4 = "bateu_world_char_v4";
-const LS_KEY_V3 = "bateu_world_char_v3";
-const CLASSES = [
-  { name: "Guerreiro", emoji: "⚔️", color: "#ef4444", grad: "from-red-500 to-rose-600", desc: "Combate corpo a corpo, vida alta" },
-  { name: "Mago", emoji: "🔮", color: "#8b5cf6", grad: "from-violet-500 to-purple-600", desc: "Explosões arcanas e meteoros" },
-  { name: "Arqueiro", emoji: "🏹", color: "#22c55e", grad: "from-green-500 to-emerald-600", desc: "Chuvas de flechas e esquivas" },
-  { name: "Curandeiro", emoji: "🌿", color: "#06b6d4", grad: "from-cyan-500 to-teal-600", desc: "Cura-se enquanto fere os inimigos" },
-];
-
-const TITLES: { lvl: number; title: string }[] = [
-  { lvl: 1, title: "Novato" }, { lvl: 3, title: "Aprendiz" }, { lvl: 5, title: "Caçador" },
-  { lvl: 8, title: "Guerreiro" }, { lvl: 12, title: "Veterano" }, { lvl: 16, title: "Elite" },
-  { lvl: 20, title: "Campeão" }, { lvl: 26, title: "Mestre" }, { lvl: 33, title: "Grão-Mestre" },
-  { lvl: 40, title: "Lenda do Mundo" },
-];
-
-// ── v17: ERA DRAGON BALL — transformações por classe ──
-// 2 formas desbloqueadas no Nv5 e Nv14; multiplicam ataque/velocidade e
-// drenam KI. Aura muda de cor (amarelo → vermelho) como no scouter.
-const TRANSFORMS: { name: string; emoji: string; lvl: number; mult: number; aura: string }[][] = [
-  // Guerreiro
-  [
-    { name: "Fúria Crescente", emoji: "🔥", lvl: 5, mult: 1.35, aura: "#fde047" },
-    { name: "Fúria Suprema", emoji: "💥", lvl: 14, mult: 1.8, aura: "#f87171" },
-  ],
-  // Mago
-  [
-    { name: "Zenith Arcano", emoji: "✨", lvl: 5, mult: 1.35, aura: "#fde047" },
-    { name: "Ascensão Mística", emoji: "🌟", lvl: 14, mult: 1.8, aura: "#f87171" },
-  ],
-  // Arqueiro
-  [
-    { name: "Olho de Falcão", emoji: "🦅", lvl: 5, mult: 1.35, aura: "#fde047" },
-    { name: "Sentido Divino", emoji: "👁️", lvl: 14, mult: 1.8, aura: "#f87171" },
-  ],
-  // Curandeiro
-  [
-    { name: "Bênção Interior", emoji: "🍃", lvl: 5, mult: 1.35, aura: "#fde047" },
-    { name: "Espírito Ancestral", emoji: "🌳", lvl: 14, mult: 1.8, aura: "#f87171" },
-  ],
-];
-
-// ── v17: PRÉMIO 1GB — suporte WhatsApp (qualquer operadora) ──
-const SUPPORT_WHATSAPP = "258848547887";
-const OPERATORS = ["Vodacom", "Movitel", "Tmcel"] as const;
-function prizeWhatsAppLink(code: string, op: string, phone: string, name: string): string {
-  const msg = [
-    "🎁 *PRÉMIO BATEU WORLD — 1GB*",
-    "",
-    `Herói: ${name}`,
-    `Código do prémio: ${code}`,
-    `Operadora: ${op}`,
-    `Número que vai receber o 1GB: ${phone}`,
-    "",
-    "Ganhei este prémio no Open World do Bateu (drop raríssimo). Por favor ativem os meus 1GB. Obrigado!",
-  ].join("\n");
-  return `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}`;
-}
-function newPrizeCode(): string {
-  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 6; i++) s += abc[Math.floor(Math.random() * abc.length)];
-  return `BW-1GB-${s}`;
-}
-
-/** v17: publica uma conquista nos Stories da plataforma (sem imagem — fundo gradiente). */
-async function publishWinStory(content: string, background: string): Promise<void> {
-  try {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data } = await supabase.auth.getUser();
-    const uid = data?.user?.id;
-    if (!uid) return; // convidados não publicam (sem conta)
-    await supabase.from("user_stories").insert({
-      user_id: uid,
-      content,
-      background,
-      media_type: "text",
-      expires_at: new Date(Date.now() + 86400000).toISOString(),
-    });
-  } catch { /* silencioso — stories são bónus, nunca bloqueiam o jogo */ }
-}
-
-function titleFor(level: number): string {
-  let t = TITLES[0].title;
-  for (const tt of TITLES) if (level >= tt.lvl) t = tt.title;
-  return t;
-}
-
-function xpNeeded(level: number): number {
-  // v16/v17: curva MUITO mais exigente — evolução difícil (105·L^1.8)
-  return Math.round(105 * Math.pow(level, 1.8));
-}
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function newChar(name: string, classId: number, avatar?: AvatarConfig): Char {
+function emptyChar(name: string, classId: number, faction: number, avatar: AvatarConfig): Char {
   return {
-    uid: "bw_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
-    name: name.slice(0, 14), classId, level: 1, xp: 0, gold: 50, points: 0,
-    allocAtk: 0, allocHp: 0, allocSpd: 0, allocDef: 0,
-    kills: 0, deaths: 0, streak: 0,
-    lastDaily: "", vouchers: [],
-    quests: { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false, gather: 0, cG: false },
-    pts: 0, discoveries: [], sagaIdx: 0,
-    saga: { kills: 0, bosses: 0, chests: 0, steals: 0, discovers: 0 },
-    chal: { date: todayStr(), c1: false, c2: false },
-    stolenFrom: 0, lostTo: 0, shieldUntil: 0,
-    inv: [], equipped: { arma: null, armadura: null, amuleto: null, escudo: null },
-    pet: false, wavesBest: 0,
-    mat: { erva: 0, minerio: 0, cristal: 0 },
-    pot: { vida: 0, forca: 0, vento: 0 },
-    npcDay: { date: todayStr(), gomas: false, lurdes: false, sabio: false },
-    onb: { done: false, step: 0 },
-    avatar: avatar ?? defaultAvatar(classId),
-    credits: 0, prizes: [], shareWin: true, duelsWon: 0,
+    uid: `bw_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
+    name, classId, faction, level: 1, xp: 0, gold: 250,
+    skillPts: 0, ranks: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hotbar: [0, 1, null, null, null, null],
+    alloc: { str: 0, int: 0, agi: 0, vit: 0 },
+    inv: [], equipped: { arma: null, armadura: null, elmo: null, amuleto: null, botas: null, anel: null },
+    mats: { fragmento: 2, erva: 0, minerio: 0, cristal: 0, essencia: 0 },
+    pots: { vida: 2, forca: 0, vento: 0, guarda: 0 },
+    coupons: 0, credits: 0,
+    fame: 0, kills: 0, deaths: 0,
+    mounts: [], activeMount: null,
+    house: null, clan: null,
+    campaign: { step: 0, prog: 0, done: false },
+    daily: { date: new Date().toDateString(), prog: {}, claimed: [] },
+    saga: { bosses: 0, dungeons: 0, duels: 0, steals: 0, towers: 0, villains: 0 },
+    avatar, musicOn: true, duelWins: 0, createdAt: Date.now(),
   };
-}
-
-function migrateBase(old: any): Char {
-  const c = newChar(old.name || "Herói", old.classId ?? 0);
-  Object.assign(c, {
-    uid: old.uid, level: old.level ?? 1, xp: old.xp ?? 0, gold: old.gold ?? 50,
-    points: old.points ?? 0, allocAtk: old.allocAtk ?? 0, allocHp: old.allocHp ?? 0,
-    allocSpd: old.allocSpd ?? 0, kills: old.kills ?? 0, deaths: old.deaths ?? 0,
-    streak: old.streak ?? 0, lastDaily: old.lastDaily ?? "",
-    vouchers: Array.isArray(old.vouchers) ? old.vouchers : [],
-    pts: old.pts ?? 0, discoveries: Array.isArray(old.discoveries) ? old.discoveries : [],
-    sagaIdx: old.sagaIdx ?? 0, stolenFrom: old.stolenFrom ?? 0, lostTo: old.lostTo ?? 0,
-  });
-  if (old.saga) c.saga = { ...c.saga, ...old.saga };
-  if (old.quests?.date === todayStr()) {
-    c.quests = { ...c.quests, ...old.quests, waves: 0, cW: false, home: old.quests.home || 0, cH: !!old.quests.cH };
-  }
-  return c;
-}
-
-function migrateV4(old: any): Char {
-  const c = migrateBase(old);
-  // v4 guardava inventário, equipamento, pet e ondas — preservar
-  if (Array.isArray(old.inv)) c.inv = old.inv;
-  if (old.equipped) c.equipped = old.equipped;
-  if (typeof old.pet === "boolean") c.pet = old.pet;
-  if (typeof old.wavesBest === "number") c.wavesBest = old.wavesBest;
-  if (old.chal) c.chal = { ...c.chal, ...old.chal };
-  // v5: avatar (v4 não tinha — parse da chave ou por defeito)
-  c.avatar = parseAvatarKey(old.avKey) ?? defaultAvatar(c.classId);
-  return c;
-}
-
-function migrateV6(old: any): Char {
-  // v5 → v6: mantém tudo, garante allocDef e slot de escudo
-  const c = migrateV4(old);
-  if (typeof old.allocDef === "number") c.allocDef = old.allocDef;
-  else c.allocDef = 0;
-  if (c.equipped && !("escudo" in c.equipped)) c.equipped.escudo = null;
-  return c;
 }
 
 function loadChar(): Char | null {
   try {
-    let raw = localStorage.getItem(LS_KEY);
-    if (!raw) {
-      // v6: migrar v5 → v4 → v3 (progresso nunca se perde)
-      const v5Raw = localStorage.getItem(LS_KEY_V5);
-      if (v5Raw) {
-        const c = migrateV6(JSON.parse(v5Raw));
-        localStorage.setItem(LS_KEY, JSON.stringify(c));
-        return c;
-      }
-      const v4Raw = localStorage.getItem(LS_KEY_V4);
-      if (v4Raw) {
-        const c = migrateV6(JSON.parse(v4Raw));
-        localStorage.setItem(LS_KEY, JSON.stringify(c));
-        return c;
-      }
-      const oldRaw = localStorage.getItem(LS_KEY_V3);
-      if (oldRaw) {
-        const c = migrateV6(JSON.parse(oldRaw));
-        localStorage.setItem(LS_KEY, JSON.stringify(c));
-        return c;
-      }
-      return null;
-    }
-    const c = JSON.parse(raw) as Char;
-    if (!c?.name || !c?.uid) return null;
-    if (c.quests?.date !== todayStr()) {
-      c.quests = { date: todayStr(), kills: 0, chest: 0, visit: 0, steal: 0, waves: 0, cK: false, cC: false, cV: false, cS: false, cW: false, item: 0, duel: 0, atk: 0, cI: false, cD: false, cA: false, home: 0, cH: false, gather: 0, cG: false };
-    }
-    // v7: garantir campos novos em saves v6
-    c.quests.item = c.quests.item || 0;
-    c.quests.duel = c.quests.duel || 0;
-    c.quests.atk = c.quests.atk || 0;
-    c.quests.cI = !!c.quests.cI;
-    c.quests.cD = !!c.quests.cD;
-    c.quests.cA = !!c.quests.cA;
-    // v8: missão de interiores
-    c.quests.home = c.quests.home || 0;
-    c.quests.cH = !!c.quests.cH;
-    // v11: missão de recolha + materiais + poções + NPCs
-    c.quests.gather = c.quests.gather || 0;
-    c.quests.cG = !!c.quests.cG;
-    c.mat = c.mat || { erva: 0, minerio: 0, cristal: 0 };
-    c.pot = c.pot || { vida: 0, forca: 0, vento: 0 };
-    if (c.npcDay?.date !== todayStr()) c.npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false };
-    c.npcDay = c.npcDay || { date: todayStr(), gomas: false, lurdes: false, sabio: false };
-    // v13: onboarding — veteranos (já lutaram/subiram) completam automaticamente
-    c.onb = c.onb || { done: (c.kills || 0) > 0 || (c.level || 1) > 2, step: 0 };
-    if (c.chal?.date !== todayStr()) {
-      c.chal = { date: todayStr(), c1: false, c2: false };
-    }
-    c.saga = c.saga || { kills: 0, bosses: 0, chests: 0, steals: 0, discovers: 0 };
-    c.discoveries = c.discoveries || [];
-    c.pts = c.pts || 0;
-    c.allocDef = c.allocDef || 0;
-    // v4/v5: garantir campos novos em saves antigos
-    c.inv = Array.isArray(c.inv) ? c.inv : [];
-    c.equipped = c.equipped || { arma: null, armadura: null, amuleto: null, escudo: null };
-    if (!c.equipped.escudo) c.equipped.escudo = null;
-    c.pet = !!c.pet;
-    c.wavesBest = c.wavesBest || 0;
-    // v17: ERA DRAGON BALL — créditos, prémios e stories
-    c.credits = c.credits || 0;
-    c.prizes = Array.isArray(c.prizes) ? c.prizes : [];
-    if (typeof c.shareWin !== "boolean") c.shareWin = true;
-    c.duelsWon = c.duelsWon || 0;
-    // v5: garantir avatar em qualquer save
-    if (!c.avatar || typeof c.avatar.skin !== "number") {
-      c.avatar = defaultAvatar(c.classId ?? 0);
-    }
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c?.name || c?.v !== 18) return null;
     return c;
   } catch { return null; }
 }
+function saveChar(c: Char) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ ...c, v: 18 })); } catch { }
+}
 
-function calcStats(c: Char) {
-  const baseAtk = [12, 11, 10, 9][c.classId] ?? 11;
-  const baseDef = [3, 1, 2, 2][c.classId] ?? 2; // v6: Guerreiro resiste mais
-  const eq = c.equipped || { arma: null, armadura: null, amuleto: null, escudo: null };
-  const bonus = (k: "atk" | "hp" | "spd" | "def") =>
-    ((eq.arma as any)?.[k] || 0) + ((eq.armadura as any)?.[k] || 0) + ((eq.amuleto as any)?.[k] || 0) + ((eq.escudo as any)?.[k] || 0);
+// ── Derivação de stats (base + nível + pontos + equipamento) ─
+function deriveStats(c: Char): EngineStats {
+  const cls = CLASSES[c.classId];
+  const L = c.level - 1;
+  const acc: Record<string, number> = {
+    atk: cls.base.atk + cls.growth.atk * L,
+    maxHp: cls.base.maxHp + cls.growth.maxHp * L,
+    def: cls.base.def + cls.growth.def * L,
+    spd: cls.base.spd + cls.growth.spd * L,
+    maxMp: cls.base.mana + cls.growth.mana * L,
+    crit: cls.base.crit, leech: 0,
+  };
+  // atributos investidos
+  acc.atk += c.alloc.str * 2.2 + c.alloc.agi * 1.6 + c.alloc.int * 1.8;
+  acc.maxHp += c.alloc.vit * 14 + c.alloc.str * 4;
+  acc.def += c.alloc.vit * 0.8;
+  acc.crit += c.alloc.agi * 0.7;
+  acc.maxMp += c.alloc.int * 7;
+  // equipamento
+  for (const s of SLOTS) applyItemStats(c.equipped[s], acc);
   return {
-    atk: baseAtk + c.allocAtk + Math.floor((c.level - 1) * 1.2) + bonus("atk"),
-    maxHp: 100 + (c.level - 1) * 10 + c.allocHp * 12 + bonus("hp"),
-    spd: 6 + c.allocSpd * 0.6 + bonus("spd"),
-    def: baseDef + c.allocDef * 2 + bonus("def"), // v6: até 60% de redução
+    atk: Math.round(acc.atk * 10) / 10,
+    maxHp: Math.round(acc.maxHp),
+    def: Math.round(acc.def * 10) / 10,
+    spd: Math.round(acc.spd * 10) / 10,
+    maxMp: Math.round(acc.maxMp),
+    crit: Math.round(acc.crit * 10) / 10,
+    leech: Math.round(acc.leech * 10) / 10,
   };
 }
 
-const CLS_NAMES = ["Guerreiro", "Mago", "Arqueiro", "Curandeiro"];
-const CLS_EMOJIS = ["⚔️", "🔮", "🏹", "🌿"];
+function titleFor(lvl: number): string {
+  let t = TITLES[0].title;
+  for (const x of TITLES) if (lvl >= x.lvl) t = x.title;
+  return t;
+}
+function fameRank(f: number) {
+  let r = FAME_RANKS[0];
+  for (const x of FAME_RANKS) if (f >= x.min) r = x;
+  return r;
+}
 
-// v13: trilha de onboarding — 5 passos (mover → lutar → recolher → NPC → progressão)
-// Psicologia: uma meta de cada vez (carga cognitiva mínima), loop aberto visível
-// (Zeigarnik) e recompensa imediata em cada passo (reforço positivo cedo).
-const ONB_STEPS = [
-  { emoji: "🧭", title: "Explora a ilha", desc: "Arrasta o joystick (ou WASD) e afasta-te da Praça Bateu" },
-  { emoji: "⚔️", title: "Primeira vitória", desc: "Aproxima-te de um inimigo e toca no botão de ataque" },
-  { emoji: "🌿", title: "Recolhe uma Erva", desc: "Vê uma erva a brilhar? Chega perto e toca em «Recolher»" },
-  { emoji: "🧙", title: "Fala com o Mestre Gomas", desc: "Os NPCs do mundo dão bênçãos diárias e sabedoria" },
-  { emoji: "📖", title: "Abre a ficha do Herói", desc: "No topo do ecrã, toca no primeiro botão e vê o teu progresso" },
-];
-
-// ── v11: Diálogos dos NPCs (RPG) ────────────────────────────
-export const NPC_LINES: Record<string, { emoji: string; name: string; lines: string[]; action: "gift" | "workshop" | "lore" }> = {
-  gomas: {
-    emoji: "🧙", name: "Mestre Gomas", action: "gift",
-    lines: [
-      "Ah, o herói do mundo! Os bugs voltaram a mexer nos cantos do mapa...",
-      "Recolhe recursos com E perto de ervas, minérios e cristais — a Lurdes transforma-os em poções.",
-      "Toma a bênção diária do Mestre: um pouco de ouro e sabedoria para a tua jornada!",
-    ],
-  },
-  lurdes: {
-    emoji: "🛠️", name: "Ferreira Lurdes", action: "workshop",
-    lines: [
-      "A bigorna está quente, herói! Trouxeste materiais da terra?",
-      "Com ervas e cristais fabrico poções: vida, força e vento. Tudo na tua Mochila → Oficina.",
-      "Uma Poção de Força antes de um chefe vale mais que dez espadas amoladas!",
-    ],
-  },
-  sabio: {
-    emoji: "📜", name: "Velho Sábio", action: "lore",
-    lines: [
-      "Este mundo nasceu de um sonho antigo... e os bugs são os seus pesadelos.",
-      "No Coração da Floresta pulsa um cristal mais velho que os reis. A Guardiã nunca dorme.",
-      "Dizem que a chuva acalma os bugs... mas as tempestades acordam os piores. Cuidado com o trovão.",
-    ],
-  },
-};
-
-// ── Saga: cadeia de missões permanente ──────────────────────
-const SAGA: { title: string; desc: string; prog: (c: Char) => number; goal: number; reward: string; apply: (c: Char) => void }[] = [
-  { title: "1 · Primeiros Passos", desc: "Derrota 5 inimigos", prog: (c) => c.saga.kills, goal: 5, reward: "+100 ouro · +10 pts", apply: (c) => { c.gold += 100; c.pts += 10; } },
-  { title: "2 · Explorador", desc: "Descobre 3 marcos do mundo", prog: (c) => c.saga.discovers, goal: 3, reward: "+80 XP · +15 pts", apply: (c) => { c.xp += 80; c.pts += 15; } },
-  { title: "3 · Caçador de Bugs", desc: "Derrota 20 inimigos", prog: (c) => c.saga.kills, goal: 20, reward: "+250 ouro · +20 pts", apply: (c) => { c.gold += 250; c.pts += 20; } },
-  { title: "4 · Tesoureiro", desc: "Abre 3 baús de cupões", prog: (c) => c.saga.chests, goal: 3, reward: "+150 XP · +25 pts", apply: (c) => { c.xp += 150; c.pts += 25; } },
-  { title: "5 · Face a Face", desc: "Derrota 1 chefe (Bug Rei ou Rainha)", prog: (c) => c.saga.bosses, goal: 1, reward: "+500 ouro · +40 pts", apply: (c) => { c.gold += 500; c.pts += 40; } },
-  { title: "6 · Sangue Frio", desc: "Rouba pontos/cupões a 1 jogador", prog: (c) => c.saga.steals, goal: 1, reward: "+200 XP · +30 pts", apply: (c) => { c.xp += 200; c.pts += 30; } },
-  { title: "7 · Veterano", desc: "Alcança o nível 8", prog: (c) => c.level, goal: 8, reward: "+400 ouro · +40 pts", apply: (c) => { c.gold += 400; c.pts += 40; } },
-  { title: "8 · Cartógrafo", desc: "Descobre 7 marcos do mundo", prog: (c) => c.saga.discovers, goal: 7, reward: "+300 XP · +50 pts", apply: (c) => { c.xp += 300; c.pts += 50; } },
-  { title: "9 · Conquistador", desc: "Derrota 2 chefes", prog: (c) => c.saga.bosses, goal: 2, reward: "+800 ouro · +80 pts", apply: (c) => { c.gold += 800; c.pts += 80; } },
-  { title: "10 · Lenda do Mundo", desc: "Alcança o nível 15", prog: (c) => c.level, goal: 15, reward: "+1500 ouro · +150 pts", apply: (c) => { c.gold += 1500; c.pts += 150; } },
-];
-
-// ── Banco de Pontos: trocas ─────────────────────────────────
-const EXCHANGES = [
-  { id: "gold", cost: 20, emoji: "💰", title: "200 de Ouro", desc: "Ouro na hora para equipar o herói" },
-  { id: "shield", cost: 30, emoji: "🛡️", title: "Escudo 10 min", desc: "Protege-te de roubos PvP" },
-  { id: "ticket", cost: 60, emoji: "🎫", title: "Bilhete de Sorteio", desc: "Participa num sorteio real da plataforma" },
-  { id: "voucher", cost: 120, emoji: "🎟️", title: "Cupão Real", desc: "Um cupão de desconto verdadeiro para as compras" },
-  { id: "cash", cost: 250, emoji: "💵", title: "10 MT na Carteira", desc: "Moeda real da plataforma — requer conta com carteira" },
-];
-
-export default function BateuWorld({ onScore, onNavigate, onExit }: Props) {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [phase, setPhase] = useState<"boot" | "create" | "world">("boot");
-  const [char, setChar] = useState<Char | null>(null);
-  const [nameInput, setNameInput] = useState("");
-  const [pickClass, setPickClass] = useState(0);
-  // v5: editor de aparência (criação + em jogo)
-  const [avDraft, setAvDraft] = useState<AvatarConfig>(() => defaultAvatar(0));
-  const [avEditing, setAvEditing] = useState(false);
-  const [platform, setPlatform] = useState<PlatformData | null>(null);
-  const [bootMsg, setBootMsg] = useState("A preparar o mundo...");
-
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+// ════════════════════════════════════════════════════════════
+export default function BateuWorld({
+  onScore, onNavigate, onExit,
+}: {
+  onScore?: (name: string, score: number) => void;
+  liveCode?: string;
+  onNavigate?: (route: string) => void;
+  onExit?: () => void;
+}) {
+  const { user } = useAuth() as any;
+  const mountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<WorldEngine | null>(null);
   const charRef = useRef<Char | null>(null);
-  const platformRef = useRef<PlatformData | null>(null);
-  const scoreRef = useRef(onScore);
-  scoreRef.current = onScore;
+  const [phase, setPhase] = useState<"load" | "create" | "play">("load");
+  const [, forceRender] = useState(0);
+  const rerender = useCallback(() => forceRender(x => x + 1), []);
 
-  // HUD
-  const [hud, setHud] = useState({ hp: 100, maxHp: 100, hit: 0 });
-  const [near, setNear] = useState<string | null>(null);
-  const [online, setOnline] = useState(1);
-  const [toasts, setToasts] = useState<{ id: number; msg: string; tone: string }[]>([]);
-  const [panel, setPanel] = useState<"none" | "char" | "quests" | "rank" | "bank" | "inv" | "set" | "map" | "poderes" | "heros">("none");
-  const [questTab, setQuestTab] = useState<"daily" | "saga" | "chal">("daily");
-  const [card, setCard] = useState<{ kind: string; id: string } | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMsgs, setChatMsgs] = useState<{ n: string; m: string }[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [deathFx, setDeathFx] = useState(false);
-  const [skillState, setSkillState] = useState<{ locked: boolean; cd: number }>({ locked: true, cd: 0 });
-  const [skillCds, setSkillCds] = useState([0, 0, 0]);
+  // HUD state (atualizado a 5Hz a partir do engine)
+  const [hud, setHud] = useState<any>({
+    hp: 100, maxHp: 100, mp: 100, maxMp: 100, level: 1, xp: 0, x: 0, z: 30,
+    target: null, region: "vila", cds: [0, 0, 0, 0, 0, 0], buffs: [],
+    dead: false, gold: 0, fps: 60, online: 8,
+  });
+  const [bossBar, setBossBar] = useState<any>(null);
+  const [toast, setToast] = useState<{ text: string; emoji: string; id: number } | null>(null);
+  const [feed, setFeed] = useState<{ text: string; emoji: string; id: number }[]>([]);
+  const [panel, setPanel] = useState<string | null>(null);
+  const [lootPop, setLootPop] = useState<{ item: LootItem; id: number } | null>(null);
+  const [dmgFlash, setDmgFlash] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [fs, setFs] = useState(false);
+  const [plat, setPlat] = useState<PlatformData | null>(null);
+  const [duelState, setDuelState] = useState<string | null>(null);
+  const [fpMode, setFpMode] = useState(false);
 
-  // v3 — HUD cinematográfico
-  const [muted, setMuted] = useState(worldAudio.isMuted);
-  const [musicOff, setMusicOff] = useState(worldAudio.isMusicOff);
-  const [bossBar, setBossBar] = useState<{ name: string; pct: number } | null>(null);
-  const [buffs, setBuffs] = useState({ atk: 0, hot: 0 });
-  const [banner, setBanner] = useState<{ kind: "discover" | "levelup" | "wave"; emoji: string; title: string; sub: string } | null>(null);
-  const [emoteOpen, setEmoteOpen] = useState(false);
-  const [tipIdx, setTipIdx] = useState(0);
-  const bannerTimer = useRef<any>(null);
-
-  // v6 — guarda, bússola, sincronização
-  const [guardOn, setGuardOn] = useState(false);
-  const [compass, setCompass] = useState<{ angle: number; dist: number } | null>(null);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-
-  // v7 — Acontecimento do Mundo ativo (chip com contagem)
-  const [worldEvent, setWorldEvent] = useState<{ kind: string; name: string; emoji: string; until: number } | null>(null);
-  const [eventNow, setEventNow] = useState(Date.now());
-
-  // v8 — interiores (chip "Estás em") + ticker da plataforma ao vivo
-  const [inside, setInside] = useState<{ name: string; desc: string } | null>(null);
-  const [ticker, setTicker] = useState<{ id: number; msg: string }[]>([]);
-  const tickerId = useRef(0);
-  useEffect(() => {
-    if (!worldEvent) return;
-    const iv = setInterval(() => setEventNow(Date.now()), 500);
-    return () => clearInterval(iv);
-  }, [worldEvent]);
-
-  // v4 — combo, arena, modo foto, qualidade
-  const [combo, setCombo] = useState(0);
-  const [arenaHud, setArenaHud] = useState<{ wave: number; alive: number } | null>(null);
-  const [arenaEnd, setArenaEnd] = useState<{ wave: number; kills: number; pts: number; gold: number; xp: number } | null>(null);
-  const [photoMode, setPhotoMode] = useState(false);
-  // ── v17: ERA DRAGON BALL ──
-  const [form, setForm] = useState(0);                    // 0 base · 1 · 2
-  const [ki, setKi] = useState(100);                      // energia KI
-  const [myPl, setMyPl] = useState(0);                    // Power Level (scouter)
-  const [playersNear, setPlayersNear] = useState<{ id: string; name: string; level: number; pl: number; dist: number }[]>([]);
-  const [duelReq, setDuelReq] = useState<{ from: string; name: string; pl: number } | null>(null);
-  const [duelVs, setDuelVs] = useState<{ name: string; until: number } | null>(null);
-  const [duelNow, setDuelNow] = useState(Date.now());
-  const [prize, setPrize] = useState<{ code: string } | null>(null);
-  const [prizeOp, setPrizeOp] = useState<string>("Vodacom");
-  const [prizePhone, setPrizePhone] = useState("");
-  const [quality, setQuality] = useState<"auto" | "low" | "medium" | "high">(
-    () => (localStorage.getItem("bateu_world_quality") as any) || "auto"
-  );
-  // v11 — câmaras, ecrã inteiro, leitor de música, clima, diálogo, montaria
-  const [camMode, setCamMode] = useState<0 | 1 | 2>(0);
-  const [isFs, setIsFs] = useState(false);
-  // v16 — MODO IMERSIVO: no telemóvel o mundo abre SEMPRE em ecrã inteiro.
-  // O Fullscreen API é instável no browser do celular (iOS nem o tem), por isso
-  // o ecrã inteiro é feito por CSS: fixed inset-0 + 100dvh + safe-areas.
-  const [immersive] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse) and (max-width: 1024px)").matches
-  );
-  // v16: «fill» = ocupar o ecrã todo (nativo OU imersivo) — HUD usa safe-areas
-  const fill = isFs || immersive;
-  // v16: PORTAL — ancestrais do hub com transform/filter (framer-motion, blur)
-  // criam «containing blocks» que roubam o position:fixed e reduzem o mundo a
-  // uma caixa; com o portal o ecrã vive diretamente no <body> — ecrã inteiro
-  // verdadeiro em qualquer página da plataforma.
-  const withPortal = (node: any) => (fill ? createPortal(node, document.body) : node);
-  const fsSeq = useRef(0); // v13: sequência de toggles (cancela fallbacks obsoletos)
-  const [musicOpen, setMusicOpen] = useState(false);
-  const [trackIdx, setTrackIdx] = useState(worldAudio.getTrackIdx());
-  const [musicVol, setMusicVolState] = useState(worldAudio.getMusicVol());
-  const [weatherChip, setWeatherChip] = useState<{ name: string; emoji: string } | null>(null);
-  const [dialogue, setDialogue] = useState<string | null>(null);
-  const [dlgStep, setDlgStep] = useState(0);
-  const [dlgText, setDlgText] = useState("");
-  const [mountOn, setMountOn] = useState(false);
-  const comboTimer = useRef<any>(null);
-  const photoTimer = useRef<any>(null);
-  const worldWrapRef = useRef<HTMLDivElement | null>(null);
-  const petToastDone = useRef(false);
-
-  const EMOTES = ["👋", "😄", "❤️", "😤", "🎉", "🙏"];
-  const TIPS = [
-    "🗺️ Mundo gigante: 19 marcos com significado — TAB abre o MAPA-MÚNDI",
-    "🛡️ Segura SHIFT (ou o botão de escudo) para DEFENDER — bloqueia 40% do dano!",
-    "🧭 No mapa grande, toca num lugar para marcar o destino — a bússola guia-te",
-    "💡 Aproxima-te de um baú e prime E (ou toca no botão) para abrir",
-    "⚔️ Clique no mundo = atacar. Perto de jogadores = PvP com roubo!",
-    "🗺️ Explora o mundo gigante: 19 marcos com significado — cada descoberta dá XP e pontos",
-    "💚 O Coração da Floresta pulsa na clareira sagrada a oeste — a Guardiã Anciã protege-o",
-    "🏟️ A Arena das Ondas (este do mapa) paga pontos e ouro por onda",
-    "🎥 Prime C (ou usa a barra topo) para trocar de câmara: 1ª pessoa tipo Minecraft, 3ª pessoa tipo GTA ou orbital",
-    "🌧️ A chuva e a tempestade visitam o mundo de vez em quando — os trovões iluminam o céu!",
-    "🐺 Ao nível 8 galopa com a Montaria Lobo Veloz (+75% velocidade) — botão 🐾",
-    "🌿 Recolhe ervas, minérios e cristais com E e fabrica poções na Oficina da Mochila",
-    "🎒 Inimigos e chefes dropam equipamento — equipa na Mochila!",
-    "🔥 Combo de mortes em menos de 4s = até +50% de XP",
-    "🏦 Reúne Pontos de Troféu e troca por cupões ou moeda real no Banco",
-    "📸 Modo Foto (tecla P): esconde a HUD e captura o mundo",
-    "🐾 Nível 5: o teu companheiro alado une-se a ti (+8% ataque)",
-    "🛡️ Foste roubado? Tens 3 minutos de escudo — usa bem o tempo",
-    "☄️ ACONTECIMENTOS: chuva de meteoros, frenesi de roubos e enxames de elite surgem do nada — ficas atento!",
-    "🎒 No PvP também podes ROUBAR ITENS da mochila do derrotado — esconde os teus melhores!",
-    "⚙️ Ajusta a qualidade gráfica nas Definições se o jogo abrandar",
-    "⚡ TRANSFORMAÇÕES estilo Dragon Ball: no nível 5 desbloqueias a 1ª forma — toca no botão ⚡ ou prime T. Drena KI!",
-    "📡 POWER LEVEL: cada herói e criatura tem PL — vê acima das cabeças e no Ranking. Sobe o teu!",
-    "⚔️ DUELOS: painel Heróis → escolhe um herói online → Desafiar. 1 contra 1, vencedor leva créditos!",
-    "💎 CRÉDITOS: chefes e duelos pagam créditos. E o prémio MÁXIMO... 1GB na tua operadora (raríssimo!)",
-    "🦕 Cada território tem os SEUS monstros: lobos na Planície, aranhas na Floresta, escorpiões nas Dunas, dragões nas Vulcânicas...",
-    "❤️ A Fonte da Vida (junto ao Banco) cura-te de graça",
-  ];
-
-  const toastId = useRef(0);
-  const pushToast = useCallback((msg: string, tone = "info") => {
-    const id = ++toastId.current;
-    setToasts((t) => [...t.slice(-3), { id, msg, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3600);
+  const pushFeed = useCallback((text: string, emoji = "✨") => {
+    const id = Date.now() + Math.random();
+    setFeed(f => [...f.slice(-5), { text, emoji, id }]);
+    setTimeout(() => setFeed(f => f.filter(x => x.id !== id)), 7000);
   }, []);
 
-  // v3: banner cinematográfico (descoberta / level-up / onda) ─────
-  const showBanner = useCallback((b: { kind: "discover" | "levelup" | "wave"; emoji: string; title: string; sub: string }) => {
-    if (bannerTimer.current) clearTimeout(bannerTimer.current);
-    setBanner(b);
-    bannerTimer.current = setTimeout(() => setBanner(null), b.kind === "levelup" ? 1900 : b.kind === "wave" ? 2200 : 2600);
+  const showToast = useCallback((text: string, emoji = "✨") => {
+    setToast({ text, emoji, id: Date.now() });
+    setTimeout(() => setToast(null), 2600);
   }, []);
 
-  // v3: desbloquear áudio no primeiro gesto + atalhos M (mute) e P (foto)
+  // ── boot ──────────────────────────────────────────────────
   useEffect(() => {
-    const unlock = () => { worldAudio.ensure(); };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (e.key.toLowerCase() === "m") setMuted(worldAudio.toggleMute());
-      if (e.key.toLowerCase() === "p" && phase === "world") togglePhoto();
-      if (e.key === "Tab" && phase === "world") { e.preventDefault(); setPanel((p) => (p === "map" ? "none" : "map")); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+    const c = loadChar();
+    if (c) { charRef.current = c; setPhase("create"); rerender(); }
+    else setPhase("create");
+    fetchPlatformData().then(setPlat);
+    flushWorldActivity();
+  }, []);
 
-  // v4: MODO FOTO — esconde a HUD, captura e descarrega PNG
-  const togglePhoto = useCallback(() => {
-    setPhotoMode((on) => {
-      if (!on) {
-        worldAudio.play("photo");
-        photoTimer.current = setTimeout(() => {
-          try {
-            const url = engineRef.current?.snapshot();
-            if (url) {
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `bateu-world-${Date.now()}.png`;
-              a.click();
-              pushToast("📸 Foto capturada e descarregada!", "good");
-            }
-          } catch { /* ignore */ }
-          // v11: janela maior (1.6s) — tempo de ver a moldura e de a E2E captar
-          setTimeout(() => setPhotoMode(false), 2600); // v11: janela generosa (2.6s)
-        }, 320);
-      }
-      return !on;
+  // ── arranque do motor ─────────────────────────────────────
+  const startEngine = useCallback((c: Char) => {
+    if (!mountRef.current || engineRef.current) return;
+    const stats = deriveStats(c);
+    const eng = new WorldEngine(mountRef.current, {
+      name: c.name, classId: c.classId, level: c.level, faction: c.faction,
+      uid: c.uid, avatar: c.avatar, stats,
+      onEvent: (ev) => handleEvent(c, ev),
     });
-  }, [pushToast]);
+    engineRef.current = eng;
+    setPhase("play");
+    worldAudio.ensure();
+    if (c.musicOn) { worldAudio.startMusic(); }
+    // expõe hooks de teste/integração
+    (window as any).__bw = {
+      version: "18-legends",
+      engine: eng,
+      getChar: () => charRef.current,
+      updateChar: (fn: (c: Char) => void) => {
+        const cc = charRef.current; if (!cc) return;
+        fn(cc); saveChar(cc);
+        eng.setStats(deriveStats(cc), cc.level);
+        eng.setSkillRanks(cc.ranks);
+        eng.setHotbar(cc.hotbar);
+        rerender();
+      },
+      openPanel: (p: string) => setPanel(p),
+      closePanel: () => setPanel(null),
+      giveXp: (n: number) => (window as any).__bw?.engine?.gainXpPublic?.(n),
+      setPopulation: (n: number) => eng.setPopulation(n),
+      panels: () => panel,
+      // helpers de teste
+      testSpawnElite: () => (window as any).__bw?.engine?.spawnTestMobPublic?.(true),
+    };
+  }, [rerender]);
 
-  // v10: garantir que o mundo entra na vista ao começar a jogar — no hub
-  // a página pode estar rolada e a HUD do jogo ficaria fora do ecrã
-  useEffect(() => {
-    if (phase !== "world") return;
-    const t = setTimeout(() => {
-      try { worldWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { /* ignore */ }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [phase]);
+  // ── eventos do motor ──────────────────────────────────────
+  const handleEvent = useCallback((c0: Char, ev: any) => {
+    const c = charRef.current;
+    if (!c) return;
+    let dirty = false;
+    switch (ev.type) {
+      case "kill": {
+        c.gold += ev.gold || 0;
+        c.kills++;
+        c.daily.prog.d_kills = (c.daily.prog.d_kills || 0) + 1;
+        if (ev.isElite) c.daily.prog.d_elite = (c.daily.prog.d_elite || 0) + 1;
+        if (ev.isBoss || ev.isWorld || ev.isVillain) {
+          c.saga.bosses++;
+          c.daily.prog.d_boss = (c.daily.prog.d_boss || 0) + 1;
+          pushFeed(`☠ ${ev.name} derrotado! +${ev.gold} ouro`, "☠️");
+        }
+        dirty = true;
+        break;
+      }
+      case "loot": {
+        if (c.inv.length < 60) { c.inv.push(ev.item); dirty = true; }
+        setLootPop({ item: ev.item, id: Date.now() });
+        setTimeout(() => setLootPop(p => (p?.item === ev.item ? null : p)), 3200);
+        break;
+      }
+      case "material": {
+        c.mats[ev.id] = (c.mats[ev.id] || 0) + (ev.n || 1);
+        c.daily.prog.d_gather = (c.daily.prog.d_gather || 0) + (ev.n || 1);
+        showToast(`+${ev.n || 1} ${(MATERIALS.find(m => m.id === ev.id)?.name) || ev.id}`, "🧰");
+        dirty = true;
+        break;
+      }
+      case "coupon": {
+        c.coupons += ev.n || 1;
+        showToast(`+${ev.n || 1} CUPÃO de ${ev.from}!`, "🎟️");
+        pushFeed(`🎟️ Cupão obtido de ${ev.from}! Usa na Casa de Leilões`, "🎟️");
+        logWorldActivity(c.uid, "coupon", ev.from, ev.n || 1);
+        dirty = true;
+        break;
+      }
+      case "steal": {
+        c.coupons += 1;
+        c.saga.steals++;
+        c.daily.prog.d_steal = (c.daily.prog.d_steal || 0) + 1;
+        pushFeed(`🥷 Roubaste um cupão de ${ev.from}!`, "🥷");
+        showToast("CUPÃO ROUBADO!", "🥷");
+        logWorldActivity(c.uid, "steal", ev.from, 1);
+        dirty = true;
+        break;
+      }
+      case "pvp-kill": {
+        c.fame += ev.fame || 15;
+        pushFeed(`⚔ Vitória sobre ${ev.name} · +${ev.fame} FAMA`, "⚔️");
+        dirty = true;
+        break;
+      }
+      case "xp": {
+        c.xp = ev.total || c.xp;
+        dirty = true;
+        break;
+      }
+      case "levelup": {
+        c.level = ev.level;
+        c.skillPts += 1;
+        showToast(`NÍVEL ${ev.level}! +1 ponto de habilidade`, "⬆️");
+        pushFeed(`⬆️ ${c.name} alcançou o nível ${ev.level}!`, "🎉");
+        logWorldActivity(c.uid, "level", `Nv${ev.level}`, ev.level);
+        if (onScore) onScore(c.name, ev.level);
+        dirty = true;
+        break;
+      }
+      case "death": {
+        c.deaths++;
+        const lost = Math.round(xpNeed(c.level) * 0.05);
+        c.xp = Math.max(0, c.xp - lost);
+        pushFeed(`💀 Morreste por ${ev.by} · −${lost} XP`, "💀");
+        dirty = true;
+        break;
+      }
+      case "tower": {
+        if (ev.action === "captured") {
+          c.fame += 25; c.saga.towers++;
+          c.campaign.prog += 1;
+          pushFeed(`🏳️ ${ev.name} capturada pela tua facção! +25 FAMA`, "🏳️");
+          dirty = true;
+        }
+        break;
+      }
+      case "dungeon": {
+        if (ev.action === "clear") {
+          c.saga.dungeons++;
+        }
+        break;
+      }
+      case "duel": {
+        if (ev.action === "win") {
+          c.saga.duels++; c.duelWins++;
+          c.gold += ev.wager || 0;
+          setDuelState(null);
+        } else if (ev.action === "start") setDuelState(ev.opponent);
+        else if (ev.action === "lose") {
+          c.gold = Math.max(0, c.gold - Math.round((ev.wager || 500) * 0.5));
+          setDuelState(null);
+        }
+        dirty = true;
+        break;
+      }
+      case "announce": { pushFeed(ev.text, ev.emoji); break; }
+      case "unlock": { pushFeed(`🌍 Nova terra: ${ev.name}!`, "🌍"); break; }
+      case "interact": {
+        const map: Record<string, string> = {
+          banco: "bank", leilao: "coupons", loja: "shop", feira: "shop",
+          montaria: "mounts", arvore: "clan", obelisco: "fame",
+          fonte: "quests", tenda1: "quests", tenda2: "quests", tenda3: "quests",
+          estatua_h: "fame", sino: "quests", campog: "map",
+        };
+        setPanel(map[ev.id] || "map");
+        break;
+      }
+      case "house": {
+        if (ev.action === "claim") c.house = { built: {}, vault: 0 };
+        if (ev.action === "build") c.house!.built[ev.id] = ev.level;
+        if (ev.action === "deposit") c.house!.vault = ev.vault;
+        dirty = true;
+        break;
+      }
+      case "quest": {
+        // campanha: progresso por capítulo
+        const step = c.campaign.step;
+        const ch = CAMPAIGN[step];
+        if (ch && !c.campaign.done) {
+          const k: Record<string, string> = { kills: "kills", elite: "elite", tower: "tower", duel: "duel", dungeon: "dungeon", house: "house", villain: "villain", worldboss: "worldboss" };
+          if (k[ch.kind] === ev.kind) c.campaign.prog += 1;
+        }
+        dirty = true;
+        break;
+      }
+      case "region": { break; }
+      case "mp-fail": { showToast("Mana insuficiente!", "💧"); break; }
+      case "player-join": { pushFeed(`${ev.name} entrou no mundo`, "👋"); break; }
+      case "villain": {
+        if (ev.action === "spawn") pushFeed(`😈 ${ev.name} apareceu — caça-o!`, "😈");
+        dirty = true;
+        break;
+      }
+      case "worldboss": {
+        if (ev.action === "spawn") pushFeed(`☄️ ${ev.name} despertou!`, "☄️");
+        break;
+      }
+      case "mount": {
+        if (ev.action === "ride") { c.activeMount = ev.id; dirty = true; }
+        if (ev.action === "dismount") { c.activeMount = null; dirty = true; }
+        break;
+      }
+    }
+    if (dirty) { saveChar(c); engineRef.current?.setStats(deriveStats(c), c.level); rerender(); }
+  }, [pushFeed, showToast, rerender, onScore]);
 
-  // v4: aplicar qualidade ao motor quando muda
+  // ── HUD polling (5Hz) ─────────────────────────────────────
   useEffect(() => {
-    try { localStorage.setItem("bateu_world_quality", quality); } catch { /* ignore */ }
-    engineRef.current?.setQuality(quality);
-  }, [quality, phase]);
-
-  // v3: polling de chefe + buffs (300ms)
-  useEffect(() => {
-    if (phase !== "world") return;
+    if (phase !== "play") return;
     const iv = setInterval(() => {
       const eng = engineRef.current;
       if (!eng) return;
-      const bb = eng.getBossBar?.() || null;
-      setBossBar(bb ? { name: bb.name, pct: bb.pct } : null);
-      const bf = eng.getBuffs?.() || { atk: 0, hot: 0 };
-      setBuffs(bf);
-      // v6: bússola do waypoint
-      const cp = eng.getCompass?.() || null;
-      setCompass(cp && cp.dist > 3 ? { angle: cp.angle, dist: cp.dist } : null);
-      setGuardOn(eng.isGuarding?.() || false);
-      // v17: forma + KI + Power Level (scouter vivo) — só atualiza se MUDOU
-      // (seters condicionais evitam re-renders 3×/s do componente gigante)
-      const f = eng.formLevel ?? 0;
-      setForm((prev) => (prev === f ? prev : f));
-      const kv = eng.kiLevel ?? 100;
-      setKi((prev) => (prev === kv ? prev : kv));
-      const plv = eng.getPowerLevel?.() ?? 0;
-      setMyPl((prev) => (prev === plv ? prev : plv));
-      const dr = eng.pendingDuelReq ?? null;
-      setDuelReq((prev) => (prev?.from === dr?.from && prev?.pl === dr?.pl ? prev : dr));
-    }, 300);
+      const st = eng.getState();
+      setHud({
+        hp: st.hp, maxHp: st.maxHp, mp: st.mp, maxMp: st.maxMp,
+        level: st.level, xp: charRef.current?.xp || 0, x: st.x, z: st.z,
+        target: st.target, region: st.region, cds: [...(st.cds || [0, 0, 0, 0, 0, 0])],
+        buffs: st.buffs || [], dead: st.dead, gold: charRef.current?.gold || 0,
+        fps: st.fps, online: eng.getOnline(),
+      });
+      setBossBar(eng.getBossBar());
+    }, 200);
     return () => clearInterval(iv);
   }, [phase]);
 
-  // v17: heróis online perto (para duelos) — 1,5s, só se mudou
-  useEffect(() => {
-    if (phase !== "world") return;
-    const iv = setInterval(() => {
-      const list = engineRef.current?.getPlayersList?.() || [];
-      setPlayersNear((prev) => {
-        if (prev.length === list.length && prev.every((p, i) => p.id === list[i].id && p.pl === list[i].pl && p.dist === list[i].dist)) return prev;
-        return list;
-      });
-      if (engineRef.current?.duelOpponent) setDuelNow(Date.now());
-    }, 1500);
-    return () => clearInterval(iv);
-  }, [phase]);
-
-  // v3: dicas rotativas
-  useEffect(() => {
-    if (phase !== "world") return;
-    const iv = setInterval(() => setTipIdx((i) => (i + 1) % TIPS.length), 7000);
-    return () => clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  // ── Boot (v9: TODOS jogam — com conta sincroniza na nuvem, sem conta joga como convidado) ──────
-  useEffect(() => {
-    if (authLoading) return; // espera pela sessão da plataforma
-    const c = loadChar();
-    if (c && user) {
-      // v6: progresso ligado à CONTA da plataforma (não ao dispositivo)
-      c.uid = "bw_" + user.id;
-      if (!c.name || c.name === "Herói") c.name = (profile?.display_name || user.email?.split("@")[0] || "Herói").slice(0, 14);
-      persist(c);
-      setChar(c);
-      setPhase("world");
-      // v6: merge com o servidor — o nível mais alto vence (multi-dispositivo)
-      (async () => {
-        const srv = await fetchServerChar(c.uid);
-        if (srv && srv.level > c.level) {
-          const merged: Char = { ...c, level: srv.level, xp: Math.max(c.xp, srv.xp || 0), gold: Math.max(c.gold, srv.gold || 0), kills: Math.max(c.kills, srv.total_kills || 0) };
-          persist(merged);
-          setChar(merged);
-          pushToast(`☁️ Progresso da conta restaurado — nível ${srv.level}!`, "good");
-        }
-        const flushed = await flushPendingExchanges();
-        if (flushed > 0) pushToast(`☁️ ${flushed} troca(s) pendente(s) processada(s) na tua conta!`, "good");
-      })();
-    } else if (c) {
-      // v9: CONVIDADO — tem progresso anterior neste dispositivo, continua de onde ficou
-      setChar(c);
-      setPhase("world");
-      setTimeout(() => pushToast("👋 Estás a jogar como convidado — cria conta para guardar o progresso na nuvem!", "info"), 2200);
-    } else {
-      setPhase("create");
-    }
-    let alive = true;
-    (async () => {
-      setBootMsg("A carregar sorteios, feira e cupões...");
-      const data = await fetchPlatformData();
-      if (!alive) return;
-      platformRef.current = data;
-      setPlatform(data);
-      const eng = engineRef.current;
-      if (eng) {
-        eng.spawnPlatformObjects({
-          raffles: data.raffles.map((r) => ({ id: r.id, title: r.title, prizeTitle: r.prizeTitle })),
-          contests: data.contests.map((x) => ({ id: x.id, title: x.title, prize: x.prize })),
-          vouchers: data.vouchers.map((v) => ({ id: v.id, code: v.code, label: voucherLabel(v) })),
-          assets: data.assets.map((a) => ({ id: a.id, title: a.title, value: a.value, modality: a.modality })),
-        });
-      }
-    })();
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.id]);
-
-  // ── Persistência ───────────────────────────────────────────
-  const persist = useCallback((c: Char) => {
-    charRef.current = c;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(c)); } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (!char) return;
-    charRef.current = char;
-    const t = setTimeout(() => {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(char)); } catch { /* ignore */ }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [char]);
-
-  // Sincronização com a base a cada 20s
-  useEffect(() => {
-    if (phase !== "world" || !char) return;
-    const iv = setInterval(() => {
-      const c = charRef.current;
-      if (!c) return;
-      const s = calcStats(c);
-      upsertCharacter({
-        guest_id: c.uid, name: c.name, class_id: c.classId, level: c.level, xp: c.xp,
-        gold: c.gold, hp: s.maxHp, max_hp: s.maxHp, atk: s.atk, spd: Math.round(s.spd),
-        total_kills: c.kills, is_online: true,
-      });
-      // v6: espelho completo do herói na conta (ranking global + avatar)
-      upsertWorldProgress({
-        guest_id: c.uid, user_id: user?.id || null, name: c.name, class_id: c.classId,
-        level: c.level, points: c.pts, kills: c.kills, discoveries: c.discoveries,
-        xp: c.xp, gold: c.gold, deaths: c.deaths, def: s.def,
-        avatar: c.avatar, vouchers_count: c.vouchers.length, waves_best: c.wavesBest,
-      });
-      setLastSync(new Date());
-    }, 20000);
-    return () => {
-      clearInterval(iv);
-      const c = charRef.current;
-      if (c) setCharacterOffline(c.uid);
-    };
-  }, [phase, char?.uid]);
-
-  // ── Subida de nível ────────────────────────────────────────
-  const applyXp = useCallback((p: Char, addXp: number): Char => {
-    let { level, points } = p;
-    let xp = p.xp + addXp;
-    let leveled = false;
-    while (xp >= xpNeeded(level) && level < 60) {
-      xp -= xpNeeded(level);
-      level += 1;
-      points += 3;
-      leveled = true;
-    }
-    if (leveled) {
-      // v4: os efeitos colaterais do level-up são ADIADOS para fora da fase
-      // de render (updaters têm de ser puros — evita o aviso do React e
-      // atualizações cruzadas de componentes durante o render)
-      const gainedCredits = 3 * (level - (p.level || level)) || 3; // v17: +3 créditos por nível
-      setTimeout(() => {
-        confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 }, colors: ["#f43f5e", "#fbbf24", "#38bdf8"] });
-        worldAudio.play("levelup"); // v13: fanfarra no pico emocional (regra pico-fim)
-        pushToast(`🎉 Subiste para o nível ${level}! ${titleFor(level)} · +3 pontos · +${gainedCredits} 💎`, "good");
-        showBanner({ kind: "levelup", emoji: "⚡", title: `NÍVEL ${level}`, sub: `${titleFor(level)} · +3 pontos · +${gainedCredits} 💎 créditos` });
-        engineRef.current?.levelFx();
-        scoreRef.current?.("Bateu World", level * 1000);
-        logWorldActivity(charRef.current?.uid || "anon", "level", `Subiu para o nível ${level}`, level);
-        // v17: nível múltiplo de 5 = conquista nos Stories
-        if (charRef.current?.shareWin && level % 5 === 0) {
-          publishWinStory(`⚡ Cheguei ao NÍVEL ${level} no Bateu World! ${titleFor(level)} — Power Level sempre a subir 🚀`, "from-violet-500 via-purple-600 to-indigo-700");
-        }
-        // v4: o companheiro alado junta-se no nível 5
-        if (level >= 5 && !petToastDone.current) {
-          petToastDone.current = true;
-          setChar((p2) => (p2 && !p2.pet ? { ...p2, pet: true } : p2));
-          engineRef.current?.setPet(true);
-          setTimeout(() => {
-            pushToast("🐾 Um companheiro alado juntou-se a ti! +8% de ataque", "good");
-            showBanner({ kind: "discover", emoji: "🐾", title: "COMPANHEIRO!", sub: "Alado fiel · +8% de ataque" });
-            confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 }, colors: ["#fde68a", "#fbbf24"] });
-          }, 1500);
-        }
-        const s = calcStats({ ...p, level });
-        engineRef.current?.syncStats(s, level);
-        engineRef.current?.healFull();
-      }, 40);
-    }
-    // v17: +3 créditos por cada nível subido (os créditos são a moeda dos prémios)
-    const lvlCredits = 3 * Math.max(0, level - (p.level || level));
-    return { ...p, xp, level, points, credits: p.credits + lvlCredits };
-  }, [pushToast, showBanner]);
-
-  // ── v13: ONBOARDING "PRIMEIROS PASSOS" ─────────────────────
-  // Avanço com fast-forward: se o jogador fizer algo avançado cedo (ex.: matar
-  // antes de explorar), completa os passos intermédios e entrega as recompensas.
-  const onbAdvance = useCallback((step: number) => {
-    const c = charRef.current;
-    // step = ÍNDICE do passo concluído; pode ser o atual (avança 1) ou à frente (fast-forward)
-    if (!c?.onb || c.onb.done || step < c.onb.step) return;
-    const gained = step - c.onb.step + 1; // passos concluídos nesta ação
-    const finished = step + 1 >= ONB_STEPS.length;
-    setChar((p) => {
-      if (!p?.onb || p.onb.done || step < p.onb.step) return p;
-      const n = { ...p, onb: finished ? { done: true, step } : { done: false, step: step + 1 }, gold: p.gold + 40 * gained };
-      return applyXp(n, 20 * gained);
-    });
-    const st = ONB_STEPS[step];
-    setTimeout(() => {
-      pushToast(`✅ ${st.emoji} ${st.title} — +${20 * gained} XP · +${40 * gained} ouro`, "good");
-      worldAudio.play("coin");
-      if (finished) {
-        pushToast("🎓 Aventureiro de Bateu formado! O mundo é teu.", "good");
-        showBanner({ kind: "discover", emoji: "🎓", title: "AVENTUREIRO DE BATEU", sub: "Guia completo — o mundo inteiro desbloqueado" });
-        confetti({ particleCount: 120, spread: 85, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8", "#f43f5e"] });
-      }
-    }, 60);
-  }, [applyXp, pushToast, showBanner]);
-
-  const onbSkip = useCallback(() => {
-    setChar((p) => (p?.onb && !p.onb.done ? { ...p, onb: { done: true, step: p.onb.step } } : p));
-    setTimeout(() => pushToast("🧭 Guia ignorado — explora livre, herói!", "info"), 40);
-  }, [pushToast]);
-
-  // passo 0 (explorar): polling da posição do herói
-  useEffect(() => {
-    if (phase !== "world" || char?.onb?.done || char?.onb?.step !== 0) return;
-    const iv = setInterval(() => {
-      const pos = engineRef.current?.getPos?.();
-      if (pos && Math.hypot(pos.x, pos.z) > 16) onbAdvance(0);
-    }, 700);
-    return () => clearInterval(iv);
-  }, [phase, char?.onb?.done, char?.onb?.step, onbAdvance]);
-
-  // passo 4 (ficha do herói): abrir o painel completa o guia
-  useEffect(() => {
-    if (panel === "char") onbAdvance(4);
-  }, [panel, onbAdvance]);
-
-  // ── Entrada no mundo ───────────────────────────────────────
-  const enterWorld = useCallback((c: Char) => {
-    const today = todayStr();
-    // v6: identidade da CONTA — o progresso segue-te em qualquer dispositivo
-    if (user) c.uid = "bw_" + user.id;
-    if (c.lastDaily !== today) {
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      c.streak = c.lastDaily === yesterday ? c.streak + 1 : 1;
-      c.lastDaily = today;
-      // v17: presença diária mais modesta (subir tem de ser difícil)
-      const bonus = 80 + c.streak * 25;
-      c.gold += bonus;
-      c.pts += 3;
-      setTimeout(() => pushToast(`🔥 Presença diária: +${bonus} ouro · +3 pts (streak ${c.streak})`, "good"), 900);
-    }
-    persist(c);
-    setChar(c);
-    setPhase("world");
-    // v8: sincroniza atividades em fila de sessões anteriores
-    flushWorldActivity();
-  }, [persist, pushToast, user]);
-
-  // ── Ações do Banco de Pontos ───────────────────────────────
-  const doExchange = useCallback(async (id: string) => {
-    const c = charRef.current;
-    if (!c) return;
-    const ex = EXCHANGES.find((e) => e.id === id);
-    if (!ex) return;
-    if (c.pts < ex.cost) {
-      pushToast(`Pontos insuficientes — precisas de ${ex.cost} pts`, "info");
-      return;
-    }
-    setChar((p) => {
-      if (!p || p.pts < ex.cost) return p;
-      const n = { ...p, pts: p.pts - ex.cost };
-      if (id === "gold") { n.gold += 200; pushToast("💰 +200 de ouro no ponto!", "good"); }
-      if (id === "shield") {
-        const until = Date.now() + 600000;
-        n.shieldUntil = until;
-        engineRef.current?.setShield(600000);
-        pushToast("🛡️ Escudo ativo durante 10 minutos!", "good");
-      }
-      if (id === "ticket") {
-        pushToast("🎫 Bilhete garantido! Boa sorte no sorteio.", "good");
-        setTimeout(() => go("/sorteios"), 800);
-      }
-      if (id === "voucher") {
-        const pd = platformRef.current;
-        const avail = (pd?.vouchers || []).filter((v) => !p.vouchers.find((x) => x.id === v.id));
-        if (avail.length > 0) {
-          const v = avail[Math.floor(Math.random() * avail.length)];
-          const label = voucherLabel(v);
-          n.vouchers = [...p.vouchers, { id: v.id, code: v.code, label }];
-          pushToast(`🎟️ Cupão real ${v.code} é teu!`, "good");
-          confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-          // v6: o cupão fica GUARDADO NA CONTA da plataforma (não só no dispositivo)
-          claimWorldVoucher(v.id, v.code, label).then((okk) => {
-            if (okk) pushToast("☁️ Cupão sincronizado com a tua conta!", "good");
-          });
-        } else {
-          n.gold += 300;
-          pushToast("Sem cupões novos disponíveis — +300 de ouro como alternativa!", "info");
-        }
-      }
-      if (id === "cash") {
-        (async () => {
-          const res = await exchangeWorldPoints(ex.cost, p.uid);
-          if (res === "ok") pushToast("💵 10 MT creditados na tua carteira!", "good");
-          else if (res === "no-auth") {
-            pushToast("Entra na tua conta Bateu para receber moeda real — o pedido ficou registado.", "info");
-            n.gold += 100; // compensação local enquanto não há conta
-          } else {
-            pushToast("Conversão em fila — o saldo será creditado na tua conta.", "info");
-          }
-        })();
-      }
-      return n;
-    });
-  }, [pushToast]);
-
-  // ── Motor 3D ───────────────────────────────────────────────
-  useEffect(() => {
-    if (phase !== "world" || !canvasRef.current || !char || engineRef.current) return;
-    const c = charRef.current!;
-
-    const eng = new WorldEngine(canvasRef.current, {
-      name: c.name, classId: c.classId, level: c.level, uid: c.uid,
-      stats: calcStats(c),
-      avatar: c.avatar,
-      onEvent: (ev) => {
-        const cur = charRef.current;
-        if (!cur) return;
-        switch (ev.type) {
-          case "hp":
-            setHud({ hp: Math.round(ev.hp), maxHp: Math.round(ev.maxHp), hit: ev.hit ? Date.now() : 0 });
-            break;
-          case "gain": {
-            setChar((p) => {
-              if (!p) return p;
-              const n = { ...p, xp: p.xp + ev.xp, gold: p.gold + ev.gold };
-              return applyXp(n, 0);
-            });
-            break;
-          }
-          case "kill": {
-            setChar((p) => {
-              if (!p) return p;
-              const q = { ...p.quests };
-              if (q.date === todayStr()) q.kills += 1; else { q.date = todayStr(); q.kills = 1; }
-              const saga = { ...p.saga, kills: p.saga.kills + 1 };
-              if (ev.boss) saga.bosses += 1;
-              // v17: créditos de chefe/guardião/elite
-              const credits = p.credits + (ev.credits || 0);
-              return applyXp({ ...p, kills: p.kills + 1, pts: p.pts + (ev.pts || 1), credits, quests: q, saga }, 0);
-            });
-            onbAdvance(1);
-            if (ev.boss) {
-              pushToast(`👑 Derrotaste o ${ev.name}! +${ev.pts} pts${ev.credits ? ` · +${ev.credits} 💎` : ""}`, "good");
-              // v17: vitória sobre chefe vai para os Stories (com conta)
-              if (charRef.current?.shareWin) {
-                publishWinStory(`👑 Derrotei o ${ev.name} no Bateu World! Power Level em subida 🚀`, "from-amber-500 via-orange-600 to-red-700");
-              }
-            }
-            // v17: PRÉMIO MÁXIMO — 1GB (drop raríssimo)
-            if (ev.prizeGb) {
-              const code = newPrizeCode();
-              setChar((p) => (p ? { ...p, prizes: [...p.prizes, { id: "pz_" + Date.now().toString(36), code, op: "", ts: Date.now(), claimed: false }] } : p));
-              setPrize({ code });
-              confetti({ particleCount: 240, spread: 110, origin: { y: 0.4 }, colors: ["#22c55e", "#fbbf24", "#38bdf8"] });
-              worldAudio.play("coin");
-            }
-            break;
-          }
-          case "loot": {
-            const it = ev.item as LootItem;
-            setChar((p) => (p ? { ...p, inv: [...p.inv, it] } : p));
-            const meta = RARITY_META[it.rarity];
-            pushToast(`${it.emoji} ${meta.name}: ${it.name} (+${it.atk}⚔️ +${it.hp}❤️ +${it.spd}⚡)`, it.rarity >= 2 ? "good" : "info");
-            if (it.rarity >= 2) {
-              confetti({ particleCount: it.rarity === 3 ? 150 : 90, spread: 80, origin: { y: 0.55 }, colors: [meta.color, "#fbbf24"] });
-              showBanner({ kind: "discover", emoji: it.emoji, title: meta.name.toUpperCase(), sub: it.name });
-            }
-            break;
-          }
-          case "combo": {
-            setCombo(ev.n);
-            if (comboTimer.current) clearTimeout(comboTimer.current);
-            comboTimer.current = setTimeout(() => setCombo(0), 4200);
-            break;
-          }
-          case "arena": {
-            if (ev.action === "start") {
-              setArenaHud({ wave: 0, alive: 0 });
-              showBanner({ kind: "wave", emoji: "🏟️", title: "ARENA DAS ONDAS", sub: "Sobrevive o máximo de ondas que conseguires!" });
-            } else if (ev.action === "wave") {
-              setArenaHud({ wave: ev.wave, alive: ev.count });
-              showBanner({ kind: "wave", emoji: ev.boss ? "👑" : "⚔️", title: `ONDA ${ev.wave}`, sub: ev.boss ? "ONDA DE CHEFE — cuidado!" : `${ev.count} inimigos entraram na arena` });
-            } else if (ev.action === "cleared") {
-              setArenaHud((h) => (h ? { ...h, alive: 0 } : h));
-              pushToast(`✅ Onda ${ev.wave} limpa! +${ev.pts} pts · +${ev.gold} ouro`, "good");
-              setChar((p) => {
-                if (!p) return p;
-                const q = { ...p.quests };
-                if (q.date === todayStr()) q.waves += 1; else { q.date = todayStr(); q.waves = 1; }
-                return { ...p, wavesBest: Math.max(p.wavesBest, ev.wave), quests: q };
-              });
-            } else if (ev.action === "end") {
-              setArenaHud(null);
-              if (ev.wave > 0) {
-                setArenaEnd({ wave: ev.wave, kills: ev.kills, pts: ev.pts, gold: ev.gold, xp: ev.xp });
-                setChar((p) => {
-                  if (!p) return p;
-                  const n = applyXp({ ...p, gold: p.gold + ev.gold, pts: p.pts + ev.pts, wavesBest: Math.max(p.wavesBest, ev.wave) }, ev.xp);
-                  return n;
-                });
-              }
-            }
-            break;
-          }
-          case "near":
-            setNear(ev.label);
-            break;
-          case "inside":
-            // v8: entrou/saiu de um interior (casa, farol, fortim...)
-            setInside(ev.on ? { name: ev.name, desc: ev.desc } : null);
-            break;
-          case "open":
-            if (ev.kind === "arena") {
-              setCard({ kind: "arena", id: "arena" });
-            } else {
-              handleOpen(ev.kind, ev.id);
-            }
-            break;
-          case "quest":
-            setChar((p) => {
-              if (!p) return p;
-              const q = { ...p.quests };
-              if (q.date !== todayStr()) { q.date = todayStr(); q.kills = 0; q.chest = 0; q.visit = 0; q.steal = 0; q.waves = 0; q.item = 0; q.duel = 0; q.atk = 0; q.home = 0; }
-              const saga = { ...p.saga };
-              if (ev.kind === "chest") { q.chest += 1; saga.chests += 1; }
-              if (ev.kind === "visit") q.visit += 1;
-              if (ev.kind === "home") q.home += 1;
-              return { ...p, quests: q, saga };
-            });
-            break;
-          case "discover": {
-            // v8: tudo o que acontece fica registado na plataforma
-            logWorldActivity(cur.uid, "discover", ev.name, 10);
-            setChar((p) => {
-              if (!p) return p;
-              if (p.discoveries.includes(ev.id)) return p;
-              const n = applyXp({ ...p, pts: p.pts + 10, discoveries: [...p.discoveries, ev.id], saga: { ...p.saga, discovers: p.saga.discovers + 1 } }, ev.xp);
-              return n;
-            });
-            showBanner({ kind: "discover", emoji: ev.emoji, title: ev.name, sub: `Descoberta! +${ev.xp} XP · +10 pts` });            confetti({ particleCount: 60, spread: 60, origin: { y: 0.55 }, colors: ["#fbbf24", "#38bdf8"] });
-            break;
-          }
-          case "skill2": {
-            if (!ev.ok) {
-              if (ev.reason === "locked") pushToast(`Poder desbloqueia no nível ${ev.lvl}`, "info");
-              else if (ev.reason === "cd") setSkillCds((s) => s.map((v, i) => (i === ev.slot ? Math.max(v, ev.remain) : v)));
-            } else {
-              setSkillCds((s) => s.map((v, i) => (i === ev.slot ? ev.cd : v)));
-            }
-            break;
-          }
-          case "pvpatk":
-            setChar((p) => {
-              if (!p) return p;
-              const q = { ...p.quests };
-              if (q.date === todayStr()) q.atk += 1; else { q.date = todayStr(); q.atk = 1; }
-              return { ...p, quests: q };
-            });
-            break;
-          case "worldevent":
-            setWorldEvent({ kind: ev.kind, name: ev.name, emoji: ev.emoji, until: Date.now() + (ev.dur || 60000) });
-            showBanner({ kind: "wave", emoji: ev.emoji, title: String(ev.name || "").toUpperCase(), sub: ev.desc || "" });
-            pushToast(`${ev.emoji} ${ev.name}: ${ev.desc}`, "info");
-            break;
-          case "worldeventend":
-            setWorldEvent(null);
-            pushToast(`⏳ ${ev.name || "Acontecimento"} terminou — até à próxima!`, "info");
-            break;
-          case "guard":
-            setGuardOn(!!ev.on);
-            break;
-          case "region":
-            showBanner({ kind: "discover", emoji: ev.emoji || "🗺️", title: (ev.name || "").toUpperCase(), sub: ev.desc || "" });
-            pushToast(`🗺️ ${ev.name}: ${ev.desc}`, "info");
-            break;
-          case "pvphitby":
-            pushToast(`⚔️ ${ev.name} atacou-te (-${ev.dmg})!`, "bad");
-            break;
-          case "pvp": {
-            if (ev.action === "steal") {
-              setChar((p) => {
-                if (!p) return p;
-                const n = { ...p, pts: p.pts + (ev.pts || 0) + (ev.bonus || 0), stolenFrom: p.stolenFrom + 1, saga: { ...p.saga, steals: p.saga.steals + 1 } };
-                const q = { ...p.quests };
-                if (q.date === todayStr()) { q.steal += 1; q.duel += 1; } else { q.date = todayStr(); q.steal = 1; q.duel = 1; }
-                if (ev.item) q.item += 1;
-                n.quests = q;
-                if (ev.coupon) n.vouchers = [...p.vouchers, ev.coupon];
-                if (ev.item) n.inv = [...p.inv, ev.item];
-                return n;
-              });
-              logWorldActivity(cur.uid, "steal", `Roubou ${ev.pts} pts a ${ev.victim}`, ev.pts || 0);
-              if (ev.coupon) {
-                (async () => {
-                  try {
-                    const { supabase: sbs } = await import("@/integrations/supabase/client");
-                    await sbs.rpc("world_steal_voucher", { p_victim_guest: ev.victimId || "", p_code: ev.coupon.code, p_label: ev.coupon.label, p_voucher_id: ev.coupon.id });
-                  } catch { /* silencioso */ }
-                })();
-              }
-              pushToast(`💀 Roubaste ${ev.pts} pts a ${ev.victim}${ev.bonus ? ` +${ev.bonus} FRENESI!` : ""}${ev.coupon ? ` + cupão ${ev.coupon.code}!` : ""}${ev.item ? ` + ITEM ${ev.item.emoji} ${ev.item.name}!` : ""}`, "good");
-              worldAudio.play("steal");
-              confetti({ particleCount: ev.item || ev.coupon ? 140 : 100, spread: 70, origin: { y: 0.5 }, colors: ["#f43f5e", "#fbbf24"] });
-            } else if (ev.action === "death") {
-              // Fui roubado — calcula perdas e transmite (v7: também posso perder um ITEM)
-              setChar((p) => {
-                if (!p) return p;
-                const stolenPts = Math.min(p.pts, Math.max(10, Math.ceil(p.pts * 0.25)));
-                let coupon = null;
-                if (p.vouchers.length > 0 && Math.random() < 0.35) {
-                  coupon = p.vouchers[Math.floor(Math.random() * p.vouchers.length)];
-                }
-                let item: LootItem | null = null;
-                if (p.inv.length > 0 && Math.random() < 0.3) {
-                  item = p.inv[Math.floor(Math.random() * p.inv.length)];
-                }
-                const n: Char = {
-                  ...p,
-                  pts: p.pts - stolenPts,
-                  vouchers: coupon ? p.vouchers.filter((v) => v.id !== coupon.id) : p.vouchers,
-                  inv: item ? p.inv.filter((it) => it.id !== item.id) : p.inv,
-                  lostTo: p.lostTo + 1,
-                  deaths: p.deaths + 1,
-                  shieldUntil: Date.now() + 180000,
-                };
-                engineRef.current?.setShield(180000);
-                engineRef.current?.broadcastPvpDeath(ev.killerId, ev.by, stolenPts, coupon, item);
-                return n;
-              });
-              setDeathFx(true);
-              pushToast(`💀 ${ev.by} derrotou-te e roubou-te pontos/cupões/itens! Proteção de 3 min ativa.`, "bad");
-              setTimeout(() => setDeathFx(false), 1600);
-            } else if (ev.action === "feed") {
-              pushToast(`⚔️ ${ev.kn} roubou ${ev.vn}... o mundo é perigoso!`, "info");
-            }
-            break;
-          }
-          // ── v11: câmaras, clima, recolha, diálogo, montaria ──
-          case "camchange":
-            setCamMode(ev.mode as 0 | 1 | 2);
-            break;
-          case "weather":
-            pushToast(`${ev.emoji} ${ev.name}: ${ev.desc}`, "info");
-            setWeatherChip(ev.kind === "clear" ? null : { name: ev.name, emoji: ev.emoji });
-            break;
-          case "gather":
-            setChar((p) => {
-              if (!p) return p;
-              const mat = { ...p.mat };
-              if (ev.kind === "erva") mat.erva += 1;
-              else if (ev.kind === "minério") mat.minerio += 1;
-              else mat.cristal += 1;
-              const q = { ...p.quests };
-              if (q.date === todayStr()) q.gather += 1;
-              else { q.date = todayStr(); q.gather = 1; }
-              return { ...p, mat, quests: q };
-            });
-            pushToast(`${ev.kind === "erva" ? "🌿" : ev.kind === "minério" ? "⛏️" : "💎"} +1 ${ev.name} — material para a Oficina!`, "good");
-            if (ev.kind === "erva") onbAdvance(2);
-            worldAudio.play("coin");
-            break;
-          case "dialogue":
-            setDialogue(String(ev.npc || "gomas"));
-            setDlgStep(0);
-            setDlgText("");
-            if (String(ev.npc || "").includes("gomas")) onbAdvance(3);
-            break;
-          case "mount":
-            setMountOn(!!ev.on);
-            pushToast(ev.on ? "🐺 Montaste o Lobo Veloz — +75% de velocidade!" : "🐺 Desmontaste — o lobo descansa.", "good");
-            break;
-          case "notify":
-            pushToast(ev.msg, ev.tone);
-            break;
-          case "chat":
-            setChatMsgs((m) => [...m.slice(-30), { n: ev.name, m: ev.msg }]);
-            break;
-          case "online":
-            setOnline(Math.max(1, ev.count));
-            break;
-          case "playerjoin":
-            if (ev.name) pushToast(`👋 ${String(ev.name).slice(0, 12)} entrou no mundo`, "info");
-            break;
-          case "death":
-            setDeathFx(true);
-            pushToast(`💀 Foste derrotado por ${ev.by}...`, "bad");
-            setChar((p) => (p ? { ...p, deaths: p.deaths + 1 } : p));
-            logWorldActivity(cur.uid, "death", `Derrotado por ${ev.by}`, 1);
-            setTimeout(() => setDeathFx(false), 1600);
-            break;
-          // ── v17: ERA DRAGON BALL ──
-          case "form": {
-            setForm(ev.form || 0);
-            setMyPl(ev.pl || 0);
-            if (ev.form > 0) {
-              showBanner({ kind: "levelup", emoji: "⚡", title: `POWER LEVEL: ${String(ev.pl)}`, sub: ev.form === 2 ? "SEGUNDA TRANSFORMAÇÃO!" : "PRIMEIRA TRANSFORMAÇÃO!" });
-              pushToast(`⚡ Transformação ativa — Power Level ${ev.pl}! (drena KI)`, "good");
-            } else {
-              pushToast("Voltaste à forma base — KI a recarregar", "info");
-            }
-            break;
-          }
-          case "duelreq": {
-            setDuelReq({ from: ev.from, name: ev.name, pl: ev.pl || 0 });
-            pushToast(`⚔️ ${ev.name} (PL ${ev.pl}) desafiou-te para um duelo!`, "info");
-            break;
-          }
-          case "duelreqend":
-            setDuelReq(null);
-            break;
-          case "duelstart": {
-            setDuelReq(null);
-            setDuelVs({ name: ev.vs, until: ev.until || Date.now() + 90000 });
-            showBanner({ kind: "wave", emoji: "⚔️", title: "DUELO INICIADO", sub: `Tu vs ${ev.vs} — 90 segundos!` });
-            break;
-          }
-          case "duelend": {
-            setDuelVs(null);
-            if (ev.won === true) {
-              const credits = 10 + Math.floor(Math.random() * 6); // 10-15
-              setChar((p) => (p ? { ...p, credits: p.credits + credits, pts: p.pts + 8, duelsWon: p.duelsWon + 1 } : p));
-              confetti({ particleCount: 150, spread: 85, origin: { y: 0.5 }, colors: ["#fbbf24", "#f43f5e", "#38bdf8"] });
-              showBanner({ kind: "levelup", emoji: "🏆", title: "VITÓRIA NO DUELO!", sub: `Derrotaste ${ev.vs} · +${credits} 💎 · +8 pts` });
-              logWorldActivity(cur.uid, "duel", `Venceu o duelo contra ${ev.vs}`, credits);
-              if (charRef.current?.shareWin) {
-                publishWinStory(`⚔️ Venci ${ev.vs} num DUELO 1v1 no Bateu World! Alguém me desafia? 💎+${credits}`, "from-red-500 via-rose-600 to-purple-700");
-              }
-            } else if (ev.won === false) {
-              pushToast(`💀 Perdeste o duelo contra ${ev.vs}... treina e volta!`, "bad");
-              logWorldActivity(cur.uid, "duel", `Perdeu o duelo contra ${ev.vs}`, 0);
-            } else {
-              pushToast(`⏳ Duelo contra ${ev.vs} terminou em empate`, "info");
-            }
-            break;
-          }
-          case "prize": {
-            // v17: 1GB — qualquer operadora (drop raríssimo / debug)
-            const code = newPrizeCode();
-            setChar((p) => (p ? { ...p, prizes: [...p.prizes, { id: "pz_" + Date.now().toString(36), code, op: "", ts: Date.now(), claimed: false }] } : p));
-            setPrize({ code });
-            confetti({ particleCount: 240, spread: 110, origin: { y: 0.4 }, colors: ["#22c55e", "#fbbf24", "#38bdf8"] });
-            worldAudio.play("coin");
-            break;
-          }
-        }
-      },
-    });
-    engineRef.current = eng;
-    (window as any).__bw = eng; // debug hook
-    // v4: pet já desbloqueado em saves antigos
-    if (c.level >= 5 && !petToastDone.current) {
-      petToastDone.current = true;
-      eng.setPet(true);
-    } else if (charRef.current?.pet) {
-      eng.setPet(true);
-    }
-    if (platformRef.current) {
-      eng.spawnPlatformObjects({
-        raffles: platformRef.current.raffles.map((r) => ({ id: r.id, title: r.title, prizeTitle: r.prizeTitle })),
-        contests: platformRef.current.contests.map((x) => ({ id: x.id, title: x.title, prize: x.prize })),
-        vouchers: platformRef.current.vouchers.map((v) => ({ id: v.id, code: v.code, label: voucherLabel(v) })),
-        assets: platformRef.current.assets.map((a) => ({ id: a.id, title: a.title, value: a.value, modality: a.modality })),
-      });
-    }
-
-    // v8: PLATAFORMA AO VIVO — qualquer mudança (sorteio, concurso,
-    // cupão, bem) reflete-se no mundo sem recarregar nada
-    const unsubPlat = subscribePlatformLive((kind) => {
-      (async () => {
-        try {
-          const pd = await fetchPlatformData();
-          platformRef.current = pd;
-          setPlatform(pd);
-          eng.spawnPlatformObjects({
-            raffles: pd.raffles.map((r) => ({ id: r.id, title: r.title, prizeTitle: r.prizeTitle })),
-            contests: pd.contests.map((x) => ({ id: x.id, title: x.title, prize: x.prize })),
-            vouchers: pd.vouchers.map((v) => ({ id: v.id, code: v.code, label: voucherLabel(v) })),
-            assets: pd.assets.map((a) => ({ id: a.id, title: a.title, value: a.value, modality: a.modality })),
-          });
-          const msgs: Record<string, string> = {
-            raffle: "🎁 Sorteios atualizados — novos cristais no Templo!",
-            contest: "🏆 Concursos atualizados na Torre!",
-            voucher: "🎟️ Novos cupões esperam-te no Cofre!",
-            asset: "🛒 Novos bens na Feira Bateu!",
-          };
-          tickerId.current += 1;
-          const tid = tickerId.current;
-          setTicker((t) => [...t.slice(-2), { id: tid, msg: msgs[kind] || "📡 A plataforma foi atualizada!" }]);
-          setTimeout(() => setTicker((t) => t.filter((x) => x.id !== tid)), 7000);
-        } catch { /* ignore */ }
-      })();
-    });
-
-    return () => {
-      unsubPlat();
-      eng.dispose();
-      engineRef.current = null;
-    };
-  }, [phase, char?.uid]);
-
-  const handleOpen = useCallback((kind: string, id: string) => {
-    const c = charRef.current;
-    if (kind === "voucher") {
-      const pd = platformRef.current;
-      const v = pd?.vouchers.find((x) => x.id === id);
-      if (v && c && !c.vouchers.find((x) => x.id === v.id)) {
-        const label = voucherLabel(v);
-        setChar((p) => (p ? { ...p, vouchers: [...p.vouchers, { id: v.id, code: v.code, label }], gold: p.gold + 25 } : p));
-        setCard({ kind, id });
-        pushToast(`🎟️ Cupão ${v.code} guardado no teu perfil!`, "good");
-        // v6: sincroniza o cupão com a conta da plataforma
-        claimWorldVoucher(v.id, v.code, label).then((okk) => {
-          if (okk) pushToast("☁️ Cupão sincronizado com a tua conta!", "good");
-        });
-      } else if (v) {
-        setCard({ kind, id });
-      } else {
-        setChar((p) => (p ? { ...p, gold: p.gold + 60 } : p));
-        pushToast("💰 Baú aberto: +60 ouro!", "good");
-      }
-      return;
-    }
-    if (kind === "bank") { setPanel("bank"); return; }
-    setCard({ kind, id });
-  }, [pushToast]);
-
-  // cooldown dos poderes
-  useEffect(() => {
-    if (!skillCds.some((c) => c > 0)) return;
-    const t = setTimeout(() => setSkillCds((s) => s.map((v) => Math.max(0, v - 1))), 1000);
-    return () => clearTimeout(t);
-  }, [skillCds]);
-
-  // v11: máquina de escrever do diálogo dos NPCs
-  useEffect(() => {
-    if (!dialogue) return;
-    const npc = NPC_LINES[dialogue];
-    if (!npc) return;
-    const full = npc.lines[Math.min(dlgStep, npc.lines.length - 1)] || "";
-    if (dlgText.length >= full.length) return;
-    const t = setTimeout(() => setDlgText(full.slice(0, dlgText.length + 1)), 16);
-    return () => clearTimeout(t);
-  }, [dialogue, dlgStep, dlgText]);
-
-  // sincroniza stats com o motor (v6: inclui DEFESA)
-  useEffect(() => {
-    if (!char || phase !== "world") return;
-    const s = calcStats(char);
-    engineRef.current?.syncStats(s, char.level);
-  }, [char?.allocAtk, char?.allocHp, char?.allocSpd, char?.allocDef, char?.level, phase]);
-
-  // v6: escudo equipado visível na mão esquerda do herói
-  useEffect(() => {
-    if (!char || phase !== "world") return;
-    const es = char.equipped?.escudo || null;
-    engineRef.current?.setShieldMesh(es ? es.rarity : null);
-  }, [char?.equipped?.escudo?.id, phase]);
-
-  // minimapa
-  useEffect(() => {
-    if (phase !== "world") return;
-    let alive = true;
-    const draw = () => {
-      if (!alive) return;
-      const cv = document.getElementById("bw-minimap") as HTMLCanvasElement | null;
-      const eng = engineRef.current;
-      if (!cv || !eng) return;
-      const ctx = cv.getContext("2d");
-      if (!ctx) return;
-      const d = eng.getMinimap();
-      const S = 100;
-      const toMap = (x: number, z: number) => [S / 2 + (x / 320) * S, S / 2 + (z / 320) * S];
-      ctx.clearRect(0, 0, S, S);
-      ctx.fillStyle = "rgba(10,14,25,0.85)";
-      ctx.fillRect(0, 0, S, S);
-      ctx.strokeStyle = "rgba(120,140,180,0.4)";
-      ctx.strokeRect(1, 1, S - 2, S - 2);
-      ctx.fillStyle = "rgba(120,140,180,0.5)";
-      ctx.fillRect(S / 2 - 1, 4, 2, S - 8);
-      ctx.fillRect(4, S / 2 - 1, S - 8, 2);
-      // marcos/descobertas
-      for (const m of d.marks || []) {
-        const [mx, my] = toMap(m.x, m.z);
-        ctx.fillStyle = m.found ? "#fbbf24" : "rgba(160,170,190,0.5)";
-        ctx.font = "7px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText(m.found ? "★" : "·", mx, my + 2);
-      }
-      for (const p of d.pois) {
-        const [mx, my] = toMap(p.x, p.z);
-        ctx.fillStyle = { raffle: "#c084fc", asset: "#fbbf24", contest: "#f59e0b", voucher: "#f87171", games: "#38bdf8", bank: "#fde047" }[p.k] || "#fff";
-        ctx.beginPath(); ctx.arc(mx, my, 3, 0, 7); ctx.fill();
-      }
-      for (const m of d.mobs) {
-        const [mx, my] = toMap(m.x, m.z);
-        ctx.fillStyle = ["#4ade80", "#f97316", "#a855f7", "#38bdf8", "#f43f5e"][m.t] || "#fff";
-        ctx.fillRect(mx - 1, my - 1, 2, 2);
-      }
-      for (const pl of d.players) {
-        const [mx, my] = toMap(pl.x, pl.z);
-        ctx.fillStyle = "#60a5fa";
-        ctx.beginPath(); ctx.arc(mx, my, 2, 0, 7); ctx.fill();
-      }
-      const [px, py] = toMap(d.px, d.pz);
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.moveTo(px, py - 4); ctx.lineTo(px + 3, py + 3); ctx.lineTo(px - 3, py + 3);
-      ctx.closePath(); ctx.fill();
-    };
-    const iv = setInterval(draw, 220);
-    return () => { alive = false; clearInterval(iv); };
-  }, [phase]);
-
-  // ── Ações ──────────────────────────────────────────────────
-  const allocate = (kind: "atk" | "hp" | "spd" | "def") => {
-    setChar((p) => {
-      if (!p || p.points <= 0) return p;
-      const n = { ...p, points: p.points - 1 };
-      if (kind === "atk") n.allocAtk += 1;
-      if (kind === "hp") n.allocHp += 1;
-      if (kind === "spd") n.allocSpd += 1;
-      if (kind === "def") n.allocDef += 1; // v6: defesa
-      return n;
-    });
-  };
-
-  const claimQuest = (k: "K" | "C" | "V" | "S" | "W" | "I" | "D" | "A" | "H" | "G") => {
-    setChar((p) => {
-      if (!p) return p;
-      const q = { ...p.quests };
-      const key = k === "K" ? "cK" : k === "C" ? "cC" : k === "V" ? "cV" : k === "S" ? "cS" : k === "W" ? "cW" : k === "I" ? "cI" : k === "D" ? "cD" : k === "H" ? "cH" : k === "G" ? "cG" : "cA";
-      if ((q as any)[key]) return p;
-      const done = k === "K" ? q.kills >= 10 : k === "C" ? q.chest >= 1 : k === "V" ? q.visit >= 1 : k === "S" ? q.steal >= 1 : k === "W" ? q.waves >= 3 : k === "I" ? q.item >= 1 : k === "D" ? q.duel >= 3 : k === "H" ? q.home >= 2 : k === "G" ? q.gather >= 6 : q.atk >= 5;
-      if (!done) return p;
-      (q as any)[key] = true;
-      let { gold, xp, pts } = p;
-      if (k === "K") { gold += 250; }
-      if (k === "C") { xp += 60; }
-      if (k === "V") { xp += 40; }
-      if (k === "S") { gold += 150; }
-      if (k === "W") { gold += 350; pts += 20; }
-      if (k === "I") { gold += 300; pts += 20; }
-      if (k === "D") { gold += 250; pts += 15; }
-      if (k === "A") { gold += 200; pts += 10; }
-      if (k === "H") { gold += 150; pts += 10; }
-      if (k === "G") { gold += 180; xp += 70; }
-      const n = applyXp({ ...p, gold, xp, pts, quests: q }, 0);
-      if (k === "H") logWorldActivity(p.uid, "quest", "Missão de interiores concluída", 10);
-      if (k === "G") logWorldActivity(p.uid, "quest", "Missão de recolha concluída", 10);
-      pushToast(k === "K" ? "✅ Missão: +250 ouro" : k === "S" ? "✅ Missão de ladrão: +150 ouro" : k === "W" ? "✅ Missão de arena: +350 ouro · +20 pts" : k === "I" ? "✅ Ladrão de Relíquias: +300 ouro · +20 pts" : k === "D" ? "✅ Duelista: +250 ouro · +15 pts" : k === "H" ? "✅ Explorador de Interiores: +150 ouro · +10 pts" : k === "G" ? "✅ Colheita Dourada: +180 ouro · +70 XP" : k === "A" ? "✅ Predador: +200 ouro · +10 pts" : "✅ Missão concluída: +XP", "good");
-      return n;
-    });
-  };
-
-  // ── v11: câmaras · ecrã inteiro · leitor de música · Oficina · NPCs ──
-
+  // ── full-screen ───────────────────────────────────────────
   const toggleFs = useCallback(async () => {
-    const el = worldWrapRef.current;
-    if (!el) return;
     try {
       if (!document.fullscreenElement) {
-        const my = ++fsSeq.current; // invalida timeouts de toggles anteriores
-        const req = (el as any).requestFullscreen || (el as any).webkitRequestFullscreen;
-        if (req) {
-          // v13: Promise.race — em WebViews/páginas escondidas o requestFullscreen
-          // pode ficar PENDENTE para sempre, o que congelava o fallback visual
-          await Promise.race([
-            Promise.resolve(req.call(el)).catch(() => {}),
-            new Promise((r) => setTimeout(r, 600)),
-          ]);
-        }
-        try { await (screen.orientation as any)?.lock?.("landscape"); } catch { /* rotação opcional */ }
-        // v11: alguns motores (headless/WebView) engajam e saem logo — se em
-        // 450ms não houver fullscreen real, entra no modo visual (fallback)
-        setTimeout(() => {
-          if (fsSeq.current === my && !document.fullscreenElement) setIsFs(true);
-        }, 450);
+        await (mountRef.current?.requestFullscreen?.() || document.documentElement.requestFullscreen?.());
+        setFs(true);
       } else {
-        fsSeq.current++; // sai: cancela fallbacks pendentes
-        // v13: race também na saída — exitFullscreen pode ficar pendente em WebViews
-        await Promise.race([
-          Promise.resolve((document as any).exitFullscreen?.()).catch(() => {}),
-          new Promise((r) => setTimeout(r, 400)),
-        ]);
-        try { (screen.orientation as any)?.unlock?.(); } catch { /* ignore */ }
-        setIsFs(false);
+        await document.exitFullscreen();
+        setFs(false);
       }
-    } catch {
-      // fallback CSS puro — ecrã inteiro "fake" quando a API não existe
-      setIsFs((v) => !v);
-      try { await (screen.orientation as any)?.lock?.("landscape"); } catch { /* ignore */ }
-    }
+    } catch { setFs(f => !f); }
   }, []);
 
-  useEffect(() => {
-    const h = () => setIsFs(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", h);
-    document.addEventListener("webkitfullscreenchange", h);
-    return () => { document.removeEventListener("fullscreenchange", h); document.removeEventListener("webkitfullscreenchange", h); };
-  }, []);
-
-  const pickTrack = (i: number) => { setTrackIdx(worldAudio.setTrack(i)); };
-  const changeVol = (v: number) => { setMusicVolState(v); worldAudio.setMusicVol(v); };
-
-  const craftPotion = (kind: "vida" | "forca" | "vento") => {
-    const cost = kind === "vida" ? { erva: 3, minerio: 0, cristal: 1 } : kind === "forca" ? { erva: 2, minerio: 2, cristal: 0 } : { erva: 1, minerio: 1, cristal: 2 };
-    setChar((p) => {
-      if (!p) return p;
-      if (p.mat.erva < cost.erva || p.mat.minerio < cost.minerio || p.mat.cristal < cost.cristal) {
-        pushToast("Materiais insuficientes — recolhe ervas, minérios e cristais no mundo!", "info");
-        return p;
-      }
-      const mat = {
-        erva: p.mat.erva - cost.erva,
-        minerio: p.mat.minerio - cost.minerio,
-        cristal: p.mat.cristal - cost.cristal,
-      };
-      const pot = { ...p.pot, [kind]: p.pot[kind] + 1 };
-      pushToast(`⚗️ Poção fabricada na Oficina! Usa-a na mochila quando precisares.`, "good");
-      worldAudio.play("craft");
-      return { ...p, mat, pot };
-    });
-  };
-
-  const usePotion = (kind: "vida" | "forca" | "vento") => {
-    setChar((p) => {
-      if (!p || p.pot[kind] <= 0) return p;
-      engineRef.current?.usePotion(kind);
-      return { ...p, pot: { ...p.pot, [kind]: p.pot[kind] - 1 } };
-    });
-  };
-
-  const claimNpcGift = (npc: "gomas" | "lurdes" | "sabio") => {
-    setChar((p) => {
-      if (!p) return p;
-      if (p.npcDay?.date === todayStr() && p.npcDay?.[npc]) return p;
-      const npcDay = { date: todayStr(), gomas: false, lurdes: false, sabio: false, ...(p.npcDay || {}), [npc]: true };
-      npcDay.date = todayStr();
-      const n = { ...p, npcDay } as Char;
-      if (npc === "gomas") { n.gold += 120; n.xp += 50; pushToast("🧙 Mestre Gomas: +120 ouro · +50 XP — volta amanhã!", "good"); }
-      if (npc === "lurdes") { n.pot = { ...n.pot, vida: n.pot.vida + 1 }; pushToast("🛠️ Ferreira Lurdes ofereceu-te uma Poção de Vida!", "good"); }
-      if (npc === "sabio") { n.pts += 5; n.xp += 30; pushToast("📜 O Velho Sábio partilhou sabedoria: +5 pts · +30 XP", "good"); }
-      worldAudio.play("heal");
-      return applyXp(n, 0);
-    });
-  };
-
-  const claimChallenge = (c: 1 | 2) => {
-    setChar((p) => {
-      if (!p || p.chal.date !== todayStr()) return p;
-      if (c === 1 && p.chal.c1) return p;
-      if (c === 2 && p.chal.c2) return p;
-      const can1 = p.quests.kills >= 25;
-      const can2 = p.quests.steal >= 2;
-      if (c === 1 && !can1) return p;
-      if (c === 2 && !can2) return p;
-      const n = { ...p, chal: { ...p.chal, ["c" + c]: true } };
-      if (c === 1) { n.gold += 400; n.pts += 15; pushToast("🏅 Desafio do Caçador: +400 ouro · +15 pts", "good"); }
-      if (c === 2) { n.gold += 300; n.pts += 25; pushToast("🏅 Desafio do Ladrão: +300 ouro · +25 pts", "good"); }
-      return n;
-    });
-  };
-
-  const claimSaga = () => {
-    setChar((p) => {
-      if (!p) return p;
-      const step = SAGA[p.sagaIdx];
-      if (!step) return p;
-      if (step.prog(p) < step.goal) return p;
-      const n: Char = { ...p, sagaIdx: p.sagaIdx + 1, saga: { ...p.saga } };
-      step.apply(n);
-      confetti({ particleCount: 110, spread: 75, origin: { y: 0.6 }, colors: ["#f43f5e", "#fbbf24", "#38bdf8"] });
-      pushToast(`📜 SAGA — ${step.title} concluída! ${step.reward}`, "good");
-      return applyXp(n, 0);
-    });
-  };
-
-  const sendChat = () => {
-    const msg = chatInput.trim();
-    if (!msg) return;
-    setChatMsgs((m) => [...m.slice(-30), { n: charRef.current?.name || "Eu", m: msg }]);
-    engineRef.current?.sendChat(msg);
-    setChatInput("");
-  };
-
-  const go = (route: string) => {
-    if (onNavigate) onNavigate(route);
-    else window.location.href = route;
-  };
-
-  const copyCode = (code: string) => {
-    try {
-      navigator.clipboard.writeText(code);
-      pushToast("📋 Código copiado!", "good");
-    } catch { /* ignore */ }
-  };
-
-  // v4: equipar / vender itens da mochila
-  const equipItem = (item: LootItem) => {
-    setChar((p) => {
-      if (!p) return p;
-      const old = p.equipped[item.slot];
-      const inv = p.inv.filter((x) => x.id !== item.id);
-      if (old) inv.push(old);
-      const equipped = { ...p.equipped, [item.slot]: item };
-      pushToast(`✅ Equipaste ${item.name}!`, "good");
-      return { ...p, inv, equipped };
-    });
-  };
-
-  const sellItem = (item: LootItem) => {
-    const price = [40, 120, 320, 800][item.rarity] ?? 40;
-    setChar((p) => {
-      if (!p) return p;
-      pushToast(`💰 Vendeste ${item.name} por ${price} de ouro`, "good");
-      return { ...p, inv: p.inv.filter((x) => x.id !== item.id), gold: p.gold + price };
-    });
-  };
-
-  // ── Render ─────────────────────────────────────────────────
-  if (phase === "boot") {
-    return withPortal((
-      <div className={"relative z-10 w-full overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center gap-4 text-white " + (immersive ? "fixed inset-0 z-[90] h-[100dvh] !rounded-none" : "h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl")}>
-        <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle at 50% 60%, rgba(244,63,94,0.12) 0%, transparent 55%), radial-gradient(circle at 30% 30%, rgba(56,189,248,0.1) 0%, transparent 45%)" }} />
-        <motion.div className="text-5xl" animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}>🌍</motion.div>
-        <p className="font-display font-bold text-xl bg-gradient-to-r from-rose-300 to-amber-200 bg-clip-text text-transparent">Bateu World</p>
-        <div className="flex items-center gap-2 text-sm text-white/70">
-          <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          {bootMsg}
-        </div>
-        <div className="h-1 w-40 overflow-hidden rounded-full bg-white/10">
-          <motion.div className="h-full w-1/3 rounded-full bg-gradient-to-r from-rose-400 to-amber-300" animate={{ x: ["-100%", "300%"] }} transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }} />
-        </div>
-      </div>
-    ));
-  }
-
-  // ── v9: SEM GATE — convidados entram direto na criação de herói ──
-
-  if (phase === "create") {
-    const sel = CLASSES[pickClass];
-    // v13 MOBILE: criação em altura quase plena (76svh) — caixa 4/3 de 292px
-    // obrigava a scroll interno minúsculo no telemóvel (1.ª impressão do jogo!)
-    return withPortal((
-      <div className={"relative z-10 w-full rounded-2xl overflow-hidden text-white bg-slate-950 " + (immersive ? "fixed inset-0 z-[90] h-[100dvh] !rounded-none flex flex-col" : "h-[76svh] min-h-[520px] md:h-auto md:min-h-0 md:aspect-video")} data-testid="bateu-create">
-        {/* fundo animado v3 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
-        <motion.div
-          className="absolute inset-0 opacity-30"
-          animate={{ background: [
-            "radial-gradient(circle at 70% 20%, #f43f5e 0%, transparent 45%), radial-gradient(circle at 20% 80%, #38bdf8 0%, transparent 40%)",
-            "radial-gradient(circle at 30% 70%, #8b5cf6 0%, transparent 45%), radial-gradient(circle at 80% 30%, #fbbf24 0%, transparent 40%)",
-            "radial-gradient(circle at 70% 20%, #f43f5e 0%, transparent 45%), radial-gradient(circle at 20% 80%, #38bdf8 0%, transparent 40%)",
-          ] }}
-          transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-        />
-        {/* estrelas decorativas */}
-        {[[12, 18], [30, 8], [55, 14], [78, 22], [88, 60], [8, 70], [45, 82], [70, 88]].map(([l, t], i) => (
-          <motion.span
-            key={i}
-            className="absolute h-1 w-1 rounded-full bg-white/70"
-            style={{ left: `${l}%`, top: `${t}%` }}
-            animate={{ opacity: [0.15, 0.9, 0.15], scale: [1, 1.6, 1] }}
-            transition={{ duration: 2.4 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
-          />
-        ))}
-
-        {/* FIX mobile: justify-center + overflow-y-auto corta o topo do conteúdo
-            (flex empurra metade do overflow para cima, inalcançável pelo scroll).
-            Sem justify-center, o conteúdo começa no topo e o scroll alcança tudo. */}
-        <div className="relative h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center gap-3 md:gap-4">
-          <div className="w-full flex flex-col items-center text-center shrink-0">
-            <motion.div
-              className="mx-auto mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500/30 to-amber-500/30 border border-white/20 text-3xl shadow-lg shadow-rose-500/20"
-              animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >🌍</motion.div>
-            <h2 className="font-display text-2xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-rose-300 via-amber-200 to-sky-300 bg-clip-text text-transparent">BATEU WORLD 3D</h2>
-            <p className="text-white/70 text-xs md:text-sm mt-0.5">O MMO da plataforma — luta, sobe de nível, rouba cupões e troca pontos por moeda real</p>
-          </div>
-
-          {/* classes com anel de seleção v3 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 w-full max-w-lg">
-            {CLASSES.map((cl, i) => (
-              <motion.button
-                key={cl.name}
-                onClick={() => { setPickClass(i); worldAudio.play("click"); }}
-                whileTap={{ scale: 0.94 }}
-                className={`relative rounded-2xl border-2 p-3 text-center transition-all overflow-hidden ${pickClass === i ? "border-white/70 bg-white/15 scale-[1.04]" : "border-white/15 bg-white/5 hover:border-white/40"}`}
-              >
-                {pickClass === i && (
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl"
-                    style={{ background: `radial-gradient(circle at 50% 0%, ${cl.color}55 0%, transparent 70%)` }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                )}
-                <motion.div
-                  className={`relative text-3xl mb-1 ${pickClass === i ? "" : "opacity-80"}`}
-                  animate={pickClass === i ? { scale: [1, 1.14, 1] } : {}}
-                  transition={{ duration: 1.6, repeat: Infinity }}
-                >{cl.emoji}</motion.div>
-                <p className="relative font-bold text-sm">{cl.name}</p>
-                <p className="relative text-[10px] text-white/60 leading-tight mt-0.5">{cl.desc}</p>
-                <div className="relative mt-1.5 flex justify-center gap-1">
-                  {[0, 1, 2].map((s) => (
-                    <span key={s} className={`h-1 w-4 rounded-full ${s === 0 ? "bg-rose-400" : s === 1 ? "bg-emerald-400" : "bg-sky-400"} ${pickClass === i ? "" : "opacity-40"}`} />
-                  ))}
-                </div>
-              </motion.button>
-            ))}
-          </div>
-
-          <motion.div
-            key={sel.name}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-lg rounded-xl border border-white/15 bg-black/30 px-4 py-2 text-center text-[11px] text-white/80 backdrop-blur"
-          >
-            <b style={{ color: sel.color }}>{sel.emoji} {sel.name}</b> — 3 poderes próprios que desbloqueiam nos níveis 3, 7 e 12
-          </motion.div>
-
-          {/* v5: editor de avatar com preview 3D ao vivo */}
-          <div className="w-full max-w-lg rounded-2xl border border-violet-400/25 bg-black/40 p-3 backdrop-blur" data-testid="bw-avatar-editor">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="mx-auto shrink-0 sm:mx-0">
-                <AvatarPreview
-                  cfg={avDraft}
-                  classColor={parseInt(sel.color.slice(1), 16)}
-                  className="h-44 w-36 rounded-xl border border-white/15 bg-gradient-to-b from-slate-800 to-slate-950"
-                />
-                <button
-                  data-testid="bw-av-random"
-                  onClick={() => { setAvDraft(randomAvatar(pickClass)); worldAudio.play("click"); }}
-                  className="mt-1.5 w-full rounded-lg border border-white/20 bg-white/10 py-1.5 text-[10px] font-bold text-white hover:bg-white/20"
-                >
-                  🎲 Aleatório
-                </button>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="mb-1.5 text-[11px] font-bold text-violet-200">✨ Personaliza o teu avatar — visível para todos os jogadores</p>
-                <AvatarSwatches cfg={avDraft} onChange={setAvDraft} />
-              </div>
-            </div>
-          </div>
-
-          <input
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && nameInput.trim()) enterWorld(newChar(nameInput, pickClass, avDraft)); }}
-            placeholder="Nome do teu herói"
-            maxLength={14}
-            className="w-full max-w-lg rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-center font-bold placeholder:text-white/40 outline-none focus:border-rose-400 transition-colors"
-          />
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => nameInput.trim() && enterWorld(newChar(nameInput, pickClass, avDraft))}
-            className="relative w-full max-w-lg overflow-hidden rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-6 py-3.5 font-display font-black text-lg shadow-lg shadow-rose-500/30"
-          >
-            <motion.span
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ["-120%", "120%"] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
-            />
-            <span className="relative">ENTRAR NO MUNDO →</span>
-          </motion.button>
-          {/* v9: nota de convidado — joga já, guarda depois */}
-          {!user && (
-            <div data-testid="guest-note" className="w-full max-w-lg rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-center text-[11px] text-amber-200">
-              👋 <b>Sem registo? Também podes jogar!</b> O progresso fica neste dispositivo —
-              <button onClick={() => go("/register")} data-testid="guest-register" className="ml-1 underline font-black hover:text-amber-100">cria conta grátis</button>
-              {" "}para o guardar na nuvem e receber moeda real.
-            </div>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-lg text-[11px] text-white/70">
-            <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">⚔️ 3 poderes por classe</div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">💀 Rouba cupões no PvP</div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">🎒 Loot lendário + mochila</div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-2 text-center">🏟️ Arena das Ondas</div>
-          </div>
-          <p className="max-w-lg text-center text-[10px] text-white/45">12 descobertas no mapa · pet companheiro no nível 5 · combo de mortes com XP bónus · troca pontos por moeda real no Banco</p>
-        </div>
-      </div>
-    ));
-  }
-
-  const stats = char ? calcStats(char) : { atk: 0, maxHp: 100, spd: 6, def: 2 };
-  const hpPct = Math.max(0, Math.min(100, (hud.hp / Math.max(1, hud.maxHp)) * 100));
-  const xpPct = char ? Math.min(100, (char.xp / xpNeeded(char.level)) * 100) : 0;
-  const q = char?.quests;
-  const mySkills = SKILLS[char!.classId] || [];
-  const shieldActive = (char?.shieldUntil || 0) > Date.now();
-
-  // Dados do card aberto
-  let cardData: React.ReactNode = null;
-  if (card && platform) {
-    if (card.kind === "raffle") {
-      const r = platform.raffles.find((x) => x.id === card.id);
-      if (r) cardData = (
-        <>
-          <div className="text-4xl mb-2">🎁</div>
-          <h3 className="font-display font-black text-lg">{r.title}</h3>
-          <p className="text-sm text-muted-foreground">Prémio: <b className="text-foreground">{r.prizeTitle}</b></p>
-          <p className="text-sm text-muted-foreground">Valor: <b className="text-emerald-400">{fmtMZN(r.prizeValue)}</b> · Bilhete: <b>{fmtMZN(r.ticketPrice)}</b></p>
-          <button onClick={() => go(worldRoute("raffle", r))} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 font-bold text-white hover:bg-rose-400">
-            <ExternalLink className="h-4 w-4" /> Participar no Sorteio
-          </button>
-        </>
-      );
-    } else if (card.kind === "contest") {
-      const c = platform.contests.find((x) => x.id === card.id);
-      if (c) cardData = (
-        <>
-          <div className="text-4xl mb-2">🏆</div>
-          <h3 className="font-display font-black text-lg">{c.title}</h3>
-          {c.prize && <p className="text-sm text-muted-foreground">Prémio: <b className="text-amber-400">{c.prize}</b></p>}
-          {c.description && <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{c.description}</p>}
-          <button onClick={() => go(worldRoute("contest", c))} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 font-bold text-white hover:bg-amber-400">
-            <ExternalLink className="h-4 w-4" /> Ver Concurso
-          </button>
-        </>
-      );
-    } else if (card.kind === "asset") {
-      const a = platform.assets.find((x) => x.id === card.id);
-      if (a) cardData = (
-        <>
-          <div className="text-4xl mb-2">🛒</div>
-          <h3 className="font-display font-black text-lg">{a.title}</h3>
-          <p className="text-sm text-muted-foreground">{MODALITY_LABEL[a.modality] || a.modality} · <b className="text-emerald-400">{fmtMZN(a.value)}</b></p>
-          {a.city && <p className="text-xs text-muted-foreground">📍 {a.city}{a.province ? `, ${a.province}` : ""}</p>}
-          <button onClick={() => go(worldRoute("asset", a))} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 font-bold text-white hover:bg-emerald-400">
-            <ExternalLink className="h-4 w-4" /> Ver / Comprar
-          </button>
-        </>
-      );
-    } else if (card.kind === "voucher") {
-      const v = platform.vouchers.find((x) => x.id === card.id);
-      if (v) {
-        const mine = char?.vouchers.find((x) => x.id === v.id);
-        cardData = (
-          <>
-            <div className="text-4xl mb-2">🎟️</div>
-            <h3 className="font-display font-black text-lg">Cupão {voucherLabel(v)}</h3>
-            <div className="my-2 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-rose-400/60 bg-rose-500/10 px-4 py-3">
-              <span className="font-mono font-black tracking-wider text-rose-300">{v.code}</span>
-              <button onClick={() => copyCode(v.code)} className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20"><Copy className="h-4 w-4" /></button>
-            </div>
-            <p className="text-xs text-muted-foreground">{mine ? "✅ Guardado no teu perfil — usa-o nas compras da plataforma!" : "Guardado no teu perfil de herói."}</p>
-          </>
-        );
-      }
-    } else if (card.kind === "games") {
-      cardData = (
-        <>
-          <div className="text-4xl mb-2">🌀</div>
-          <h3 className="font-display font-black text-lg">Jogos da Plataforma</h3>
-          <p className="text-sm text-muted-foreground">Roleta, Millionaire, quiz e mais de 80 jogos para jogar com amigos.</p>
-          <button onClick={() => go("/lives")} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-2.5 font-bold text-white hover:bg-sky-400">
-            <ExternalLink className="h-4 w-4" /> Abrir Jogos
-          </button>
-        </>
-      );
-    } else if (card.kind === "arena") {
-      cardData = (
-        <>
-          <div className="text-4xl mb-2">🏟️</div>
-          <h3 className="font-display font-black text-lg">Arena das Ondas</h3>
-          <p className="text-sm text-muted-foreground">Sobrevivência infinita: ondas cada vez mais difíceis, chefe a cada 5 ondas. Ganhos por onda limpa e bónus final por ondas+mortes.</p>
-          <p className="text-xs text-muted-foreground mt-1">O teu recorde: <b className="text-amber-300">onda {char?.wavesBest || 0}</b></p>
-          <button
-            onClick={() => { setCard(null); engineRef.current?.startArena(); }}
-            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 font-bold text-white hover:brightness-110"
-            data-testid="bw-arena-start"
-          >
-            <Swords className="h-4 w-4" /> ENTRAR NA ARENA
-          </button>
-        </>
-      );
+  // ── sair ──────────────────────────────────────────────────
+  const exitGame = useCallback(() => {
+    const c = charRef.current;
+    if (c) {
+      saveChar(c);
+      upsertCharacter({
+        guest_id: c.uid, name: c.name, class_id: c.classId, level: c.level,
+        xp: c.xp, gold: c.gold, hp: hud.hp, max_hp: hud.maxHp, atk: deriveStats(c).atk,
+        spd: deriveStats(c).spd, total_kills: c.kills, is_online: false,
+      } as any);
+      setCharacterOffline(c.uid);
+      upsertWorldProgress({
+        guest_id: c.uid, name: c.name, class_id: c.classId, level: c.level,
+        points: c.fame, kills: c.kills, discoveries: [], gold: c.gold,
+        deaths: c.deaths, vouchers_count: c.coupons, avatar: c.avatar,
+      });
     }
-  }
+    engineRef.current?.dispose();
+    engineRef.current = null;
+    onExit?.();
+  }, [hud.hp, hud.maxHp, onExit]);
 
-  return withPortal((
-    <div
-      ref={worldWrapRef}
-      data-bw-fs={isFs ? "1" : undefined}
-      style={fill ? { height: "100dvh", width: "100vw" } : undefined}
-      className={`relative z-10 w-full overflow-hidden bg-slate-900 select-none ${fill ? "!fixed inset-0 z-[90] !h-full !w-full !rounded-none !aspect-auto" : "h-[72svh] min-h-[480px] md:h-auto md:min-h-0 md:aspect-video rounded-2xl"}`}
-      data-testid="bateu-world"
-    >
-      {/* v13 MOBILE: touch-none impede o browser de roubar o arrasto (zoom/scroll) — câmara contínua no dedo */}
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full touch-none" />
+  // ════════════════ CRIAÇÃO DE HERÓI ════════════════════════
+  const [ncName, setNcName] = useState("");
+  const [ncClass, setNcClass] = useState(0);
+  const [ncFaction, setNcFaction] = useState(0);
+  const [ncAvatar, setNcAvatar] = useState<AvatarConfig>(defaultAvatar(0));
+  const [ncStep, setNcStep] = useState(0); // 0 classe/facção · 1 avatar
 
-      {/* flash de dano / morte */}
-      <AnimatePresence>
-        {hud.hit > 0 && (
-          <motion.div key={`hit-${hud.hit}`} className="pointer-events-none absolute inset-0 bg-red-600/25" initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.4 }} />
-        )}
-        {/* v16: vinheta mais leve — tela limpa, cantos nítidos */}
-        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: "inset 0 0 64px 12px rgba(2,6,23,0.35)" }} />
-        {deathFx && (
-          <motion.div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2 bg-red-950/70 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.p className="font-display text-3xl md:text-4xl font-black text-red-300 drop-shadow-[0_0_18px_rgba(248,113,113,0.8)]" initial={{ scale: 0.6, rotate: -6 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 14 }}>
-              💀 Derrotado
-            </motion.p>
-            <motion.p className="text-xs font-bold text-white/70" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }}>
-              A renascer na Praça Bateu...
-            </motion.p>
-            {/* v13: consolo na derrota — amortece a aversão à perda e evita abandono
-                (o XP/ouro/itens do jogador NÃO são afetados por morte contra mobs) */}
-            <motion.p className="text-[10px] font-semibold text-emerald-300/90" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-              Tranquilo — o teu XP, ouro e itens estão seguros. 💪
-            </motion.p>
-          </motion.div>
-        )}
-        {/* v4: HUD da ARENA — ondas */}
-        <AnimatePresence>
-          {arenaHud && (
-            <motion.div
-              key="arena-hud"
-              initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-              className="pointer-events-none absolute left-1/2 top-9 z-20 -translate-x-1/2"
-              data-testid="bw-arena-hud"
-            >
-              <div className="flex items-center gap-2 rounded-full border border-orange-400/50 bg-black/75 px-4 py-1.5 backdrop-blur">
-                <Swords className="h-3.5 w-3.5 text-orange-300" />
-                <span className="text-xs font-black text-orange-200">ONDA {arenaHud.wave}</span>
-                <span className="h-3 w-px bg-white/25" />
-                <span className="text-xs font-bold text-white/85">{arenaHud.alive > 0 ? `${arenaHud.alive} restantes` : "prepara..."}</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* v7: ACONTECIMENTO DO MUNDO — chip com contagem regressiva */}
-        <AnimatePresence>
-          {worldEvent && (
-            <motion.div
-              key="world-event"
-              initial={{ opacity: 0, y: -14, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14 }}
-              className={`pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 ${fill ? "top-[46px]" : "top-16"}`}
-              data-testid="bw-world-event"
-            >
-              <motion.div
-                className="flex items-center gap-2 rounded-full border border-fuchsia-400/60 bg-black/80 px-4 py-1.5 backdrop-blur"
-                animate={{ boxShadow: ["0 0 14px rgba(232,121,249,0.35)", "0 0 30px rgba(232,121,249,0.6)", "0 0 14px rgba(232,121,249,0.35)"] }}
-                transition={{ duration: 1.3, repeat: Infinity }}
-              >
-                <motion.span className="text-base" animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.15, 1] }} transition={{ duration: 1.1, repeat: Infinity }}>{worldEvent.emoji}</motion.span>
-                <span className="max-w-[38vw] truncate text-xs font-black uppercase tracking-wider text-fuchsia-200">{worldEvent.name}</span>
-                <span className="h-3 w-px bg-white/25" />
-                <span className="text-[11px] font-black tabular-nums text-white/85">{Math.max(0, Math.ceil((worldEvent.until - eventNow) / 1000))}s</span>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* v4: COMBO — contador central direito */}
-        <AnimatePresence>
-          {combo >= 2 && (
-            <motion.div
-              key="combo"
-              initial={{ opacity: 0, scale: 0.5, rotate: -8 }}
-              animate={{ opacity: 1, scale: [1.15, 1], rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              className="pointer-events-none absolute right-[16%] top-[30%] z-20"
-              data-testid="bw-combo"
-            >
-              <motion.p
-                className="font-display text-4xl font-black italic drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]"
-                style={{ color: combo >= 8 ? "#fde047" : combo >= 5 ? "#fb923c" : "#f87171" }}
-                animate={{ scale: combo >= 2 ? [1, 1.18, 1] : 1 }}
-                transition={{ duration: 0.28 }}
-              >
-                x{combo}!
-              </motion.p>
-              <p className="text-center text-[10px] font-black tracking-widest text-white/80">COMBO</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* v3: banner cinematográfico (descoberta / level-up) */}
-        <AnimatePresence>
-          {banner && (
-            <motion.div
-              key={`banner-${banner.title}`}
-              className="pointer-events-none absolute left-0 right-0 top-[26%] z-30 flex flex-col items-center"
-              initial={{ opacity: 0, y: 26, scale: 0.92 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -18, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 220, damping: 20 }}
-            >
-              <motion.div
-                className={`flex items-center gap-3 rounded-2xl border px-6 py-3 shadow-2xl backdrop-blur-md ${banner.kind === "levelup" ? "border-amber-300/60 bg-gradient-to-r from-amber-500/25 via-yellow-400/20 to-amber-500/25" : "border-sky-300/60 bg-gradient-to-r from-sky-500/25 via-cyan-400/20 to-sky-500/25"}`}
-                animate={{ boxShadow: banner.kind === "levelup" ? ["0 0 24px rgba(251,191,36,0.35)", "0 0 48px rgba(251,191,36,0.6)", "0 0 24px rgba(251,191,36,0.35)"] : ["0 0 24px rgba(56,189,248,0.35)", "0 0 48px rgba(56,189,248,0.6)", "0 0 24px rgba(56,189,248,0.35)"] }}
-                transition={{ duration: 1.4, repeat: Infinity }}
-              >
-                <motion.span className="text-4xl" animate={{ rotate: banner.kind === "discover" ? [0, -12, 12, 0] : [0, 8, -8, 0], scale: [1, 1.2, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
-                  {banner.emoji}
-                </motion.span>
-                <div className="text-center">
-                  <p className={`font-display text-xl font-black tracking-wide ${banner.kind === "levelup" ? "text-amber-200" : "text-sky-200"}`}>{banner.title}</p>
-                  <p className="text-[11px] font-bold text-white/80">{banner.sub}</p>
-                </div>
-              </motion.div>
-              {/* raios laterais */}
-              <motion.div
-                className="mt-1 h-px w-2/3"
-                style={{ background: banner.kind === "levelup" ? "linear-gradient(90deg, transparent, #fbbf24, transparent)" : "linear-gradient(90deg, transparent, #38bdf8, transparent)" }}
-                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5 }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </AnimatePresence>
+  const existing = charRef.current;
 
-      {/* v3: barra de CHEFE / guardião */}
-      <AnimatePresence>
-        {bossBar && (
-          <motion.div
-            key="bossbar"
-            initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
-            className="pointer-events-none absolute left-1/2 top-14 z-20 w-[260px] -translate-x-1/2"
-            data-testid="bw-bossbar"
-          >
-            <div className="rounded-xl border border-red-500/40 bg-black/70 px-3 py-1.5 backdrop-blur">
-              <div className="mb-1 flex items-center justify-between text-[10px] font-black">
-                <span className="flex items-center gap-1 text-red-300"><Crown className="h-3 w-3" /> {bossBar.name}</span>
-                <span className="text-white/60">{Math.ceil(bossBar.pct * 100)}%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <motion.div className="h-full rounded-full bg-gradient-to-r from-red-600 via-rose-500 to-orange-400" animate={{ width: `${bossBar.pct * 100}%` }} transition={{ duration: 0.25 }} />
-              </div>
+  const beginNew = () => {
+    const name = (ncName || "").trim().slice(0, 16) || `Herói${Math.floor(Math.random() * 999)}`;
+    const av = ncAvatar;
+    const c = emptyChar(name, ncClass, ncFaction, av);
+    charRef.current = c;
+    saveChar(c);
+    startEngine(c);
+  };
+  const continueGame = () => {
+    if (!existing) return;
+    setNcAvatar(existing.avatar);
+    startEngine(existing);
+  };
+
+  const createUi = (phase === "create" || !charRef.current) ? (
+      <div className="w-full h-full relative overflow-y-auto overflow-x-hidden" style={{ background: "radial-gradient(ellipse at top, #1e1b4b 0%, #020617 60%)" }} data-testid="bw-create">
+        <div className="min-h-full flex flex-col items-center justify-center px-4 py-8" style={{ minHeight: "100dvh" }}>
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-md">
+            <div className="text-center mb-4">
+              <div className="text-[10px] tracking-[0.35em] text-amber-400/80 font-bold">BATEU WORLD</div>
+              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 mt-1">ERA DAS LENDAS</h1>
+              <p className="text-xs text-slate-400 mt-1">MMO 3D · 2 facções · 48 habilidades · mundo que cresce</p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* ── HUD principal (esconde-se no modo foto) ── */}
-      {!photoMode && (
-        <>
-      {/* HUD topo-esquerda v3 (vidro + anel de classe + buffs) */}
-      <div className={`pointer-events-none absolute left-2 w-[214px] rounded-2xl border border-white/15 bg-black/55 p-2.5 text-white shadow-xl backdrop-blur-md ${fill ? "top-[46px]" : "top-2"}`} style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ background: CLASSES[char!.classId]?.color + "33", border: `1.5px solid ${CLASSES[char!.classId]?.color}` }}>
-            {CLS_EMOJIS[char!.classId]}
-            {char!.points > 0 && <motion.span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400" animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold">{char!.name} <span className="text-white/60">· Nv{char!.level}</span></p>
-            <p className="text-[9px] font-bold tracking-wide text-amber-300/90 -mt-0.5">{titleFor(char!.level)}</p>
-            {/* HP com brilho v3 */}
-            <div className="relative mt-1 h-2 overflow-hidden rounded-full bg-white/15">
-              <motion.div className="h-full rounded-full bg-gradient-to-r from-rose-600 via-red-500 to-rose-400" animate={{ width: `${hpPct}%` }} transition={{ duration: 0.3 }} />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/25 to-transparent" />
-              {hpPct < 30 && <motion.div className="absolute inset-0 rounded-full bg-red-500/40" animate={{ opacity: [0.2, 0.7, 0.2] }} transition={{ duration: 0.9, repeat: Infinity }} />}
-            </div>
-            <div className="relative mt-0.5 h-1.5 overflow-hidden rounded-full bg-white/15">
-              <motion.div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-300" animate={{ width: `${xpPct}%` }} transition={{ duration: 0.4 }} />
-            </div>
-          </div>
-        </div>
-        <div className="mt-1.5 flex items-center gap-2.5 text-[11px] text-white/80">
-          <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3 text-rose-400" />{hud.hp}/{hud.maxHp}</span>
-          <span className="inline-flex items-center gap-1"><Coins className="h-3 w-3 text-amber-400" />{char!.gold}</span>
-          <span className="inline-flex items-center gap-1 font-black text-yellow-300">🏆 {char!.pts}</span>
-        </div>
-        {/* v17: KI + Power Level + créditos — era Dragon Ball */}
-        <div className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <motion.div className={`h-full rounded-full ${form > 0 ? "bg-gradient-to-r from-amber-300 to-orange-400" : "bg-gradient-to-r from-cyan-400 to-violet-500"}`} animate={{ width: `${ki}%` }} transition={{ duration: 0.3 }} />
-        </div>
-        <div className="mt-1 flex items-center gap-2.5 text-[11px] text-white/80">
-          <span className="inline-flex items-center gap-1 font-black text-fuchsia-300" data-testid="bw-power-level" title="Power Level (scouter)">⚡ PL {myPl.toLocaleString("pt-PT")}{form > 0 ? (form === 2 ? " 💥" : " 🔥") : ""}</span>
-          <span className="inline-flex items-center gap-1 font-bold text-emerald-300" title="Créditos — moeda dos prémios">💎 {char!.credits}</span>
-        </div>
-        {/* v3: chips de buffs ativos */}
-        {(shieldActive || buffs.atk > 0 || buffs.hot > 0 || char!.pet) && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {char!.pet && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/25 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
-                <PawPrint className="h-2.5 w-2.5" /> Companheiro +8%
-              </span>
-            )}
-            {shieldActive && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/25 px-1.5 py-0.5 text-[9px] font-bold text-sky-200">
-                <Shield className="h-2.5 w-2.5" /> Escudo {Math.ceil(((char!.shieldUntil || 0) - Date.now()) / 60000)}m
-              </span>
-            )}
-            {buffs.atk > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-red-500/25 px-1.5 py-0.5 text-[9px] font-bold text-red-200">
-                <Swords className="h-2.5 w-2.5" /> +50% {Math.ceil(buffs.atk / 1000)}s
-              </span>
-            )}
-            {buffs.hot > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200">
-                <Sparkles className="h-2.5 w-2.5" /> Regen {Math.ceil(buffs.hot / 1000)}s
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* v3: rastreador de objetivos (saga + diária) sob o HUD */}
-      {char && SAGA[char.sagaIdx] && (
-        <motion.button
-          onClick={() => setPanel("quests")}
-          initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-          className={`absolute left-2 z-10 w-[214px] rounded-xl border border-amber-400/30 bg-black/50 p-2 text-left text-white backdrop-blur-md hover:bg-black/70 transition-colors ${fill ? "top-[152px]" : "top-[118px]"}`}
-          style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}
-          data-testid="bw-tracker"
-        >
-          <p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-300"><Target className="h-2.5 w-2.5" /> Objetivo da Saga</p>
-          <p className="truncate text-[11px] font-bold">{SAGA[char.sagaIdx].title}</p>
-          {(() => {
-            const step = SAGA[char.sagaIdx];
-            const prog = Math.min(step.prog(char), step.goal);
-            return (
-              <div className="mt-1">
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 transition-all" style={{ width: `${(prog / step.goal) * 100}%` }} />
-                </div>
-                <p className="mt-0.5 text-[9px] text-white/60">{step.desc} · {prog}/{step.goal}</p>
-              </div>
-            );
-          })()}
-          {(() => {
-            // v16: «coisas por fazer» à vista — missões diárias prontas para levantar
-            const q = char.quests;
-            const ready = (q.kills >= 10 && !q.cK ? 1 : 0) + (q.chest >= 1 && !q.cC ? 1 : 0) + (q.visit >= 1 && !q.cV ? 1 : 0)
-              + (q.steal >= 1 && !q.cS ? 1 : 0) + (q.waves >= 3 && !q.cW ? 1 : 0) + (q.item >= 1 && !q.cI ? 1 : 0)
-              + (q.duel >= 3 && !q.cD ? 1 : 0) + (q.atk >= 5 && !q.cA ? 1 : 0) + (q.home >= 2 && !q.cH ? 1 : 0)
-              + (q.gather >= 6 && !q.cG ? 1 : 0);
-            return (
-              <p className="mt-1 flex items-center gap-1 border-t border-white/10 pt-1 text-[9px] font-bold text-white/75">
-                <ScrollText className="h-2.5 w-2.5 shrink-0 text-sky-300" />
-                {ready > 0 ? <span className="text-amber-300">{ready} missão{ready > 1 ? "es" : ""} pronta{ready > 1 ? "s" : ""} para levantar 🎁</span> : <span className="text-white/50">Missões diárias em curso…</span>}
-              </p>
-            );
-          })()}
-        </motion.button>
-      )}
-
-      {/* v10: topo-direita desce para debaixo da barra de navegação —
-          em ecrãs estreitos as duas linhas sobrepunham-se (foto/som
-          ficavam escondidas atrás de Definições — bug visual) */}
-      <div className="absolute right-2 top-[46px] z-10 flex flex-col items-end gap-1.5" style={fill ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", top: "calc(2.875rem + env(safe-area-inset-top, 0px))" } : undefined}>
-        <div className="pointer-events-none flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm sm:text-[11px]">
-          <Users className="h-3 w-3 text-sky-400" /> {online} online
-          {platform?.live && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-        </div>
-        {/* v16: minimapa SEMPRE visível (no telemóvel também!) — era hidden sm:block */}
-        <div className="relative">
-          <canvas id="bw-minimap" width={100} height={100} className="h-[76px] w-[76px] rounded-xl border border-white/25 shadow-lg sm:h-[100px] sm:w-[100px]" />
-          <span className="pointer-events-none absolute left-1/2 top-0.5 -translate-x-1/2 text-[7px] font-black text-white/80">N</span>
-        </div>
-        <div className="pointer-events-none flex rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-sm">
-          <MapPin className="mr-0.5 inline h-2.5 w-2.5 text-amber-300" />{char!.discoveries.length}/{LANDMARKS.length} descobertas
-        </div>
-        {/* v3: roda de emotes */}
-        <div className="flex flex-col items-end gap-1">
-          <button
-            onClick={() => setEmoteOpen((o) => !o)}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur transition-colors ${emoteOpen ? "bg-white text-slate-900" : "bg-black/55 text-white hover:bg-black/75"}`}
-            data-testid="bw-emote-btn"
-          >
-            <Smile className="h-3 w-3" /> Emotes
-          </button>
-          <AnimatePresence>
-            {emoteOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.9 }}
-                className="grid grid-cols-3 gap-1 rounded-xl border border-white/15 bg-black/70 p-1.5 backdrop-blur"
-                data-testid="bw-emotes"
-              >
-                {EMOTES.map((em) => (
-                  <button
-                    key={em}
-                    onClick={() => { engineRef.current?.emote(em); }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base transition-transform hover:scale-110 hover:bg-white/20 active:scale-90"
-                  >
-                    {em}
+            {existing && (
+              <div className="mb-4 rounded-2xl border border-amber-500/40 bg-slate-900/80 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+                    <AvatarPreview cfg={existing.avatar} classColor={CLASSES[existing.classId].color} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white truncate">{existing.name}</div>
+                    <div className="text-xs text-slate-400">
+                      Nv{existing.level} · {CLASSES[existing.classId].name} {CLASSES[existing.classId].emoji}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: FACTIONS[existing.faction].color }}>
+                      {FACTIONS[existing.faction].emoji} {FACTIONS[existing.faction].name} · {fameRank(existing.fame).emoji} {fameRank(existing.fame).name}
+                    </div>
+                  </div>
+                  <button onClick={continueGame} data-testid="bw-continue"
+                    className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-900 bg-gradient-to-r from-amber-300 to-yellow-500 shadow-lg shadow-amber-500/30 active:scale-95">
+                    CONTINUAR
                   </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* toasts (v16: abaixo das duas filas do topo) */}
-      <div className="pointer-events-none absolute left-1/2 top-[84px] z-20 flex w-[300px] -translate-x-1/2 flex-col items-center gap-1">
-        <AnimatePresence>
-          {toasts.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: -12, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur ${t.tone === "good" ? "bg-emerald-600/90" : t.tone === "bad" ? "bg-red-600/90" : "bg-slate-800/90"}`}
-            >
-              {t.msg}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* chat */}
-      <div className="absolute bottom-2 right-2 z-10 w-[220px]" style={fill ? { right: "calc(0.5rem + env(safe-area-inset-right, 0px))", bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
-        {chatOpen ? (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-black/65 p-2 text-white backdrop-blur">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-bold text-white/60 flex items-center gap-1"><MessageSquare className="h-3 w-3" /> CHAT GLOBAL</p>
-              <button onClick={() => setChatOpen(false)}><X className="h-3.5 w-3.5 text-white/60" /></button>
-            </div>
-            <div className="max-h-[120px] space-y-0.5 overflow-y-auto text-[11px]">
-              {chatMsgs.length === 0 && <p className="text-white/40">Fala com outros heróis...</p>}
-              {chatMsgs.slice(-8).map((m, i) => (
-                <p key={i}><b className="text-sky-300">{m.n}:</b> <span className="text-white/85">{m.m}</span></p>
-              ))}
-            </div>
-            <div className="mt-1.5 flex gap-1">
-              <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }}
-                placeholder="Mensagem..."
-                maxLength={140}
-                className="min-w-0 flex-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] outline-none placeholder:text-white/30"
-              />
-              <button onClick={sendChat} className="rounded-lg bg-sky-500 px-2 py-1 text-[11px] font-bold">➤</button>
-            </div>
-          </motion.div>
-        ) : (
-          <button onClick={() => setChatOpen(true)} className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur hover:bg-black/75">
-            <MessageSquare className="h-3.5 w-3.5" /> Chat
-          </button>
-        )}
-      </div>
-
-      {/* prompt de interação */}
-      <AnimatePresence>
-        {near && !card && (
-          <motion.button
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            onClick={() => engineRef.current?.interact()}
-            className={`absolute left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-xl hover:scale-105 transition-transform ${char?.onb && !char.onb.done ? "bottom-[7.5rem]" : "bottom-24"}`}
-            data-testid="bw-interact"
-          >
-            {near && <span className="inline-block max-w-[44vw] truncate align-middle">{near}</span>} <span className="ml-1 text-slate-400">[E]</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* v6: bússola do destino marcado */}
-      <AnimatePresence>
-        {compass && (
-          <motion.div
-            initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
-            className={`absolute left-2 z-10 flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/60 px-3 py-1.5 backdrop-blur ${fill ? "top-[300px]" : "top-14"}`}
-            data-testid="bw-compass"
-          >
-            <span className="relative flex h-7 w-7 items-center justify-center">
-              <motion.span
-                className="text-lg leading-none"
-                style={{ rotate: compass.angle * 180 / Math.PI }}
-                animate={{ rotate: compass.angle * 180 / Math.PI }}
-                transition={{ type: "tween", duration: 0.25 }}
-              >🧭</motion.span>
-            </span>
-            <span className="text-[10px] font-black text-amber-300">{compass.dist > 999 ? `${(compass.dist / 1000).toFixed(1)}km` : `${Math.round(compass.dist)}m`}</span>
-            <button onClick={() => engineRef.current?.clearWaypoint()} className="text-[9px] text-white/40 hover:text-white">✕</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v6: indicador de GUARDA ativa */}
-      <AnimatePresence>
-        {guardOn && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className={`absolute left-2 z-10 rounded-full border border-amber-400/50 bg-amber-500/20 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur ${fill ? "top-[300px]" : "top-24"}`}
-            data-testid="bw-guard-indicator"
-          >
-            🛡️ GUARDA — bloqueando 40%
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v8: ESTÁS EM — interior de um edifício (zona segura) */}
-      <AnimatePresence>
-        {inside && (
-          <motion.div
-            key={inside.name}
-            initial={{ opacity: 0, y: 12, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.94 }}
-            className="pointer-events-none absolute bottom-32 left-1/2 z-10 -translate-x-1/2"
-            data-testid="bw-inside"
-          >
-            <div className="flex max-w-[300px] items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/75 px-4 py-2 shadow-xl backdrop-blur">
-              <span className="text-lg">🏠</span>
-              <span className="min-w-0">
-                <span className="block truncate text-[11px] font-black text-amber-200">{inside.name}</span>
-                <span className="block text-[9px] font-bold text-emerald-300">Zona segura · vida a recuperar</span>
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v8: ticker da plataforma ao vivo — o que acontece fora aparece aqui */}
-      <div className="pointer-events-none absolute bottom-40 left-2 z-10 flex flex-col items-start gap-1" style={fill ? { left: "calc(0.5rem + env(safe-area-inset-left, 0px))" } : undefined}>
-        <AnimatePresence>
-          {ticker.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, x: -14, scale: 0.92 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -14, scale: 0.92 }}
-              className="max-w-[240px] rounded-xl border border-sky-400/40 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-sky-100 shadow-lg backdrop-blur"
-              data-testid="bw-ticker"
-            >
-              <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
-              {t.msg}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* v16/v17: FAIXA DE CONTROLO única — Sair (imersivo) + painéis (Poderes/Heróis v17)
-          + câmaras + ecrã inteiro + música + foto + som numa só fila com scroll horizontal.
-          z-30: acima de qualquer chrome residual do wrapper. */}
-      <div
-        className="absolute top-2 left-1/2 z-30 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-full bg-black/45 px-1.5 py-1 backdrop-blur-md [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: "none", ...(fill ? { top: "calc(0.5rem + env(safe-area-inset-top, 0px))" } : {}) }}
-      >
-          {immersive && onExit && (
-            <button onClick={onExit} aria-label="Sair do mundo" data-testid="bw-exit" title="Voltar aos jogos"
-              className="flex shrink-0 items-center gap-1 rounded-full bg-rose-600/85 px-2.5 py-1.5 text-[11px] font-black text-white backdrop-blur transition-colors hover:bg-rose-500 active:scale-95">
-              <ChevronLeft className="h-4 w-4" /> Sair
-            </button>
-          )}
-        {([
-          ["char", <User key="u" className="h-4 w-4" />, "Herói"],
-          ["poderes", <Zap key="z" className="h-4 w-4" />, "Poderes"],
-          ["inv", <Backpack key="i" className="h-4 w-4" />, "Mochila"],
-          ["quests", <ScrollText key="q" className="h-4 w-4" />, "Missões"],
-          ["heros", <Users key="h" className="h-4 w-4" />, "Heróis"],
-          ["bank", <Landmark key="b" className="h-4 w-4" />, "Banco"],
-          ["rank", <Trophy key="r" className="h-4 w-4" />, "Ranking"],
-          ["map", <Map key="m" className="h-4 w-4" />, "Mapa"],
-          ["set", <Settings key="s" className="h-4 w-4" />, "Definições"],
-        ] as const).map(([id, icon, label]) => (
-          <button
-            key={id}
-            onClick={() => setPanel((p) => (p === id ? "none" : id))}
-            aria-label={label}
-            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-colors ${panel === id ? "bg-white text-slate-900" : "text-white/85 hover:text-white"}`}
-            data-testid={`bw-nav-${id}`}
-          >
-            {icon}<span className="hidden lg:inline">{label}</span>
-            {id === "char" && char!.points > 0 && <span className="ml-0.5 h-2 w-2 rounded-full bg-emerald-400" />}
-            {id === "quests" && <span className="ml-0.5 h-2 w-2 rounded-full bg-amber-400" />}
-            {id === "inv" && char!.inv.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{char!.inv.length}</span>}
-            {id === "heros" && playersNear.length > 0 && <span className="ml-0.5 rounded-full bg-sky-400 px-1 text-[8px] font-black text-slate-900">{playersNear.length}</span>}
-          </button>
-        ))}
-        <div className="mx-0.5 w-px shrink-0 self-stretch bg-white/20" />
-        {/* v11: CÂMARAS — orbital · 1ª pessoa Minecraft · 3ª pessoa GTA */}
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-black/55 p-0.5 backdrop-blur" data-testid="bw-cam-group">
-          {([0, 1, 2] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => engineRef.current?.setCamMode(m)}
-              aria-label={m === 0 ? "Câmara Orbital" : m === 1 ? "Primeira pessoa" : "Terceira pessoa"}
-              className={`rounded-full p-1.5 transition-colors ${camMode === m ? "bg-white text-slate-900" : "text-white/75 hover:text-white"}`}
-              data-testid={`bw-cam-${m}`}
-              title={m === 0 ? "Câmara Orbital (clássica)" : m === 1 ? "1ª Pessoa — tipo Minecraft (C)" : "3ª Pessoa — tipo San Andreas (C)"}
-            >
-              {m === 0 ? <Video className="h-4 w-4" /> : m === 1 ? <Eye className="h-4 w-4" /> : <Gamepad2 className="h-4 w-4" />}
-            </button>
-          ))}
-        </div>
-        {/* v11: ECRÃ INTEIRO */}
-        <button
-          onClick={toggleFs}
-          aria-label="Ecrã inteiro"
-          className="flex shrink-0 items-center rounded-full p-1.5 text-white transition-colors hover:text-amber-200"
-          data-testid="bw-fs"
-          title="Ecrã inteiro"
-        >
-          {isFs ? <Minimize2 className="h-4 w-4 text-amber-300" /> : <Maximize2 className="h-4 w-4 text-white" />}
-        </button>
-        {/* v11: LEITOR DE MÚSICA — faixas originais sem direitos de autor */}
-        <button
-          onClick={() => { setMusicOpen((v) => !v); worldAudio.ensure(); }}
-          aria-label="Banda sonora"
-          className={`flex shrink-0 items-center rounded-full p-1.5 backdrop-blur transition-colors ${musicOpen ? "bg-white text-slate-900" : "text-white hover:text-fuchsia-200"}`}
-          data-testid="bw-music"
-          title="Banda sonora do mundo"
-        >
-          <Music className={`h-4 w-4 ${musicOpen ? "text-slate-900" : "text-fuchsia-300"}`} />
-        </button>
-        <div className="mx-0.5 w-px shrink-0 self-stretch bg-white/20" />
-        <button
-          onClick={togglePhoto}
-          aria-label="Modo foto"
-          className="flex shrink-0 items-center rounded-full p-1.5 text-white transition-colors hover:text-amber-200"
-          data-testid="bw-photo"
-          title="Modo Foto (P)"
-        >
-          <Camera className="h-4 w-4 text-sky-300" />
-        </button>
-        <button
-          onClick={() => setMuted(worldAudio.toggleMute())}
-          aria-label={muted ? "Ligar som" : "Desligar som"}
-          className="flex shrink-0 items-center rounded-full p-1.5 transition-colors"
-          data-testid="bw-sound"
-          title={muted ? "Ligar som (M)" : "Desligar som (M)"}
-        >
-          {muted ? <VolumeX className="h-4 w-4 text-red-300" /> : <Volume2 className="h-4 w-4 text-emerald-300" />}
-        </button>
-      </div>
-
-      {/* v9/v16: chip de convidado — lembra suave, nunca bloqueia */}
-      {!user && (
-        <button onClick={() => go("/register")} data-testid="bw-guest-chip" className="absolute left-1/2 top-[46px] z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black text-amber-200 backdrop-blur hover:bg-amber-500/25" style={fill ? { top: "calc(3rem + env(safe-area-inset-top, 0px))" } : undefined}>
-          👤 CONVIDADO — criar conta para guardar na nuvem
-        </button>
-      )}
-
-      {/* v11: LEITOR DE MÚSICA — 5 faixas ORIGINAIS (0% direitos de autor) */}
-      <AnimatePresence>
-        {musicOpen && (
-          <motion.div
-            key="music-player"
-            initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-12 left-1/2 z-20 w-[248px] -translate-x-1/2 rounded-2xl border border-fuchsia-400/40 bg-black/85 p-3 shadow-2xl backdrop-blur-md"
-            data-testid="bw-music-player"
-          >
-            <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-fuchsia-300">♪ Banda Sonora Bateu · 100% original</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{MUSIC_TRACKS[trackIdx].emoji}</span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-black text-white" data-testid="bw-track-name">{MUSIC_TRACKS[trackIdx].name}</p>
-                <p className="truncate text-[9px] font-bold text-white/50">{MUSIC_TRACKS[trackIdx].desc} · {MUSIC_TRACKS[trackIdx].bpm} BPM</p>
-              </div>
-              <button onClick={() => setTrackIdx(worldAudio.prevTrack())} className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20" data-testid="bw-music-prev" title="Anterior">⏮</button>
-              <button onClick={() => { setTrackIdx(worldAudio.nextTrack()); }} className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20" data-testid="bw-music-next" title="Próxima">⏭</button>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-[10px]">🔊</span>
-              <input
-                type="range" min={0.05} max={1} step={0.05} value={musicVol}
-                onChange={(e) => changeVol(parseFloat(e.target.value))}
-                className="h-1.5 flex-1 accent-fuchsia-400"
-                data-testid="bw-vol"
-              />
-              <span className="w-8 text-right text-[9px] font-black text-white/60">{Math.round(musicVol * 100)}%</span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {MUSIC_TRACKS.map((tr, i) => (
-                <button key={tr.id} onClick={() => pickTrack(i)} className={`rounded-full px-2 py-0.5 text-[9px] font-black transition-colors ${i === trackIdx ? "bg-fuchsia-500 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}>
-                  {tr.emoji} {i + 1}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v11: chip do CLIMA — chuva/tempestade ao vivo */}
-      <AnimatePresence>
-        {weatherChip && (
-          <motion.div
-            key="weather-chip"
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 ${fill ? "top-[46px]" : "top-24"}`}
-            data-testid="bw-weather"
-          >
-            <div className="flex items-center gap-2 rounded-full border border-sky-300/40 bg-black/70 px-3 py-1 text-[10px] font-black text-sky-100 backdrop-blur">
-              <span className="animate-pulse">{weatherChip.emoji}</span> {weatherChip.name.toUpperCase()}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v11: DIÁLOGO DE NPC — RPG com máquina de escrever */}
-      <AnimatePresence>
-        {dialogue && char && NPC_LINES[dialogue] && (
-          <motion.div
-            key="npc-dialogue"
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-            className="absolute bottom-40 left-1/2 z-30 w-[min(92%,420px)] -translate-x-1/2"
-            data-testid="bw-dialogue"
-          >
-            <div className="rounded-2xl border border-violet-300/40 bg-slate-950/92 p-3.5 shadow-2xl backdrop-blur-md">
-              <div className="mb-1.5 flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/25 text-xl">{NPC_LINES[dialogue].emoji}</span>
-                <p className="text-xs font-black text-violet-200">{NPC_LINES[dialogue].name}</p>
-                <button onClick={() => setDialogue(null)} className="ml-auto rounded-lg bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/70 hover:bg-white/20" data-testid="bw-dialogue-close">✕ fechar</button>
-              </div>
-              <p className="min-h-[38px] text-[12px] leading-snug text-white/90">
-                {dlgText}
-                <span className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-violet-300 align-middle" />
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex gap-1">
-                  {NPC_LINES[dialogue].lines.map((_, i) => (
-                    <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === dlgStep ? "bg-violet-300" : "bg-white/20"}`} />
-                  ))}
-                </div>
-                <div className="flex gap-1.5">
-                  {dlgStep < NPC_LINES[dialogue].lines.length - 1 && (
-                    <button onClick={() => { setDlgStep((s) => s + 1); setDlgText(""); }} className="rounded-lg bg-white/10 px-3 py-1 text-[10px] font-black text-white hover:bg-white/20">continuar ▸</button>
-                  )}
-                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "gift" && (
-                    <button onClick={() => { claimNpcGift("gomas"); setDialogue(null); }} className="rounded-lg bg-emerald-500 px-3 py-1 text-[10px] font-black text-white hover:bg-emerald-400" data-testid="bw-dialogue-gift">🎁 Bênção diária</button>
-                  )}
-                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "workshop" && (
-                    <button onClick={() => { setPanel("inv"); setDialogue(null); }} className="rounded-lg bg-amber-500 px-3 py-1 text-[10px] font-black text-white hover:bg-amber-400" data-testid="bw-dialogue-forge">🛠️ Abrir Oficina</button>
-                  )}
-                  {dlgStep === NPC_LINES[dialogue].lines.length - 1 && NPC_LINES[dialogue].action === "lore" && (
-                    <button onClick={() => { claimNpcGift("sabio"); setDialogue(null); }} className="rounded-lg bg-sky-500 px-3 py-1 text-[10px] font-black text-white hover:bg-sky-400" data-testid="bw-dialogue-lore">📜 Sabedoria (+5 pts)</button>
-                  )}
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v9: chip de convidado removido daqui — agora vive na coluna do topo */}
-
-      {/* joystick (mobile) */}
-      <Joystick onMove={(x, y) => engineRef.current?.setJoystick(x, y)} fs={fill} />
-
-      {/* barra de poderes + botões de combate v3 (cooldown radial) */}
-      <div className="absolute bottom-14 right-3 z-10 flex items-end gap-2" style={fill ? { right: "calc(0.75rem + env(safe-area-inset-right, 0px))", bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}>
-        <div className="flex flex-col items-center gap-2">
-          {/* v17: TRANSFORMAÇÃO estilo Dragon Ball (tecla T) */}
-          <button
-            onClick={() => engineRef.current?.cycleTransform()}
-            className={`relative flex h-11 w-11 items-center justify-center rounded-full border-2 text-lg font-black backdrop-blur transition-all ${form > 0 ? "border-amber-300 bg-amber-500/40 text-white shadow-[0_0_18px_rgba(251,191,36,0.7)]" : "border-fuchsia-300/70 bg-black/55 text-fuchsia-200 hover:bg-black/75"}`}
-            data-testid="bw-transform"
-            title="Transformação (T) — estilo Dragon Ball"
-          >
-            ⚡
-            {form > 0 && (
-              <motion.span className="absolute inset-0 rounded-full border-2 border-amber-300" animate={{ scale: [1, 1.35], opacity: [0.9, 0] }} transition={{ duration: 1, repeat: Infinity }} />
             )}
-            {char!.level < 5 && <span className="absolute -bottom-1 rounded-full bg-black/80 px-1 text-[7px] font-black text-white/70">Nv5</span>}
-          </button>
-          {mySkills.map((sk, i) => {
-            const locked = char!.level < sk.lvl;
-            const cd = skillCds[i] || 0;
-            const cdTotal = sk.cd || 1;
-            const cdPct = cd > 0 ? cd / cdTotal : 0;
-            return (
-              <button
-                key={sk.name}
-                onClick={() => engineRef.current?.skill(i)}
-                disabled={locked || cd > 0}
-                data-testid={`bw-skill-${i}`}
-                title={`${sk.name} — ${sk.desc}${locked ? ` (Nv${sk.lvl})` : ""}`}
-                className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl font-black shadow-lg transition-all active:scale-90 ${locked ? "bg-slate-800/85 text-white/35" : cd > 0 ? "bg-slate-700/85 text-white/50" : "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-amber-500/40 hover:scale-105"}`}
-              >
-                {!locked && cd <= 0 && <motion.span className="absolute inset-0 rounded-full border-2 border-white/60" animate={{ scale: [1, 1.12, 1], opacity: [0.7, 0, 0.7] }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.3 }} />}
-                {locked ? "🔒" : sk.emoji}
-                {cd > 0 && (
-                  <>
-                    <span className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(rgba(0,0,0,0.72) ${cdPct * 360}deg, transparent 0deg)` }} />
-                    <span className="absolute inset-0 flex items-center justify-center text-sm font-black">{cd}</span>
-                  </>
-                )}
-                {!locked && <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 rounded-full bg-slate-900 px-0.5 text-[8px] font-black text-amber-300 flex items-center justify-center border border-amber-400/50">{i + 1}</span>}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <button
-            onClick={() => engineRef.current?.attack()}
-            className="relative flex h-[68px] w-[68px] items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-90"
-            data-testid="bw-attack"
-          >
-            <motion.span
-              className="absolute inset-0 rounded-full border-2 border-white/50"
-              animate={{ scale: [1, 1.14, 1], opacity: [0.6, 0, 0.6] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
-            />
-            <Swords className="h-7 w-7" />
-          </button>
-          <div className="flex gap-2">
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              onClick={() => engineRef.current?.toggleGuard()}
-              data-testid="bw-guard"
-              title="Modo Guarda (Shift) — bloqueia 40% do dano"
-              className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90 ${guardOn ? "bg-gradient-to-br from-amber-300 to-yellow-500 text-slate-900 ring-2 ring-white" : "bg-slate-700/90 text-white"}`}
-            >
-              {guardOn && <motion.span className="absolute inset-0 rounded-full border-2 border-amber-200" animate={{ scale: [1, 1.25, 1], opacity: [0.8, 0, 0.8] }} transition={{ duration: 1.2, repeat: Infinity }} />}
-              <Shield className="h-5 w-5" />
-            </motion.button>
-            <button
-              onClick={() => engineRef.current?.jump()}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600/90 text-white shadow-lg active:scale-90"
-            >
-              <ArrowUp className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        {/* v11: MONTARIA — Lobo Veloz (desbloqueia ao nível 8) */}
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={() => engineRef.current?.toggleMount()}
-          data-testid="bw-mount"
-          title="Montaria: Lobo Veloz (V) — +75% de velocidade · desbloqueia ao Nv8"
-          className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl shadow-lg active:scale-90 ${mountOn ? "bg-gradient-to-br from-sky-400 to-cyan-500 text-white ring-2 ring-white" : "bg-slate-800/90 text-white/90"}`}
-        >
-          {mountOn ? "🐺" : "🐾"}
-          {char!.level < 8 && <span className="absolute -top-1 -right-1 rounded-full bg-slate-900 px-1 text-[8px] font-black text-amber-300 border border-amber-400/50">Nv8</span>}
-        </motion.button>
-      </div>
 
-      {/* v3: dica rotativa + atalhos (desktop) */}
-      <div className="pointer-events-none absolute bottom-1 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-0.5 md:flex">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={tipIdx}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-bold text-white/70 backdrop-blur-sm"
-          >
-            {TIPS[tipIdx]}
-          </motion.p>
-        </AnimatePresence>
-        <p className="text-[9px] text-white/40">
-          WASD mover · rato girar · clique/F atacar (jogadores perto = PvP!) · 1/2/3 poderes · E interagir · M som
-        </p>
-      </div>
-
-      {/* v13: ONBOARDING — cartão compacto com gradiente de meta visível */}
-      {char?.onb && !char.onb.done && ONB_STEPS[char.onb.step] && (
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`absolute left-1/2 z-20 w-[290px] max-w-[86vw] -translate-x-1/2 rounded-2xl border border-amber-300/40 bg-slate-950/85 p-2.5 text-white shadow-2xl backdrop-blur-md ${fill ? "top-[150px]" : "bottom-3"}`}
-          data-testid="bw-onb"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-amber-300">🧭 Primeiros passos · {char.onb.step + 1}/{ONB_STEPS.length}</p>
-            <button onClick={onbSkip} className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-white/60 hover:bg-white/20" data-testid="bw-onb-skip">Pular</button>
-          </div>
-          <div className="mt-1 flex items-start gap-2">
-            <span className="text-xl leading-none">{ONB_STEPS[char.onb.step].emoji}</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-black leading-tight" data-testid="bw-onb-title">{ONB_STEPS[char.onb.step].title}</p>
-              <p className="text-[10px] leading-snug text-white/65">{ONB_STEPS[char.onb.step].desc}</p>
-            </div>
-            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-black text-emerald-300 border border-emerald-400/30">+40 XP</span>
-          </div>
-          <div className="mt-1.5 flex items-center gap-1">
-            {ONB_STEPS.map((_, i) => (
-              <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < char!.onb!.step ? "bg-emerald-400" : i === char!.onb!.step ? "bg-amber-400" : "bg-white/15"} ${i === char!.onb!.step ? "animate-pulse" : ""}`} />
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Painéis ── */}
-      <AnimatePresence>
-        {panel === "char" && char && (
-          <Panel title="Meu Herói" onClose={() => setPanel("none")}>
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl" style={{ background: CLASSES[char.classId]?.color + "22", border: `1px solid ${CLASSES[char.classId]?.color}` }}>
-                {CLS_EMOJIS[char.classId]}
-              </div>
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 space-y-4">
               <div>
-                <p className="font-display font-black">{char.name} <span className="text-amber-300">· {titleFor(char.level)}</span></p>
-                <p className="text-xs text-muted-foreground">{CLS_NAMES[char.classId]} · Nível {char.level} · {char.kills} inimigos derrotados</p>
+                <div className="text-xs font-bold text-slate-300 mb-2">1 · NOME DO HERÓI</div>
+                <input value={ncName} onChange={e => setNcName(e.target.value)} maxLength={16} data-testid="bw-name-input"
+                  placeholder="Escreve o teu nome…" className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-400" />
               </div>
-            </div>
-            <div className="mb-2 h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full bg-gradient-to-r from-amber-400 to-yellow-300" style={{ width: `${xpPct}%` }} />
-            </div>
-            <p className="mb-3 text-[11px] text-muted-foreground">{char.xp} / {xpNeeded(char.level)} XP para o nível {char.level + 1}</p>
 
-            <div className="mb-3 grid grid-cols-3 gap-1.5 text-center">
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-1.5">
-                <p className="text-sm font-black text-amber-300">🏆 {char.pts}</p>
-                <p className="text-[9px] text-muted-foreground">Pontos de Troféu</p>
-              </div>
-              <div className="rounded-lg bg-sky-500/10 border border-sky-500/30 p-1.5">
-                <p className="text-sm font-black text-sky-300">🗺️ {char.discoveries.length}/{LANDMARKS.length}</p>
-                <p className="text-[9px] text-muted-foreground">Descobertas</p>
-              </div>
-              <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-1.5">
-                <p className="text-sm font-black text-rose-300">💀 {char.stolenFrom}/{char.lostTo}</p>
-                <p className="text-[9px] text-muted-foreground">Roubados / Perdidos</p>
-              </div>
-            </div>
-
-            <div className="mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5">
-              <p className="text-xs font-bold text-emerald-300">Pontos de atributo: {char.points}</p>
-              {char.points <= 0 && <p className="text-[10px] text-muted-foreground">Sobe de nível para ganhares mais pontos.</p>}
-            </div>
-
-            <div className="space-y-2">
-              <StatRow icon={<Swords className="h-4 w-4 text-rose-400" />} label="Ataque" value={stats.atk} disabled={char.points <= 0} onAdd={() => allocate("atk")} />
-              <StatRow icon={<Heart className="h-4 w-4 text-red-400" />} label="Vida" value={stats.maxHp} addLabel="+12" disabled={char.points <= 0} onAdd={() => allocate("hp")} />
-              <StatRow icon={<Zap className="h-4 w-4 text-amber-400" />} label="Velocidade" value={stats.spd.toFixed(1)} disabled={char.points <= 0} onAdd={() => allocate("spd")} />
-              <StatRow icon={<Shield className="h-4 w-4 text-sky-400" />} label={`Defesa (−${Math.min(60, stats.def * 3)}% dano)`} value={stats.def} addLabel="+2" disabled={char.points <= 0} onAdd={() => allocate("def")} />
-            </div>
-
-            {/* v5: editor de aparência dentro do jogo */}
-            <div className="mt-3 rounded-xl border border-violet-500/30 bg-violet-500/10 p-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold flex items-center gap-1"><User className="h-3.5 w-3.5 text-violet-300" /> Aparência do avatar</p>
-                <button
-                  data-testid="bw-appearance"
-                  onClick={() => { setAvDraft(char.avatar); setAvEditing(!avEditing); worldAudio.play("click"); }}
-                  className="rounded-lg bg-violet-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-violet-400"
-                >
-                  {avEditing ? "Fechar" : "Personalizar"}
-                </button>
-              </div>
-              {avEditing && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
-                    <div className="mx-auto shrink-0 sm:mx-0">
-                      <AvatarPreview
-                        cfg={avDraft}
-                        classColor={parseInt(CLASSES[char.classId]?.color?.slice(1) || "ef4444", 16)}
-                        className="h-40 w-32 rounded-xl border border-white/15 bg-gradient-to-b from-slate-800 to-slate-950"
-                      />
-                      <button
-                        data-testid="bw-av-random-2"
-                        onClick={() => setAvDraft(randomAvatar(char.classId))}
-                        className="mt-1.5 w-full rounded-lg border border-white/20 bg-white/10 py-1.5 text-[10px] font-bold hover:bg-white/20"
-                      >
-                        🎲 Aleatório
-                      </button>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <AvatarSwatches cfg={avDraft} onChange={setAvDraft} />
-                    </div>
-                  </div>
-                  <button
-                    data-testid="bw-av-save"
-                    onClick={() => {
-                      setChar((p) => (p ? { ...p, avatar: avDraft } : p));
-                      engineRef.current?.applyAvatar(avDraft);
-                      setAvEditing(false);
-                      pushToast("✨ Aparência atualizada — todos os jogadores já te veem assim!", "good");
-                      showBanner({ kind: "discover", emoji: "✨", title: "APARÊNCIA", sub: "Novo visual aplicado ao teu avatar" });
-                      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ["#a78bfa", "#fbbf24"] });
-                    }}
-                    className="mt-2 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-2 text-xs font-black text-white shadow-lg shadow-violet-500/25"
-                  >
-                    GUARDAR APARÊNCIA
-                  </button>
-                </motion.div>
-              )}
-            </div>
-
-            <div className="mt-3">
-              <p className="mb-1.5 text-xs font-bold flex items-center gap-1"><Sparkles className="h-3 w-3 text-amber-400" /> Poderes ({CLS_NAMES[char.classId]})</p>
-              <div className="space-y-1.5">
-                {mySkills.map((sk, i) => (
-                  <div key={sk.name} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 ${char.level >= sk.lvl ? "bg-amber-500/10 border border-amber-500/25" : "bg-white/5 opacity-60"}`}>
-                    <span className="text-base">{char.level >= sk.lvl ? sk.emoji : "🔒"}</span>
-                    <div className="flex-1">
-                      <p className="text-[11px] font-bold">{sk.name} <span className="text-[9px] text-white/40">tecla {i + 1}</span></p>
-                      <p className="text-[9px] text-muted-foreground">{sk.desc}{char.level < sk.lvl ? ` · Nv${sk.lvl}` : ""}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <p className="mb-1.5 text-xs font-bold flex items-center gap-1"><Map className="h-3 w-3 text-sky-400" /> Descobertas</p>
-              <div className="flex flex-wrap gap-1">
-                {LANDMARKS.map((l) => {
-                  const found = char.discoveries.includes(l.id);
-                  return (
-                    <span key={l.id} className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${found ? "bg-amber-500/15 text-amber-300" : "bg-white/5 text-white/30"}`}>
-                      {found ? `${l.emoji} ${l.name}` : "??? ????"}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            {char.vouchers.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1.5 text-xs font-bold flex items-center gap-1"><Copy className="h-3 w-3" /> Cupões ganhos no mundo</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {char.vouchers.map((v) => (
-                    <button key={v.id} onClick={() => copyCode(v.code)} className="rounded-lg border border-dashed border-rose-400/50 bg-rose-500/10 px-2 py-1 text-[10px] font-mono font-bold text-rose-300">
-                      {v.code} · {v.label}
+              <div>
+                <div className="text-xs font-bold text-slate-300 mb-2">2 · CLASSE (4 · 48 habilidades)</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {CLASSES.map(cl => (
+                    <button key={cl.id} onClick={() => { setNcClass(cl.id); setNcAvatar(defaultAvatar(cl.id)); }} data-testid={`bw-class-${cl.id}`}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${ncClass === cl.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
+                      <div className="text-lg">{cl.emoji}</div>
+                      <div className="font-bold text-sm" style={{ color: cl.color }}>{cl.name}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{cl.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-            <div className="mt-3 flex gap-2 text-[10px] text-muted-foreground">
-              <span>🔥 Streak: {char.streak}d</span>
-              <span>💀 Mortes: {char.deaths}</span>
-              <button className="underline hover:text-foreground" onClick={() => { if (confirm("Recomeçar personagem do zero?")) { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY_V4); localStorage.removeItem(LS_KEY_V3); window.location.reload(); } }}>
-                Recomeçar
+
+              <div>
+                <div className="text-xs font-bold text-slate-300 mb-2">3 · FACÇÃO (guerra permanente)</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {FACTIONS.map(f => (
+                    <button key={f.id} onClick={() => setNcFaction(f.id)} data-testid={`bw-faction-${f.id}`}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${ncFaction === f.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
+                      <div className="font-black text-sm" style={{ color: f.color }}>{f.emoji} {f.name}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{f.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold text-slate-300 mb-2">4 · APARÊNCIA</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                    <AvatarPreview cfg={ncAvatar} classColor={CLASSES[ncClass].color} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <AvatarSwatches cfg={ncAvatar} onChange={setNcAvatar} />
+                  </div>
+                  <button onClick={() => setNcAvatar(randomAvatar(ncClass))} title="Aleatório"
+                    className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs">🎲</button>
+                </div>
+              </div>
+
+              <button onClick={beginNew} data-testid="bw-enter"
+                className="w-full py-3.5 rounded-xl font-black text-base text-slate-900 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-xl shadow-amber-500/25 active:scale-[0.98]">
+                ENTRAR NO MUNDO ⚔
               </button>
+              <p className="text-center text-[10px] text-slate-500">Sem registo · o progresso guarda na tua conta quando fizeres login</p>
             </div>
-          </Panel>
+          </motion.div>
+        </div>
+      </div>
+    ) : null;
+
+  // ════════════════ JOGO (HUD) ══════════════════════════════
+  function renderHud() {
+  const c = charRef.current!;
+  const stats = deriveStats(c);
+  const cls = CLASSES[c.classId];
+  const region = REGIONS.find(r => r.id === hud.region) || REGIONS[0];
+  const xpNeedCur = xpNeed(c.level);
+  const hpPct = Math.max(0, Math.min(100, (hud.hp / hud.maxHp) * 100));
+  const mpPct = Math.max(0, Math.min(100, (hud.mp / hud.maxMp) * 100));
+  const xpPct = Math.max(0, Math.min(100, (c.xp / xpNeedCur) * 100));
+  const isMobileHud = window.innerWidth < 820 || window.matchMedia?.("(pointer: coarse)").matches;
+  const isTouch = window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window;
+  const towerOwned = (engineRef.current?.getTowers() || []).filter(t => t.owner === c.faction).length;
+
+  const skillSlot = (i: number) => {
+    const si = c.hotbar[i];
+    if (si == null) return null;
+    const sk = SKILLS[c.classId][si];
+    const locked = c.level < sk.unlock;
+    const cd = hud.cds[i] || 0;
+    return { sk, locked, cd, si };
+  };
+
+  const MENUS: { id: string; label: string; icon: any; testid: string }[] = [
+    { id: "inv", label: "Mochila", icon: Backpack, testid: "bw-menu-inv" },
+    { id: "skills", label: "Habilidades", icon: Sparkles, testid: "bw-menu-skills" },
+    { id: "quests", label: "Missões", icon: ScrollText, testid: "bw-menu-quests" },
+    { id: "map", label: "Mapa", icon: Map, testid: "bw-menu-map" },
+    { id: "fame", label: "Fama", icon: Trophy, testid: "bw-menu-fame" },
+    { id: "party", label: "Grupo", icon: Users, testid: "bw-menu-party" },
+    { id: "clan", label: "Clã", icon: Shield, testid: "bw-menu-clan" },
+    { id: "mounts", label: "Montarias", icon: Compass, testid: "bw-menu-mounts" },
+    { id: "home", label: "Habitação", icon: Home, testid: "bw-menu-home" },
+    { id: "forge", label: "Oficina", icon: Hammer, testid: "bw-menu-forge" },
+    { id: "shop", label: "Loja", icon: Store, testid: "bw-menu-shop" },
+    { id: "coupons", label: "Cupões", icon: Ticket, testid: "bw-menu-coupons" },
+    { id: "bank", label: "Banco", icon: Landmark, testid: "bw-menu-bank" },
+    { id: "settings", label: "Opções", icon: Settings, testid: "bw-menu-settings" },
+  ];
+
+  const openMenu = (id: string) => { setMenuOpen(false); setPanel(id); worldAudio.play("click"); };
+
+  return (
+    <div className="absolute inset-0" data-testid="bw-play">
+
+      {/* flash de dano */}
+      <AnimatePresence>
+        {hud.hp < hud.maxHp * 0.3 && !hud.dead && (
+          <motion.div animate={{ opacity: [0.25, 0.08, 0.25] }} transition={{ repeat: Infinity, duration: 1.2 }}
+            className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(220,38,38,0.55))" }} />
         )}
+      </AnimatePresence>
 
-        {panel === "quests" && q && (
-          <Panel title="Missões & Desafios" onClose={() => setPanel("none")}>
-            <div className="mb-3 flex gap-1.5">
-              <button onClick={() => setQuestTab("daily")} className={`flex-1 rounded-lg py-1.5 text-[11px] font-black ${questTab === "daily" ? "bg-rose-500 text-white" : "bg-white/10 text-white/60"}`}>Diárias</button>
-              <button onClick={() => setQuestTab("saga")} className={`flex-1 rounded-lg py-1.5 text-[11px] font-black ${questTab === "saga" ? "bg-amber-500 text-white" : "bg-white/10 text-white/60"}`}>Saga {char!.sagaIdx + 1}/10</button>
-              <button onClick={() => setQuestTab("chal")} className={`flex-1 rounded-lg py-1.5 text-[11px] font-black ${questTab === "chal" ? "bg-violet-500 text-white" : "bg-white/10 text-white/60"}`}>Desafios</button>
+      {/* ── topo esquerda: barras ── */}
+      <div className="absolute top-2 left-2 right-2 flex items-start gap-2 pointer-events-none z-20">
+        <div className="flex-1 max-w-[46%]">
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="px-1.5 py-0.5 rounded-md text-[10px] font-black text-slate-900" style={{ background: cls.color }}>
+              {cls.emoji} Nv{c.level}
             </div>
-
-            {questTab === "daily" && (
-              <>
-                <QuestRow emoji="⚔️" title="Derrota 10 inimigos" progress={`${Math.min(q.kills, 10)}/10`} done={q.cK} canClaim={q.kills >= 10 && !q.cK} reward="+250 ouro" onClaim={() => claimQuest("K")} />
-                <QuestRow emoji="🎟️" title="Abre 1 baú de cupões" progress={`${Math.min(q.chest, 1)}/1`} done={q.cC} canClaim={q.chest >= 1 && !q.cC} reward="+120 XP" onClaim={() => claimQuest("C")} />
-                <QuestRow emoji="🎁" title="Visita um sorteio/concurso/bem" progress={`${Math.min(q.visit, 1)}/1`} done={q.cV} canClaim={q.visit >= 1 && !q.cV} reward="+80 XP" onClaim={() => claimQuest("V")} />
-                <QuestRow emoji="💀" title="Rouba pontos a 1 jogador (PvP)" progress={`${Math.min(q.steal, 1)}/1`} done={q.cS} canClaim={q.steal >= 1 && !q.cS} reward="+150 ouro" onClaim={() => claimQuest("S")} />
-                <QuestRow emoji="🏟️" title="Limpa 3 ondas na Arena" progress={`${Math.min(q.waves, 3)}/3`} done={q.cW} canClaim={q.waves >= 3 && !q.cW} reward="+350 ouro · +20 pts" onClaim={() => claimQuest("W")} />
-                <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-rose-400">⚔️ Caça entre heróis — missões PvP</p>
-                <QuestRow emoji="🎒" title="Rouba 1 ITEM a outro herói (PvP)" progress={`${Math.min(q.item, 1)}/1`} done={q.cI} canClaim={q.item >= 1 && !q.cI} reward="+300 ouro · +20 pts" onClaim={() => claimQuest("I")} testid="bw-quest-item" />
-                <QuestRow emoji="🩸" title="Vence 3 heróis em duelo (PvP)" progress={`${Math.min(q.duel, 3)}/3`} done={q.cD} canClaim={q.duel >= 3 && !q.cD} reward="+250 ouro · +15 pts" onClaim={() => claimQuest("D")} testid="bw-quest-duel" />
-                <QuestRow emoji="🎯" title="Acerta 5 golpes em heróis (PvP)" progress={`${Math.min(q.atk, 5)}/5`} done={q.cA} canClaim={q.atk >= 5 && !q.cA} reward="+200 ouro · +10 pts" onClaim={() => claimQuest("A")} testid="bw-quest-atk" />
-                <QuestRow emoji="🏠" title="Entra 2 vezes em interiores (casas, farol…)" progress={`${Math.min(q.home, 2)}/2`} done={q.cH} canClaim={q.home >= 2 && !q.cH} reward="+150 ouro · +10 pts" onClaim={() => claimQuest("H")} testid="bw-quest-home" />
-                <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-emerald-400">🌿 Vida de recolhedor — v11</p>
-                <QuestRow emoji="🌿" title="Recolhe 6 recursos (ervas, minérios, cristais)" progress={`${Math.min(q.gather, 6)}/6`} done={q.cG} canClaim={q.gather >= 6 && !q.cG} reward="+180 ouro · +150 XP" onClaim={() => claimQuest("G")} testid="bw-quest-gather" />
-                <p className="mt-3 text-[10px] text-muted-foreground">As missões diárias reiniciam todos os dias. PvP ativo fora da praça — jogadores abaixo do Nv3 estão protegidos. Durante o Frenesi de Roubos cada roubo rende +25 pts bónus!</p>
-              </>
-            )}
-
-            {questTab === "saga" && (
-              <>
-                {SAGA[char!.sagaIdx] ? (() => {
-                  const step = SAGA[char!.sagaIdx];
-                  const prog = Math.min(step.prog(char!), step.goal);
-                  return (
-                    <div className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">Passo atual da Saga</p>
-                      <p className="font-display font-black text-sm mt-0.5">{step.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                        <div className="h-full bg-gradient-to-r from-amber-400 to-yellow-300" style={{ width: `${(prog / step.goal) * 100}%` }} />
-                      </div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <p className="text-[10px] text-muted-foreground">{prog}/{step.goal} · {step.reward}</p>
-                        {prog >= step.goal && (
-                          <button onClick={claimSaga} className="animate-pulse rounded-lg bg-amber-400 px-3 py-1 text-[11px] font-black text-slate-900 shadow-lg shadow-amber-400/30 hover:bg-amber-300">Receber</button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })() : (
-                  <div className="mb-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-center">
-                    <p className="text-2xl">👑</p>
-                    <p className="font-display font-black text-sm">Saga completa — és uma LENDA do Bateu World!</p>
-                  </div>
-                )}
-                <div className="space-y-1">
-                  {SAGA.map((step, i) => (
-                    <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-[10px] ${i < char!.sagaIdx ? "bg-emerald-500/10 text-emerald-300" : i === char!.sagaIdx ? "bg-amber-500/15 text-amber-200" : "bg-white/5 text-white/40"}`}>
-                      <span>{i < char!.sagaIdx ? "✅" : i === char!.sagaIdx ? "▶" : "🔒"}</span>
-                      <span className="flex-1 font-bold">{step.title}</span>
-                      <span className="text-white/50">{Math.min(step.prog(char!), step.goal)}/{step.goal}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {questTab === "chal" && (
-              <>
-                <QuestRow emoji="🏹" title="Desafio do Caçador: derrota 25 inimigos hoje" progress={`${Math.min(q.kills, 25)}/25`} done={char!.chal.c1} canClaim={q.kills >= 25 && !char!.chal.c1} reward="+400 ouro · +15 pts" onClaim={() => claimChallenge(1)} />
-                <QuestRow emoji="😈" title="Desafio do Ladrão: rouba 2 jogadores hoje" progress={`${Math.min(q.steal, 2)}/2`} done={char!.chal.c2} canClaim={q.steal >= 2 && !char!.chal.c2} reward="+300 ouro · +25 pts" onClaim={() => claimChallenge(2)} />
-                <p className="mt-3 text-[10px] text-muted-foreground">Os desafios são mais difíceis mas pagam muito melhor. Recomeçam todos os dias à meia-noite.</p>
-              </>
-            )}
-          </Panel>
-        )}
-
-        {panel === "bank" && char && (
-          <Panel title="🏦 Banco de Pontos" onClose={() => setPanel("none")}>
-            <div className="mb-3 rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-center">
-              <p className="text-2xl font-black text-amber-300">🏆 {char.pts} pts</p>
-              <p className="text-[10px] text-muted-foreground">Ganha Pontos de Troféu derrotando inimigos, chefes, descobrindo marcos e roubando outros jogadores.</p>
+            <div className="px-1.5 py-0.5 rounded-md text-[10px] font-bold truncate" style={{ background: "rgba(2,6,23,0.7)", color: FACTIONS[c.faction].color }}>
+              {FACTIONS[c.faction].emoji} {c.name}
             </div>
-            <div className="space-y-2">
-              {EXCHANGES.map((ex) => {
-                const can = char.pts >= ex.cost;
-                return (
-                  <div key={ex.id} className={`flex items-center gap-2.5 rounded-xl border p-2.5 ${can ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-white/5"}`}>
-                    <span className="text-2xl">{ex.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold">{ex.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{ex.desc}</p>
-                    </div>
-                    <button
-                      onClick={() => doExchange(ex.id)}
-                      disabled={!can}
-                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-black ${can ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 hover:brightness-110" : "bg-white/5 text-white/30"}`}
-                    >
-                      {ex.cost} pts
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-[10px] text-muted-foreground">
-              💵 A conversão em moeda real (MT) é creditada na carteira da plataforma. Cupões podem ser roubados por outros jogadores se não tiveres escudo — protege-te no Banco!
-            </p>
-          </Panel>
-        )}
+            {c.clan && <div className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-900/70 text-cyan-300">[{c.clan.tag}]</div>}
+          </div>
+          {/* HP */}
+          <div className="h-3 rounded-full bg-slate-950/80 border border-slate-700/80 overflow-hidden mb-1" data-testid="bw-hp-bar">
+            <motion.div className="h-full" animate={{ width: `${hpPct}%` }} transition={{ duration: 0.2 }}
+              style={{ background: "linear-gradient(90deg,#dc2626,#f87171)" }} />
+          </div>
+          {/* Mana */}
+          <div className="h-2 rounded-full bg-slate-950/80 border border-slate-700/80 overflow-hidden mb-1">
+            <motion.div className="h-full" animate={{ width: `${mpPct}%` }} transition={{ duration: 0.2 }}
+              style={{ background: "linear-gradient(90deg,#2563eb,#60a5fa)" }} />
+          </div>
+          {/* XP */}
+          <div className="h-1.5 rounded-full bg-slate-950/80 border border-slate-800 overflow-hidden">
+            <motion.div className="h-full" animate={{ width: `${xpPct}%` }} transition={{ duration: 0.3 }}
+              style={{ background: "linear-gradient(90deg,#d97706,#fbbf24)" }} />
+          </div>
+          <div className="text-[9px] text-slate-400 mt-0.5 flex gap-2">
+            <span data-testid="bw-gold">🪙 {c.gold.toLocaleString("pt-MZ")}</span>
+            <span>🎟️ {c.coupons}</span>
+            <span>⭐ XP {Math.floor(xpPct)}%</span>
+          </div>
+        </div>
 
-        {panel === "rank" && (
-          <Panel title="🏆 Ranking por POWER LEVEL" onClose={() => setPanel("none")}>
-            {(() => {
-              // v17: ranking estilo scouter — ordena por Power Level
-              const myPlLocal = engineRef.current?.getPowerLevel?.() ?? Math.round(char ? (calcStats(char).atk * 7 + calcStats(char).maxHp * 0.55 + calcStats(char).def * 4 + calcStats(char).spd * 3 + char.level * 12) : 0);
-              const rows = [...(platform?.leaderboard || [])].map((r) => ({
-                ...r,
-                pl: r.pl ?? Math.round((r.level || 1) * 95 + (r.gold || 0) / 40 + (r.kills || 0) * 3),
-              }));
-              // heróis ONLINE entram também (sincronizados em tempo real)
-              for (const p of playersNear) {
-                if (!rows.some((r) => r.name === p.name)) rows.push({ name: p.name, classId: 0, level: p.level, gold: 0, kills: 0, pl: p.pl } as any);
-              }
-              if (char) {
-                const i = rows.findIndex((r) => r.name === char.name);
-                const me = { name: char.name, classId: char.classId, level: char.level, gold: char.gold, kills: char.kills, pl: myPlLocal };
-                if (i >= 0) rows[i] = { ...rows[i], ...me };
-                else rows.push(me as any);
-              }
-              rows.sort((a: any, b: any) => (b.pl || 0) - (a.pl || 0) || b.level - a.level);
-              return (
-                <div className="space-y-1">
-                  {rows.slice(0, 15).map((r: any, i: number) => (
-                    <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${char && r.name === char.name ? "bg-rose-500/20 border border-rose-400/40" : "bg-white/5"}`}>
-                      <span className="w-5 text-center font-black text-white/50">{i === 0 ? "👑" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
-                      <span className="text-base">{CLS_EMOJIS[r.classId] || "⚔️"}</span>
-                      <span className="flex-1 truncate font-bold">{r.name}</span>
-                      <span className="text-white/60">Nv{r.level}</span>
-                      <span className="font-black text-fuchsia-300" title="Power Level">⚡{(r.pl || 0).toLocaleString("pt-PT")}</span>
-                      <span className="hidden text-amber-400 sm:inline">{r.gold}💰</span>
-                    </div>
-                  ))}
-                  {rows.length === 0 && <p className="text-xs text-muted-foreground">Sê o primeiro do ranking!</p>}
-                  <p className="pt-1 text-[10px] text-muted-foreground">
-                    📡 O Power Level cresce com ataque, vida, defesa, velocidade, nível e TRANSFORMAÇÕES. Derrota criaturas de territórios perigosos para o fazer explodir!
-                  </p>
-                </div>
-              );
-            })()}
-          </Panel>
-        )}
-
-        {/* ── v17: PODERES & ARMAS — o manual estilo Dragon Ball ── */}
-        {panel === "poderes" && char && (
-          <Panel title="⚡ Poderes, Transformações & Armas" onClose={() => setPanel("none")}>
-            <div className="mb-3 rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-2.5 text-center" data-testid="bw-poderes-pl">
-              <p className="text-[10px] font-black uppercase tracking-wider text-fuchsia-200">O teu Power Level (scouter)</p>
-              <p className="text-2xl font-black text-white">⚡ {myPl.toLocaleString("pt-PT")}</p>
-              <p className="text-[10px] text-white/60">Ataque×7 + Vida×0.55 + Defesa×4 + Velocidade×3 + Nível×12 — multiplicado pelas transformações</p>
-            </div>
-
-            <p className="mb-1.5 text-xs font-black text-amber-300">🔥 TRANSFORMAÇÕES (estilo Dragon Ball)</p>
-            <div className="mb-3 space-y-1.5">
-              {TRANSFORMS[char.classId].map((tf, ti) => {
-                const unlocked = char.level >= tf.lvl;
-                const active = form === ti + 1;
-                return (
-                  <div key={tf.name} className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${active ? "border-amber-400/60 bg-amber-500/15" : unlocked ? "border-white/10 bg-white/5" : "border-white/5 bg-white/[0.02] opacity-60"}`}>
-                    <span className="text-lg">{tf.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold">{tf.name} {active && <span className="text-amber-300">· ATIVA</span>}</p>
-                      <p className="text-[10px] text-white/60">{unlocked ? `×${tf.mult} de ataque · ×${tf.mult === 1.8 ? 1.22 : 1.12} de velocidade · drena KI` : `Desbloqueia no nível ${tf.lvl}`}</p>
-                    </div>
-                    <button
-                      onClick={() => engineRef.current?.transform(unlocked ? (active ? ti : ti + 1) : ti + 1)}
-                      className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-black ${active ? "bg-white/20 text-white" : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900"}`}
-                      data-testid={`bw-transform-${ti}`}
-                    >
-                      {active ? "Desativar" : "Transformar"}
-                    </button>
-                  </div>
-                );
-              })}
-              <p className="text-[10px] text-muted-foreground">Como usar: toca no botão ⚡ da barra de combate ou prime <b>T</b> (base → 1ª → 2ª → base). O KI drena em forma transformada — quando acabar, voltas à base e ele recarrega sozinho.</p>
-            </div>
-
-            <p className="mb-1.5 text-xs font-black text-violet-300">🔮 OS TEUS PODERES ({CLASSES[char.classId].name})</p>
-            <div className="mb-3 space-y-1.5">
-              {mySkills.map((sk, i) => {
-                const unlocked = char.level >= sk.lvl;
-                return (
-                  <div key={sk.name} className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${unlocked ? "border-white/10 bg-white/5" : "border-white/5 bg-white/[0.02] opacity-60"}`}>
-                    <span className="text-lg">{sk.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold">{sk.name} <span className="text-white/40">· tecla {i + 1}</span></p>
-                      <p className="text-[10px] text-white/60">{unlocked ? `${sk.desc} · recarga ${sk.cd}s` : `Desbloqueia no nível ${sk.lvl}`}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="mb-1.5 text-xs font-black text-sky-300">🗡️ ARMAS & EQUIPAMENTO</p>
-            <div className="mb-3 space-y-1 text-[11px] text-white/70">
-              <p>• Slots: <b>arma</b> (ataque), <b>armadura</b> (vida), <b>amuleto</b> (velocidade) e <b>escudo</b> (defesa) — equipa na <b>Mochila</b>.</p>
-              <p>• Raridades: <span className="text-white/60">Comum</span> → <span className="text-sky-300">Raro</span> → <span className="text-purple-300">Épico</span> → <span className="text-amber-300">Lendário</span>. Quanto mais raro, mais stats.</p>
-              <p>• Criaturas de territórios perigosos (Montanhas, Vulcânicas) e chefes dropam itens melhores.</p>
-              <p>• <b>Guerreiro</b> usa espada corpo a corpo · <b>Mago/Arqueiro/Curandeiro</b> atiram projéteis à distância (8.5m).</p>
-              <p>• <b>Guarda (Shift)</b> bloqueia 40% do dano — combina com transformação para duelos!</p>
-            </div>
-
-            <p className="mb-1.5 text-xs font-black text-emerald-300">💎 CRÉDITOS & PRÉMIO 1GB</p>
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 text-[11px] text-white/75">
-              <p className="mb-1">Saldo: <b className="text-emerald-300">{char.credits} 💎 créditos</b> (ganho em chefes, duelos e níveis)</p>
-              <p className="mb-1">🎁 O drop mais raro do mundo: <b>1GB em qualquer operadora</b> (Vodacom, Movitel, Tmcel) — cai de <b>chefes (0,5%)</b> e guardiões (0,2%). Ganhar é MESMO difícil.</p>
-              <p>Quando ganhares, abre-se um bilhete com mensagem automática pronta para o suporte no WhatsApp <b>+258 84 854 7887</b> — só escolhes a operadora e o teu número e envias. Levas o 1GB direto!</p>
-            </div>
-          </Panel>
-        )}
-
-        {/* ── v17: HERÓIS ONLINE — encontra jogadores e desafia 1v1 ── */}
-        {panel === "heros" && char && (
-          <Panel title="⚔️ Heróis no Mundo" onClose={() => setPanel("none")}>
-            {playersNear.length === 0 ? (
-              <div className="space-y-2 text-center" data-testid="bw-heros-empty">
-                <p className="text-3xl">🌍</p>
-                <p className="text-xs font-bold">Nenhum herói por perto agora</p>
-                <p className="text-[10px] text-muted-foreground">Os heróis online aparecem aqui em tempo real com o Power Level sincronizado. Convida amigos para se encontrarem no mundo!</p>
+        {/* centro: alvo */}
+        <div className="flex-1 flex flex-col items-center">
+          {hud.target && (
+            <div className="px-2 py-1 rounded-lg bg-slate-950/80 border border-red-900/70 min-w-[140px]" data-testid="bw-target">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-red-300 truncate max-w-[130px]">{hud.target.name}</span>
+                <span className="text-[10px] text-slate-400">Nv{hud.target.lvl}</span>
               </div>
-            ) : (
-              <div className="space-y-1.5" data-testid="bw-heros-list">
-                {playersNear.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs">
-                    <span className="text-base">🧑‍🚀</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-bold">{p.name}</p>
-                      <p className="text-[10px] text-white/60">Nv{p.level} · ⚡PL {p.pl.toLocaleString("pt-PT")} · a {p.dist}m</p>
-                    </div>
-                    <button
-                      onClick={() => engineRef.current?.requestDuel(p.id)}
-                      disabled={!!duelVs}
-                      className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-black ${duelVs ? "bg-white/10 text-white/40" : "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:brightness-110"}`}
-                      data-testid={`bw-duel-${p.name}`}
-                    >
-                      Desafiar
-                    </button>
-                  </div>
-                ))}
-                <p className="pt-1 text-[10px] text-muted-foreground">Duelo 1v1: 90 segundos, mesmo na praça. O vencedor leva <b className="text-emerald-300">10-15 💎 créditos</b> + 8 pts e pode publicar a vitória nos Stories!</p>
-              </div>
-            )}
-          </Panel>
-        )}
-
-        {panel === "inv" && char && (
-          <Panel title="🎒 Mochila & Equipamento" onClose={() => setPanel("none")}>
-            {/* equipado */}
-            <div className="mb-3 grid grid-cols-4 gap-1.5">
-              {(["arma", "armadura", "amuleto", "escudo"] as const).map((slot) => {
-                const it = char.equipped[slot];
-                const meta = it ? RARITY_META[it.rarity] : null;
-                return (
-                  <div key={slot} className={`rounded-lg border p-2 text-center ${meta ? "bg-white/5" : "border-dashed border-white/15 bg-white/[0.03]"}`} style={meta ? { borderColor: meta.color + "88" } : undefined}>
-                    <p className="text-[9px] uppercase tracking-wider text-white/40">{slot}</p>
-                    <p className="my-0.5 text-xl">{it ? it.emoji : "➖"}</p>
-                    {it ? (
-                      <>
-                        <p className="truncate text-[9px] font-bold" style={{ color: meta!.color }}>{it.name}</p>
-                        <p className="text-[8px] text-white/50">+{it.atk}⚔️ +{it.hp}❤️ +{it.spd}⚡{it.def ? ` +${it.def}🛡` : ""}</p>
-                        <button onClick={() => equipItem(it)} className="mt-1 rounded bg-white/10 px-1.5 py-0.5 text-[8px] font-bold hover:bg-white/20">Remover</button>
-                      </>
-                    ) : (
-                      <p className="text-[8px] text-white/30">vazio</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mb-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2 py-1.5 text-[10px] font-bold text-emerald-300">
-              Bónus total: +{stats.atk - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).atk)}⚔️ · +{stats.maxHp - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).maxHp)}❤️ · +{stats.spd.toFixed(1)}⚡ · +{stats.def - (calcStats({ ...char, equipped: { arma: null, armadura: null, amuleto: null, escudo: null } }).def)}🛡️
-            </div>
-            {/* v11: OFICINA — materiais → poções */}
-            <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-2.5">
-              <p className="mb-1.5 text-xs font-black flex items-center gap-1">⚗️ Oficina da Lurdes <span className="rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[8px] font-black text-amber-300">RECOLHE NO MUNDO COM E</span></p>
-              <div className="mb-2 flex items-center gap-2 text-[10px] font-black">
-                <span className="rounded-lg bg-emerald-500/15 px-2 py-0.5 text-emerald-300" data-testid="bw-mat-erva">🌿 {char.mat.erva}</span>
-                <span className="rounded-lg bg-orange-500/15 px-2 py-0.5 text-orange-300" data-testid="bw-mat-minerio">⛏️ {char.mat.minerio}</span>
-                <span className="rounded-lg bg-cyan-500/15 px-2 py-0.5 text-cyan-300" data-testid="bw-mat-cristal">💎 {char.mat.cristal}</span>
-              </div>
-              <div className="space-y-1.5">
-                {([
-                  { k: "vida", emoji: "❤️", name: "Poção de Vida", desc: "Cura 55% da vida", cost: "3🌿 + 1💎", can: char.mat.erva >= 3 && char.mat.cristal >= 1 },
-                  { k: "forca", emoji: "💪", name: "Poção de Força", desc: "+30% ataque · 60s", cost: "2🌿 + 2⛏️", can: char.mat.erva >= 2 && char.mat.minerio >= 2 },
-                  { k: "vento", emoji: "💨", name: "Poção do Vento", desc: "+25% velocidade · 60s", cost: "1🌿 + 1⛏️ + 2💎", can: char.mat.erva >= 1 && char.mat.minerio >= 1 && char.mat.cristal >= 2 },
-                ] as const).map((r) => (
-                  <div key={r.k} className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1.5">
-                    <span className="text-lg">{r.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-black text-white">{r.name} <span className="text-white/40">×{char.pot[r.k]}</span></p>
-                      <p className="text-[9px] text-white/50">{r.desc} · {r.cost}</p>
-                    </div>
-                    <button
-                      onClick={() => craftPotion(r.k)}
-                      disabled={!r.can}
-                      data-testid={`bw-craft-${r.k}`}
-                      className={`rounded-lg px-2.5 py-1 text-[9px] font-black ${r.can ? "bg-amber-400 text-slate-900 hover:bg-amber-300" : "bg-white/10 text-white/30"}`}
-                    >
-                      Fabricar
-                    </button>
-                    {char.pot[r.k] > 0 && (
-                      <button
-                        onClick={() => usePotion(r.k)}
-                        data-testid={`bw-use-${r.k}`}
-                        className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[9px] font-black text-white hover:bg-emerald-400"
-                      >
-                        Usar
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <div className="h-1.5 mt-0.5 rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-full bg-red-500 transition-all" style={{ width: `${(hud.target.hp / hud.target.maxHp) * 100}%` }} />
               </div>
             </div>
-            <p className="mb-1.5 text-xs font-bold flex items-center gap-1"><Backpack className="h-3 w-3 text-sky-400" /> Mochila ({char.inv.length})</p>
-            {char.inv.length === 0 && (
-              <p className="rounded-lg border border-dashed border-white/15 bg-white/[0.03] p-3 text-center text-[10px] text-muted-foreground">
-                Derrota inimigos, chefes e guardiões para ganhares equipamento com raridades (Comum → Lendário).
-              </p>
-            )}
-            <div className="space-y-1.5">
-              {char.inv.map((it) => {
-                const meta = RARITY_META[it.rarity];
-                return (
-                  <div key={it.id} className="flex items-center gap-2 rounded-lg border bg-white/5 p-2" style={{ borderColor: meta.color + "55" }}>
-                    <span className="text-xl">{it.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-bold" style={{ color: meta.color }}>{it.name} <span className="text-[8px] font-black uppercase">{meta.name}</span></p>
-                      <p className="text-[9px] text-white/60">{it.slot} · +{it.atk}⚔️ +{it.hp}❤️ +{it.spd}⚡{it.def ? ` +${it.def}🛡` : ""}</p>
-                    </div>
-                    <button onClick={() => equipItem(it)} className="rounded-lg bg-emerald-500 px-2 py-1 text-[10px] font-black text-white hover:bg-emerald-400">Equipar</button>
-                    <button onClick={() => sellItem(it)} className="rounded-lg bg-white/10 px-2 py-1 text-[10px] font-black text-white/70 hover:bg-white/20">{[40, 120, 320, 800][it.rarity]}💰</button>
-                  </div>
-                );
-              })}
-            </div>
-          </Panel>
-        )}
-
-        {panel === "map" && char && (
-            <Panel title="🗺️ Mapa-Múndi do Bateu World" onClose={() => setPanel("none")}>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative mx-auto shrink-0">
-                  <BigMap
-                    discoveries={char.discoveries}
-                    onPick={(x, z) => { engineRef.current?.setWaypoint(x, z); }}
-                  />
-                </div>
-                <div className="min-w-0 flex-1 max-h-64 overflow-y-auto sm:max-h-none">
-                  <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-white/50">O que significa cada lugar</p>
-                  <div className="space-y-1">
-                    {LANDMARKS.map((l) => {
-                      const found = char.discoveries.includes(l.id);
-                      return (
-                        <button
-                          key={l.id}
-                          onClick={() => { engineRef.current?.setWaypoint(l.x, l.z); }}
-                          className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${found ? "bg-amber-500/10 hover:bg-amber-500/20" : "bg-white/[0.03] hover:bg-white/10"}`}
-                          data-testid={`bw-map-${l.id}`}
-                        >
-                          <span className="text-base leading-none">{found ? l.emoji : "❓"}</span>
-                          <span className="min-w-0 flex-1">
-                            <span className={`block text-[11px] font-bold ${found ? "text-amber-200" : "text-white/40"}`}>{found ? l.name : "Lugar por descobrir"}</span>
-                            <span className={`block text-[9px] leading-snug ${found ? "text-white/60" : "text-white/25"}`}>{found ? l.desc : "Explora o mundo para revelares o seu significado!"}</span>
-                          </span>
-                          <span className="text-[8px] text-white/30">🧭</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* v8: VILAS E INTERIORES — casas enteráveis com escadas */}
-                  <p className="mb-1 mt-3 text-[10px] font-black uppercase tracking-wider text-amber-300/90">🏘️ Vilas e Interiores (podes entrar!)</p>
-                  <div className="space-y-1">
-                    {BUILDINGS.map((b) => {
-                      const visited = char.discoveries.includes("bld-" + b.id);
-                      return (
-                        <button
-                          key={b.id}
-                          onClick={() => { engineRef.current?.setWaypoint(b.x, b.z); }}
-                          className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${visited ? "bg-amber-500/10 hover:bg-amber-500/20" : "bg-white/[0.03] hover:bg-white/10"}`}
-                          data-testid={`bw-bld-${b.id}`}
-                        >
-                          <span className="text-base leading-none">{b.emoji}</span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-[11px] font-bold text-amber-100">{b.name} <span className="text-[8px] font-black text-white/40">{b.floors === 1 ? "· 1 piso" : b.floors === 4 ? "· 3 pisos + miradouro" : `· ${b.floors} pisos`}</span></span>
-                            <span className="block text-[9px] leading-snug text-white/55">{b.desc}</span>
-                          </span>
-                          <span className="text-[8px] text-white/30">🧭</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-2 rounded-lg bg-sky-500/10 border border-sky-500/25 px-2 py-1.5 text-[9px] text-sky-200">
-                    💡 Toca num lugar (na lista ou no mapa) para marcar o destino — a bússola dourada no ecrã aponta o caminho.
-                  </p>
-                </div>
-              </div>
-            </Panel>
           )}
+          {bossBar && (
+            <div className="mt-1 px-3 py-1 rounded-lg bg-slate-950/85 border border-amber-600/80 min-w-[200px] max-w-[280px]" data-testid="bw-boss-bar">
+              <div className="text-center text-[10px] font-black text-amber-400 tracking-wider">{bossBar.kind}</div>
+              <div className="text-center text-[11px] font-bold text-white truncate">{bossBar.name}</div>
+              <div className="h-2 mt-0.5 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+                <div className="h-full transition-all" style={{ width: `${(bossBar.hp / bossBar.maxHp) * 100}%`, background: "linear-gradient(90deg,#7f1d1d,#ef4444)" }} />
+              </div>
+            </div>
+          )}
+          <div className="mt-1 text-center">
+            <div className="px-2 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "rgba(2,6,23,0.7)", color: region.color }} data-testid="bw-region">
+              {region.emoji || "📍"} {region.name}{region.danger > 0 ? ` · ☠${region.danger}` : " · seguro"}
+            </div>
+            {towerOwned > 0 && <div className="text-[9px] text-amber-300 mt-0.5">🏳️ Domínio: +10% XP ({towerOwned} torre{towerOwned > 1 ? "s" : ""})</div>}
+          </div>
+        </div>
 
-        {panel === "set" && (
-          <Panel title="⚙️ Definições" onClose={() => setPanel("none")}>
-            <p className="mb-1.5 text-xs font-bold">Qualidade gráfica</p>
-            <div className="mb-3 grid grid-cols-4 gap-1.5">
-              {(["auto", "low", "medium", "high"] as const).map((q) => (
-                <button
-                  key={q}
-                  onClick={() => { setQuality(q); worldAudio.play("click"); }}
-                  className={`rounded-lg py-1.5 text-[10px] font-black capitalize transition-colors ${quality === q ? "bg-rose-500 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
-                  data-testid={`bw-quality-${q}`}
-                >
-                  {q === "auto" ? "Auto" : q === "low" ? "Baixa" : q === "medium" ? "Média" : "Alta"}
+        {/* direita: minimapa + botões */}
+        <div className="flex flex-col items-end gap-1 pointer-events-auto">
+          <div className="w-[86px] h-[86px] rounded-xl overflow-hidden border border-slate-600/80 bg-slate-950/80 relative" data-testid="bw-minimap">
+            <MiniMap engine={engineRef.current} faction={c.faction} />
+          </div>
+          <div className="flex gap-1">
+            <button onClick={() => worldAudio.toggleMusic()} className="w-8 h-8 rounded-lg bg-slate-900/85 border border-slate-700 flex items-center justify-center text-slate-300 text-xs active:scale-90">
+              {c.musicOn ? "🎵" : "🔇"}
+            </button>
+            <button onClick={() => { const m = engineRef.current?.toggleCamera(); setFpMode(m === "1p"); }}
+              className="w-8 h-8 rounded-lg bg-slate-900/85 border border-slate-700 flex items-center justify-center text-slate-300 text-xs active:scale-90">
+              📷
+            </button>
+            <button onClick={toggleFs} className="w-8 h-8 rounded-lg bg-slate-900/85 border border-slate-700 flex items-center justify-center text-slate-300 text-xs active:scale-90">
+              {fs ? "🗗" : "⛶"}
+            </button>
+            <button onClick={exitGame} className="w-8 h-8 rounded-lg bg-red-950/90 border border-red-800 flex items-center justify-center text-red-300 text-xs active:scale-90" data-testid="bw-exit">✕</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── buffs ativos ── */}
+      {hud.buffs.length > 0 && (
+        <div className="absolute top-[104px] left-2 flex flex-wrap gap-1 max-w-[40%] z-10 pointer-events-none">
+          {hud.buffs.map((b: any, i: number) => (
+            <div key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-950/85 border border-emerald-700/60 text-[9px] text-emerald-300 font-bold">
+              {b.id === "estrelas" ? "🌟" : b.id.startsWith("forca") ? "💪" : "✨"} {Math.ceil(b.t)}s
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── feed de eventos ── */}
+      <div className="absolute left-2 top-[150px] max-w-[52%] space-y-1 z-10 pointer-events-none">
+        <AnimatePresence>
+          {feed.map(f => (
+            <motion.div key={f.id} initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0 }}
+              className="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700/60 text-[10px] text-slate-200 leading-tight">
+              <span className="mr-1">{f.emoji}</span>{f.text}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* ── tracker de missão (campanha) ── */}
+      {!c.campaign.done && CAMPAIGN[c.campaign.step] && (
+        <div className="absolute right-2 top-[104px] w-[150px] px-2 py-1.5 rounded-lg bg-slate-950/80 border border-amber-700/50 z-10 pointer-events-none" data-testid="bw-tracker">
+          <div className="text-[9px] font-black text-amber-400 tracking-wider">CAMPANHA {c.campaign.step + 1}/12</div>
+          <div className="text-[10px] text-slate-200 leading-tight">{CAMPAIGN[c.campaign.step].title}</div>
+          <div className="text-[9px] text-slate-400 leading-tight">{CAMPAIGN[c.campaign.step].goal}</div>
+          <div className="h-1 mt-1 rounded-full bg-slate-800 overflow-hidden">
+            <div className="h-full bg-amber-400" style={{ width: `${Math.min(100, (c.campaign.prog / Math.max(1, CAMPAIGN[c.campaign.step].target)) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── loot pop ── */}
+      <AnimatePresence>
+        {lootPop && (
+          <motion.div key={lootPop.id} initial={{ scale: 0.5, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="absolute left-1/2 top-[38%] -translate-x-1/2 z-30 px-3 py-2 rounded-xl border shadow-xl"
+            style={{ background: "rgba(2,6,23,0.92)", borderColor: RARITY_META[lootPop.item.rarity].color }}>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{lootPop.item.emoji}</span>
+              <div>
+                <div className="text-xs font-bold" style={{ color: RARITY_META[lootPop.item.rarity].color }}>
+                  {lootPop.item.name}{lootPop.item.up > 0 ? ` +${lootPop.item.up}` : ""}
+                </div>
+                <div className="text-[9px] text-slate-400">{RARITY_META[lootPop.item.rarity].name} · Nv{lootPop.item.level}</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── duelo ── */}
+      {duelState && (
+        <div className="absolute left-1/2 top-[22%] -translate-x-1/2 z-30 px-4 py-1.5 rounded-xl bg-red-950/90 border border-red-600 text-center" data-testid="bw-duel-banner">
+          <div className="text-xs font-black text-red-300 tracking-widest">⚔ DUELO</div>
+          <div className="text-[11px] text-white">vs {duelState} — reduz a vida dele a zero!</div>
+        </div>
+      )}
+
+      {/* ── morte ── */}
+      {hud.dead && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/75" data-testid="bw-death">
+          <Skull className="w-14 h-14 text-red-500 mb-3" />
+          <div className="text-2xl font-black text-red-400">CAÍSTE EM BATALHA</div>
+          <p className="text-xs text-slate-400 mt-1 mb-5">−5% de XP · renasce na tua fortaleza</p>
+          <button onClick={() => engineRef.current?.respawn()} data-testid="bw-respawn"
+            className="px-8 py-3 rounded-xl font-black text-slate-900 bg-gradient-to-r from-amber-300 to-yellow-500 active:scale-95">
+            RENASCER
+          </button>
+        </div>
+      )}
+
+      {/* ── joystick (só ecrãs táteis) ── */}
+      {isTouch && <Joystick onMove={(x, y) => engineRef.current?.setMoveVec(x, y)} />}
+
+      {/* ── hotbar ── */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1.5 z-20" data-testid="bw-hotbar">
+        {[0, 1, 2, 3, 4, 5].map(i => {
+          const s = skillSlot(i);
+          const cdPct = s && s.cd > 0 ? (s.cd / s.sk.cd) * 100 : 0;
+          return (
+            <button key={i}
+              onClick={() => engineRef.current?.castSkill(i)}
+              data-testid={`bw-skill-${i}`}
+              className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl border-2 flex flex-col items-center justify-center active:scale-90 transition-transform ${s?.locked ? "opacity-40 border-slate-800 bg-slate-950/90" : "border-slate-600 bg-slate-950/85"}`}
+              style={{ boxShadow: s && !s.locked ? `0 0 8px ${s.sk.color}55` : undefined }}>
+              <span className="text-lg leading-none">{s ? s.sk.emoji : "＋"}</span>
+              <span className="text-[7px] text-slate-400 leading-none mt-0.5">{s ? (s.locked ? `Nv${s.sk.unlock}` : s.sk.name.split(" ")[0].slice(0, 7)) : ""}</span>
+              {cdPct > 0 && (
+                <div className="absolute inset-0 rounded-xl bg-slate-950/75 flex items-center justify-center" style={{ clipPath: `inset(${100 - cdPct}% 0 0 0)` }}>
+                  <span className="text-xs font-black text-white">{s!.cd.toFixed(1)}</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+        {/* ações */}
+        <button onClick={() => engineRef.current?.dodge()} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl border-2 border-cyan-700 bg-cyan-950/85 flex items-center justify-center active:scale-90" data-testid="bw-dodge">
+          <span className="text-lg">💨</span>
+        </button>
+        <button onPointerDown={() => { engineRef.current?.requestAttack(); }} data-testid="bw-attack"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-red-600 bg-gradient-to-b from-red-600 to-red-800 flex items-center justify-center active:scale-90 shadow-lg shadow-red-900/50">
+          <Swords className="w-7 h-7 text-white" />
+        </button>
+      </div>
+
+      {/* ── menu de painéis (canto direito) ── */}
+      <div className="absolute right-2 bottom-[84px] z-20 flex flex-col items-end gap-1" data-testid="bw-menu">
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div initial={{ opacity: 0, y: 10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              className="grid grid-cols-3 gap-1 p-2 rounded-2xl bg-slate-950/95 border border-slate-700 shadow-2xl mb-1">
+              {MENUS.map(m => (
+                <button key={m.id} onClick={() => openMenu(m.id)} data-testid={m.testid}
+                  className="w-[64px] h-[54px] rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center gap-0.5 active:scale-90">
+                  <m.icon className="w-4 h-4 text-amber-300" />
+                  <span className="text-[8px] text-slate-300 font-bold">{m.label}</span>
                 </button>
               ))}
-            </div>
-            <p className="mb-3 text-[10px] text-muted-foreground">Auto escolhe pelo teu dispositivo. Baixa desliga o brilho cinematográfico (bloom) e corre melhor em telemóveis mais antigos.</p>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 rounded-lg bg-white/5 px-2.5 py-2">
-                <Volume2 className="h-4 w-4 text-emerald-400" />
-                <span className="flex-1 text-xs font-bold">Efeitos sonoros</span>
-                <button onClick={() => setMuted(worldAudio.toggleMute())} className={`rounded-lg px-2.5 py-1 text-[10px] font-black ${muted ? "bg-white/10 text-white/50" : "bg-emerald-500 text-white"}`} data-testid="bw-set-sfx">
-                  {muted ? "Desligado" : "Ligado"}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-white/5 px-2.5 py-2">
-                <Music className="h-4 w-4 text-violet-400" />
-                <span className="flex-1 text-xs font-bold">Música ambiente</span>
-                <button onClick={() => setMusicOff(worldAudio.toggleMusic())} className={`rounded-lg px-2.5 py-1 text-[10px] font-black ${musicOff ? "bg-white/10 text-white/50" : "bg-emerald-500 text-white"}`} data-testid="bw-set-music">
-                  {musicOff ? "Desligada" : "Ligada"}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-white/5 px-2.5 py-2">
-                <Camera className="h-4 w-4 text-sky-400" />
-                <span className="flex-1 text-xs font-bold">Modo foto</span>
-                <button onClick={togglePhoto} className="rounded-lg bg-sky-500 px-2.5 py-1 text-[10px] font-black text-white">Capturar</button>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-2" data-testid="bw-set-sync">
-                <Cloud className="h-4 w-4 text-emerald-400" />
-                <span className="flex-1 text-xs font-bold">
-                  Sincronização com a conta
-                  <span className="block text-[9px] font-normal text-emerald-300/80">
-                    {user ? `✔ ${profile?.display_name || user.email?.split("@")[0] || "conta"} · a cada 20s` : "a sincronizar..."}
-                  </span>
-                </span>
-                <button
-                  onClick={() => {
-                    const c = charRef.current;
-                    if (!c) return;
-                    const s = calcStats(c);
-                    upsertCharacter({ guest_id: c.uid, name: c.name, class_id: c.classId, level: c.level, xp: c.xp, gold: c.gold, hp: s.maxHp, max_hp: s.maxHp, atk: s.atk, spd: Math.round(s.spd), total_kills: c.kills, is_online: true });
-                    setLastSync(new Date());
-                    worldAudio.play("coin");
-                    pushToast("☁️ Progresso sincronizado com a conta!", "good");
-                  }}
-                  className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[10px] font-black text-white"
-                  data-testid="bw-sync-now"
-                >Sincronizar</button>
-              </div>
-              {/* v17: publicar conquistas nos Stories */}
-              <div className="flex items-center gap-2 rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/10 px-2.5 py-2" data-testid="bw-set-stories">
-                <Sparkles className="h-4 w-4 text-fuchsia-400" />
-                <span className="flex-1 text-xs font-bold">
-                  Publicar conquistas nos Stories
-                  <span className="block text-[9px] font-normal text-fuchsia-300/80">níveis múltiplos de 5, chefes e duelos vencidos</span>
-                </span>
-                <button
-                  onClick={() => {
-                    setChar((p) => (p ? { ...p, shareWin: !p.shareWin } : p));
-                    worldAudio.play("click");
-                    pushToast(char?.shareWin ? "Stories: desligado" : "Stories: ligado — as tuas conquistas vão para o perfil!", "good");
-                  }}
-                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black ${char?.shareWin ? "bg-fuchsia-500 text-white" : "bg-white/10 text-white/50"}`}
-                  data-testid="bw-set-stories-toggle"
-                >
-                  {char?.shareWin ? "Ligado" : "Desligado"}
-                </button>
-              </div>
-              {/* v17: prémios 1GB guardados */}
-              {char && char.prizes.length > 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2" data-testid="bw-set-prizes">
-                  <p className="mb-1 flex items-center gap-1.5 text-xs font-bold text-amber-200">🎁 Os teus prémios 1GB ({char.prizes.length})</p>
-                  <div className="space-y-1">
-                    {char.prizes.map((pz) => (
-                      <div key={pz.id} className="flex items-center gap-2 text-[10px]">
-                        <span className="font-mono font-black text-amber-300">{pz.code}</span>
-                        <span className="text-white/50">{pz.op || "sem operadora"}</span>
-                        <a
-                          href={prizeWhatsAppLink(pz.code, pz.op || prizeOp, prizePhone.trim() || "—", char.name)}
-                          target="_blank" rel="noreferrer"
-                          className="ml-auto rounded bg-green-600 px-1.5 py-0.5 font-black text-white"
-                        >
-                          WhatsApp
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                  <input
-                    value={prizePhone}
-                    onChange={(e) => setPrizePhone(e.target.value.replace(/[^0-9+ ]/g, "").slice(0, 13))}
-                    placeholder="o teu número p/ receber"
-                    className="mt-1.5 w-full rounded-lg border border-white/15 bg-black/40 px-2 py-1 text-[11px] font-bold text-white outline-none placeholder:text-white/25 focus:border-amber-400"
-                  />
-                </div>
-              )}
-            </div>
-            <p className="mt-3 text-[10px] text-muted-foreground">Teclas: WASD mover · F/clique atacar · 1/2/3 poderes · E interagir · Shift escudo · Tab mapa · M som · P foto.</p>
-          </Panel>
-        )}
-      </AnimatePresence>
-
-      {/* card de plataforma */}
-      <AnimatePresence>
-        {card && (
-          <motion.div
-            className="absolute inset-0 z-30 flex items-end justify-center bg-black/50 p-4 md:items-center"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setCard(null)}
-          >
-            <motion.div
-              initial={{ y: 40, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 40, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/95 p-5 text-center text-white shadow-2xl"
-              data-testid="bw-card"
-            >
-              {cardData}
-              <button onClick={() => setCard(null)} className="mt-3 block w-full rounded-xl bg-white/10 py-2 text-sm font-bold hover:bg-white/20">Fechar</button>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </>) }
+          )}
+        </AnimatePresence>
+        <button onClick={() => { setMenuOpen(o => !o); worldAudio.play("click"); }} data-testid="bw-menu-toggle"
+          className="w-12 h-12 rounded-2xl border-2 border-amber-600 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center active:scale-90 shadow-lg">
+          <Gamepad2 className="w-6 h-6 text-amber-300" />
+        </button>
+      </div>
 
-      {/* v4: resumo da arena */}
+      {/* ── interação próxima ── */}
+      <NearInteract engine={engineRef.current} onInteract={(id) => {
+        const map: Record<string, string> = {
+          banco: "bank", leilao: "coupons", loja: "shop", feira: "shop",
+          montaria: "mounts", arvore: "clan", obelisco: "fame", fonte: "quests",
+          tenda1: "quests", tenda2: "quests", tenda3: "quests", estatua_h: "fame",
+          sino: "quests", campog: "map", arena: "party", lote: "home",
+        };
+        if (map[id]) setPanel(map[id]);
+      }} />
+
+      {/* ── toast central ── */}
       <AnimatePresence>
-        {arenaEnd && (
-          <motion.div
-            className="absolute inset-0 z-40 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            data-testid="bw-arena-end"
-          >
-            <motion.div
-              initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }}
-              className="w-full max-w-xs rounded-2xl border border-orange-400/40 bg-slate-900/95 p-5 text-center text-white shadow-2xl"
-            >
-              <p className="text-3xl">🏟️</p>
-              <h3 className="font-display mt-1 text-lg font-black text-orange-300">Fim da sessão!</h3>
-              <p className="text-xs text-muted-foreground">Sobreviveste <b className="text-white">{arenaEnd.wave}</b> ondas com <b className="text-white">{arenaEnd.kills}</b> abates</p>
-              <div className="my-3 grid grid-cols-3 gap-1.5 text-center">
-                <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-1.5"><p className="text-sm font-black text-amber-300">+{arenaEnd.pts}</p><p className="text-[8px] text-muted-foreground">Pontos</p></div>
-                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-1.5"><p className="text-sm font-black text-emerald-300">+{arenaEnd.gold}</p><p className="text-[8px] text-muted-foreground">Ouro</p></div>
-                <div className="rounded-lg bg-sky-500/10 border border-sky-500/30 p-1.5"><p className="text-sm font-black text-sky-300">+{arenaEnd.xp}</p><p className="text-[8px] text-muted-foreground">XP</p></div>
-              </div>
-              <button
-                onClick={() => setArenaEnd(null)}
-                className="w-full rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 py-2.5 text-sm font-black shadow-lg shadow-rose-500/25"
-              >
-                Continuar
-              </button>
-            </motion.div>
+        {toast && (
+          <motion.div key={toast.id} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 1.1, opacity: 0 }}
+            className="absolute left-1/2 top-[16%] -translate-x-1/2 z-40 px-4 py-2 rounded-xl bg-slate-950/95 border border-amber-500/70 shadow-2xl">
+            <div className="text-sm font-black text-amber-300 text-center">{toast.emoji} {toast.text}</div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* v4: overlay do modo foto */}
-      <AnimatePresence>
-        {photoMode && (
-          <motion.div
-            className="pointer-events-none absolute inset-0 z-50 flex items-start justify-center"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            data-testid="bw-photo-overlay"
-          >
-            <div className="mt-4 flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-[11px] font-bold text-white backdrop-blur">
-              <Camera className="h-3.5 w-3.5 text-sky-300" />
-              <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity }}>
-                📸 A capturar o mundo...
-              </motion.span>
-            </div>
-            {/* moldura de foto */}
-            <div className="pointer-events-none absolute inset-3 rounded-xl border-2 border-white/30" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── FPS discreto ── */}
+      <div className="absolute bottom-1 left-1 text-[8px] text-slate-600 z-10">{hud.fps} fps · {hud.online} online</div>
 
-      {/* ── v17: DUELO — HUD do duelo ativo + pedido de duelo ── */}
+      {/* ── painéis ── */}
       <AnimatePresence>
-        {duelVs && (
-          <motion.div
-            key="duel-hud"
-            initial={{ opacity: 0, y: -14, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14 }}
-            className="pointer-events-none absolute left-1/2 top-16 z-20 -translate-x-1/2"
-            data-testid="bw-duel-hud"
-          >
-            <motion.div
-              className="flex items-center gap-2 rounded-full border border-red-400/60 bg-black/80 px-4 py-1.5 backdrop-blur"
-              animate={{ boxShadow: ["0 0 14px rgba(248,113,113,0.4)", "0 0 30px rgba(248,113,113,0.7)", "0 0 14px rgba(248,113,113,0.4)"] }}
-              transition={{ duration: 1.1, repeat: Infinity }}
-            >
-              <Swords className="h-3.5 w-3.5 text-red-300" />
-              <span className="text-xs font-black uppercase tracking-wider text-red-200">DUELO vs {duelVs.name}</span>
-              <span className="h-3 w-px bg-white/25" />
-              <span className="text-[11px] font-black tabular-nums text-white/85">{Math.max(0, Math.ceil((duelVs.until - duelNow) / 1000))}s</span>
-            </motion.div>
-          </motion.div>
+        {panel && (
+          <PanelShell title={MENUS.find(m => m.id === panel)?.label || panel} onClose={() => setPanel(null)}>
+            {panel === "inv" && <InvPanel c={c} onUpdate={commit} />}
+            {panel === "skills" && <SkillsPanel c={c} onUpdate={commit} />}
+            {panel === "quests" && <QuestsPanel c={c} plat={plat} onNavigate={onNavigate} onUpdate={commit} />}
+            {panel === "map" && <MapPanel c={c} engine={engineRef.current} />}
+            {panel === "fame" && <FamePanel c={c} towers={engineRef.current?.getTowers() || []} />}
+            {panel === "party" && <PartyPanel c={c} engine={engineRef.current} onDuel={(n) => { engineRef.current?.startDuel(n); setPanel(null); }} />}
+            {panel === "clan" && <ClanPanel c={c} onUpdate={commit} />}
+            {panel === "mounts" && <MountsPanel c={c} engine={engineRef.current} onUpdate={commit} />}
+            {panel === "home" && <HomePanel c={c} engine={engineRef.current} onUpdate={commit} />}
+            {panel === "forge" && <ForgePanel c={c} onUpdate={commit} />}
+            {panel === "shop" && <ShopPanel c={c} onUpdate={commit} engine={engineRef.current} />}
+            {panel === "coupons" && <CouponsPanel c={c} onUpdate={commit} onNavigate={onNavigate} />}
+            {panel === "bank" && <BankPanel c={c} onUpdate={commit} onNavigate={onNavigate} />}
+            {panel === "settings" && <SettingsPanel c={c} onUpdate={commit} engine={engineRef.current} onExit={exitGame} />}
+          </PanelShell>
         )}
       </AnimatePresence>
-      <AnimatePresence>
-        {duelReq && !duelVs && (
-          <motion.div
-            key="duel-req"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-36 left-1/2 z-30 -translate-x-1/2"
-            data-testid="bw-duel-req"
-          >
-            <div className="flex items-center gap-2 rounded-2xl border border-amber-400/50 bg-slate-900/95 px-3 py-2 shadow-2xl backdrop-blur">
-              <span className="text-lg">⚔️</span>
-              <div className="min-w-0">
-                <p className="text-xs font-black text-white">{duelReq.name} desafiou-te!</p>
-                <p className="text-[10px] text-amber-300">⚡ PL {duelReq.pl.toLocaleString("pt-PT")} · aceita o duelo 1v1</p>
-              </div>
-              <button
-                onClick={() => { engineRef.current?.acceptDuel(duelReq.from); setDuelReq(null); }}
-                className="shrink-0 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 px-2.5 py-1.5 text-[11px] font-black text-white hover:brightness-110"
-                data-testid="bw-duel-accept"
-              >
-                Aceitar
-              </button>
-              <button
-                onClick={() => { engineRef.current?.declineDuel(duelReq.from); setDuelReq(null); }}
-                className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-black text-white/70 hover:bg-white/20"
-                data-testid="bw-duel-decline"
-              >
-                Recusar
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── v17: PRÉMIO 1GB — bilhete com mensagem automática para o suporte ── */}
-      <AnimatePresence>
-        {prize && (
-          <motion.div
-            key="prize-modal"
-            className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            data-testid="bw-prize-modal"
-          >
-            <motion.div
-              className="w-full max-w-sm overflow-hidden rounded-3xl border border-emerald-400/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl"
-              initial={{ scale: 0.8, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}
-            >
-              <div className="relative bg-gradient-to-r from-emerald-600 via-green-500 to-lime-500 px-5 py-4 text-center">
-                <motion.p className="text-4xl" animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.15, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>🎁</motion.p>
-                <p className="font-display text-2xl font-black text-white drop-shadow">GANHASTE 1GB!</p>
-                <p className="text-[11px] font-bold text-emerald-100">Drop raríssimo do Bateu World — qualquer operadora</p>
-                <motion.div className="absolute inset-0 bg-white/10" animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 2.2, repeat: Infinity }} />
-              </div>
-              <div className="space-y-3 p-4 text-white">
-                <div className="rounded-xl bg-white/5 p-2.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-white/50">Código do prémio</p>
-                  <p className="font-mono text-lg font-black tracking-wider text-emerald-300" data-testid="bw-prize-code">{prize.code}</p>
-                </div>
-                <div>
-                  <p className="mb-1 text-[11px] font-bold text-white/70">1. Escolhe a operadora</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {OPERATORS.map((op) => (
-                      <button
-                        key={op}
-                        onClick={() => setPrizeOp(op)}
-                        className={`rounded-lg py-1.5 text-[11px] font-black transition-colors ${prizeOp === op ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
-                        data-testid={`bw-prize-op-${op.toLowerCase()}`}
-                      >
-                        {op}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-[11px] font-bold text-white/70">2. O teu número ({prizeOp})</p>
-                  <input
-                    value={prizePhone}
-                    onChange={(e) => setPrizePhone(e.target.value.replace(/[^0-9+ ]/g, "").slice(0, 13))}
-                    placeholder="84 123 4567"
-                    className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-emerald-400"
-                    data-testid="bw-prize-phone"
-                  />
-                </div>
-                <a
-                  href={prizeWhatsAppLink(prize.code, prizeOp, prizePhone.trim() || "—", char?.name || "Herói")}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-500/30 hover:brightness-110"
-                  data-testid="bw-prize-whatsapp"
-                >
-                  📲 Pedir pelo WhatsApp (+258 84 854 7887)
-                </a>
-                <p className="text-center text-[10px] text-white/45">
-                  A mensagem já vai escrita e pronta — o suporte confirma o código e ativa os teus 1GB.
-                </p>
-                <button
-                  onClick={() => { setPrize(null); pushToast("💎 Prémio guardado — também está no painel Definições!", "good"); }}
-                  className="w-full rounded-xl bg-white/10 py-2 text-xs font-black text-white/70 hover:bg-white/20"
-                  data-testid="bw-prize-close"
-                >
-                  Guardar para depois
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* v17: SAIR do ecrã inteiro (só no modo imersivo do telemóvel) — entra
-          na faixa de navegação como primeiro botão para não colidir com a HUD */}
     </div>
-  ));
+  );
+  }
+
+  const hudUi = (charRef.current && phase === "play") ? renderHud() : null;
+
+  // aplica mudanças de char → motor + storage
+  function commit(fn?: (c: Char) => void) {
+    const cc = charRef.current; if (!cc) return;
+    fn?.(cc);
+    saveChar(cc);
+    engineRef.current?.setStats(deriveStats(cc), cc.level);
+    engineRef.current?.setSkillRanks(cc.ranks);
+    engineRef.current?.setHotbar(cc.hotbar);
+    rerender();
+  }
+
+  // Shell persistente: o canvas do motor vive SEMPRE montado
+  // (o startEngine precisa do mountRef já durante a criação)
+  return (
+    <div className="w-full h-full relative overflow-hidden select-none" style={{ background: "#0b1026", height: "100dvh" }}>
+      <div ref={mountRef} className="absolute inset-0" data-testid="bw-canvas-host" onTouchStart={() => { worldAudio.ensure(); }} />
+      {createUi || hudUi}
+    </div>
+  );
 }
 
-// ── Sub-componentes ──────────────────────────────────────────
+// ════════════════ COMPONENTES DE APOIO ══════════════════════
 
-function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function PanelShell({ title, onClose, children }: { title: string; onClose: () => void; children: any }) {
   return (
-    <motion.div
-      className="absolute inset-x-2 top-12 bottom-20 z-20 mx-auto max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-slate-900/92 text-white shadow-2xl backdrop-blur"
-      initial={{ opacity: 0, y: 20, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.97 }}
-      data-testid="bw-panel"
-    >
-      <div className="relative flex items-center justify-between border-b border-white/10 px-4 py-2.5">
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-rose-400/70 to-transparent" />
-        <p className="font-display text-sm font-black">{title}</p>
-        <button onClick={onClose} className="rounded-lg p-1 hover:bg-white/10"><X className="h-4 w-4" /></button>
-      </div>
-      <div className="max-h-[calc(100%-44px)] overflow-y-auto p-3">{children}</div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60" onClick={onClose}>
+      <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+        onClick={e => e.stopPropagation()} data-testid="bw-panel"
+        className="w-full sm:max-w-lg max-h-[78%] sm:max-h-[82%] bg-slate-950/97 border border-slate-700 rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 shrink-0">
+          <div className="font-black text-amber-300 text-sm tracking-wide">{title.toUpperCase()}</div>
+          <button onClick={onClose} data-testid="bw-panel-close" className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-300 active:scale-90">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-3 flex-1">{children}</div>
+      </motion.div>
     </motion.div>
   );
 }
 
-function StatRow({ icon, label, value, addLabel = "+1", disabled, onAdd }: { icon: React.ReactNode; label: string; value: number | string; addLabel?: string; disabled: boolean; onAdd: () => void }) {
+function Row({ children, className = "" }: { children: any; className?: string }) {
+  return <div className={`flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 ${className}`}>{children}</div>;
+}
+function Btn({ children, onClick, disabled, tone = "amber", testid, className = "" }: any) {
+  const tones: Record<string, string> = {
+    amber: "from-amber-400 to-yellow-500 text-slate-900",
+    green: "from-emerald-500 to-green-600 text-white",
+    red: "from-red-600 to-rose-700 text-white",
+    slate: "from-slate-700 to-slate-800 text-slate-200",
+    blue: "from-blue-600 to-indigo-700 text-white",
+  };
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-white/5 px-2.5 py-2">
-      {icon}
-      <span className="flex-1 text-xs font-bold">{label}</span>
-      <span className="text-sm font-black text-amber-300">{value}</span>
-      <button
-        onClick={onAdd}
-        disabled={disabled}
-        className={`rounded-lg px-2.5 py-1 text-xs font-black ${disabled ? "bg-white/5 text-white/30" : "bg-emerald-500 text-white hover:bg-emerald-400"}`}
-      >
-        {addLabel}
-      </button>
+    <button onClick={onClick} disabled={disabled} data-testid={testid}
+      className={`px-3 py-2 rounded-xl font-bold text-xs bg-gradient-to-r active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${tones[tone]} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+// ── Minimapa ao vivo ────────────────────────────────────────
+function MiniMap({ engine, faction }: { engine: WorldEngine | null; faction: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let raf = 0; let t = 0;
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      t++;
+      if (t % 4 !== 0 || !ref.current || !engine) return;
+      const d = engine.getMinimapData();
+      const ctx = ref.current.getContext("2d")!;
+      const W = 86, S = W / 420; // mostra ±210 unidades
+      ctx.clearRect(0, 0, W, W);
+      ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 0, W, W);
+      // regiões
+      for (const r of d.regions) {
+        const dx = (r.cx - d.px) * S + W / 2, dz = (r.cz - d.pz) * S + W / 2;
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = r.locked ? "#334155" : r.color;
+        ctx.beginPath(); ctx.arc(dx, dz, Math.max(3, r.r * S), 0, 7); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      // marcos
+      for (const l of d.landmarks) {
+        const dx = (l.x - d.px) * S + W / 2, dz = (l.z - d.pz) * S + W / 2;
+        ctx.fillStyle = "#fbbf24"; ctx.fillRect(dx - 1, dz - 1, 2, 2);
+      }
+      // torres (cor da facção dona)
+      for (const tw of d.towers) {
+        const dx = (tw.x - d.px) * S + W / 2, dz = (tw.z - d.pz) * S + W / 2;
+        ctx.fillStyle = tw.owner === 0 ? "#3b82f6" : tw.owner === 1 ? "#f59e0b" : "#e2e8f0";
+        ctx.fillRect(dx - 2, dz - 2, 4, 4);
+      }
+      // mobs
+      for (const m of d.mobs) {
+        const dx = (m.x - d.px) * S + W / 2, dz = (m.z - d.pz) * S + W / 2;
+        ctx.fillStyle = m.boss ? "#ef4444" : m.elite ? "#fbbf24" : "#94a3b8";
+        ctx.fillRect(dx - 1, dz - 1, m.boss ? 4 : 2, m.boss ? 4 : 2);
+      }
+      // jogadores
+      for (const p of d.players) {
+        const dx = (p.x - d.px) * S + W / 2, dz = (p.z - d.pz) * S + W / 2;
+        ctx.fillStyle = p.faction === faction ? "#22c55e" : "#f87171";
+        ctx.fillRect(dx - 1.5, dz - 1.5, 3, 3);
+      }
+      // eu
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(W / 2, W / 2, 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1.5; ctx.stroke();
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, [engine, faction]);
+  return <canvas ref={ref} width={86} height={86} className="w-full h-full" />;
+}
+
+// ── Joystick virtual ────────────────────────────────────────
+function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const baseRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef(false);
+  const startRef = useRef({ x: 0, y: 0 });
+
+  const handle = (e: React.PointerEvent) => {
+    if (!activeRef.current) return;
+    const dx = e.clientX - startRef.current.x, dy = e.clientY - startRef.current.y;
+    const max = 44;
+    const len = Math.min(max, Math.hypot(dx, dy));
+    const nx = len ? dx / Math.hypot(dx, dy) : 0, ny = len ? dy / Math.hypot(dx, dy) : 0;
+    setKnob({ x: nx * len, y: ny * len });
+    onMove(nx * (len / max), -ny * (len / max));
+  };
+  return (
+    <div ref={baseRef} data-testid="bw-joystick"
+      onPointerDown={(e) => { activeRef.current = true; startRef.current = { x: e.clientX, y: e.clientY }; (e.target as HTMLElement).setPointerCapture?.(e.pointerId); }}
+      onPointerMove={handle}
+      onPointerUp={() => { activeRef.current = false; setKnob({ x: 0, y: 0 }); onMove(0, 0); }}
+      onPointerCancel={() => { activeRef.current = false; setKnob({ x: 0, y: 0 }); onMove(0, 0); }}
+      className="absolute left-3 bottom-20 w-[104px] h-[104px] rounded-full bg-slate-950/50 border-2 border-slate-600/70 z-20 touch-none sm:w-[120px] sm:h-[120px]">
+      <div className="absolute w-12 h-12 rounded-full bg-slate-300/80 border-2 border-white shadow-lg transition-transform"
+        style={{ left: `calc(50% - 24px + ${knob.x}px)`, top: `calc(50% - 24px + ${knob.y}px)` }} />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <span className="text-[9px] text-slate-500 font-bold">MOVER</span>
+      </div>
     </div>
   );
 }
 
-function QuestRow({ emoji, title, progress, done, canClaim, reward, onClaim, testid }: { emoji: string; title: string; progress: string; done: boolean; canClaim: boolean; reward: string; onClaim: () => void; testid?: string }) {
+// ── Interação próxima ───────────────────────────────────────
+function NearInteract({ engine, onInteract }: { engine: WorldEngine | null; onInteract: (id: string) => void }) {
+  const [near, setNear] = useState<any>(null);
+  useEffect(() => {
+    if (!engine) return;
+    const iv = setInterval(() => {
+      try {
+        const it = engine.nearestInteract();
+        setNear(it ? { ...it, key: it.id } : null);
+      } catch { }
+    }, 500);
+    return () => clearInterval(iv);
+  }, [engine]);
+  if (!near) return null;
   return (
-    <div data-testid={testid} className={`mb-2 flex items-center gap-2.5 rounded-xl border p-2.5 ${done ? "border-emerald-500/40 bg-emerald-500/10" : "border-white/10 bg-white/5"}`}>
-      <span className="text-2xl">{emoji}</span>
-      <div className="flex-1">
-        <p className="text-xs font-bold">{title}</p>
-        <p className="text-[10px] text-muted-foreground">{progress} · {reward}</p>
+    <button onClick={() => { onInteract(near.id); }} data-testid="bw-interact"
+      className="absolute left-1/2 -translate-x-1/2 bottom-[108px] z-20 px-4 py-2 rounded-xl bg-slate-950/90 border border-amber-500/80 shadow-xl active:scale-95">
+      <div className="text-[10px] font-black text-amber-300">{near.emoji} {near.name}</div>
+      <div className="text-[8px] text-slate-400">toca para interagir</div>
+    </button>
+  );
+}
+
+// ════════════════ PAINÉIS ═══════════════════════════════════
+
+// ── Mochila + Equipamento ───────────────────────────────────
+function InvPanel({ c, onUpdate }: { c: Char; onUpdate: (fn: (c: Char) => void) => void }) {
+  const [sel, setSel] = useState<LootItem | null>(null);
+  const equip = (it: LootItem) => {
+    onUpdate(cc => {
+      const old = cc.equipped[it.slot];
+      cc.equipped[it.slot] = it;
+      cc.inv = cc.inv.filter(x => x.id !== it.id);
+      if (old) cc.inv.push(old);
+    });
+    setSel(null);
+  };
+  const sell = (it: LootItem) => {
+    const price = 20 + it.level * 12 + it.rarity * 90 + it.up * 40;
+    onUpdate(cc => { cc.inv = cc.inv.filter(x => x.id !== it.id); cc.gold += price; });
+    setSel(null);
+  };
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-[10px] font-black text-slate-400 mb-1.5 tracking-wider">EQUIPAMENTO</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {SLOTS.map(s => {
+            const it = c.equipped[s];
+            const rm = it ? RARITY_META[it.rarity] : null;
+            return (
+              <button key={s} onClick={() => it && setSel(it)}
+                className="p-2 rounded-xl border bg-slate-900/70 text-left min-h-[52px]"
+                style={{ borderColor: rm?.color + "88" || "#334155" }}>
+                <div className="text-base">{it?.emoji || "＋"}</div>
+                <div className="text-[8px] font-bold truncate" style={{ color: rm?.color || "#64748b" }}>{it ? `${it.name}${it.up ? ` +${it.up}` : ""}` : s}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      {done ? <Check className="h-5 w-5 text-emerald-400" /> : canClaim ? (
-        <button onClick={onClaim} className="animate-pulse rounded-lg bg-amber-400 px-3 py-1 text-[11px] font-black text-slate-900 shadow-lg shadow-amber-400/30 hover:bg-amber-300">Receber</button>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 mb-1.5 tracking-wider">MOCHILA ({c.inv.length}/60)</div>
+        {c.inv.length === 0 ? <p className="text-xs text-slate-500 py-4 text-center">Vazia — caça criaturas para obter loot!</p> : (
+          <div className="grid grid-cols-4 gap-1.5">
+            {c.inv.map(it => (
+              <button key={it.id} onClick={() => setSel(it)}
+                className="p-1.5 rounded-lg border bg-slate-900/70 text-center" style={{ borderColor: RARITY_META[it.rarity].color + "77" }}>
+                <div className="text-lg leading-none">{it.emoji}</div>
+                <div className="text-[7px] font-bold truncate" style={{ color: RARITY_META[it.rarity].color }}>{it.name.split(" ")[0]}{it.up ? `+${it.up}` : ""}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <AnimatePresence>
+        {sel && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setSel(null)}>
+            <div className="w-full max-w-xs bg-slate-950 border rounded-2xl p-4 space-y-2" style={{ borderColor: RARITY_META[sel.rarity].color }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-2">
+                <span className="text-3xl">{sel.emoji}</span>
+                <div>
+                  <div className="font-black text-sm" style={{ color: RARITY_META[sel.rarity].color }}>{sel.name} {sel.up > 0 && `+${sel.up}`}</div>
+                  <div className="text-[10px] text-slate-400">{RARITY_META[sel.rarity].name} · {sel.slot} · Nv{sel.level}</div>
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                {Object.entries(sel.stats).map(([k, v]) => (
+                  <div key={k} className="flex justify-between text-[11px]">
+                    <span className="text-slate-400">{statLabel(k)}</span>
+                    <span className="text-emerald-300 font-bold">+{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Btn onClick={() => equip(sel)} tone="green" testid="bw-equip">EQUIPAR</Btn>
+                <Btn onClick={() => sell(sel)} tone="slate" testid="bw-sell">Vender 🪙</Btn>
+                <Btn onClick={() => setSel(null)} tone="red">✕</Btn>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* materiais */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 mb-1.5 tracking-wider">MATERIAIS</div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {MATERIALS.map(m => (
+            <div key={m.id} className="p-1.5 rounded-lg border border-slate-800 bg-slate-900/70 text-center">
+              <div className="text-base">{m.emoji}</div>
+              <div className="text-[10px] font-black text-amber-300" data-testid={`bw-mat-${m.id}`}>{c.mats[m.id] || 0}</div>
+              <div className="text-[7px] text-slate-500 leading-none">{m.name.split(" ")[0]}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Habilidades (48 + pontos) ───────────────────────────────
+function SkillsPanel({ c, onUpdate }: { c: Char; onUpdate: (fn: (c: Char) => void) => void }) {
+  const skills = SKILLS[c.classId];
+  const [tab, setTab] = useState(0);
+  const learn = (i: number) => {
+    onUpdate(cc => {
+      if (cc.skillPts <= 0 || cc.level < skills[i].unlock) return;
+      if (cc.ranks[i] === 0) { cc.ranks[i] = 1; cc.skillPts -= 1; }
+      else if (cc.ranks[i] < 5) { cc.ranks[i] += 1; cc.skillPts -= 1; }
+    });
+  };
+  const setHot = (i: number, slot: number) => {
+    onUpdate(cc => { cc.hotbar[slot] = i; });
+  };
+  return (
+    <div className="space-y-3">
+      <Row className="justify-between">
+        <span className="text-xs text-slate-300">{CLASSES[c.classId].emoji} {CLASSES[c.classId].name} · {skills.length} habilidades</span>
+        <span className="text-xs font-black text-amber-300" data-testid="bw-skillpts">Pontos: {c.skillPts}</span>
+      </Row>
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {[0, 1, 2, 3].map(t => (
+          <button key={t} onClick={() => setTab(t)} data-testid={`bw-skilltab-${t}`}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${tab === t ? "border-amber-400 text-amber-300 bg-amber-400/10" : "border-slate-700 text-slate-400"}`}>
+            Nv {skills[t * 3]?.unlock}+
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        {skills.slice(tab * 3, tab * 3 + 3).map((sk) => {
+          const i = skills.indexOf(sk);
+          const rank = c.ranks[i];
+          const locked = c.level < sk.unlock;
+          return (
+            <div key={sk.id} className={`p-2.5 rounded-xl border ${locked ? "border-slate-800 bg-slate-950/60 opacity-60" : "border-slate-700 bg-slate-900/70"}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{sk.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black" style={{ color: sk.color }}>{sk.name} {sk.ult && <span className="text-[8px] text-amber-400 border border-amber-400/60 rounded px-1">ULT</span>}</div>
+                  <div className="text-[10px] text-slate-400 leading-tight">{sk.desc}</div>
+                  <div className="text-[9px] text-slate-500">CD {sk.cd}s · {sk.mana} {CLASSES[c.classId].resource}{rank > 0 ? ` · Rank ${rank}/5 (+${(rank - 1) * 18}% dano)` : ""}</div>
+                </div>
+                {!locked && (
+                  <Btn onClick={() => learn(i)} disabled={c.skillPts <= 0 || rank >= 5} tone={rank === 0 ? "green" : "amber"} testid={`bw-learn-${sk.id}`}>
+                    {rank === 0 ? "Aprender" : rank < 5 ? "+Rank" : "MAX"}
+                  </Btn>
+                )}
+                {locked && <span className="text-[9px] text-slate-500">🔒 Nv{sk.unlock}</span>}
+              </div>
+              {!locked && rank > 0 && (
+                <div className="flex gap-1 mt-1.5">
+                  {[0, 1, 2, 3, 4, 5].map(slot => (
+                    <button key={slot} onClick={() => setHot(i, slot)}
+                      className={`w-6 h-6 rounded-md text-[9px] font-black border ${c.hotbar[slot] === i ? "border-amber-400 bg-amber-400/20 text-amber-300" : "border-slate-700 bg-slate-950 text-slate-500"}`}>
+                      {slot + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* atributos */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 mb-1.5 tracking-wider">ATRIBUTOS ({c.level - 1} pontos por nível de herói)</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[["str", "Força", "+ATK +HP"], ["int", "Inteligência", "+ATK +Mana"], ["agi", "Agilidade", "+ATK +CRIT"], ["vit", "Vitalidade", "+HP +DEF"]].map(([k, label, eff]) => (
+            <div key={k} className="p-2 rounded-xl border border-slate-800 bg-slate-900/70">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-bold text-slate-200">{label}</span>
+                <span className="text-[11px] font-black text-amber-300">{c.alloc[k as keyof typeof c.alloc]}</span>
+              </div>
+              <div className="text-[8px] text-slate-500">{eff}</div>
+              <Btn tone="slate" className="w-full mt-1 !py-1" testid={`bw-alloc-${k}`}
+                onClick={() => onUpdate(cc => { (cc.alloc as any)[k]++; })}>+1</Btn>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Missões (campanha + diárias + empresas reais) ───────────
+function QuestsPanel({ c, plat, onNavigate, onUpdate }: any) {
+  const ch = CAMPAIGN[c.campaign.step];
+  const today = new Date().toDateString();
+  const daily = c.daily.date === today ? c.daily : null;
+  const claimDaily = (q: any) => {
+    const prog = daily?.prog?.[q.id] || 0;
+    if (prog < q.target || daily?.claimed?.includes(q.id)) return;
+    onUpdate(cc => {
+      cc.daily.claimed = [...(cc.daily.claimed || []), q.id];
+      cc.gold += q.reward;
+    });
+  };
+  const claimCampaign = () => {
+    if (!ch || c.campaign.prog < ch.target) return;
+    onUpdate(cc => {
+      cc.gold += 800 + ch.id * 700;
+      if (ch.id === 3 && !cc.mounts.includes("corcel")) cc.mounts.push("corcel");
+      if (ch.id === 1 && !cc.mounts.includes("corcel")) { /* livro → +1 ponto */ cc.skillPts += 1; }
+      if (ch.id === 8) { /* item épico */ }
+      cc.campaign.step = Math.min(CAMPAIGN.length, cc.campaign.step + 1);
+      cc.campaign.prog = 0;
+      if (cc.campaign.step >= CAMPAIGN.length) cc.campaign.done = true;
+    });
+  };
+  return (
+    <div className="space-y-3">
+      {/* campanha */}
+      <div className="p-3 rounded-xl border border-amber-700/60 bg-amber-950/30">
+        <div className="text-[10px] font-black text-amber-400 tracking-wider mb-1">⚔ CAMPANHA · CAPÍTULO {Math.min(12, c.campaign.step + 1)}/12</div>
+        {c.campaign.done ? (
+          <p className="text-xs text-amber-200 font-bold">🏆 CAMPANHA COMPLETA — és uma LENDA VIVA!</p>
+        ) : ch ? (
+          <>
+            <div className="text-sm font-black text-white">{ch.title}</div>
+            <div className="text-[11px] text-slate-300">{ch.goal}</div>
+            <div className="h-1.5 mt-1.5 rounded-full bg-slate-900 overflow-hidden">
+              <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.min(100, (c.campaign.prog / ch.target) * 100)}%` }} />
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-[10px] text-slate-400">🎁 {ch.reward}</span>
+              <Btn onClick={claimCampaign} disabled={c.campaign.prog < ch.target} testid="bw-claim-campaign">RECLAMAR</Btn>
+            </div>
+          </>
+        ) : null}
+      </div>
+      {/* diárias */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">📜 MISSÕES DIÁRIAS (reiniciam à meia-noite)</div>
+        <div className="space-y-1.5">
+          {DAILY_QUESTS.map(q => {
+            const prog = daily?.prog?.[q.id] || 0;
+            const done = prog >= q.target;
+            const claimed = daily?.claimed?.includes(q.id);
+            return (
+              <div key={q.id} className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70">
+                <div className="flex justify-between items-center gap-2">
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-200">{q.label}</div>
+                    <div className="text-[9px] text-slate-400">{q.goal} · 🪙 {q.reward}</div>
+                  </div>
+                  {claimed ? <span className="text-[10px] text-emerald-400 font-bold">✔ FEITO</span>
+                    : <Btn onClick={() => claimDaily(q)} disabled={!done} tone={done ? "green" : "slate"} testid={`bw-daily-${q.id}`}>Reclamar</Btn>}
+                </div>
+                <div className="h-1 mt-1 rounded-full bg-slate-950 overflow-hidden">
+                  <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, (prog / q.target) * 100)}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* empresas reais */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🎪 DESAFIOS DE EMPRESAS (conteúdo real da plataforma)</div>
+        <div className="space-y-1.5">
+          {(plat?.raffles || []).slice(0, 2).map((r: any) => (
+            <div key={r.id} className="p-2.5 rounded-xl border border-fuchsia-800/60 bg-fuchsia-950/20">
+              <div className="text-[11px] font-bold text-fuchsia-200">🎟️ {r.title}</div>
+              <div className="text-[9px] text-slate-400">Prémio: {r.prizeTitle} ({fmtMZN(r.prizeValue)})</div>
+              <Btn tone="blue" className="mt-1" onClick={() => onNavigate?.(worldRoute("raffle", r))}>Participar na plataforma</Btn>
+            </div>
+          ))}
+          {(plat?.contests || []).slice(0, 1).map((cn: any) => (
+            <div key={cn.id} className="p-2.5 rounded-xl border border-cyan-800/60 bg-cyan-950/20">
+              <div className="text-[11px] font-bold text-cyan-200">🏆 {cn.title}</div>
+              <div className="text-[9px] text-slate-400">{cn.prize || "Prémio especial"}</div>
+              <Btn tone="blue" className="mt-1" onClick={() => onNavigate?.(worldRoute("contest", cn))}>Ver concurso</Btn>
+            </div>
+          ))}
+          {(plat?.vouchers || []).slice(0, 1).map((v: any) => (
+            <div key={v.id} className="p-2.5 rounded-xl border border-emerald-800/60 bg-emerald-950/20">
+              <div className="text-[11px] font-bold text-emerald-200">🎟️ Cupão escondido: {v.code}</div>
+              <div className="text-[9px] text-slate-400">Captura-o na Casa de Leilões do mundo!</div>
+            </div>
+          ))}
+          {!plat?.live && <p className="text-[10px] text-slate-500">A ligar às empresas da plataforma…</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Mapa mundial ────────────────────────────────────────────
+function MapPanel({ c, engine }: any) {
+  const S = 340 / 860;
+  const toXY = (x: number, z: number) => [170 + x * S, 170 + z * S];
+  const mm = engine?.getMinimapData();
+  const go = (id: string) => { engine?.teleportTo(id); };
+  return (
+    <div className="space-y-2">
+      <div className="relative mx-auto rounded-xl border border-slate-700 overflow-hidden" style={{ width: 340, height: 340, background: "#0f172a" }} data-testid="bw-bigmap">
+        {REGIONS.map(r => {
+          const [x, y] = toXY(r.cx, r.cz);
+          const locked = engine?.isRegionLocked(r.id);
+          return (
+            <button key={r.id} onClick={() => !r.hub && go(r.id)} disabled={r.hub}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center"
+              style={{ left: x, top: y, width: Math.max(24, r.r * 2 * S), height: Math.max(24, r.r * 2 * S), background: r.color + (locked ? "33" : "55"), border: `1px solid ${r.color}` }}>
+              <span className="text-[8px] font-black text-white drop-shadow text-center leading-tight px-0.5">{r.name}</span>
+              {locked && <span className="absolute text-[10px]">🔒</span>}
+            </button>
+          );
+        })}
+        {mm && (
+          <div className="absolute w-3 h-3 rounded-full bg-white border-2 border-amber-400 -translate-x-1/2 -translate-y-1/2" style={{ left: toXY(mm.px, mm.pz)[0], top: toXY(mm.px, mm.pz)[1] }} />
+        )}
+        {mm?.towers.map((t: any) => {
+          const [x, y] = toXY(t.x, t.z);
+          return <div key={t.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-[11px]" style={{ left: x, top: y }}>{t.owner === 0 ? "🛡️" : t.owner === 1 ? "⚡" : "🏳️"}</div>;
+        })}
+        {mm?.dungeons.map((d: any) => {
+          const [x, y] = toXY(d.x, d.z);
+          return <div key={d.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-[11px]" style={{ left: x, top: y }}>{d.emoji}</div>;
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {REGIONS.map(r => {
+          const locked = engine?.isRegionLocked(r.id);
+          return (
+            <button key={r.id} onClick={() => go(r.id)}
+              className="p-2 rounded-xl border text-left active:scale-95"
+              style={{ borderColor: r.color + "77", background: r.color + "14" }}>
+              <div className="text-[11px] font-black" style={{ color: r.color }}>{r.hub ? "🏠" : "🌍"} {r.name} {locked && "🔒"}</div>
+              <div className="text-[8px] text-slate-400 leading-tight">{r.desc}</div>
+              <div className="text-[8px] text-slate-500">Nv {r.lvl[0]}–{r.lvl[1]}{r.locked && !locked ? " · DESBLOQUEADA" : ""}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Fama & Guerra ───────────────────────────────────────────
+function FamePanel({ c, towers }: any) {
+  const rank = fameRank(c.fame);
+  const next = FAME_RANKS.find(r => r.min > c.fame);
+  return (
+    <div className="space-y-3">
+      <div className="p-4 rounded-xl border border-amber-700/60 bg-amber-950/30 text-center">
+        <div className="text-3xl">{rank.emoji}</div>
+        <div className="font-black text-amber-300 text-lg">{rank.name}</div>
+        <div className="text-xs text-slate-400">{c.fame} FAMA {next && `· faltam ${next.min - c.fame} para ${next.name}`}</div>
+        <div className="mt-1 text-[10px] text-slate-500">{FACTIONS[c.faction].emoji} {FACTIONS[c.faction].name} — "{FACTIONS[c.faction].motto}"</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🏳️ GUERRA DE TERRITÓRIO</div>
+        <div className="space-y-1.5">
+          {towers.map((t: any) => {
+            const td = TOWERS.find(x => x.id === t.id);
+            return (
+              <div key={t.id} className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70 flex justify-between items-center">
+                <div>
+                  <div className="text-[11px] font-bold text-slate-200">{td?.emoji} {t.name}</div>
+                  <div className="text-[9px] text-slate-400">Dono: {t.owner === 0 ? "🛡️ VANGUARDA" : t.owner === 1 ? "⚡ TEMPESTADE" : "livre"}</div>
+                </div>
+                {t.owner === c.faction && <span className="text-[9px] text-emerald-400 font-bold">TEU DOMÍNIO +10% XP</span>}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[9px] text-slate-500 mt-1.5">Fica dentro do anel de uma torre 10s para capturá-la para a tua facção. Domínio dá +10% XP a toda a facção.</p>
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">📊 A TUA SAGA</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[["☠ Chefes", c.saga.bosses], ["💀 Masmorras", c.saga.dungeons], ["⚔ Duelos", c.saga.duels], ["🥷 Roubos", c.saga.steals], ["🏳️ Torres", c.saga.towers], ["😈 Vilões", c.saga.villains]].map(([l, v]) => (
+            <div key={String(l)} className="p-2 rounded-xl border border-slate-800 bg-slate-900/70 text-center">
+              <div className="text-sm font-black text-amber-300">{String(v)}</div>
+              <div className="text-[8px] text-slate-400">{String(l)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Grupo 1-clique ──────────────────────────────────────────
+function PartyPanel({ c, engine, onDuel }: any) {
+  const [inParty, setInParty] = useState(false);
+  const mm = engine?.getMinimapData();
+  const near = (mm?.players || []).filter((p: any) => {
+    const d = Math.hypot(p.x - mm.px, p.z - mm.pz);
+    return d < 60;
+  });
+  const join = () => {
+    const ids = near.map((p: any) => p.name);
+    setInParty(true);
+    engine?.setParty(ids);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl border border-emerald-800/60 bg-emerald-950/30">
+        <div className="text-xs font-black text-emerald-300">🤝 PROCURAR GRUPO (1 clique)</div>
+        <p className="text-[10px] text-slate-400 mt-1">Cada membro perto de ti dá <b className="text-emerald-300">+8% XP e +8% ouro</b> (até +32%). Igual ao Hordes.io, mas melhor.</p>
+        {inParty ? (
+          <div className="mt-2">
+            <div className="text-[10px] font-bold text-emerald-400" data-testid="bw-party-active">✔ EM GRUPO com {near.length} herói(s) por perto</div>
+            <Btn tone="red" className="mt-1.5" onClick={() => { setInParty(false); engine?.setParty([]); }}>Sair do grupo</Btn>
+          </div>
+        ) : (
+          <Btn tone="green" className="mt-2" onClick={join} testid="bw-party-join" disabled={near.length === 0}>
+            {near.length > 0 ? `AGRUPAR com ${near.length} por perto` : "Sem heróis por perto agora"}
+          </Btn>
+        )}
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">⚔ DESAFIAR (duelo 1v1 com aposta)</div>
+        <div className="space-y-1.5">
+          {(mm?.players || []).slice(0, 5).map((p: any) => (
+            <div key={p.name} className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70 flex justify-between items-center">
+              <div>
+                <div className="text-[11px] font-bold text-slate-200">{p.faction === c.faction ? "🤝" : "⚔"} {p.name}</div>
+                <div className="text-[9px]" style={{ color: FACTIONS[p.faction]?.color }}>{FACTIONS[p.faction]?.name}</div>
+              </div>
+              <Btn tone="red" onClick={() => onDuel(p.name)} testid={`bw-duel-${p.name}`}>Desafiar</Btn>
+            </div>
+          ))}
+          {!mm?.players?.length && <p className="text-[10px] text-slate-500">Ninguém perto — explora o mundo!</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Clã ─────────────────────────────────────────────────────
+function ClanPanel({ c, onUpdate }: any) {
+  const [tag, setTag] = useState(c.clan?.tag || "");
+  const [name, setName] = useState(c.clan?.name || "");
+  const LS_CLANS = "bateu_legends_clans";
+  const [clans, setClans] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem(LS_CLANS) || "[]"); } catch { return []; }
+  });
+  const create = () => {
+    const t = (tag || "").toUpperCase().slice(0, 4).trim();
+    const n = (name || "").trim().slice(0, 20);
+    if (!t || !n || c.gold < 5000) return;
+    onUpdate(cc => {
+      cc.clan = { tag: t, name: n };
+      cc.gold -= 5000;
+    });
+    try {
+      const list = JSON.parse(localStorage.getItem(LS_CLANS) || "[]");
+      list.push({ tag: t, name: n, by: c.name, at: Date.now() });
+      localStorage.setItem(LS_CLANS, JSON.stringify(list.slice(-30)));
+      setClans(list);
+    } catch { }
+  };
+  return (
+    <div className="space-y-3">
+      {c.clan ? (
+        <div className="p-3 rounded-xl border border-cyan-700/60 bg-cyan-950/30 text-center">
+          <div className="text-2xl font-black text-cyan-300">[{c.clan.tag}]</div>
+          <div className="text-xs text-slate-300">{c.clan.name}</div>
+          <div className="text-[10px] text-slate-500 mt-1">Fundado por {c.name} · Árvore dos Juramentos 🌳</div>
+        </div>
       ) : (
-        <span className="text-[10px] text-white/30">...</span>
+        <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/70 space-y-2">
+          <div className="text-xs font-black text-slate-300">🌳 FUNDA O TEU CLÃ (5.000 🪙)</div>
+          <input value={tag} onChange={e => setTag(e.target.value)} maxLength={4} placeholder="SIGLA (ex: LZA)"
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm uppercase" />
+          <input value={name} onChange={e => setName(e.target.value)} maxLength={20} placeholder="Nome do clã"
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
+          <Btn onClick={create} disabled={!tag || !name || c.gold < 5000} testid="bw-clan-create">FUNDAR CLÃ</Btn>
+        </div>
+      )}
+      {clans.length > 0 && (
+        <div>
+          <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">CLÃS DO MUNDO</div>
+          <div className="space-y-1">
+            {clans.slice(-8).reverse().map((cl: any, i: number) => (
+              <div key={i} className="p-2 rounded-lg border border-slate-800 bg-slate-900/60 flex justify-between text-[10px]">
+                <span className="font-black text-cyan-300">[{cl.tag}] {cl.name}</span>
+                <span className="text-slate-500">por {cl.by}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-function Joystick({ onMove, fs }: { onMove: (x: number, y: number) => void; fs?: boolean }) {
-  const baseRef = useRef<HTMLDivElement>(null);
-  const [knob, setKnob] = useState({ x: 0, y: 0 });
-  const active = useRef(false);
-
-  const handle = (e: React.PointerEvent) => {
-    const base = baseRef.current;
-    if (!base) return;
-    const rect = base.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    let dx = e.clientX - cx;
-    let dy = e.clientY - cy;
-    const max = rect.width / 2 - 14;
-    const d = Math.hypot(dx, dy);
-    if (d > max) { dx = (dx / d) * max; dy = (dy / d) * max; }
-    setKnob({ x: dx, y: dy });
-    onMove(dx / max, dy / max);
+// ── Montarias ───────────────────────────────────────────────
+function MountsPanel({ c, engine, onUpdate }: any) {
+  const buy = (id: string, cost: number) => {
+    if (c.gold < cost || c.mounts.includes(id)) return;
+    onUpdate(cc => { cc.gold -= cost; cc.mounts.push(id); });
   };
-
+  const ride = (id: string) => {
+    const ok = engine?.mount(id);
+    onUpdate(cc => { cc.activeMount = ok ? id : null; });
+  };
   return (
-    <div
-      ref={baseRef}
-      data-testid="bw-joystick"
-      className="absolute bottom-4 left-4 z-10 h-24 w-24 touch-none rounded-full border-2 border-white/25 bg-black/35 backdrop-blur-sm"
-      style={{ touchAction: "none", boxShadow: "0 0 24px rgba(56,189,248,0.18), inset 0 0 18px rgba(255,255,255,0.06)", ...(fs ? { bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))", left: "calc(1rem + env(safe-area-inset-left, 0px))" } : {}) }}
-      onPointerDown={(e) => { active.current = true; worldAudio.play("click"); (e.target as HTMLElement).setPointerCapture(e.pointerId); handle(e); }}
-      onPointerMove={(e) => { if (active.current) handle(e); }}
-      onPointerUp={() => { active.current = false; setKnob({ x: 0, y: 0 }); onMove(0, 0); }}
-      onPointerCancel={() => { active.current = false; setKnob({ x: 0, y: 0 }); onMove(0, 0); }}
-    >
-      {/* marcações direcionais */}
-      <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-[8px] text-white/40">▲</span>
-      <span className="pointer-events-none absolute left-1/2 bottom-1 -translate-x-1/2 text-[8px] text-white/40">▼</span>
-      <span className="pointer-events-none absolute top-1/2 left-1 -translate-y-1/2 text-[8px] text-white/40">◀</span>
-      <span className="pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 text-[8px] text-white/40">▶</span>
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-10 w-10 rounded-full bg-white/80 shadow-lg"
-        style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))`, boxShadow: "0 0 14px rgba(255,255,255,0.5)" }}
-      />
+    <div className="space-y-1.5">
+      <p className="text-[10px] text-slate-400">Invoca a montaria e galopa pelo mundo com velocidade extra.</p>
+      {MOUNTS.map(m => {
+        const owned = c.mounts.includes(m.id);
+        const active = c.activeMount === m.id;
+        return (
+          <div key={m.id} className="p-2.5 rounded-xl border bg-slate-900/70 flex items-center gap-2" style={{ borderColor: active ? "#fbbf24" : "#1e293b" }}>
+            <span className="text-2xl">{m.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-bold text-slate-200">{m.name} <span className="text-emerald-400">×{m.mult} vel.</span></div>
+              <div className="text-[9px] text-slate-500">{m.source}</div>
+            </div>
+            {owned
+              ? <Btn onClick={() => ride(m.id)} tone={active ? "amber" : "slate"} testid={`bw-mount-${m.id}`}>{active ? "Desmontar" : "Montar"}</Btn>
+              : m.id === "lobo" ? <Btn onClick={() => buy(m.id, 15000)} disabled={c.gold < 15000} testid={`bw-buy-${m.id}`}>15.000 🪙</Btn>
+                : <span className="text-[9px] text-slate-500">🔒</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-
-// ── v6: MAPA-MÚNDI grande com regiões, marcos e waypoint ───
-function BigMap({ discoveries, onPick }: { discoveries: string[]; onPick: (x: number, z: number) => void }) {
-  const cvRef = useRef<HTMLCanvasElement>(null);
-  const engRef = useRef<any>(null);
-
-  useEffect(() => {
-    engRef.current = (window as any).__bw || null;
-  });
-
-  useEffect(() => {
-    let alive = true;
-    const S = 260;
-    const draw = () => {
-      if (!alive) return;
-      const cv = cvRef.current;
-      if (!cv) return;
-      const ctx = cv.getContext("2d");
-      if (!ctx) return;
-      const eng = engRef.current;
-      const d = eng?.getMapData?.() || null;
-      const R = 230; // WORLD_RADIUS
-      const toMap = (x: number, z: number) => [S / 2 + (x / (R + 12)) * (S / 2 - 8), S / 2 + (z / (R + 12)) * (S / 2 - 8)];
-
-      ctx.clearRect(0, 0, S, S);
-      // oceano
-      ctx.fillStyle = "#0b1626";
-      ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); ctx.fill();
-      // o mundo
-      const [wx, wy] = toMap(0, 0);
-      const wr = ((R + 12) / (R + 12)) * (S / 2 - 8);
-      ctx.save();
-      ctx.beginPath(); ctx.arc(wx, wy, wr, 0, Math.PI * 2); ctx.clip();
-      ctx.fillStyle = "#123524";
-      ctx.fillRect(0, 0, S, S);
-      // regiões
-      for (const r of REGIONS) {
-        const [rx, ry] = toMap(r.cx, r.cz);
-        const rr = (r.r / (R + 12)) * (S / 2 - 8);
-        const grd = ctx.createRadialGradient(rx, ry, rr * 0.2, rx, ry, rr);
-        grd.addColorStop(0, r.color + "66");
-        grd.addColorStop(1, r.color + "22");
-        ctx.fillStyle = grd;
-        ctx.beginPath(); ctx.arc(rx, ry, rr, 0, Math.PI * 2); ctx.fill();
-      }
-      // mobs (pontinhos vermelhos suaves)
-      if (d) {
-        for (const m of d.mobs || []) {
-          const [mx, my] = toMap(m.x, m.z);
-          ctx.fillStyle = m.t >= 4 ? "#f43f5e" : m.t >= 2 ? "#fb923c" : "#fca5a5aa";
-          ctx.fillRect(mx - 1, my - 1, 2, 2);
-        }
-      }
-      // marcos
-      for (const l of LANDMARKS) {
-        const [lx, ly] = toMap(l.x, l.z);
-        const found = discoveries.includes(l.id);
-        ctx.font = "12px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText(found ? l.emoji : "❓", lx, ly + 4);
-        if (found) {
-          ctx.font = "bold 6.5px system-ui";
-          ctx.fillStyle = "#fde68a";
-          ctx.fillText(l.name.split(" ")[0], lx, ly + 14);
-        }
-      }
-      // waypoint
-      if (d?.waypoint) {
-        const [tpx, tpy] = toMap(d.waypoint.x, d.waypoint.z);
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(tpx, tpy, 5 + Math.sin(Date.now() / 300) * 1.6, 0, Math.PI * 2); ctx.stroke();
-      }
-      // outros jogadores
-      for (const p of d?.players || []) {
-        const [ppx, ppy] = toMap(p.x, p.z);
-        ctx.fillStyle = "#60a5fa";
-        ctx.beginPath(); ctx.arc(ppx, ppy, 2.5, 0, 7); ctx.fill();
-      }
-      // eu (seta)
-      if (d) {
-        const [px, py] = toMap(d.px, d.pz);
-        ctx.save();
-        ctx.translate(px, py);
-        ctx.rotate(d.yaw);
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(0, -6); ctx.lineTo(4.4, 4.4); ctx.lineTo(0, 2.2); ctx.lineTo(-4.4, 4.4);
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
-      }
-      ctx.restore();
-      // moldura
-      ctx.strokeStyle = "rgba(253,230,138,0.5)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(wx, wy, wr, 0, Math.PI * 2); ctx.stroke();
-    };
-    draw();
-    const iv = setInterval(draw, 700);
-    return () => { alive = false; clearInterval(iv); };
-  }, [discoveries]);
-
-  const click = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const cv = cvRef.current;
-    if (!cv) return;
-    const rect = cv.getBoundingClientRect();
-    const S = 260, R = 230;
-    const cx = ((e.clientX - rect.left) / rect.width) * S;
-    const cy = ((e.clientY - rect.top) / rect.height) * S;
-    const scale = (S / 2 - 8) / (R + 12);
-    const wx = (cx - S / 2) / scale;
-    const wz = (cy - S / 2) / scale;
-    if (Math.hypot(wx, wz) > R) return;
-    // pega no marco mais próximo (até 14 unidades) — senão marca ponto livre
-    let best = null, bestD = 14;
-    for (const l of LANDMARKS) {
-      const dd = Math.hypot(l.x - wx, l.z - wz);
-      if (dd < bestD) { bestD = dd; best = l; }
-    }
-    if (best) onPick(best.x, best.z);
-    else onPick(wx, wz);
-  };
-
+// ── Habitação ───────────────────────────────────────────────
+function HomePanel({ c, engine, onUpdate }: any) {
+  const house = engine?.getHousing();
   return (
-    <canvas
-      ref={cvRef}
-      width={260}
-      height={260}
-      onClick={click}
-      data-testid="bw-bigmap"
-      className="cursor-crosshair rounded-xl border border-amber-400/30 bg-slate-950 shadow-lg"
-      style={{ width: 260, height: 260 }}
-    />
+    <div className="space-y-2">
+      {!house ? (
+        <div className="p-3 rounded-xl border border-amber-800/60 bg-amber-950/20">
+          <div className="text-xs font-black text-amber-300">🏘️ RECLAMA O TEU LOTE (GRÁTIS)</div>
+          <p className="text-[10px] text-slate-400 mt-1">Um terreno no Bairro das Residências, perto da Vila Dourada. Constroi casa, muralha e torre de guarda para proteger os teus cupões de ladrões inimigos.</p>
+          <Btn tone="green" className="mt-2" onClick={() => { engine?.claimPlot(); onUpdate(() => { }); }} testid="bw-claim-plot">RECLAMAR LOTE</Btn>
+        </div>
+      ) : (
+        <>
+          <div className="p-2.5 rounded-xl border border-emerald-800/60 bg-emerald-950/20">
+            <div className="text-[10px] text-slate-300">🏠 Lote reclamado · Cofre de cupões: <b className="text-amber-300">{house.vault}</b> 🎟️</div>
+            <div className="flex gap-2 mt-1.5">
+              <Btn tone="amber" onClick={() => { if (c.coupons > 0) { engine?.depositCoupon(1); onUpdate(cc => { cc.coupons--; }); } }} disabled={c.coupons <= 0} testid="bw-deposit-coupon">Guardar 1 cupão</Btn>
+              <Btn tone="green" onClick={() => { onUpdate(cc => { cc.gold += 300; cc.house && (cc.house.vault = Math.max(0, cc.house.vault - 1)); }); engine?.getHousing(); }} disabled={(house.vault || 0) <= 0}>Levantar 1</Btn>
+            </div>
+          </div>
+          {BUILDINGS.map(b => {
+            const lvl = house.built?.[b.id] || 0;
+            const next = lvl + 1;
+            const cost = b.cost[Math.min(lvl, b.cost.length - 1)];
+            const maxed = lvl >= b.levels;
+            return (
+              <div key={b.id} className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70">
+                <div className="flex justify-between items-center gap-2">
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-200">{b.emoji} {b.name} {lvl > 0 && <span className="text-amber-300">Nv{lvl}</span>}</div>
+                    <div className="text-[9px] text-slate-400">{b.desc}</div>
+                  </div>
+                  {!maxed
+                    ? <Btn onClick={() => { engine?.buildHouse(b.id); onUpdate(cc => { cc.gold -= cost; }); }} disabled={c.gold < cost} testid={`bw-build-${b.id}`}>
+                      {lvl === 0 ? "Construir" : `Melhorar Nv${next}`} · {cost.toLocaleString("pt-MZ")} 🪙
+                    </Btn>
+                    : <span className="text-[9px] text-emerald-400 font-bold">MAX</span>}
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[9px] text-slate-500">Com Torre de Guarda ativa, os inimigos não conseguem roubar cupões dentro do teu lote — têm primeiro de destruir a torre (invasão).</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Oficina (melhorias) ─────────────────────────────────────
+function ForgePanel({ c, onUpdate }: any) {
+  const [sel, setSel] = useState<LootItem | null>(null);
+  const items = [...Object.values(c.equipped).filter(Boolean), ...c.inv] as LootItem[];
+  const doUpgrade = () => {
+    if (!sel) return;
+    const cost = upgradeCost(sel.up);
+    if ((c.mats.fragmento || 0) < cost) return;
+    const chance = upgradeChance(sel.up);
+    const ok = Math.random() < chance;
+    onUpdate(cc => {
+      cc.mats.fragmento -= cost;
+      const all = [...cc.inv, ...Object.values(cc.equipped).filter(Boolean)];
+      const it = all.find(x => x.id === sel.id);
+      if (it && ok) it.up += 1;
+    });
+  };
+  const cost = sel ? upgradeCost(sel.up) : 0;
+  const chance = sel ? Math.round(upgradeChance(sel.up) * 100) : 0;
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] text-slate-400"> 🔨 melhora o teu equipamento com Fragmentos Arcanos. Até +6 é 100%; depois falha-se! Cada nível dá +12% aos stats do item.</p>
+      <div className="grid grid-cols-4 gap-1.5">
+        {items.map(it => (
+          <button key={it.id} onClick={() => setSel(it)} className="p-1.5 rounded-lg border bg-slate-900/70" style={{ borderColor: RARITY_META[it.rarity].color + (sel?.id === it.id ? "" : "66") }}>
+            <div className="text-lg">{it.emoji}</div>
+            <div className="text-[7px] font-bold" style={{ color: RARITY_META[it.rarity].color }}>{it.name.split(" ")[0]}{it.up ? `+${it.up}` : ""}</div>
+          </button>
+        ))}
+        {items.length === 0 && <p className="col-span-4 text-xs text-slate-500 text-center py-4">Sem itens — caça primeiro!</p>}
+      </div>
+      {sel && (
+        <div className="p-3 rounded-xl border" style={{ borderColor: upgradeGlow(sel.up) || RARITY_META[sel.rarity].color, background: "rgba(2,6,23,0.8)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{sel.emoji}</span>
+            <div className="flex-1">
+              <div className="text-xs font-black" style={{ color: RARITY_META[sel.rarity].color }}>{sel.name} → +{sel.up + 1}</div>
+              <div className="text-[10px] text-slate-400">Custo: {cost} 🔹 · Sucesso: {chance}%</div>
+            </div>
+          </div>
+          <Btn onClick={doUpgrade} disabled={(c.mats.fragmento || 0) < cost} tone={chance === 100 ? "green" : "amber"} className="w-full mt-2" testid="bw-upgrade-go">
+            MELHORAR ({c.mats.fragmento || 0} 🔹 disponíveis)
+          </Btn>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Loja ────────────────────────────────────────────────────
+function ShopPanel({ c, onUpdate, engine }: any) {
+  const craft = (p: any) => {
+    const ok = Object.entries(p.cost).every(([k, v]) => (c.mats[k] || 0) >= (v as number));
+    if (!ok) return;
+    onUpdate(cc => {
+      for (const [k, v] of Object.entries(p.cost)) cc.mats[k] -= v as number;
+      cc.pots[p.id] = (cc.pots[p.id] || 0) + 1;
+    });
+  };
+  const buyVida = () => {
+    if (c.gold < 300) return;
+    onUpdate(cc => { cc.gold -= 300; cc.pots.vida = (cc.pots.vida || 0) + 1; });
+  };
+  const usePot = (id: string) => {
+    if ((c.pots[id] || 0) <= 0) return;
+    if (engine?.usePotion(id)) onUpdate(cc => { cc.pots[id]--; });
+  };
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🧪 CALDEIRÃO (usa materiais)</div>
+        <div className="space-y-1.5">
+          {POTIONS.map(p => {
+            const can = Object.entries(p.cost).every(([k, v]) => (c.mats[k] || 0) >= (v as number));
+            return (
+              <div key={p.id} className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70 flex justify-between items-center gap-2">
+                <div>
+                  <div className="text-[11px] font-bold text-slate-200">{p.emoji} {p.name} <span className="text-amber-300">×{c.pots[p.id] || 0}</span></div>
+                  <div className="text-[9px] text-slate-400">{p.desc} · {Object.entries(p.cost).map(([k, v]) => `${v} ${k}`).join(", ")}</div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Btn onClick={() => craft(p)} disabled={!can} tone={can ? "green" : "slate"} testid={`bw-craft-${p.id}`}>Fabricar</Btn>
+                  <Btn onClick={() => usePot(p.id)} disabled={(c.pots[p.id] || 0) <= 0} tone="slate" testid={`bw-usepot-${p.id}`}>Usar</Btn>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🏪 MERCADOR</div>
+        <div className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/70 flex justify-between items-center">
+          <div>
+            <div className="text-[11px] font-bold text-slate-200">🧪 Poção de Vida ×1</div>
+            <div className="text-[9px] text-slate-400">Recupera 45% da vida · 300 🪙</div>
+          </div>
+          <Btn onClick={buyVida} disabled={c.gold < 300} testid="bw-buy-potion">Comprar</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Cupões (economia da plataforma) ─────────────────────────
+function CouponsPanel({ c, onUpdate, onNavigate }: any) {
+  const [acc, setAcc] = useState<{ id: string; code: string; label: string }[]>([]);
+  const [plat, setPlat] = useState<PlatformData | null>(null);
+  const [claimed, setClaimed] = useState<string[]>([]);
+  useEffect(() => {
+    fetchAccountVouchers().then(setAcc);
+    fetchPlatformData().then(setPlat);
+  }, []);
+  const claim = (v: any) => {
+    if (c.coupons <= 0) return;
+    onUpdate(cc => { cc.coupons--; });
+    claimWorldVoucher(v.id, v.code, voucherLabelOf(v)).then(ok => {
+      if (ok) setClaimed(cl => [...cl, v.id]);
+    });
+    logWorldActivity(c.uid, "coupon-claim", v.code, 1);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl border border-amber-700/60 bg-amber-950/30 text-center">
+        <div className="text-3xl font-black text-amber-300" data-testid="bw-coupons-count">🎟️ {c.coupons}</div>
+        <div className="text-[10px] text-slate-400">cupões no bolso — ganhos a roubar, em vilões, chefes e desafios</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🔁 TROCAR POR CUPÕES REAIS DA PLATAFORMA</div>
+        <div className="space-y-1.5">
+          {(plat?.vouchers || []).map((v: any) => (
+            <div key={v.id} className="p-2.5 rounded-xl border border-emerald-800/60 bg-emerald-950/20 flex justify-between items-center gap-2">
+              <div>
+                <div className="text-[11px] font-black text-emerald-300">{v.code}</div>
+                <div className="text-[9px] text-slate-400">{voucherLabelOf(v)}</div>
+              </div>
+              {claimed.includes(v.id) || acc.some(a => a.id === v.id)
+                ? <span className="text-[10px] text-emerald-400 font-bold">✔ NA CONTA</span>
+                : <Btn onClick={() => claim(v)} disabled={c.coupons <= 0} tone="green" testid={`bw-claim-voucher-${v.id}`}>Trocar 1 🎟️</Btn>}
+            </div>
+          ))}
+          {!plat?.vouchers?.length && <p className="text-[10px] text-slate-500">Sem cupões ativos agora — volta em breve!</p>}
+        </div>
+      </div>
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🔨 CASA DE LEILÕES</div>
+        <p className="text-[10px] text-slate-400 mb-1.5">Usa o teu ouro e créditos nos leilões reais da plataforma.</p>
+        <Btn tone="blue" onClick={() => onNavigate?.("/leiloes")}>Abrir Leilões da plataforma</Btn>
+      </div>
+      {acc.length > 0 && (
+        <div>
+          <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">💼 NA TUA CONTA</div>
+          {acc.map(a => (
+            <div key={a.id} className="p-2 rounded-lg border border-slate-800 bg-slate-900/60 text-[10px] text-slate-300 mb-1">
+              {a.code} · {a.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+function voucherLabelOf(v: any): string {
+  return v.type === "percentage" ? `-${v.value}%` : `-${v.value} MT`;
+}
+
+// ── Banco de Pontos ─────────────────────────────────────────
+function BankPanel({ c, onUpdate, onNavigate }: any) {
+  const [amount, setAmount] = useState(10);
+  const [status, setStatus] = useState<string | null>(null);
+  const exchange = () => {
+    const cost = amount * 100;
+    if (c.gold < cost) return;
+    onUpdate(cc => { cc.gold -= cost; });
+    exchangeWorldPoints(amount, c.uid).then(r => {
+      if (r === "ok") setStatus(`✔ ${amount} créditos creditados na conta!`);
+      else if (r === "no-auth") setStatus("⏳ Guardado — entra na conta para receber (sincroniza automático).");
+      else setStatus("⏳ Pedido registado — processa após sincronização.");
+    });
+    logWorldActivity(c.uid, "bank-exchange", `${amount}p`, amount);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl border border-emerald-700/60 bg-emerald-950/25">
+        <div className="text-xs font-black text-emerald-300">🏦 BANCO DE PONTOS</div>
+        <p className="text-[10px] text-slate-400 mt-1">Converte ouro do mundo em <b className="text-emerald-300">créditos reais da plataforma</b> — 100 🪙 = 1 crédito. Mínimo 10.</p>
+        <div className="flex items-center gap-2 mt-2">
+          <input type="number" min={10} max={100} value={amount} onChange={e => setAmount(Math.max(10, Math.min(100, Number(e.target.value) || 10)))}
+            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-sm" data-testid="bw-bank-amount" />
+          <Btn onClick={exchange} disabled={c.gold < amount * 100} tone="green" testid="bw-bank-exchange">Trocar · {amount * 100} 🪙</Btn>
+        </div>
+        {status && <div className="text-[10px] mt-2 text-emerald-300" data-testid="bw-bank-status">{status}</div>}
+      </div>
+      <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+        <div className="text-xs font-bold text-slate-300">💡 O que fazer com créditos?</div>
+        <ul className="text-[10px] text-slate-400 list-disc pl-4 space-y-0.5 mt-1">
+          <li>Participar em sorteios e concursos reais</li>
+          <li>Licitar nos leilões da plataforma</li>
+          <li>Comprar bilhetes de prémios</li>
+        </ul>
+        <Btn tone="blue" className="mt-2" onClick={() => onNavigate?.("/lives")}>Ir à plataforma</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Opções ──────────────────────────────────────────────────
+function SettingsPanel({ c, onUpdate, engine, onExit }: any) {
+  const WHATS = "+258848547887";
+  const [share, setShare] = useState(false);
+  const shareAchievement = () => {
+    const text = `⚔ Sou ${c.name}, ${CLASSES[c.classId].name} Nv${c.level} com ${fameRank(c.fame).name} no BATEU WORLD: Era das Lendas! Vem jogar: jogo de mundo aberto da plataforma Bateu 🌍`;
+    try { navigator.share?.({ text }); } catch { }
+    setShare(true);
+  };
+  const waMsg = encodeURIComponent(`Olá! Acabei de conquistar um prémio no Bateu World — Era das Lendas (Nv${c.level}, ${fameRank(c.fame).name}). Quero receber o meu 1GB! Herói: ${c.name}`);
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+        <div className="text-xs font-black text-slate-300 mb-1.5">🎵 ÁUDIO</div>
+        <div className="flex gap-2 flex-wrap">
+          {MUSIC_TRACKS.map((t, i) => (
+            <button key={t.id} onClick={() => { worldAudio.setTrack(i); worldAudio.startMusic(); }}
+              className="px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-950 text-[9px] text-slate-300">{t.emoji} {t.name}</button>
+          ))}
+        </div>
+      </div>
+      <div className="p-3 rounded-xl border border-fuchsia-800/60 bg-fuchsia-950/20">
+        <div className="text-xs font-black text-fuchsia-300">🌟 CONQUISTAS</div>
+        <Btn tone="blue" className="mt-1.5" onClick={shareAchievement} testid="bw-share">
+          {share ? "✔ Partilhado!" : "Partilhar nos Stories"}
+        </Btn>
+      </div>
+      <div className="p-3 rounded-xl border border-amber-800/60 bg-amber-950/20">
+        <div className="text-xs font-black text-amber-300">📞 APOIO / PRÉMIOS</div>
+        <a href={`https://wa.me/${WHATS.replace("+", "")}?text=${waMsg}`} target="_blank" rel="noreferrer" data-testid="bw-whatsapp"
+          className="inline-block mt-1.5 px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-bold active:scale-95">
+          WhatsApp {WHATS}
+        </a>
+        <p className="text-[9px] text-slate-500 mt-1">Prémio 1GB (qualquer operador) — enviado com mensagem automática.</p>
+      </div>
+      <div className="p-3 rounded-xl border border-red-900/60 bg-red-950/20">
+        <div className="text-xs font-black text-red-300 mb-1.5">⚠ ZONA DE PERIGO</div>
+        <div className="flex gap-2 flex-wrap">
+          <Btn tone="slate" onClick={() => { if (confirm("Apagar o herói e começar de novo?")) { localStorage.removeItem(LS_KEY); onExit?.(); } }}>Recomeçar herói</Btn>
+          <Btn tone="red" onClick={onExit} testid="bw-quit">Sair do mundo</Btn>
+        </div>
+      </div>
+      <div className="text-center text-[9px] text-slate-600">Bateu World · Era das Lendas v18 · {engine?.getState().fps || 0} fps</div>
+    </div>
   );
 }

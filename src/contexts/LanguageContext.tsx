@@ -115,6 +115,7 @@ const translations: Partial<Record<Lang, Dict>> = {
 
     // Mobile bottom tab
     "tab.home": "Home",
+    "tab.arena": "Arena",
     "tab.explore": "Explore",
     "tab.contests": "Contests",
     "tab.profile": "Profile",
@@ -1210,6 +1211,7 @@ const translations: Partial<Record<Lang, Dict>> = {
 
 
     "tab.home": "Início",
+    "tab.arena": "Arena",
     "tab.explore": "Explorar",
     "tab.contests": "Concursos",
     "tab.profile": "Perfil",
@@ -2279,6 +2281,7 @@ const translations: Partial<Record<Lang, Dict>> = {
 
     // ===== Mobile bottom tab =====
     "tab.home": "Início",
+    "tab.arena": "Arena",
     "tab.explore": "Explorar",
     "tab.contests": "Concursos",
     "tab.profile": "Perfil",

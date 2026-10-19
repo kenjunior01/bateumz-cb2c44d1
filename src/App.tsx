@@ -58,6 +58,7 @@ const AdminRegionalBranding = lazy(() => import("./pages/admin/AdminRegionalBran
 const AdminRegionalDashboard = lazy(() => import("./pages/admin/AdminRegionalDashboard.tsx"));
 const AdminSuperDashboard = lazy(() => import("./pages/admin/AdminSuperDashboard.tsx"));
 const EngagementLeaderboard = lazy(() => import("./pages/EngagementLeaderboard.tsx"));
+const Arena = lazy(() => import("./pages/Arena.tsx"));
 const AdminMillionaireManager = lazy(() => import("./pages/admin/AdminMillionaireManager.tsx"));
 const AdminSpinWheelManager = lazy(() => import("./pages/admin/AdminSpinWheelManager.tsx"));
 const Index = lazy(() => import("./pages/Index.tsx"));
@@ -226,6 +227,7 @@ function AnimatedRoutes() {
             <Route path="/blog/:slug" element={<BlogPostDetail />} />
             <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
             <Route path="/pontos" element={<EngagementLeaderboard />} />
+            <Route path="/arena" element={<Arena />} />
             <Route path="/games/millionaire/:gameId" element={<MillionairePage />} />
             <Route path="/games/spin-wheel/:gameId" element={<PrizeWheelWrapper />} />
             <Route path="/instant-win" element={<SorteiosLayout />}>            <Route index element={<InstantWin />} />          </Route>

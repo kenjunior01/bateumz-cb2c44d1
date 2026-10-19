@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, ShoppingBag, Ticket, User, Play } from "lucide-react";
+import { Home, ShoppingBag, Ticket, User, Play, Swords } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -18,6 +18,7 @@ type TabDef = {
 const TABS: TabDef[] = [
   { icon: Home, labelKey: "tab.home", href: "/" },
   { icon: ShoppingBag, labelKey: "tab.shop", href: "/marketplace" },
+  { icon: Swords, labelKey: "tab.arena", href: "/arena" },
   { icon: Ticket, labelKey: "tab.raffles", href: "/concursos" },
   { icon: User, labelKey: "tab.profile", href: "/profile", requiresAuth: false },
 ];

@@ -230,6 +230,7 @@ const Navbar = () => {
       },
       items: [
         { label: "🌍 Bateu World 3D", href: "/world", icon: Globe, desc: "O MMO oficial — níveis, poderes, PvP com roubo de cupões e prémios reais", badge: "🔥 TOP", trending: true },
+        { label: "⚔️ Gaming Arena", href: "/arena", icon: Swords, desc: "Torneios ao vivo, copas diárias e semanais, missões e ranking de elite com prémios reais", badge: "NOVO", trending: true },
         { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
         { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
         { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },

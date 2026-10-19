@@ -551,6 +551,27 @@ export default function Index() {
                   Sorteios & Concursos → Feed da Plataforma (tudo num só fluxo). */}
       <Suspense fallback={<div className="h-48" />}><DestaquesRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><GamesTournamentsRollUp /></Suspense>
+
+      {/* ═══════════ GAMING ARENA — competição, ranking e prémios (REA Stake/FACEIT) ═══════════ */}
+      <div className="w-full max-w-6xl mx-auto px-4 py-4" data-testid="home-arena-banner">
+        <Link to="/arena" className="group relative block overflow-hidden rounded-3xl border border-amber-600/40 bg-gradient-to-r from-rose-950/70 via-[#0a0d16] to-violet-950/60 p-5 sm:p-7">
+          <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-amber-500/10 blur-2xl" />
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black tracking-widest">GAMING ARENA</span>
+            <span className="text-[10px] text-slate-400 font-bold">TORNEIOS · COPAS · MISSÕES · RANKING</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-50">
+            Compite no ranking de elite e <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-rose-400">ganha prémios reais</span>
+          </h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-xl">
+            Copas todos os dias, missões com recompensa e torneios com brackets automáticos. A tua habilidade decide.
+          </p>
+          <span className="inline-flex items-center gap-1 mt-3 text-xs font-black text-amber-300">
+            Entrar na Arena <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </span>
+        </Link>
+      </div>
+
       <Suspense fallback={<div className="h-48" />}><VendasRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><SorteiosConcursosRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><PlatformFeed /></Suspense>

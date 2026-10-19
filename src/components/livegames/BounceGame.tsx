@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RotateCcw, Play, Trophy, CircleDot, ArrowLeft, ArrowRight, Volume2, VolumeX } from "lucide-react";
+import { haptic, playSfx, unlockAudio } from "@/components/games/kit";
 
 /**
  * BOUNCE — o clássico da bola quicando, estilo app nativo.
@@ -25,6 +26,7 @@ interface Platform {
 }
 
 interface Ring { x: number; y: number; taken: boolean; t: number; }
+interface Star { x: number; y: number; taken: boolean; t: number; }
 interface Cloud { x: number; y: number; s: number; v: number; }
 
 const WORLD_W = 480;
@@ -62,6 +64,8 @@ export default function BounceGame({ onScore, liveCode }: Props) {
     x: WORLD_W / 2, y: WORLD_H - 140, vx: 0, vy: 0,
     camY: 0, maxY: 0, score: 0, lives: 3, ringsTaken: 0,
     platforms: [] as Platform[], rings: [] as Ring[], clouds: [] as Cloud[],
+    stars: [] as Star[],
+    shield: false, ringCombo: 0, bonusPts: 0,
     lastT: 0, squash: 0, running: false, dead: false, shakeT: 0,
   });
 
@@ -85,9 +89,10 @@ export default function BounceGame({ onScore, liveCode }: Props) {
   // ---------- geração de mundo ----------
   const genWorld = useCallback(() => {
     const s = state.current;
-    s.platforms = []; s.rings = []; s.clouds = [];
+    s.platforms = []; s.rings = []; s.clouds = []; s.stars = [];
     s.x = WORLD_W / 2; s.y = WORLD_H - 140; s.vx = 0; s.vy = BOUNCE_V;
     s.camY = 0; s.maxY = 0; s.score = 0; s.lives = 3; s.ringsTaken = 0;
+    s.shield = false; s.ringCombo = 0; s.bonusPts = 0;
     s.dead = false; s.squash = 0; s.shakeT = 0;
 
     // plataforma inicial larga
@@ -122,6 +127,10 @@ export default function BounceGame({ onScore, liveCode }: Props) {
     if (type !== "spike" && Math.random() < 0.62 - 0.2 * diff) {
       s.rings.push({ x: x + w / 2, y: y - rand(34, 54), taken: false, t: Math.random() * 6 });
     }
+    // v20 PRO: ESTRELA-ESCUDO a cada ~24 plataformas — apanha e sobrevive a 1 espinho
+    if (i > 0 && i % 24 === 0 && type !== "spike") {
+      s.stars.push({ x: x + w / 2, y: y - rand(58, 78), taken: false, t: Math.random() * 6 });
+    }
   };
 
   // ---------- loop ----------
@@ -151,9 +160,16 @@ export default function BounceGame({ onScore, liveCode }: Props) {
         if (s.x + BALL_R * 0.7 > p.x && s.x - BALL_R * 0.7 < p.x + p.w &&
             s.y + BALL_R > top && s.y + BALL_R < top + 26) {
           if (p.type === "spike") {
+            // v20 PRO: com escudo, o espinho é absorvido
+            if (s.shield) {
+              s.shield = false; s.shakeT = 0.3; s.vy = BOUNCE_V; s.squash = 1;
+              playSfx("powerup"); haptic(30);
+              continue;
+            }
             // espinho = perde vida
             s.lives -= 1; s.shakeT = 0.25;
             beep(160, 0.18, "sawtooth", 0.2);
+            haptic(60);
             setLives(s.lives);
             if (s.lives <= 0) { die(); return; }
             s.vy = BOUNCE_V; s.squash = 1;
@@ -161,25 +177,44 @@ export default function BounceGame({ onScore, liveCode }: Props) {
           }
           s.vy = p.type === "spring" ? SPRING_V : BOUNCE_V;
           s.squash = 1;
+          s.ringCombo = 0; // combo de anéis reinicia ao tocar numa plataforma
           beep(p.type === "spring" ? 720 : 300, p.type === "spring" ? 0.12 : 0.07, p.type === "spring" ? "triangle" : "sine");
-          if (p.type === "spring") beep(960, 0.1, "triangle", 0.1);
+          if (p.type === "spring") { beep(960, 0.1, "triangle", 0.1); haptic(10); }
           break;
         }
       }
     }
 
-    // anéis
+    // anéis — v20 PRO: COMBO de anéis consecutivos vale cada vez mais
     for (const r of s.rings) {
       if (!r.taken) {
         const dx = r.x - s.x, dy = r.y - s.y;
         if (dx * dx + dy * dy < (BALL_R + 11) * (BALL_R + 11)) {
-          r.taken = true; s.ringsTaken++; s.score += 25;
+          r.taken = true; s.ringsTaken++;
+          s.ringCombo = Math.min(10, s.ringCombo + 1);
+          const pts = 25 + s.ringCombo * 5;
+          s.bonusPts += pts - 25; // o extra do combo vai para o bónus
           beep(1180, 0.09, "triangle", 0.14);
           setTimeout(() => beep(1560, 0.09, "triangle", 0.12), 70);
+          haptic(6);
           setScore(s.score);
         }
       }
       r.t += dt * 3;
+    }
+
+    // v20 PRO: estrelas-escudo
+    for (const st of s.stars) {
+      if (!st.taken) {
+        const dx = st.x - s.x, dy = st.y - s.y;
+        if (dx * dx + dy * dy < (BALL_R + 13) * (BALL_R + 13)) {
+          st.taken = true;
+          s.shield = true;
+          playSfx("levelup");
+          haptic([15, 25, 15]);
+        }
+      }
+      st.t += dt * 3;
     }
 
     // plataformas em movimento
@@ -191,9 +226,9 @@ export default function BounceGame({ onScore, liveCode }: Props) {
       }
     }
 
-    // altura → pontos
+    // altura → pontos (v20: + bónus de combo e estrelas)
     const climbed = Math.max(0, Math.floor((s.maxY - s.y) / 10));
-    const newScore = s.ringsTaken * 25 + climbed;
+    const newScore = s.ringsTaken * 25 + climbed + s.bonusPts;
     if (newScore !== s.score) { s.score = newScore; setScore(s.score); }
     s.maxY = Math.min(s.maxY, s.y);
     setHeight(Math.max(0, Math.floor((WORLD_H - 100 - s.y) / 10)));
@@ -202,10 +237,11 @@ export default function BounceGame({ onScore, liveCode }: Props) {
     if (s.y - s.camY > WORLD_H + 60) {
       s.lives -= 1; s.shakeT = 0.3;
       beep(140, 0.25, "sawtooth", 0.22);
+      haptic(50);
       setLives(s.lives);
       if (s.lives <= 0) { die(); return; }
       // reposiciona na plataforma mais próxima abaixo da câmara
-      s.y = s.camY + 120; s.vy = 0; s.x = WORLD_W / 2;
+      s.y = s.camY + 120; s.vy = 0; s.x = WORLD_W / 2; s.ringCombo = 0;
     }
 
     // câmara segue para cima
@@ -317,9 +353,45 @@ export default function BounceGame({ onScore, liveCode }: Props) {
       ctx.beginPath(); ctx.ellipse(r.x, yy, 10, 12 * Math.abs(Math.cos(r.t * 0.8)) + 4, 0, 0, Math.PI * 2); ctx.stroke();
     }
 
+    // v20 PRO: estrelas-escudo (giram e brilham)
+    for (const st of s.stars) {
+      if (st.taken || st.y < s.camY - 30 || st.y > s.camY + WORLD_H + 30) continue;
+      const yy = st.y + Math.sin(st.t) * 4;
+      const glow = ctx.createRadialGradient(st.x, yy, 0, st.x, yy, 20);
+      glow.addColorStop(0, "rgba(253,224,71,0.55)");
+      glow.addColorStop(1, "rgba(253,224,71,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(st.x, yy, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.translate(st.x, yy);
+      ctx.rotate(st.t * 0.9);
+      ctx.fillStyle = "#fde047";
+      ctx.strokeStyle = "#b45309";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const rr = k % 2 === 0 ? 11 : 4.6;
+        const a = (Math.PI * 2 * k) / 10 - Math.PI / 2;
+        const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+
     // bola
     const sq = 1 - s.squash * 0.28;
     const sw = 1 + s.squash * 0.22;
+    // v20 PRO: aura do escudo quando activo
+    if (s.shield) {
+      const shieldPulse = 0.5 + Math.sin(performance.now() / 180) * 0.25;
+      const sg = ctx.createRadialGradient(s.x, s.y, BALL_R * 0.6, s.x, s.y, BALL_R + 9);
+      sg.addColorStop(0, "rgba(34,211,238,0)");
+      sg.addColorStop(0.75, `rgba(34,211,238,${0.35 * shieldPulse})`);
+      sg.addColorStop(1, `rgba(34,211,238,${0.6 * shieldPulse})`);
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(s.x, s.y, BALL_R + 9, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.fillStyle = C.ballDark;
     ctx.beginPath(); ctx.ellipse(s.x, s.y + 2, BALL_R * sw, BALL_R * sq, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = C.ball;
@@ -340,6 +412,20 @@ export default function BounceGame({ onScore, liveCode }: Props) {
     roundRect(ctx, WORLD_W - 118, 10, 108, 30, 15); ctx.fill();
     ctx.fillStyle = "#fff";
     ctx.fillText(`♥ ${s.lives}`, WORLD_W - 106, 30);
+    if (s.shield) {
+      ctx.fillStyle = "rgba(8,145,178,0.85)";
+      roundRect(ctx, WORLD_W - 118, 46, 108, 24, 12); ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px system-ui, sans-serif";
+      ctx.fillText("🛡 ESCUDO ACTIVO", WORLD_W - 106, 62);
+    }
+    if (s.ringCombo >= 3) {
+      ctx.fillStyle = "rgba(234,88,12,0.9)";
+      roundRect(ctx, 10, 46, 96, 24, 12); ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px system-ui, sans-serif";
+      ctx.fillText(`COMBO ×${s.ringCombo}`, 20, 62);
+    }
   };
 
   const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {

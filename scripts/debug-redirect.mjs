@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const b = await chromium.launch({ args: ["--no-sandbox", "--disable-gpu"] });
+const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+p.on("pageerror", (e) => console.log("PAGEERROR:", e.message.slice(0, 150)));
+await p.goto("http://localhost:8099/jogo/nao-existe", { waitUntil: "domcontentloaded" });
+await p.waitForTimeout(6000);
+console.log("URL:", p.url());
+await p.goto("http://localhost:8099/todos-jogos", { waitUntil: "domcontentloaded" });
+await p.waitForTimeout(6000);
+console.log("URL2:", p.url());
+await b.close();

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RotateCcw, Coins, Bot } from "lucide-react";
+import { playSfx, haptic, unlockAudio } from "@/components/games/kit";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -386,6 +387,9 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
   const [round, setRound] = useState(1);
   const [score1, setScore1] = useState(0);
   const [score2, setScore2] = useState(0);
+  // v20 PRO: PODER DOURADO — fruta bónus temporária que vale o triplo
+  const goldenRef = useRef<{ pos: Point; expiresAt: number } | null>(null);
+  const foodsSinceGoldenRef = useRef(0);
   const [length1, setLength1] = useState(3);
   const [length2, setLength2] = useState(3);
   const [winner, setWinner] = useState<"Jogador 1" | "Jogador 2" | "Computador" | "empate" | null>(null);
@@ -442,6 +446,8 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
     snake1Ref.current = cloneSnake(INITIAL_SNAKE_1);
     snake2Ref.current = cloneSnake(INITIAL_SNAKE_2);
     foodRef.current = randomFood(snake1Ref.current, snake2Ref.current);
+    goldenRef.current = null;
+    foodsSinceGoldenRef.current = 0;
     setLength1(3);
     setLength2(3);
     setWinner(null);
@@ -544,14 +550,20 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
     const dead2 = hitWall2 || hitSelf2 || hitOther2;
 
     if (dead1 && dead2) {
+      playSfx('explosion', { volume: 0.6 });
+      haptic(40);
       endRound("empate");
       return;
     }
     if (dead1) {
+      playSfx('explosion', { volume: 0.6 });
+      haptic(40);
       endRound(gameModeRef.current === "computador" ? "Computador" : "Jogador 2");
       return;
     }
     if (dead2) {
+      playSfx('explosion', { volume: 0.6 });
+      haptic(40);
       endRound("Jogador 1");
       return;
     }
@@ -571,6 +583,15 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       setFlashScore(1);
       setTimeout(() => setFlashScore(null), 400);
       spawnParticles(particlesRef.current, food.x, food.y, 500 / GRID_SIZE, 'rgba(34, 211, 238, 1)', 12);
+      playSfx('coin', { volume: 0.45 });
+      haptic(8);
+      // v20 PRO: PODER DOURADO — a cada 6 frutas aparece uma dourada (30 pts, 8s)
+      foodsSinceGoldenRef.current++;
+      if (foodsSinceGoldenRef.current >= 6 && !goldenRef.current) {
+        foodsSinceGoldenRef.current = 0;
+        goldenRef.current = { pos: randomFood(s1, s2), expiresAt: Date.now() + 8000 };
+        playSfx('powerup');
+      }
       foodRef.current = randomFood(s1, s2);
     } else {
       s1.body.pop();
@@ -582,9 +603,34 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
       setTimeout(() => setFlashScore(null), 400);
       const p2Color = gameModeRef.current === "computador" ? 'rgba(52, 211, 153, 1)' : 'rgba(244, 114, 182, 1)';
       spawnParticles(particlesRef.current, food.x, food.y, 500 / GRID_SIZE, p2Color, 12);
+      playSfx('coin', { volume: 0.45, pitch: 1.15 });
+      haptic(8);
+      foodsSinceGoldenRef.current++;
+      if (foodsSinceGoldenRef.current >= 6 && !goldenRef.current) {
+        foodsSinceGoldenRef.current = 0;
+        goldenRef.current = { pos: randomFood(s1, s2), expiresAt: Date.now() + 8000 };
+        playSfx('powerup');
+      }
       foodRef.current = randomFood(s1, s2);
     } else {
       s2.body.pop();
+    }
+
+    // v20 PRO: apanhar o PODER DOURADO → +30 pts instantâneos
+    if (goldenRef.current) {
+      const g = goldenRef.current;
+      if (Date.now() > g.expiresAt) {
+        goldenRef.current = null;
+      } else if (pointsEqual(newHead1, g.pos) || pointsEqual(newHead2, g.pos)) {
+        const g1 = pointsEqual(newHead1, g.pos);
+        const g2 = pointsEqual(newHead2, g.pos);
+        if (g1) { setLength1((l) => l + 2); setScore1((v) => v + 30); }
+        if (g2) { setLength2((l) => l + 2); setScore2((v) => v + 30); }
+        spawnParticles(particlesRef.current, g.pos.x, g.pos.y, 30 / GRID_SIZE, 'rgba(251, 191, 36, 1)', 20);
+        goldenRef.current = null;
+        playSfx('levelup');
+        haptic([20, 30, 20]);
+      }
     }
   }, [endRound]);
 
@@ -704,6 +750,44 @@ export default function SnakeBattle({ onScore, liveCode }: Props) {
     ctx.beginPath();
     ctx.arc(fx - foodRadius * 0.2, fy - foodRadius * 0.2, foodRadius * 0.35, 0, Math.PI * 2);
     ctx.fill();
+
+    // ── v20 PRO: PODER DOURADO — estrela brilhante com temporizador ──
+    if (goldenRef.current) {
+      const g = goldenRef.current;
+      const gx2 = g.pos.x * cell + cell / 2;
+      const gy2 = g.pos.y * cell + cell / 2;
+      const leftMs = Math.max(0, g.expiresAt - Date.now());
+      const blink = leftMs < 2500 ? (Math.sin(now / 70) + 1) / 2 : 1;
+      const gGlow = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, cell);
+      gGlow.addColorStop(0, `rgba(253, 224, 71, ${0.75 * blink})`);
+      gGlow.addColorStop(1, "rgba(253, 224, 71, 0)");
+      ctx.fillStyle = gGlow;
+      ctx.beginPath(); ctx.arc(gx2, gy2, cell, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.translate(gx2, gy2);
+      ctx.rotate(now / 600);
+      ctx.fillStyle = "#fde047";
+      ctx.strokeStyle = "#92400e";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const rr = i % 2 === 0 ? cell * 0.42 : cell * 0.18;
+        const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
+        const px = Math.cos(a) * rr;
+        const py = Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      // anel de tempo restante
+      ctx.strokeStyle = "rgba(253, 224, 71, 0.8)";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(gx2, gy2, cell * 0.55, -Math.PI / 2, -Math.PI / 2 + (leftMs / 8000) * Math.PI * 2);
+      ctx.stroke();
+    }
 
     // ── Draw Snakes ──
     const drawSnake = (

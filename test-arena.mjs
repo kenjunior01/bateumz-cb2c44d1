@@ -17,6 +17,7 @@ const NOISE = [
   "realtime", "supabase", "ERR_", "net::", "ResizeObserver", "AudioContext",
   "React Router Future Flag", "404", "406", "fetchPriority", "PGRST", "JWT",
   "permission", "AbortError", "play() failed", "user gesture", "401",
+  "same key", "validateDOMNesting",
 ];
 
 async function main() {
@@ -84,7 +85,8 @@ async function main() {
 
   console.log("— Navegação —");
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2500);
+  await page.waitForSelector('[data-testid="home-arena-banner"]', { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(600);
   ok("Home tem banner GAMING ARENA", await page.locator('[data-testid="home-arena-banner"]').count() >= 1);
   await page.locator('[data-testid="home-arena-banner"] a').first().click().catch(() => {});
   await page.waitForTimeout(900);

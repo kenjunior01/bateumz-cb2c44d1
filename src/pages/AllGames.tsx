@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { Search, Gamepad2, Users, Brain, Zap, Swords, Grid3X3, Sparkles, LayoutGrid, Radio, ChevronRight, Globe, Crown, CircleDot } from "lucide-react";
+import { Search, Gamepad2, Users, Zap, Swords, Radio, Flame, ChevronRight, TrendingUp, Globe, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { COUNTRIES } from "@/lib/regions";
@@ -11,49 +11,9 @@ import ShimmerText from '@/components/ui/ShimmerText';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
 import HolographicCard from '@/components/ui/HolographicCard';
 import ChallengeModal from '@/components/games/ChallengeModal';
+import GameArt, { GameArtChip } from '@/components/games/GameArt';
 import { getPlayerIdentity } from '@/lib/challenges';
-
-interface GameDef {
-  id: string;
-  label: string;
-  emoji: string;
-  desc: string;
-  grad: string;
-  category: string;
-  players: string;
-  icon: any;
-  hasBot: boolean;
-  regions?: string[];
-}
-
-// CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o MMO da plataforma
-const ALL_GAMES: GameDef[] = [
-  { id: "mmorpg", label: "Bateu World 3D", emoji: "🌍", desc: "O MMO oficial da Bateu — combate em tempo real, níveis e poderes, rouba cupões a outros jogadores e troca pontos por moeda da plataforma!", grad: "from-rose-600 via-orange-500 to-amber-500", category: "Mundo Aberto", players: "Multiplayer", icon: Globe, hasBot: false },
-  { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: CircleDot, hasBot: false },
-  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: Zap, hasBot: false },
-  { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: Gamepad2, hasBot: true },
-  { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "A cobra famosa de sempre — duas cobras, um tabuleiro, quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
-  { id: "numbertetris", label: "Números Caindo", emoji: "🔢", desc: "Estilo Tetris 2048 — números caem e combinam até fazer 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: LayoutGrid, hasBot: false },
-  { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "O primeiro clássico da história — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: Gamepad2, hasBot: false },
-  { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "O famoso jogo do galo a nível PRO — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", category: "Estratégia", players: "1v1 / Bot", icon: Grid3X3, hasBot: true },
-  { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estratégia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: true },
-  { id: "checkers", label: "Damas", emoji: "♟️", desc: "O clássico mundial das damas com capturas e promoção a rei!", grad: "from-amber-700 to-red-800", category: "Estratégia", players: "1v1 / Bot", icon: Grid3X3, hasBot: false },
-  { id: "chess", label: "Xadrez", emoji: "♚", desc: "Xadrez completo: roque, en passant, promoção e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estratégia", players: "1v1 / Bot", icon: Crown, hasBot: true },
-  { id: "dominoes", label: "Dominó", emoji: "🎲", desc: "O clássico das mesas de Moçambique — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700", category: "Estratégia", players: "1v1 / Bot", icon: LayoutGrid, hasBot: false },
-  { id: "snakesladders", label: "Cobras e Escadas", emoji: "🪜", desc: "O clássico mundial! Suba escadas, fuja das cobras e chegue primeiro ao 100!", grad: "from-lime-600 to-emerald-700", category: "Arcade", players: "1v1 / Bot", icon: Sparkles, hasBot: true },
-  { id: "memory", label: "Jogo da Memória VS", emoji: "🧠", desc: "O clássico dos pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: Brain, hasBot: false },
-  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala moçambicano — semeie, capture e vença!", grad: "from-green-700 to-amber-900", category: "Moçambicano", players: "1v1 / Bot", icon: Gamepad2, hasBot: true },
-  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mão — jogo moçambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Moçambicano", players: "1v1 / Bot", icon: Zap, hasBot: true },
-];
-
-const CATEGORIES = [
-  { id: "todos", label: "Todos", emoji: "🎮" },
-  { id: "Mundo Aberto", label: "Mundo Aberto", emoji: "🗺️" },
-  { id: "Arcade", label: "Arcade", emoji: "👾" },
-  { id: "Estratégia", label: "Estratégia", emoji: "♟️" },
-  { id: "Puzzle", label: "Puzzle", emoji: "🧩" },
-  { id: "Moçambicano", label: "Moçambicano", emoji: "🇲🇿" },
-];
+import { ALL_GAMES, CATEGORIES, weeklyPopular, popularityScore, playsOf, bestOf } from '@/lib/gamesCatalog';
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
 // Steam/CrazyGames inspired green theme
@@ -64,10 +24,18 @@ const THEME_A = "#f78166";
 const AllGames = () => {
   const { sfx } = useSoundEffects();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("todos");
+  const [category, setCategory] = useState(() => searchParams.get("cat") || "todos");
   const [regionFilter, setRegionFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "category">("name");
+  const [sortBy, setSortBy] = useState<"populares" | "name" | "category">("populares");
+
+  /* chips da homepage (hero) chegam por /jogos?cat=X — mantém em sincronia */
+  useEffect(() => {
+    const cat = searchParams.get("cat");
+    if (cat && CATEGORIES.some((c) => c.id === cat)) setCategory(cat);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const heroRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [challengeGame, setChallengeGame] = useState<{ id: string; label: string } | null>(null);
@@ -82,10 +50,14 @@ const AllGames = () => {
       const q = search.toLowerCase();
       list = list.filter((g) => g.label.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q) || g.category.toLowerCase().includes(q));
     }
-    if (sortBy === "name") list = [...list].sort((a, b) => a.label.localeCompare(b.label));
+    if (sortBy === "populares") list = [...list].sort((a, b) => popularityScore(b.id) - popularityScore(a.id));
+    else if (sortBy === "name") list = [...list].sort((a, b) => a.label.localeCompare(b.label));
     else list = [...list].sort((a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label));
     return list;
   }, [search, category, sortBy, regionFilter]);
+
+  /* ⭐ Populares esta Semana (padrão CrazyGames) — top 6 do catálogo */
+  const weekTop = useMemo(() => weeklyPopular(6), []);
 
   const botGames = useMemo(() => ALL_GAMES.filter((g) => g.hasBot), []);
   const categoryCounts = useMemo(() => {
@@ -104,9 +76,9 @@ const AllGames = () => {
     <div className="min-h-screen pb-20 lg:pb-0" style={{ background: 'var(--area-bg, #0d1117)', color: 'var(--area-text, #e6edf3)' }}>
       <Helmet>
         <title>Jogos Clássicos Online Grátis — Bateu</title>
-        <meta name="description" content="Joga os melhores clássicos de sempre: Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas, Dominó e o MMO Bateu World 3D. Grátis, direto no navegador!" />
+        <meta name="description" content="Joga os melhores clássicos de sempre: Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas, Dominó e o MUNDO BATEU. Grátis, direto no navegador!" />
         <meta property="og:title" content="Jogos Clássicos Online Grátis — Bateu" />
-        <meta property="og:description" content="Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas e o MMO Bateu World 3D — grátis e direto no navegador!" />
+        <meta property="og:description" content="Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas e o MUNDO BATEU — grátis e direto no navegador!" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href={`${window.location.origin}/jogos`} />
       </Helmet>
@@ -155,7 +127,7 @@ const AllGames = () => {
               <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Jogos Clássicos</ShimmerText>
             </h1>
             <p className="text-base mb-6 max-w-xl" style={{ color: '#7d8590' }}>
-              Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MMO Bateu World 3D. Grátis, direto no navegador!
+              Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MUNDO BATEU. Grátis, direto no navegador!
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -203,25 +175,27 @@ const AllGames = () => {
             animate={{ opacity: [0.5, 0.85, 0.5] }}
             transition={{ duration: 4, repeat: Infinity }}
           />
-          <div className="relative z-10 p-4 sm:p-5 flex items-center gap-4">
+          <div className="relative z-10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <motion.div
-              className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-3xl sm:text-4xl"
+              className="h-20 w-28 sm:h-20 sm:w-32 shrink-0 rounded-2xl overflow-hidden border border-white/25"
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             >
-              🌍
+              <GameArt id="mmorpg" className="w-full h-full" />
             </motion.div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">🌍 BATEU WORLD 3D</span>
+                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">MUNDO BATEU</span>
                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[9px] font-black animate-pulse">MMO DA PLATAFORMA · JOGO EM DESTAQUE</span>
               </div>
               <p className="text-[11px] sm:text-xs font-semibold text-white/80 mt-1 leading-snug">
                 Níveis, poderes, missões e exploração num mundo 3D ao vivo — derrota jogadores e rouba os cupões deles, troca pontos por moeda da plataforma e ganha prémios reais.
               </p>
             </div>
-            <div className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 text-white font-black text-[11px] sm:text-xs shadow-lg">
-              JOGAR AGORA ▶
+            <div className="shrink-0 self-stretch sm:self-auto flex">
+              <span className="flex-1 sm:flex-none text-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 text-white font-black text-[11px] sm:text-xs shadow-lg">
+                JOGAR AGORA ▶
+              </span>
             </div>
           </div>
         </motion.div>
@@ -261,11 +235,11 @@ const AllGames = () => {
 
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <span className="text-xs text-muted-foreground">Ordenar:</span>
-          {(["name", "category"] as const).map((s) => (
+          {(["populares", "name", "category"] as const).map((s) => (
             <motion.button
               key={s}
               onClick={() => { sfx.click(); setSortBy(s); }}
-              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1"
               style={{
                 backgroundColor: sortBy === s ? "hsl(220 70% 18% / 0.1)" : "transparent",
                 color: sortBy === s ? THEME_P : "hsl(var(--muted-foreground))",
@@ -273,7 +247,8 @@ const AllGames = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {s === "name" ? "Nome" : "Categoria"}
+              {s === "populares" && <Flame className="h-3 w-3" />}
+              {s === "name" ? "Nome" : s === "category" ? "Categoria" : "Populares"}
             </motion.button>
           ))}
           <span className="text-xs text-muted-foreground mx-1">|</span>
@@ -291,6 +266,48 @@ const AllGames = () => {
           <span className="text-xs text-muted-foreground ml-auto"><AnimatedNumber value={filtered.length} /> jogo{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       </div>
+
+      {/* ⭐ POPULARES ESTA SEMANA — padrão CrazyGames/Poki reconstruído (REA) */}
+      {category === "todos" && !search && (
+        <section className="container mx-auto px-4 pb-2 relative z-20" data-testid="jogos-populares-rail">
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(247,129,102,0.12)", border: "1px solid rgba(247,129,102,0.25)" }}>
+              <TrendingUp className="h-3.5 w-3.5" style={{ color: THEME_A }} />
+            </span>
+            <h2 className="text-sm font-black font-display tracking-tight">Populares esta Semana</h2>
+            <span className="text-[10px] text-muted-foreground">· actualizado semanalmente</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide custom-scrollbar">
+            {weekTop.map((g, i) => {
+              const plays = playsOf(g.id);
+              const best = bestOf(g.id);
+              return (
+                <Link
+                  key={g.id}
+                  to={`/lives?game=${g.id}`}
+                  data-testid={`populares-card-${g.id}`}
+                  onClick={() => sfx.click()}
+                  className="game-card-v2 shrink-0 w-[168px] rounded-2xl overflow-hidden card-hover-lift btn-press"
+                  style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  <div className={`relative h-[86px] overflow-hidden bg-gradient-to-br ${g.grad}`}>
+                    <GameArt id={g.id} className="w-full h-full" animate={false} />
+                    <span className="absolute top-1.5 left-1.5 h-6 w-6 rounded-lg bg-black/45 backdrop-blur flex items-center justify-center text-[11px] font-black text-white">{i + 1}</span>
+                    {i === 0 && <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-400 text-[8px] font-black text-black">🔥 TOP 1</span>}
+                  </div>
+                  <div className="p-2.5" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <p className="text-xs font-bold truncate">{g.label}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {best > 0 ? <>Recorde: <span className="text-amber-400 font-bold">{best.toLocaleString("pt-PT")}</span></> : g.players}
+                      {plays > 0 && <span className="opacity-60"> · jogaste {plays}×</span>}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="container mx-auto px-4 pb-8 relative z-20">
         <AnimatePresence mode="wait">
@@ -315,17 +332,21 @@ const AllGames = () => {
                 >
                   <Link
                     to={`/lives?game=${game.id}`}
-                    className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl"
+                    className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl overflow-hidden"
                     style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
                     onClick={() => sfx.click()}
                   >
-                    <div className={`h-1.5 bg-gradient-to-r ${game.grad} rounded-t-xl`} />
-                    <div className="p-3 md:p-4">
-                      <div className={`game-visual inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${game.grad} mb-3 text-xl shadow-lg`}>
-                        {game.emoji}
-                      </div>
+                    {/* ARTE do jogo (padrão CrazyGames) + CTA por cima */}
+                    <div className="relative h-24 sm:h-28 overflow-hidden">
+                      <GameArt id={game.id} className="w-full h-full transition-transform duration-300 hover:scale-[1.04]" animate={false} />
+                      <span className="absolute inset-x-0 bottom-0 h-10 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(13,17,23,0.85))" }} />
+                      <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ background: "rgba(46,160,67,0.92)" }}>
+                        JOGAR ▶
+                      </span>
+                    </div>
+                    <div className="p-3 md:p-4 pt-2.5">
                       <h3 className="text-sm font-bold leading-tight mb-1 line-clamp-1">{game.label}</h3>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{game.desc}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{game.desc}</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
                           {game.players}
@@ -335,8 +356,17 @@ const AllGames = () => {
                             Bot IA
                           </span>
                         )}
+                        {playsOf(game.id) > 0 && (
+                          <span
+                            data-testid={`plays-badge-${game.id}`}
+                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold"
+                            style={{ background: "rgba(46,160,67,0.12)", color: THEME_P }}
+                          >
+                            <Flame className="h-2.5 w-2.5" /> {playsOf(game.id)}× tuas
+                          </span>
+                        )}
                       </div>
-                      <div className="mt-3 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="mt-2.5 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                         <span className="text-[10px] text-muted-foreground/50">{game.category}</span>
                         <span className="flex items-center gap-2">
                           <motion.button
@@ -348,9 +378,16 @@ const AllGames = () => {
                           >
                             <Swords className="h-3 w-3" /> Desafiar
                           </motion.button>
-                          <motion.span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: THEME_P }}>
-                            Jogar <ChevronRight className="h-3 w-3" />
-                          </motion.span>
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); sfx.click(); navigate(`/jogo/${game.id}`); }}
+                            title={`Detalhes do ${game.label}`}
+                            data-testid={`info-${game.id}`}
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                            style={{ color: THEME_S, background: "rgba(88,166,255,0.1)" }}
+                          >
+                            <Info className="h-3 w-3" /> Detalhes
+                          </motion.button>
                         </span>
                       </div>
                     </div>
@@ -406,7 +443,7 @@ const AllGames = () => {
                         style={{ border: "1px solid rgba(255,255,255,0.05)" }}
                         onClick={() => sfx.click()}
                       >
-                        <span>{g.emoji}</span> <span>{g.label}</span>
+                        <GameArtChip id={g.id} size={20} /> <span>{g.label}</span>
                       </Link>
                     ))}
                     {botGames.length > 8 && (

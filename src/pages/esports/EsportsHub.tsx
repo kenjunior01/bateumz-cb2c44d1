@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Play, Flame, CircleDollarSign, Video, MessageSquare,
+  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Play, Flame, CircleDollarSign, Video, MessageSquare, GitBranch, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,14 @@ import ButtonRipple from '@/components/ui/ButtonRipple';
 import { fadeInUp, staggerContainer, neonPulse } from '@/lib/animation-utilities';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import ScrollReveal from '@/components/ui/ScrollReveal';
+import {
+  PowerRankingsWidget,
+  PollWidget,
+  PrizePoolWidget,
+  StreamsWidget,
+  FantasyCTA,
+  GrelhaCTA,
+} from './EsportsAdvancedWidgets';
 
 const sb: any = supabase;
 
@@ -728,6 +736,12 @@ export default function EsportsHub() {
               </CardTilt>
             </motion.div>
 
+            {/* Widgets avançados: Transmissões, Power Rankings, Previsões, Prize Pool */}
+            <StreamsWidget />
+            <PowerRankingsWidget />
+            <PollWidget />
+            <PrizePoolWidget />
+
             {/* Top Equipas */}
             <motion.div
               variants={fadeInUp}
@@ -803,6 +817,10 @@ export default function EsportsHub() {
               </CardTilt>
             </motion.div>
 
+            {/* Widgets Avançados: Fantasy + Grelha */}
+            <FantasyCTA />
+            <GrelhaCTA />
+
             {/* Links Rapidos */}
             <motion.div
               variants={fadeInUp}
@@ -817,6 +835,8 @@ export default function EsportsHub() {
                 </h3>
                 <div className="space-y-1">
                   {[
+                    { icon: GitBranch, label: 'Grelha dos Playoffs', path: '/esports/brackets' },
+                    { icon: Sparkles, label: 'Fantasy Esports', path: '/esports/fantasy' },
                     { icon: Trophy, label: 'Ver Ranking Global', path: '/esports/ranking' },
                     { icon: Gamepad2, label: 'Explorar Ligas', path: '/esports/ligas' },
                     { icon: Users, label: 'Minha Equipa', path: '/esports/equipa' },

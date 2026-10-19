@@ -121,6 +121,7 @@ function BottomTab({
   return (
     <button
       onClick={() => onGo(tab.href)}
+      data-testid={"mob-tab-" + tab.href.replace("/", "")}
       className={"btn-press mob-bottom-tab " + (active ? "mob-bottom-tab-active" : "")}
     >
       {active && (

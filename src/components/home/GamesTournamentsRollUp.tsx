@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Trophy, Users, Gamepad2, Crown, Clock, LayoutGrid } from "lucide-react";
 import RollUp from "./RollUp";
+import GameArt from "@/components/games/GameArt";
 import { getTournaments, type Tournament } from "@/lib/tournaments";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -148,11 +149,15 @@ export default function GamesTournamentsRollUp() {
           role="link"
           aria-label={`Jogar ${g.label}`}
         >
-          <div className="relative flex flex-col p-4" style={{ minHeight: 230 }}>
-            <div className="text-[40px] leading-none mb-auto transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">{g.emoji}</div>
-            <h3 className="text-[15px] font-black text-white leading-tight mt-3 line-clamp-2">{g.label}</h3>
-            <p className="text-[11px] text-white/60 mt-1 line-clamp-2">{g.desc}</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-white/90">
+          <div className="relative flex flex-col" style={{ minHeight: 230 }}>
+            {/* ARTE do jogo — padrão CrazyGames, sem emojis soltos */}
+            <div className="relative h-[108px] -mx-px -mt-px overflow-hidden" style={{ borderRadius: "23px 23px 0 0" }}>
+              <GameArt id={g.id} className="w-full h-full transition-transform duration-300 group-hover:scale-105" animate={false} />
+              <div className="absolute inset-x-0 bottom-0 h-8" style={{ background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.35))" }} />
+            </div>
+            <h3 className="text-[15px] font-black text-white leading-tight mt-3 px-4 line-clamp-2">{g.label}</h3>
+            <p className="text-[11px] text-white/60 mt-1 px-4 line-clamp-2">{g.desc}</p>
+            <span className="mt-auto mb-4 mx-4 inline-flex items-center gap-1 text-[11px] font-bold text-white/90">
               <Gamepad2 className="h-3.5 w-3.5" /> Jogar
             </span>
           </div>

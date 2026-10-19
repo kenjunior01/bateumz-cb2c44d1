@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RotateCcw, Play, Bot, Trophy, Medal, Bird, Zap } from 'lucide-react';
+import { playSfx, haptic, unlockAudio } from '@/components/games/kit';
 
 // ===================== TYPES =====================
 
@@ -240,6 +241,8 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
   const flap = useCallback(() => {
     if (phaseRef.current !== 'playing') return;
     birdRef.current.vy = FLAP_FORCE;
+    playSfx('jump', { volume: 0.4 });
+    haptic(8);
   }, []);
 
   const botFlap = useCallback(() => {
@@ -390,12 +393,15 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
           setScore(scoreRef.current);
           scorePopRef.current = 18;
           spawnParticles(bird.x, bird.y, 5, '#ffd700');
+          playSfx('coin', { volume: 0.45 });
 
           // Milestone
           if (scoreRef.current > 0 && scoreRef.current % 10 === 0 && scoreRef.current !== lastMilestone) {
             lastMilestone = scoreRef.current;
             spawnParticles(bird.x, bird.y, 20, '#ff6b6b');
             spawnParticles(bird.x, bird.y, 20, '#ffd700');
+            playSfx('levelup');
+            haptic([15, 30, 15]);
           }
         }
 
@@ -444,6 +450,8 @@ export default function FlappyBirdGame({ onScore, liveCode }: Props) {
         gameOverTriggered.current = true;
         spawnParticles(bird.x, bird.y, 30, '#ff4444');
         spawnParticles(bird.x, bird.y, 15, '#ffaa00');
+        playSfx('explosion', { volume: 0.7 });
+        haptic(45);
         setTimeout(() => {
           if (phaseRef.current === 'playing') {
             setPhase('gameover');

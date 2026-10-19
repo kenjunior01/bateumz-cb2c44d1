@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import { supabase } from "@/integrations/supabase/client";
+import { abrirBuscaGlobal } from "@/components/search/GlobalSearch";
 import bateuLogo from "@/assets/bateu-logo.png";
 
 // supabase is used directly as (supabase as any) below
@@ -539,15 +540,17 @@ const Navbar = () => {
             </div>
 
             <div className="hidden items-center gap-1.5 lg:flex">
-              <Link
-                to="/marketplace"
+              <button
+                type="button"
+                onClick={() => { sfx.inputFocus(); abrirBuscaGlobal(); }}
                 className="navbar-search-trigger group flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:bg-secondary/50 hover:text-foreground"
                 aria-label={t("nav.search")}
+                data-testid="navbar-busca"
               >
                 <Search className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
                 <span className="hidden xl:inline">{t("nav.search.placeholder")}</span>
                 <kbd className="navbar-kbd hidden xl:inline-flex">⌘K</kbd>
-              </Link>
+              </button>
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">
                 <RegionCountrySwitcher compact />
                 <LanguageSwitcher />
@@ -656,13 +659,15 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center gap-1 lg:hidden">
-              <Link
-                to="/marketplace"
+              <button
+                type="button"
+                onClick={() => { sfx.inputFocus(); abrirBuscaGlobal(); }}
                 className="flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
                 aria-label={t("nav.search")}
+                data-testid="navbar-busca-mobile"
               >
                 <Search className="h-5 w-5" />
-              </Link>
+              </button>
               <LanguageSwitcher />
               <SoundSettings compact />
               <ThemeToggle />
@@ -773,14 +778,15 @@ const Navbar = () => {
                       <span className="tabular-nums">{liveCount}</span>
                       <span className="opacity-90">{t("nav.live")}</span>
                     </Link>
-                    <Link
-                      to="/marketplace"
-                      onClick={() => { setOpen(false); sfx.tabClick(); }}
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); sfx.inputFocus(); abrirBuscaGlobal(); }}
                       className="navbar-search-trigger flex flex-1 items-center gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
+                      data-testid="navbar-busca-menu"
                     >
                       <Search className="h-3.5 w-3.5" />
                       <span className="flex-1 text-left">{t("nav.search.placeholder")}</span>
-                    </Link>
+                    </button>
                   </div>
 
                   {!user && (

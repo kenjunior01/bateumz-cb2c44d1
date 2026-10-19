@@ -8,6 +8,7 @@ import {
   Menu, X, Zap, Trophy, Users, Sparkles,
 } from 'lucide-react';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+import { ALL_GAMES } from '@/lib/gamesCatalog';
 import SoundSettings from '@/components/SoundSettings';
 import GlowOrb from '@/components/ui/GlowOrb';
 import ParticleField from '@/components/ui/ParticleField';
@@ -31,7 +32,7 @@ export default function JogosLayout() {
 
   const isActive = (path: string) => {
     if (path === '/jogos') {
-      return location.pathname === '/jogos' || location.pathname === '/jogos/';
+      return location.pathname === '/jogos' || location.pathname === '/jogos/' || location.pathname.startsWith('/jogo/');
     }
     return location.pathname.startsWith(path);
   };
@@ -173,7 +174,7 @@ export default function JogosLayout() {
                 as="span"
                 className="text-[10px] font-bold"
               >
-                90+ JOGOS
+                {ALL_GAMES.length} CLÁSSICOS + MMO
               </ShimmerText>
             </motion.div>
 

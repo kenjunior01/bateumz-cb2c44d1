@@ -194,6 +194,12 @@ const LoadingScreen = () => {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState(0);
   const [tipIndex] = useState(Math.floor(Math.random() * 6));
+  // FIX: key única monotónica para o contador de % — antes key={Math.floor(progress)}
+  // repetia valores (0, 1, 5...) e gerava «two children with the same key»
+  const pctKeyRef = useRef(0);
+  const lastPctRef = useRef(-1);
+  const flPct = Math.floor(progress);
+  if (flPct !== lastPctRef.current) { lastPctRef.current = flPct; pctKeyRef.current += 1; }
   const canvasRef = useParticles(60);
   const progressMotion = useMotionValue(0);
   const progressWidth = useTransform(progressMotion, [0, 100], ["0%", "100%"]);
@@ -495,7 +501,7 @@ const LoadingScreen = () => {
               {TIPS[tipIndex]}
             </motion.p>
             <motion.span
-              key={Math.floor(progress)}
+              key={pctKeyRef.current}
               initial={{ scale: 1.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-[11px] font-mono font-bold text-muted-foreground"

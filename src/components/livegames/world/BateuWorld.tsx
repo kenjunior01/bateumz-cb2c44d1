@@ -27,6 +27,7 @@ import {
   CLASSES, SKILLS, FACTIONS, REGIONS, TOWERS, DUNGEONS, MOUNTS, BUILDINGS,
   RARITY_META, SLOTS, POTIONS, MATERIALS, CAMPAIGN, DAILY_QUESTS, TITLES,
   FAME_RANKS, xpNeed, LEVEL_CAP, PVP_SAFE_RADIUS, type LootItem,
+  MOB_TYPES, REGION_BOSSES, WORLD_BOSSES, VILLAINS,
 } from "./mmo";
 import { statLabel, applyItemStats, upgradeCost, upgradeChance, upgradeGlow } from "./loot";
 import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
@@ -213,6 +214,25 @@ export default function BateuWorld({
       version: "18-legends",
       engine: eng,
       getChar: () => charRef.current,
+      xpNeed: (l: number) => xpNeed(l),
+      data: {
+        skills: SKILLS.reduce((a, s) => a + s.length, 0),
+        classes: SKILLS.length,
+        mobs: (MOB_TYPES as any[]).length,
+        bosses: (REGION_BOSSES as any[]).length,
+        worldBosses: (WORLD_BOSSES as any[]).length,
+        villains: (VILLAINS as any[]).length,
+        dungeons: (DUNGEONS as any[]).length,
+        mounts: (MOUNTS as any[]).length,
+        buildings: (BUILDINGS as any[]).length,
+        campaign: (CAMPAIGN as any[]).length,
+        dailies: (DAILY_QUESTS as any[]).length,
+        titles: (TITLES as any[]).length,
+        fameRanks: (FAME_RANKS as any[]).length,
+        regions: (REGIONS as any[]).length,
+        towers: (TOWERS as any[]).length,
+        potions: (POTIONS as any[]).length,
+      },
       updateChar: (fn: (c: Char) => void) => {
         const cc = charRef.current; if (!cc) return;
         fn(cc); saveChar(cc);
@@ -244,6 +264,7 @@ export default function BateuWorld({
         if (ev.isElite) c.daily.prog.d_elite = (c.daily.prog.d_elite || 0) + 1;
         if (ev.isBoss || ev.isWorld || ev.isVillain) {
           c.saga.bosses++;
+          if (ev.isVillain) c.saga.villains++;
           c.daily.prog.d_boss = (c.daily.prog.d_boss || 0) + 1;
           pushFeed(`☠ ${ev.name} derrotado! +${ev.gold} ouro`, "☠️");
         }

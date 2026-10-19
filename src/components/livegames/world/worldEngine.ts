@@ -1417,7 +1417,7 @@ export class WorldEngine {
           p.coupons--;
           this.emit("steal", { from: p.name, coupon: true });
           worldAudio.play("steal");
-          this.emit("announce", { text: `盗 ${this.opts.name} ROUBOU um cupão de ${p.name}!`, emoji: "🥷" });
+          this.emit("announce", { text: `${this.opts.name} ROUBOU um cupão de ${p.name}!`, emoji: "🥷" });
         }
       } else if (protectedHome && safe === false) {
         this.emit("announce", { text: `${p.name} estava PROTEGIDO pela torre de guarda!`, emoji: "🛡️" });
@@ -1430,7 +1430,7 @@ export class WorldEngine {
   /** Simula roubo de cupão (usado em testes e em eventos). */
   forceSteal(fromName = "Bot Tempestade") {
     this.emit("steal", { from: fromName, coupon: true });
-    this.emit("announce", { text: `盗 ${this.opts.name} ROUBOU um cupão de ${fromName}!`, emoji: "🥷" });
+    this.emit("announce", { text: `${this.opts.name} ROUBOU um cupão de ${fromName}!`, emoji: "🥷" });
   }
 
   // ── TORRES DE DOMÍNIO ─────────────────────────────────────
@@ -1992,6 +1992,32 @@ export class WorldEngine {
     this.hp = this.state.maxHp;
     this.mp = this.state.maxMp;
     this.iFrames = 0;
+  }
+
+  // __TESTHOOK__
+  /** Invoca um VILÃO da plataforma junto do herói (testes/demo). */
+  spawnVillainPublic(): MobEnt | null {
+    const v = pick(VILLAINS);
+    const t = MOB_TYPES.find(m => m.tier === Math.min(v.tier, 8)) || MOB_TYPES[MOB_TYPES.length - 1];
+    const a = rnd(Math.PI * 2);
+    const m = this.spawnMob(t, this.px + Math.cos(a) * 5, this.pz + Math.sin(a) * 5, -1, {
+      isVillain: true, name: `${v.emoji} ${v.name}`, mech: v.mech as any,
+      lvlOverride: Math.max(1, this.opts.level + 2),
+    });
+    m.hp = Math.round(m.maxHp * 0.2); // versão de teste: 20% da vida
+    return m;
+  }
+
+  // __TESTHOOK__
+  /** Deixa todos os vilões vivos a 1hp (golpe determinístico em testes). */
+  weakenVillainsPublic() {
+    for (const m of this.mobs) if (m.isVillain && m.state !== "dead") m.hp = 1;
+  }
+
+  // __TESTHOOK__
+  /** Alias de testHeal (usado pela suíte E2E). */
+  healPublic() {
+    this.testHeal();
   }
 
   // ── DUELOS 1v1 (arena) ────────────────────────────────────

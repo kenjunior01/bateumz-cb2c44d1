@@ -24,6 +24,7 @@ import {
   CLASSES, SKILLS, MOB_TYPES, REGION_BOSSES, WORLD_BOSSES, VILLAINS, REGIONS,
   LANDMARKS, TOWERS, DUNGEONS, MOUNTS, BUILDINGS, FACTIONS, RARITY_META, AFFIXES,
   PVP_SAFE_RADIUS, xpNeed, mobXp, mobLevelForTier, LEVEL_CAP, BOT_NAMES,
+  MIRADOUROS, EMOTES, AURAS,
   type SkillDef, type MobType, type LootItem,
 } from "./mmo";
 import { rollLoot } from "./loot";
@@ -36,6 +37,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const dist2 = (ax: number, az: number, bx: number, bz: number) => {
   const dx = ax - bx, dz = az - bz; return dx * dx + dz * dz;
 };
+const todayStr = () => new Date().toDateString();
 
 // Ruído de valor suave determinístico
 function hash2(x: number, y: number): number {
@@ -216,6 +218,7 @@ export class WorldEngine {
     this.buildFortezaes();
     this.buildTowers();
     this.buildNodes();
+    this.buildExploration();
     this.buildPlayer();
     this.spawnCamps();
     this.spawnRegionBosses();
@@ -229,8 +232,30 @@ export class WorldEngine {
 
   private emit(type: string, data: any = {}) { this.onEvent({ type, ...data }); }
 
-  // ── CÉU ───────────────────────────────────────────────────
+  // ── CÉU (REA Genshin: identidade visual por bioma) ────────
+  private skyDome!: THREE.Mesh; private cloudGrp!: THREE.Group;
+  private ambientPts!: THREE.Points; private ambientVel!: Float32Array;
+  private waterShimmer: THREE.Mesh | null = null;
+
   private buildSky() {
+    // DOME com gradiente vertical (zénite → horizonte) — muito mais rico
+    // que a cor chapada anterior; segue o jogador.
+    const domeGeo = new THREE.SphereGeometry(760, 24, 14);
+    const dpos = domeGeo.attributes.position;
+    const dcol = new Float32Array(dpos.count * 3);
+    const top = new THREE.Color(0x2f6fd0), mid = new THREE.Color(0x8fc7ee), bot = new THREE.Color(0xdceefb);
+    const tmp = new THREE.Color();
+    for (let i = 0; i < dpos.count; i++) {
+      const y = dpos.getY(i) / 760;
+      if (y > 0.12) tmp.copy(mid).lerp(top, Math.min(1, (y - 0.12) / 0.75));
+      else tmp.copy(bot).lerp(mid, Math.max(0, (y + 0.25) / 0.37));
+      dcol[i * 3] = tmp.r; dcol[i * 3 + 1] = tmp.g; dcol[i * 3 + 2] = tmp.b;
+    }
+    domeGeo.setAttribute("color", new THREE.BufferAttribute(dcol, 3));
+    const dome = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    dome.renderOrder = -10;
+    this.scene.add(dome); this.skyDome = dome;
+
     const sunMesh = new THREE.Mesh(
       new THREE.SphereGeometry(14, 16, 16),
       new THREE.MeshBasicMaterial({ color: 0xffe9a8 })
@@ -254,6 +279,45 @@ export class WorldEngine {
     sg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, transparent: true, opacity: 0 }));
     this.scene.add(stars); this.starPts = stars;
+
+    // NUVENS: puff achatados a derivar (profundidade sem custo de pós-processamento)
+    const clouds = new THREE.Group();
+    const cmat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.82 });
+    for (let i = 0; i < 22; i++) {
+      const puff = new THREE.Group();
+      const parts = 2 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < parts; j++) {
+        const s = rnd(16, 7);
+        const m = new THREE.Mesh(new THREE.SphereGeometry(s, 8, 6), cmat);
+        m.scale.y = 0.45;
+        m.position.set(j * rnd(9, 4) - 6, rnd(2.5, 0), rnd(4, -4));
+        puff.add(m);
+      }
+      puff.position.set(rnd(680, -680), rnd(150, 105), rnd(680, -680));
+      (puff as any).__spd = rnd(2.2, 0.7);
+      clouds.add(puff);
+    }
+    this.scene.add(clouds); this.cloudGrp = clouds;
+
+    // PARTÍCULAS AMBIENTES (pólen/vagalumes/areia/neve/brasas) —
+    // um único sistema Points que muda de cor/comportamento por bioma
+    const an = this.isMobile ? 160 : 300;
+    const ag = new THREE.BufferGeometry();
+    const apos = new Float32Array(an * 3);
+    for (let i = 0; i < an; i++) {
+      apos[i * 3] = rnd(45, -45); apos[i * 3 + 1] = rnd(14, 0.5); apos[i * 3 + 2] = rnd(45, -45);
+    }
+    ag.setAttribute("position", new THREE.BufferAttribute(apos, 3));
+    const amb = new THREE.Points(ag, new THREE.PointsMaterial({
+      color: 0xfff3b0, size: 0.5, transparent: true, opacity: 0.75, depthWrite: false,
+    }));
+    this.scene.add(amb); this.ambientPts = amb;
+    this.ambientVel = new Float32Array(an * 3);
+    for (let i = 0; i < an; i++) {
+      this.ambientVel[i * 3] = rnd(0.6, -0.6);
+      this.ambientVel[i * 3 + 1] = rnd(0.45, 0.05);
+      this.ambientVel[i * 3 + 2] = rnd(0.6, -0.6);
+    }
   }
 
   // ── TERRENO ───────────────────────────────────────────────
@@ -321,6 +385,14 @@ export class WorldEngine {
     );
     water.position.y = -0.55;
     this.scene.add(water);
+    // brilho de superfície (ondas baratas: anel oposto a rodar devagar)
+    const shimmer = new THREE.Mesh(
+      new THREE.RingGeometry(30, 428, 42).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.16, depthWrite: false })
+    );
+    shimmer.position.y = -0.5;
+    this.scene.add(shimmer);
+    this.waterShimmer = shimmer;
   }
 
   // ── VEGETAÇÃO instanciada ─────────────────────────────────
@@ -1748,6 +1820,210 @@ export class WorldEngine {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // EXPLORAÇÃO (REA BotW/Elden Ring): miradouros, baús, frutos
+  // ═══════════════════════════════════════════════════════════
+  private meta: { miradouros: string[]; chests: string[]; date: string; aura: string | null } = { miradouros: [], chests: [], date: "", aura: null };
+  private miraEnts: { id: string; x: number; z: number; group: THREE.Group; crystal: THREE.Mesh; halo: THREE.Mesh }[] = [];
+  private chestEnts: { id: string; x: number; z: number; group: THREE.Group; lid: THREE.Mesh }[] = [];
+  private fruitEnts: { x: number; z: number; group: THREE.Group }[] = [];
+  private emoteSprite: THREE.Sprite | null = null; private emoteT = 0;
+  private auraMesh: THREE.Mesh | null = null;
+
+  /** Sincroniza o progresso de exploração vindo do herói (UI). */
+  setMeta(m: Partial<WorldEngine["meta"]>) { this.meta = { ...this.meta, ...m }; this.syncExplorationMeshes(); }
+
+  private buildExploration() {
+    // MIRADOUROS: torres com cristal da cor da região
+    for (const mi of MIRADOUROS) {
+      const reg = REGIONS.find(r => r.id === mi.region)!;
+      const g = new THREE.Group();
+      const h = 9;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2.2, h, 6), new THREE.MeshLambertMaterial({ color: 0x57534e }));
+      base.position.y = h / 2; base.castShadow = !this.isMobile;
+      g.add(base);
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.1), new THREE.MeshBasicMaterial({ color: reg.color }));
+      crystal.position.y = h + 1.2;
+      g.add(crystal);
+      // halo brilhante sem luz (74 PointLights rebentavam com o renderer)
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(1.7, 8, 8), new THREE.MeshBasicMaterial({ color: reg.color, transparent: true, opacity: 0.28, depthWrite: false }));
+      halo.position.y = h + 1.2; g.add(halo);
+      g.position.set(mi.x, this.terrainHeight(mi.x, mi.z), mi.z);
+      this.scene.add(g);
+      this.miraEnts.push({ id: mi.id, x: mi.x, z: mi.z, group: g, crystal, halo });
+    }
+    // BAÚS escondidos (26, posições determinísticas fora dos hubs)
+    let ci = 0;
+    for (let i = 0; i < 400 && ci < 26; i++) {
+      const x = (hash2(i * 7, 13) - 0.5) * 700, z = (hash2(29, i * 11) - 0.5) * 700;
+      const reg = this.regionAt(x, z);
+      if (reg.hub) continue;
+      if (this.terrainHeight(x, z) < 0.1) continue;
+      const id = `chest_${i}`;
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1), new THREE.MeshLambertMaterial({ color: 0x92400e }));
+      body.position.y = 0.4; g.add(body);
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1), new THREE.MeshLambertMaterial({ color: 0xb45309 }));
+      lid.position.set(0, 0.9, -0.5); g.add(lid);
+      const gl = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.25, depthWrite: false }));
+      gl.position.y = 1.1; g.add(gl);
+      g.position.set(x, this.terrainHeight(x, z), z);
+      this.scene.add(g);
+      this.chestEnts.push({ id, x, z, group: g, lid });
+      ci++;
+    }
+    // FRUTOS ANCESTRAIS (40 — colecionáveis)
+    let fi = 0;
+    for (let i = 0; i < 500 && fi < 40; i++) {
+      const x = (hash2(53, i * 17) - 0.5) * 680, z = (hash2(i * 19, 71) - 0.5) * 680;
+      const reg = this.regionAt(x, z);
+      if (reg.hub) continue;
+      if (this.terrainHeight(x, z) < 0.1) continue;
+      const g = new THREE.Group();
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 8), new THREE.MeshBasicMaterial({ color: 0xf0abfc }));
+      orb.position.y = 1.1; g.add(orb);
+      const gl = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), new THREE.MeshBasicMaterial({ color: 0xf0abfc, transparent: true, opacity: 0.25, depthWrite: false }));
+      gl.position.y = 1.1; g.add(gl);
+      g.position.set(x, this.terrainHeight(x, z), z);
+      this.scene.add(g);
+      this.fruitEnts.push({ x, z, group: g });
+      fi++;
+    }
+    this.syncExplorationMeshes();
+  }
+
+  /** Estado visual: miradouro ativado fica dourado; baú aberto some. */
+  private syncExplorationMeshes() {
+    for (const m of this.miraEnts) {
+      const on = this.meta.miradouros.includes(m.id);
+      (m.crystal.material as THREE.MeshBasicMaterial).color.setHex(on ? 0xfbbf24 : (this.regionAt(m.x, m.z).color as any));
+      (m.halo.material as THREE.MeshBasicMaterial).color.setHex(on ? 0xfbbf24 : 0xffffff);
+      (m.halo.material as THREE.MeshBasicMaterial).opacity = on ? 0.4 : 0.22;
+    }
+    for (const c of this.chestEnts) {
+      const opened = this.meta.date === todayStr() && this.meta.chests.includes(c.id);
+      c.group.visible = !opened;
+    }
+  }
+
+  private updateExploration(dt: number) {
+    // cristais giram e pulsam; frutos flutuam; apanhar fruto ao passar
+    const pulse = 1 + Math.sin(this.dayT * 3) * 0.12;
+    for (const m of this.miraEnts) {
+      m.crystal.rotation.y += dt * 1.2;
+      m.halo.scale.setScalar(pulse);
+    }
+    for (let i = this.fruitEnts.length - 1; i >= 0; i--) {
+      const f = this.fruitEnts[i];
+      f.group.position.y = this.terrainHeight(f.x, f.z) + Math.sin(this.dayT * 2 + f.x) * 0.15;
+      f.group.rotation.y += dt;
+      f.group.scale.setScalar(pulse);
+      if (dist2(this.px, this.pz, f.x, f.z) < 6.5) {
+        this.scene.remove(f.group);
+        this.fruitEnts.splice(i, 1);
+        this.emit("fruit", {});
+        worldAudio.play("coin");
+        this.spawnHitFx(f.x, 1.2, f.z, 0xf0abfc, 1.4);
+      }
+    }
+    // emote flutuante
+    if (this.emoteSprite && this.emoteT > 0) {
+      this.emoteT -= dt;
+      this.emoteSprite.position.set(this.px, this.terrainHeight(this.px, this.pz) + 3.4 + Math.sin(this.dayT * 6) * 0.1, this.pz);
+      if (this.emoteT <= 0) { this.scene.remove(this.emoteSprite); this.emoteSprite = null; }
+    }
+  }
+
+  /** Emote social (Bartle: socializadores) — emoji flutua sobre o herói. */
+  emote(id: string) {
+    const e = EMOTES.find(x => x.id === id);
+    if (!e) return;
+    if (this.emoteSprite) { this.scene.remove(this.emoteSprite); this.emoteSprite = null; }
+    const cv = document.createElement("canvas"); cv.width = 128; cv.height = 128;
+    const ctx = cv.getContext("2d")!;
+    ctx.font = "96px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(e.emoji, 64, 68);
+    const tex = new THREE.CanvasTexture(cv);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    spr.scale.set(2.2, 2.2, 1);
+    this.scene.add(spr);
+    this.emoteSprite = spr; this.emoteT = 2.2;
+    worldAudio.play("click");
+    this.emit("emote", { id });
+  }
+
+  /** Aura cosmética (anel luminoso sob o herói). */
+  setAura(id: string | null) {
+    if (this.auraMesh) { this.pGroup.remove(this.auraMesh); this.auraMesh = null; }
+    this.meta.aura = id;
+    if (!id) return;
+    const a = AURAS.find(x => x.id === id);
+    if (!a) return;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.15, 0.09, 8, 28).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(a.color), transparent: true, opacity: 0.85 })
+    );
+    ring.position.y = 0.18;
+    this.pGroup.add(ring);
+    this.auraMesh = ring;
+  }
+
+  // hooks de teste
+  testActivateMiradouro(): boolean {
+    for (const m of this.miraEnts) {
+      if (!this.meta.miradouros.includes(m.id)) { this.activateMiradouro(m.id); return true; }
+    }
+    return false;
+  }
+  private activateMiradouro(id: string) {
+    const mi = MIRADOUROS.find(m => m.id === id);
+    if (!mi) return;
+    if (!this.meta.miradouros.includes(id)) this.meta.miradouros.push(id);
+    this.syncExplorationMeshes();
+    this.state.gold += 1200;
+    this.gainXp(120 + this.opts.level * 6);
+    this.emit("miradouro", { id, region: mi.region, name: mi.name, gold: 1200 });
+    this.emit("announce", { text: `🗼 ${mi.name} ATIVADO! Região revelada + 1.200 ouro`, emoji: "🗼" });
+    worldAudio.play("waypoint");
+  }
+  testOpenChest(): boolean {
+    const c = this.chestEnts.find(c => c.group.visible && !(this.meta.date === todayStr() && this.meta.chests.includes(c.id)));
+    if (!c) return false;
+    this.openChest(c.id);
+    return true;
+  }
+  private openChest(id: string) {
+    const c = this.chestEnts.find(x => x.id === id);
+    if (!c || (this.meta.date === todayStr() && this.meta.chests.includes(id))) return;
+    if (this.meta.date !== todayStr()) { this.meta.date = todayStr(); this.meta.chests = []; }
+    this.meta.chests.push(id);
+    c.lid.rotation.x = -1.9;
+    c.lid.position.z = -0.9;
+    const gold = rndi(900, 300);
+    this.state.gold += gold;
+    const item = rollLoot(Math.max(1, this.regionAt(c.x, c.z).danger), false, Math.random() < 0.35, this.opts.level);
+    if (item) this.emit("loot", { item });
+    if (Math.random() < 0.18) this.emit("coupon", { n: 1, from: "Baú Escondido" });
+    this.emit("material", { id: "fragmento", n: Math.random() < 0.5 ? 2 : 1 });
+    this.emit("chest", { id, gold });
+    this.emit("announce", { text: `🧰 Baú aberto! +${gold} ouro`, emoji: "🧰" });
+    worldAudio.play("chest");
+  }
+  testCollectFruit(): boolean {
+    const f = this.fruitEnts[0];
+    if (!f) return false;
+    this.px = f.x; this.pz = f.z;
+    this.updateExploration(0.016);
+    return true;
+  }
+  getExploration() {
+    return {
+      miradouros: this.meta.miradouros,
+      chestsOpen: this.meta.chests.length,
+      frutosLeft: this.fruitEnts.length,
+    };
+  }
+
   // ── DIA/NOITE + CLIMA ─────────────────────────────────────
   private updateSky(dt: number) {
     this.dayT += dt;
@@ -1765,6 +2041,68 @@ export class WorldEngine {
     (this.starPts.material as THREE.PointsMaterial).opacity = night ? 0.9 : 0;
     this.starPts.visible = night;
     this.sunMesh.visible = !night; this.moonMesh.visible = night;
+
+    // DOME segue o jogador + luz com identidade por BIOMA (Genshin) —
+    // subtítulo de cor, nunca fog/blur (o utilizador pediu "bem nítido")
+    this.skyDome.position.set(this.px, 0, this.pz);
+    const reg = this.regionAt(this.px, this.pz);
+    const REG_TINT: Record<string, { sun: number; ground: number }> = {
+      planicie: { sun: 0xfff2d9, ground: 0x9bbf5a },
+      floresta: { sun: 0xeafff0, ground: 0x2f7d4f },
+      dunas: { sun: 0xffe0b0, ground: 0xd9a441 },
+      pantano: { sun: 0xdfffe8, ground: 0x4a6b2a },
+      vulcao: { sun: 0xffc9a0, ground: 0x6b2a1a },
+      tundra: { sun: 0xd8f2ff, ground: 0x9fd4e8 },
+      titas: { sun: 0xf1e8d8, ground: 0x8a7a68 },
+      escuro: { sun: 0xc9b8ff, ground: 0x2a1a4a },
+    };
+    const tint = REG_TINT[reg.id] || { sun: 0xfff2d9, ground: 0x8a7a5a };
+    this.sun.color.setHex(night ? 0x9db4ff : tint.sun);
+    this.hemi.groundColor.setHex(tint.ground);
+    (this.skyDome.material as THREE.MeshBasicMaterial).color.setScalar(night ? 0.22 : 1);
+
+    // nuvens derivam e envolvem
+    for (const puff of this.cloudGrp.children) {
+      puff.position.x += (puff as any).__spd * dt;
+      if (puff.position.x > 700) puff.position.x = -700;
+    }
+    (this.cloudGrp as any).visible = !night;
+
+    // água cintila
+    if (this.waterShimmer) this.waterShimmer.rotation.y += dt * 0.05;
+
+    // partículas ambientes por bioma/hora
+    const ambMat = this.ambientPts.material as THREE.PointsMaterial;
+    const AMB_STYLE: Record<string, { color: number; size: number; fall: number }> = {
+      planicie: { color: 0xfff3b0, size: 0.5, fall: 0.15 },
+      floresta: { color: 0xbef264, size: 0.45, fall: 0.1 },
+      dunas: { color: 0xfbbf24, size: 0.6, fall: 0.35 },
+      pantano: { color: 0x84cc16, size: 0.55, fall: 0.12 },
+      vulcao: { color: 0xf97316, size: 0.7, fall: -0.5 },
+      tundra: { color: 0xe0f2fe, size: 0.65, fall: 0.8 },
+      titas: { color: 0xe7e5e4, size: 0.5, fall: 0.2 },
+      escuro: { color: 0xc4b5fd, size: 0.6, fall: 0.1 },
+    };
+    const st = AMB_STYLE[reg.id] || AMB_STYLE.planicie;
+    const ambColor = night ? 0x9fe870 : st.color; // vagalumes à noite
+    if (ambMat.color.getHex() !== ambColor) ambMat.color.setHex(ambColor);
+    ambMat.size = night ? 0.7 : st.size;
+    const ap = this.ambientPts.geometry.attributes.position as THREE.BufferAttribute;
+    const an2 = ap.count;
+    for (let i = 0; i < an2; i++) {
+      let y = ap.getY(i) + (st.fall >= 0 ? -st.fall * dt * 6 : Math.abs(st.fall) * dt * 8);
+      ap.setX(i, ap.getX(i) + this.ambientVel[i * 3] * dt);
+      ap.setZ(i, ap.getZ(i) + this.ambientVel[i * 3 + 2] * dt);
+      if (y < 0.2 || y > 16) y = rnd(14, 1);
+      ap.setY(i, y);
+      // reencentra em volta do jogador
+      const dx = ap.getX(i) - this.px, dz = ap.getZ(i) - this.pz;
+      if (dx > 45) ap.setX(i, this.px - 45); else if (dx < -45) ap.setX(i, this.px + 45);
+      if (dz > 45) ap.setZ(i, this.pz - 45); else if (dz < -45) ap.setZ(i, this.pz + 45);
+    }
+    ap.needsUpdate = true;
+    this.ambientPts.position.y = 0;
+
 
     // clima
     this.weatherT -= dt;
@@ -2069,6 +2407,22 @@ export class WorldEngine {
       if (d < Math.max(bd, l.r * l.r) && d < l.r * l.r + 16) { bd = d; best = { id: l.id, name: l.name, emoji: l.emoji, dist: Math.sqrt(d) }; }
     }
     if (!best) {
+      // baús escondidos têm prioridade de proximidade
+      for (const c of this.chestEnts) {
+        if (!c.group.visible) continue;
+        if (this.meta.date === todayStr() && this.meta.chests.includes(c.id)) continue;
+        const dd = dist2(this.px, this.pz, c.x, c.z);
+        if (dd < 30) best = { id: c.id, name: "Baú Escondido", emoji: "🧰", dist: Math.sqrt(dd) };
+      }
+    }
+    if (!best) {
+      for (const m of this.miraEnts) {
+        if (this.meta.miradouros.includes(m.id)) continue;
+        const dd = dist2(this.px, this.pz, m.x, m.z);
+        if (dd < 42) best = { id: m.id, name: MIRADOUROS.find(x => x.id === m.id)?.name || "Miradouro", emoji: "🗼", dist: Math.sqrt(dd) };
+      }
+    }
+    if (!best) {
       for (const d of DUNGEONS) {
         const dd = dist2(this.px, this.pz, d.x, d.z);
         if (dd < 36) best = { id: `dungeon_${d.id}`, name: d.name, emoji: d.emoji, dist: Math.sqrt(dd) };
@@ -2083,12 +2437,24 @@ export class WorldEngine {
     worldAudio.play("click");
     if (it.id === "portal_v") { this.teleportTo("fortaleza"); return "teleport"; }
     if (it.id === "portal_t") { this.teleportTo("bastiao"); return "teleport"; }
+    if (it.id.startsWith("mira_")) { this.activateMiradouro(it.id); return "miradouro"; }
+    if (it.id.startsWith("chest_")) { this.openChest(it.id); return "chest"; }
     if (it.id.startsWith("dungeon_")) { this.enterDungeon(it.id.replace("dungeon_", "")); return "dungeon"; }
     this.emit("interact", { id: it.id, name: it.name });
     return it.id;
   }
 
   teleportTo(regionId: string) {
+    // viagem rápida a miradouros ativados (REA Elden Ring: liberal)
+    if (regionId.startsWith("mira_")) {
+      const mi = MIRADOUROS.find(m => m.id === regionId);
+      if (!mi || !this.meta.miradouros.includes(mi.id) || this.isRegionLocked(mi.region)) { worldAudio.play("deny"); return; }
+      this.px = mi.x + rnd(4, -4); this.pz = mi.z + rnd(4, -4);
+      this.pGroup.position.set(this.px, this.terrainHeight(this.px, this.pz), this.pz);
+      this.emit("announce", { text: `🌀 Viagem rápida: ${mi.name}`, emoji: "🌀" });
+      worldAudio.play("waypoint");
+      return;
+    }
     const reg = REGIONS.find(r => r.id === regionId);
     if (!reg || this.isRegionLocked(regionId)) { worldAudio.play("deny"); return; }
     this.px = reg.cx + rnd(8, -8); this.pz = reg.cz + rnd(8, -8);
@@ -2356,6 +2722,7 @@ export class WorldEngine {
     this.updateNodes(dt);
     this.updateEvents(dt);
     this.updateLootFields(dt);
+    this.updateExploration(dt);
     this.updateSky(dt);
     this.netSync(dt);
     this.updateCamera(dt);

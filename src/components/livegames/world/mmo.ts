@@ -424,3 +424,89 @@ export const LANDMARKS = [
   { id: "estatua_h", name: "Estatua do Herói", x: -14, z: 8, r: 4, emoji: "🗿", desc: "Homenagem às lendas da facção" },
   { id: "lote", name: "Bairro das Residências", x: 70, z: -30, r: 18, emoji: "🏘️", desc: "Constroi a tua casa e protege os cupões" },
 ];
+
+// ════════════════════════════════════════════════════════════
+// REA v19 — FUSÃO DOS MELHORES DO GÉNERO
+//  · Genshin (visual por bioma, identidade de região)
+//  · Zelda BotW / Elden Ring (miradouros, segredos, viagem rápida)
+//  · Fortnite / WoW (retenção: passe, streak, onboarding guiado)
+//  · Bartle (conquistador/explorador/socializador/competidor)
+// ════════════════════════════════════════════════════════════
+
+// ── MIRADOUROS (BotW: torre ativa → revela a região) ────────
+export const MIRADOUROS = [
+  { id: "mira_planicie", region: "planicie", x: -95, z: 25, name: "Miradouro da Planície" },
+  { id: "mira_floresta", region: "floresta", x: -175, z: 120, name: "Miradouro Ancestral" },
+  { id: "mira_dunas", region: "dunas", x: 45, z: -155, name: "Miradouro das Areias" },
+  { id: "mira_pantano", region: "pantano", x: 185, z: 45, name: "Miradouro do Lodo" },
+  { id: "mira_vulcao", region: "vulcao", x: -45, z: -225, name: "Miradouro do Magma" },
+  { id: "mira_tundra", region: "tundra", x: 265, z: -65, name: "Miradouro Gelado" },
+  { id: "mira_titas", region: "titas", x: -265, z: -25, name: "Miradouro dos Titãs" },
+  { id: "mira_escuro", region: "escuro", x: 105, z: 235, name: "Miradouro Final" },
+];
+
+// ── EMOTES (socializadores) ─────────────────────────────────
+export const EMOTES = [
+  { id: "ola", emoji: "👋", name: "Saudação" },
+  { id: "danca", emoji: "💃", name: "Dança" },
+  { id: "forca", emoji: "💪", name: "Força" },
+  { id: "agradecer", emoji: "🙏", name: "Gratidão" },
+  { id: "riso", emoji: "😂", name: "Riso" },
+  { id: "chorar", emoji: "😭", name: "Choro" },
+];
+
+// ── AURAS cosméticas (estatuto visível — afinal é um MMO) ───
+export const AURAS = [
+  { id: "fogo", name: "Aura de Fogo", color: "#f97316", cost: 6000 },
+  { id: "gelo", name: "Aura de Gelo", color: "#38bdf8", cost: 6000 },
+  { id: "sombra", name: "Aura Sombria", color: "#a855f7", cost: 12000 },
+  { id: "lenda", name: "Aura Lendária", color: "#fbbf24", cost: 25000 },
+];
+
+// ── PASSE DAS LENDAS (temporada 1 — 12 níveis) ──────────────
+export interface PassTier { tier: number; need: number; kind: "gold" | "fragmento" | "cupao" | "pot" | "titulo"; n: number; label: string }
+
+export const BATTLE_PASS: PassTier[] = [
+  { tier: 1, need: 30, kind: "gold", n: 1500, label: "1.500 ouro" },
+  { tier: 2, need: 70, kind: "fragmento", n: 4, label: "4 Fragmentos" },
+  { tier: 3, need: 120, kind: "pot", n: 3, label: "3 Poções de Vida" },
+  { tier: 4, need: 180, kind: "gold", n: 4000, label: "4.000 ouro" },
+  { tier: 5, need: 250, kind: "cupao", n: 1, label: "1 CUPÃO 🎟️" },
+  { tier: 6, need: 330, kind: "fragmento", n: 8, label: "8 Fragmentos" },
+  { tier: 7, need: 420, kind: "gold", n: 9000, label: "9.000 ouro" },
+  { tier: 8, need: 520, kind: "titulo", n: 1, label: "Título: Ascendente" },
+  { tier: 9, need: 640, kind: "cupao", n: 2, label: "2 CUPÕES 🎟️" },
+  { tier: 10, need: 780, kind: "gold", n: 20000, label: "20.000 ouro" },
+  { tier: 11, need: 950, kind: "fragmento", n: 15, label: "15 Fragmentos" },
+  { tier: 12, need: 1200, kind: "titulo", n: 1, label: "Título: ESTRELA DA TEMPORADA ⭐" },
+];
+
+export const PASS_XP = { kill: 1, elite: 3, boss: 8, chest: 5, miradouro: 15, quest: 6, villain: 12, fruto: 2 };
+
+// ── STREAK diário (retenção diária — ciclo de 7 dias) ───────
+export const STREAK_REWARDS = [
+  { day: 1, kind: "gold", n: 800, label: "800 ouro" },
+  { day: 2, kind: "fragmento", n: 2, label: "2 Fragmentos" },
+  { day: 3, kind: "pot", n: 2, label: "2 Poções" },
+  { day: 4, kind: "gold", n: 2500, label: "2.500 ouro" },
+  { day: 5, kind: "cupao", n: 1, label: "1 CUPÃO 🎟️" },
+  { day: 6, kind: "fragmento", n: 5, label: "5 Fragmentos" },
+  { day: 7, kind: "gold", n: 6000, label: "6.000 ouro + aura 🌟" },
+];
+
+// ── TUTORIAL guiado (Exile's Reach: 6 passos com recompensa) ─
+export const TUTORIAL_STEPS = [
+  { id: 0, text: "Abate 3 criaturas na Planície", goal: 3, reward: 500 },
+  { id: 1, text: "Abre 1 baú escondido (procura o brilho dourado)", goal: 1, reward: 800 },
+  { id: 2, text: "Ativa 1 Miradouro 🗼", goal: 1, reward: 1200 },
+  { id: 3, text: "Aprende uma habilidade nova", goal: 1, reward: 800 },
+  { id: 4, text: "Visita o Banco de Pontos na Vila", goal: 1, reward: 600 },
+  { id: 5, text: "Reclama o primeiro nível do Passe das Lendas", goal: 1, reward: 1000 },
+];
+
+// ── Títulos extra (passe/exploração) ────────────────────────
+export const EXTRA_TITLES: Record<string, string> = {
+  ascendente: "Ascendente",
+  estrela: "Estrela da Temporada ⭐",
+  explorador: "Explorador Supremo 🧭",
+};

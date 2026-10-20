@@ -28,6 +28,7 @@ import {
   RARITY_META, SLOTS, POTIONS, MATERIALS, CAMPAIGN, DAILY_QUESTS, TITLES,
   FAME_RANKS, xpNeed, LEVEL_CAP, PVP_SAFE_RADIUS, type LootItem,
   MOB_TYPES, REGION_BOSSES, WORLD_BOSSES, VILLAINS,
+  MIRADOUROS, EMOTES, AURAS, BATTLE_PASS, PASS_XP, STREAK_REWARDS, TUTORIAL_STEPS, EXTRA_TITLES,
 } from "./mmo";
 import { statLabel, applyItemStats, upgradeCost, upgradeChance, upgradeGlow } from "./loot";
 import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
@@ -64,6 +65,16 @@ interface Char {
   musicOn: boolean;
   duelWins: number;
   createdAt: number;
+  // REA v19 — exploração + retenção + identidade
+  miradouros: string[];
+  chests: { date: string; ids: string[] };
+  frutos: number;
+  streak: { last: string; count: number };
+  pass: { xp: number; claimed: number[] };
+  auras: string[]; activeAura: string | null;
+  titles: string[];
+  seenIntro: boolean;
+  tutorial: { step: number; prog: number };
 }
 
 function emptyChar(name: string, classId: number, faction: number, avatar: AvatarConfig): Char {
@@ -83,7 +94,28 @@ function emptyChar(name: string, classId: number, faction: number, avatar: Avata
     daily: { date: new Date().toDateString(), prog: {}, claimed: [] },
     saga: { bosses: 0, dungeons: 0, duels: 0, steals: 0, towers: 0, villains: 0 },
     avatar, musicOn: true, duelWins: 0, createdAt: Date.now(),
+    miradouros: [], chests: { date: new Date().toDateString(), ids: [] }, frutos: 0,
+    streak: { last: "", count: 0 }, pass: { xp: 0, claimed: [] },
+    auras: [], activeAura: null, titles: [], seenIntro: false,
+    tutorial: { step: 0, prog: 0 },
   };
+}
+
+/** Garante os campos REA v19 em heróis antigos (migração suave). */
+function fillDefaults(c: any): Char {
+  const d = emptyChar(c.name || "Herói", c.classId || 0, c.faction || 0, c.avatar);
+  const out = { ...d, ...c };
+  out.miradouros = c.miradouros || [];
+  out.chests = c.chests || { date: new Date().toDateString(), ids: [] };
+  if (out.chests.date !== new Date().toDateString()) out.chests = { date: new Date().toDateString(), ids: [] };
+  out.frutos = c.frutos || 0;
+  out.streak = c.streak || { last: "", count: 0 };
+  out.pass = c.pass || { xp: 0, claimed: [] };
+  out.auras = c.auras || []; out.activeAura = c.activeAura ?? null;
+  out.titles = c.titles || [];
+  out.seenIntro = !!c.seenIntro;
+  out.tutorial = c.tutorial || { step: 0, prog: 0 };
+  return out;
 }
 
 function loadChar(): Char | null {
@@ -92,7 +124,7 @@ function loadChar(): Char | null {
     if (!raw) return null;
     const c = JSON.parse(raw);
     if (!c?.name || c?.v !== 18) return null;
-    return c;
+    return fillDefaults(c);
   } catch { return null; }
 }
 function saveChar(c: Char) {
@@ -175,6 +207,10 @@ export default function BateuWorld({
   const [plat, setPlat] = useState<PlatformData | null>(null);
   const [duelState, setDuelState] = useState<string | null>(null);
   const [fpMode, setFpMode] = useState(false);
+  // REA v19
+  const [showStreak, setShowStreak] = useState<number | null>(null);
+  const [intro, setIntro] = useState(false);
+  const [emoteOpen, setEmoteOpen] = useState(false);
 
   const pushFeed = useCallback((text: string, emoji = "✨") => {
     const id = Date.now() + Math.random();
@@ -209,6 +245,23 @@ export default function BateuWorld({
     setPhase("play");
     worldAudio.ensure();
     if (c.musicOn) { worldAudio.startMusic(); }
+    // REA v19: sincroniza exploração/aura + streak diário + intro
+    eng.setMeta({
+      miradouros: c.miradouros || [],
+      chests: (c.chests?.date === new Date().toDateString() ? c.chests.ids : []) || [],
+      date: new Date().toDateString(),
+      aura: c.activeAura || null,
+    });
+    // streak diário (retenção — ciclo de 7 dias)
+    const today = new Date().toDateString();
+    const yest = new Date(Date.now() - 864e5).toDateString();
+    if (c.streak.last !== today) {
+      c.streak.count = c.streak.last === yest ? c.streak.count + 1 : 1;
+      c.streak.last = today;
+      saveChar(c);
+      setShowStreak(c.streak.count);
+    }
+    if (!c.seenIntro) setIntro(true);
     // expõe hooks de teste/integração
     (window as any).__bw = {
       version: "18-legends",
@@ -260,7 +313,13 @@ export default function BateuWorld({
       case "kill": {
         c.gold += ev.gold || 0;
         c.kills++;
+        c.pass.xp += ev.isBoss || ev.isWorld || ev.isVillain ? PASS_XP.boss : ev.isElite ? PASS_XP.elite : PASS_XP.kill;
         c.daily.prog.d_kills = (c.daily.prog.d_kills || 0) + 1;
+        // tutorial passo 0: abater 3 criaturas
+        if (c.tutorial.step === 0) {
+          c.tutorial.prog++;
+          if (c.tutorial.prog >= 3) { c.tutorial.step = 1; c.tutorial.prog = 0; c.gold += TUTORIAL_STEPS[0].reward; showToast(`+${TUTORIAL_STEPS[0].reward} ouro · procura um baú brilhante!`, "🧰"); }
+        }
         if (ev.isElite) c.daily.prog.d_elite = (c.daily.prog.d_elite || 0) + 1;
         if (ev.isBoss || ev.isWorld || ev.isVillain) {
           c.saga.bosses++;
@@ -368,6 +427,13 @@ export default function BateuWorld({
           fonte: "quests", tenda1: "quests", tenda2: "quests", tenda3: "quests",
           estatua_h: "fame", sino: "quests", campog: "map",
         };
+        // tutorial passo 4: visitar o Banco de Pontos
+        if (ev.id === "banco" && c.tutorial.step === 4) {
+          c.tutorial.step = 5; c.tutorial.prog = 0;
+          c.gold += TUTORIAL_STEPS[4].reward;
+          showToast(`+${TUTORIAL_STEPS[4].reward} ouro · falta o Passe!`, "🏦");
+          dirty = true;
+        }
         setPanel(map[ev.id] || "map");
         break;
       }
@@ -406,6 +472,36 @@ export default function BateuWorld({
         if (ev.action === "dismount") { c.activeMount = null; dirty = true; }
         break;
       }
+      // ── REA v19: exploração + retenção + identidade ──────
+      case "miradouro": {
+        c.gold += ev.gold || 0;
+        if (!c.miradouros.includes(ev.id)) c.miradouros.push(ev.id);
+        c.pass.xp += PASS_XP.miradouro;
+        // tutorial: passo 2 = ativar miradouro
+        if (c.tutorial.step === 2) { c.tutorial.step = 3; c.tutorial.prog = 0; c.gold += TUTORIAL_STEPS[2].reward; showToast(`+${TUTORIAL_STEPS[2].reward} ouro · passo do tutorial!`, "🗼"); }
+        pushFeed(`🗼 ${ev.name} revelado no mapa!`, "🗼");
+        dirty = true;
+        break;
+      }
+      case "chest": {
+        c.gold += ev.gold || 0;
+        if (c.chests.date !== new Date().toDateString()) c.chests = { date: new Date().toDateString(), ids: [] };
+        if (!c.chests.ids.includes(ev.id)) c.chests.ids.push(ev.id);
+        c.pass.xp += PASS_XP.chest;
+        // tutorial: passo 1 = abrir baú
+        if (c.tutorial.step === 1) { c.tutorial.step = 2; c.tutorial.prog = 0; c.gold += TUTORIAL_STEPS[1].reward; showToast(`+${TUTORIAL_STEPS[1].reward} ouro · passo do tutorial!`, "🧰"); }
+        dirty = true;
+        break;
+      }
+      case "fruit": {
+        c.frutos += 1;
+        c.pass.xp += PASS_XP.fruto;
+        showToast(`Fruto Ancestral ${c.frutos}/40 — troca na Árvore dos Juramentos!`, "🫐");
+        if (c.frutos === 40) { pushFeed("🫐 40 Frutos! Troca-os na Árvore dos Juramentos por um item MÍTICO!", "🫐"); }
+        dirty = true;
+        break;
+      }
+      case "emote": { break; }
     }
     if (dirty) { saveChar(c); engineRef.current?.setStats(deriveStats(c), c.level); rerender(); }
   }, [pushFeed, showToast, rerender, onScore]);
@@ -604,6 +700,7 @@ export default function BateuWorld({
 
   const MENUS: { id: string; label: string; icon: any; testid: string }[] = [
     { id: "inv", label: "Mochila", icon: Backpack, testid: "bw-menu-inv" },
+    { id: "passe", label: "Passe", icon: Star, testid: "bw-menu-passe" },
     { id: "skills", label: "Habilidades", icon: Sparkles, testid: "bw-menu-skills" },
     { id: "quests", label: "Missões", icon: ScrollText, testid: "bw-menu-quests" },
     { id: "map", label: "Mapa", icon: Map, testid: "bw-menu-map" },
@@ -752,6 +849,15 @@ export default function BateuWorld({
         </div>
       )}
 
+      {/* ── REA v19: tutorial guiado (Exile's Reach) ── */}
+      {c.tutorial.step < 6 && (
+        <div className="absolute right-2 top-[190px] w-[150px] px-2 py-1.5 rounded-lg bg-indigo-950/85 border border-indigo-600/70 z-10 pointer-events-none" data-testid="bw-tutorial">
+          <div className="text-[9px] font-black text-indigo-300 tracking-wider">TUTORIAL {c.tutorial.step + 1}/6</div>
+          <div className="text-[10px] text-slate-200 leading-tight">{TUTORIAL_STEPS[Math.min(5, c.tutorial.step)]?.text}</div>
+          <div className="text-[8px] text-amber-300">+{TUTORIAL_STEPS[Math.min(5, c.tutorial.step)]?.reward} ouro</div>
+        </div>
+      )}
+
       {/* ── loot pop ── */}
       <AnimatePresence>
         {lootPop && (
@@ -848,6 +954,26 @@ export default function BateuWorld({
         </button>
       </div>
 
+      {/* ── REA v19: emotes rápidos ── */}
+      <div className="absolute right-2 bottom-[148px] z-20 flex flex-col items-end gap-1">
+        <AnimatePresence>
+          {emoteOpen && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+              className="grid grid-cols-3 gap-1 p-1.5 rounded-xl bg-slate-950/95 border border-slate-700" data-testid="bw-emote-wheel">
+              {EMOTES.map(e => (
+                <button key={e.id} data-testid={`bw-emote-${e.id}`}
+                  onClick={() => { engineRef.current?.emote(e.id); setEmoteOpen(false); }}
+                  className="w-9 h-9 rounded-lg border border-slate-700 bg-slate-900 text-lg active:scale-90" title={e.name}>
+                  {e.emoji}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <button onClick={() => { setEmoteOpen(o => !o); worldAudio.play("click"); }} data-testid="bw-emote-btn"
+          className="w-9 h-9 rounded-xl border border-slate-700 bg-slate-950/90 flex items-center justify-center text-base active:scale-90">👋</button>
+      </div>
+
       {/* ── interação próxima ── */}
       <NearInteract engine={engineRef.current} onInteract={(id) => {
         const map: Record<string, string> = {
@@ -877,6 +1003,7 @@ export default function BateuWorld({
         {panel && (
           <PanelShell title={MENUS.find(m => m.id === panel)?.label || panel} onClose={() => setPanel(null)}>
             {panel === "inv" && <InvPanel c={c} onUpdate={commit} />}
+            {panel === "passe" && <PassPanel c={c} onUpdate={commit} engine={engineRef.current} />}
             {panel === "skills" && <SkillsPanel c={c} onUpdate={commit} />}
             {panel === "quests" && <QuestsPanel c={c} plat={plat} onNavigate={onNavigate} onUpdate={commit} />}
             {panel === "map" && <MapPanel c={c} engine={engineRef.current} />}
@@ -893,11 +1020,85 @@ export default function BateuWorld({
           </PanelShell>
         )}
       </AnimatePresence>
+
+      {/* ── REA v19: ABERTURA CINEMATOGRÁFICA (primeira sessão) ── */}
+      <AnimatePresence>
+        {intro && (
+          <motion.div key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center text-center px-6"
+            style={{ background: "radial-gradient(ellipse at center, rgba(30,27,75,0.55) 0%, rgba(2,6,23,0.94) 70%)" }}
+            data-testid="bw-intro">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }}>
+              <div className="text-[10px] tracking-[0.5em] text-amber-400/90 font-bold mb-2">BATEU WORLD APRESENTA</div>
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-3" style={{ fontFamily: "Georgia, serif" }}>
+                <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-fuchsia-500 bg-clip-text text-transparent drop-shadow">ERA DAS LENDAS</span>
+              </h1>
+            </motion.div>
+            <IntroCaptions />
+            <div className="mt-6 text-[11px] text-slate-400 max-w-sm leading-relaxed">
+              Um mundo vivo que cresce com a plataforma Bateu: facções em guerra, vilões que roubam cupões reais, tesouros escondidos e lendas que nunca desaparecem.
+            </div>
+            <button onClick={skipIntro} data-testid="bw-intro-skip"
+              className="mt-6 px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-sm active:scale-95 shadow-lg">
+              COMEÇAR A JORNADA ▶
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── REA v19: STREAK diário (ciclo de 7 dias) ── */}
+      <AnimatePresence>
+        {showStreak !== null && (
+          <motion.div key="streak" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 px-6" data-testid="bw-streak">
+            <motion.div initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }}
+              className="w-full max-w-xs p-5 rounded-2xl border-2 border-amber-500 bg-slate-950 text-center">
+              <div className="text-3xl mb-1">🔥</div>
+              <div className="text-lg font-black text-amber-300">DIA {((showStreak - 1) % 7) + 1} DE STREAK!</div>
+              <div className="text-[11px] text-slate-400 mb-3">Recompensa diária: {STREAK_REWARDS[((showStreak - 1) % 7)]?.label}</div>
+              <div className="flex justify-center gap-1 mb-4">
+                {STREAK_REWARDS.map(r => (
+                  <div key={r.day} className={`w-8 h-8 rounded-lg border flex items-center justify-center text-[10px] font-black ${r.day <= ((showStreak - 1) % 7) + 1 ? "border-amber-500 bg-amber-950/60 text-amber-300" : "border-slate-700 text-slate-600"}`}>
+                    {r.day}
+                  </div>
+                ))}
+              </div>
+              <button data-testid="bw-streak-ok" onClick={() => {
+                const r = STREAK_REWARDS[((showStreak || 1) - 1) % 7];
+                onUpdateStreakReward(r);
+                setShowStreak(null);
+              }} className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-sm active:scale-95">
+                RECLAMAR
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
   }
 
   const hudUi = (charRef.current && phase === "play") ? renderHud() : null;
+
+  // ── REA v19: intro cinematográfica + recompensa de streak ──
+  function skipIntro() {
+    const c = charRef.current; if (!c) return;
+    c.seenIntro = true;
+    saveChar(c);
+    setIntro(false);
+    worldAudio.play("event");
+  }
+  function onUpdateStreakReward(r: any) {
+    const c = charRef.current; if (!c) return;
+    if (r.kind === "gold") c.gold += r.n;
+    else if (r.kind === "fragmento") c.mats.fragmento = (c.mats.fragmento || 0) + r.n;
+    else if (r.kind === "pot") c.pots.vida = (c.pots.vida || 0) + r.n;
+    else if (r.kind === "cupao") c.coupons += r.n;
+    if (c.streak.count >= 7 && !c.auras.includes("lenda")) { c.auras.push("lenda"); c.activeAura = "lenda"; engineRef.current?.setAura("lenda"); }
+    saveChar(c);
+    showToast(`🔥 Streak dia ${((c.streak.count - 1) % 7) + 1}: ${r.label}`, "🔥");
+    rerender();
+  }
 
   // aplica mudanças de char → motor + storage
   function commit(fn?: (c: Char) => void) {
@@ -1071,6 +1272,138 @@ function NearInteract({ engine, onInteract }: { engine: WorldEngine | null; onIn
   );
 }
 
+// ── PASSE DAS LENDAS (REA Fortnite/Genshin: temporada + exploração + identidade) ──
+function PassPanel({ c, onUpdate, engine }: { c: Char; onUpdate: (fn: (c: Char) => void) => void; engine: any }) {
+  const tiers = BATTLE_PASS;
+  const cur = tiers.find(t => !c.pass.claimed.includes(t.tier) && c.pass.xp >= t.need);
+  const nextT = tiers.find(t => c.pass.xp < t.need) || tiers[tiers.length - 1];
+  const claim = (t: any) => {
+    onUpdate(cc => {
+      if (cc.pass.claimed.includes(t.tier) || cc.pass.xp < t.need) return;
+      cc.pass.claimed.push(t.tier);
+      if (t.kind === "gold") cc.gold += t.n;
+      else if (t.kind === "fragmento") cc.mats.fragmento = (cc.mats.fragmento || 0) + t.n;
+      else if (t.kind === "pot") cc.pots.vida = (cc.pots.vida || 0) + t.n;
+      else if (t.kind === "cupao") cc.coupons += t.n;
+      else if (t.kind === "titulo" && !cc.titles.includes(t.label)) cc.titles.push(t.label);
+      // tutorial passo 5: reclamar 1 nível do passe
+      if (cc.tutorial.step === 5) { cc.tutorial.step = 6; cc.gold += TUTORIAL_STEPS[5].reward; }
+    });
+  };
+  // troca de frutos (exploradores) — 10 frutos → item Mítico + título
+  const exchangeFruits = () => {
+    onUpdate(cc => {
+      if (cc.frutos < 10) return;
+      cc.frutos -= 10;
+      cc.mats.fragmento = (cc.mats.fragmento || 0) + 6;
+      cc.gold += 5000;
+      if (!cc.titles.includes(EXTRA_TITLES.explorador)) cc.titles.push(EXTRA_TITLES.explorador);
+    });
+  };
+  const buyAura = (a: any) => {
+    let nextActive: string | null = null;
+    onUpdate(cc => {
+      if (cc.auras.includes(a.id)) { cc.activeAura = cc.activeAura === a.id ? null : a.id; }
+      else { if (cc.gold < a.cost) return; cc.gold -= a.cost; cc.auras.push(a.id); cc.activeAura = a.id; }
+      nextActive = cc.activeAura;
+    });
+    setTimeout(() => engine?.setAura(nextActive || null), 30);
+  };
+  const exp = engine?.getExploration?.();
+  return (
+    <div className="space-y-3">
+      {/* progresso da temporada */}
+      <div className="p-3 rounded-xl border border-fuchsia-700/60 bg-fuchsia-950/30" data-testid="bw-pass-progress">
+        <div className="flex justify-between text-[10px] font-black mb-1">
+          <span className="text-fuchsia-300">✨ TEMPORADA 1 · PASSE DAS LENDAS</span>
+          <span className="text-amber-300">{c.pass.xp} brilhos</span>
+        </div>
+        <div className="h-2 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-fuchsia-600 to-amber-400" style={{ width: `${Math.min(100, (c.pass.xp / nextT.need) * 100)}%` }} />
+        </div>
+        <div className="text-[9px] text-slate-400 mt-1">Ganha brilhos: abates (+1) · baús (+5) · missões (+6) · miradouros (+15) · chefes (+8) · vilões (+12) · frutos (+2)</div>
+      </div>
+      {/* níveis do passe */}
+      <div className="space-y-1.5">
+        {tiers.map(t => {
+          const claimed = c.pass.claimed.includes(t.tier);
+          const ready = !claimed && c.pass.xp >= t.need;
+          return (
+            <div key={t.tier} data-testid={`bw-pass-tier-${t.tier}`}
+              className={`p-2 rounded-xl border flex justify-between items-center ${claimed ? "border-slate-800 bg-slate-900/40 opacity-60" : ready ? "border-amber-500 bg-amber-950/30" : "border-slate-800 bg-slate-900/70"}`}>
+              <div>
+                <div className="text-[11px] font-bold text-slate-200">Nível {t.tier} · {t.label}</div>
+                <div className="text-[9px] text-slate-500">{t.need} brilhos</div>
+              </div>
+              {claimed ? <span className="text-[9px] text-emerald-400 font-black">✔ RECLAMADO</span>
+                : ready ? <Btn tone="green" onClick={() => claim(t)} testid={`bw-pass-claim-${t.tier}`}>RECLAMAR</Btn>
+                  : <span className="text-[9px] text-slate-500">🔒 {t.need - c.pass.xp} faltam</span>}
+            </div>
+          );
+        })}
+      </div>
+      {/* exploração */}
+      <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/70" data-testid="bw-explore-block">
+        <div className="text-[10px] font-black text-slate-300 mb-1.5">🧭 EXPLORAÇÃO</div>
+        <div className="grid grid-cols-3 gap-1.5 text-center">
+          <div><div className="text-sm font-black text-amber-300">{c.miradouros.length}/8</div><div className="text-[8px] text-slate-400">Miradouros</div></div>
+          <div><div className="text-sm font-black text-amber-300">{exp?.chestsOpen ?? c.chests.ids.length}</div><div className="text-[8px] text-slate-400">Baús hoje</div></div>
+          <div><div className="text-sm font-black text-fuchsia-300">{c.frutos}</div><div className="text-[8px] text-slate-400">Frutos 🫐</div></div>
+        </div>
+        <Btn tone={c.frutos >= 10 ? "green" : "slate"} disabled={c.frutos < 10} onClick={exchangeFruits} className="w-full mt-2" testid="bw-fruit-exchange">
+          Trocar 10 Frutos → 6 Fragmentos + 5.000 ouro + título 🧭
+        </Btn>
+      </div>
+      {/* identidade: auras */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🌟 AURAS (estatuto visível)</div>
+        <div className="space-y-1.5">
+          {AURAS.map(a => {
+            const owned = c.auras.includes(a.id);
+            const active = c.activeAura === a.id;
+            return (
+              <div key={a.id} className="p-2 rounded-xl border border-slate-800 bg-slate-900/70 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full inline-block" style={{ background: a.color, boxShadow: `0 0 8px ${a.color}` }} />
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-200">{a.name}</div>
+                    <div className="text-[9px] text-slate-500">{owned ? (active ? "ATIVA" : "possuída") : `${a.cost.toLocaleString("pt-MZ")} ouro`}</div>
+                  </div>
+                </div>
+                <Btn tone={active ? "amber" : owned ? "slate" : "green"} disabled={!owned && c.gold < a.cost}
+                  onClick={() => buyAura(a)} testid={`bw-aura-${a.id}`}>
+                  {active ? "Desativar" : owned ? "Ativar" : "Comprar"}
+                </Btn>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* emotes */}
+      <div>
+        <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">👋 EMOTES</div>
+        <div className="flex gap-1.5 flex-wrap">
+          {EMOTES.map(e => (
+            <button key={e.id} data-testid={`bw-emote-${e.id}`} onClick={() => { engine?.emote(e.id); setEmoteOpen(false); }}
+              className="w-10 h-10 rounded-xl border border-slate-700 bg-slate-900 text-lg active:scale-90" title={e.name}>
+              {e.emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* títulos */}
+      {c.titles.length > 0 && (
+        <div>
+          <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🏅 TÍTULOS</div>
+          <div className="flex gap-1.5 flex-wrap">
+            {c.titles.map(t => <span key={t} className="px-2 py-1 rounded-lg bg-amber-950/50 border border-amber-700/60 text-[10px] font-black text-amber-300">{t}</span>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ════════════════ PAINÉIS ═══════════════════════════════════
 
 // ── Mochila + Equipamento ───────────────────────────────────
@@ -1176,7 +1509,11 @@ function SkillsPanel({ c, onUpdate }: { c: Char; onUpdate: (fn: (c: Char) => voi
   const learn = (i: number) => {
     onUpdate(cc => {
       if (cc.skillPts <= 0 || cc.level < skills[i].unlock) return;
-      if (cc.ranks[i] === 0) { cc.ranks[i] = 1; cc.skillPts -= 1; }
+      if (cc.ranks[i] === 0) {
+        cc.ranks[i] = 1; cc.skillPts -= 1;
+        // tutorial passo 3: aprender uma habilidade
+        if (cc.tutorial.step === 3) { cc.tutorial.step = 4; cc.tutorial.prog = 0; cc.gold += TUTORIAL_STEPS[3].reward; }
+      }
       else if (cc.ranks[i] < 5) { cc.ranks[i] += 1; cc.skillPts -= 1; }
     });
   };
@@ -1388,6 +1725,11 @@ function MapPanel({ c, engine }: any) {
           const [x, y] = toXY(d.x, d.z);
           return <div key={d.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-[11px]" style={{ left: x, top: y }}>{d.emoji}</div>;
         })}
+        {MIRADOUROS.map(m => {
+          const [x, y] = toXY(m.x, m.z);
+          const on = (c.miradouros || []).includes(m.id);
+          return <div key={m.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-[11px]" style={{ left: x, top: y, opacity: on ? 1 : 0.5 }}>{on ? "🗼" : "📍"}</div>;
+        })}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {REGIONS.map(r => {
@@ -1403,6 +1745,47 @@ function MapPanel({ c, engine }: any) {
           );
         })}
       </div>
+      {/* REA v19: viagem rápida a miradouros ativados (Elden Ring liberal) */}
+      {(c.miradouros || []).length > 0 && (
+        <div>
+          <div className="text-[10px] font-black text-slate-400 tracking-wider mb-1.5">🗼 VIAGEM RÁPIDA (miradouros ativados)</div>
+          <div className="flex flex-wrap gap-1.5">
+            {MIRADOUROS.filter(m => (c.miradouros || []).includes(m.id)).map(m => (
+              <button key={m.id} onClick={() => go(m.id)} data-testid={`bw-fast-${m.id}`}
+                className="px-2.5 py-1.5 rounded-xl border border-amber-600/70 bg-amber-950/30 text-[10px] font-bold text-amber-300 active:scale-95">
+                {m.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Intro cinematográfica: legendas das regiões ─────────────
+function IntroCaptions() {
+  const caps = [
+    "🌊 Vila Dourada — o coração da plataforma",
+    "⚔️ VANGUARDA vs ⚡ TEMPESTADE — escolhe o teu lado",
+    "🗼 Miradouros revelam terras que ninguém viu",
+    "😈 Vilões roubam CUPÕES reais — recupera-os",
+    "🧰 Baús escondidos em cada bioma, todos os dias",
+    "🔥 E lendas que nunca desaparecem…",
+  ];
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setI(v => Math.min(caps.length - 1, v + 1)), 2200);
+    return () => clearInterval(iv);
+  }, []);
+  return (
+    <div className="h-10 flex items-center justify-center" data-testid="bw-intro-captions">
+      <AnimatePresence mode="wait">
+        <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+          className="text-sm font-bold text-slate-200">
+          {caps[i]}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

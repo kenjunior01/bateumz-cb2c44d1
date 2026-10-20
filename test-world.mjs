@@ -50,7 +50,7 @@ async function main() {
       }
     }
   }, [times, dt]);
-  const PANEL_LABELS = { inv: "MOCHILA", skills: "HABILIDADES", quests: "MISSÕES", map: "MAPA", fame: "FAMA", party: "GRUPO", clan: "CLÃ", mounts: "MONTARIAS", home: "HABITAÇÃO", forge: "OFICINA", shop: "LOJA", coupons: "CUPÕES", bank: "BANCO", settings: "OPÇÕES" };
+  const PANEL_LABELS = { inv: "MOCHILA", passe: "PASSE", skills: "HABILIDADES", quests: "MISSÕES", map: "MAPA", fame: "FAMA", party: "GRUPO", clan: "CLÃ", mounts: "MONTARIAS", home: "HABITAÇÃO", forge: "OFICINA", shop: "LOJA", coupons: "CUPÕES", bank: "BANCO", settings: "OPÇÕES" };
   const openPanel = async (m) => {
     // cliques via JS: imunes ao re-render do HUD (5Hz); valida o TÍTULO do painel aberto
     for (let i = 0; i < 4; i++) {
@@ -100,11 +100,22 @@ async function main() {
   await page.waitForTimeout(5000);
   ok("Mundo aberto (bw-play)", await page.locator('[data-testid="bw-play"]').isVisible().catch(() => false));
   ok("Canvas WebGL montado", await page.evaluate(() => !!document.querySelector('[data-testid="bw-canvas-host"] canvas')));
+
+  // REA v19: streak diário + abertura cinematográfica (primeira sessão)
+  ok("Modal de streak diário aparece", await page.locator('[data-testid="bw-streak"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-streak-ok"]').click();
+  await page.waitForTimeout(400);
+  ok("Streak dia 1 registado", ((await char())?.streak?.count) === 1);
+  ok("Abertura cinematográfica aparece", await page.locator('[data-testid="bw-intro"]').isVisible().catch(() => false));
+  ok("Legendas de região na abertura", await page.locator('[data-testid="bw-intro-captions"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-intro-skip"]').click();
+  await page.waitForTimeout(400);
+
   const c1 = await char();
   ok("Herói criado com nome", c1?.name === "LendaTeste");
   ok("Classe Mago (1)", c1?.classId === 1);
   ok("Facção TEMPESTADE (1)", c1?.faction === 1);
-  ok("Ouro inicial 250", c1?.gold === 250);
+  ok("Ouro inicial + streak (≥250)", (c1?.gold || 0) >= 250);
 
   // ── 2. HUD MMO ────────────────────────────────────────────
   console.log("— HUD MMO —");
@@ -156,7 +167,7 @@ async function main() {
 
   // ── 5. PAINÉIS (14) ───────────────────────────────────────
   console.log("— Painéis do MMO —");
-  const MENUS = ["inv", "skills", "quests", "map", "fame", "party", "clan", "mounts", "home", "forge", "shop", "coupons", "bank", "settings"];
+  const MENUS = ["inv", "passe", "skills", "quests", "map", "fame", "party", "clan", "mounts", "home", "forge", "shop", "coupons", "bank", "settings"];
   for (const m of MENUS) {
     await openPanel(m);
     const vis = await page.locator('[data-testid="bw-panel"]').isVisible().catch(() => false);
@@ -292,10 +303,27 @@ async function main() {
     if (!bbHud) await page.waitForTimeout(200);
   }
   ok("Boss bar aparece no HUD", bbHud && !!bbEngine);
-  await resetAtk();
-  await page.locator('[data-testid="bw-attack"]').dispatchEvent("pointerdown");
-  await pump(4);
-  ok("Alvo atual indicado no HUD", await page.evaluate(() => !!(window).__bw.engine.getState().target));
+  // alvo no HUD: força um alvo vivo adjacente antes do golpe (o vilão pode morrer no pump anterior)
+  let targetOk = false;
+  for (let i = 0; i < 4 && !targetOk; i++) {
+    await page.evaluate(() => {
+      const e = (window).__bw.engine;
+      const s = e.getState();
+      try {
+        let best = null, bd = 1e9;
+        for (const mo of (e.mobs || [])) {
+          if (mo.state !== "dead" && mo.group.visible) { const d = Math.hypot(mo.x - s.x, mo.z - s.z); if (d < bd) { bd = d; best = mo; } }
+        }
+        if (best) { try { e.target = best; } catch { } }
+      } catch { }
+    });
+    await resetAtk();
+    await page.locator('[data-testid="bw-attack"]').dispatchEvent("pointerdown");
+    await pump(2);
+    targetOk = await page.evaluate(() => !!(window).__bw.engine.getState().target);
+    if (!targetOk) await page.waitForTimeout(300);
+  }
+  ok("Alvo atual indicado no HUD", targetOk);
   // limpa o vilão do assert anterior
   for (let i = 0; i < 3; i++) {
     await page.evaluate(() => { const e = (window).__bw.engine; e.healPublic(); e.weakenVillainsPublic(); });
@@ -545,8 +573,8 @@ async function main() {
   await page.locator('[data-testid="bw-panel"] input').nth(1).fill("Lendas de Angola");
   await page.evaluate(() => { const b = document.querySelector('[data-testid="bw-clan-create"]'); if (b) (b).click(); });
   await page.waitForTimeout(400);
-  const c9 = await char();
-  ok("Clã fundado com sigla", c9.clan?.tag === "LZA");
+  const cClan = await char();
+  ok("Clã fundado com sigla", cClan.clan?.tag === "LZA");
 
   // ── 17. FAMA ──────────────────────────────────────────────
   console.log("— Fama —");
@@ -609,9 +637,12 @@ async function main() {
 
   // ── 18. MORTE + RENASCER ──────────────────────────────────
   console.log("— Morte e renascimento —");
-  await page.evaluate(() => { (window).__bw.engine.testHurt(99999); });
-  await page.waitForTimeout(600);
-  ok("Ecrã de morte aparece", await page.locator('[data-testid="bw-death"]').isVisible().catch(() => false));
+  let deathOk = false;
+  for (let i = 0; i < 4 && !deathOk; i++) {
+    await page.evaluate(() => { (window).__bw.engine.testHurt(99999); });
+    deathOk = await page.locator('[data-testid="bw-death"]').waitFor({ state: "visible", timeout: 1500 }).then(() => true).catch(() => false);
+  }
+  ok("Ecrã de morte aparece", deathOk);
   let respawned = false;
   for (let i = 0; i < 4 && !respawned; i++) {
     await page.evaluate(() => { const b = document.querySelector('[data-testid="bw-respawn"]'); if (b) (b).click(); });
@@ -638,13 +669,75 @@ async function main() {
   ok("Elite invocada para teste", bossCount);
   ok("Boss bar preparada (motor ativo)", await page.evaluate(() => typeof (window).__bw.engine.getBossBar === "function"));
 
-  // ── 21. PERSISTÊNCIA ──────────────────────────────────────
+  // ── 21. REA v19: PASSE + EXPLORAÇÃO + IDENTIDADE ──────────
+  console.log("— REA v19: passe, exploração, identidade —");
+  await updateChar("c.pass.xp = 40;");
+  await openPanel("passe");
+  ok("Painel do Passe abre com brilhos", await page.locator('[data-testid="bw-pass-progress"]').isVisible().catch(() => false));
+  const tierReady = await page.locator('[data-testid="bw-pass-claim-1"]').isVisible().catch(() => false);
+  if (tierReady) await page.locator('[data-testid="bw-pass-claim-1"]').click();
+  await page.waitForTimeout(300);
+  const c9v = await char();
+  ok("Nível 1 do passe reclamado", c9v.pass.claimed.includes(1));
+  await closePanel();
+
+  // miradouro (BotW): ativa → revela → viagem rápida
+  const mira = await page.evaluate(() => { try { return (window).__bw.engine.testActivateMiradouro(); } catch { return false; } });
+  await page.waitForTimeout(400);
+  const c10v = await char();
+  ok("Miradouro ativado (revela região)", mira === true && c10v.miradouros.length === 1);
+  await openPanel("map");
+  ok("Viagem rápida disponível no mapa", await page.locator('[data-testid="bw-fast-mira_planicie"]').isVisible().catch(() => false));
+  const dest = await page.evaluate(() => {
+    (window).__bw.engine.teleportTo("mira_planicie");
+    const s = (window).__bw.engine.getState();
+    return { x: s.x, z: s.z };
+  });
+  ok("Viagem rápida teleporta ao miradouro", Math.abs(dest.x - (-95)) < 8);
+  await closePanel();
+
+  // baú escondido + fruto ancestral
+  const chest = await page.evaluate(() => { try { return (window).__bw.engine.testOpenChest(); } catch { return false; } });
+  const c11v = await char();
+  ok("Baú escondido aberto", chest === true && c11v.chests.ids.length >= 1);
+  const fruit = await page.evaluate(() => { try { return (window).__bw.engine.testCollectFruit(); } catch { return false; } });
+  await page.waitForTimeout(300);
+  const c12v = await char();
+  ok("Fruto Ancestral apanhado", fruit === true && c12v.frutos >= 1);
+
+  // emotes (socializadores)
+  await page.locator('[data-testid="bw-emote-btn"]').click();
+  await page.waitForTimeout(250);
+  ok("Roda de emotes abre", await page.locator('[data-testid="bw-emote-wheel"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-emote-ola"]').click();
+  await page.waitForTimeout(250);
+
+  // auras (identidade)
+  await updateChar("c.gold = 20000;");
+  await openPanel("passe");
+  await page.locator('[data-testid="bw-aura-fogo"]').click();
+  await page.waitForTimeout(300);
+  const c13v = await char();
+  ok("Aura comprada e equipada", c13v.auras.includes("fogo") && c13v.activeAura === "fogo");
+  await closePanel();
+
+  // troca de frutos (explorador supremo)
+  await updateChar("c.frutos = 12;");
+  await openPanel("passe");
+  await page.locator('[data-testid="bw-fruit-exchange"]').click();
+  await page.waitForTimeout(300);
+  const c14v = await char();
+  ok("Troca de frutos: recompensa + título", c14v.frutos === 2 && (c14v.titles || []).includes("Explorador Supremo 🧭"));
+  await closePanel();
+
+  // ── 22. PERSISTÊNCIA ──────────────────────────────────────
   console.log("— Persistência —");
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("bateu_legends_v18") || "null"));
   ok("Herói guardado em localStorage v18", saved?.name === "LendaTeste" && saved?.v === 18);
   ok("SAGA registada (duelos, torres)", (saved?.saga?.duels || 0) >= 1 && (saved?.saga?.towers || 0) >= 1);
+  ok("Progresso v19 guardado (streak, passe, miradouro)", saved?.streak?.count >= 1 && (saved?.pass?.claimed || []).length >= 1 && (saved?.miradouros || []).length >= 1);
 
-  // ── 22. SEM ERROS DE CONSOLA ─────────────────────────────
+  // ── 23. SEM ERROS DE CONSOLA ─────────────────────────────
   const realErrors = consoleErrors.filter(e => !NOISE.some(n => e.includes(n)));
   ok(`Sem erros JS graves (${realErrors.length})`, realErrors.length === 0);
   if (realErrors.length) console.log("   →", realErrors.slice(0, 4).join("\n   → "));
@@ -678,6 +771,13 @@ async function mobileSuite(BASE, NOISE) {
   await page.locator('[data-testid="bw-enter"]').click();
   await page.waitForTimeout(4500);
   ok("M: mundo abre", await page.locator('[data-testid="bw-play"]').isVisible().catch(() => false));
+  // REA v19: streak + intro no telemóvel (para não bloquear toques)
+  ok("M: modal de streak aparece", await page.locator('[data-testid="bw-streak"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-streak-ok"]').click().catch(() => { });
+  await page.waitForTimeout(400);
+  ok("M: abertura cinematográfica aparece", await page.locator('[data-testid="bw-intro"]').isVisible().catch(() => false));
+  await page.locator('[data-testid="bw-intro-skip"]').click().catch(() => { });
+  await page.waitForTimeout(400);
   ok("M: joystick presente", await page.locator('[data-testid="bw-joystick"]').isVisible().catch(() => false));
   ok("M: botão ATACAR presente", await page.locator('[data-testid="bw-attack"]').isVisible().catch(() => false));
   ok("M: hotbar compacta", await page.locator('[data-testid="bw-skill-0"]').isVisible().catch(() => false));

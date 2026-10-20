@@ -300,3 +300,50 @@ Stage Summary:
 - main local = origin/main (v2.25) + fix de estabilidade E2E
 - Suite do mundo: 135/135 verdes, determinística
 - APK v2.25 publicado em download/ a partir do código testado
+
+---
+Task ID: 20
+Agent: Main Agent (Super Z)
+Task: v19 — REA dos melhores do género: visuais elogiados + exploração BotW + retenção Fortnite + identidade Bartle
+
+Work Log:
+- REA rápido (web): Genshin (identidade visual por bioma, cel-shading, regiões com alma),
+  Fortnite/Genshin (passe de temporada, streaks, retenção diária), BotW/Elden Ring
+  (miradouros que revelam o mapa, baús escondidos, colecionáveis, viagem rápida liberal),
+  WoW Exile's Reach (onboarding guiado), Bartle (conquistador/explorador/socializador/competidor)
+- mmo.ts (+120 linhas): MIRADOUROS (8), EMOTES (6), AURAS (4), BATTLE_PASS (12 níveis),
+  PASS_XP, STREAK_REWARDS (7 dias), TUTORIAL_STEPS (6), EXTRA_TITLES
+- worldEngine.ts (+400): CÉU com DOME gradiente (zénite→horizonte) que segue o jogador,
+  22 nuvens derivantes, 300 partículas ambientes por bioma (pólen/areia/brasas/neve/vagalumes
+  à noite), luz tintada por REGIÃO (Genshin: dunas quentes, tundra fria, vulcão vermelho),
+  água com cintilação; MIRADOUROS com cristal giratório + halo pulsante; 26 BAÚS escondidos
+  determinísticos fora de hubs (respawn diário); 40 FRUTOS Ancestrais colecionáveis;
+  interação de baú/miradouro no botão E; VIAGEM RÁPIDA a miradouros ativados;
+  emotes (sprite flutuante sobre o herói); auras (anel luminoso no pGroup);
+  hooks de teste (testActivateMiradouro/testOpenChest/testCollectFruit)
+- CORREÇÃO CRÍTICA de renderer: 74 PointLights (baús+frutos+miradouros) rebentavam o
+  WebGL em headless → substituídos por MeshBasicMaterial brilhante + pulso de escala
+- BateuWorld.tsx (+330): ABERTURA CINEMATOGRÁFICA (título dourado + 6 legendas de região
+  alternadas + botão COMEÇAR A JORNADA; só na 1ª sessão); MODAL DE STREAK (ciclo 7 dias
+  com recompensa crescente; dia 7 dá Aura Lendária); painel PASSE (progresso de brilhos,
+  12 níveis reclamáveis, troca 10 frutos→título Explorador Supremo, auras comprar/ativar,
+  emotes, títulos); TUTORIAL guiado 6 passos com tracker no HUD e recompensas;
+  roda de emotes no HUD; marcadores 🗼 no mapa + VIAGEM RÁPIDA aos miradouros;
+  migração suave fillDefaults() para heróis antigos
+- E2E: 135 → 153 asserts (streak, intro, legendas, 15 painéis, passe, miradouro,
+  viagem rápida, baú, fruto, emotes, auras, troca de frutos, progresso v19 guardado);
+  fixes de determinismo: streak antes da intro (z-order), esperas ativas com sondagem,
+  variáveis renomeadas (c9v/c14v/cClan) sem shadowing
+- TSC 0 erros · build OK · APK v2.26 (versionCode 26): debug 9.0MB, release 7.5MB, aab 7.3MB
+  → /home/z/my-project/download/
+- Toolchain Android reconstruída nesta máquina: SDK de /home/user_skills/bateu_ws
+  (build-tools 35/36, platforms 35/36, licenças aceites) + JDK 21 do /tmp/my-project/jdk
+  (com JAVA_TOOL_OPTIONS=-Xshare:off para contornar CDS corrompido) + android-36-2
+  duplicado removido
+
+Stage Summary:
+- O mundo tem agora as 4 camadas REA pedidas: VISUAIS elogiados (biomas vivos, céu
+  gradiente, partículas), EXPLORAÇÃO de BotW (miradouros, baús, frutos, fast travel),
+  RETENÇÃO de Fortnite (passe 12 níveis, streak 7 dias, tutorial guiado com recompensas),
+  IDENTIDADE Bartle (emotes social, auras de estatuto, títulos, facções/fama já existentes)
+- Suite E2E: 153/153 verdes · APK v2.26 publicado em download/

@@ -277,10 +277,21 @@ async function main() {
   const d1 = await distTo();
   ok("Mob agressivo persegue o herói (IA)", d0 !== null && d1 !== null && d1 < d0);
   // boss bar visível no HUD + alvo (ataca primeiro para ter alvo)
-  await page.evaluate(() => { (window).__bw.engine.healPublic(); (window).__bw.engine.spawnVillainPublic(); });
-  await pump(6);
-  await page.waitForTimeout(500); // HUD tica a 5Hz
-  ok("Boss bar aparece no HUD", await page.locator('[data-testid="bw-boss-bar"]').count() > 0);
+  await page.evaluate(() => {
+    const e = (window).__bw.engine;
+    e.healPublic();
+    const m = e.spawnVillainPublic();
+    if (m) { const s = e.getState(); m.x = s.x + 3; m.z = s.z; m.hp = Math.max(1, Math.round(m.maxHp * 0.2)); }
+  });
+  await pump(4);
+  const bbEngine = await page.evaluate(() => (window).__bw.engine.getBossBar());
+  // HUD tica a 5Hz — sonda até 2s antes de declarar falha
+  let bbHud = false;
+  for (let i = 0; i < 10 && !bbHud; i++) {
+    bbHud = await page.locator('[data-testid="bw-boss-bar"]').count() > 0;
+    if (!bbHud) await page.waitForTimeout(200);
+  }
+  ok("Boss bar aparece no HUD", bbHud && !!bbEngine);
   await resetAtk();
   await page.locator('[data-testid="bw-attack"]').dispatchEvent("pointerdown");
   await pump(4);

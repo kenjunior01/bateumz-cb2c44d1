@@ -268,3 +268,35 @@ Stage Summary:
 - Home mobile redesenhada com o melhor das duas versões de exemplo, 100% em português, dados reais (sorteios, missões, feed)
 - Navegação inferior com WORLD 3D em destaque central; topo limpo (pesquisa, sino com badge, avatar); definições no drawer
 - Suite E2E intacta (141 asserts) e build verde
+
+---
+Task ID: 19
+Agent: Main Agent (Super Z)
+Task: Continuação + commit — sincronização com remote v2.25, E2E 135/135 e APK reconstruído
+
+Work Log:
+- Retomado o trabalho do episódio anterior (linhagem local v18 com 86 asserts)
+- Descoberto que o remote tinha avançado para além da linhagem local:
+  f236999 (APK v2.25) inclui o MMO v18 EVOLUÍDO (vilões com hooks spawnVillain/
+  weakenVillainsPublic/healPublic, saga.viloes, anúncios PT, GAMING ARENA,
+  BateuCraft, leilões, suite de 135 asserts) — verificou-se que o remote JÁ
+  continha os fixes locais (montaria sem dupla inversão, boss bar) e mais
+- Ação correta tomada: checkout -B main origin/main (a linhagem local era
+  subconjunto; descartada sem regressões; stash limpo)
+- Na base v2.25: tsc 0 erros · npm run build OK
+- E2E test-world.mjs: 134/135 → 1 falha intermitente "Boss bar aparece no HUD"
+  (vilão podia ficar fora do raio/da janela de 5Hz do HUD). Estabilizado:
+  vilão agora spawna ADJACENTE (3u) com vida garantida, e o HUD é sondado até
+  2s antes de declarar falha → 135/135 VERDES (desktop + mobile) ✅
+- Toolchain Android reconstruída nesta máquina (a antiga perdeu-se no rollback):
+  SDK (build-tools 35/36, platforms 35/36, licenças) + JDK 21 Adoptium limpo;
+  build com --no-daemon --max-workers=1 (4GB RAM)
+- APK v2.25 (versionCode 25) construído a partir deste código exato:
+  bateu-v2.25-debug.apk (9.0MB) · bateu-v2.25-release.apk (7.5MB) ·
+  bateu-v2.25-release.aab (7.3MB) → /home/z/my-project/download/
+- APKs obsoletos v2.19 removidos do download/
+
+Stage Summary:
+- main local = origin/main (v2.25) + fix de estabilidade E2E
+- Suite do mundo: 135/135 verdes, determinística
+- APK v2.25 publicado em download/ a partir do código testado

@@ -280,8 +280,9 @@ async function main() {
     await page.locator('[data-testid="bw-attack"]').dispatchEvent("pointerdown");
     await pump(12);
   }
-  // agressividade: mob persegue o herói (herói curado para o confronto)
-  await page.evaluate(() => { (window).__bw.engine.healPublic(); (window).__testMob = (window).__bw.engine.spawnTestMobPublic(false); });
+  // agressividade: mob persegue o herói (herói curado + fora da vila para os
+  // guardas não interferirem — torna o assert determinístico)
+  await page.evaluate(() => { const e = (window).__bw.engine; e.healPublic(); e.testTeleport(160, 160); (window).__testMob = e.spawnTestMobPublic(false); });
   const distTo = () => page.evaluate(() => {
     const s = (window).__bw.engine.getState();
     const m = (window).__testMob;

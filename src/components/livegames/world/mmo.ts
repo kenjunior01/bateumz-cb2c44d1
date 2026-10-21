@@ -98,6 +98,8 @@ export interface SkillDef {
   dmg: number; radius?: number; range?: number; speed?: number;
   kind: "golpe" | "projeto" | "area" | "buff" | "cura" | "dash" | "passiva";
   color: string; emoji: string; desc: string; ult?: boolean;
+  /** REA hordes.io: tempo de canalização em segundos (cancela ao mover) */
+  castT?: number;
 }
 
 export const SKILLS: SkillDef[][] = [
@@ -124,8 +126,8 @@ export const SKILLS: SkillDef[][] = [
     { id: "m4", name: "Teleporte", unlock: 11, cd: 12, mana: 4, dmg: 0, range: 12, speed: 30, kind: "dash", color: "#c084fc", emoji: "💫", desc: "Reaparece 12m adiante na direção em que olhas" },
     { id: "m5", name: "Escudo de Gelo", unlock: 14, cd: 60, mana: 5, dmg: 0, kind: "buff", color: "#bae6fd", emoji: "🛡️", desc: "Bloqueia os próximos ataques recebidos" },
     { id: "m6", name: "Chamado Gélido", unlock: 17, cd: 6, mana: 2, dmg: 1.2, radius: 6.5, kind: "area", color: "#22d3ee", emoji: "🌨️", desc: "Tempestade congelante numa área" },
-    { id: "m7", name: "Orbe de Sarcículas", unlock: 20, cd: 8, mana: 10, dmg: 1.7, radius: 5.5, kind: "area", color: "#0284c7", emoji: "🔮", desc: "Orbe gigante cospe sarcículas no caminho", ult: true },
-    { id: "m8", name: "Bloco de Gelo", unlock: 24, cd: 80, mana: 5, dmg: 0, kind: "cura", color: "#e0f2fe", emoji: "🧱", desc: "Invulnerável e a curar-te, mas imóvel" },
+    { id: "m7", name: "Orbe de Sarcículas", unlock: 20, cd: 8, mana: 10, dmg: 1.7, radius: 5.5, kind: "area", color: "#0284c7", emoji: "🔮", desc: "Orbe gigante cospe sarcículas no caminho", ult: true, castT: 0.9 },
+    { id: "m8", name: "Bloco de Gelo", unlock: 24, cd: 80, mana: 5, dmg: 0, kind: "cura", color: "#e0f2fe", emoji: "🧱", desc: "Invulnerável e a curar-te, mas imóvel", castT: 1.2 },
     { id: "m9", name: "Frenesi Hipotérmico", unlock: 28, cd: 45, mana: 0, dmg: 0, kind: "buff", color: "#67e8f9", emoji: "⚡", desc: "+pressa e +dano; reinicia o Orbe de Sarcículas" },
     { id: "m10", name: "Encantamento", unlock: 32, cd: 8, mana: 5, dmg: 0, kind: "buff", color: "#d8b4fe", emoji: "✨", desc: "Aumenta o dano de um aliado" },
     { id: "m11", name: "Aura Ártica", unlock: 36, cd: 120, mana: 15, dmg: 0, kind: "buff", color: "#38bdf8", emoji: "🌟", desc: "O teu grupo ganha crítico extra", ult: true },
@@ -151,19 +153,67 @@ export const SKILLS: SkillDef[][] = [
     { id: "x1", name: "Decadência", unlock: 1, cd: 3, mana: 6, dmg: 1.2, range: 22, speed: 22, kind: "projeto", color: "#14b8a6", emoji: "☠️", desc: "Maldição que corrói o alvo ao longo do tempo" },
     { id: "x2", name: "Espalha-praga", unlock: 4, cd: 0, mana: 0, dmg: 0, kind: "passiva", color: "#84cc16", emoji: "🦠", desc: "Decadência salta entre inimigos e dá-te pressa" },
     { id: "x3", name: "Revitalizar", unlock: 6, cd: 30, mana: 4, dmg: 0, kind: "cura", color: "#34d399", emoji: "💚", desc: "Cura ao longo do tempo; acumula até 3 vezes" },
-    { id: "x4", name: "Tratamento", unlock: 8, cd: 2, mana: 6, dmg: 0, kind: "cura", color: "#4ade80", emoji: "➕", desc: "Cura direta poderosa" },
+    { id: "x4", name: "Tratamento", unlock: 8, cd: 2, mana: 6, dmg: 0, kind: "cura", color: "#4ade80", emoji: "➕", desc: "Cura direta poderosa", castT: 0.8 },
     { id: "x5", name: "Poço de Mimir", unlock: 11, cd: 90, mana: 0, dmg: 0, kind: "buff", color: "#2dd4bf", emoji: "🕳️", desc: "O teu grupo regenera mana rapidamente" },
-    { id: "x6", name: "Totem de Cura", unlock: 14, cd: 20, mana: 10, dmg: 0, radius: 6, kind: "cura", color: "#fbbf24", emoji: "🗿", desc: "Totem que cura todos os aliados perto" },
+    { id: "x6", name: "Totem de Cura", unlock: 14, cd: 20, mana: 10, dmg: 0, radius: 6, kind: "cura", color: "#fbbf24", emoji: "🗿", desc: "Totem que cura todos os aliados perto", castT: 1.0 },
     { id: "x7", name: "Uivo Canino", unlock: 17, cd: 25, mana: 8, dmg: 0, kind: "buff", color: "#94a3b8", emoji: "🐺", desc: "O teu grupo ganha pressa e cooldowns mais rápidos" },
     { id: "x8", name: "Convocar", unlock: 20, cd: 120, mana: 25, dmg: 0, kind: "buff", color: "#a78bfa", emoji: "🌀", desc: "Convoca o teu grupo para junto de ti" },
     { id: "x9", name: "Purificar", unlock: 24, cd: 12, mana: 8, dmg: 0, kind: "cura", color: "#a7f3d0", emoji: "🌿", desc: "Remove venenos e maldições" },
     { id: "x10", name: "Escudo Espiritual", unlock: 28, cd: 30, mana: 10, dmg: 0, kind: "buff", color: "#c4b5fd", emoji: "👻", desc: "Os espíritos absorvem parte do dano" },
     { id: "x11", name: "Corrente de Pragas", unlock: 32, cd: 7, mana: 8, dmg: 1.5, radius: 6, kind: "area", color: "#0d9488", emoji: "⛓️", desc: "A praga salta por toda a área", ult: true },
-    { id: "x12", name: "Ira dos Anciãos", unlock: 36, cd: 45, mana: 30, dmg: 2.6, radius: 8, kind: "area", color: "#f97316", emoji: "🗿", desc: "Os anciãos esmagam tudo à tua volta", ult: true },
+    { id: "x12", name: "Ira dos Anciãos", unlock: 36, cd: 45, mana: 30, dmg: 2.6, radius: 8, kind: "area", color: "#f97316", emoji: "🗿", desc: "Os anciãos esmagam tudo à tua volta", ult: true, castT: 1.2 },
   ],
 ]
 
 export const SKILL_BOOK_XP = "Livro de Habilidades";
+
+// ── REA hordes.io: CHAT DO MUNDO (voz viva da comunidade) ──
+// Frases ORIGINAIS que dão vida ao canal Geral como num MMO
+// de verdade: procura de grupo, caca de chefes, comércio.
+export const CHAT_AMBIENT: string[] = [
+  "Alguém para caçar o chefe do Pântano?",
+  "LFG nível 10+ para a masmorra!",
+  "Vendo espada rara, 800 ouro — chama no privado",
+  "Compro fragmentos, pago bem!",
+  "A TEMPESTADE vai dominar a torre do norte hoje!",
+  "GG naquele elite, quase morri lol",
+  "Onde aparecem os cristais?",
+  "Acabei de dropar um anel ÉPICO!",
+  "Cuidado na Floresta Sombria, tem matilha agressiva",
+  "Grupo para vilão? Estou na vila",
+  "Primeira vez aqui, dicas?",
+  "O chefe mundial vai nascer, preparem-se!",
+  "Quem vende poção de vida em quantidade?",
+  "Subi 3 níveis hoje, que grind!",
+  "A FORJA nunca vai vencer a guerra, é real",
+  "Alguém viu o vilão roubar meu cupão...",
+  "Miradouro do norte tem vista incrível!",
+  "Preciso de 1 pessoa para duelo, valendo ouro",
+  "Esse novo xamã cura bem demais",
+  "Fazendo quest diária, vem comigo",
+  "Baú escondido a oeste, corre!",
+  "Montaria nova e o mundo fica pequeno",
+  "Boa sorte nas caçadas de hoje, pessoal",
+  "Lembrar: morrer custa XP, levem poções",
+];
+
+export const CHAT_REPLIES: string[] = [
+  "Boa ideia, conta comigo!",
+  "Estou a caminho!",
+  "Vamos nessa!",
+  "Eu também preciso disso",
+  "Afirmativo, sítio marcado",
+  "Vou contigo se ainda houver vaga",
+  "Boa sorte lá",
+  "Depois dizias onde foi",
+  "xD",
+  "Esse drop é meu, hein!",
+];
+
+export const QUICK_PHRASES: string[] = [
+  "Olá!", "Procuram grupo?", "Vamos ao chefe!", "Ajuda aqui!",
+  "Vendo itens raros", "Boa caçada!", "Cuidado, elite perto!", "GG!",
+];
 
 // ── Títulos e Fama ──────────────────────────────────────────
 export const TITLES: { lvl: number; title: string }[] = [

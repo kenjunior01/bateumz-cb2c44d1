@@ -29,6 +29,7 @@ import {
   FAME_RANKS, xpNeed, LEVEL_CAP, PVP_SAFE_RADIUS, type LootItem,
   MOB_TYPES, REGION_BOSSES, WORLD_BOSSES, VILLAINS,
   MIRADOUROS, EMOTES, AURAS, BATTLE_PASS, PASS_XP, STREAK_REWARDS, TUTORIAL_STEPS, EXTRA_TITLES,
+  BOT_NAMES, CHAT_AMBIENT, CHAT_REPLIES, QUICK_PHRASES,
 } from "./mmo";
 import { statLabel, applyItemStats, upgradeCost, upgradeChance, upgradeGlow } from "./loot";
 import { worldAudio, MUSIC_TRACKS } from "./worldAudio";
@@ -217,6 +218,19 @@ export default function BateuWorld({
   const [showStreak, setShowStreak] = useState<number | null>(null);
   const [intro, setIntro] = useState(false);
   const [emoteOpen, setEmoteOpen] = useState(false);
+  // REA hordes.io: chat do mundo com abas
+  const [chatLog, setChatLog] = useState<{ id: number; ch: "geral" | "combate"; who: string; text: string; color: string; sys: boolean }[]>([]);
+  const [chatTab, setChatTab] = useState<"geral" | "combate">("geral");
+  const [chatInput, setChatInput] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
+  const chatLogRef = useRef<HTMLDivElement>(null);
+
+  const pushChat = useCallback((who: string, text: string, opts: { ch?: "geral" | "combate"; color?: string; sys?: boolean } = {}) => {
+    setChatLog(l => [...l.slice(-70), {
+      id: Date.now() + Math.random(), ch: opts.ch || "geral", who, text,
+      color: opts.color || (opts.sys ? "#fcd34d" : "#e2e8f0"), sys: !!opts.sys,
+    }]);
+  }, []);
 
   const pushFeed = useCallback((text: string, emoji = "✨") => {
     const id = Date.now() + Math.random();
@@ -332,6 +346,7 @@ export default function BateuWorld({
           if (ev.isVillain) c.saga.villains++;
           c.daily.prog.d_boss = (c.daily.prog.d_boss || 0) + 1;
           pushFeed(`☠ ${ev.name} derrotado! +${ev.gold} ouro`, "☠️");
+          pushChat("Mundo", `☠ ${ev.name} foi derrotado por ${c.name}! +${ev.gold} ouro`, { ch: "combate", sys: true });
         }
         dirty = true;
         break;
@@ -340,6 +355,9 @@ export default function BateuWorld({
         if (c.inv.length < 60) { c.inv.push(ev.item); dirty = true; }
         setLootPop({ item: ev.item, id: Date.now() });
         setTimeout(() => setLootPop(p => (p?.item === ev.item ? null : p)), 3200);
+        if (ev.item.rarity >= 3) {
+          pushChat("Mundo", `${RARITY_META[ev.item.rarity].emoji} ${c.name} obteve ${ev.item.name} (${RARITY_META[ev.item.rarity].name})!`, { ch: "combate", sys: true });
+        }
         break;
       }
       case "material": {
@@ -370,6 +388,7 @@ export default function BateuWorld({
       case "pvp-kill": {
         c.fame += ev.fame || 15;
         pushFeed(`⚔ Vitória sobre ${ev.name} · +${ev.fame} FAMA`, "⚔️");
+        pushChat("Mundo", `⚔ ${c.name} venceu ${ev.name} em PvP · +${ev.fame} FAMA`, { ch: "combate", sys: true });
         dirty = true;
         break;
       }
@@ -383,6 +402,7 @@ export default function BateuWorld({
         c.skillPts += 1;
         showToast(`NÍVEL ${ev.level}! +1 ponto de habilidade`, "⬆️");
         pushFeed(`⬆️ ${c.name} alcançou o nível ${ev.level}!`, "🎉");
+        pushChat("Mundo", `⬆️ ${c.name} alcançou o nível ${ev.level}!`, { sys: true });
         logWorldActivity(c.uid, "level", `Nv${ev.level}`, ev.level);
         if (onScore) onScore(c.name, ev.level);
         dirty = true;
@@ -393,6 +413,7 @@ export default function BateuWorld({
         const lost = Math.round(xpNeed(c.level) * 0.05);
         c.xp = Math.max(0, c.xp - lost);
         pushFeed(`💀 Morreste por ${ev.by} · −${lost} XP`, "💀");
+        pushChat("Mundo", `💀 ${c.name} caiu em batalha (${ev.by})`, { sys: true });
         dirty = true;
         break;
       }
@@ -401,6 +422,7 @@ export default function BateuWorld({
           c.fame += 25; c.saga.towers++;
           c.campaign.prog += 1;
           pushFeed(`🏳️ ${ev.name} capturada pela tua facção! +25 FAMA`, "🏳️");
+          pushChat("Mundo", `🏳️ ${ev.name} capturada! +25 FAMA`, { sys: true });
           dirty = true;
         }
         break;
@@ -424,7 +446,7 @@ export default function BateuWorld({
         dirty = true;
         break;
       }
-      case "announce": { pushFeed(ev.text, ev.emoji); break; }
+      case "announce": { pushFeed(ev.text, ev.emoji); pushChat("Mundo", `${ev.emoji || "»"} ${ev.text}`, { sys: true }); break; }
       case "unlock": { pushFeed(`🌍 Nova terra: ${ev.name}!`, "🌍"); break; }
       case "interact": {
         const map: Record<string, string> = {
@@ -463,7 +485,7 @@ export default function BateuWorld({
       }
       case "region": { break; }
       case "mp-fail": { showToast("Mana insuficiente!", "💧"); break; }
-      case "player-join": { pushFeed(`${ev.name} entrou no mundo`, "👋"); break; }
+      case "player-join": { pushFeed(`${ev.name} entrou no mundo`, "👋"); pushChat("Mundo", `👋 ${ev.name} entrou no mundo`, { sys: true }); break; }
       case "villain": {
         if (ev.action === "spawn") pushFeed(`😈 ${ev.name} apareceu — caça-o!`, "😈");
         dirty = true;
@@ -510,7 +532,7 @@ export default function BateuWorld({
       case "emote": { break; }
     }
     if (dirty) { saveChar(c); engineRef.current?.setStats(deriveStats(c), c.level); rerender(); }
-  }, [pushFeed, showToast, rerender, onScore]);
+  }, [pushFeed, showToast, rerender, onScore, pushChat]);
 
   // ── HUD polling (5Hz) ─────────────────────────────────────
   useEffect(() => {
@@ -525,11 +547,53 @@ export default function BateuWorld({
         target: st.target, region: st.region, cds: [...(st.cds || [0, 0, 0, 0, 0, 0])],
         buffs: st.buffs || [], dead: st.dead, gold: charRef.current?.gold || 0,
         fps: st.fps, online: eng.getOnline(),
+        cast: (st as any).cast || null, party: eng.getPartyFrames(),
       });
       setBossBar(eng.getBossBar());
     }, 200);
     return () => clearInterval(iv);
   }, [phase]);
+
+  // ── REA hordes.io: comunidade viva no chat (bots + respostas) ─
+  useEffect(() => {
+    if (phase !== "play") return;
+    const pickA = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
+    const iv = setInterval(() => {
+      if (Math.random() < 0.72) {
+        pushChat(pickA(BOT_NAMES as string[]), pickA(CHAT_AMBIENT));
+      }
+    }, 11000);
+    const boot = setTimeout(() => {
+      pushChat("Mundo", "Bem-vindo ao chat da Era das Lendas! Sê respeitoso — os vilões não são.", { sys: true });
+      pushChat(pickA(BOT_NAMES as string[]), pickA(CHAT_AMBIENT));
+    }, 2600);
+    return () => { clearInterval(iv); clearTimeout(boot); };
+  }, [phase, pushChat]);
+
+  const sendText = useCallback((raw: string) => {
+    const t = raw.trim();
+    if (!t || !charRef.current) return;
+    pushChat(charRef.current.name, t, { color: "#fbbf24" });
+    worldAudio.play("click");
+    if (Math.random() < 0.55) {
+      setTimeout(() => {
+        const pickB = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
+        pushChat(pickB(BOT_NAMES as string[]), pickB(CHAT_REPLIES));
+      }, 1400 + Math.random() * 2600);
+    }
+  }, [pushChat]);
+
+  const sendChat = useCallback(() => {
+    if (!chatInput.trim()) return;
+    setChatInput("");
+    sendText(chatInput);
+  }, [chatInput, sendText]);
+
+  // auto-scroll do chat para a última mensagem
+  useEffect(() => {
+    const el = chatLogRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chatLog, chatTab, chatOpen]);
 
   // ── full-screen ───────────────────────────────────────────
   const toggleFs = useCallback(async () => {
@@ -631,26 +695,47 @@ export default function BateuWorld({
               <div>
                 <div className="text-xs font-bold text-slate-300 mb-2">1 · CLASSE (48 habilidades oficiais)</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {CLASSES.map(cl => (
-                    <button key={cl.id} onClick={() => { setNcClass(cl.id); setNcAvatar(defaultAvatar(cl.id)); }} data-testid={`bw-class-${cl.id}`}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${ncClass === cl.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
-                      <div className="text-lg">{cl.emoji}</div>
-                      <div className="font-bold text-sm" style={{ color: cl.color }}>{cl.name}</div>
-                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{cl.desc}</div>
-                    </button>
-                  ))}
+                  {CLASSES.map(cl => {
+                    const maxA = 18, maxH = 230;
+                    const statBar = (v: number, max: number, color: string) => (
+                      <div className="h-1 rounded-full bg-slate-800 overflow-hidden flex-1">
+                        <div className="h-full" style={{ width: `${Math.min(100, (v / max) * 100)}%`, background: color }} />
+                      </div>
+                    );
+                    return (
+                      <button key={cl.id} onClick={() => { setNcClass(cl.id); setNcAvatar(defaultAvatar(cl.id)); }} data-testid={`bw-class-${cl.id}`}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${ncClass === cl.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="text-lg">{cl.emoji}</div>
+                          <div className="text-[8px] font-bold px-1 py-0.5 rounded" style={{ background: "rgba(2,6,23,0.6)", color: cl.color }}>{cl.resource}</div>
+                        </div>
+                        <div className="font-bold text-sm" style={{ color: cl.color }}>{cl.name}</div>
+                        <div className="text-[10px] text-slate-400 leading-tight mt-0.5 min-h-[26px]">{cl.desc}</div>
+                        <div className="mt-1.5 space-y-0.5">
+                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-500 w-7">ATQ</span>{statBar(cl.base.atk, maxA, "#ef4444")}</div>
+                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-500 w-7">VIDA</span>{statBar(cl.base.maxHp, maxH, "#22c55e")}</div>
+                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-500 w-7">VEL</span>{statBar(cl.base.spd - 5, 1.5, "#38bdf8")}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div>
                 <div className="text-xs font-bold text-slate-300 mb-2">2 · FACÇÃO (guerra permanente Vanguard vs Bloodlust)</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {FACTIONS.map(f => (
                     <button key={f.id} onClick={() => setNcFaction(f.id)} data-testid={`bw-faction-${f.id}`}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${ncFaction === f.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
-                      <div className="font-black text-sm" style={{ color: f.color }}>{f.emoji} {f.name}</div>
-                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{f.desc}</div>
+                      className={`relative overflow-hidden p-3 rounded-xl border text-left transition-all ${ncFaction === f.id ? "border-amber-400 scale-[1.02]" : "border-slate-700"}`}
+                      style={{ background: ncFaction === f.id ? `linear-gradient(135deg, ${f.color}33 0%, rgba(2,6,23,0.9) 65%)` : "rgba(2,6,23,0.6)" }}>
+                      <div className="absolute -right-3 -top-3 text-5xl opacity-15 select-none pointer-events-none">{f.emoji}</div>
+                      <div className="font-black text-sm tracking-wide" style={{ color: f.color }}>{f.emoji} {f.name}</div>
+                      <div className="text-[10px] text-slate-300 leading-snug mt-1">{f.desc}</div>
                       <div className="text-[10px] italic mt-0.5" style={{ color: f.color }}>{f.motto}</div>
+                      {ncFaction === f.id && (
+                        <div className="mt-1.5 text-[8px] font-black text-amber-300 tracking-widest">✓ ESCOLHIDO · LUTA POR {f.name.toUpperCase()}</div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -778,6 +863,24 @@ export default function BateuWorld({
             <span>🎟️ {c.coupons}</span>
             <span>⭐ XP {Math.floor(xpPct)}%</span>
           </div>
+          {/* REA hordes.io: frames do grupo (nome + vida de cada membro) */}
+          {hud.party && hud.party.length > 0 && (
+            <div className="mt-1 space-y-0.5 max-w-[170px]" data-testid="bw-party-frames">
+              {hud.party.map((m: any, i: number) => (
+                <div key={i} className="px-1.5 py-0.5 rounded-md bg-slate-950/75 border border-slate-700/70">
+                  <div className="flex justify-between text-[8px] font-bold leading-tight">
+                    <span className={m.self ? "text-amber-300" : "text-slate-300"}>
+                      {m.self ? "👑 " : ""}{m.name}
+                    </span>
+                    <span className="text-slate-500">Nv{m.level}</span>
+                  </div>
+                  <div className="h-1 mt-0.5 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-emerald-500" style={{ width: `${Math.max(0, Math.min(100, (m.hp / Math.max(1, m.maxHp)) * 100))}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* centro: alvo */}
@@ -918,6 +1021,16 @@ export default function BateuWorld({
       {/* ── joystick (só ecrãs táteis) ── */}
       {isTouch && <Joystick onMove={(x, y) => engineRef.current?.setMoveVec(x, y)} />}
 
+      {/* ── REA hordes.io: barra de canalização ── */}
+      {hud.cast && !hud.dead && (
+        <div className="absolute bottom-[76px] left-1/2 -translate-x-1/2 w-56 z-30 pointer-events-none" data-testid="bw-castbar">
+          <div className="text-center text-[10px] font-black text-white drop-shadow mb-0.5">✨ {hud.cast.name}</div>
+          <div className="h-2 rounded-full bg-slate-950/90 border border-slate-600 overflow-hidden">
+            <div className="h-full transition-none" style={{ width: `${Math.round((hud.cast.pct || 0) * 100)}%`, background: hud.cast.color || "#a855f7" }} />
+          </div>
+        </div>
+      )}
+
       {/* ── hotbar ── */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1.5 z-20" data-testid="bw-hotbar">
         {[0, 1, 2, 3, 4, 5].map(i => {
@@ -1014,6 +1127,51 @@ export default function BateuWorld({
 
       {/* ── FPS discreto ── */}
       <div className="absolute bottom-1 left-1 text-[8px] text-slate-600 z-10">{hud.fps} fps · {hud.online} online</div>
+
+      {/* ── REA hordes.io: CHAT DO MUNDO (Geral/Combate) ── */}
+      <div className={`${isTouch ? "left-2 bottom-[196px]" : "left-2 bottom-7"} absolute z-20`} data-testid="bw-chat">
+        <div className={`rounded-xl border border-slate-700/70 bg-slate-950/70 backdrop-blur-[2px] overflow-hidden ${chatOpen || !isTouch ? "w-[290px] sm:w-[320px]" : "w-[240px]"}`}>
+          <div className="flex items-center gap-1 px-1.5 py-1 border-b border-slate-800/80">
+            <button onClick={() => setChatTab("geral")} data-testid="bw-chat-tab-geral"
+              className={`px-2 py-0.5 rounded-md text-[9px] font-black ${chatTab === "geral" ? "bg-amber-500/90 text-slate-950" : "text-slate-400 bg-slate-900/80"}`}>GERAL</button>
+            <button onClick={() => setChatTab("combate")} data-testid="bw-chat-tab-combate"
+              className={`px-2 py-0.5 rounded-md text-[9px] font-black ${chatTab === "combate" ? "bg-red-500/90 text-slate-950" : "text-slate-400 bg-slate-900/80"}`}>COMBATE</button>
+            <div className="flex-1" />
+            {isTouch && (
+              <button onClick={() => setChatOpen(o => !o)} className="px-1.5 py-0.5 rounded-md text-[9px] font-bold text-slate-300 bg-slate-900/80 border border-slate-700">
+                {chatOpen ? "▼" : "▲"}
+              </button>
+            )}
+          </div>
+          <div ref={chatLogRef} className={`overflow-y-auto scrollbar-none px-1.5 ${chatOpen || !isTouch ? "h-[104px]" : "h-[46px]"}`} data-testid="bw-chat-log">
+            {chatLog.filter(m => m.ch === chatTab).slice(-40).map(m => (
+              <div key={m.id} className="text-[10px] leading-snug py-[1px] break-words">
+                {m.sys
+                  ? <span style={{ color: m.color }}><span className="text-slate-500">[Mundo]</span> {m.text}</span>
+                  : <span><span className="font-bold" style={{ color: m.color }}>{m.who}:</span> <span className="text-slate-200">{m.text}</span></span>}
+              </div>
+            ))}
+          </div>
+          {(!isTouch || chatOpen) && (
+            <div className="flex items-center gap-1 px-1.5 py-1 border-t border-slate-800/80">
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") sendChat(); e.stopPropagation(); }}
+                placeholder="Diz algo ao mundo…" maxLength={120} data-testid="bw-chat-input"
+                className="flex-1 min-w-0 bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white outline-none focus:border-amber-400" />
+              <button onClick={sendChat} data-testid="bw-chat-send"
+                className="px-2 py-1 rounded-lg bg-amber-500 text-slate-950 text-[9px] font-black active:scale-90">ENVIAR</button>
+            </div>
+          )}
+          {isTouch && chatOpen && (
+            <div className="flex flex-wrap gap-1 px-1.5 pb-1.5">
+              {QUICK_PHRASES.slice(0, 6).map(q => (
+                <button key={q} onClick={() => sendText(q)}
+                  className="px-1.5 py-0.5 rounded-md bg-slate-900/90 border border-slate-700 text-[9px] text-slate-300 active:scale-95">{q}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── painéis ── */}
       <AnimatePresence>

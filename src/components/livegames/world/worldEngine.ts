@@ -73,6 +73,7 @@ interface MobEnt {
   scale: number; deadT: number; wave?: number; floatY: number; bob: number;
   slowT: number; stunT: number; poisonT: number; poisonDmg: number; burnT: number;
   respawnT: number; campId: number;
+  tag?: TagHandle;
 }
 
 interface ProjEnt {
@@ -91,6 +92,13 @@ interface PlayerEnt { // remotos e bots
   coupons: number; atkT: number; roamT: number; state: string; txT: number;
   targetMob: MobEnt | null; duelWith: string | null; mountId: string | null;
   mesh: THREE.Group | null;
+  tag?: TagHandle;
+}
+
+/** REA hordes.io: placa de nome com barra de vida AO VIVO sobre cada entidade */
+interface TagHandle {
+  sp: THREE.Sprite; cnv: HTMLCanvasElement; ctx: CanvasRenderingContext2D;
+  tex: THREE.CanvasTexture; lastPct: number; text: string; isPlayer: boolean;
 }
 
 interface NodeEnt { // recolha
@@ -124,7 +132,7 @@ export class WorldEngine {
   private player!: AvatarParts;
   private pGroup = new THREE.Group();
   private px = 0; private pz = 30; private py = 0;
-  private pYaw = 0; private camYaw = Math.PI; private camPitch = 0.5; private camDist = 16;
+  private pYaw = 0; private camYaw = Math.PI; private camPitch = 0.85; private camDist = 18;
   private hp = 100; private mp = 100;
   private dead = false;
   private state = {
@@ -153,6 +161,10 @@ export class WorldEngine {
   private animPhase = 0;
   private skillRanks: number[] = [1, 1, 1, 1, 1, 1];
   private hotbar: (number | null)[] = [0, 1, 2, 3, 4, 5];
+  // REA hordes.io: canalização (cast bar) + placas vivas
+  private cast: { slot: number; t: number; dur: number; sk: SkillDef; dmgMult: number } | null = null;
+  private selfTag: TagHandle | null = null;
+  private tagT = 0.25;
 
   // mundo vivo
   private timeOfDay = 8; private dayT = 0; private weather = "limpo"; private weatherT = 60;
@@ -613,27 +625,77 @@ export class WorldEngine {
     this.hp = this.state.maxHp; this.mp = this.state.maxMp;
     this.state.hp = this.hp; this.state.mp = this.mp;
 
-    // nome flutuante
-    this.makeNameTag(this.pGroup, `${this.opts.name}`, cls.color, fc.color, true);
+    // nome flutuante + barra de vida ao vivo (hordes.io)
+    this.selfTag = this.makeNameTag(this.pGroup, `${this.opts.name}`, cls.color, fc.color, true);
   }
 
-  private makeNameTag(group: THREE.Group, text: string, color: string, factionColor: string, isPlayer = false) {
+  private makeNameTag(group: THREE.Group, text: string, color: string, factionColor: string, isPlayer = false): TagHandle {
     const cnv = document.createElement("canvas");
-    cnv.width = 256; cnv.height = 72;
+    cnv.width = 256; cnv.height = 88;
     const ctx = cnv.getContext("2d")!;
-    ctx.font = `bold ${isPlayer ? 34 : 28}px system-ui`;
+    ctx.font = `bold ${isPlayer ? 30 : 26}px system-ui`;
     ctx.textAlign = "center";
     ctx.fillStyle = factionColor;
-    ctx.fillRect(48, 0, 160, 6);
+    ctx.fillRect(48, 0, 160, 5);
     ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = 5;
-    ctx.strokeText(text, 128, 46); ctx.fillText(text, 128, 46);
+    ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineWidth = 5;
+    ctx.strokeText(text, 128, 36); ctx.fillText(text, 128, 36);
+    // barra de vida (fundo + preenchimento) — redesenhada quando muda
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.fillRect(47, 51, 162, 15);
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(49, 53, 158, 11);
+    ctx.fillStyle = "#4ade80";
+    ctx.fillRect(49, 53, Math.max(0, 158 * 1), 11);
     const tex = new THREE.CanvasTexture(cnv);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
-    sp.scale.set(isPlayer ? 4.4 : 3.6, isPlayer ? 1.25 : 1.02, 1);
-    sp.position.y = isPlayer ? 3.4 : 2.6;
+    sp.scale.set(isPlayer ? 4.4 : 3.6, isPlayer ? 1.55 : 1.26, 1);
+    sp.position.y = isPlayer ? 3.5 : 2.7;
     group.add(sp);
-    return sp;
+    return { sp, cnv, ctx, tex, lastPct: 1, text, isPlayer };
+  }
+
+  /** Redesenha a barra da placa (só quando a % muda — barato) */
+  private drawTagBar(h: TagHandle, pct: number) {
+    h.lastPct = pct;
+    const ctx = h.ctx;
+    ctx.clearRect(0, 0, h.cnv.width, h.cnv.height);
+    ctx.font = `bold ${h.isPlayer ? 30 : 26}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineWidth = 5;
+    ctx.strokeText(h.text, 128, 36);
+    ctx.fillStyle = h.isPlayer ? "#fef3c7" : "#e5e7eb";
+    ctx.fillText(h.text, 128, 36);
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.fillRect(47, 51, 162, 15);
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(49, 53, 158, 11);
+    ctx.fillStyle = pct > 0.5 ? "#4ade80" : pct > 0.25 ? "#facc15" : "#ef4444";
+    ctx.fillRect(49, 53, Math.max(0, 158 * pct), 11);
+    h.tex.needsUpdate = true;
+  }
+
+  /** Placas vivas: atualização a 4Hz só para entidades próximas visíveis */
+  private updateTags(dt: number) {
+    this.tagT -= dt;
+    if (this.tagT > 0) return;
+    this.tagT = 0.25;
+    if (this.selfTag) {
+      const pct = clamp(this.hp / Math.max(1, this.state.maxHp), 0, 1);
+      if (Math.abs(pct - this.selfTag.lastPct) > 0.005) this.drawTagBar(this.selfTag, pct);
+    }
+    for (const m of this.mobs) {
+      if (!m.tag || !m.group.visible) continue;
+      if (dist2(m.x, m.z, this.px, this.pz) > 3600) continue;
+      const pct = clamp(m.hp / Math.max(1, m.maxHp), 0, 1);
+      if (Math.abs(pct - m.tag.lastPct) > 0.008) this.drawTagBar(m.tag, pct);
+    }
+    for (const p of this.players.values()) {
+      if (!p.tag || !p.group.visible) continue;
+      if (dist2(p.x, p.z, this.px, this.pz) > 3600) continue;
+      const pct = clamp(p.hp / Math.max(1, p.maxHp), 0, 1);
+      if (Math.abs(pct - p.tag.lastPct) > 0.008) this.drawTagBar(p.tag, pct);
+    }
   }
 
   // ── CAMPOS DE MOBS (matilhas por região) ──────────────────
@@ -746,7 +808,7 @@ export class WorldEngine {
       tx: x, tz: z, isBoss, isElite, isWorld, isVillain, isGuard: false,
       name, mech: extra.mech, mechT: 0, enraged: false, scale, deadT: 0,
       floatY: y, bob: rnd(Math.PI * 2), slowT: 0, stunT: 0, poisonT: 0, poisonDmg: 0,
-      burnT: 0, respawnT: 0, campId, wave: extra.wave,
+      burnT: 0, respawnT: 0, campId, wave: extra.wave, tag,
     };
     this.mobs.push(m);
     return m;
@@ -967,7 +1029,16 @@ export class WorldEngine {
     this.cds[slot] = sk.cd * (this.state.buffs.find(b => b.id === "sintonia") ? 0.7 : 1);
     worldAudio.play("skill");
     this.emit("cast", { slot, skill: sk.id, name: sk.name });
+    // REA hordes.io: habilidades de canalização demoram e cancelam-se ao mover
+    if (sk.castT && sk.castT > 0) {
+      this.cast = { slot, t: 0, dur: sk.castT, sk, dmgMult };
+      this.emit("cast-start", { name: sk.name, dur: sk.castT, color: sk.color });
+      return;
+    }
+    this.applySkill(sk, dmgMult);
+  }
 
+  private applySkill(sk: SkillDef, dmgMult: number) {
     const cls = CLASSES[this.opts.classId];
     const fx = (x: number, z: number, color: number, r = 1.2) => this.spawnHitFx(x, this.terrainHeight(x, z) + 1, z, color, r);
 
@@ -1064,6 +1135,24 @@ export class WorldEngine {
   }
 
   private dungeonWavePause() { return false; }
+
+  /** REA hordes.io: progresso da canalização; mover cancela (sem reembolso) */
+  private updateCast(dt: number) {
+    if (!this.cast) return;
+    const mvLen = Math.hypot(this.moveVec.x, this.moveVec.y);
+    const keyMove = ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].some(k => this.keys.has(k));
+    if (mvLen > 0.15 || keyMove) {
+      this.cast = null;
+      this.emit("cast-cancel", {});
+      worldAudio.play("deny");
+      return;
+    }
+    this.cast.t += dt;
+    if (this.cast.t >= this.cast.dur) {
+      const c = this.cast; this.cast = null;
+      this.applySkill(c.sk, c.dmgMult);
+    }
+  }
 
   private nearestMob(range: number): MobEnt | null {
     let best: MobEnt | null = null; let bd = range * range;
@@ -2154,13 +2243,13 @@ export class WorldEngine {
       group.position.set(x, this.terrainHeight(x, z), z);
       this.scene.add(group);
       const fc = FACTIONS[faction];
-      this.makeNameTag(group, `${fc.emoji} ${name} Nv${level}`, CLASSES[classId].color, fc.color);
+      const btag = this.makeNameTag(group, `${fc.emoji} ${name} Nv${level}`, CLASSES[classId].color, fc.color);
       this.players.set(`bot_${i}`, {
         id: `bot_${i}`, name, faction, level, classId, avatar: parts, group,
         x, z, tx: x, tz: z, hp: 200 + level * 14, maxHp: 200 + level * 14,
         bot: true, coupons: rndi(3, 0) + 1, atkT: 0, roamT: 0, state: "roam",
         txT: 0, targetMob: null, duelWith: null, mountId: null, mesh: null,
-        uidHouseProtected: false,
+        uidHouseProtected: false, tag: btag,
       } as any);
     }
   }
@@ -2234,13 +2323,13 @@ export class WorldEngine {
               group.add(parts.root);
               this.scene.add(group);
               const fc = FACTIONS[s.faction ?? 0] || FACTIONS[0];
-              this.makeNameTag(group, `${fc.emoji} ${s.name} Nv${s.level}`, CLASSES[s.classId ?? 0]?.color ?? "#fff", fc.color);
+              const ptag = this.makeNameTag(group, `${fc.emoji} ${s.name} Nv${s.level}`, CLASSES[s.classId ?? 0]?.color ?? "#fff", fc.color);
               p = {
                 id: key, name: s.name || "Herói", faction: s.faction ?? 0, level: s.level ?? 1,
                 classId: s.classId ?? 0, avatar: parts, group, x: s.x ?? 0, z: s.z ?? 0,
                 tx: s.x ?? 0, tz: s.z ?? 0, hp: 100, maxHp: 100, bot: false, coupons: 0,
                 atkT: 0, roamT: 0, state: "ok", txT: 0, targetMob: null, duelWith: null,
-                mountId: null, mesh: null, uidHouseProtected: false,
+                mountId: null, mesh: null, uidHouseProtected: false, tag: ptag,
               };
               this.players.set(key, p);
               this.emit("player-join", { name: p.name, faction: p.faction });
@@ -2677,6 +2766,7 @@ export class WorldEngine {
       kind: tg.isVillain ? "vilao" : tg.isWorld ? "mundo" : tg.isBoss ? "chefe" : tg.isElite ? "elite" : "mob",
     } : null;
     this.state.region = reg.id;
+    this.state.cast = this.cast ? { name: this.cast.sk.name, pct: Math.min(1, this.cast.t / this.cast.dur), color: this.cast.sk.color } : null;
     return this.state;
   }
 
@@ -2703,7 +2793,27 @@ export class WorldEngine {
   }
 
   getTowers() { return this.towers.map(t => ({ id: t.id, name: t.name, owner: t.owner })); }
+  /** REA hordes.io: frames do grupo para o HUD (nome + vida de cada membro) */
+  getPartyFrames(): { name: string; hp: number; maxHp: number; level: number; self: boolean }[] {
+    const out: { name: string; hp: number; maxHp: number; level: number; self: boolean }[] = [];
+    for (const id of this.partyIds) {
+      if (id === "self") {
+        out.push({ name: this.opts.name, hp: Math.max(0, Math.round(this.hp)), maxHp: this.state.maxHp, level: this.opts.level, self: true });
+        continue;
+      }
+      const p = this.players.get(id);
+      if (p) out.push({ name: p.name, hp: Math.max(0, Math.round(p.hp)), maxHp: p.maxHp, level: p.level, self: false });
+    }
+    return out;
+  }
   getFame() { return this.fameSession; }
+  /** Diagnóstico: placas de vida vivas no mundo (REA hordes.io) */
+  getTagStats() {
+    let mobs = 0, players = 0;
+    for (const m of this.mobs) if (m.tag) mobs++;
+    for (const p of this.players.values()) if (p.tag) players++;
+    return { mobs, players, self: !!this.selfTag };
+  }
   getOnline() { return Math.max(this.state.online, this.players.size + 1); }
   getHousing() { return this.myHouse ? { built: { ...this.myHouse.built }, vault: this.myHouse.vault, towerHp: this.myHouse.towerHp, towerMax: this.myHouse.towerMax, x: this.myHouse.x, z: this.myHouse.z } : null; }
   getWeather() { return this.weather; }
@@ -2716,6 +2826,7 @@ export class WorldEngine {
     this.raf = requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
     this.updatePlayer(dt);
+    this.updateCast(dt);
     this.updateMobs(dt);
     this.updateProjs(dt);
     this.updateFx(dt);
@@ -2726,6 +2837,7 @@ export class WorldEngine {
     this.updateLootFields(dt);
     this.updateExploration(dt);
     this.updateSky(dt);
+    this.updateTags(dt);
     this.netSync(dt);
     this.updateCamera(dt);
     // FPS adaptativo: degrada sob pressão, RECUPERA nitidez quando estabiliza

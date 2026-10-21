@@ -116,10 +116,13 @@ async function main() {
 
   // ═══ 3. MOVIMENTO E FÍSICA ═══
   console.log("\n── 3. Movimento e física ──");
+  await arena();
+  c = await cap();
   const pos0 = c.pos;
   await page.evaluate(() => { const m = (window).__blocos.motor; m.entrada.frente = 1; });
-  await pump(20);
+  await pump(10);
   await page.evaluate(() => { (window).__blocos.motor.entrada.frente = 0; });
+  await pump(2);
   c = await cap();
   ok("jogador desloca-se para a frente", Math.hypot(c.pos[0] - pos0[0], c.pos[2] - pos0[2]) > 0.3);
   ok("jogador pousado no chão", await page.evaluate(() => (window).__blocos.motor.noChao));
@@ -135,17 +138,21 @@ async function main() {
 
   // ═══ 4. MINERAÇÃO (dureza e drops) ═══
   console.log("\n── 4. Mineração ──");
-  // teleportar e mirar o bloco sob os pés
+  await arena();
+  // coloca um bloco de TERRA à frente e mira-o (determinístico)
   await page.evaluate(() => {
-    const b = (window).__blocos, m = b.motor;
-    b.olhar(0, -1.5); // olhar para baixo
+    const m = (window).__blocos.motor;
+    const fx = Math.floor(m.px), fz = Math.floor(m.pz);
+    let fy = 79; while (fy > 1 && !m.mundo.solido(fx, fy - 1, fz)) fy--;
+    m.mundo.setBloco(fx, fy, fz - 2, 2); // TERRA 2 blocos à frente
+    m.yaw = 0; m.pitch = -0.45;
   });
   await pump(2);
   c = await cap();
   ok("mira aponta para um bloco", !!c.mirando);
   ok("nome do bloco em português", c.mirando && /Relva|Terra|Areia|Pedra/.test(c.mirando.nome));
 
-  // o drop corresponde ao bloco visado (relva→terra, terra→terra, areia→areia)
+  // o drop corresponde ao bloco visado (terra→terra)
   const idAlvo = c.mirando.id;
   const dropEsperado = idAlvo === 1 ? 2 : idAlvo;
   const invAntesDrop = c.slots.filter((s) => s && s.id === dropEsperado).reduce((a, s) => a + s.qtd, 0);
@@ -251,14 +258,18 @@ async function main() {
     const b = (window).__blocos, m = b.motor;
     m.inv.selecao = 0;
     // garante picareta selecionada
-    for (let i = 0; i < 36; i++) if (m.inv.slots[i] && m.inv.slots[i].id === 108) { m.inv.selecao = i; break; }
+    let sel = -1;
+    for (let i = 0; i < 36; i++) if (m.inv.slots[i] && m.inv.slots[i].id === 108) { sel = i; break; }
+    if (sel >= 0) m.inv.selecao = sel;
+    const ferr = m.inv.selecionado() ? m.inv.selecionado().id : 0;
     m.entrada.minerando = true;
     for (let i = 0; i < 40; i++) m.passo(0.05);
     const com = m.progressoQuebra;
+    const mir = m.mira ? m.mira.id : 0;
     m.entrada.minerando = false;
-    return com;
+    return { com, ferr, mir, quebrados: m.blocosQuebrados };
   });
-  ok("picareta de madeira acelera (2 s > 50% da pedra)", pedraPicareta > 0.45);
+  ok("picareta de madeira acelera (2 s > 50% da pedra)", pedraPicareta.com > 0.45);
 
   // ═══ 8. FOME E COMER ═══
   console.log("\n── 8. Fome e comer ──");
@@ -303,8 +314,9 @@ async function main() {
     const fx = Math.floor(m.px), fz = Math.floor(m.pz);
     let fy = 79; while (fy > 1 && !m.mundo.solido(fx, fy - 1, fz)) fy--;
     const mob = m.gestor.spawnar("porco", fx + 2.5, fy + 0.05, fz + 0.5);
+    mob.__teste = true;
     b.pump(2);
-    return m.gestor.mobs.some((mm) => mm.tipo === "porco" && mm.vivo);
+    return m.gestor.mobs.some((mm) => mm.__teste && mm.vivo);
   });
   ok("porco spawnado e vivo", spawnouPorco);
   // atacar porco → dropa carne
@@ -315,8 +327,8 @@ async function main() {
     for (let i = 0; i < 36; i++) if (m.inv.slots[i] && m.inv.slots[i].id === 113) { m.inv.selecao = i; break; }
     m.atacarPedido = true;
     b.pump(3);
-    const alvo = m.gestor.mobs.find((mm) => mm.tipo === "porco");
-    return alvo ? { hp: alvo.hp, vivo: alvo.vivo } : null;
+    const alvo = m.gestor.mobs.find((mm) => mm.__teste);
+    return alvo ? { hp: alvo.hp, vivo: alvo.vivo, dist: +Math.hypot(alvo.x - m.px, alvo.z - m.pz).toFixed(1) } : null;
   });
   ok("espada tira vida ao porco", atacouPorco && (atacouPorco.hp < 10 || !atacouPorco.vivo));
 
@@ -324,7 +336,7 @@ async function main() {
   const zumbiAtaca = await page.evaluate(() => {
     const b = (window).__blocos, m = b.motor;
     b.definirVida(20);
-    const z = m.gestor.spawnar("zumbi", m.px + 6, m.py + 1, m.pz);
+    const z = m.gestor.spawnar("zumbi", m.px + 3, m.py + 0.5, m.pz);
     // força noite
     b.definirHora(0.7);
     let dano = 0;

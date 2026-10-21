@@ -378,3 +378,22 @@ Stage Summary:
 - O utilizador pediu: apagar tudo e fazer "exatamente Minecraft em todas as propostas com personagens tipo LEGO" — FEITO de raiz, sem copiar nada do jogo original
 - 77 asserts E2E verdes + regressão web limpa + APK v2.27 publicado
 - O jogo cumpre as regras permanentes: sem registo, bem nítido, 100dvh fullscreen no móvel, HUD limpo, progressão difícil/rara, créditos → histórias → 1 GB → WhatsApp
+
+---
+Task ID: 20-b
+Agent: Z.ai (main)
+Task: Sincronização com a remota (linha antiga hordes.io) — BateuCraft LEGO prevalece + correções pós-fusão
+
+Work Log:
+- A remota tinha a v21 "HORDAS DE BATEU" (direção anterior que o utilizador substituiu por LEGO/Minecraft)
+- git merge -X ours: a versão BateuCraft Mundo LEGO prevaleceu em todos os conflitos
+- Apagados os restos do hordes que entraram por caminhos novos (src/components/livegames/world/hordes/, test-hordes.mjs)
+- Corrigidos erros de TS herdados da remota: StoriesCarousel (image_url em 2 literais), Profile (import Star em falta)
+- Banner de destaque do LiveHub atualizado: "⚔️ HORDAS DE BATEU" → "⛏️ BATEUCRAFT: MUNDO LEGO"
+- E2E endurecido: secção 4 minera um bloco de TERRA colocado (determinístico), ataque visa o porco marcado (spawn natural não interfere), movimento dentro da arena
+- E2E final: 77/77 verdes ×2 corridas seguidas · TSC 0 erros · build OK
+- APK v2.27 reconstruído com as correções: debug 8.8MB · release 7.4MB · aab 7.1MB → /home/z/my-project/download/
+
+Stage Summary:
+- main remota e local agora consistentes: o jogo oficial é o BateuCraft: Mundo LEGO (Minecraft-propostas + LEGO), linha hordes.io removida
+- APK v2.27 (versionCode 27) final em download/

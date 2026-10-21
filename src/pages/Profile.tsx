@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle, Heart, Target, TrendingUp } from "lucide-react";
+import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle, Heart, Target, TrendingUp, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";

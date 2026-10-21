@@ -689,11 +689,11 @@ const LiveHub = () => {
               <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>⚔️</motion.span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-display text-base font-black text-white">⚔️ HORDAS DE BATEU</span>
-                  <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[8px] font-black animate-pulse">MMO DA PLATAFORMA · DESTAQUE</span>
+                  <span className="font-display text-base font-black text-white">⛏️ BATEUCRAFT: MUNDO LEGO</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-lime-400 text-white text-[8px] font-black animate-pulse">JOGO PRINCIPAL · DESTAQUE</span>
                 </div>
                 <p className="text-[10px] font-semibold text-white/80 truncate">
-                  MMO estilo hordes: escolhe classe e facção, caça mobs nível a nível, faz quests, sobe ao 50 e domina as zonas em guerra!
+                  Mundo voxel com personagens LEGO: minera, cria ferramentas, funde ferro e sobrevive à noite aos Zumbis!
                 </p>
               </div>
               <span className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[10px] font-black">JOGAR ▶</span>

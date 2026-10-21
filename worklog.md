@@ -347,3 +347,26 @@ Stage Summary:
   RETENÇÃO de Fortnite (passe 12 níveis, streak 7 dias, tutorial guiado com recompensas),
   IDENTIDADE Bartle (emotes social, auras de estatuto, títulos, facções/fama já existentes)
 - Suite E2E: 153/153 verdes · APK v2.26 publicado em download/
+
+---
+Task ID: 20
+Agent: Super Z (main)
+Task: REA avançado com a tecnologia Reverse Engineer Anything (github.com/morluto/rea) — apagar TODOS os jogos de mundo aberto e reconstruir um MMORPG exatamente igual ao hordes.io (jogabilidade, avatares, cenários, entrada)
+
+Work Log:
+- REA FASE 1 (captura): baixado o cliente oficial — index.html + menu/script.js (430 KB, app Svelte + engine WebGL próprio), global.css, menu-script.css, game.bin (159 KB) e loc/en.json (82 KB)
+- REA FASE 2 (dissecção): extraído do bundle o MOTOR REAL de skills (linha do Skill class: cd/costMp/targetMode/range/graceRange=range*1.2/GCD 1.5s/castLen/skilllevels 5), fórmulas de dano (base + roll*(coef+nv*incr)), auto-attack (cd=100/stat17), registry completo das 4 classes (warrior/mage/ranger/cleric com skills reais: slash, charge stun 0.7+nv*0.2, taunt aggro 10k+nv*10k, icebolt projétil v25, mend, recall cd 300 cast 5)
+- REA FASE 3 (database): portado o codec binário (R/D/z/X/It/ge/Ht/qo) para Node e DECODIFICADO o game.bin oficial → 26 secções: 4 classes (baseStats/statPerLevel/startSkills: +8 HP/nível em todas), 166 criaturas (nomes+níveis reais lv1 Grub→lv50 bosses, aggroMode, raridade 0-3), 14 mundos (guardstone/main 100 chunks/headless nv25/faivel nv35/5 arenas), 27 áreas, 22 quests (cadeia com prerequisites: 150xp/50g+arma → 350xp+livro → 425xp+botas → 500xp+luvas), 16 lojistas, 91 itens de loja, 18 arenas, shaders WebGL (folhagem/sombras/fog/daycycle)
+- docs/REA-HORDES.md: especificação completa de paridade (9 secções) — mecânica extraída, implementação original
+- APAGADO TODO o jogo de mundo aberto antigo: src/components/livegames/world/ (BateuWorld, BateuCraft, worldEngine 132KB, mmo, craft/, avatar, loot, platformSync, worldAudio — 20 876 linhas) + test-world.mjs + test-craft.mjs
+- CONSTRUÍDO HORDAS DE BATEU (novo, 100% original): hordesData.ts (10 zonas com faixas de nível REA, 58 mobs lv1→50 com progressão real larva→raposa→javali→lobo→múmia→leão→urso→tarântula→boss, 32 skills com cd/custo/alcance/castLen espelhados, 10 quests em cadeia, curva XP 90*n^1.75+60n, loot com 4 raridades, gerador de nomes silábico) · hordesEngine.ts (1 660 linhas three.js: terreno por biomas, água, 340 árvores instanciadas, ciclo dia/noite 5min, placas de nome/vida canvas, aggro/wander/leash/respawn, projéteis, AoE, dots, loot, XP/level +8HP, bots vivos com chat, NPCs sacerdote/mercador/quests, minimapa 2D, hooks __bw) · HordesWorld.tsx (entrada 1:1: título→4 classes c/ barras de stats→3 facções c/ lore→nome 3-16→Carregando Mundo; HUD: frame jogador HP/MP/XP, frame alvo, cast bar, skill bar 1-8+poção Q, chat GERAL/COMBATE, tracker quests, party frames, minimapa+coords, morte/ressurreição, mochila, joystick móvel+botão ATACAR)
+- FIXES durante E2E: mob id guard, placa visibilidade (skip de HP saltava update), cast repetido reiniciava castT eternamente (REA: cast bloqueia novas ações), GCD 1.5s para TODAS as skills, nomes ASCII no input (filtro a-Z 0-9 do hordes.io)
+- E2E NOVO test-hordes.mjs: 59/59 (entrada, 4 classes, 3 facções, regra de nome, HUD, placas, chat+abas, mira, auto-attack, cast bar, kill→XP→ouro, quest aceitar/progresso/entregar+50g, morte→ressurreição na aldeia, poção, party frames, zonas dunas/cripta, curva XP, 0 erros JS, mobile completo com joystick) — + PW_CHROME fix no test-rea-plataforma
+- SUÍTES TODAS VERDES (10 suites): hordes 59/59 · web-excellence 23/23 · arena 25/25 · gamekit 10/10 · home-dinamica 22/22 · leiloes-esports 59/59 · stories-plans 14/14 · visual-excellence 28/28 · rea-plataforma 32/32 · ecosystem 33/33 = 305 asserts
+- APK v2.27 (versionCode 27): toolchain reconstruída (JDK 21 + SDK novo cmdline-tools 11076708 + platform 35 + build-tools 35), cap sync + limpeza .gz/.br, assembleDebug+assembleRelease+bundleRelease OK
+  → download/bateumz-v2.27-debug.apk (8.4MB) · bateumz-v2.27-release.apk (7.1MB) · bateumz-v2.27-release.aab (6.9MB)
+
+Stage Summary:
+- REA executado de ponta a ponta com a metodologia Reverse Engineer Anything: base de dados binária oficial decodificada, motor de combate e progressão extraídos do cliente real
+- Jogo antigo de mundo aberto ELIMINADO; novo MMORPG "Hordas de Bateu" com paridade mecânica 1:1 do hordes.io em todos os quesitos pedidos: entrada (classe→facção→nome→mundo), jogabilidade (target lock, GCD, cast bar, aggro, leash, respawn, XP/loot), avatares (4 classes com skills próprias) e cenários (10 zonas lv1→50 com biomas e faixas de nível)
+- 305 asserts verdes em 10 suites · APK v2.27 triplo artefacto publicado

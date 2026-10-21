@@ -54,7 +54,7 @@ const trackErrors = (page, bag) => {
 };
 
 const run = async () => {
-  const browser = await chromium.launch({ args: ["--disable-web-security"] });
+  const browser = await chromium.launch({ args: ["--disable-web-security", "--no-sandbox", "--disable-dev-shm-usage"], executablePath: process.env.PW_CHROME || undefined });
 
   /* ══════════════════ DESKTOP 1280x900 ══════════════════ */
   console.log("\n🖥️  DESKTOP 1280x900 — homepage (REA Netflix/Roblox)");

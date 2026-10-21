@@ -83,8 +83,7 @@ const BounceGame = lazy(() => import("@/components/livegames/BounceGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
-const BateuWorld = lazy(() => import("@/components/livegames/world/BateuWorld"));
-const BateuCraft = lazy(() => import("@/components/livegames/world/BateuCraft"));
+const HordesWorld = lazy(() => import("@/components/livegames/world/hordes/HordesWorld"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
 const DjikotaGame = lazy(() => import("@/components/livegames/DjikotaGame"));
@@ -146,7 +145,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "bateucraft" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -168,7 +167,6 @@ interface SavedWheelGame {
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-rose-600 via-orange-500 to-amber-400" },
-  { id: "bateucraft", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
@@ -688,14 +686,14 @@ const LiveHub = () => {
           >
             <motion.div className="absolute inset-0" style={{ background: "radial-gradient(circle at 12% 25%, rgba(255,255,255,0.16), transparent 50%), radial-gradient(circle at 88% 80%, rgba(251,191,36,0.3), transparent 45%)" }} animate={{ opacity: [0.5, 0.9, 0.5] }} transition={{ duration: 4, repeat: Infinity }} />
             <div className="relative z-10 px-4 py-3.5 flex items-center gap-3">
-              <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>🌍</motion.span>
+              <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>⚔️</motion.span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-display text-base font-black text-white">🌍 MUNDO BATEU</span>
+                  <span className="font-display text-base font-black text-white">⚔️ HORDAS DE BATEU</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[8px] font-black animate-pulse">MMO DA PLATAFORMA · DESTAQUE</span>
                 </div>
                 <p className="text-[10px] font-semibold text-white/80 truncate">
-                  Mundo aberto gigante: constrói a tua casa, rouba baús, duela 1v1, derrota vilões e ganha cupões reais!
+                  MMO estilo hordes: escolhe classe e facção, caça mobs nível a nível, faz quests, sobe ao 50 e domina as zonas em guerra!
                 </p>
               </div>
               <span className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[10px] font-black">JOGAR ▶</span>
@@ -748,7 +746,7 @@ const LiveHub = () => {
             )}
             {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
-            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg" || active === "bateucraft"}>
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>
             <AnimatePresence mode="wait">
               <Suspense fallback={
                 <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
@@ -1334,17 +1332,8 @@ const LiveHub = () => {
                    fica espremido no fluxo da página (bug "fica num quadrado") */
                 <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
-                  <GameErrorBoundary gameName="Bateu World 3D">
-                    <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-                  </GameErrorBoundary>
-                </motion.div>, document.body)}
-              {active === "bateucraft" && createPortal(
-                /* BateuCraft também em portal fullscreen — mesma garantia de ecrã inteiro */
-                <motion.div key="bateucraft" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[80] bg-black">
-                  <GameErrorBoundary gameName="BateuCraft">
-                  <BateuCraft onScore={recordScore("BateuCraft")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-
+                  <GameErrorBoundary gameName="Hordas de Bateu">
+                    <HordesWorld onScore={recordScore("Hordas de Bateu")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "p2pbet" && (

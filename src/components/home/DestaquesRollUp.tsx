@@ -140,11 +140,14 @@ export default function DestaquesRollUp() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-40px" }}
             transition={{ delay: Math.min(i * 0.05, 0.25), duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative shrink-0 snap-start w-[78vw] max-w-[320px] sm:w-[46%] sm:max-w-none md:w-[38%] lg:w-[31%] rounded-3xl overflow-hidden cursor-pointer group"
+            className="relative shrink-0 snap-start w-[78vw] max-w-[320px] sm:w-[46%] sm:max-w-none md:w-[38%] lg:w-[31%] rounded-3xl overflow-hidden cursor-pointer group focus-visible:ring-2 focus:outline-none"
             style={{ background: f.grad, border: `1px solid ${f.accent}22`, minHeight: 340, boxShadow: `0 12px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)` }}
             onClick={() => { accentRef.current = f.accent; navigate(f.href); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(f.href); } }}
             role="link"
+            tabIndex={0}
             aria-label={`${f.title} ${f.titleHighlight}`}
+            data-testid={`destaque-card-${i + 1}`}
           >
             {/* número editorial fantasma */}
             <span
@@ -154,9 +157,9 @@ export default function DestaquesRollUp() {
               {f.num}
             </span>
 
-            {/* orbes decorativos */}
-            <div className="absolute -top-10 -left-10 h-36 w-36 rounded-full blur-3xl pointer-events-none opacity-70 transition-opacity duration-500 group-hover:opacity-100" style={{ background: f.glow }} />
-            <div className="absolute bottom-6 -right-8 h-28 w-28 rounded-full blur-2xl pointer-events-none opacity-50" style={{ background: f.glow }} />
+            {/* orbes decorativos — estáticos no telemóvel (REA perf) */}
+            <div className="hidden sm:block absolute -top-10 -left-10 h-36 w-36 rounded-full blur-3xl pointer-events-none opacity-70 transition-opacity duration-500 group-hover:opacity-100" style={{ background: f.glow }} />
+            <div className="hidden sm:block absolute bottom-6 -right-8 h-28 w-28 rounded-full blur-2xl pointer-events-none opacity-50" style={{ background: f.glow }} />
 
             {/* padrão de grelha subtil */}
             <div

@@ -173,6 +173,25 @@ const Marketplace = () => {
     return `${hours}h restantes`;
   };
 
+  /* ⭐ REA eBay: countdown ao vivo (tiquetaque compartilhado de 30s — barato p/ o telemóvel) */
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(iv);
+  }, []);
+  const countdown = (date: string | null) => {
+    void tick;
+    if (!date) return "Sem prazo";
+    const diff = new Date(date).getTime() - Date.now();
+    if (diff <= 0) return "Encerrado";
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (d > 0) return `termina em ${d}d ${h}h`;
+    if (h > 0) return `termina em ${h}h ${m}m`;
+    return `termina em ${m}m`;
+  };
+
   const getRaffleUrl = (raffle: Raffle) => `/raffle/${raffle.slug || raffle.id}`;
 
   const showRaffles = contentType === "all" || contentType === "raffles";
@@ -359,8 +378,19 @@ const Marketplace = () => {
         <div className="mt-3 md:mt-0" />
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          /* ⭐ REA Netflix/ML: skeleton grid — nunca spinner vazio */
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-skeleton">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden border border-border/50">
+                <div className="aspect-[4/3] bg-muted/60 animate-pulse" />
+                <div className="p-3 sm:p-5 space-y-2.5">
+                  <div className="h-4 w-3/4 rounded bg-muted/60 animate-pulse" />
+                  <div className="h-3 w-1/2 rounded bg-muted/50 animate-pulse" />
+                  <div className="h-2 w-full rounded bg-muted/40 animate-pulse" />
+                  <div className="h-3 w-2/3 rounded bg-muted/50 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : isCatalogEmpty ? (
           <MarketplaceEmptyState />
@@ -427,7 +457,7 @@ const Marketplace = () => {
                     <Badge variant="secondary">{filteredContests.length}</Badge>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-contests-grid">
                   {filteredContests.map((contest, i) => (
                     <motion.div
                       key={contest.id}
@@ -457,7 +487,7 @@ const Marketplace = () => {
                             {contest.end_date && (
                               <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {timeLeft(contest.end_date)}
+                                {countdown(contest.end_date)}
                               </Badge>
                             )}
                             <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
@@ -477,7 +507,7 @@ const Marketplace = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-semibold">
                               Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                             </div>
                           </CardContent>
@@ -509,9 +539,10 @@ const Marketplace = () => {
                     <p className="text-xl text-muted-foreground">{t("marketplace.noRaffles")}</p>
                   </div>
                 ) : filteredRaffles.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-raffles-grid">
                     {filteredRaffles.map((raffle, i) => {
                       const pct = raffle.total_tickets > 0 ? (raffle.sold_tickets / raffle.total_tickets) * 100 : 0;
+                      const quaseEsgotado = pct >= 80;
                       return (
                         <motion.div
                           key={raffle.id}
@@ -538,6 +569,15 @@ const Marketplace = () => {
                                 <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
                                   {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : (raffle as any).hide_prize_value ? "🎁 Surpresa" : formatMZN(raffle.prize_value)}
                                 </Badge>
+                                {/* ⭐ REA eBay/ML: urgência real ligada à % vendida */}
+                                {quaseEsgotado && (
+                                  <Badge
+                                    data-testid="mk-quase-esgotado"
+                                    className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-black font-black animate-pulse text-[10px]"
+                                  >
+                                    ⚡ QUASE ESGOTADO
+                                  </Badge>
+                                )}
                                 {raffle.province && (
                                   <Badge variant="outline" className="absolute bottom-3 left-3 glass text-foreground border-border text-[10px]">
                                     <MapPin className="h-2.5 w-2.5 mr-0.5" />
@@ -547,7 +587,7 @@ const Marketplace = () => {
                                 {raffle.end_date && (
                                   <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
                                     <Clock className="h-3 w-3 mr-1" />
-                                    {timeLeft(raffle.end_date)}
+                                    {countdown(raffle.end_date)}
                                   </Badge>
                                 )}
                               </div>
@@ -556,12 +596,13 @@ const Marketplace = () => {
                                 <p className="text-xs sm:text-sm text-primary mb-2 sm:mb-3 line-clamp-1">{raffle.prize_title}</p>
                                 <Progress value={pct} className="h-2 mb-2" />
                                 <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                  <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
+                                  <span className="flex items-center gap-1 font-semibold text-foreground"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
                                   <span className="font-semibold text-foreground">
                                     {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : `${formatMZN(raffle.ticket_price)}/bilhete`}
                                   </span>
                                 </div>
-                                <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* ⭐ REA Mercado Livre: CTA sempre visível — nunca escondido atrás de hover */}
+                                <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-semibold">
                                   Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </div>
                               </CardContent>

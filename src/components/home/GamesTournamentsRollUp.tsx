@@ -97,10 +97,13 @@ export default function GamesTournamentsRollUp() {
             boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
           }}
           onClick={() => navigate("/esports")}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/esports"); } }}
           role="link"
+          tabIndex={0}
           aria-label={`Torneio ${t.name}`}
+          data-testid={`rollup-torneio-${i + 1}`}
         >
-          <div className="absolute -top-8 -right-8 h-28 w-28 rounded-full blur-3xl opacity-60" style={{ background: "rgba(251,191,36,0.25)" }} />
+          <div className="hidden sm:block absolute -top-8 -right-8 h-28 w-28 rounded-full blur-3xl opacity-60" style={{ background: "rgba(251,191,36,0.25)" }} />
 
           <div className="relative flex flex-col h-full" style={{ minHeight: 190 }}>
             <div className="flex items-center justify-between mb-3">
@@ -146,8 +149,11 @@ export default function GamesTournamentsRollUp() {
           className="relative shrink-0 snap-start w-[42vw] max-w-[185px] sm:w-[23%] md:w-[18%] lg:w-[15.5%] rounded-3xl overflow-hidden cursor-pointer group"
           style={{ background: g.grad, border: "1px solid rgba(255,255,255,0.09)", minHeight: 230, boxShadow: "0 10px 32px rgba(0,0,0,0.4)" }}
           onClick={() => navigate(`/lives?game=${g.id}`)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/lives?game=${g.id}`); } }}
           role="link"
+          tabIndex={0}
           aria-label={`Jogar ${g.label}`}
+          data-testid={`rollup-jogo-${g.id}`}
         >
           <div className="relative flex flex-col" style={{ minHeight: 230 }}>
             {/* ARTE do jogo — padrão CrazyGames, sem emojis soltos */}
@@ -173,7 +179,9 @@ export default function GamesTournamentsRollUp() {
           minHeight: 230,
         }}
         onClick={() => navigate("/jogos")}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/jogos"); } }}
         role="link"
+        tabIndex={0}
         aria-label="Ver todos os jogos"
       >
         <div className="h-12 w-12 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110" style={{ background: `${ACCENT.purple}14`, border: `1px solid ${ACCENT.purple}30` }}>

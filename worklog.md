@@ -347,3 +347,34 @@ Stage Summary:
   RETENÇÃO de Fortnite (passe 12 níveis, streak 7 dias, tutorial guiado com recompensas),
   IDENTIDADE Bartle (emotes social, auras de estatuto, títulos, facções/fama já existentes)
 - Suite E2E: 153/153 verdes · APK v2.26 publicado em download/
+
+---
+Task ID: 20
+Agent: Z.ai (main)
+Task: Reconstrução TOTAL do jogo de mundo aberto — "BateuCraft: Mundo LEGO" (propostas de Minecraft, personagens LEGO) + APK v2.27
+
+Work Log:
+- Apagado por completo o jogo antigo a pedido do utilizador: src/components/livegames/world/ (BateuWorld, BateuCraft antigo, worldEngine, mmo, craft/…), VoxelWorld.tsx, MMORPGGame.tsx, test-world.mjs, test-craft.mjs
+- REA muito avançado documentado em docs/REA-BATEUCRAFT-LEGO.md (metodologia R-E-A, 14 propostas do género voxel → implementação original, identidade LEGO, regras da plataforma)
+- Motor voxel novo do zero em src/game/blocos/ (código 100% original):
+  · constants.ts — 19 blocos + 17 itens, durezas por ferramenta, 18 receitas (criação + fundição), conquistas/créditos
+  · noise.ts — value noise + fBm + PRNG mulberry32 determinístico
+  · textures.ts — atlas procedural 16×16 pixel-art (23 tiles) + caras LEGO em canvas
+  · world.ts — chunks 16×16×80, biomas (planície/deserto/floresta/montanha), cavernas 3D, minérios por profundidade (carvão<48, ferro<32, ouro<20, diamante<14), árvores, água, malhagem com AO por vértice e escurecimento por profundidade, explosões
+  · lego.ts — minifigs: cabeça cilíndrica amarela com cara, torso trapezoidal, mãos em C, chapéus; zumbi, porco, estourador; item na mão
+  · mobs.ts — IA: porco foge, zumbi persegue à noite e desaparece de dia, estourador funde 1.4 s e explode (correção de estado "fundir" reiniciado a cada tick)
+  · inventario.ts — 36 posições, empilhamento 64, avaliação de receitas perto de mesa/fornalha
+  · engine.ts — física AABB, natação/afogamento, DDA raycast com face para colocação, fome/regeneração/dano de queda, ciclo dia/noite 10 min, chunks dinâmicos com orçamento/frame, save em localStorage, sons WebAudio sintetizados, correção crítica: mundo anterior era removido da cena no arranque (terreno invisível)
+- UI nova src/components/livegames/BateuCraft.tsx — menu (Sobrevivência/Criativo/Continuar/Personagem/Como Jogar), HUD PT (corações/fome/ar/hotbar/relógio/créditos), controlos móveis (joystick + MINERAR/POR/SALTAR/ATACAR), mochila com criação/fundição, pausa, morte/renascer, personalização LEGO, CTA WhatsApp (créditos ≥25 → 1 GB, +258848547887)
+- LiveHub: mmorpg → BateuCraft novo (portal fullscreen); removida entrada "bateucraft" duplicada; catálogo atualizado ("BateuCraft: Mundo LEGO")
+- E2E novo test-blocos.mjs com ganchos window.__blocos.pump() determinísticos + arena de pedra para independência do terreno: 77/77 VERDES
+  · correções durante os testes: cone de ataque com offset de π (convenção -sin/-cos), explosão do estourador, emissão de estado na morte, asserções dependentes de bioma
+- Regressão web: test-web-excellence 23/0 · test-home-dinamica 22/0 · test-gamekit 10/0 · TSC 0 erros · build OK
+- Screenshots validados: mundo voxel nítido + minifig LEGO (shots/bateucraft-3pessoa.png)
+- APK v2.27 (versionCode 27): debug 8.8MB · release 7.4MB · aab 7.1MB → /home/z/my-project/download/
+  · toolchain reconstruída: JDK 21.0.2 em /tmp/jdk21-clean (alternativa /tmp/my-project/jdk com -Xshare:off) + SDK em /tmp/my-project/android-sdk via local.properties
+
+Stage Summary:
+- O utilizador pediu: apagar tudo e fazer "exatamente Minecraft em todas as propostas com personagens tipo LEGO" — FEITO de raiz, sem copiar nada do jogo original
+- 77 asserts E2E verdes + regressão web limpa + APK v2.27 publicado
+- O jogo cumpre as regras permanentes: sem registo, bem nítido, 100dvh fullscreen no móvel, HUD limpo, progressão difícil/rara, créditos → histórias → 1 GB → WhatsApp

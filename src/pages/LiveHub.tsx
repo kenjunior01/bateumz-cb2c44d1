@@ -82,8 +82,7 @@ const BounceGame = lazy(() => import("@/components/livegames/BounceGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
-const BateuWorld = lazy(() => import("@/components/livegames/world/BateuWorld"));
-const BateuCraft = lazy(() => import("@/components/livegames/world/BateuCraft"));
+const BateuCraft = lazy(() => import("@/components/livegames/BateuCraft"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
 const DjikotaGame = lazy(() => import("@/components/livegames/DjikotaGame"));
@@ -145,7 +144,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "bateucraft" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -166,8 +165,7 @@ interface SavedWheelGame {
 }
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
-  { id: "mmorpg", icon: Globe, emoji: "🌍", grad: "from-rose-600 via-orange-500 to-amber-400" },
-  { id: "bateucraft", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
+  { id: "mmorpg", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
@@ -688,7 +686,7 @@ const LiveHub = () => {
             )}
             {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
-            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg" || active === "bateucraft"}>
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>
             <AnimatePresence mode="wait">
               <Suspense fallback={
                 <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
@@ -1270,21 +1268,12 @@ const LiveHub = () => {
                   </GameErrorBoundary>
                 </motion.div>              )}
               {active === "mmorpg" && createPortal(
-                /* ECRÃ INTEIRO REAL: portal no body + fixed inset-0 — o mundo nunca
+                /* ECRÃ INTEIRO REAL: portal no body + fixed inset-0 — o jogo nunca
                    fica espremido no fluxo da página (bug "fica num quadrado") */
                 <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
-                  <GameErrorBoundary gameName="Bateu World 3D">
-                    <BateuWorld onScore={recordScore("Bateu World")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-                  </GameErrorBoundary>
-                </motion.div>, document.body)}
-              {active === "bateucraft" && createPortal(
-                /* BateuCraft também em portal fullscreen — mesma garantia de ecrã inteiro */
-                <motion.div key="bateucraft" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[80] bg-black">
-                  <GameErrorBoundary gameName="BateuCraft">
-                  <BateuCraft onScore={recordScore("BateuCraft")} onNavigate={(route: string) => navigate(route)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-
+                  <GameErrorBoundary gameName="BateuCraft: Mundo LEGO">
+                    <BateuCraft onScore={(creditos: number) => recordScore("BateuCraft")("BateuCraft", creditos)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "p2pbet" && (

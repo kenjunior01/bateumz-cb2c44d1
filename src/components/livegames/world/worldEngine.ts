@@ -2398,6 +2398,8 @@ export class WorldEngine {
 
   // ── HOOKS DE TESTE/INTEGRAÇÃO ─────────────────────────────
   gainXpPublic(n: number) { this.gainXp(n); }
+  /** Hook de teste: limpa cooldowns (para retries determinísticos) */
+  clearCdsPublic() { this.cds = [0, 0, 0, 0, 0, 0]; }
   spawnTestMobPublic(elite = false): MobEnt | null {
     // espécie AGRESSIVA (neutras só reagem — comportamento oficial)
     const t = MOB_TYPES.find(m => !m.neutral && (m.aggro ?? 0) > 0) || MOB_TYPES[0];

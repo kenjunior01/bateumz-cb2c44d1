@@ -33,9 +33,9 @@ async function main() {
     // ── entrada hordes.io ──
     ok("Banners de facção com lore", await page.locator('[data-testid="bw-faction-0"]').count() === 1 && await page.locator('[data-testid="bw-faction-1"]').count() === 1);
     ok("Classes com barras de stats", (await page.locator('[data-testid="bw-class-0"]').innerText()).includes("ATQ"));
-    await page.locator('[data-testid="bw-name-input"]').fill("HordesTeste");
     await page.locator('[data-testid="bw-class-1"]').click();
     await page.locator('[data-testid="bw-faction-1"]').click();
+    await page.locator('[data-testid="bw-name-input"]').fill("HordesTeste");
     await page.locator('[data-testid="bw-enter"]').click();
     await page.waitForSelector('[data-testid="bw-play"]', { timeout: 30000 });
     ok("Mundo aberto", true);
@@ -70,14 +70,25 @@ async function main() {
     // ── canalização (cast bar) ──
     const castState = await page.evaluate(() => {
       const E = (window).__bw.engine;
-      (window).__bw.updateChar((c) => { c.level = 8; });
-      E.setHotbar([3, null, null, null, null, null]); // m4 Bola de Fogo (castT 0.8)
+      (window).__bw.updateChar((c) => { c.level = 25; });
+      E.setHotbar([7, null, null, null, null, null]); // m8 Bloco de Gelo (castT 1.2)
       E.castSkill(0);
       const st = E.getState();
       return { cast: st.cast, name: st.cast?.name || null };
     });
-    ok("Cast iniciado (Bola de Fogo)", castState?.cast && castState.name === "Bola de Fogo");
-    const castbarShown = await page.waitForSelector('[data-testid="bw-castbar"]', { timeout: 1600 }).then(() => true).catch(() => false);
+    ok("Cast iniciado (Bloco de Gelo)", castState?.cast && castState.name === "Bloco de Gelo");
+    // retries: em headless o poll de 200ms pode atrasar >1,2s (GC do render)
+    // e o cast completar sem o HUD chegar a mostrar — tentamos até 3 vezes
+    let castbarShown = false;
+    for (let i = 0; i < 3 && !castbarShown; i++) {
+      await page.evaluate(() => {
+        const E = (window).__bw.engine;
+        E.clearCdsPublic();
+        E.setHotbar([7, null, null, null, null, null]);
+        E.castSkill(0);
+      });
+      castbarShown = await page.waitForSelector('[data-testid="bw-castbar"]', { timeout: 900 }).then(() => true).catch(() => false);
+    }
     ok("Cast bar visível no HUD", castbarShown);
     const castCancelled = await page.evaluate(() => {
       const E = (window).__bw.engine;

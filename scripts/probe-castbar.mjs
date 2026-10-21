@@ -13,8 +13,8 @@ if (await page.locator('[data-testid="bw-streak-ok"]').count()) await page.locat
 if (await page.locator('[data-testid="bw-intro-skip"]').count()) await page.locator('[data-testid="bw-intro-skip"]').click();
 const r = await page.evaluate(() => {
   const E = (window).__bw.engine;
-  (window).__bw.updateChar((c) => { c.level = 8; });
-  E.setHotbar([3, null, null, null, null, null]);
+  (window).__bw.updateChar((c) => { c.level = 25; });
+  E.setHotbar([7, null, null, null, null, null]);
   E.castSkill(0);
   const st = E.getState();
   return { castInState: st.cast, castbarInDom: !!document.querySelector('[data-testid="bw-castbar"]'), hudHasCast: undefined };

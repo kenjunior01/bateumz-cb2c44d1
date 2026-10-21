@@ -1,6 +1,6 @@
 // @ts-nocheck
 // ============================================================
-// BATEU WORLD — ERA DAS LENDAS (v18) · UI DO MMO
+// BATEU HORDES (v20) · UI DO MMO — conteúdo oficial do hordes.io
 // Reconstrução total sobre o motor v18 (REA Hordes.io):
 //  · Criação com CLASSE + FACÇÃO + avatar articulado
 //  · HUD MMO: barras HP/Mana/XP, alvo, barra de CHEFE,
@@ -117,6 +117,12 @@ function fillDefaults(c: any): Char {
   out.tutorial = c.tutorial || { step: 0, prog: 0 };
   return out;
 }
+
+// ── Nome de herói estilo hordes.io (aleatorizador do menu) ──
+const NOME_A = ["Gor", "Kar", "Thra", "Ul", "Vex", "Zor", "Bel", "Dro", "Fen", "Hark", "Mor", "Nyx", "Rak", "Sar", "Tor", "Ulf", "Yor", "Bal", "Kro", "Dra"];
+const NOME_B = ["gath", "mash", "rek", "thorn", "dush", "grim", "lok", "nak", "rok", "thar", "vek", "zar", "gorn", "mok", "rush", "kash", "dum", "zim"];
+const randomName = () =>
+  NOME_A[Math.floor(Math.random() * NOME_A.length)] + NOME_B[Math.floor(Math.random() * NOME_B.length)];
 
 function loadChar(): Char | null {
   try {
@@ -587,10 +593,15 @@ export default function BateuWorld({
       <div className="w-full h-full relative overflow-y-auto overflow-x-hidden" style={{ background: "radial-gradient(ellipse at top, #1e1b4b 0%, #020617 60%)" }} data-testid="bw-create">
         <div className="min-h-full flex flex-col items-center justify-center px-4 py-8" style={{ minHeight: "100dvh" }}>
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-md">
-            <div className="text-center mb-4">
-              <div className="text-[10px] tracking-[0.35em] text-amber-400/80 font-bold">BATEU WORLD</div>
-              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 mt-1">ERA DAS LENDAS</h1>
-              <p className="text-xs text-slate-400 mt-1">MMO 3D · 2 facções · 48 habilidades · mundo que cresce</p>
+            <div className="text-center mb-3">
+              <div className="text-[10px] tracking-[0.35em] text-slate-400/80 font-bold">MMORPG 3D DE MUNDO ABERTO NO TEU NAVEGADOR</div>
+              <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 mt-1 tracking-tight">BATEU HORDES</h1>
+              <p className="text-xs text-slate-400 mt-1">2 facções · 48 habilidades oficiais · 83 criaturas · Gloomfury espera-te</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+              {["Classificativas", "Clãs", "Clips", "PvP", "Itens", "Habilidades", "Loja"].map(n => (
+                <span key={n} className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-900/70 border border-slate-700/60 text-slate-300">{n}</span>
+              ))}
             </div>
 
             {existing && (
@@ -618,13 +629,7 @@ export default function BateuWorld({
 
             <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 space-y-4">
               <div>
-                <div className="text-xs font-bold text-slate-300 mb-2">1 · NOME DO HERÓI</div>
-                <input value={ncName} onChange={e => setNcName(e.target.value)} maxLength={16} data-testid="bw-name-input"
-                  placeholder="Escreve o teu nome…" className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-400" />
-              </div>
-
-              <div>
-                <div className="text-xs font-bold text-slate-300 mb-2">2 · CLASSE (4 · 48 habilidades)</div>
+                <div className="text-xs font-bold text-slate-300 mb-2">1 · CLASSE (48 habilidades oficiais)</div>
                 <div className="grid grid-cols-2 gap-2">
                   {CLASSES.map(cl => (
                     <button key={cl.id} onClick={() => { setNcClass(cl.id); setNcAvatar(defaultAvatar(cl.id)); }} data-testid={`bw-class-${cl.id}`}
@@ -638,15 +643,26 @@ export default function BateuWorld({
               </div>
 
               <div>
-                <div className="text-xs font-bold text-slate-300 mb-2">3 · FACÇÃO (guerra permanente)</div>
+                <div className="text-xs font-bold text-slate-300 mb-2">2 · FACÇÃO (guerra permanente Vanguard vs Bloodlust)</div>
                 <div className="grid grid-cols-2 gap-2">
                   {FACTIONS.map(f => (
                     <button key={f.id} onClick={() => setNcFaction(f.id)} data-testid={`bw-faction-${f.id}`}
                       className={`p-2.5 rounded-xl border text-left transition-all ${ncFaction === f.id ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-slate-700 bg-slate-950/60"}`}>
                       <div className="font-black text-sm" style={{ color: f.color }}>{f.emoji} {f.name}</div>
                       <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{f.desc}</div>
+                      <div className="text-[10px] italic mt-0.5" style={{ color: f.color }}>{f.motto}</div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold text-slate-300 mb-2">3 · NOME DO HERÓI</div>
+                <div className="flex gap-2">
+                  <input value={ncName} onChange={e => setNcName(e.target.value)} maxLength={16} data-testid="bw-name-input"
+                    placeholder="Escreve o teu nome…" className="flex-1 min-w-0 bg-slate-950/80 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-400" />
+                  <button onClick={() => setNcName(randomName())} title="Nome aleatório" data-testid="bw-name-random"
+                    className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-sm active:scale-95">🎲</button>
                 </div>
               </div>
 
@@ -660,7 +676,7 @@ export default function BateuWorld({
                     <AvatarSwatches cfg={ncAvatar} onChange={setNcAvatar} />
                   </div>
                   <button onClick={() => setNcAvatar(randomAvatar(ncClass))} title="Aleatório"
-                    className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs">🎲</button>
+                    className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs">🎭</button>
                 </div>
               </div>
 
@@ -670,6 +686,7 @@ export default function BateuWorld({
               </button>
               <p className="text-center text-[10px] text-slate-500">Sem registo · o progresso guarda na tua conta quando fizeres login</p>
             </div>
+            <div className="text-right text-[9px] text-slate-600 mt-2 pr-1" data-testid="bw-version">0.51.9102 · Bateu Live</div>
           </motion.div>
         </div>
       </div>
@@ -1029,9 +1046,9 @@ export default function BateuWorld({
             style={{ background: "radial-gradient(ellipse at center, rgba(30,27,75,0.55) 0%, rgba(2,6,23,0.94) 70%)" }}
             data-testid="bw-intro">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }}>
-              <div className="text-[10px] tracking-[0.5em] text-amber-400/90 font-bold mb-2">BATEU WORLD APRESENTA</div>
+              <div className="text-[10px] tracking-[0.5em] text-amber-400/90 font-bold mb-2">BATEU APRESENTA</div>
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-3" style={{ fontFamily: "Georgia, serif" }}>
-                <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-fuchsia-500 bg-clip-text text-transparent drop-shadow">ERA DAS LENDAS</span>
+                <span className="bg-gradient-to-r from-slate-100 via-amber-300 to-red-400 bg-clip-text text-transparent drop-shadow">HORDES</span>
               </h1>
             </motion.div>
             <IntroCaptions />

@@ -1,5 +1,5 @@
 // ============================================================
-// E2E — BATEU WORLD: ERA DAS LENDAS (v18) — MMO reconstruído
+// E2E — BATEU HORDES (v20) — conteúdo oficial do hordes.io
 // REA de Hordes.io + superação: facções, fama, território,
 // 48 habilidades, matilhas, chefes, masmorras, vilões,
 // grupo, clãs, montarias, oficina, habitação, cupões, banco.
@@ -29,7 +29,7 @@ const NOISE = [
 ];
 
 async function main() {
-  console.log(`\n🌍 BATEU WORLD: ERA DAS LENDAS v18 E2E — ${BASE}\n`);
+  console.log(`\n🌍 BATEU HORDES v20 — conteúdo oficial hordes.io — ${BASE}\n`);
   const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"], executablePath: process.env.PW_CHROME || undefined });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
@@ -86,7 +86,11 @@ async function main() {
   await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForSelector('[data-testid="bw-name-input"]', { timeout: 40000 });
   ok("Ecrã de criação presente", true);
-  ok("Título ERA DAS LENDAS presente", (await page.locator('[data-testid="bw-create"]').innerText().catch(() => "")).includes("ERA DAS LENDAS"));
+  ok("Título BATEU HORDES presente", (await page.locator('[data-testid="bw-create"]').innerText().catch(() => "")).includes("BATEU HORDES"));
+  const createTxt = await page.locator('[data-testid="bw-create"]').innerText().catch(() => "");
+  ok("Fluxo hordes.io: classe → facção → nome → ENTRAR", createTxt.includes("1 · CLASSE") && createTxt.includes("2 · FACÇÃO") && createTxt.includes("3 · NOME") && createTxt.includes("ENTRAR NO MUNDO"));
+  ok("Facções oficiais VANGUARD e BLOODLUST", createTxt.includes("VANGUARD") && createTxt.includes("BLOODLUST"));
+  ok("Versão estilo hordes.io visível", createTxt.includes("0.51.9102"));
   ok("Input de nome presente", true);
   ok("4 classes selecionáveis", await page.locator('[data-testid="bw-class-0"]').count() === 1 && await page.locator('[data-testid="bw-class-3"]').count() === 1);
   ok("2 facções selecionáveis", await page.locator('[data-testid="bw-faction-0"]').count() === 1 && await page.locator('[data-testid="bw-faction-1"]').count() === 1);
@@ -94,7 +98,7 @@ async function main() {
 
   await page.locator('[data-testid="bw-name-input"]').fill("LendaTeste");
   await page.locator('[data-testid="bw-class-1"]').click();   // Mago
-  await page.locator('[data-testid="bw-faction-1"]').click(); // TEMPESTADE
+  await page.locator('[data-testid="bw-faction-1"]').click(); // BLOODLUST
   await page.waitForTimeout(300);
   await page.locator('[data-testid="bw-enter"]').click();
   await page.waitForTimeout(5000);
@@ -114,14 +118,14 @@ async function main() {
   const c1 = await char();
   ok("Herói criado com nome", c1?.name === "LendaTeste");
   ok("Classe Mago (1)", c1?.classId === 1);
-  ok("Facção TEMPESTADE (1)", c1?.faction === 1);
+  ok("Facção BLOODLUST (1)", c1?.faction === 1);
   ok("Ouro inicial + streak (≥250)", (c1?.gold || 0) >= 250);
 
   // ── 2. HUD MMO ────────────────────────────────────────────
   console.log("— HUD MMO —");
   ok("Barra de HP", await page.locator('[data-testid="bw-hp-bar"]').count() > 0);
   ok("Ouro no HUD", (await page.locator('[data-testid="bw-gold"]').innerText().catch("")).length > 0);
-  ok("Badge de região (Vila Dourada)", (await page.locator('[data-testid="bw-region"]').innerText().catch("")).includes("Vila Dourada"));
+  ok("Badge de região (Guardstone)", (await page.locator('[data-testid="bw-region"]').innerText().catch("")).includes("Guardstone"));
   ok("Minimapa ao vivo", await page.locator('[data-testid="bw-minimap"]').count() > 0);
   ok("Tracker de campanha (Cap. 1)", (await page.locator('[data-testid="bw-tracker"]').innerText().catch("")).includes("Primeiros Passos"));
   ok("Hotbar 6 slots + esquiva + ataque", await page.locator('[data-testid="bw-skill-0"]').count() === 1 && await page.locator('[data-testid="bw-skill-5"]').count() === 1 && await page.locator('[data-testid="bw-dodge"]').count() === 1 && await page.locator('[data-testid="bw-attack"]').count() === 1);
@@ -184,14 +188,14 @@ async function main() {
   await page.evaluate(() => { const b = document.querySelector('[data-testid="bw-skilltab-3"]'); if (b) (b).click(); });
   await page.waitForTimeout(300);
   const skUlt = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
-  ok("Skill ultimate listada (Supernova + tag ULT)", skUlt.includes("Supernova") && skUlt.includes("ULT"));
+  ok("Skill ultimate listada (Aura Ártica + tag ULT)", skUlt.includes("Aura Ártica") && skUlt.includes("ULT"));
   const tabs = await page.evaluate(() => document.querySelectorAll('[data-testid^="bw-skilltab-"]').length);
   ok("4 abas de tiers navegáveis", tabs === 4);
   await closePanel();
   // mapa: regiões, masmorras, torres
   await openPanel("map");
   const mapTxt2 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
-  ok("11 regiões no mapa (Vila…Coração Escuro)", mapTxt2.includes("Vila Dourada") && mapTxt2.includes("Tundra Gelada") && mapTxt2.includes("Coração Escuro"));
+  ok("11 regiões no mapa (Guardstone…Gloomfury)", mapTxt2.includes("Guardstone") && mapTxt2.includes("Dell Alviverde") && mapTxt2.includes("Ruínas de Gloomfury"));
   ok("Masmorras marcadas no mapa (💀/🔥)", mapTxt2.includes("💀") && mapTxt2.includes("🔥"));
   ok("Torres de domínio marcadas (⚡/🛡️/🏳️)", mapTxt2.includes("⚡") || mapTxt2.includes("🛡️") || mapTxt2.includes("🏳️"));
   await closePanel();
@@ -214,7 +218,7 @@ async function main() {
   await openPanel("fame");
   const fameTxt2 = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
   ok("Rank de fama inicial (Recruta)", fameTxt2.includes("Recruta"));
-  ok("Facção ativa mostrada (TEMPESTADE)", fameTxt2.includes("TEMPESTADE"));
+  ok("Facção ativa mostrada (BLOODLUST)", fameTxt2.includes("BLOODLUST"));
   await closePanel();
   // dados do motor: conteúdo completo
   const content = await page.evaluate(() => {
@@ -334,7 +338,7 @@ async function main() {
   // dados completos do mundo (regressão de conteúdo)
   const data = await page.evaluate(() => (window).__bw.data);
   ok("48 habilidades (4×12)", data.skills === 48 && data.classes === 4);
-  ok("19 tipos de criaturas", data.mobs === 19);
+  ok("83 criaturas oficiais do hordes.io (wiki)", data.mobs === 83);
   ok("8 chefes de região", data.bosses === 8);
   ok("2 chefes mundiais", data.worldBosses === 2);
   ok("4 vilões da plataforma", data.villains === 4);
@@ -353,18 +357,18 @@ async function main() {
 
   // ── 6. HABILIDADES: aprender + pontos ─────────────────────
   console.log("— Habilidades —");
-  await updateChar("c.level = 4; c.skillPts = 2; c.xp = 0;");
+  await updateChar("c.level = 8; c.skillPts = 2; c.xp = 0;");
   await openPanel("skills");
-  await page.locator('[data-testid="bw-skilltab-1"]').click();
+  await page.locator('[data-testid="bw-skilltab-0"]').click();
   await page.waitForTimeout(300);
-  const learnBtn = page.locator('[data-testid="bw-learn-m4"]');
-  ok("Skill desbloqueada por nível aparece (Bola de Fogo Nv4)", await learnBtn.count() > 0);
+  const learnBtn = page.locator('[data-testid="bw-learn-m3"]');
+  ok("Skill desbloqueada por nível aparece (Estilhaço Gélido Nv8)", await learnBtn.count() > 0);
   if (await learnBtn.count() > 0) {
     await learnBtn.click();
     await page.waitForTimeout(300);
   }
   const c3 = await char();
-  ok("Habilidade aprendida gasta ponto", c3.ranks[3] === 1 && c3.skillPts === 1);
+  ok("Habilidade aprendida gasta ponto", c3.ranks[2] === 1 && c3.skillPts === 1);
   ok("Atributo +1 funciona", await page.locator('[data-testid="bw-alloc-str"]').click().then(() => true).catch(() => false));
   await closePanel();
 
@@ -388,7 +392,7 @@ async function main() {
   await openPanel("map");
   ok("Mapa grande com regiões", await page.locator('[data-testid="bw-bigmap"]').count() > 0);
   const mapTxt = await page.locator('[data-testid="bw-panel"]').innerText().catch(() => "");
-  ok("8+ regiões nomeadas", mapTxt.includes("Planície Dourada") && mapTxt.includes("Terras Vulcânicas") && mapTxt.includes("Coração Escuro"));
+  ok("8+ regiões nomeadas", mapTxt.includes("Campina de Guardstone") && mapTxt.includes("Terras Marrowlands") && mapTxt.includes("Ruínas de Gloomfury"));
   ok("Região bloqueada mostrada com cadeado", mapTxt.includes("🔒"));
   await closePanel();
 

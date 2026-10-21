@@ -641,7 +641,7 @@ export class WorldEngine {
     for (const t of MOB_TYPES) {
       const reg = REGIONS.find(r => r.id === t.region);
       if (!reg) continue;
-      const nCamps = t.pack >= 2 ? 2 : 1;
+      const nCamps = MOB_TYPES.length > 30 ? 1 : (t.pack >= 2 ? 2 : 1);
       for (let c = 0; c < nCamps; c++) {
         const a = rnd(Math.PI * 2) + c * Math.PI, d = rnd(reg.r * 0.7, reg.r * 0.2);
         const cx = reg.cx + Math.cos(a) * d, cz = reg.cz + Math.sin(a) * d;
@@ -738,7 +738,7 @@ export class WorldEngine {
     group.position.set(x, y, z);
     this.scene.add(group);
     const name = extra.name || (isWorld ? t.name : isVillain ? extra.name || t.name : isElite ? `Elite ${t.name}` : t.name);
-    const tag = this.makeNameTag(group, `${isBoss || isWorld || isVillain ? "☠ " : isElite ? "★ " : ""}${name} Nv${lvl}`, isBoss || isWorld || isVillain ? "#f87171" : isElite ? "#fbbf24" : "#e5e7eb", "#00000000");
+    const tag = this.makeNameTag(group, `${isBoss || isWorld || isVillain ? "☠ " : isElite ? "★ " : ""}${name} Nv${lvl}`, isBoss || isWorld || isVillain ? "#f87171" : isElite ? "#fbbf24" : "#fdba74", "#00000000");
     const m: MobEnt = {
       id: this.mobId++, group, body, type: t, lvl,
       hp: Math.round(t.hp * hpMult), maxHp: Math.round(t.hp * hpMult),
@@ -2310,12 +2310,14 @@ export class WorldEngine {
   // ── HOOKS DE TESTE/INTEGRAÇÃO ─────────────────────────────
   gainXpPublic(n: number) { this.gainXp(n); }
   spawnTestMobPublic(elite = false): MobEnt | null {
-    const t = MOB_TYPES[0];
+    // espécie AGRESSIVA (neutras só reagem — comportamento oficial)
+    const t = MOB_TYPES.find(m => !m.neutral && (m.aggro ?? 0) > 0) || MOB_TYPES[0];
     const a = rnd(Math.PI * 2);
     const m = this.spawnMob(t, this.px + Math.cos(a) * 3, this.pz + Math.sin(a) * 3, -1, {
       isElite: elite, lvlOverride: Math.max(1, this.opts.level),
     });
     if (elite) { m.hp = Math.round(m.maxHp * 0.35); }
+    else { m.hp = Math.min(m.maxHp, 60); m.maxHp = Math.max(m.maxHp, 60); } // determinismo E2E
     return m;
   }
   testTeleport(x: number, z: number) {

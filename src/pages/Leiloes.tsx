@@ -33,13 +33,16 @@ function CardLeilao({ l, index, navigate }: { l: Leilao; index: number; navigate
   const terminado = l.status === "terminado";
   const ehMeu = l.maior_licitador !== null && l.lances[0]?.is_minha === true;
 
+  const abrir = () => navigate(`/leiloes/${l.slug || l.id}`);
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.24), duration: 0.35 }}
-      onClick={() => navigate(`/leiloes/${l.slug || l.id}`)}
-      className="relative rounded-2xl overflow-hidden cursor-pointer group"
+      onClick={abrir}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } }}
+      className="relative rounded-2xl overflow-hidden cursor-pointer group focus-visible:ring-2 focus-visible:ring-orange-400 focus:outline-none"
       style={{
         background: "linear-gradient(160deg, #100a04 0%, #150d06 55%, #0d0803 100%)",
         border: `1px solid ${l.destaque ? "rgba(255,123,0,0.45)" : "rgba(255,123,0,0.18)"}`,
@@ -47,6 +50,7 @@ function CardLeilao({ l, index, navigate }: { l: Leilao; index: number; navigate
         minHeight: 210,
       }}
       role="link"
+      tabIndex={0}
       aria-label={l.titulo}
       data-testid="leilao-card"
     >
@@ -153,6 +157,8 @@ export default function Leiloes() {
   }, [porAba, aba, cat, pesquisa]);
 
   const totalLances = leiloes.reduce((acc, l) => acc + l.lances.length, 0);
+  /* ⭐ REA eBay: nº real de licitadores únicos — zero números inventados */
+  const licitadoresUnicos = new Set(leiloes.flatMap((l) => l.lances.map((b) => b.bidder))).size;
   const aoVivoCount = porAba.ao_vivo.length + porAba.terminando.length;
 
   const abas: { id: Aba; label: string; n: number }[] = [
@@ -191,7 +197,7 @@ export default function Leiloes() {
           <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg">
             {[
               { icon: Gavel, label: "Lances hoje", v: totalLances },
-              { icon: Users, label: "Licitadores", v: 14 },
+              { icon: Users, label: "Licitadores", v: licitadoresUnicos },
               { icon: Wallet, label: "Teu saldo", v: saldo, money: true },
             ].map((s) => (
               <div key={s.label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -267,10 +273,21 @@ export default function Leiloes() {
       {/* ─── LISTA ─── */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-24">
         {filtrados.length === 0 ? (
-          <div className="text-center py-20">
+          <div className="text-center py-20" data-testid="leiloes-empty">
             <Gavel className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
             <h3 className="text-lg font-black text-zinc-400">Sem leilões nesta secção</h3>
             <p className="text-sm text-zinc-600 mt-1">Volta em breve — novos leilões abrem todos os dias às 12h e 19h.</p>
+            {/* ⭐ REA: empty state com ação real */}
+            {aba !== "agendados" && porAba.agendados.length > 0 && (
+              <button
+                onClick={() => setAba("agendados")}
+                data-testid="leiloes-ver-agendados"
+                className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black transition-transform hover:scale-105"
+                style={{ background: ACCENT, color: "#fff", boxShadow: "0 4px 20px rgba(255,123,0,0.35)" }}
+              >
+                <CalendarClock className="h-3.5 w-3.5" /> VER {porAba.agendados.length} AGENDADOS
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="lista-leiloes">

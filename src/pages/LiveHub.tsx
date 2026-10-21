@@ -12,6 +12,7 @@ import ShimmerText from "@/components/ui/ShimmerText";
 import NeonBorder from "@/components/ui/NeonBorder";
 import ButtonRipple from "@/components/ui/ButtonRipple";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import { getActiveLives } from "@/lib/livePlatform";
 const TapBattle = lazy(() => import("@/components/livegames/TapBattle"));
 const QuizBattle = lazy(() => import("@/components/livegames/QuizBattle"));
 const MysteryBox = lazy(() => import("@/components/livegames/MysteryBox"));
@@ -134,11 +135,11 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     if (this.state.hasError) return (
       <div className="flex flex-col items-center justify-center py-20 px-6 rounded-2xl border border-dashed border-destructive/30 bg-gradient-to-b from-destructive/5 to-transparent">
         <div className="text-5xl mb-4">⚠️</div>
-        <p className="text-sm font-bold mb-1">Error loading {this.props.gameName}</p>
+        <p className="text-sm font-bold mb-1">Erro ao carregar {this.props.gameName}</p>
         <p className="text-[11px] text-muted-foreground mb-2 text-center max-w-xs">{this.state.errorMsg}</p>
         <div className="flex items-center gap-2">
-          <button onClick={this.handleRetry} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-colors">Try Again</button>
-          <button onClick={this.handleSelectOther} className="text-xs px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold transition-colors">Other game</button>
+          <button onClick={this.handleRetry} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-colors">Tentar Novamente</button>
+          <button onClick={this.handleSelectOther} className="text-xs px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold transition-colors">Outro jogo</button>
         </div>
       </div>
     );
@@ -201,10 +202,28 @@ const LiveHub = () => {
   const [searchParams] = useSearchParams();
   const gameFromUrl = searchParams.get("game") as GameId | null;
 
+  /* ⭐ REA Twitch: descoberta de consumo — lives de criadores/empresas ao vivo AGORA */
+  const [livesAgora, setLivesAgora] = useState<{ id: string; title: string; slug: string; display_name?: string; company_name?: string }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    getActiveLives().then(({ data }) => {
+      if (!alive || !data) return;
+      setLivesAgora(data.map((l: any) => ({
+        id: l.id,
+        title: l.title,
+        slug: l.slug,
+        display_name: l.profiles?.display_name || l.profiles?.company_name || undefined,
+      })));
+    }).catch(() => {});
+    const iv = setInterval(() => { getActiveLives().then(({ data }) => { if (alive && data) setLivesAgora(data.map((l: any) => ({ id: l.id, title: l.title, slug: l.slug, display_name: l.profiles?.display_name || l.profiles?.company_name || undefined }))); }).catch(() => {}); }, 30000);
+    return () => { alive = false; clearInterval(iv); };
+  }, []);
+
   const templateId = searchParams.get("template");
   const { user, role } = useAuth();
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [templateName, setTemplateName] = useState<string | null>(null);
+  const [buscaJogos, setBuscaJogos] = useState("");
   const [active, setActive] = useState<GameId>(() => {
     try {
       const fromUrl = gameFromUrl;
@@ -607,13 +626,54 @@ const LiveHub = () => {
         {active !== "mmorpg" && (
           <MobileDiscoveryHeader
             title={t("livehub.all")}
-            searchValue=""
-            onSearchChange={() => {}}
+            searchValue={buscaJogos}
+            onSearchChange={setBuscaJogos}
             searchPlaceholder={t("livehub.search")}
-            categories={GAMES.map((g) => ({ id: g.id, label: g.label, icon: hasArt(g.id) ? <GameArtChip id={g.id} size={18} /> : g.emoji }))}
+            categories={GAMES.filter((g) => !buscaJogos.trim() || g.label.toLowerCase().includes(buscaJogos.trim().toLowerCase())).map((g) => ({ id: g.id, label: g.label, icon: hasArt(g.id) ? <GameArtChip id={g.id} size={18} /> : g.emoji }))}
             activeCategory={active}
             onCategoryChange={(id) => setActive(id as GameId)}
           />
+        )}
+
+        {/* ⭐ REA Twitch: secção de CONSUMO — quem está ao vivo agora na plataforma */}
+        {active !== "mmorpg" && livesAgora.length > 0 && (
+          <div className="mb-4" data-testid="livehub-lives-agora">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-rose-500" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+              </span>
+              <h2 className="text-sm font-black text-foreground">AO VIVO AGORA</h2>
+              <span className="text-[10px] text-muted-foreground">· {livesAgora.length} transmissã{livesAgora.length === 1 ? "o" : "ões"} da comunidade</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+              {livesAgora.slice(0, 10).map((lv, i) => (
+                <motion.button
+                  key={lv.id}
+                  onClick={() => navigate(`/live-evento/${lv.slug}`)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="relative shrink-0 w-[220px] sm:w-[250px] text-left rounded-2xl overflow-hidden border border-rose-500/30 bg-card hover:border-rose-400/60 transition-colors group"
+                  data-testid={`live-agora-${i + 1}`}
+                >
+                  <div className="relative h-[92px] flex items-end p-3" style={{ background: "linear-gradient(135deg, #3f0d1f, #1f0a2e 60%, #0a0a12)" }}>
+                    <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[8px] font-black tracking-wider">
+                      ● LIVE
+                    </span>
+                    <span className="absolute top-2 right-2 text-[9px] font-bold text-white/70">▶ assistir</span>
+                    <p className="relative text-[12px] font-bold text-white line-clamp-2 leading-snug">{lv.title}</p>
+                  </div>
+                  <div className="px-3 py-2 flex items-center gap-2">
+                    <span className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black text-white" style={{ background: "linear-gradient(135deg, #e11d48, #a855f7)" }}>
+                      {(lv.display_name || "B").charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-[11px] font-semibold text-muted-foreground truncate">{lv.display_name || "Bateu Oficial"}</span>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* ⭐ BATEU WORLD — banner destaque permanente (jogo principal) */}

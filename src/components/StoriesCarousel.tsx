@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, Megaphone } from "lucide-react";
@@ -24,6 +23,7 @@ const StoriesCarousel = ({ embedded = false }: Props) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [groups, setGroups] = useState<StoryAuthorGroup[]>([]);
   const [platformStories, setPlatformStories] = useState<UserStory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
   const [viewerOpen, setViewerOpen] = useState(false);
   const [startGroup, setStartGroup] = useState(0);
@@ -38,6 +38,7 @@ const StoriesCarousel = ({ embedded = false }: Props) => {
   }, []);
 
   const reload = async () => {
+    setLoading(true);
     // Stories dos utilizadores (agrupados)
     const g = await loadActiveStories();
     setGroups(Array.from(g.values()));
@@ -121,6 +122,7 @@ const StoriesCarousel = ({ embedded = false }: Props) => {
     });
 
     setPlatformStories(platform);
+    setLoading(false);
   };
 
   const markViewed = (id: string) => {
@@ -227,8 +229,23 @@ const StoriesCarousel = ({ embedded = false }: Props) => {
               <span className="text-[10px] font-medium text-foreground max-w-[68px] truncate">Seu Status</span>
             </button>
 
-            {/* Grupos de autores */}
-            {allGroups.map((g, idx) => {
+            {/* Grupos de autores — ⭐ REA Instagram: skeleton enquanto carrega (sem "salto") */}
+            {loading && (
+              <>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`sk-${i}`} className="flex flex-col items-center gap-1.5 shrink-0" data-testid={i === 0 ? "stories-skeleton" : undefined}>
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full bg-muted-foreground/15 animate-pulse" />
+                      <div className="relative h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full p-[3px]">
+                        <div className="h-full w-full rounded-full bg-muted/70 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="h-2.5 w-14 rounded-full bg-muted/60 animate-pulse" />
+                  </div>
+                ))}
+              </>
+            )}
+            {!loading && allGroups.map((g, idx) => {
               const firstUnviewed = g.stories.find((s) => !viewedIds.has(s.id));
               const allViewed = !firstUnviewed;
               const isPlatform = g.author.id === "platform";

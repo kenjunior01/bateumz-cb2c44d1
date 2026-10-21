@@ -5,8 +5,10 @@ import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 /**
  * RollUp — carrossel horizontal universal da Bateu (mobile + desktop).
  * - Snap por cartão, arrasto/swipe, setas no desktop, auto-avanço opcional
- * - Indicador de progresso (barrinha) + dots
+ * - Indicador de progresso (barrinha) + dots clicáveis
  * - Cabeçalho: kicker colorido + título + link "ver tudo"
+ * ⭐ REA a11y: aria-roledescription="carousel", navegação por teclado (setas),
+ *   respeito por prefers-reduced-motion, dots clicáveis com aria-label.
  */
 export default function RollUp({
   kicker,
@@ -34,7 +36,17 @@ export default function RollUp({
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(0);
   const pausedRef = useRef(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const count = Children.count(children);
+
+  /* ⭐ REA: auto-avanço desligado se o utilizador prefere menos movimento */
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReducedMotion(mq.matches);
+    apply();
+    mq.addEventListener?.("change", apply);
+    return () => mq.removeEventListener?.("change", apply);
+  }, []);
 
   const onScroll = useCallback(() => {
     const el = scrollerRef.current;
@@ -68,9 +80,9 @@ export default function RollUp({
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
-  /* auto-avanço — pausa quando o utilizador interage */
+  /* auto-avanço — pausa quando o utilizador interage; desligado com reduced-motion */
   useEffect(() => {
-    if (!autoAdvanceMs || count < 2) return;
+    if (!autoAdvanceMs || count < 2 || reducedMotion) return;
     const id = setInterval(() => {
       const el = scrollerRef.current;
       if (!el || pausedRef.current) return;
@@ -80,10 +92,23 @@ export default function RollUp({
       else el.scrollBy({ left: el.clientWidth * 0.8, behavior: "smooth" });
     }, autoAdvanceMs);
     return () => clearInterval(id);
-  }, [autoAdvanceMs, count]);
+  }, [autoAdvanceMs, count, reducedMotion]);
 
   const pause = () => { pausedRef.current = true; };
   const resume = () => { pausedRef.current = false; };
+
+  /* ⭐ REA a11y: navegação por teclado no trilho */
+  const onTrilhoKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); scrollByCard(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); scrollByCard(-1); }
+  };
+
+  const goToPage = (i: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const step = el.clientWidth * 0.85 || 1;
+    el.scrollTo({ left: i * step, behavior: "smooth" });
+  };
 
   return (
     <section
@@ -93,6 +118,7 @@ export default function RollUp({
       onMouseLeave={resume}
       onTouchStart={pause}
       onTouchEnd={resume}
+      aria-roledescription="carousel"
     >
       {/* brilho de fundo na cor do acento */}
       <div
@@ -155,7 +181,11 @@ export default function RollUp({
 
           <div
             ref={scrollerRef}
-            className="flex gap-3.5 sm:gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"
+            tabIndex={0}
+            onKeyDown={onTrilhoKey}
+            role="group"
+            aria-label={title}
+            className="flex gap-3.5 sm:gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 focus-visible:ring-2 focus-visible:ring-white/30 focus:outline-none rounded-lg"
             style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
           >
             {children}
@@ -173,9 +203,11 @@ export default function RollUp({
             </div>
             <div className="hidden sm:flex items-center gap-1.5">
               {Array.from({ length: Math.min(pages, 8) }).map((_, i) => (
-                <span
+                <button
                   key={i}
-                  className="rounded-full transition-all duration-200"
+                  onClick={() => goToPage(i)}
+                  aria-label={`Ir para posição ${i + 1}`}
+                  className="rounded-full transition-all duration-200 hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                   style={{
                     width: i === Math.min(page, 7) ? 14 : 5,
                     height: 5,
@@ -183,6 +215,9 @@ export default function RollUp({
                   }}
                 />
               ))}
+              <span className="ml-1 text-[10px] font-bold tabular-nums" style={{ color: accent }} aria-hidden>
+                {Math.min(page, 7) + 1}/{Math.min(pages, 8)}
+              </span>
             </div>
           </div>
         )}

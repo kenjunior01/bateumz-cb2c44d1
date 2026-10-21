@@ -31,7 +31,7 @@ const THEME_GOLD = "#fbbf24";
 
 const statusMap: Record<string, { label: string; color: string; bgColor: string }> = {
   active: { label: "Aberto", color: THEME_P, bgColor: "hsl(220 70% 18% / 0.12)" },
-  voting: { label: "Em Votacao", color: THEME_A, bgColor: "hsl(352 73% 50% / 0.12)" },
+  voting: { label: "Em Votação", color: THEME_A, bgColor: "hsl(352 73% 50% / 0.12)" },
   completed: { label: "Encerrado", color: "hsl(var(--muted-foreground))", bgColor: "hsl(var(--muted))" },
 };
 
@@ -42,6 +42,7 @@ export default function Contests() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"active" | "past">("active");
   const heroRef = useRef<HTMLDivElement>(null);
+  const mouseRafRef = useRef(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -73,7 +74,13 @@ export default function Contests() {
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!heroRef.current) return;
     const rect = heroRef.current.getBoundingClientRect();
-    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (mouseRafRef.current) return;
+    mouseRafRef.current = requestAnimationFrame(() => {
+      mouseRafRef.current = 0;
+      setMousePos({ x, y });
+    });
   };
 
   const chips = [
@@ -95,7 +102,7 @@ export default function Contests() {
         transition={{ ...SPRING, delay: Math.min(index, 12) * 0.06 }}
         whileHover={{ y: -6, scale: 1.02 }}
       >
-        <Link to={`/concursos/${contest.id}`}>
+        <Link to={`/concursos/${contest.id}`} data-testid={`concursos-card-${contest.id}`}>
           <div
             className={"game-card-v2 cursor-pointer h-full relative " + (isFeatured ? "" : "")}
             style={{
@@ -110,10 +117,8 @@ export default function Contests() {
                 <img
                   src={contest.image_url}
                   alt={contest.title}
-                  className="w-full h-full object-cover transition-transform duration-700"
-                  style={{ transform: "scale(1)", transition: "transform 0.7s cubic-bezier(0.22, 1, 0.36, 1)" }}
-                  onMouseEnter={(e: any) => { e.target.style.transform = "scale(1.08)"; }}
-                  onMouseLeave={(e: any) => { e.target.style.transform = "scale(1)"; }}
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(220 70% 18% / 0.08), hsl(352 73% 50% / 0.04))" }}>
@@ -163,10 +168,7 @@ export default function Contests() {
             </div>
 
             <div className="p-3 sm:p-4 space-y-2">
-              <h3 className="font-display text-xs sm:text-sm md:text-base font-bold text-foreground line-clamp-2 leading-tight transition-colors" style={{ transition: "color 0.2s" }}
-                onMouseEnter={(e: any) => { e.target.style.color = THEME_P; }}
-                onMouseLeave={(e: any) => { e.target.style.color = ""; }}
-              >
+              <h3 className="font-display text-xs sm:text-sm md:text-base font-bold text-foreground line-clamp-2 leading-tight transition-colors group-hover:text-primary">
                 {contest.title}
               </h3>
               {contest.description && (
@@ -191,15 +193,12 @@ export default function Contests() {
                   <span className="line-clamp-1">{contest.prize_description}</span>
                 </div>
               )}
-              <div
-                className="pt-1 flex items-center gap-1 text-xs font-semibold opacity-0 transition-opacity"
-                style={{ color: THEME_P }}
-                onMouseEnter={(e: any) => { e.currentTarget.style.opacity = "1"; }}
-                onMouseLeave={(e: any) => { e.currentTarget.style.opacity = "0"; }}
-              >
+              {/* ⭐ REA touch-first: CTA sempre visível — nunca escondido atrás de hover */}
+              <div className="pt-1 flex items-center gap-1 text-xs font-bold" style={{ color: THEME_P }}>
                 <span>Participar</span> <ArrowRight className="h-3 w-3" />
               </div>
             </div>
+            <span className="sr-only">Participar no concurso {contest.title}</span>
           </div>
         </Link>
       </motion.div>
@@ -319,7 +318,8 @@ export default function Contests() {
         </motion.div>
 
         {loading ? (
-          <div className="md:hidden"><MeituanSkeleton count={6} /></div>
+          /* ⭐ REA: skeleton em TODAS as dimensões — nunca falso "vazio" no desktop */
+          <div data-testid="concursos-loading"><MeituanSkeleton count={9} /></div>
         ) : (
           <AnimatePresence mode="wait">
             {tab === "active" ? (
@@ -331,7 +331,7 @@ export default function Contests() {
                 transition={{ ...SPRING }}
               >
                 {active.length === 0 ? (
-                  <div className="empty-state-v2 text-center py-20">
+                  <div className="empty-state-v2 text-center py-20" data-testid="concursos-empty">
                     <div className="empty-orb" style={{ backgroundColor: THEME_A, width: 100, height: 100, top: "20%", left: "45%" }} />
                     <motion.div className="empty-float inline-block relative">
                       <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, " + THEME_A + "10, transparent)", border: "1px dashed " + THEME_A + "20" }}>
@@ -342,7 +342,7 @@ export default function Contests() {
                     <p className="text-sm text-muted-foreground/50 mt-1">Fica atento — novos concursos em breve!</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-3" data-testid="concursos-grid">
                     {active.map((c, i) => <ContestCard key={c.id} contest={c} index={i} />)}
                   </div>
                 )}

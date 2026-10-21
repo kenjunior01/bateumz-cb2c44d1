@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -37,7 +38,10 @@ const AllGames = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const heroRef = useRef<HTMLDivElement>(null);
+  const mouseRafRef = useRef(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  /* ⭐ REA Steam: CCU real — sessões de jogo nas últimas 24h (tabela game_sessions) */
+  const [sessoes24h, setSessoes24h] = useState<number | null>(null);
   const [challengeGame, setChallengeGame] = useState<{ id: string; label: string } | null>(null);
   const [challengeToast, setChallengeToast] = useState<string | null>(null);
   const meName = getPlayerIdentity().name;
@@ -66,11 +70,30 @@ const AllGames = () => {
     return m;
   }, []);
 
+  /* ⭐ REA perf: luz do rato com requestAnimationFrame — sem re-render por pixel */
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!heroRef.current) return;
     const rect = heroRef.current.getBoundingClientRect();
-    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (mouseRafRef.current) return;
+    mouseRafRef.current = requestAnimationFrame(() => {
+      mouseRafRef.current = 0;
+      setMousePos({ x, y });
+    });
   };
+
+  /* ⭐ REA Steam: contagem real de sessões (24h) — sem números inventados */
+  useEffect(() => {
+    let alive = true;
+    const iso24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    supabase
+      .from("game_sessions")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", iso24h)
+      .then(({ count }) => { if (alive && typeof count === "number") setSessoes24h(count); });
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="min-h-screen pb-20 lg:pb-0" style={{ background: 'var(--area-bg, #0d1117)', color: 'var(--area-text, #e6edf3)' }}>
@@ -95,8 +118,9 @@ const AllGames = () => {
       <div
         ref={heroRef}
         onMouseMove={handleMouseMove}
-        className="dir-hero-bg relative overflow-hidden hidden md:block"
-        style={{ minHeight: "380px" }}
+        data-testid="jogos-hero"
+        className="dir-hero-bg relative overflow-hidden"
+        style={{ minHeight: "auto" }}
       >
         <div className="aurora-hero">
           <div className="aurora-blob aurora-blob-1" style={{ background: 'rgba(46, 160, 67, 0.2)' }} />
@@ -110,7 +134,7 @@ const AllGames = () => {
         />
         <div className="hero-bottom-fade" />
 
-        <div className="relative z-10 container mx-auto px-4 py-14">
+        <div className="relative z-10 container mx-auto px-4 py-7 md:py-14">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.1 }} className="max-w-2xl">
             <motion.div
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4"
@@ -123,14 +147,29 @@ const AllGames = () => {
               <span className="text-xs font-bold" style={{ color: '#7d8590' }}><AnimatedNumber value={ALL_GAMES.length} /> JOGOS DISPONIVEIS</span>
             </motion.div>
 
-            <h1 className="text-4xl md:text-6xl font-black font-display tracking-tight mb-3 jogos-glow-green">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-black font-display tracking-tight mb-2 md:mb-3 jogos-glow-green">
               <ShimmerText colors={['#2ea043', '#58a6ff', '#f78166', '#2ea043']} speed={5}>Jogos Clássicos</ShimmerText>
             </h1>
             <p className="text-base mb-6 max-w-xl" style={{ color: '#7d8590' }}>
               Os clássicos famosos de qualquer dispositivo — Bounce, Guerra Espacial, Flappy Bird, Xadrez, Damas — e o nosso MUNDO BATEU. Grátis, direto no navegador!
             </p>
 
-            <div className="flex flex-wrap gap-3 mb-6">
+            {/* ⭐ REA Steam: prova social real — badge com contagem ao vivo de game_sessions */}
+            {sessoes24h !== null && sessoes24h > 0 && (
+              <span
+                data-testid="jogos-badge-sessoes-live"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-2"
+                style={{ background: "rgba(46,160,67,0.12)", color: THEME_P, border: "1px solid rgba(46,160,67,0.3)" }}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: THEME_P }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: THEME_P }} />
+                </span>
+                <AnimatedNumber value={sessoes24h} /> sessões de jogo nas últimas 24h
+              </span>
+            )}
+
+            <div className="flex flex-wrap gap-3 mb-4 md:mb-6">
               <span className="jogos-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold">
                 <Users className="h-3.5 w-3.5" /> <AnimatedNumber value={botGames.length} /> jogos com Bot IA
               </span>
@@ -142,15 +181,18 @@ const AllGames = () => {
               </span>
             </div>
 
+            {/* ⭐ REA CrazyGames: pesquisa acessível em todas as dimensões */}
             <div className="dir-search-wrap max-w-md">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
+                  aria-label="Procurar jogo"
                   placeholder="Procurar jogo..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onFocus={() => sfx.inputFocus()}
+                  data-testid="jogos-pesquisa"
                   className="w-full pl-11 pr-4 py-3 rounded-full bg-white/[0.03] border-white/[0.06] text-sm focus:outline-none focus:border-hsl(220 70% 18% / 0.4) transition-all input-focus-glow"
                 />
               </div>
@@ -399,7 +441,7 @@ const AllGames = () => {
         </AnimatePresence>
 
         {filtered.length === 0 && (
-          <div className="empty-state-v2 text-center py-20">
+          <div className="empty-state-v2 text-center py-20" data-testid="jogos-empty-state">
             <div className="empty-orb" style={{ backgroundColor: THEME_P, width: 120, height: 120, top: "20%", left: "40%" }} />
             <motion.div className="empty-float inline-block relative">
               <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, hsl(220 70% 18% / 0.1), hsl(352 73% 50% / 0.05))", border: "1px dashed hsl(220 70% 18% / 0.2)" }}>
@@ -408,6 +450,15 @@ const AllGames = () => {
             </motion.div>
             <p className="text-lg font-bold text-muted-foreground">Nenhum jogo encontrado</p>
             <p className="text-sm text-muted-foreground/50 mt-1">Tenta outro termo de pesquisa ou categoria</p>
+            {/* ⭐ REA Poki: empty state com ação real */}
+            <button
+              onClick={() => { setSearch(""); setCategory("todos"); setRegionFilter("all"); setSortBy("populares"); sfx.click(); }}
+              data-testid="jogos-limpar-filtros"
+              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black transition-transform hover:scale-105"
+              style={{ background: THEME_P, color: "#fff", boxShadow: "0 4px 20px rgba(46,160,67,0.35)" }}
+            >
+              <Search className="h-3.5 w-3.5" /> LIMPAR FILTROS
+            </button>
           </div>
         )}
       </section>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle, Heart, Target, Gamepad2, Coins, Star, TrendingUp } from "lucide-react";
+import { User, Ticket, Trophy, Calendar, MapPin, Mail, Phone, Edit2, Camera, Clock, CheckCircle2, XCircle, AlertCircle, Heart, Target, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -363,52 +363,52 @@ const Profile = () => {
               <ResponsibleGaming />
             </TabsContent>
 
-            {/* Tab: Estatísticas */}
-            <TabsContent value="stats">
+            {/* Tab: Estatísticas — ⭐ REA Steam: números 100% reais, derivados das participações */}
+            <TabsContent value="stats" data-testid="profile-estatisticas">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {([
                   {
-                    label: "Nível",
-                    value: "12",
-                    sub: "65% para o próximo nível",
-                    icon: Star,
-                    color: "bg-amber-500/15 text-amber-500",
-                    progress: 65,
-                  },
-                  {
-                    label: "XP Total",
-                    value: "4,280 XP",
-                    sub: "Experiência acumulada",
-                    icon: TrendingUp,
+                    label: "Participações",
+                    value: String(stats.total),
+                    sub: "bilhetes adquiridos por ti",
+                    icon: Ticket,
                     color: "bg-primary/15 text-primary",
                   },
                   {
-                    label: "Previsões",
-                    value: "47",
-                    sub: "Precisão: 68%",
-                    icon: Target,
-                    color: "bg-cyan-500/15 text-cyan-500",
+                    label: "Confirmados",
+                    value: String(stats.confirmed),
+                    sub: "pagamentos validados",
+                    icon: CheckCircle2,
+                    color: "bg-green-500/15 text-green-500",
                   },
                   {
-                    label: "Sorteios",
-                    value: "23 bilhetes",
-                    sub: "2 vitórias",
-                    icon: Ticket,
+                    label: "Taxa de Confirmação",
+                    value: stats.total > 0 ? `${Math.round((stats.confirmed / stats.total) * 100)}%` : "—",
+                    sub: "confirmados sobre o total",
+                    icon: TrendingUp,
+                    color: "bg-cyan-500/15 text-cyan-500",
+                    progress: stats.total > 0 ? Math.round((stats.confirmed / stats.total) * 100) : 0,
+                  },
+                  {
+                    label: "Pendentes",
+                    value: String(stats.pending),
+                    sub: "aguardam pagamento",
+                    icon: Clock,
+                    color: "bg-yellow-500/15 text-yellow-500",
+                  },
+                  {
+                    label: "Sorteios Distintos",
+                    value: String(new Set(participations.map((p) => p.raffle?.title).filter(Boolean)).size),
+                    sub: "sorteios diferentes em que participaste",
+                    icon: Target,
                     color: "bg-purple-500/15 text-purple-500",
                   },
                   {
-                    label: "Jogos",
-                    value: "156 jogos",
-                    sub: "89 vitórias",
-                    icon: Gamepad2,
-                    color: "bg-emerald-500/15 text-emerald-500",
-                  },
-                  {
-                    label: "Moedas",
-                    value: "2,450",
-                    sub: "Saldo disponível",
-                    icon: Coins,
-                    color: "bg-yellow-500/15 text-yellow-500",
+                    label: "Total Investido",
+                    value: formatMZN(stats.spent),
+                    sub: "soma dos teus bilhetes",
+                    icon: Trophy,
+                    color: "bg-accent/15 text-accent",
                   },
                 ] as const).map((stat, i) => (
                   <motion.div
@@ -423,12 +423,6 @@ const Profile = () => {
                           <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.color}`}>
                             <stat.icon className="h-5 w-5" />
                           </div>
-                          {stat.label === "Nível" && (
-                            <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground border-border/60">
-                              <Trophy className="h-3 w-3 mr-0.5 text-amber-500" />
-                              Rank B
-                            </Badge>
-                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mb-0.5">{stat.label}</p>
                         <p className="text-2xl font-bold text-foreground">{stat.value}</p>

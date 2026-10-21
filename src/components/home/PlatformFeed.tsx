@@ -259,6 +259,7 @@ export default function PlatformFeed() {
           <AnimatePresence initial={false}>
             {!loading && visible.slice(0, 12).map((item, idx) => {
               const Icon = item.icon;
+              const abrir = () => navigate(item.href);
               return (
                 <motion.div
                   key={item.key}
@@ -266,8 +267,13 @@ export default function PlatformFeed() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: Math.min(idx * 0.03, 0.3), duration: 0.3 }}
-                  onClick={() => navigate(item.href)}
-                  className="flex items-start gap-3 p-4 cursor-pointer transition-colors duration-150 hover:bg-white/[0.03]"
+                  onClick={abrir}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={item.text}
+                  data-testid={`feed-item-${idx + 1}`}
+                  className="flex items-start gap-3 p-4 cursor-pointer transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus:outline-none"
                   style={idx > 0 ? { borderTop: "1px solid rgba(255,255,255,0.05)" } : undefined}
                 >
                   <span
@@ -297,10 +303,21 @@ export default function PlatformFeed() {
           </AnimatePresence>
         </div>
 
-        {/* rodapé do feed */}
+        {/* rodapé do feed — ⭐ REA: "ver mais" também dentro do feed (não só no fim) */}
+        {!loading && visible.length > 12 && (
+          <button
+            onClick={() => navigate("/community")}
+            data-testid="feed-ver-mais"
+            className="mt-2 w-full inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-2xl transition-transform active:scale-[0.98]"
+            style={{ color: "#a1a1aa", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            Ver mais {visible.length - 12} atividades <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        )}
         {!loading && visible.length > 0 && (
           <button
             onClick={() => navigate("/community")}
+            data-testid="feed-comunidade"
             className="mt-3 w-full inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-2xl transition-transform active:scale-[0.98]"
             style={{ color: CYAN, background: `${CYAN}0a`, border: `1px solid ${CYAN}22` }}
           >

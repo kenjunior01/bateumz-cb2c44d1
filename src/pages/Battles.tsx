@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSEO } from '@/hooks/useSEO';
+import { supabase } from '@/integrations/supabase/client';
 import {
   BATTLE_GAMES, createBattle, getOpenBattles, getMyBattles, acceptBattle,
   type UserBattle,
@@ -48,37 +49,25 @@ const statusColors: Record<string, string> = {
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -12 } };
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } };
 
-// Fake ticker data for social proof
-const tickerMessages = [
-  { text: 'Carlos venceu 100 MZN no Galo VS', won: true },
-  { text: 'Ana perdeu 50 MZN no Pong VS', won: false },
-  { text: 'Miguel venceu 250 MZN no Xadrez', won: true },
-  { text: 'Sofia venceu 75 MZN na Corrida de Reacao', won: true },
-  { text: 'Joao perdeu 30 MZN no Duelo de Matematica', won: false },
-  { text: 'Beatriz venceu 500 MZN na Arena de Duelo VS', won: true },
-  { text: 'Pedro venceu 150 MZN no Ligar 4', won: true },
-  { text: 'Luisa perdeu 100 MZN nas Damas', won: false },
-  { text: 'Ricardo venceu 200 MZN na Batalha de Cobras', won: true },
-  { text: 'Fernanda venceu 80 MZN no Pesca Cores', won: true },
-  { text: 'Andre perdeu 60 MZN na Torre VS', won: false },
-  { text: 'Diana venceu 300 MZN no Memoria VS Cartas', won: true },
-];
+// ⭐ REA FACEIT: prova social REAL — vencedores recentes de game_sessions (Supabase).
+// Zero números inventados: se não houver dados reais, as secções simplesmente não aparecem.
+interface SessaoRecente {
+  player_name: string | null;
+  game_name: string;
+  is_winner: boolean;
+  prize_value: number;
+  created_at: string;
+}
 
-// Fake ranking data
-const fakeRanking = [
-  { rank: 1, name: 'Carlos23', wins: 142, totalWon: 12450, color: 'from-amber-400 to-yellow-600' },
-  { rank: 2, name: 'MiguelPro', wins: 118, totalWon: 9800, color: 'from-gray-300 to-gray-400' },
-  { rank: 3, name: 'SofiaX', wins: 97, totalWon: 7200, color: 'from-amber-600 to-amber-800' },
-  { rank: 4, name: 'BeatrizG', wins: 85, totalWon: 5600, color: 'from-purple-500 to-purple-700' },
-  { rank: 5, name: 'RicardoK', wins: 72, totalWon: 4300, color: 'from-blue-500 to-blue-700' },
-];
+const RANK_COLORS = ['from-amber-400 to-yellow-600', 'from-gray-300 to-gray-400', 'from-amber-600 to-amber-800', 'from-purple-500 to-purple-700', 'from-blue-500 to-blue-700'];
 
-// Fake recent results for the open tab
-const fakeRecentResults = [
-  { winner: 'Carlos23', loser: 'Joao99', game: 'Galo VS', amount: 100, time: '2min' },
-  { winner: 'SofiaX', loser: 'Ana12', game: 'Xadrez', amount: 250, time: '5min' },
-  { winner: 'MiguelPro', loser: 'Pedro45', game: 'Pong VS', amount: 75, time: '8min' },
-];
+const timeAgoShort = (iso: string) => {
+  const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return `${mins}min`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.round(h / 24)}d`;
+};
 
 // Game category mapping
 const gameCategories: Record<string, string> = {
@@ -161,19 +150,76 @@ export default function Battles() {
   const [statsVisible, setStatsVisible] = useState(false);
   const [rankingsVisible, setRankingsVisible] = useState(false);
   const [showRankings, setShowRankings] = useState(false);
+  /* ⭐ REA: vencedores REAIS das últimas 24h (game_sessions) — alimenta ticker + resultados + ranking */
+  const [vencedores, setVencedores] = useState<SessaoRecente[]>([]);
 
-  // Animated counters for stats
-  const animatedBattles = useAnimatedCounter(12450, 2200, statsVisible);
-  const animatedBets = useAnimatedCounter(2400000, 2500, statsVisible);
-  const animatedPlayers = useAnimatedCounter(3200, 2000, statsVisible);
-
-  // Ticker cycling
   useEffect(() => {
+    let alive = true;
+    const iso24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('player_name, game_name, is_winner, prize_value, created_at')
+          .gte('created_at', iso24h)
+          .order('created_at', { ascending: false })
+          .limit(200);
+        if (alive && data) {
+          const ganhos = (data as SessaoRecente[]).filter((s) => s.is_winner && s.player_name);
+          setVencedores(ganhos);
+        }
+      } catch { /* sem dados reais → secções sociais escondidas (honesto) */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  /* Derivados reais */
+  const tickerMessages = useMemo(
+    () => vencedores.slice(0, 12).map((s) => ({
+      text: `${s.player_name} venceu ${Math.round(s.prize_value || 0)} MZN no ${s.game_name}`,
+      won: true,
+    })),
+    [vencedores]
+  );
+  const recentResults = useMemo(
+    () => vencedores.slice(0, 8).map((s) => ({
+      winner: s.player_name as string,
+      game: s.game_name,
+      amount: Math.round(s.prize_value || 0),
+      time: timeAgoShort(s.created_at),
+    })),
+    [vencedores]
+  );
+  const topBattlers = useMemo(() => {
+    const agg: Record<string, { wins: number; totalWon: number }> = {};
+    for (const s of vencedores) {
+      const n = s.player_name as string;
+      agg[n] = agg[n] || { wins: 0, totalWon: 0 };
+      agg[n].wins += 1;
+      agg[n].totalWon += s.prize_value || 0;
+    }
+    return Object.entries(agg)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.wins - a.wins)
+      .slice(0, 5)
+      .map((p, i) => ({ rank: i + 1, ...p, color: RANK_COLORS[i] }));
+  }, [vencedores]);
+
+  // Animated counters — REAIS: derivados das batalhas abertas
+  const emJogo = useMemo(() => openBattles.reduce((acc, b) => acc + (b.wager_amount || 0), 0), [openBattles]);
+  const batedores = useMemo(() => new Set(openBattles.map((b) => b.creator?.display_name).filter(Boolean)).size, [openBattles]);
+  const animatedBattles = useAnimatedCounter(openBattles.length, 1600, statsVisible);
+  const animatedBets = useAnimatedCounter(emJogo, 1800, statsVisible);
+  const animatedPlayers = useAnimatedCounter(batedores, 1600, statsVisible);
+
+  // Ticker cycling — só quando há vencedores reais
+  useEffect(() => {
+    if (tickerMessages.length === 0) return;
     const interval = setInterval(() => {
       setTickerIndex(prev => (prev + 1) % tickerMessages.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tickerMessages.length]);
 
   // Stats visibility trigger
   useEffect(() => {
@@ -301,29 +347,31 @@ export default function Battles() {
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">Ao Vivo</span>
             </div>
-            <div className="relative h-5 flex-1 overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tickerIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.35, ease: 'easeInOut' }}
-                  className="absolute inset-0 flex items-center"
-                >
-                  <div className="flex items-center gap-2">
-                    {tickerMessages[tickerIndex].won ? (
-                      <Trophy className="h-3.5 w-3.5 text-emerald-400" />
-                    ) : (
-                      <X className="h-3.5 w-3.5 text-red-400" />
-                    )}
-                    <span className={`text-xs font-medium ${tickerMessages[tickerIndex].won ? 'text-emerald-300' : 'text-red-300/70'}`}>
-                      {tickerMessages[tickerIndex].text}
-                    </span>
+                  {tickerMessages.length > 0 && (
+                  <div className="relative h-5 flex-1 overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={tickerIndex}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.35, ease: 'easeInOut' }}
+                        className="absolute inset-0 flex items-center"
+                      >
+                        <div className="flex items-center gap-2">
+                          {tickerMessages[tickerIndex].won ? (
+                            <Trophy className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <X className="h-3.5 w-3.5 text-red-400" />
+                          )}
+                          <span className={`text-xs font-medium ${tickerMessages[tickerIndex].won ? 'text-emerald-300' : 'text-red-300/70'}`}>
+                            {tickerMessages[tickerIndex].text}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                  )}
           </div>
         </div>
       </div>
@@ -340,7 +388,7 @@ export default function Battles() {
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-500/10 blur-xl" />
             <Sword className="mx-auto mb-2 h-5 w-5 text-purple-400" />
             <p className="text-xl font-extrabold text-white sm:text-2xl">{formatNumber(animatedBattles)}</p>
-            <p className="mt-0.5 text-[10px] text-white/50">Batalhas Jogadas</p>
+            <p className="mt-0.5 text-[10px] text-white/50">Batalhas Abertas</p>
           </motion.div>
 
           <motion.div
@@ -353,7 +401,7 @@ export default function Battles() {
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-emerald-500/10 blur-xl" />
             <TrendingUp className="mx-auto mb-2 h-5 w-5 text-emerald-400" />
             <p className="text-xl font-extrabold text-white sm:text-2xl">MT {formatNumber(animatedBets)}</p>
-            <p className="mt-0.5 text-[10px] text-white/50">Total em Apostas</p>
+            <p className="mt-0.5 text-[10px] text-white/50">Em Jogo Agora</p>
           </motion.div>
 
           <motion.div
@@ -366,7 +414,7 @@ export default function Battles() {
             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-amber-500/10 blur-xl" />
             <Users className="mx-auto mb-2 h-5 w-5 text-amber-400" />
             <p className="text-xl font-extrabold text-white sm:text-2xl">{formatNumber(animatedPlayers)}</p>
-            <p className="mt-0.5 text-[10px] text-white/50">Jogadores Activos</p>
+            <p className="mt-0.5 text-[10px] text-white/50">Criadores de Batalhas</p>
           </motion.div>
         </div>
       </div>
@@ -437,6 +485,7 @@ export default function Battles() {
                     </motion.div>
                   </div>
 
+                  {recentResults.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -448,9 +497,9 @@ export default function Battles() {
                       <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Ultimos Resultados</h3>
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                      {fakeRecentResults.map((r, i) => (
+                      {recentResults.map((r, i) => (
                         <motion.div
-                          key={r.winner + "-" + r.game}
+                          key={r.winner + "-" + r.game + "-" + i}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.2 + i * 0.08 }}
@@ -460,8 +509,6 @@ export default function Battles() {
                           <div className="flex items-center gap-1.5 text-[10px]">
                             <Trophy className="h-3 w-3 text-emerald-400" />
                             <span className="font-bold text-emerald-300">{r.winner}</span>
-                            <span className="text-white/30">vs</span>
-                            <span className="text-white/40">{r.loser}</span>
                           </div>
                           <div className="mt-1 flex items-center gap-2 text-[10px] text-white/40">
                             <span>{r.game}</span>
@@ -472,6 +519,7 @@ export default function Battles() {
                       ))}
                     </div>
                   </motion.div>
+                  )}
 
                   {loading ? (
                     <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/5" />)}</div>
@@ -515,12 +563,10 @@ export default function Battles() {
                                 <p className="text-[10px] text-white/40">aposta</p>
                               </div>
                               <Dialog>
-                                <DialogTrigger>
-                                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                    <Button size="sm" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500" onClick={() => setAcceptTarget(battle)}>
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                  </motion.div>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" aria-label="Aceitar batalha" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500" onClick={() => setAcceptTarget(battle)}>
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
                                 </DialogTrigger>
                                 <DialogContent className="border-white/10 bg-[#1a1035] text-white sm:max-w-md">
                                   <DialogHeader><DialogTitle>Aceitar Batalha?</DialogTitle></DialogHeader>
@@ -739,7 +785,10 @@ export default function Battles() {
                     <Flame className="h-4 w-4 text-amber-400" />
                     <h3 className="text-sm font-bold text-white/80">Top Battlers</h3>
                   </div>
-                  {fakeRanking.map((player, i) => (
+                  {topBattlers.length === 0 && (
+                    <p className="text-xs text-white/30 leading-relaxed">Sem vencedores registados nas últimas 24h — cria a tua batalha e aparece aqui!</p>
+                  )}
+                  {topBattlers.map((player, i) => (
                     <motion.div
                       key={player.rank}
                       initial={{ opacity: 0, x: 20 }}
@@ -788,7 +837,10 @@ export default function Battles() {
                 </div>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-                {fakeRanking.map((player, i) => (
+                {topBattlers.length === 0 && (
+                  <p className="text-xs text-white/30">Sem vencedores registados nas últimas 24h — sê o primeiro!</p>
+                )}
+                {topBattlers.map((player, i) => (
                   <motion.div
                     key={player.rank}
                     initial={{ opacity: 0, y: 15 }}

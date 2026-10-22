@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Play, Flame, CircleDollarSign, Video, MessageSquare, GitBranch, Sparkles,
+  Trophy, Gamepad2, Users, Clock, Search, Zap, Eye, Star, ChevronRight, Filter, TrendingUp, Shield, Radio, MapPin, Calendar, Play, Flame, CircleDollarSign, Video, MessageSquare, GitBranch, Sparkles, Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,7 @@ import ButtonRipple from '@/components/ui/ButtonRipple';
 import { fadeInUp, staggerContainer, neonPulse } from '@/lib/animation-utilities';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import ScrollReveal from '@/components/ui/ScrollReveal';
+import ActivityFeed from '@/components/ActivityFeed';
 import {
   PowerRankingsWidget,
   PollWidget,
@@ -835,13 +836,14 @@ export default function EsportsHub() {
                 </h3>
                 <div className="space-y-1">
                   {[
+                    { icon: Plus, label: 'Criar Campeonato (empresas)', path: '/dashboard/esports' },
                     { icon: GitBranch, label: 'Grelha dos Playoffs', path: '/esports/brackets' },
                     { icon: Sparkles, label: 'Fantasy Esports', path: '/esports/fantasy' },
-                    { icon: Trophy, label: 'Ver Ranking Global', path: '/esports/ranking' },
-                    { icon: Gamepad2, label: 'Explorar Ligas', path: '/esports/ligas' },
-                    { icon: Users, label: 'Minha Equipa', path: '/esports/equipa' },
-                    { icon: Calendar, label: 'Calendario de Eventos', path: '/esports/calendario' },
-                    { icon: Eye, label: 'Assistir Transmissoes', path: '/esports/ao-vivo' },
+                    { icon: Trophy, label: 'Ver Ranking Global', path: '/esports/leaderboard' },
+                    { icon: Gamepad2, label: 'Explorar Ligas', path: '/ligas' },
+                    { icon: Users, label: 'Minha Equipa', path: '/esports/equipas' },
+                    { icon: Calendar, label: 'Calendario de Eventos', path: '/esports/seasons' },
+                    { icon: Eye, label: 'Assistir Transmissoes', path: '/lives-agora' },
                   ].map((link) => (
                     <button
                       key={link.path}
@@ -899,6 +901,11 @@ export default function EsportsHub() {
             </motion.div>
           </div>
           </ScrollReveal>
+
+          {/* atividade ao vivo dos esports — inscrições, resultados e ligas em tempo real */}
+          <div className='mt-8 max-w-6xl mx-auto px-4 pb-10' data-testid='esports-activity'>
+            <ActivityFeed limit={4} testId='esports-activity-feed' />
+          </div>
         </div>
       </div>
     </div>

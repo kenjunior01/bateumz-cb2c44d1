@@ -17,6 +17,7 @@ const EcosystemHarmony = lazy(() => import("@/components/EcosystemHarmony").then
 const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
 const DestaquesRollUp = lazy(() => import("@/components/home/DestaquesRollUp").then(m => ({ default: m.default })));
 const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
+const EsportsRollUp = lazy(() => import("@/components/home/EsportsRollUp").then(m => ({ default: m.default })));
 const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
 const LeiloesRollUp = lazy(() => import("@/components/home/LeiloesRollUp").then(m => ({ default: m.default })));
 const SorteiosConcursosRollUp = lazy(() => import("@/components/home/SorteiosConcursosRollUp").then(m => ({ default: m.default })));
@@ -598,10 +599,11 @@ export default function Index() {
       <Suspense fallback={<div className="h-24" />}><ContinuePlayRail /></Suspense>
 
       {/* ═══════════ ROLL-UPS DINÂMICOS — a homepage que engloba tudo ═══════════
-           Ordem: Destaques & Features → Jogos & Torneios → Vendas → Leilões →
-                  Sorteios & Concursos → Feed da Plataforma (tudo num só fluxo). */}
+           Ordem: Destaques & Features → Jogos & Torneios → Esports & Ligas (inscrições) →
+                  Vendas → Leilões → Sorteios & Concursos → Feed da Plataforma. */}
       <Suspense fallback={<div className="h-48" />}><DestaquesRollUp /></Suspense>
       <Suspense fallback={<div className="h-48" />}><GamesTournamentsRollUp /></Suspense>
+      <Suspense fallback={<div className="h-48" />}><EsportsRollUp /></Suspense>
 
       {/* ═══════════ GAMING ARENA — competição, ranking e prémios (REA Stake/FACEIT) ═══════════ */}
       <div className="w-full max-w-6xl mx-auto px-4 py-4" data-testid="home-arena-banner">

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+import { Plus } from "lucide-react";
+import ActivityFeed from "@/components/ActivityFeed";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getLeagues,
@@ -324,6 +326,27 @@ export default function LeaguesListPage() {
           >
             Participe de ligas competitivas, suba no ranking e concorra a premios incriveis em diversos jogos.
           </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="flex flex-wrap items-center justify-center gap-3"
+            data-testid="ligas-ctas"
+          >
+            <a
+              href="/dashboard/leagues"
+              data-testid="ligas-criar"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-purple-500/25 transition-transform hover:scale-[1.03]"
+            >
+              <Plus className="h-4 w-4" /> Criar Liga (empresas e organizadores)
+            </a>
+            <a
+              href="/tournaments"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-bold text-white backdrop-blur hover:border-white/30"
+            >
+              <Trophy className="h-4 w-4" /> Ver Torneios
+            </a>
+          </motion.div>
         </div>
       </section>
 
@@ -428,6 +451,11 @@ export default function LeaguesListPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* atividade ao vivo das ligas — tudo o que acontece aparece aqui */}
+        <div className="pt-6" data-testid="ligas-activity">
+          <ActivityFeed limit={4} testId="ligas-activity-feed" />
+        </div>
       </div>
     </div>
   );

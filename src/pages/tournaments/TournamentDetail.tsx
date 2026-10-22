@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+import { publishActivity } from "@/lib/activityBus";
 import { useAuth } from "@/contexts/AuthContext";
 import TournamentLeaderboard from "@/components/tournaments/TournamentLeaderboard";
 import {
@@ -90,6 +91,10 @@ export default function TournamentDetail() {
     }
     setJoined(true);
     setParticipantCount((c) => c + 1);
+    publishActivity("tournament", `Nova inscrição em ${tournament?.name ?? "torneio"}`, {
+      detail: res.fee_paid && res.fee_paid > 0 ? `Taxa paga: ${res.fee_paid.toLocaleString("pt-PT")} ${tournament?.currency ?? "MZN"}` : "Inscrição gratuita confirmada",
+      href: `/tournaments/${id}`,
+    });
     toast.success(
       res.fee_paid && res.fee_paid > 0
         ? `Inscrição confirmada! Taxa: ${res.fee_paid.toLocaleString("pt-PT")} ${tournament?.currency ?? "MZN"}`

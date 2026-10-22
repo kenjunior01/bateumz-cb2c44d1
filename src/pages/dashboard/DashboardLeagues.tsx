@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { publishActivity } from "@/lib/activityBus";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -199,6 +200,9 @@ export default function DashboardLeagues() {
       });
 
       toast({ title: "Liga criada com sucesso!" });
+      publishActivity("league", `Nova liga criada: ${form.name.trim()}`, {
+        detail: form.prize_description?.trim() || "Inscrições abertas em breve", href: "/ligas",
+      });
       setDialogOpen(false);
       setForm({ ...emptyForm });
       loadLeagues();

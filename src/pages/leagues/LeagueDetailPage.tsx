@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+import { publishActivity } from "@/lib/activityBus";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -134,6 +135,10 @@ export default function LeagueDetailPage() {
     try {
       await joinLeague(league.id, user.id);
       setIsParticipant(true);
+      publishActivity("league", `Nova inscrição na liga ${league.name}`, {
+        detail: league.game_type || "Inscrição confirmada",
+        href: `/ligas/${league.slug ?? league.id}`,
+      });
       await loadData();
     } catch (e) {
       console.error(e);

@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Inbox, HandCoins } from "lucide-react";
+import { Trophy, Inbox, HandCoins, Plus } from "lucide-react";
+import ActivityFeed from "@/components/ActivityFeed";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import TournamentCard from "@/components/tournaments/TournamentCard";
@@ -83,11 +84,18 @@ export default function TournamentsList() {
               </div>
               <h1 className="text-2xl font-bold">{t("tournament.title")}</h1>
             </div>
-            <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href="/negocios">
-                <HandCoins className="h-4 w-4" /> Ganhe dinheiro organizando
-              </a>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <a href="/negocios">
+                  <HandCoins className="h-4 w-4" /> Ganhe dinheiro organizando
+                </a>
+              </Button>
+              <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700" data-testid="torneios-criar">
+                <a href="/dashboard/tournaments">
+                  <Plus className="h-4 w-4" /> Criar Torneio
+                </a>
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             {t("tournament.subtitle")}
@@ -111,6 +119,11 @@ export default function TournamentsList() {
             {renderList(completed)}
           </TabsContent>
         </Tabs>
+
+        {/* atividade ao vivo — inscrições e resultados aparecem aqui em tempo real */}
+        <div className="mt-10" data-testid="torneios-activity">
+          <ActivityFeed limit={4} testId="torneios-activity-feed" />
+        </div>
       </div>
       <Footer />
     </div>

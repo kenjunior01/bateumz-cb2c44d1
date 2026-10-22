@@ -1,646 +1,556 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+// ═══════════════════════════════════════════════════════════════
+// Marketplace Bateu — o mercado unificado de classe mundial.
+//
+// REA dos melhores do mundo (Amazon · Temu · StockX · Steam · Wallapop):
+//   → UMA busca instantânea para tudo (leilões, produtos, alienação,
+//     sorteios, jogos, concursos)
+//   → Flash deals com contagem regressiva REAL (o que acaba primeiro)
+//   → Prova social e confiança em cada cartão (verificado, visualizações)
+//   → Atividade ao vivo embutida (o mercado respira)
+//   → Compatibilidade total com links antigos (?tab= / ?filter= / ?q=)
+// ═══════════════════════════════════════════════════════════════
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Ticket, Clock, Users, ArrowRight, MapPin, Gift, Star, Trophy, ThumbsUp, Eye, Video, X, SlidersHorizontal, Gamepad2, Zap } from "lucide-react";
+import {
+  Search, X, Flame, Gavel, ShoppingBag, KeyRound, Gift, Gamepad2, Trophy,
+  LayoutGrid, ArrowUpDown, ShieldCheck, Eye, Heart, MapPin, Zap, Clock, Sparkles,
+} from "lucide-react";
 import { formatMZN } from "@/lib/currency";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { PROVINCES } from "@/lib/provinces";
-import { getRegions } from "@/lib/regions";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import CountryRegionFilter from "@/components/CountryRegionFilter";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
-import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
-import MobileFilterSheet from "@/components/meituan/MobileFilterSheet";
-import MarketplaceEmptyState from "@/components/MarketplaceEmptyState";
-import ProvablyFair from "@/components/ProvablyFair";
-import OptimizedImage from "@/components/OptimizedImage";
-import { useLanguage } from "@/contexts/LanguageContext";
+import ActivityFeed from "@/components/ActivityFeed";
+import {
+  getMarketplaceData, searchMarket, sortMarket, subscribeMarketChanges,
+  kindLabel, type MarketItem, type MarketKind, type MarketData, type MarketSort,
+} from "@/lib/marketplace";
 import { useSEO } from "@/hooks/useSEO";
 
-const sb: any = supabase;
+const sb: any = null; // acesso direto não necessário — tudo via lib/marketplace
 
-interface Raffle {
-  id: string;
-  title: string;
-  slug: string | null;
-  prize_title: string;
-  prize_value: number;
-  ticket_price: number;
-  total_tickets: number;
-  sold_tickets: number;
-  end_date: string | null;
-  image_url: string | null;
-  status: string;
-  raffle_type: string;
-  points_cost: number;
-  province: string | null;
-  city: string | null;
-}
+type CatFilter = "all" | MarketKind;
 
-interface Contest {
-  id: string;
-  title: string;
-  description: string | null;
-  prize_description: string | null;
-  image_url: string | null;
-  status: string;
-  evaluation_type: string;
-  end_date: string | null;
-  created_at: string;
-}
+const CATS: { id: CatFilter; label: string; icon: typeof Gavel; accent: string }[] = [
+  { id: "all", label: "Tudo", icon: LayoutGrid, accent: "from-cyan-500 to-blue-600" },
+  { id: "leilao", label: "Leilões", icon: Gavel, accent: "from-orange-500 to-amber-600" },
+  { id: "produto", label: "Produtos", icon: ShoppingBag, accent: "from-fuchsia-500 to-purple-600" },
+  { id: "alienacao", label: "Alienação", icon: KeyRound, accent: "from-emerald-500 to-teal-600" },
+  { id: "sorteio", label: "Sorteios", icon: Gift, accent: "from-violet-500 to-fuchsia-600" },
+  { id: "jogo", label: "Jogos", icon: Gamepad2, accent: "from-lime-500 to-green-600" },
+  { id: "concurso", label: "Concursos", icon: Trophy, accent: "from-yellow-500 to-orange-600" },
+];
 
-type ContentType = "all" | "raffles" | "contests" | "games";
+const SORTS: { id: MarketSort; label: string }[] = [
+  { id: "urgente", label: "Acaba primeiro" },
+  { id: "desconto", label: "Melhor desconto" },
+  { id: "barato", label: "Preço mais baixo" },
+  { id: "caro", label: "Preço mais alto" },
+  { id: "popular", label: "Mais popular" },
+  { id: "recente", label: "Mais recente" },
+];
 
-const Marketplace = () => {
-  const { t } = useLanguage();
-  const [raffles, setRaffles] = useState<Raffle[]>([]);
-  const [contests, setContests] = useState<Contest[]>([]);
-  const [games, setGames] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<"newest" | "ending" | "popular">("newest");
-  const [typeFilter, setTypeFilter] = useState<"all" | "paid" | "free" | "points">("all");
-  const [country, setCountry] = useState("");
-  const [region, setRegion] = useState("");
-  const [searchParams] = useSearchParams();
-  const [contentType, setContentType] = useState<ContentType>((searchParams.get("tab") as ContentType) || "all");
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const isMobile = useIsMobile();
-
-  useSEO({
-    title: 'Sorteios e Rifas Online',
-    description: 'Explore todos os sorteios ativos na Bateu. Rifas de prémios reais, bilhetes acessíveis, sorteios ao vivo com verificação justa. Novos sorteios adicionados diariamente.',
-    canonicalPath: '/marketplace',
-    structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'CollectionPage',
-      name: 'Sorteios Ativos — Bateu',
-      description: 'Todos os sorteios e rifas ativas na plataforma Bateu',
-      url: 'https://bateu.online/marketplace'
-    }
-  });
-
+/** Contagem regressiva ao vivo (tiquetaque a cada segundo). */
+function useNow(active: boolean) {
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const tab = searchParams.get("tab") as ContentType;
-    if (tab && (tab === "all" || tab === "raffles" || tab === "contests" || tab === "games")) {
-      setContentType(tab);
-    }
-    const q = searchParams.get("q");
-    if (q) setSearch(q);
-    const filter = searchParams.get("filter");
-    if (filter) {
-      switch (filter) {
-        case "trending":
-          setSortBy("popular");
-          break;
-        case "new":
-          setSortBy("newest");
-          break;
-        case "ending":
-          setSortBy("ending");
-          break;
-        case "cheap":
-          setTypeFilter("free");
-          setContentType("raffles");
-          break;
-        case "premium":
-          setSortBy("popular");
-          setContentType("raffles");
-          break;
-      }
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const [rafflesRes, contestsRes, spinRes, millRes] = await Promise.all([
-        sb.from("raffles").select("*").eq("status", "active").order("created_at", { ascending: false }),
-        sb.from("contests").select("*").in("status", ["active", "voting", "completed"]).order("created_at", { ascending: false }),
-        sb.from("spin_wheel_games").select("*").eq("is_published", true),
-        sb.from("millionaire_games").select("*").eq("is_published", true),
-      ]);
-      if (rafflesRes.data) setRaffles(rafflesRes.data as Raffle[]);
-      if (contestsRes.data) setContests(contestsRes.data as Contest[]);
-      
-      const allGames = [
-        ...(spinRes.data || []).map(g => ({ ...g, type: 'spin' })),
-        ...(millRes.data || []).map(g => ({ ...g, type: 'millionaire' }))
-      ];
-      setGames(allGames);
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
-
-  const filteredRaffles = raffles
-    .filter((r) => {
-      if (!r.title.toLowerCase().includes(search.toLowerCase()) && !r.prize_title.toLowerCase().includes(search.toLowerCase())) return false;
-      if (typeFilter !== "all" && r.raffle_type !== typeFilter) return false;
-      if (region && r.province !== region) return false;
-      if (country && !region) {
-        const regs = getRegions(country).map((x) => x.value);
-        if (r.province && !regs.includes(r.province)) return false;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "ending") return (a.end_date || "z").localeCompare(b.end_date || "z");
-      if (sortBy === "popular") return b.sold_tickets - a.sold_tickets;
-      return 0;
-    });
-
-  const filteredContests = contests.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    (c.description || "").toLowerCase().includes(search.toLowerCase()) ||
-    (c.prize_description || "").toLowerCase().includes(search.toLowerCase())
-  );
-
-  const timeLeft = (date: string | null) => {
-    if (!date) return "Sem prazo";
-    const diff = new Date(date).getTime() - Date.now();
-    if (diff <= 0) return "Encerrado";
-    const days = Math.floor(diff / 86400000);
-    if (days > 0) return `${days}d restantes`;
-    const hours = Math.floor(diff / 3600000);
-    return `${hours}h restantes`;
-  };
-
-  /* ⭐ REA eBay: countdown ao vivo (tiquetaque compartilhado de 30s — barato p/ o telemóvel) */
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const iv = setInterval(() => setTick((t) => t + 1), 30000);
+    if (!active) return;
+    const iv = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(iv);
-  }, []);
-  const countdown = (date: string | null) => {
-    void tick;
-    if (!date) return "Sem prazo";
-    const diff = new Date(date).getTime() - Date.now();
-    if (diff <= 0) return "Encerrado";
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    if (d > 0) return `termina em ${d}d ${h}h`;
-    if (h > 0) return `termina em ${h}h ${m}m`;
-    return `termina em ${m}m`;
-  };
+  }, [active]);
+  return now;
+}
 
-  const getRaffleUrl = (raffle: Raffle) => `/raffle/${raffle.slug || raffle.id}`;
+function fmtRestante(endsAt: number | null | undefined, now: number): string | null {
+  if (!endsAt || endsAt <= now) return null;
+  const s = Math.floor((endsAt - now) / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m`;
+  return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+}
 
-  const showRaffles = contentType === "all" || contentType === "raffles";
-  const showContests = contentType === "all" || contentType === "contests";
-  const showGames = contentType === "all" || contentType === "games";
+const KIND_ICON: Record<MarketKind, typeof Gavel> = {
+  leilao: Gavel, produto: ShoppingBag, alienacao: KeyRound,
+  sorteio: Gift, jogo: Gamepad2, concurso: Trophy,
+};
 
-  const contestStatusMap: Record<string, { label: string; color: string }> = {
-    active: { label: "Aberto", color: "bg-primary text-primary-foreground" },
-    voting: { label: "Em Votação", color: "bg-accent text-accent-foreground" },
-    completed: { label: "Encerrado", color: "bg-muted text-muted-foreground" },
-  };
+const KIND_COLOR: Record<MarketKind, string> = {
+  leilao: "bg-orange-500/15 text-orange-300 border-orange-400/25",
+  produto: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-400/25",
+  alienacao: "bg-emerald-500/15 text-emerald-300 border-emerald-400/25",
+  sorteio: "bg-violet-500/15 text-violet-300 border-violet-400/25",
+  jogo: "bg-lime-500/15 text-lime-300 border-lime-400/25",
+  concurso: "bg-yellow-500/15 text-yellow-300 border-yellow-400/25",
+};
 
-  const activeFilterCount =
-    (typeFilter !== "all" ? 1 : 0) +
-    (contentType !== "all" ? 1 : 0) +
-    (country ? 1 : 0) +
-    (region ? 1 : 0) +
-    (sortBy !== "newest" ? 1 : 0);
+// ── cartão do marketplace ──────────────────────────────────────────────────
 
-  const sortLabel = sortBy === "newest" ? "Recentes" : sortBy === "ending" ? "A terminar" : "Populares";
-  const typeLabel = typeFilter === "all" ? null : typeFilter === "paid" ? "Pagos" : typeFilter === "free" ? "Gratuitos" : "Pontos";
-  const contentLabel = contentType === "all" ? null : contentType === "raffles" ? "Sorteios" : "Concursos";
-
-  const FiltersBody = () => (
-    <div className="space-y-5">
-      <div>
-        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tipo de conteúdo</p>
-        <div className="flex flex-wrap gap-2">
-          {([
-            { value: "all" as ContentType, label: "🔥 Tudo" },
-            { value: "raffles" as ContentType, label: "🎟️ Sorteios" },
-            { value: "contests" as ContentType, label: "🏆 Concursos" },
-            { value: "games" as ContentType, label: "🎮 Jogos" },
-          ]).map((t) => (
-            <Button key={t.value} variant={contentType === t.value ? "default" : "outline"} size="sm" onClick={() => setContentType(t.value)}>
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar</p>
-        <div className="flex flex-wrap gap-2">
-          {(["newest", "ending", "popular"]).map((s) => (
-            <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s as "newest" | "ending" | "popular")}>
-              {s === "newest" ? "Recentes" : s === "ending" ? "A terminar" : "Populares"}
-            </Button>
-          ))}
-        </div>
-      </div>
-      {showRaffles && (
-        <div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidade de sorteio</p>
-          <div className="flex flex-wrap gap-2">
-            {(["all", "paid", "free", "points"]).map((t) => (
-              <Button key={t} variant={typeFilter === t ? "default" : "outline"} size="sm" onClick={() => setTypeFilter(t as "all" | "paid" | "free" | "points")} className="gap-1">
-                {t === "all" ? "Todos" : t === "paid" ? <><Ticket className="h-3 w-3" /> Pagos</> : t === "free" ? <><Gift className="h-3 w-3" /> Gratuitos</> : <><Star className="h-3 w-3" /> Pontos</>}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-      <div>
-        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Região</p>
-        <CountryRegionFilter country={country} region={region} onCountry={setCountry} onRegion={setRegion} />
-      </div>
-    </div>
-  );
-
-  const chipCategories = [
-    { id: "all", label: "Tudo", icon: "🔥", count: raffles.length + contests.length + games.length },
-    { id: "raffles", label: "Sorteios", icon: "🎟️", count: raffles.length },
-    { id: "contests", label: "Concursos", icon: "🏆", count: contests.length },
-    { id: "games", label: "Jogos", icon: "🎮", count: games.length },
-    { id: "paid", label: "Pagos", icon: "💎" },
-    { id: "free", label: "Grátis", icon: "🎁" },
-    { id: "points", label: "Pontos", icon: "⭐" },
-    { id: "ending", label: "A terminar", icon: "⏰" },
-    { id: "popular", label: "Populares", icon: "🚀" },
-  ];
-
-  const handleChipChange = (id: string) => {
-    if (id === "all") { setContentType("all"); setTypeFilter("all"); setSortBy("newest"); return; }
-    if (id === "raffles" || id === "contests" || id === "games") { setContentType(id); return; }
-    if (id === "paid" || id === "free" || id === "points") { setTypeFilter(id); setContentType("raffles"); return; }
-    if (id === "ending") { setSortBy("ending"); return; }
-    if (id === "popular") { setSortBy("popular"); return; }
-  };
-  const activeChip =
-    sortBy === "ending" ? "ending" :
-    sortBy === "popular" ? "popular" :
-    typeFilter !== "all" ? typeFilter :
-    contentType !== "all" ? contentType :
-    "all";
-
-  const isCatalogEmpty = !loading && raffles.length === 0 && contests.length === 0 && games.length === 0;
-  const hasFilteredResults =
-    (showRaffles && filteredRaffles.length > 0) ||
-    (showContests && filteredContests.length > 0) ||
-    (showGames && games.length > 0);
-
+function MarketCard({ item, now }: { item: MarketItem; now: number }) {
+  const KindIcon = KIND_ICON[item.kind];
+  const restante = fmtRestante(item.endsAt, now);
   return (
-    <div className="min-h-screen bg-background">
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
-
-      <div className="container mx-auto px-4 md:pt-28 pb-20">
-        <MobileDiscoveryHeader
-          title={t("marketplace.title")}
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder={t("marketplace.searchPlaceholder")}
-          categories={chipCategories}
-          activeCategory={activeChip}
-          onCategoryChange={handleChipChange}
-          onOpenFilters={() => setFilterSheetOpen(true)}
-        />
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 hidden md:block">
-          <h1 className="font-display text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">{t("marketplace.title")}</h1>
-          <p className="text-muted-foreground text-lg">{t("marketplace.subtitle")}</p>
-        </motion.div>
-
-        <div className="hidden md:flex flex-col gap-3 mb-8">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Pesquisar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 glass border-border h-10" />
-            </div>
-            <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 gap-1.5 shrink-0 relative">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span>Filtros</span>
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
-                <SheetHeader>
-                  <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-border" />
-                  <SheetTitle className="text-left flex items-center gap-2">
-                    <SlidersHorizontal className="h-4 w-4 text-primary" /> Filtros
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="py-4">
-                  <FiltersBody />
-                </div>
-                <div className="sticky bottom-0 bg-background pt-3 pb-2 flex gap-2 border-t border-border">
-                  <Button variant="outline" className="flex-1" onClick={() => {
-                    setTypeFilter("all"); setContentType("all"); setCountry(""); setRegion(""); setSortBy("newest");
-                  }}>Limpar</Button>
-                  <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>Aplicar</Button>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          {activeFilterCount > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {contentLabel && (<Chip onRemove={() => setContentType("all")}>{contentLabel}</Chip>)}
-              {typeLabel && (<Chip onRemove={() => setTypeFilter("all")}>{typeLabel}</Chip>)}
-              {sortBy !== "newest" && (<Chip onRemove={() => setSortBy("newest")}>{sortLabel}</Chip>)}
-              {region && (<Chip onRemove={() => setRegion("")}>{PROVINCES.find(p => p.value === region)?.label || region}</Chip>)}
-              {country && !region && (<Chip onRemove={() => setCountry("")}>{country.toUpperCase()}</Chip>)}
-            </div>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25 }}
+      data-testid="market-card"
+      data-kind={item.kind}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur transition-colors hover:border-white/25"
+    >
+      <Link to={item.href} className="flex h-full flex-col">
+        {/* mídia */}
+        <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900">
+          {item.image ? (
+            <img
+              src={item.image}
+              alt={item.title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="grid h-full w-full place-items-center text-5xl">{item.emoji}</div>
+          )}
+          {/* tipo */}
+          <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur ${KIND_COLOR[item.kind]}`}>
+            <KindIcon className="h-3 w-3" /> {kindLabel(item.kind)}
+          </span>
+          {/* desconto */}
+          {item.discountPct != null && item.discountPct > 0 && (
+            <span className="absolute right-2 top-2 rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-black text-white shadow-lg shadow-rose-500/30" data-testid="market-discount">
+              −{item.discountPct}%
+            </span>
+          )}
+          {/* urgência */}
+          {restante && (
+            <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur" data-testid="market-countdown">
+              <Clock className="h-3 w-3 text-amber-400" /> {restante}
+            </span>
           )}
         </div>
 
-        <MobileFilterSheet
-          open={filterSheetOpen && isMobile}
-          onOpenChange={setFilterSheetOpen}
-          title="Filtrar"
-          onReset={() => { setTypeFilter("all"); setContentType("all"); setCountry(""); setRegion(""); setSortBy("newest"); }}
-          onApply={() => {}}
-        >
-          <FiltersBody />
-        </MobileFilterSheet>
-
-        <div className="mt-3 md:mt-0" />
-
-        {loading ? (
-          /* ⭐ REA Netflix/ML: skeleton grid — nunca spinner vazio */
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-skeleton">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden border border-border/50">
-                <div className="aspect-[4/3] bg-muted/60 animate-pulse" />
-                <div className="p-3 sm:p-5 space-y-2.5">
-                  <div className="h-4 w-3/4 rounded bg-muted/60 animate-pulse" />
-                  <div className="h-3 w-1/2 rounded bg-muted/50 animate-pulse" />
-                  <div className="h-2 w-full rounded bg-muted/40 animate-pulse" />
-                  <div className="h-3 w-2/3 rounded bg-muted/50 animate-pulse" />
-                </div>
-              </div>
-            ))}
+        {/* conteúdo */}
+        <div className="flex flex-1 flex-col gap-1.5 p-3">
+          <h3 className="line-clamp-2 text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+            {item.title}
+          </h3>
+          {item.subtitle && (
+            <p className="line-clamp-1 text-xs text-zinc-400">{item.subtitle}</p>
+          )}
+          <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+            <div>
+              {item.price > 0 ? (
+                <>
+                  {item.oldPrice && item.oldPrice > item.price && (
+                    <span className="mr-1.5 text-[11px] text-zinc-500 line-through">{formatMZN(item.oldPrice)}</span>
+                  )}
+                  <span className="text-base font-black text-white">{formatMZN(item.price)}</span>
+                </>
+              ) : (
+                <span className="text-sm font-black text-emerald-400">Grátis</span>
+              )}
+              {item.meta && <span className="block truncate text-[10px] text-zinc-500">{item.meta}</span>}
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] text-zinc-500">
+              {item.verified && (
+                <span className="inline-flex items-center gap-0.5 text-emerald-400">
+                  <ShieldCheck className="h-3 w-3" /> Verificado
+                </span>
+              )}
+              {(item.views != null && item.views > 0) && (
+                <span className="inline-flex items-center gap-0.5">
+                  <Eye className="h-3 w-3" /> {item.views.toLocaleString("pt-PT")}
+                </span>
+              )}
+              {item.location && (
+                <span className="inline-flex max-w-[110px] items-center gap-0.5 truncate">
+                  <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{item.location}</span>
+                </span>
+              )}
+            </div>
           </div>
-        ) : isCatalogEmpty ? (
-          <MarketplaceEmptyState />
-        ) : !hasFilteredResults ? (
-          <div className="text-center py-20">
-            <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-xl text-muted-foreground">{t("marketplace.noResults")}</p>
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {showGames && games.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className="h-5 w-5 text-primary" />
-                  <h2 className="font-display text-xl font-bold text-foreground">Jogos & Diversão</h2>
-                  <Badge variant="secondary">{games.length}</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
-                  {games.map((game, i) => (
-                    <Link key={game.id} to={`/games/${game.type === 'spin' ? 'spin-wheel' : 'millionaire'}/${game.id}`}>
-                      <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full">
-                        <div className="relative aspect-video bg-secondary overflow-hidden">
-                          {game.background_image_url ? (
-                            <OptimizedImage
-                              src={game.background_image_url}
-                              alt={game.name}
-                              optimizeWidth={480}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                              <Gamepad2 className="h-12 w-12 text-primary/40" />
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2">
-                            <Badge className="bg-black/60 backdrop-blur-md border-none">
-                              {game.type === 'spin' ? 'Roda' : 'Milionário'}
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-3">
-                          <h3 className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">{game.name}</h3>
-                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{game.description}</p>
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-[10px] font-bold text-primary">
-                              {game.spin_cost > 0 ? `${game.spin_cost} MZN` : 'GRÁTIS'}
-                            </span>
-                            <Button size="sm" className="h-6 text-[10px] px-2">Jogar</Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {showContests && filteredContests.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                {contentType === "all" && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    <h2 className="font-display text-xl font-bold text-foreground">Concursos</h2>
-                    <Badge variant="secondary">{filteredContests.length}</Badge>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-contests-grid">
-                  {filteredContests.map((contest, i) => (
-                    <motion.div
-                      key={contest.id}
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: i * 0.05, type: "spring", stiffness: 200 }}
-                      whileHover={{ y: -4 }}
-                    >
-                      <Link to={`/concursos/${contest.id}`}>
-                        <Card className="glass group hover:border-primary/30 transition-all overflow-hidden h-full shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
-                          <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
-                            {contest.image_url ? (
-                              <OptimizedImage
-                                src={contest.image_url}
-                                alt={contest.title}
-                                optimizeWidth={640}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
-                                <Trophy className="h-12 w-12 text-primary/30" />
-                              </div>
-                            )}
-                            <Badge className={`absolute top-3 left-3 ${contestStatusMap[contest.status]?.color || "bg-muted"}`}>
-                              {contestStatusMap[contest.status]?.label || contest.status}
-                            </Badge>
-                            {contest.end_date && (
-                              <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {countdown(contest.end_date)}
-                              </Badge>
-                            )}
-                            <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
-                          </div>
-                          <CardContent className="p-3 sm:p-5">
-                            <h3 className="font-display text-sm sm:text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2">{contest.title}</h3>
-                            {contest.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{contest.description}</p>
-                            )}
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                {contest.evaluation_type === "views" ? <><Eye className="h-3 w-3" /> Visualizações</> : <><ThumbsUp className="h-3 w-3" /> Votos</>}
-                              </span>
-                              {contest.prize_description && (
-                                <span className="font-semibold text-primary flex items-center gap-1">
-                                  <Trophy className="h-3 w-3" /> {contest.prize_description.length > 20 ? contest.prize_description.slice(0, 20) + "…" : contest.prize_description}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-semibold">
-                              Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {showRaffles && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                {contentType === "all" && filteredRaffles.length > 0 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Ticket className="h-5 w-5 text-primary" />
-                    <h2 className="font-display text-xl font-bold text-foreground">Sorteios</h2>
-                    <Badge variant="secondary">{filteredRaffles.length}</Badge>
-                  </div>
-                )}
-                {filteredRaffles.length === 0 && filteredContests.length === 0 && contentType !== "all" ? (
-                  <div className="text-center py-20">
-                    <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-xl text-muted-foreground">{t("marketplace.noRaffles")}</p>
-                  </div>
-                ) : filteredRaffles.length === 0 && contentType === "raffles" ? (
-                  <div className="text-center py-20">
-                    <Ticket className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-xl text-muted-foreground">{t("marketplace.noRaffles")}</p>
-                  </div>
-                ) : filteredRaffles.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3" data-testid="mk-raffles-grid">
-                    {filteredRaffles.map((raffle, i) => {
-                      const pct = raffle.total_tickets > 0 ? (raffle.sold_tickets / raffle.total_tickets) * 100 : 0;
-                      const quaseEsgotado = pct >= 80;
-                      return (
-                        <motion.div
-                          key={raffle.id}
-                          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ delay: i * 0.05, type: "spring", stiffness: 200 }}
-                          whileHover={{ y: -4 }}
-                        >
-                          <Link to={getRaffleUrl(raffle)}>
-                            <Card className="glass group hover:border-primary/30 transition-all overflow-hidden shadow-[0_0_15px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]">
-                              <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
-                                {raffle.image_url ? (
-                                  <OptimizedImage
-                                    src={raffle.image_url}
-                                    alt={raffle.title}
-                                    optimizeWidth={640}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Ticket className="h-12 w-12 text-muted-foreground/20" />
-                                  </div>
-                                )}
-                                <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
-                                  {raffle.raffle_type === "free" ? "🎁 Grátis" : raffle.raffle_type === "points" ? `⭐ ${raffle.points_cost} pts` : (raffle as any).hide_prize_value ? "🎁 Surpresa" : formatMZN(raffle.prize_value)}
-                                </Badge>
-                                {/* ⭐ REA eBay/ML: urgência real ligada à % vendida */}
-                                {quaseEsgotado && (
-                                  <Badge
-                                    data-testid="mk-quase-esgotado"
-                                    className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-black font-black animate-pulse text-[10px]"
-                                  >
-                                    ⚡ QUASE ESGOTADO
-                                  </Badge>
-                                )}
-                                {raffle.province && (
-                                  <Badge variant="outline" className="absolute bottom-3 left-3 glass text-foreground border-border text-[10px]">
-                                    <MapPin className="h-2.5 w-2.5 mr-0.5" />
-                                    {PROVINCES.find(p => p.value === raffle.province)?.label || raffle.province}
-                                  </Badge>
-                                )}
-                                {raffle.end_date && (
-                                  <Badge variant="outline" className="absolute top-3 right-3 glass text-foreground border-border">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {countdown(raffle.end_date)}
-                                  </Badge>
-                                )}
-                              </div>
-                              <CardContent className="p-3 sm:p-5">
-                                <h3 className="font-display text-sm sm:text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2">{raffle.title}</h3>
-                                <p className="text-xs sm:text-sm text-primary mb-2 sm:mb-3 line-clamp-1">{raffle.prize_title}</p>
-                                <Progress value={pct} className="h-2 mb-2" />
-                                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                  <span className="flex items-center gap-1 font-semibold text-foreground"><Users className="h-3 w-3" /> {raffle.sold_tickets}/{raffle.total_tickets}</span>
-                                  <span className="font-semibold text-foreground">
-                                    {raffle.raffle_type === "free" ? "Grátis" : raffle.raffle_type === "points" ? `${raffle.points_cost} pts` : `${formatMZN(raffle.ticket_price)}/bilhete`}
-                                  </span>
-                                </div>
-                                {/* ⭐ REA Mercado Livre: CTA sempre visível — nunca escondido atrás de hover */}
-                                <div className="mt-2 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm text-primary font-semibold">
-                                  Participar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </Link>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </motion.div>
-            )}
-
-            {showContests && filteredContests.length === 0 && contentType === "contests" && (
-              <div className="text-center py-20">
-                <Trophy className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-xl text-muted-foreground">Nenhum concurso encontrado</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="max-w-4xl mx-auto px-4 py-12 md:py-16">
-          <ProvablyFair />
         </div>
-      <div className="hidden md:block"><Footer /></div>
+      </Link>
+    </motion.div>
+  );
+}
+
+// ── página ─────────────────────────────────────────────────────────────────
+
+export default function Marketplace() {
+  useSEO({
+    title: "Marketplace Bateu — Leilões, Produtos, Alienação e Sorteios",
+    description: "O mercado unificado da Bateu: leilões ao vivo, produtos em prestações, alienação, sorteios premium e jogos. Busca instantânea, flash deals reais e confiança verificada.",
+    canonicalPath: "/marketplace",
+  });
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [data, setData] = useState<MarketData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [cat, setCat] = useState<CatFilter>("all");
+  const [sort, setSort] = useState<MarketSort>("urgente");
+
+  /* compatibilidade com links antigos: ?tab= e ?filter= */
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "raffles") setCat("sorteio");
+    else if (tab === "contests") setCat("concurso");
+    else if (tab === "games") setCat("jogo");
+    else if (tab === "all") setCat("all");
+    const filter = searchParams.get("filter");
+    switch (filter) {
+      case "trending": setSort("popular"); break;
+      case "new": setSort("recente"); break;
+      case "ending": setSort("urgente"); break;
+      case "cheap": setSort("barato"); setCat("sorteio"); break;
+      case "premium": setSort("desconto"); break;
+    }
+  }, [searchParams]);
+
+  const load = useCallback(async () => {
+    const d = await getMarketplaceData();
+    setData(d);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void load();
+    const off = subscribeMarketChanges(load);
+    return off;
+  }, [load]);
+
+  const now = useNow(!!data && data.flashDeals.length > 0);
+
+  const hasUrgent = !!data && data.flashDeals.length > 0;
+  const hero = useMemo<MarketItem | null>(() => {
+    if (!data) return null;
+    return (
+      data.flashDeals[0] ??
+      data.leiloesDestaque[0] ??
+      [...data.items].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0] ??
+      null
+    );
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    let list = searchMarket(data.items, q);
+    if (cat !== "all") list = list.filter((i) => i.kind === cat);
+    return sortMarket(list, sort);
+  }, [data, q, cat, sort]);
+
+  const counts = data?.counts;
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <Navbar />
+
+      {/* ═══ cabeçalho do mercado ═══ */}
+      <header className="border-b border-white/10 bg-gradient-to-b from-zinc-900/80 to-transparent">
+        <div className="mx-auto max-w-6xl px-4 pb-4 pt-8">
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="mb-1 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-cyan-400" />
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-400">Marketplace Bateu</span>
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl">
+              Um mercado. <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Tudo dentro.</span>
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-zinc-400">
+              Leilões ao vivo, produtos em prestações, alienação, sorteios premium e jogos — com busca instantânea, flash deals reais e vendedores verificados.
+            </p>
+          </motion.div>
+
+          {/* busca instantânea */}
+          <div className="relative mt-4" data-testid="market-search">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4.5 w-[18px] -translate-y-1/2 text-zinc-500" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Procurar em tudo: iPhone, leilão de viatura, bilhete de sorteio…"
+              className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-10 text-sm text-white placeholder-zinc-500 outline-none backdrop-blur transition-colors focus:border-cyan-400/50 focus:bg-white/[0.07]"
+              aria-label="Procurar no marketplace"
+            />
+            {q && (
+              <button
+                onClick={() => setQ("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-zinc-500 hover:bg-white/10 hover:text-white"
+                aria-label="Limpar pesquisa"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* categorias com contadores reais */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none" data-testid="market-cats" role="tablist" aria-label="Categorias do mercado">
+            {CATS.map((c) => {
+              const Icon = c.icon;
+              const n = c.id === "all" ? (data?.items.length ?? 0) : (counts?.[c.id as MarketKind] ?? 0);
+              const activeCat = cat === c.id;
+              return (
+                <button
+                  key={c.id}
+                  role="tab"
+                  aria-selected={activeCat}
+                  onClick={() => setCat(c.id)}
+                  data-testid={`market-cat-${c.id}`}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all ${
+                    activeCat
+                      ? `border-transparent bg-gradient-to-r ${c.accent} text-white shadow-lg`
+                      : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/25 hover:text-white"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {c.label}
+                  {!loading && <span className={`rounded-full px-1.5 text-[10px] ${activeCat ? "bg-white/20" : "bg-white/10"}`}>{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 pb-16">
+        {/* ═══ HERO: o destaque do momento ═══ */}
+        {hero && (
+          <motion.section
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative mt-5 overflow-hidden rounded-3xl border border-white/10"
+            data-testid="market-hero"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-fuchsia-500/10 to-amber-500/10" />
+            <div className="relative flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-8 md:p-8">
+              <div className="grid h-40 w-full shrink-0 place-items-center overflow-hidden rounded-2xl bg-black/30 text-7xl md:h-44 md:w-64">
+                {hero.image ? (
+                  <img src={hero.image} alt={hero.title} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <span>{hero.emoji}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/90 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-white">
+                    <Flame className="h-3 w-3" /> Em destaque agora
+                  </span>
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${KIND_COLOR[hero.kind]}`}>
+                    {kindLabel(hero.kind)}
+                  </span>
+                  {hero.countdown && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-300" data-testid="market-hero-countdown">
+                      <Zap className="h-3 w-3" /> termina em {hero.countdown}
+                    </span>
+                  )}
+                </div>
+                <h2 className="line-clamp-2 text-xl font-black text-white md:text-2xl">{hero.title}</h2>
+                {hero.subtitle && <p className="mt-1 text-sm text-zinc-400">{hero.subtitle}</p>}
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="text-2xl font-black text-white">{hero.price > 0 ? formatMZN(hero.price) : "Grátis"}</span>
+                  {hero.oldPrice && hero.oldPrice > hero.price && (
+                    <span className="text-sm text-zinc-500 line-through">{formatMZN(hero.oldPrice)}</span>
+                  )}
+                  {hero.discountPct != null && hero.discountPct > 0 && (
+                    <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-black text-white">−{hero.discountPct}%</span>
+                  )}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    to={hero.href}
+                    data-testid="market-hero-cta"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-cyan-500/25 transition-transform hover:scale-[1.03]"
+                  >
+                    <Zap className="h-4 w-4" /> {hero.kind === "leilao" ? "Dar lance agora" : "Ver agora"}
+                  </Link>
+                  <button
+                    onClick={() => { setCat(hero.kind); document.getElementById("market-grid-sec")?.scrollIntoView({ behavior: "smooth" }); }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-bold text-white backdrop-blur hover:border-white/30"
+                  >
+                    Ver mais {kindLabel(hero.kind).toLowerCase()}s
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+        )}
+
+        {/* ═══ FLASH DEALS ═══ */}
+        {hasUrgent && (
+          <section className="mt-8" data-testid="market-flash">
+            <div className="mb-3 flex items-center gap-2">
+              <Flame className="h-5 w-5 text-rose-400" />
+              <h2 className="text-lg font-black tracking-tight text-white md:text-xl">Flash deals</h2>
+              <span className="text-[11px] text-zinc-500">· os que acabam primeiro, atualizado ao vivo</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+              {data!.flashDeals.map((d) => {
+                const restante = fmtRestante(d.endsAt, now);
+                return (
+                  <Link
+                    key={d.id}
+                    to={d.href}
+                    data-testid="market-flash-item"
+                    className="group relative w-44 shrink-0 overflow-hidden rounded-2xl border border-rose-400/20 bg-white/[0.04] p-3 backdrop-blur transition-colors hover:border-rose-400/50"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-3xl">{d.emoji}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-amber-300" data-testid="flash-countdown">
+                        <Clock className="h-3 w-3" /> {restante ?? "a fechar"}
+                      </span>
+                    </div>
+                    <h3 className="line-clamp-1 text-xs font-bold text-white">{d.title}</h3>
+                    <p className="mt-0.5 text-sm font-black text-rose-300">
+                      {d.price > 0 ? formatMZN(d.price) : "Grátis"}
+                      {d.discountPct != null && d.discountPct > 0 && (
+                        <span className="ml-1.5 rounded bg-rose-500 px-1 text-[10px] font-black text-white">−{d.discountPct}%</span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-zinc-500">{kindLabel(d.kind)}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══ grelha com ordenação ═══ */}
+        <section className="mt-8" id="market-grid-sec" data-testid="market-grid-sec">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-white md:text-xl">
+              <LayoutGrid className="h-5 w-5 text-cyan-400" />
+              {cat === "all" ? "Explorar o mercado" : CATS.find((c) => c.id === cat)?.label}
+              {!loading && <span className="text-xs font-bold text-zinc-500">· {filtered.length} {filtered.length === 1 ? "item" : "itens"}</span>}
+            </h2>
+            <label className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-400">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as MarketSort)}
+                data-testid="market-sort"
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs font-bold text-white outline-none backdrop-blur focus:border-cyan-400/50"
+                aria-label="Ordenar por"
+              >
+                {SORTS.map((s) => (
+                  <option key={s.id} value={s.id} className="bg-zinc-900">{s.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-64 animate-pulse rounded-2xl bg-white/5" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-14 text-center"
+              data-testid="market-empty"
+            >
+              <span className="mb-3 text-5xl">🛒</span>
+              <h3 className="text-lg font-black text-white">
+                {q ? `Nada encontrado para “${q}”` : "O mercado está a abrir as portas"}
+              </h3>
+              <p className="mt-1 max-w-md text-sm text-zinc-400">
+                {q
+                  ? "Tenta outra palavra ou explora as categorias — há leilões, produtos e sorteios à tua espera."
+                  : "Assim que houver leilões, produtos, alienação ou sorteios publicados, aparecem aqui na hora."}
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => { setQ(""); setCat("all"); }}
+                  className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-bold text-white hover:border-white/30"
+                >
+                  Ver tudo
+                </button>
+                <button
+                  onClick={() => navigate("/leiloes")}
+                  className="rounded-xl border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-xs font-bold text-orange-300 hover:border-orange-400/60"
+                >
+                  🔨 Leilões
+                </button>
+                <button
+                  onClick={() => navigate("/prestacoes")}
+                  className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-xs font-bold text-fuchsia-300 hover:border-fuchsia-400/60"
+                >
+                  🛍️ Produtos
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" data-testid="market-grid">
+              <AnimatePresence initial={false}>
+                {filtered.map((item) => (
+                  <MarketCard key={item.id} item={item} now={now} />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </section>
+
+        {/* ═══ baralho de confiança ═══ */}
+        <section className="mt-10 grid gap-3 sm:grid-cols-3" data-testid="market-trust">
+          {[
+            { icon: ShieldCheck, title: "Vendedores verificados", desc: "Identidade e reputação confirmadas pela Bateu antes de vender." },
+            { icon: Gavel, title: "Leilões com anti-snipe", desc: "Lances nos últimos segundos estendem o leilão — ninguém ganha por sorrateiro." },
+            { icon: Eye, title: "Tudo transparente", desc: "Histórico de lances, visualizações e estado do item visíveis para todos." },
+          ].map((t, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08 }}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur"
+            >
+              <t.icon className="mb-2 h-6 w-6 text-cyan-400" />
+              <h3 className="text-sm font-black text-white">{t.title}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-400">{t.desc}</p>
+            </motion.div>
+          ))}
+        </section>
+
+        {/* ═══ atividade ao vivo do mercado ═══ */}
+        <section className="mt-10">
+          <ActivityFeed limit={4} testId="market-activity" />
+        </section>
+
+        {/* ═══ CTA vender ═══ */}
+        <section className="mt-10 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-fuchsia-500/10 p-6 md:p-8" data-testid="market-sell-cta">
+          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h2 className="text-xl font-black text-white md:text-2xl">Tens algo para vender ou leiloar?</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Publica no marketplace da Bateu: leilões com lances ao vivo, produtos em prestações e visibilidade para milhares de utilizadores.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                to="/negocios"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-500/25 transition-transform hover:scale-[1.03]"
+              >
+                <ShoppingBag className="h-4 w-4" /> Ser vendedor
+              </Link>
+              <Link
+                to="/leiloes"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-bold text-white hover:border-white/30"
+              >
+                <Gavel className="h-4 w-4" /> Leiloar
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
     </div>
   );
-};
-
-const Chip = ({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) => (
-  <button
-    onClick={onRemove}
-    className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 transition-colors"
-  >
-    {children}
-    <X className="h-3 w-3" />
-  </button>
-);
-
-export default Marketplace;
+}

@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import {
   Radio, Ticket, Gamepad2, Crown, Play,
   MoreHorizontal, Flame, Clock, Sparkles, ChevronRight, Gem,
-  HandCoins, HeartPulse,
+  HandCoins, HeartPulse, ShoppingBag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,6 +29,7 @@ const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then
 const StoriesCarousel = lazy(() => import("@/components/StoriesCarousel").then(m => ({ default: m.default })));
 const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
 const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
+const EsportsRollUp = lazy(() => import("@/components/home/EsportsRollUp").then(m => ({ default: m.default })));
 const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
 
 /* ─── tipos ─── */
@@ -88,7 +89,7 @@ function useCountdown(endDate: string | null) {
 /* ─── anéis de gradiente dos círculos ─── */
 const QUICK_LINKS = [
   { icon: Radio, label: "AO VIVO", href: "/lives", ring: "conic-gradient(from 180deg, #f97316, #ec4899, #f97316)", live: true },
-  { icon: Ticket, label: "SORTEIOS", href: "/marketplace?tab=raffles", ring: "conic-gradient(from 180deg, #8b5cf6, #d946ef, #8b5cf6)" },
+  { icon: ShoppingBag, label: "MERCADO", href: "/marketplace", ring: "conic-gradient(from 180deg, #d946ef, #8b5cf6, #d946ef)" },
   { icon: Gamepad2, label: "GAMES", href: "/jogos", ring: "conic-gradient(from 180deg, #22d3ee, #3b82f6, #22d3ee)" },
   { icon: Crown, label: "VIP HUB", href: "/pontos", ring: "conic-gradient(from 180deg, #f59e0b, #fbbf24, #f59e0b)" },
   { icon: MoreHorizontal, label: "MAIS", href: null, ring: "conic-gradient(from 180deg, #ec4899, #f43f5e, #ec4899)" },
@@ -382,6 +383,11 @@ export default function MobileHomeApp() {
       {/* ═══ JOGOS & TORNEIOS — roll-up dinâmico (dados reais) ═══ */}
       <Suspense fallback={<div className="h-56" />}>
         <GamesTournamentsRollUp />
+      </Suspense>
+
+      {/* ═══ ESPORTS & LIGAS — inscrições abertas (harmonia desktop+mobile) ═══ */}
+      <Suspense fallback={<div className="h-56" />}>
+        <EsportsRollUp />
       </Suspense>
 
       {/* ═══ faixa MUNDO 3D ═══ */}

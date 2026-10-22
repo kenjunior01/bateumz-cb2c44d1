@@ -164,7 +164,7 @@ const run = async () => {
     await ctx.close();
   }
 
-  console.log("\n📱 MOBILE — /marketplace (REA Mercado Livre: CTA touch-first)");
+  console.log("\n📱 MOBILE — /marketplace (mercado unificado de classe mundial: CTA touch-first)");
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
@@ -172,19 +172,28 @@ const run = async () => {
     trackErrors(page, errors);
     await page.goto(BASE + "/marketplace", { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(5000);
-    const temGrid = await waitDom(page, '[data-testid="mk-raffles-grid"], [data-testid="mk-contests-grid"]', 25000);
-    const temVazio = (await page.locator("text=Nenhum resultado").count()) > 0;
+    const temGrid = await waitDom(page, '[data-testid="market-grid"]', 25000);
+    const temVazio = (await page.locator('[data-testid="market-empty"]').count()) > 0;
     ok("Marketplace: conteúdo real (grelha ou vazio honesto)", temGrid || temVazio);
     if (temGrid) {
-      // ⭐ CTA dentro do CARTÃO (não o banner "Participar Agora"): sem opacity-0 / hover-only
+      // ⭐ cartão 100% clicável no toque: link real cobrindo o cartão, sem opacity-0
       const ctaOk = await page.evaluate(() => {
-        const els = Array.from(document.querySelectorAll('[data-testid="mk-contests-grid"] div, [data-testid="mk-raffles-grid"] div'));
-        const cta = els.find((e) => e.textContent?.trim().startsWith("Participar") && e.children.length <= 1 && !e.textContent.includes("Agora"));
-        if (!cta) return "missing";
-        const st = getComputedStyle(cta);
-        return st.opacity === "1" && st.visibility === "visible" ? "visible" : `opacity:${st.opacity}`;
+        const card = document.querySelector('[data-testid="market-card"]');
+        if (!card) return "missing";
+        const link = card.querySelector("a[href]");
+        if (!link) return "no-link";
+        const st = getComputedStyle(link);
+        const rect = link.getBoundingClientRect();
+        return st.opacity === "1" && st.visibility === "visible" && rect.height > 60 ? "visible" : `opacity:${st.opacity}`;
       });
-      ok("CTA 'Participar' do cartão SEM hover (touch-first)", ctaOk === "visible");
+      ok("Cartão do mercado totalmente clicável no toque (touch-first)", ctaOk === "visible");
+      // busca instantânea usável no mobile
+      const busca = page.locator('[data-testid="market-search"] input');
+      if (await busca.isVisible().catch(() => false)) {
+        await busca.fill("leilão");
+        await page.waitForTimeout(800);
+        ok("Busca instantânea aceita entrada touch", (await busca.inputValue()) === "leilão");
+      }
     }
     ok("Mobile: 0 erros de página", errors.length === 0);
     await ctx.close();

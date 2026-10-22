@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const m = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+const p = await m.newPage();
+await p.goto("http://localhost:8099/", { waitUntil: "domcontentloaded" });
+await p.waitForTimeout(7000);
+const el = p.locator('[data-testid="esports-criar-card"]').first();
+await el.scrollIntoViewIfNeeded().catch(() => {});
+await p.waitForTimeout(1200);
+await p.screenshot({ path: "/tmp/shot-esports-rollup.png" });
+await browser.close();
+console.log("ok");

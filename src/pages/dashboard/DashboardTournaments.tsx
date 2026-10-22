@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { publishActivity } from "@/lib/activityBus";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +110,9 @@ export default function DashboardTournaments() {
         rules: form.rules || undefined,
       });
       toast({ title: t("tournament.createSuccess") });
+      publishActivity("tournament", `Novo torneio criado: ${form.name}`, {
+        detail: form.prize_description || "Inscrições em breve", href: "/tournaments",
+      });
       setForm(emptyForm);
       setShowCreate(false);
       loadTournaments();

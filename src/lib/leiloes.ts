@@ -712,6 +712,13 @@ export function colocarLance(leilaoId: string, valor?: number): LanceResultado {
   estado.meusLances[l.id].unshift(lance);
   persistir();
   notificar();
+  // atividade ao vivo: um lance real foi dado
+  import("@/lib/activityBus")
+    .then(({ publishActivity }) =>
+      publishActivity("auction", `Lance de ${formatMZN(valorFinal)} em “${l.titulo}”`, {
+        detail: `Leilão ao vivo · ${nomeUsuario()}`, href: `/leiloes/${l.id}`,
+      }))
+    .catch(() => {});
   return { ok: true, leilao: getLeilao(l.id)!, saldo: estado.saldoDemo };
 }
 
@@ -778,6 +785,13 @@ export function comprarAgora(leilaoId: string): LanceResultado {
   if (!estado.vitorias.includes(l.id)) estado.vitorias.push(l.id);
   persistir();
   notificar();
+  // atividade ao vivo: compra imediata real
+  import("@/lib/activityBus")
+    .then(({ publishActivity }) =>
+      publishActivity("market", `Compra imediata: “${l.titulo}” por ${formatMZN(l.comprar_agora ?? 0)}`, {
+        detail: "Leilão fechado por compra direta", href: `/leiloes/${l.id}`,
+      }))
+    .catch(() => {});
   return { ok: true, leilao: getLeilao(l.id)!, saldo: estado.saldoDemo };
 }
 

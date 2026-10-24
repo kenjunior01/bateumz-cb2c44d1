@@ -24,9 +24,13 @@ if (isPreviewHost || isInIframe) {
 }
 
 const Root = () => {
-  const [loading, setLoading] = useState(true);
+  // Ferramentas de palco (jogos de palco/estúdio) arrancam SEM ecrã de loading:
+  // a empresa abre a meio de uma live real — cada segundo conta.
+  const isStageTool = /^\/(palco|estudio-jogos)/.test(window.location.pathname);
+  const [loading, setLoading] = useState(!isStageTool);
 
   useEffect(() => {
+    if (isStageTool) return;
     const timer = setTimeout(() => setLoading(false), 2200);
     return () => clearTimeout(timer);
   }, []);

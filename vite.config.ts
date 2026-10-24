@@ -8,10 +8,12 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import { compression } from "vite-plugin-compression2";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  // Build id injectado no bundle — usado pelo self-heal para detectar deploys
+export default defineConfig(({ mode, command }) => ({
+  // Build id injectado no bundle — usado pelo self-heal para detectar deploys.
+  // ⚠️ Em dev TEM de ser estável: um timestamp novo a cada load fazia o
+  // self-heal entrar em LOOP de reloads (cada load via "novo deploy").
   define: {
-    __BUILD_ID__: JSON.stringify(new Date().toISOString()),
+    __BUILD_ID__: JSON.stringify(command === "build" ? new Date().toISOString() : "dev-stable"),
   },
   server: {
     host: "::",

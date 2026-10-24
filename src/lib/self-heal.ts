@@ -102,7 +102,11 @@ export function initBootSelfHeal(): void {
     const prev = localStorage.getItem(BUILD_KEY);
     localStorage.setItem(BUILD_KEY, BUILD_ID);
     const isNewDeploy = !!prev && prev !== BUILD_ID;
-    if (isNewDeploy && !sessionStorage.getItem(RESET_FLAG)) {
+    // ⚠️ o flag tem de incluir o motivo — hardReset guarda
+    // `${RESET_FLAG}:${reason}` (antes lia-se a chave sem sufixo e o
+    // guard nunca batia certo → loop de reloads).
+    const alreadyReset = !!sessionStorage.getItem(`${RESET_FLAG}:new-deploy`);
+    if (isNewDeploy && !alreadyReset) {
       console.info("[Bateu self-heal] novo deploy detectado — refresh");
       // Deixa o React montar; o refresh acontece logo a seguir, uma vez.
       setTimeout(() => hardReset("new-deploy"), 0);

@@ -140,6 +140,9 @@ const DashboardScheduledLives = lazy(() => import("./pages/dashboard/DashboardSc
 const LiveStudio = lazy(() => import("./pages/dashboard/LiveStudio.tsx"));
 const OverlayLive = lazy(() => import("./pages/OverlayLive.tsx"));
 const OverlayPro = lazy(() => import("./pages/OverlayPro.tsx"));
+// 🎪 Jogos de Palco para empresas — roleta/quiz/comentários com controlo total (REA dos melhores do mundo)
+const StageShow = lazy(() => import("./pages/StageShow.tsx"));
+const GameStudioPage = lazy(() => import("./pages/GameStudioPage.tsx"));
 const CompanyLiveManager = lazy(() => import("./pages/dashboard/CompanyLiveManager.tsx"));
 const LivesAgora = lazy(() => import("./pages/LivesAgora.tsx"));
 const Battles = lazy(() => import("./pages/Battles.tsx"));
@@ -355,6 +358,10 @@ function AnimatedRoutes() {
             </Route>
             <Route path="/overlay/live/:id" element={<OverlayLive />} />
             <Route path="/overlay/pro" element={<OverlayPro />} />
+            <Route path="/palco" element={<StageShow />} />
+            <Route path="/palco/:liveId" element={<StageShow />} />
+            <Route path="/estudio-jogos" element={<GameStudioPage />} />
+            <Route path="/estudio-jogos/:liveId" element={<GameStudioPage />} />
             <Route
               path="/admin"
               element={
@@ -450,6 +457,10 @@ function AppShell() {
   const { loading: configLoading } = useRegionalContext();
   const { user, loading: authLoading } = useAuth();
   const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
+  /* Ferramentas de PALCO (jogos de palco + estúdio) — como overlays: arrancam
+     logo (a empresa abre a meio de uma live real) e sem cromos globais. */
+  const isStageTool = location.pathname.startsWith("/palco") || location.pathname.startsWith("/estudio-jogos");
+  const isTool = isOverlay || isStageTool;
   const isMobile = useIsMobile();
   /* Home mobile tem design escuro próprio (exemplos) — barras globais acompanham */
   const isMobileHome = isMobile && location.pathname === "/";
@@ -463,13 +474,16 @@ function AppShell() {
     return () => clearTimeout(timer);
   }, [configLoading]);
 
-  if (showLoading && !isOverlay) return <LoadingScreen />;
+  if (showLoading && !isTool) return <LoadingScreen />;
 
   return (
     <MobileNavProvider>
       <div className={isMobileHome ? "dark" : undefined}>
-      {!isOverlay && <><Toaster /><Sonner /><BackgroundDecorations /></>}
-      {!isOverlay && <>
+      {/* Toasts (orçamento/prémios) também no palco — ferramentas de palco
+          comunicam por toast; decorações e cromos ficam só nas páginas normais */}
+      {!isOverlay && <><Toaster /><Sonner /></>}
+      {!isTool && <BackgroundDecorations />}
+      {!isTool && <>
         {!authLoading && user && <PushNotificationBanner />}
         <MobileTopBar />
         <MobileMenuDrawer />
@@ -480,7 +494,7 @@ function AppShell() {
       <AnimatedRoutes />
       {/* ⭐ Busca global ⌘K — jogos, leilões ao vivo, esports, sorteios e páginas */}
       <Suspense fallback={null}><GlobalSearch /></Suspense>
-      {!isOverlay && <>
+      {!isTool && <>
       {/* Assistente único (MascotBuddy): sem pop-ups automáticos — apenas
           celebrações de vitórias reais e chat ao toque do utilizador. */}
       <MascotBuddy />

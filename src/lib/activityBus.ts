@@ -26,6 +26,7 @@ export type ActivityType =
   | "auction"     // leilão (lance, compra imediata)
   | "market"      // marketplace (produto publicado, venda)
   | "game"        // jogo (conquista, recorde)
+  | "live"        // jogos de palco — rodada de roleta/quiz/sorteio ao vivo na empresa
   | "credit"      // créditos/1GB/bonificações
 
 export interface PlatformActivity {

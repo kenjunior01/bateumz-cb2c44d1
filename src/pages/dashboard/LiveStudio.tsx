@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, Radio, Calendar, Trophy, Megaphone, BarChart3, Copy, ExternalLink, Plus, X, CheckCircle2, Circle, Play, Pause, Square, Sparkles, MessageSquare, Tv, Link as LinkIcon } from "lucide-react";
+import { Loader2, Radio, Calendar, Trophy, Megaphone, BarChart3, Copy, ExternalLink, Plus, X, CheckCircle2, Circle, Play, Pause, Square, Sparkles, MessageSquare, Tv, Link as LinkIcon, Disc3, GraduationCap, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchScheduledLiveById, updateScheduledLive, fetchScheduledLiveRanking, buildScheduledLiveUrl, type ScheduledLive } from "@/lib/scheduledLives";
@@ -213,6 +213,36 @@ const LiveStudio = () => {
 
       {tab === "pre" && (
         <div className="grid gap-4 md:grid-cols-2">
+          {/* 🎪 Jogos de Palco — controlo total antes da live (REA dos melhores do mundo) */}
+          <section className="rounded-2xl border border-border bg-card p-4 md:col-span-2 shadow-[0_0_15px_hsl(var(--primary)/0.15)]" data-testid="stage-games-section">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display font-bold flex items-center gap-2"><Radio className="h-4 w-4 text-red-500" />Jogos de Palco — controlo total</h2>
+              <Link to={`/estudio-jogos/${live.id}`} data-testid="stage-games-config"
+                className="inline-flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full bg-emerald-500 text-white font-bold">
+                <Sparkles className="h-3 w-3" />Configurar jogos
+              </Link>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Roleta de prémios, Quiz Milionário e Sorteio de Comentários — personaliza a marca, define o orçamento de gastos e gera o regulamento conforme as diretrizes das redes sociais.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {[
+                { g: "roleta", label: "Roleta de Prémios", icon: Disc3, desc: "Pesos visuais + log auditável" },
+                { g: "quiz", label: "Quiz Milionário", icon: GraduationCap, desc: "Ajudas + escada de prémios" },
+                { g: "comentarios", label: "Sorteio de Comentários", icon: Users, desc: "Dedupe + multi-vencedores" },
+              ].map(({ g, label, icon: Icon, desc }) => (
+                <a key={g} href={`/palco/${live.id}?game=${g}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-2 rounded-xl border border-border p-2.5 transition-colors hover:border-emerald-400/60">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary"><Icon className="h-4 w-4 text-emerald-500" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-extrabold">{label}</span>
+                    <span className="block text-[10px] text-muted-foreground">{desc} · abrir no palco</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+
           <section className="rounded-2xl border border-border bg-card p-4">
             <h2 className="font-display font-bold mb-3 flex items-center gap-2"><LinkIcon className="h-4 w-4 text-blue-500" />Links das plataformas</h2>
             <ul className="space-y-2 mb-3">

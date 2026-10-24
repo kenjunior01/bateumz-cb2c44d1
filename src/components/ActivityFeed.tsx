@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Activity, Award, Gift, Store, Swords, Trophy, Gavel, ShoppingBag, Gamepad2, Coins, Shield } from "lucide-react";
+import { Activity, Award, Gift, Store, Swords, Trophy, Gavel, ShoppingBag, Gamepad2, Coins, Shield, Radio } from "lucide-react";
 import { timeAgo } from "@/lib/stories";
 import { useActivityFeed, type ActivityType } from "@/lib/activityBus";
 
@@ -16,6 +16,7 @@ const TYPE_META: Record<string, { icon: typeof Gift; cls: string; label: string 
   contest: { icon: Award, cls: "bg-sky-500/15 text-sky-300 border-sky-400/25", label: "Concurso" },
   tournament: { icon: Swords, cls: "bg-emerald-500/15 text-emerald-300 border-emerald-400/25", label: "Torneio" },
   business: { icon: Store, cls: "bg-rose-500/15 text-rose-300 border-rose-400/25", label: "Empresa" },
+  live: { icon: Radio, cls: "bg-red-500/15 text-red-300 border-red-400/25", label: "Palco" },
   league: { icon: Shield, cls: "bg-cyan-500/15 text-cyan-300 border-cyan-400/25", label: "Liga" },
   auction: { icon: Gavel, cls: "bg-orange-500/15 text-orange-300 border-orange-400/25", label: "Leilão" },
   market: { icon: ShoppingBag, cls: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-400/25", label: "Mercado" },

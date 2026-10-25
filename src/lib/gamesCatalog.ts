@@ -25,6 +25,7 @@ export interface GameDef {
 
 // CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o MMO da plataforma
 export const ALL_GAMES: GameDef[] = [
+  { id: "aetheria", label: "Aetheria: Ilhas do Vento", emoji: "🪽", desc: "Explora ilhas suspensas, escolhe uma classe, enfrenta criaturas e completa missões num RPG de fantasia 3D.", grad: "from-sky-500 via-indigo-500 to-violet-600", category: "Mundo Aberto", players: "Solo", icon: "globe", hasBot: false },
   { id: "mmorpg", label: "BateuCraft: Mundo LEGO", emoji: "⛏️", desc: "Mundo voxel com personagens LEGO: minera, cria ferramentas, constrói, funde ferro, sobrevive à noite aos Zumbis e desvia do Estourador!", grad: "from-emerald-600 via-green-500 to-lime-400", category: "Mundo Aberto", players: "Solo", icon: "globe", hasBot: false },
   { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false },
   { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },

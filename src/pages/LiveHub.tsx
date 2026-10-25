@@ -84,6 +84,7 @@ const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
 const BateuCraft = lazy(() => import("@/components/livegames/BateuCraft"));
+const AetheriaGame = lazy(() => import("@/components/livegames/AetheriaGame"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
 const DjikotaGame = lazy(() => import("@/components/livegames/DjikotaGame"));
@@ -145,7 +146,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -166,6 +167,7 @@ interface SavedWheelGame {
 }
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
+  { id: "aetheria", icon: Globe, emoji: "🪽", grad: "from-sky-500 via-indigo-500 to-violet-600" },
   { id: "mmorpg", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
@@ -194,8 +196,10 @@ const LiveHub = () => {
   const navigate = useNavigate();
   const GAMES = useMemo(() => GAME_DEFS.map(g => ({
     ...g,
-    label: t("livehub.game." + g.id),
-    desc: t("livehub.game." + g.id + ".desc"),
+    label: g.id === "aetheria" ? "Aetheria: Ilhas do Vento" : t("livehub.game." + g.id),
+    desc: g.id === "aetheria"
+      ? "Explora ilhas suspensas, enfrenta criaturas e completa missões num RPG de fantasia 3D."
+      : t("livehub.game." + g.id + ".desc"),
   })), [t]);
   const [searchParams] = useSearchParams();
   const gameFromUrl = searchParams.get("game") as GameId | null;
@@ -415,6 +419,7 @@ const LiveHub = () => {
   }, [active]);
 
   const activeMeta = useMemo(() => GAMES.find((g) => g.id === active), [GAMES, active]);
+  const isImmersiveWorld = active === "mmorpg" || active === "aetheria";
 
   const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
@@ -621,7 +626,7 @@ const LiveHub = () => {
         {/* v13 MOBILE: com o Bateu World ativo o header NÃO renderiza — ele ficava
             por cima da UI full-screen do jogo (criação/HUD) e roubava os toques.
             A navegação de jogos volta ao sair do mundo (pílula «◀ Jogos»). */}
-        {active !== "mmorpg" && (
+        {!isImmersiveWorld && (
           <MobileDiscoveryHeader
             title={t("livehub.all")}
             searchValue={buscaJogos}
@@ -634,7 +639,7 @@ const LiveHub = () => {
         )}
 
         {/* ⭐ REA Twitch: secção de CONSUMO — quem está ao vivo agora na plataforma */}
-        {active !== "mmorpg" && livesAgora.length > 0 && (
+        {!isImmersiveWorld && livesAgora.length > 0 && (
           <div className="mb-4" data-testid="livehub-lives-agora">
             <div className="flex items-center gap-2 mb-2">
               <span className="relative flex h-2 w-2">
@@ -675,7 +680,7 @@ const LiveHub = () => {
         )}
 
         {/* ⭐ BATEU WORLD — banner destaque permanente (jogo principal) */}
-        {active !== "mmorpg" && (
+        {!isImmersiveWorld && (
           <motion.button
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
@@ -739,14 +744,14 @@ const LiveHub = () => {
         <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
           <div>
             {/* v20 PRO KIT: progressão universal — missões diárias do jogo activo */}
-            {active !== "mmorpg" && (
+            {!isImmersiveWorld && (
               <div className="mb-3">
                 <MissionsBar gameId={active} gameName={activeMeta?.label ?? "Jogo"} />
               </div>
             )}
             {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
-            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={active === "mmorpg"}>
+            <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={isImmersiveWorld}>
             <AnimatePresence mode="wait">
               <Suspense fallback={
                 <div className="flex flex-col items-center justify-center py-24 gap-3" data-testid="hub-loading">
@@ -1334,6 +1339,16 @@ const LiveHub = () => {
                   className="fixed inset-0 z-[80] bg-black">
                   <GameErrorBoundary gameName="BateuCraft: Mundo LEGO">
                     <BateuCraft onScore={(creditos: number) => recordScore("BateuCraft")("BateuCraft", creditos)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+                  </GameErrorBoundary>
+                </motion.div>, document.body)}
+              {active === "aetheria" && createPortal(
+                <motion.div key="aetheria" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[80] bg-black">
+                  <GameErrorBoundary gameName="Aetheria: Ilhas do Vento">
+                    <AetheriaGame
+                      onScore={recordScore("Aetheria: Ilhas do Vento")}
+                      onExit={() => { setActive("wheel"); navigate("/lives"); window.scrollTo({ top: 0 }); }}
+                    />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "p2pbet" && (

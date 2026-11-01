@@ -56,6 +56,8 @@ ok("chunk de /jogos-gratis pedido no hover (antes do clique)", chunkReqs.length 
   `— reqs: ${chunkReqs.length}`);
 // ─── 5. SKIP-LINK a11y: 1º Tab foca «Saltar para o conteúdo» ───
 console.log("■ 5. Skip-link de acessibilidade");
+await page.waitForSelector("[data-testid='skip-link']", { state: "attached", timeout: 8000 });
+await page.evaluate(() => { document.activeElement?.blur?.(); document.body.focus(); });
 await page.keyboard.press("Tab");
 const skipFocused = await page.evaluate(() => {
   const el = document.activeElement;
@@ -81,7 +83,24 @@ await page.waitForURL("**/jogos-gratis", { timeout: 8000 });
 await page.waitForSelector("[data-testid='freegames-grid'], [data-testid='freegames-empty']", { timeout: 8000 });
 ok("navegação para hub de jogos grátis OK", true);
 
-// ─── 7. Loading screen continua a aparecer (marca) mas não mais que ~2s no mobile ───
+// ─── 7b. SCROLL RESTORATION: rota nova abre no topo ───
+console.log("■ 7b. Scroll restoration na navegação");
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded", timeout: 30000 });
+await page.waitForSelector("[data-testid='home-cta-jogar-central']", { timeout: 15000 });
+await page.evaluate(() => window.scrollTo({ top: 999999, behavior: "instant" }));
+await page.waitForTimeout(200);
+const beforeY = await page.evaluate(() => document.scrollingElement?.scrollTop ?? window.scrollY);
+ok("scroll estava no fundo da home antes de navegar", beforeY > 500, `— scrollY=${beforeY}`);
+await page.evaluate(() => {
+  const a = document.querySelector("a[href='/jogos']");
+  if (a) a.click();
+});
+await page.waitForURL("**/jogos**", { timeout: 8000 });
+await page.waitForTimeout(900);
+const afterY = await page.evaluate(() => window.scrollY);
+ok(`rota /jogos abre no topo (scrollY=${afterY})`, afterY < 60);
+
+// ─── 8. Loading screen continua a aparecer (marca) mas não mais que ~2s no mobile ───
 console.log("■ 7. LoadingScreen presente mas breve");
 await page.goto(BASE + "/lives", { waitUntil: "domcontentloaded", timeout: 30000 });
 const t1 = Date.now();

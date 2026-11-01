@@ -208,6 +208,18 @@ function AnimatedRoutes() {
   const location = useLocation();
   const pageRef = useRef<HTMLDivElement>(null);
   useSwipeBack(pageRef);
+  /* v26 Web excellence: cada rota abre NO TOPO (a SPA mantinha a posição de
+     scroll anterior — clicar num link do rodapé abria a página seguinte a meio)
+     e anuncia a nova página a leitores de ecrã via foco no alvo do skip-link.
+     Só pathname: mudanças de query (filtros, ?game=) preservam o scroll. */
+  const firstRouteRef = useRef(true);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    // Foco no conteúdo só em NAVEGAÇÕES (não no arranque): se focar no mount,
+    // o 1º Tab do utilizador salta o skip-link e entra direto nas rotas.
+    if (firstRouteRef.current) { firstRouteRef.current = false; return; }
+    document.getElementById("conteudo-principal")?.focus({ preventScroll: true });
+  }, [location.pathname]);
   return (
     <AnimatePresence mode="wait">
       <PageTransition key={location.pathname}>
@@ -490,7 +502,7 @@ function AppShell() {
       {!isTool && (
         <a
           href="#conteudo-principal"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:rounded-lg focus:bg-emerald-600 focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
+          className="fixed top-2 left-2 z-[10000] opacity-0 pointer-events-none rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-xl transition-opacity duration-200 focus:opacity-100 focus:pointer-events-auto"
           data-testid="skip-link"
         >Saltar para o conteúdo</a>
       )}

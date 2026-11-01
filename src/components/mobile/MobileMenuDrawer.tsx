@@ -6,7 +6,7 @@ import {
   MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen,
   Gift, Store, Gamepad2, Bell, Search, Flame, Wallet, Clock, Heart,
   BadgeCheck, LogOut, Settings, User, X, Home, Layers, TrendingUp,
-  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins
+  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins, Medal
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -54,6 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
       { icon: Swords, labelKey: "mob.battles", href: "/batalhas", grad: "from-blue-600 to-indigo-800", trending: true },
       { icon: Dice5, labelKey: "mob.spinWheel", href: "/marketplace?tab=games", grad: "from-purple-500 to-pink-600" },
       { icon: Target, labelKey: "tournament.title", href: "/tournaments", grad: "from-emerald-500 to-teal-600", badge: "NOVO" },
+      { icon: Medal, labelKey: "desporto.real", href: "/desporto", grad: "from-green-500 to-emerald-700", badge: "NOVO" },
     ],
   },
   {

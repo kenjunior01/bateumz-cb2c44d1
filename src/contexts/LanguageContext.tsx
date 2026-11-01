@@ -209,6 +209,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.badge.new": "New",
     "menu.games": "Games & Fun",
     "menu.games.desc": "Win prizes playing",
+    "desporto.real": "Real Sports",
     "menu.millionaire": "Millionaire",
     "menu.spinWheel": "Spin Wheel",
 
@@ -1305,6 +1306,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.badge.new": "Novo",
     "menu.games": "Jogos & Diversão",
     "menu.games.desc": "Ganha prémios a jogar",
+    "desporto.real": "Desporto Real",
     "menu.millionaire": "Milionário",
     "menu.spinWheel": "Roda da Sorte",
 
@@ -2361,6 +2363,7 @@ const translations: Partial<Record<Lang, Dict>> = {
     "menu.badge.new": "Novo",
     "menu.games": "Jogos & Diversão",
     "menu.games.desc": "Ganhe prêmios jogando",
+    "desporto.real": "Esportes Reais",
     "menu.millionaire": "Milionário",
     "menu.spinWheel": "Roleta da Sorte",
 

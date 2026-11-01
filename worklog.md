@@ -143,3 +143,25 @@ Work Log:
 
 Stage Summary:
 - Plataforma mais leve, honesta e de classe mundial: enchimento fora, protocolo provably-fair real, ligas/torneios/concursos com gestão completa, duelos com escrow real
+
+---
+Task ID: rea-desporto-v24
+Agent: Super Z (main)
+Task: REA do desporto real — último módulo pendente do pedido (esportes/torneios/campeonatos/sorteios/competições/concursos)
+
+Work Log:
+- DESCOBERTA: TheSportsDB v1 com chave de teste pública "123" funciona no browser (CORS *) — antiga chave "3" desativada; limites do plano gratuito medidos: eventsround devolve a JORNADA COMPLETA (10 jogos), lookuptable devolve Top 5, sem livescore minuto-a-minuto
+- NOVO src/lib/sports.ts: cliente com cache localStorage TTL + dedupe de pedidos em voo + fila serializada (≤1 req/1,5s) + fallback stale-on-error; 7 ligas reais (EPL/LaLiga/SerieA/Bundesliga/Ligue1/UCL/NBA); temporada automática "2026-2027"; status honesto derivado (NS/LIVE/HT/FT/POSTP pela fonte+relógio, nunca minuto inventado)
+- NOVO supabase/migrations/20261101_sport_predictions.sql: sport_predictions (RLS: select/insert próprio, SEM update/delete no cliente) + view pública AGREGADA sport_prediction_stats (pools sem expor utilizadores) + trigger que rejeita palpite depois do kickoff (server-side)
+- NOVO supabase/functions/settle-sport-predictions: liquidação PARIMUTUEL server-side — resultados oficiais da fonte (2h pós-jogo), 95% do pool dividido proporcionalmente entre acertadores, reembolso por adiamento/7 dias, crédito na carteira de jogo (user_wallets) com transação auditável; suporta ?dry_run=true
+- NOVO src/lib/sportPredictions.ts: palpite com escrow na carteira (mesma dos duelos P2P) + rollback em falha; min 5 / max 200 moedas
+- NOVO /desporto (DesportoHub): chips de ligas, jornada automática (classificação.played+1) com seletor manual, abas Partidas/Resultados/Top 5/Meus Palpites, polling fresh só com jogo ao vivo + página visível, estados de erro com retry, atribuição TheSportsDB em tudo
+- Integração: rota lazy + SEO; Navbar desktop "⚽ Desporto Real" + ação rápida mobile; drawer mobile "Desporto Real" (chave desporto.real PT/PT-BR/EN)
+- FIX descoberto no caminho: tsconfig tem strictNullChecks:false → uniões discriminadas true/false NÃO estreitam (ok:true alarga para boolean) — placeSportPrediction devolve {ok, prediction?, error?}
+- E2E NOVO test-desporto.mjs 14/14 (mock determinístico da fonte — nota: glob ** do page.route não casa; usar regex — + smoke real da API); regressões: rea-plataforma 33/33, home-dinamica 22/22, web-excellence 23/23
+- tsc 0 erros · vite build OK · screenshots desktop+mobile com dados reais verificados (jornada 10 EPL: Everton-Coventry, Leeds-Spurs, Arsenal-Hull; Top 5 real com formas)
+- Honestidade: sem Moçambola falsa (fonte não tem), sem odds fixas de casa de apostas (pool comunitário), sem minuto fabricado
+
+Stage Summary:
+- O último módulo do pedido original está feito com dados REAIS: hub de desporto classe SofaScore + palpites parimutuel honestos com liquidação server-side
+- Doc: docs/REA-desporto-v24.md

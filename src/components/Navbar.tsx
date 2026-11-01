@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -234,6 +234,7 @@ const Navbar = () => {
         { label: "⚔️ Gaming Arena", href: "/arena", icon: Swords, desc: "Torneios ao vivo, copas diárias e semanais, missões e ranking de elite com prémios reais", badge: "NOVO", trending: true },
         { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
         { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
+        { label: "⚽ Desporto Real", href: "/desporto", icon: Medal, desc: "Jornadas, resultados e classificação reais das grandes ligas + palpites parimutuel entre jogadores", badge: "NOVO", trending: true },
         { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },
         { label: t("nav.lives"), href: "/lives", icon: Radio, desc: t("nav.lives.desc") },
         { label: t("nav.blog"), href: "/blog", icon: Newspaper, desc: t("nav.blog.desc") },
@@ -275,6 +276,7 @@ const Navbar = () => {
   const quickActions = [
     { label: t("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
     { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
+    { label: "Desporto", href: "/desporto", icon: Medal },
     { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
     { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
     { label: "Alienação", href: "/alienacao", icon: KeyRound },

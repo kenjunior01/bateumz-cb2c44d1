@@ -165,3 +165,25 @@ Work Log:
 Stage Summary:
 - O último módulo do pedido original está feito com dados REAIS: hub de desporto classe SofaScore + palpites parimutuel honestos com liquidação server-side
 - Doc: docs/REA-desporto-v24.md
+
+---
+Task ID: apis-publicas-v25
+Agent: Super Z (main)
+Task: APIs públicas do public-apis integradas na plataforma — validadas ao vivo, sem teatro
+
+Work Log:
+- SELEÇÃO com validação ao vivo ANTES do código: FreeToGame (HTTP 200 + CORS *, sem chave) ✅ · Open Trivia DB (REA do cliente) ✅ · TheSportsDB +1 liga ✅ · CheapShark DESCARTADA (agora exige User-Agent descritivo — impossível no browser, HTTP 400 medido) · CoinGecko/PandaScore/dados-falsos descartados com justificação
+- NOVO src/lib/freeGames.ts: catálogo F2P inteiro em 1 pedido + cache 60min + dedupe + stale-on-error; filtragem/ordenação 100% cliente (busca normalizada sem acentos, plataforma, género com contagens, Populares/A–Z/Recentes)
+- NOVO hub /jogos-gratis (FreeGamesHub): padrão DesportoHub mobile-first, busca, chips de plataforma/géneros derivados dos dados, dialog de detalhe com "Jogar no site oficial" (nova aba), skeleton/erro com retry/vazio/atribuição em tudo; rota lazy + Navbar desktop + ação rápida + drawer mobile + SEO canónico
+- REA src/lib/openTriviaDB.ts: session token persistido (fim das perguntas repetidas; codes 3/4 → reset+retry), fila 1,2s + backoff no code 5, Fisher-Yates com crypto.getRandomValues (antigo sort(random) enviesado), decode via DOMParser (sem innerHTML), cache 5min + dedupe; TRIVIA_CATEGORIES PT, getReadyQuestions, getLadderQuestions
+- Quiz Milionário: escada de dificuldade REAL easy(5)→medium(5)→hard(5) estilo WWTBAM + cascata de fallback (escada → busca única → perguntas locais com aviso)
+- Desporto: Primeira Liga PT (id 4429) = 8.ª liga do hub (jornadas/resultados/Top 5 pelo pipeline v24)
+- BUGS REAIS corrigidos no caminho: "menu.liveHub" aparecia CRUA no drawer (chave inexistente em TODOS os idiomas) → criada em 5; desporto.real/games.free faltavam em es/fr/hi → criadas
+- E2E NOVO test-apis-publicas.mjs 30/30 ✅ (mocks regex, trivia testada in-page via módulo vite, drawer mobile navega de verdade até /jogos-gratis, mobile sem overflow, smoke real FreeToGame >100 jogos)
+- REGRESSÕES: test-desporto 14/14 (atualizado p/ 8 ligas; smoke real ✅) · rea-plataforma 33/33 · home-dinamica 22/22 · web-excellence 23/23
+- tsc 0 erros · vite build OK · visual com 421 jogos REAIS verificado (desktop 4 col + mobile 2 col)
+- DOC: docs/REA-apis-publicas-v25.md (tabela de candidatas com veredicto e provas)
+
+Stage Summary:
+- Plataforma agora consome 3 APIs públicas de classe mundial com padrão v23/v24: hub de jogos grátis real, banco de perguntas à prova de rate-limit com escada de dificuldade, e desporto com a liga de Portugal
+- Zero APIs decorativas: todas as candidatas foram testadas ao vivo e as que não funcionam no browser foram descartadas com prova

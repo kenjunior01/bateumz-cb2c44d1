@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { fetchTriviaQuestions, decodeHTMLEntities, shuffleAnswers } from "@/lib/openTriviaDB";
+import { fetchTriviaQuestions, getLadderQuestions, decodeHTMLEntities, shuffleAnswers } from "@/lib/openTriviaDB";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface PrizeLevel {
@@ -164,9 +164,15 @@ export default function MillionairePage() {
 
   const startGame = async () => {
     setLoading(true);
-    const trivia = await fetchTriviaQuestions(totalQuestions, undefined, "easy", "multiple");
-    if (trivia.length > 0) {
-      const formatted: Question[] = trivia.map((tq, i) => {
+    // REA v25: escada de dificuldade real (easy→medium→hard) estilo WWTBAM;
+    // se alguma perna falhar, usa busca única simples; por fim, fallback local.
+    let trivia = await getLadderQuestions(5);
+    if (trivia.length < totalQuestions) {
+      trivia = await fetchTriviaQuestions(totalQuestions, undefined, undefined, "multiple");
+    }
+    if (trivia.length >= totalQuestions) {
+      const usable = trivia.slice(0, totalQuestions);
+      const formatted: Question[] = usable.map((tq, i) => {
         const s = shuffleAnswers(decodeHTMLEntities(tq.correct_answer), tq.incorrect_answers.map(a => decodeHTMLEntities(a)));
         return { id: `t-${i}`, question_number: i + 1, question_text: decodeHTMLEntities(tq.question), ...s };
       });

@@ -63,6 +63,7 @@ export const SPORT_LEAGUES: SportLeague[] = [
   { id: "4332", name: "Serie A", short: "Serie A", country: "Itália" },
   { id: "4331", name: "Bundesliga", short: "Bundesliga", country: "Alemanha" },
   { id: "4334", name: "Ligue 1", short: "Ligue 1", country: "França" },
+  { id: "4429", name: "Primeira Liga", short: "Primeira", country: "Portugal" },
   { id: "4480", name: "UEFA Champions League", short: "Champions", country: "Europa" },
   { id: "4387", name: "NBA", short: "NBA", country: "EUA" },
 ];

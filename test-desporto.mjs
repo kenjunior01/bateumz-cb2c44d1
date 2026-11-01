@@ -74,7 +74,7 @@ async function main() {
   const resp = await page.goto(`${BASE}/desporto`, { waitUntil: "domcontentloaded", timeout: 60000 });
   ok("Rota /desporto responde", resp?.status() === 200);
   await page.waitForSelector('[data-testid="desporto-leagues"]', { timeout: 25000 });
-  ok("7 ligas no seletor", await page.locator('[data-testid="desporto-leagues"] button').count() === 7);
+  ok("8 ligas no seletor (com Primeira Liga PT)", await page.locator('[data-testid="desporto-leagues"] button').count() === 8);
   await page.waitForSelector('[data-testid^="match-"]', { timeout: 25000 });
   ok("Jornada futura no mock visível (aba Partidas só mostra NS/LIVE)", await page.locator('[data-testid^="match-"]').count() === 1);
   const roundTxt = await page.locator('[data-testid="desporto-round"]').innerText().catch(() => "");

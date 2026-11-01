@@ -377,16 +377,155 @@ export async function reportMatchResult(
     metadata?: Record<string, any>;
   }
 ): Promise<void> {
+  // REA ligas: fix do bug histórico (loser_id era sempre undefined) +
+  // atualização automática da classificação + avanço do bracket.
+  const { data: match, error: fetchErr } = await sb
+    .from("league_matches")
+    .select("*")
+    .eq("id", matchId)
+    .single();
+  if (fetchErr) throw fetchErr;
+  if (!match || match.status === "completed") throw new Error("Jogo inexistente ou já reportado");
+
+  const loserId =
+    data.winner_id && !data.is_draw
+      ? data.winner_id === match.player1_id
+        ? match.player2_id
+        : match.player1_id
+      : undefined;
+
   const { error } = await sb
     .from("league_matches")
     .update({
       ...data,
       status: "completed",
       completed_at: new Date().toISOString(),
-      loser_id: data.winner_id ? undefined : undefined,
+      loser_id: loserId ?? null,
     })
     .eq("id", matchId);
   if (error) throw error;
+
+  // ── Classificação ao vivo (pontos por vitória/empate/derrota da liga)
+  const { data: league } = await sb
+    .from("leagues")
+    .select("points_per_win, points_per_draw, points_per_loss")
+    .eq("id", match.league_id)
+    .single();
+  const pWin = league?.points_per_win ?? 3;
+  const pDraw = league?.points_per_draw ?? 1;
+  const pLoss = league?.points_per_loss ?? 0;
+
+  const bump = async (userId: string | undefined, result: "win" | "loss" | "draw", gf: number, ga: number) => {
+    if (!userId) return;
+    const { data: p } = await sb
+      .from("league_participants")
+      .select("wins, losses, draws, points, score_for, score_against")
+      .eq("league_id", match.league_id)
+      .eq("user_id", userId)
+      .single();
+    if (!p) return;
+    const patch =
+      result === "win"
+        ? { wins: (p.wins ?? 0) + 1, points: (p.points ?? 0) + pWin }
+        : result === "loss"
+          ? { losses: (p.losses ?? 0) + 1, points: (p.points ?? 0) + pLoss }
+          : { draws: (p.draws ?? 0) + 1, points: (p.points ?? 0) + pDraw };
+    await sb
+      .from("league_participants")
+      .update({ ...patch, score_for: (p.score_for ?? 0) + gf, score_against: (p.score_against ?? 0) + ga })
+      .eq("league_id", match.league_id)
+      .eq("user_id", userId);
+  };
+
+  const s1 = data.player1_score ?? 0;
+  const s2 = data.player2_score ?? 0;
+  if (data.is_draw) {
+    await bump(match.player1_id, "draw", s1, s2);
+    await bump(match.player2_id, "draw", s2, s1);
+  } else if (data.winner_id) {
+    await bump(data.winner_id, "win", data.winner_id === match.player1_id ? s1 : s2, data.winner_id === match.player1_id ? s2 : s1);
+    await bump(loserId, "loss", loserId === match.player1_id ? s1 : s2, loserId === match.player1_id ? s2 : s1);
+  }
+
+  // ── Avanço de bracket (eliminação direta): o vencedor ocupa o lugar no jogo seguinte
+  if (match.next_match_id && data.winner_id) {
+    const { data: next } = await sb
+      .from("league_matches")
+      .select("player1_id, player2_id")
+      .eq("id", match.next_match_id)
+      .single();
+    if (next && !next.player1_id) {
+      await sb.from("league_matches").update({ player1_id: data.winner_id }).eq("id", match.next_match_id);
+    } else if (next && !next.player2_id) {
+      await sb.from("league_matches").update({ player2_id: data.winner_id }).eq("id", match.next_match_id);
+    }
+  }
+
+  await addLeagueActivity(match.league_id, "match_reported", {
+    title: `Resultado reportado: ${s1}–${s2}`,
+    body: data.is_draw ? "Empate" : `Vencedor registado no jogo ${match.match_number}`,
+    metadata: { match_id: matchId, winner_id: data.winner_id ?? null },
+  });
+}
+
+// ===== Geração de Calendário / Bracket (REA: padrão Challengermode/Battlefy) =====
+export async function generateLeagueFixtures(league: League, participants: LeagueParticipant[]): Promise<number> {
+  if (league.format === "single_elimination") {
+    const { matches } = generateSingleEliminationBracket(participants);
+    const ids: Record<string, string> = {};
+    // 1ª passagem: criar todos os jogos
+    for (const m of matches) {
+      const created = await createMatch({
+        league_id: league.id,
+        round_number: m.round,
+        match_number: m.match,
+        bracket: "main",
+        player1_id: m.p1,
+        player2_id: m.p2,
+      });
+      ids[`${m.round}-${m.match}`] = created.id;
+    }
+    // 2ª passagem: ligar next_match_id
+    for (const m of matches) {
+      if (m.next) {
+        await sb.from("league_matches").update({ next_match_id: ids[`${m.round + 1}-${m.next}`] }).eq("id", ids[`${m.round}-${m.match}`]);
+      }
+    }
+    // byes: quem fica sozinho no 1º jogo avança automaticamente
+    for (const m of matches.filter((x) => x.round === 1)) {
+      const created = await sb.from("league_matches").select("*").eq("id", ids[`1-${m.match}`]).single();
+      if (created && created.player1_id && !created.player2_id) {
+        await sb.from("league_matches").update({ status: "bye", winner_id: created.player1_id, completed_at: new Date().toISOString() }).eq("id", created.id);
+        if (created.next_match_id) {
+          const { data: nxt } = await sb.from("league_matches").select("player1_id, player2_id").eq("id", created.next_match_id).single();
+          if (nxt && !nxt.player1_id) await sb.from("league_matches").update({ player1_id: created.player1_id }).eq("id", created.next_match_id);
+          else if (nxt && !nxt.player2_id) await sb.from("league_matches").update({ player2_id: created.player1_id }).eq("id", created.next_match_id);
+        }
+      }
+    }
+    return matches.length;
+  }
+
+  if (league.format === "round_robin") {
+    const pairings = generateRoundRobinPairings(participants.map((p) => p.user_id));
+    for (const pr of pairings) {
+      const p1 = participants.find((x) => x.user_id === pr.p1)!;
+      const p2 = participants.find((x) => x.user_id === pr.p2)!;
+      await createMatch({
+        league_id: league.id,
+        round_number: pr.round,
+        match_number: pr.match,
+        bracket: "main",
+        player1_id: p1.user_id,
+        player2_id: p2.user_id,
+        player1_display: p1.team_name || p1.display_name || p1.profile?.display_name,
+        player2_display: p2.team_name || p2.display_name || p2.profile?.display_name,
+      });
+    }
+    return pairings.length;
+  }
+
+  throw new Error(`Geração de calendário ainda não suportada para o formato "${league.format}"`);
 }
 
 // ===== Bracket Generation =====

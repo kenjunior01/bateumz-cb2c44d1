@@ -34,6 +34,7 @@ export type QuizQuestion = {
   options: [string, string, string, string];
   correct: 0 | 1 | 2 | 3;
   explanation?: string;
+  timeSeconds?: number;
 };
 
 export type StageBrand = {

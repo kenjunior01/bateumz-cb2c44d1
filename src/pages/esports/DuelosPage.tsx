@@ -26,7 +26,10 @@ import type {
 import {
   P2P_CHALLENGE_TYPE_LABELS, P2P_CHALLENGE_STATUS_LABELS,
   P2P_FORMAT_LABELS, P2P_WAGER_PRESETS,
+  getOpenDuels, createP2PDuel, acceptP2PDuel, getP2PChallengeByInviteCode,
 } from '@/lib/esports-advanced';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import FairPlayShield from '@/components/FairPlayShield';
 import CardTilt from '@/components/ui/CardTilt';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
@@ -256,10 +259,30 @@ type Tab = 'arena' | 'meus' | 'ranking';
 export default function DuelosPage() {
   const { toast } = useToast();
   const { sfx } = useSoundEffects();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('arena');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [challengeDetail, setChallengeDetail] = useState<P2PChallenge | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // REA duelos: duelos REAIS da base de dados (p2p_challenges) + fallback honesto
+  const [realDuels, setRealDuels] = useState<P2PChallenge[]>([]);
+  const [realLoaded, setRealLoaded] = useState(false);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getOpenDuels(12)
+      .then((duels) => { if (alive) { setRealDuels(duels || []); setRealLoaded(true); } })
+      .catch(() => { if (alive) setRealLoaded(true); });
+    return () => { alive = false; };
+  }, []);
+
+  const openDuels = realDuels.length > 0 ? realDuels : MOCK_OPEN_DUELS;
+  const duelsAreReal = realDuels.length > 0;
 
   // Effects state
   const [confettiTrigger, setConfettiTrigger] = useState(0);
@@ -309,12 +332,102 @@ export default function DuelosPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
+  // REA: aceitar duelo REAL (escrow na carteira) — com fallback prévia
+  const handleAcceptDuel = async (duel: P2PChallenge) => {
+    if (!user) {
+      toast({ title: 'Inicia sessão para duelar', description: 'Os duelos com escrow real exigem conta e carteira.' });
+      navigate('/login');
+      return;
+    }
+    const isReal = duelsAreReal && realDuels.some(d => d.id === duel.id);
+    if (!isReal) {
+      // Prévia/demo — mantém a experiência mas deixa claro que não é real
+      sfx.duelAccepted();
+      sfx.battleStart();
+      setShakeTrigger(prev => prev + 1);
+      setEnergyTrigger(prev => prev + 1);
+      haptics.heavy();
+      toast({ title: 'Prévia', description: 'Este é um duelo de demonstração. Cria um duelo real para competir com escrow.' });
+      return;
+    }
+    setJoiningId(duel.id);
+    try {
+      sfx.escrowLock();
+      haptics.heavy();
+      await acceptP2PDuel(duel.id, user.id, profile?.display_name || 'Desafiante');
+      sfx.battleStart();
+      setShakeTrigger(prev => prev + 1);
+      setEnergyTrigger(prev => prev + 1);
+      setConfettiTrigger(prev => prev + 1);
+      toast({ title: 'Duelo aceite!', description: `Escrow bloqueado — preparado para enfrentar ${duel.creator_display_name}!` });
+      const fresh = await getOpenDuels(12).catch(() => [] as P2PChallenge[]);
+      setRealDuels(fresh || []);
+    } catch (e: any) {
+      toast({ title: 'Não foi possível aceitar', description: e?.message || 'Erro inesperado', variant: 'destructive' as any });
+    } finally {
+      setJoiningId(null);
+    }
+  };
+
+  // REA: procurar duelo por código de convite real
+  const handleInviteSearch = async () => {
+    const code = inviteCode.trim().toUpperCase();
+    if (!code) return;
+    setInviteLoading(true);
+    try {
+      const found = await getP2PChallengeByInviteCode(code);
+      if (found) {
+        setChallengeDetail(found);
+        toast({ title: 'Duelo encontrado!', description: `${found.match_label || 'Duelo'} de ${found.creator_display_name}` });
+      } else {
+        toast({ title: 'Código não encontrado', description: 'Confere o código com quem te convidou.' });
+      }
+    } catch {
+      toast({ title: 'Erro ao procurar', description: 'Tenta novamente em instantes.' });
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
   const handleCreateChallenge = async () => {
     setCreating(true);
     sfx.escrowLock();
     haptics.heavy();
     setEnergyTrigger(prev => prev + 1);
-    // Simulate API call
+
+    // REA: duelo REAL com escrow quando há sessão; senão prévia honesta
+    if (user) {
+      try {
+        await createP2PDuel({
+          creator_id: user.id,
+          creator_display_name: profile?.display_name || 'Desafiante',
+          opponent_username: opponentUsername || 'aberto',
+          market_type: 'match_winner',
+          creator_prediction: prediction || 'Vou ganhar',
+          match_label: matchLabel || 'Duelo livre',
+          championship_name: championshipName || undefined,
+          wager_amount: wagerAmount,
+          format,
+          expires_in_hours: expiresIn,
+          is_public: isPublic,
+          trash_talk: trashTalk || undefined,
+        });
+        sfx.duelCreated();
+        setConfettiTrigger(prev => prev + 1);
+        setCreating(false);
+        setCreateDialogOpen(false);
+        sfx.modalClose();
+        const fresh = await getOpenDuels(12).catch(() => [] as P2PChallenge[]);
+        setRealDuels(fresh || []);
+        showP2PToast('Duelo REAL lancado com escrow!', '⚔️', '#00d4ff');
+        toast({ title: 'Duelo criado com escrow!', description: `${wagerAmount} bloqueados na carteira. A espera de oponente...` });
+        return;
+      } catch (e: any) {
+        toast({ title: 'Duelo real falhou', description: e?.message || 'A continuar em modo prévia.', variant: 'destructive' as any });
+      }
+    }
+
+    // Prévia (sem sessão ou erro) — honesto sobre não ser real
     await new Promise(r => setTimeout(r, 1500));
     sfx.duelCreated();
     setConfettiTrigger(prev => prev + 1);
@@ -453,7 +566,7 @@ export default function DuelosPage() {
                 <span className="relative z-10">{tab.label}</span>
                 {tab.id === 'arena' && (
                   <span className="relative z-10 flex h-5 w-5 items-center justify-center rounded-full bg-[#ff4655] text-[10px] font-black text-white">
-                    {MOCK_OPEN_DUELS.length + MOCK_GROUP_CHALLENGES.length}
+                    {openDuels.length + MOCK_GROUP_CHALLENGES.length}
                   </span>
                 )}
                 {tab.id === 'meus' && MOCK_MY_CHALLENGES.filter(c => c.status === 'active').length > 0 && (
@@ -490,12 +603,19 @@ export default function DuelosPage() {
                   <Hash className="w-4 h-4 text-[#00d4ff] ml-2" />
                   <input
                     type="text"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === 'Enter' && handleInviteSearch()}
                     placeholder="Codigo de convite (ex: NR7K2M)"
                     className="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder-zinc-600"
                     maxLength={6}
                   />
-                  <button className="px-4 py-1.5 rounded-lg text-xs font-bold text-black bg-[#00d4ff] hover:bg-[#00d4ff]/90 transition-all">
-                    Entrar
+                  <button
+                    onClick={handleInviteSearch}
+                    disabled={inviteLoading || !inviteCode.trim()}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-black bg-[#00d4ff] hover:bg-[#00d4ff]/90 disabled:opacity-50 transition-all"
+                  >
+                    {inviteLoading ? '...' : 'Entrar'}
                   </button>
                 </div>
               </div>
@@ -509,22 +629,25 @@ export default function DuelosPage() {
                       <Swords className="w-4 h-4 text-[#00d4ff]" />
                       <span className="text-sm font-bold text-[#00d4ff]">DUELOS 1v1</span>
                     </div>
-                    <span className="text-xs text-zinc-600">{MOCK_OPEN_DUELS.length} duelos abertos</span>
+                    <span className="text-xs text-zinc-600">{openDuels.length} duelos abertos</span>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: duelsAreReal ? 'rgba(46,160,67,0.15)' : 'rgba(251,191,36,0.12)',
+                        color: duelsAreReal ? '#2ea043' : '#fbbf24',
+                        border: `1px solid ${duelsAreReal ? 'rgba(46,160,67,0.3)' : 'rgba(251,191,36,0.25)'}`,
+                      }}
+                    >
+                      {duelsAreReal ? '● AO VIVO — DADOS REAIS' : '◐ PRÉVIA — cria o teu duelo real'}
+                    </span>
                     <div className="flex-1 h-px bg-gradient-to-r from-[#00d4ff]/20 to-transparent" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {MOCK_OPEN_DUELS.map((duel) => (
+                    {openDuels.map((duel) => (
                       <DuelCard
                         key={duel.id}
                         challenge={duel}
-                        onAccept={() => {
-                          sfx.duelAccepted();
-                          sfx.battleStart();
-                          setShakeTrigger(prev => prev + 1);
-                          setEnergyTrigger(prev => prev + 1);
-                          haptics.heavy();
-                          toast({ title: 'Duelo aceite!', description: `Preparado para enfrentar ${duel.creator_display_name}!` });
-                        }}
+                        onAccept={() => handleAcceptDuel(duel)}
                         onCopyCode={handleCopyCode}
                         onView={() => setChallengeDetail(duel)}
                         copiedCode={copiedCode}

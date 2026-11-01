@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trophy, Users, Calendar, Gift, ArrowLeft, BookOpen, Building2,
-  Medal, Flame, HandCoins, Loader2, CheckCircle2,
+  Medal, Flame, HandCoins, Loader2, CheckCircle2, LogIn, WifiOff, RefreshCw,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -21,6 +21,9 @@ import {
   getTournamentParticipantCount,
   isTournamentJoined,
   joinTournament,
+  getCheckInStatus,
+  checkInTournament,
+  isCheckInWindowOpen,
   type Tournament,
   type TournamentStanding,
 } from "@/lib/tournaments";
@@ -36,8 +39,11 @@ export default function TournamentDetail() {
   const [participantCount, setParticipantCount] = useState(0);
   const location = useLocation();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -50,18 +56,48 @@ export default function TournamentDetail() {
         setTournament(t);
         setStandings(s);
         setParticipantCount(c);
+        setError(false);
       })
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
     if (!id || !user) {
       setJoined(false);
+      setCheckedIn(false);
       return;
     }
     isTournamentJoined(id, user.id).then(setJoined).catch(() => {});
+    getCheckInStatus(id).then((st) => setCheckedIn(Boolean(st.checked_in))).catch(() => {});
   }, [id, user]);
+
+  const handleCheckIn = async () => {
+    if (!id || checkingIn) return;
+    setCheckingIn(true);
+    const res = await checkInTournament(id);
+    setCheckingIn(false);
+    if (!res.ok) {
+      const map: Record<string, string> = {
+        not_authenticated: "Inicia sessão para fazeres check-in.",
+        not_found: "Torneio não encontrado.",
+        not_active: "O check-in só abre quando o torneio está ativo.",
+        not_joined: "Precisas de te inscrever primeiro.",
+        already_checked_in: "Já fizeste check-in — estás pronto!",
+        window_not_open: "A janela de check-in abre 60 minutos antes do início.",
+        already_ended: "O torneio já terminou.",
+      };
+      toast.error(map[res.error ?? ""] ?? "Não foi possível fazer check-in.");
+      if (res.error === "already_checked_in") setCheckedIn(true);
+      return;
+    }
+    setCheckedIn(true);
+    publishActivity("tournament", `Check-in feito em ${tournament?.name ?? "torneio"}`, {
+      detail: "Presença confirmada — o organizador sabe que vais competir",
+      href: `/tournaments/${id}`,
+    });
+    toast.success("Check-in confirmado — estás na lista de presentes!");
+  };
 
   const handleJoin = async () => {
     if (!user) {
@@ -116,6 +152,23 @@ export default function TournamentDetail() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <WifiOff className="h-16 w-16 text-muted-foreground/30 mb-4" />
+        <p className="text-sm text-muted-foreground mb-4">Não foi possível carregar este torneio.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Recarregar
+          </Button>
+          <Button variant="ghost" onClick={() => navigate("/tournaments")}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+          </Button>
+        </div>
       </div>
     );
   }
@@ -300,6 +353,46 @@ export default function TournamentDetail() {
                     </>
                   )}
                 </Button>
+              )}
+
+              {/* REA torneios — Check-in (padrão Battlefy): presença antes de competir */}
+              {joined && isCheckInWindowOpen(tournament) && (
+                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4 space-y-3" data-testid="checkin-panel">
+                  {checkedIn ? (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span className="font-semibold">Check-in feito — estás confirmado para competir.</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <LogIn className="h-4 w-4 text-emerald-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold">Faz check-in para confirmar presença</p>
+                          <p className="text-xs text-muted-foreground">
+                            Como no Battlefy: quem confirma presença é semeado no arranque — quem falta é excluído sem perturbar os outros.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+                        onClick={handleCheckIn}
+                        disabled={checkingIn}
+                        data-testid="tournament-checkin"
+                      >
+                        {checkingIn ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A confirmar...
+                          </>
+                        ) : (
+                          <>
+                            <LogIn className="h-4 w-4 mr-2" /> Fazer check-in agora
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

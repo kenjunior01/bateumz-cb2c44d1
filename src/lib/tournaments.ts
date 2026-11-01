@@ -202,3 +202,38 @@ export async function joinTournament(
   if (error) return { ok: false, error: error.message };
   return data as { ok: boolean; error?: string; fee_paid?: number };
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// REA TORNEIOS — Check-in (padrão Battlefy): janela abre 60 min antes do
+// início; só quem faz check-in é semeado no arranque do torneio.
+// ═══════════════════════════════════════════════════════════════════════
+
+export async function getCheckInStatus(
+  tournamentId: string
+): Promise<{ checked_in: boolean; checked_in_at?: string | null }> {
+  const { data, error } = await sb.rpc("tournament_checkin_status", {
+    p_tournament_id: tournamentId,
+  });
+  if (error) return { checked_in: false };
+  return data as { checked_in: boolean; checked_in_at?: string | null };
+}
+
+export async function checkInTournament(
+  tournamentId: string
+): Promise<{ ok: boolean; error?: string; checked_in_at?: string }> {
+  const { data, error } = await sb.rpc("check_in_tournament", {
+    p_tournament_id: tournamentId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as { ok: boolean; error?: string; checked_in_at?: string };
+}
+
+/** Janela de check-in aberta? (60 min antes do início até ao fim) */
+export function isCheckInWindowOpen(t: Tournament): boolean {
+  if (t.status !== "active") return false;
+  const now = Date.now();
+  const start = t.start_date ? new Date(t.start_date).getTime() : null;
+  const end = t.end_date ? new Date(t.end_date).getTime() : null;
+  if (start === null) return false;
+  return now >= start - 60 * 60 * 1000 && (end === null || now <= end);
+}

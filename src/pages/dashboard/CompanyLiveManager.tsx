@@ -605,7 +605,6 @@ const CompanyLiveManager = () => {
                   <div><Label className="text-xs">Nome da Empresa</Label><Input value={current.branding.companyName} onChange={(e) => updateBranding({ companyName: e.target.value })} className="mt-1" /></div>
                   <div><Label className="text-xs">Slogan</Label><Input value={current.branding.companySlogan} onChange={(e) => updateBranding({ companySlogan: e.target.value })} className="mt-1" /></div>
                   <div><Label className="text-xs">URL do Logo</Label><Input value={current.branding.companyLogoUrl} onChange={(e) => updateBranding({ companyLogoUrl: e.target.value })} className="mt-1" /></div>
-                  <div><Label className="text-xs">Imagem de Fundo</Label><Input value={current.branding.backgroundImageUrl} onChange={(e) => updateBranding({ backgroundImageUrl: e.target.value })} className="mt-1" /></div>
                 </CardContent>
               </Card>
 
@@ -640,34 +639,6 @@ const CompanyLiveManager = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="h-4 w-4" /> Efeitos Visuais</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div><Label className="text-xs font-medium">Particulas animadas</Label><p className="text-[10px] text-muted-foreground">Efeitos de particulas no fundo</p></div>
-                    <Switch checked={current.branding.enableParticles} onCheckedChange={(v) => updateBranding({ enableParticles: v })} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div><Label className="text-xs font-medium">Confetti</Label><p className="text-[10px] text-muted-foreground">Celebracoes com confetti</p></div>
-                    <Switch checked={current.branding.enableConfetti} onCheckedChange={(v) => updateBranding({ enableConfetti: v })} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div><Label className="text-xs font-medium">Efeitos de brilho</Label><p className="text-[10px] text-muted-foreground">Bordas e brilho animados</p></div>
-                    <Switch checked={current.branding.enableGlowEffects} onCheckedChange={(v) => updateBranding({ enableGlowEffects: v })} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium">Velocidade da animacao</Label>
-                    <Select value={current.branding.animationSpeed} onValueChange={(v: any) => updateBranding({ animationSpeed: v })}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="slow">Lento</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="fast">Rapido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
         </TabsContent>

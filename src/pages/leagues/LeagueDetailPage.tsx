@@ -12,7 +12,11 @@ import {
   ArrowLeft, Users, Trophy, Gift, Calendar, Clock, Copy, Check,
   Swords, Gamepad2, ScrollText, Shield, MessageSquare, Crown,
   TrendingUp, AlertCircle, LogOut, UserPlus, Share2, Zap,
+  CalendarPlus, Flag,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import { publishActivity } from "@/lib/activityBus";
@@ -26,6 +30,8 @@ import {
   joinLeague,
   leaveLeague,
   createInvitation,
+  generateLeagueFixtures,
+  reportMatchResult,
   FORMAT_LABELS,
   FORMAT_DESCRIPTIONS,
   GAME_CATEGORY_LABELS,
@@ -91,6 +97,13 @@ export default function LeagueDetailPage() {
   const [isParticipant, setIsParticipant] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [generating, setGenerating] = useState(false);
+  const [reportMatch, setReportMatch] = useState<LeagueMatch | null>(null);
+  const [reportS1, setReportS1] = useState("0");
+  const [reportS2, setReportS2] = useState("0");
+  const [reporting, setReporting] = useState(false);
+
+  const isCreator = Boolean(league && user && league.creator_id === user.id);
 
   useSEO({
     title: league?.name ? `${league.name} — Liga` : 'Liga',
@@ -125,6 +138,55 @@ export default function LeagueDetailPage() {
       setLoading(false);
     }
   };
+
+  const handleGenerateFixtures = async () => {
+    if (!league) return;
+    if (participants.length < 2) {
+      toast.error("Precisas de pelo menos 2 participantes para gerar o calendário");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const n = await generateLeagueFixtures(league, participants);
+      toast.success(`Calendário criado: ${n} jogos programados`);
+      await loadData();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao gerar calendário");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const openReport = (m: LeagueMatch) => {
+    setReportMatch(m);
+    setReportS1(String(m.player1_score ?? 0));
+    setReportS2(String(m.player2_score ?? 0));
+  };
+
+  const submitReport = async () => {
+    if (!reportMatch) return;
+    const s1 = Math.max(0, parseInt(reportS1 || "0", 10));
+    const s2 = Math.max(0, parseInt(reportS2 || "0", 10));
+    setReporting(true);
+    try {
+      await reportMatchResult(reportMatch.id, {
+        player1_score: s1,
+        player2_score: s2,
+        is_draw: s1 === s2,
+        winner_id: s1 === s2 ? undefined : s1 > s2 ? reportMatch.player1_id : reportMatch.player2_id,
+      });
+      toast.success("Resultado registado — classificação atualizada");
+      setReportMatch(null);
+      await loadData();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao reportar resultado");
+    } finally {
+      setReporting(false);
+    }
+  };
+
+  const canReport = (m: LeagueMatch) =>
+    m.status === "scheduled" && Boolean(user) && (m.player1_id === user?.id || m.player2_id === user?.id || isCreator);
 
   useEffect(() => {
     loadData();
@@ -472,9 +534,27 @@ export default function LeagueDetailPage() {
           </TabsContent>
 
           <TabsContent value="bracket">
+            {isCreator && matches.length === 0 && (
+              <div className="mb-4 flex flex-col items-center gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5 text-center">
+                <p className="text-xs text-white/70">
+                  Liga com {participants.length} participantes. Gera automaticamente o{" "}
+                  {isElimination ? "bracket de eliminatórias com byes" : "calendário todos-contra-todos"} — cada resultado
+                  reportado atualiza a classificação e avança o vencedor no bracket.
+                </p>
+                <Button
+                  onClick={handleGenerateFixtures}
+                  disabled={generating}
+                  className="bg-purple-600 hover:bg-purple-500 text-white gap-2"
+                  data-testid="generate-fixtures-btn"
+                >
+                  <CalendarPlus className="h-4 w-4" />
+                  {generating ? "A gerar..." : "Gerar calendário"}
+                </Button>
+              </div>
+            )}
             {matches.length === 0 ? (
               <div className="text-center py-16 text-white/30 text-sm">
-                Nenhum jogo cadastrado ainda.
+                {isCreator ? "Gera o calendário acima para começar." : "Nenhum jogo cadastrado ainda."}
               </div>
             ) : isElimination ? (
               <div className="space-y-8 overflow-x-auto">
@@ -539,6 +619,19 @@ export default function LeagueDetailPage() {
                                     {formatDate(m.scheduled_at)}
                                   </p>
                                 )}
+                                {canReport(m) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openReport(m)}
+                                    className="w-full h-7 text-[11px] border-white/20 bg-white/5 hover:bg-white/10 text-white gap-1.5"
+                                  >
+                                    <Flag className="h-3 w-3" /> Reportar resultado
+                                  </Button>
+                                )}
+                                {m.status === "bye" && (
+                                  <p className="text-[10px] text-center text-white/30">Passou à ronda seguinte (bye)</p>
+                                )}
                               </CardContent>
                             </Card>
                           );
@@ -566,22 +659,34 @@ export default function LeagueDetailPage() {
                         const p2Win = m.winner_id === m.player2_id;
                         return (
                           <Card key={m.id} className="bg-white/5 border-white/5 backdrop-blur-md">
-                            <CardContent className="p-3 flex items-center justify-between text-xs">
-                              <span className={`font-medium ${p1Win ? "text-emerald-300" : "text-white/60"}`}>
-                                {m.player1_display || m.player1?.display_name || "TBD"}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className={`font-mono font-bold ${p1Win ? "text-emerald-300" : "text-white/40"}`}>
-                                  {m.player1_score}
+                            <CardContent className="p-3 space-y-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className={`font-medium ${p1Win ? "text-emerald-300" : "text-white/60"}`}>
+                                  {m.player1_display || m.player1?.display_name || "TBD"}
                                 </span>
-                                <span className="text-white/20">x</span>
-                                <span className={`font-mono font-bold ${p2Win ? "text-emerald-300" : "text-white/40"}`}>
-                                  {m.player2_score}
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-mono font-bold ${p1Win ? "text-emerald-300" : "text-white/40"}`}>
+                                    {m.player1_score}
+                                  </span>
+                                  <span className="text-white/20">x</span>
+                                  <span className={`font-mono font-bold ${p2Win ? "text-emerald-300" : "text-white/40"}`}>
+                                    {m.player2_score}
+                                  </span>
+                                </div>
+                                <span className={`font-medium text-right ${p2Win ? "text-emerald-300" : "text-white/60"}`}>
+                                  {m.player2_display || m.player2?.display_name || "TBD"}
                                 </span>
                               </div>
-                              <span className={`font-medium text-right ${p2Win ? "text-emerald-300" : "text-white/60"}`}>
-                                {m.player2_display || m.player2?.display_name || "TBD"}
-                              </span>
+                              {canReport(m) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openReport(m)}
+                                  className="w-full h-7 text-[11px] border-white/20 bg-white/5 hover:bg-white/10 text-white gap-1.5"
+                                >
+                                  <Flag className="h-3 w-3" /> Reportar resultado
+                                </Button>
+                              )}
                             </CardContent>
                           </Card>
                         );
@@ -695,6 +800,54 @@ export default function LeagueDetailPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        <Dialog open={Boolean(reportMatch)} onOpenChange={(o) => !o && setReportMatch(null)}>
+          <DialogContent className="bg-[#150b2e] border-white/10 text-white max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base">Reportar resultado</DialogTitle>
+              <DialogDescription className="text-white/50 text-xs">
+                {reportMatch?.player1_display || reportMatch?.player1?.display_name || "Jogador 1"} vs{" "}
+                {reportMatch?.player2_display || reportMatch?.player2?.display_name || "Jogador 2"} · Ronda {reportMatch?.round_number}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-center gap-4 py-2">
+              <div className="text-center space-y-2">
+                <p className="text-[11px] text-white/50 max-w-[110px] truncate">{reportMatch?.player1_display || "Jogador 1"}</p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={reportS1}
+                  onChange={(e) => setReportS1(e.target.value)}
+                  className="w-20 text-center text-lg bg-white/5 border-white/20"
+                  data-testid="report-score-1"
+                />
+              </div>
+              <span className="text-white/30 text-sm">—</span>
+              <div className="text-center space-y-2">
+                <p className="text-[11px] text-white/50 max-w-[110px] truncate">{reportMatch?.player2_display || "Jogador 2"}</p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={reportS2}
+                  onChange={(e) => setReportS2(e.target.value)}
+                  className="w-20 text-center text-lg bg-white/5 border-white/20"
+                  data-testid="report-score-2"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-white/40 text-center">
+              Empates contam {league?.points_per_draw ?? 1} ponto · Vitória {league?.points_per_win ?? 3} pontos
+            </p>
+            <Button
+              onClick={submitReport}
+              disabled={reporting}
+              className="w-full bg-purple-600 hover:bg-purple-500 text-white"
+              data-testid="submit-report-btn"
+            >
+              {reporting ? "A registar..." : "Confirmar resultado"}
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

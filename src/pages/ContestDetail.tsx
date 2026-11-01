@@ -20,7 +20,6 @@ import ContestCountdown from "@/components/ContestCountdown";
 import ShareButtons from "@/components/ShareButtons";
 import { fireConfetti, fireSideCannons } from "@/lib/celebrate";
 import LiveLeaderboard from "@/components/LiveLeaderboard";
-import EmojiReactions from "@/components/EmojiReactions";
 import SocialVideoEmbed from "@/components/SocialVideoEmbed";
 
 interface Contest {
@@ -35,6 +34,7 @@ interface Contest {
   end_date: string | null;
   max_submissions_per_user: number;
   winner_submission_id: string | null;
+  created_by: string;
 }
 
 interface Submission {
@@ -262,6 +262,22 @@ export default function ContestDetail() {
   );
   const winners = sorted.filter((s) => s.is_winner);
   const topScore = sorted.length > 0 ? (contest.evaluation_type === "views" ? sorted[0].views_count : sorted[0].votes_count) : 0;
+  const isEnded = (contest.end_date ? new Date(contest.end_date).getTime() < Date.now() : false) || contest.status === "completed";
+  const isOwner = Boolean(user && contest.created_by === user.id);
+
+  // REA concursos: coroação automática — 1 clique coroa o líder real (votos/views)
+  const crownWinner = async () => {
+    if (!sorted.length) return;
+    const leader = sorted[0];
+    try {
+      await supabase.from("contest_submissions").update({ is_winner: true }).eq("id", leader.id);
+      await supabase.from("contests").update({ winner_submission_id: leader.id, status: "completed" }).eq("id", contest.id);
+      toast({ title: "Vencedor coroado!", description: `${leader.participant_name} lidera com ${contest.evaluation_type === "views" ? `${leader.views_count} visualizações` : `${leader.votes_count} votos`}` });
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Erro ao coroar vencedor", description: e?.message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -297,6 +313,25 @@ export default function ContestDetail() {
               <div className="mt-4">
                 <ShareButtons data={{ title: contest.title, text: `${contest.title} — participa e ganha!`, url: typeof window !== "undefined" ? window.location.href : "" }} />
               </div>
+              {isEnded && winners.length === 0 && sorted.length > 0 && (
+                <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4" data-testid="crown-banner">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                        🏁 Concurso terminado — líder atual: {sorted[0].participant_name} ({contest.evaluation_type === "views" ? `${sorted[0].views_count} visualizações` : `${sorted[0].votes_count} votos`})
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isOwner ? "Confirma o vencedor com um clique — a classificação final é a contagem real de votos." : "A aguardar a confirmação oficial do vencedor pelo organizador."}
+                      </p>
+                    </div>
+                    {isOwner && (
+                      <Button onClick={crownWinner} size="sm" className="bg-amber-500 hover:bg-amber-400 text-black font-bold gap-1.5" data-testid="crown-winner-btn">
+                        <Crown className="h-4 w-4" /> Coroar vencedor
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="flex items-center gap-3">
               {!contest.image_url && (
@@ -550,8 +585,7 @@ export default function ContestDetail() {
                           </Button>
                         )}
 
-                        <div className="flex items-center justify-between pt-1">
-                          <EmojiReactions compact onReact={() => {}} />
+                        <div className="flex items-center justify-end pt-1">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Eye className="h-3 w-3" />{sub.views_count}</span>
                             {(isOpen || isVoting) && contest.evaluation_type === "votes" && (

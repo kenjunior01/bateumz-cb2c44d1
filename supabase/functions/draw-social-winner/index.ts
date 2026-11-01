@@ -21,13 +21,19 @@ function getTierMultiplier(missionsCount: number, totalMissions: number): number
   return 1;
 }
 
+function cryptoRandom(): number {
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return bytes[0] / 4294967296;
+}
+
 function weightedRandomPick(entries: Entry[], totalMissions: number): Entry {
   const weights = entries.map(e => ({
     entry: e,
     weight: getTierMultiplier((e.missions_completed || []).length, totalMissions),
   }));
   const totalWeight = weights.reduce((a, w) => a + w.weight, 0);
-  let r = Math.random() * totalWeight;
+  let r = cryptoRandom() * totalWeight;
   for (const w of weights) {
     r -= w.weight;
     if (r <= 0) return w.entry;
@@ -35,16 +41,9 @@ function weightedRandomPick(entries: Entry[], totalMissions: number): Entry {
   return weights[weights.length - 1].entry;
 }
 
-/** Generate a deterministic blockchain-like verification hash */
-function generateBlockchainHash(raffleId: string, winnerId: string, timestamp: string): string {
-  // Create a SHA-256-like hash from the seed data
-  const seed = `${raffleId}:${winnerId}:${timestamp}:${Math.random().toString(36)}`;
-  let hash = "0x";
-  for (let i = 0; i < 64; i++) {
-    const charCode = seed.charCodeAt(i % seed.length);
-    hash += ((charCode * 31 + i * 17) % 16).toString(16);
-  }
-  return hash;
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 Deno.serve(async (req) => {
@@ -118,10 +117,7 @@ Deno.serve(async (req) => {
       metadata: { social_username: winner.social_username },
     });
 
-    // ── Blockchain Verification ──
-    const txHash = generateBlockchainHash(raffle_id, winner.id, timestamp);
-    const blockNumber = Math.floor(Date.now() / 1000); // Use unix timestamp as block number
-
+    // ── Auditoria honesta: SHA-256 real dos dados do sorteio (sem teatro de blockchain) ──
     const seedData = {
       raffle_id,
       raffle_title: raffle.title,
@@ -132,19 +128,20 @@ Deno.serve(async (req) => {
       missions_count: (winner.missions_completed || []).length,
       total_missions: totalMissions,
       draw_timestamp: timestamp,
-      algorithm: "weighted_random",
+      algorithm: "weighted_crypto_random",
       weights: entries.map(e => ({
         entry_id: e.id,
         missions: ((e as unknown as Entry).missions_completed || []).length,
         multiplier: getTierMultiplier(((e as unknown as Entry).missions_completed || []).length, totalMissions),
       })),
     };
+    const auditHash = await sha256Hex(JSON.stringify(seedData));
 
     await supabase.from("blockchain_verifications").insert({
       raffle_id,
-      tx_hash: txHash,
-      block_number: blockNumber,
-      network: "polygon",
+      tx_hash: auditHash,
+      block_number: null,
+      network: "bateu-sha256",
       winner_ticket_number: 1, // Social raffles use entry-based, not ticket-based
       seed_data: seedData,
     });
@@ -164,10 +161,10 @@ Deno.serve(async (req) => {
       },
       total_participants: entries.length,
       raffle_title: raffle.title,
-      blockchain: {
-        tx_hash: txHash,
-        block_number: blockNumber,
-        network: "polygon",
+      verification: {
+        method: "sha256_auditoria",
+        hash: auditHash,
+        algorithm: "weighted_crypto_random",
         verified_at: timestamp,
       },
     }), {

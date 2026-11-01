@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { Trophy, ArrowLeft, Users, Ticket, Sparkles, Crown, Star, Zap, Heart, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { commitRaffleDraw, revealRaffleDraw } from "@/lib/raffleDraws";
+import { toast } from "sonner";
 import { formatMZN } from "@/lib/currency";
 import { playWinSound, playDrumRoll, playTickSound } from "@/lib/sounds";
 import Navbar from "@/components/Navbar";
@@ -397,7 +399,17 @@ const LiveDraw = () => {
     setHeartbeat(true);
     playDrumRoll();
 
-    // Dramatic number cycling — accelerate then slow down
+    // REA provably-fair: o vencedor é apurado SERVER-SIDE (HMAC-SHA256
+    // commit-reveal). O cliente só anima o resultado — nunca escolhe.
+    const commitRes = await commitRaffleDraw(raffle.id);
+    if (!commitRes.ok) {
+      toast.error(commitRes.error || "Não foi possível preparar o sorteio verificado");
+      setPhase("idle");
+      setHeartbeat(false);
+      return;
+    }
+
+    // Dramatic number cycling — accelerate then slow down (só animação)
     const totalCycles = 40;
     for (let i = 0; i < totalCycles; i++) {
       const randomIdx = Math.floor(Math.random() * participants.length);
@@ -411,21 +423,21 @@ const LiveDraw = () => {
     // Final dramatic pause
     await new Promise(r => setTimeout(r, 800));
 
-    // Pick winner
-    const winnerIdx = Math.floor(Math.random() * participants.length);
-    const selectedWinner = participants[winnerIdx];
-    setCurrentNumber(selectedWinner.ticket_number);
+    const revealRes = await revealRaffleDraw(raffle.id);
+    if (!revealRes.ok || !revealRes.result?.winner) {
+      toast.error(revealRes.error || "Apuramento falhou — a prova garante que ninguém escolheu à mão");
+      setPhase("idle");
+      setHeartbeat(false);
+      return;
+    }
 
-    // Save to DB
-    await supabase.from("participants").update({ status: "winner" }).eq("id", selectedWinner.id);
-    await supabase.from("raffles").update({ status: "completed" }).eq("id", raffle.id);
-    await supabase.from("luck_points").insert({
-      user_id: selectedWinner.user_id,
-      points: 500,
-      action: "bonus",
-      description: `Vencedor do sorteio ao vivo: ${raffle.title}`,
-      raffle_id: raffle.id,
-    });
+    const winnerTicket = revealRes.result.winner.ticket_number;
+    const selectedWinner = participants.find((p) => p.ticket_number === winnerTicket) ?? {
+      id: revealRes.result.winner.id,
+      ticket_number: winnerTicket,
+      user_id: revealRes.result.winner.user_id,
+    } as Participant;
+    setCurrentNumber(winnerTicket);
 
     // Dramatic pause before reveal
     await new Promise(r => setTimeout(r, 1500));

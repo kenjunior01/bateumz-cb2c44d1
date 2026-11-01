@@ -85,8 +85,6 @@ export default function AdminSpinWheelManager() {
   const [spinCost, setSpinCost] = useState(0);
   const [soundEnabled, setSoundEnabledGame] = useState(true);
   const [particleEffects, setParticleEffects] = useState(true);
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
-  const [backgroundColor, setBackgroundColor] = useState("#0f172a");
   const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const [companySlogan, setCompanySlogan] = useState("");
   const [defaultEffect, setDefaultEffect] = useState("confetti");
@@ -155,8 +153,6 @@ export default function AdminSpinWheelManager() {
     setSpinCost(game.spin_cost || 0);
     setSoundEnabledGame(game.sound_enabled ?? true);
     setParticleEffects(game.particle_effects ?? true);
-    setBackgroundImageUrl(game.background_image_url || "");
-    setBackgroundColor(game.background_color || "#0f172a");
     setCompanyLogoUrl(game.company_logo_url || "");
     setCompanySlogan(game.company_slogan || "");
     setDefaultEffect(game.default_effect || "confetti");
@@ -192,8 +188,6 @@ export default function AdminSpinWheelManager() {
           spin_cost: spinCost,
           sound_enabled: soundEnabled,
           particle_effects: particleEffects,
-          background_image_url: backgroundImageUrl,
-          background_color: backgroundColor,
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
           default_effect: defaultEffect,
@@ -238,8 +232,6 @@ export default function AdminSpinWheelManager() {
           spin_cost: spinCost,
           sound_enabled: soundEnabled,
           particle_effects: particleEffects,
-          background_image_url: backgroundImageUrl,
-          background_color: backgroundColor,
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
           default_effect: defaultEffect,
@@ -348,8 +340,6 @@ export default function AdminSpinWheelManager() {
     setSpinCost(0);
     setSoundEnabledGame(true);
     setParticleEffects(true);
-    setBackgroundImageUrl("");
-    setBackgroundColor("#0f172a");
     setCompanyLogoUrl("");
     setCompanySlogan("");
     setDefaultEffect("confetti");
@@ -488,7 +478,6 @@ export default function AdminSpinWheelManager() {
                     <button
                       key={key}
                       onClick={() => {
-                        setBackgroundColor(theme.backgroundColor);
                         setWheelBackgroundColor(theme.wheelBackgroundColor);
                         setWheelBorderColor(theme.primaryColor);
                         setCompanyLogoUrl(theme.primaryColor);
@@ -509,22 +498,6 @@ export default function AdminSpinWheelManager() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Cor de Fundo (Hex)</Label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="w-12 h-10 rounded-md border border-border cursor-pointer"
-                    />
-                    <Input
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div>
                   <Label>Cor da Roda (Hex)</Label>
                   <div className="flex gap-2">
                     <input
@@ -540,16 +513,6 @@ export default function AdminSpinWheelManager() {
                     />
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <ImageUpload
-                  label="Imagem de Fundo (Marca)"
-                  value={backgroundImageUrl}
-                  onChange={setBackgroundImageUrl}
-                  placeholder="URL da imagem de fundo"
-                  bucketName="game-images"
-                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

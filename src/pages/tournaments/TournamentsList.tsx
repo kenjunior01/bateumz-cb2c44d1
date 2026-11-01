@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Inbox, HandCoins, Plus } from "lucide-react";
+import { Trophy, Inbox, HandCoins, Plus, WifiOff, RefreshCw } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -19,16 +19,32 @@ export default function TournamentsList() {
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    getTournaments()
+      .then((list) => {
+        setTournaments(list);
+        setError(null);
+      })
+      .catch(() => setError("Não foi possível carregar os torneios. Verifica a ligação e tenta de novo."))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    getTournaments()
-      .then(setTournaments)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    load();
   }, []);
 
-  const active = tournaments.filter((t) => t.status === "active");
-  const upcoming = tournaments.filter((t) => t.status === "draft");
+  // REA torneios: o que está a acabar primeiro aparece em cima (urgência real)
+  const byEndingSoon = (a: Tournament, b: Tournament) =>
+    new Date(a.end_date ?? "2999-01-01").getTime() - new Date(b.end_date ?? "2999-01-01").getTime();
+  const byStartingSoon = (a: Tournament, b: Tournament) =>
+    new Date(a.start_date ?? "2999-01-01").getTime() - new Date(b.start_date ?? "2999-01-01").getTime();
+
+  const active = tournaments.filter((t) => t.status === "active").sort(byEndingSoon);
+  const upcoming = tournaments.filter((t) => t.status === "draft").sort(byStartingSoon);
   const completed = tournaments.filter((t) => t.status === "completed");
 
   const EmptyState = ({ message }: { message: string }) => (
@@ -42,7 +58,22 @@ export default function TournamentsList() {
     </motion.div>
   );
 
+  const ErrorState = (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 text-center"
+    >
+      <WifiOff className="h-14 w-14 text-muted-foreground/30 mb-3" />
+      <p className="text-sm font-medium text-muted-foreground mb-4 max-w-sm">{error}</p>
+      <Button onClick={load} variant="outline" size="sm" className="gap-2" data-testid="torneios-retry">
+        <RefreshCw className="h-4 w-4" /> Tentar novamente
+      </Button>
+    </motion.div>
+  );
+
   const renderList = (list: Tournament[]) => {
+    if (error) return ErrorState;
     if (loading) {
       return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

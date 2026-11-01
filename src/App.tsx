@@ -100,7 +100,6 @@ const Install = lazy(() => import("./pages/Install.tsx"));
 const Referral = lazy(() => import("./pages/Referral.tsx"));
 const Community = lazy(() => import("./pages/Community.tsx"));
 const WhiteLabelConfig = lazy(() => import("./pages/dashboard/WhiteLabelConfig.tsx"));
-const GameBrandingConfig = lazy(() => import("./pages/dashboard/GameBrandingConfig.tsx"));
 const DashboardPrizes = lazy(() => import("./pages/dashboard/DashboardPrizes.tsx"));
 const DashboardNotifications = lazy(() => import("./pages/dashboard/DashboardNotifications.tsx"));
 const Profile = lazy(() => import("./pages/Profile.tsx"));
@@ -335,7 +334,6 @@ function AnimatedRoutes() {
               <Route path="prizes" element={<DashboardPrizes />} />
               <Route path="notifications" element={<DashboardNotifications />} />
               <Route path="white-label" element={<WhiteLabelConfig />} />
-              <Route path="game-branding" element={<GameBrandingConfig />} />
               <Route path="contests" element={<DashboardContests />} />
               <Route path="prestacoes" element={<DashboardPrestacoes />} />
               <Route path="alienacao" element={<DashboardAlienacao />} />

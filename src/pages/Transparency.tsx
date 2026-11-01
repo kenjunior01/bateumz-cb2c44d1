@@ -4,7 +4,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Shield, Lock, Cpu, FileCheck, Users, Eye, ChevronRight, CheckCircle2, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import BlockchainVerification from "@/components/BlockchainVerification";
+import DrawProofPanel from "@/components/DrawProofPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { transparencyContent, resolveLegalLang } from "@/lib/legal-content";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,7 +123,7 @@ const Transparency = () => {
             <h2 className="font-display text-lg font-bold text-foreground mb-1">{content.verifyTitle}</h2>
             <p className="text-sm text-muted-foreground mb-4">{content.verifySubtitle}</p>
             <div className="flex flex-wrap items-center gap-3">
-              <BlockchainVerification raffleId={raffleId} raffleTitle={raffleTitle || raffleId} />
+              <DrawProofPanel raffleId={raffleId} raffleTitle={raffleTitle || raffleId} />
               <Link to={"/raffle/" + raffleId} className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
                 {raffleTitle || raffleId} <ExternalLink className="h-3.5 w-3.5" />
               </Link>

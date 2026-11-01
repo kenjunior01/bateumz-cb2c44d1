@@ -120,3 +120,26 @@ Work Log:
 Stage Summary:
 - Empresas fazem lives super divertidas com controlo total: 3 jogos de palco REA dos melhores do mundo, orçamento com teto, log auditável e conformidade com as diretrizes das redes sociais
 - Bug sistémico de reload em dev eliminado; palco arranca instantâneo
+
+---
+Task ID: rea-plataforma-v23
+Agent: Super Z (main)
+Task: REA geral — eliminar enchimento (fundo dos jogos etc.) + aplicar padrões mundiais em torneios/ligas/sorteios/concursos/duelos
+
+Work Log:
+- AUDITORIA: 555 ficheiros TS, 127 rotas mapeados; ~3.800 linhas de componentes mortos confirmadas com rg
+- ELIMINADO: personalização de fundo/efeitos dos jogos (GameBrandingConfig 1.218 linhas + rota + sidebar; secções de fundo em LiveGameSettings, CompanyLiveManager, AdminMillionaireManager, AdminSpinWheelManager) — o utilizador pediu explicitamente
+- ELIMINADO: teatro falso (ProvablyFair 100% mock com stats inventadas; BlockchainVerification com "polygon"/block_number falsos; hash por charCodes no draw-social-winner)
+- ELIMINADO: 17 componentes mortos + 4 hooks órfãos + lixo do repo (--timeout 74KB PNG, dev.log, 3 PNGs 3.2MB, tool-results/, snapshots, shot-*.mjs) + .gitignore reforçado
+- PERF: BackgroundDecorations estático em TODOS os dispositivos (canvas O(n²) desktop removido); fix 3 erros tsc pré-existentes (StageQuiz.timeSeconds, StageWheel.ts); EmojiReactions decorativo removido
+- SORTEIOS PROVABLY FAIR (commit-reveal HMAC-SHA256): nova migration (raffle_draw_commits/results/seeds + RLS pública), edge function raffle-draw (commit/reveal, Deno crypto), lib raffleDraws.ts, DrawProofPanel (verificação Web Crypto NO browser), LiveDraw passa a apurar server-side (nunca Math.random no cliente), auto-draw cron reescrito com o mesmo protocolo, draw-social-winner com crypto.getRandomValues + SHA-256 real
+- LIGAS: bug loser_id corrigido; reportMatchResult atualiza standings (V/E/D + pontos + golos) e avança bracket automaticamente; generateLeagueFixtures liga os geradores órfãos (round-robin + eliminação com byes); UI "Gerar calendário" + "Reportar resultado" na LeagueDetailPage
+- TORNEIOS: check-in estilo Battlefy (RPC check_in_tournament + janela 60min + coluna checked_in_at + painel UI); estados de erro com retry na lista e detalhe; ordenação por urgência (acaba primeiro em cima)
+- CONCURSOS: coroação automática do vencedor real (banner pós-fim + botão do dono grava winner_submission_id/is_winner/status completed)
+- DUELOS P2P: UI ligada ao backend real que estava órfão (createP2PDuel/acceptP2PDuel/getOpenDuels/getP2PChallengeByInviteCode) com escrow na carteira; badges honestos "AO VIVO — DADOS REAIS" vs "PRÉVIA"
+- DESPORTO: decisão REA honesta — sem livescore falso; benchmark SofaScore/365Scores documentado + recomendação de API terceiros
+- VALIDAÇÃO: tsc 0 erros · vite build OK 45s · E2E 136 asserts verdes (rea-plataforma 33/33, ecosystem 33/33, home-dinamica 22/22, web-excellence 23/23, arena 25/25) · 0 pageerrors · screenshots verificados
+- DOC: docs/REA-plataforma-geral-v23.md com benchmark por módulo e tudo o que foi aplicado
+
+Stage Summary:
+- Plataforma mais leve, honesta e de classe mundial: enchimento fora, protocolo provably-fair real, ligas/torneios/concursos com gestão completa, duelos com escrow real

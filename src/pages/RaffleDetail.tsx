@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
-import BlockchainVerification from "@/components/BlockchainVerification";
+import DrawProofPanel from "@/components/DrawProofPanel";
 import BolaoModal from "@/components/BolaoModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -342,7 +342,7 @@ const RaffleDetail = () => {
             </motion.div>
 
             <motion.div className="flex gap-3" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.2 }}>
-              <BlockchainVerification raffleId={raffle.id} raffleTitle={raffle.title} />
+              <DrawProofPanel raffleId={raffle.id} raffleTitle={raffle.title} />
               <motion.button className="rd-bolao-btn shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]" onClick={() => { sfx.modalOpen(); setBolaoOpen(true); }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Users className="h-4 w-4" /> Bolao
               </motion.button>

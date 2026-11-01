@@ -14,3 +14,13 @@ android/local.properties
 shots/
 local.properties
 shots/
+
+# Lixo de ferramentas / artefactos locais (REA: manter o repo limpo)
+tool-results/
+download/
+*.log
+--timeout
+bateu-*.json
+homepage.png
+empresas*.png
+shot-*.mjs

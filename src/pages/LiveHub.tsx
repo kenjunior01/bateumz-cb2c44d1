@@ -579,8 +579,6 @@ const LiveHub = () => {
               <LiveGameSettings 
                 config={config} 
                 onChange={setConfig} 
-                branding={branding}
-                onBrandingChange={setBranding}
               />
               <ButtonRipple as="div" soundEffect={() => sfx.click()}>
                 <Link

@@ -24,6 +24,11 @@ export type LiveGameConfig = {
  pointMultiplier: number;
  allowAudienceChallenges: boolean;
  challengeCooldown: number;
+};
+
+// Identidade visual padrão dos jogos ao vivo (só leitura — a personalização
+// de fundo/efeitos foi removida por decisão REA: enchimento sem consumidor real).
+export type LiveGameConfigLegacy = {
  enableParticles: boolean;
  enableConfetti: boolean;
  enableGlowEffects: boolean;
@@ -55,10 +60,6 @@ export const DEFAULT_CONFIG: LiveGameConfig = {
  pointMultiplier: 1,
  allowAudienceChallenges: true,
  challengeCooldown: 30,
- enableParticles: true,
- enableConfetti: true,
- enableGlowEffects: true,
- animationSpeed: 'normal',
 };
 
 export const DEFAULT_BRANDING: CompanyBranding = {
@@ -72,16 +73,13 @@ export const DEFAULT_BRANDING: CompanyBranding = {
 interface Props {
  config: LiveGameConfig;
  onChange: (c: LiveGameConfig) => void;
- branding?: CompanyBranding;
- onBrandingChange?: (b: CompanyBranding) => void;
 }
 
-const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBrandingChange }: Props) => {
+const LiveGameSettings = ({ config, onChange }: Props) => {
  const { toast } = useToast();
  const { user } = useAuth();
 
  const update = (patch: Partial<LiveGameConfig>) => onChange({ ...config, ...patch });
- const updateBranding = (patch: Partial<CompanyBranding>) => onBrandingChange?.({ ...branding, ...patch });
 
  const saveToSupabase = async () => {
  if (!user) return;
@@ -93,20 +91,10 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
  board_game_timer: config.boardGameTimer, allow_undo: config.allowUndo,
  scoring_system: config.scoringSystem, point_multiplier: config.pointMultiplier,
  allow_audience_challenges: config.allowAudienceChallenges,
- challenge_cooldown: config.challengeCooldown, enable_particles: config.enableParticles,
- enable_confetti: config.enableConfetti, enable_glow_effects: config.enableGlowEffects,
- animation_speed: config.animationSpeed, is_active: true,
+ challenge_cooldown: config.challengeCooldown, is_active: true,
  }, { onConflict: 'user_id' });
  if (configError) throw configError;
 
- const { error: brandingError } = await (supabase as any).from('company_branding').upsert({
- user_id: user.id, company_name: branding.companyName, company_slogan: branding.companySlogan,
- company_logo_url: branding.companyLogoUrl, primary_color: branding.primaryColor,
- secondary_color: branding.secondaryColor, accent_color: branding.accentColor,
- background_color: branding.backgroundColor, text_color: branding.textColor,
- background_image_url: branding.backgroundImageUrl,
- }, { onConflict: 'user_id' });
- if (brandingError) throw brandingError;
  toast({ title: "Configurações Guardadas!" });
  } catch (e) { console.error(e); toast({ title: "Erro ao guardar", variant: "destructive" }); }
  };
@@ -121,14 +109,6 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
  boardGameTimer: cd.board_game_timer ?? 30, allowUndo: cd.allow_undo ?? false,
  scoringSystem: cd.scoring_system ?? 'cumulative', pointMultiplier: cd.point_multiplier ?? 1,
  allowAudienceChallenges: cd.allow_audience_challenges ?? true, challengeCooldown: cd.challenge_cooldown ?? 30,
- enableParticles: cd.enable_particles ?? true, enableConfetti: cd.enable_confetti ?? true,
- enableGlowEffects: cd.enable_glow_effects ?? true, animationSpeed: cd.animation_speed ?? 'normal',
- });
- const { data: bd, error: be } = await (supabase as any).from('company_branding').select('*').eq('user_id', user.id).single();
- if (!be && bd) updateBranding({
- companyName: bd.company_name, companySlogan: bd.company_slogan, companyLogoUrl: bd.company_logo_url,
- primaryColor: bd.primary_color, secondaryColor: bd.secondary_color, accentColor: bd.accent_color,
- backgroundColor: bd.background_color, textColor: bd.text_color, backgroundImageUrl: bd.background_image_url,
  });
  } catch (e) { console.error(e); toast({ title: "Erro ao carregar", variant: "destructive" }); }
  };
@@ -155,8 +135,6 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
  <TabsList className="w-full mb-4">
  <TabsTrigger value="games">Jogos</TabsTrigger>
  <TabsTrigger value="rules">Regras</TabsTrigger>
- <TabsTrigger value="effects">Efeitos</TabsTrigger>
- <TabsTrigger value="branding">Marca</TabsTrigger>
  </TabsList>
 
  <TabsContent value="games" className="space-y-6 pb-6">
@@ -171,21 +149,6 @@ const LiveGameSettings = ({ config, onChange, branding = DEFAULT_BRANDING, onBra
  <section><h4 className="font-bold text-sm mb-3">📊 Pontuação</h4><div className="space-y-3"><div><Label className="text-xs">Sistema de Pontuação</Label><Select value={config.scoringSystem} onValueChange={(v: any) => update({ scoringSystem: v })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cumulative">Acumulativa</SelectItem><SelectItem value="per_round">Por Ronda</SelectItem><SelectItem value="best_of_3">Melhor de 3</SelectItem></SelectContent></Select></div><div><Label className="text-xs">Multiplicador: {config.pointMultiplier}x</Label><Slider min={0.5} max={3} step={0.1} value={[config.pointMultiplier]} onValueChange={([v]) => update({ pointMultiplier: v })} className="mt-2" /></div></div></section>
  <section><h4 className="font-bold text-sm mb-3">🎯 Desafios</h4><div className="space-y-3"><div className="flex items-center justify-between"><Label className="text-xs">Desafios do Público</Label><Switch checked={config.allowAudienceChallenges} onCheckedChange={(v) => update({ allowAudienceChallenges: v })} /></div><div><Label className="text-xs">Intervalo: {config.challengeCooldown}s</Label><Slider min={10} max={120} step={5} value={[config.challengeCooldown]} onValueChange={([v]) => update({ challengeCooldown: v })} className="mt-2" /></div></div></section>
  <Button variant="destructive" onClick={() => onChange(DEFAULT_CONFIG)} className="w-full">Repor Padrão</Button>
- </TabsContent>
-
- <TabsContent value="effects" className="space-y-6 pb-6">
- <section><h4 className="font-bold text-sm mb-3">✨ Efeitos Visuais</h4><div className="space-y-4"><div className="flex items-center justify-between"><div><Label className="text-xs font-medium">Partículas</Label><p className="text-[10px] text-muted-foreground">Partículas animadas no fundo</p></div><Switch checked={config.enableParticles} onCheckedChange={(v) => update({ enableParticles: v })} /></div><div className="flex items-center justify-between"><div><Label className="text-xs font-medium">Confetti</Label><p className="text-[10px] text-muted-foreground">Celebrações com confetti</p></div><Switch checked={config.enableConfetti} onCheckedChange={(v) => update({ enableConfetti: v })} /></div><div className="flex items-center justify-between"><div><Label className="text-xs font-medium">Brilho</Label><p className="text-[10px] text-muted-foreground">Bordas e brilho animados</p></div><Switch checked={config.enableGlowEffects} onCheckedChange={(v) => update({ enableGlowEffects: v })} /></div><div><Label className="text-xs font-medium">Velocidade</Label><Select value={config.animationSpeed} onValueChange={(v: any) => update({ animationSpeed: v })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="slow">Lento</SelectItem><SelectItem value="normal">Normal</SelectItem><SelectItem value="fast">Rápido</SelectItem></SelectContent></Select></div></div></section>
- </TabsContent>
-
- <TabsContent value="branding" className="space-y-6 pb-6">
- <section><h4 className="font-bold text-sm mb-3">ℹ️ Dados da Empresa</h4><div className="space-y-3"><div><Label className="text-xs">Nome da Empresa</Label><Input value={branding.companyName || ""} onChange={(e) => updateBranding({ companyName: e.target.value })} placeholder="Nome da tua empresa..." /></div><div><Label className="text-xs">Slogan</Label><Input value={branding.companySlogan || ""} onChange={(e) => updateBranding({ companySlogan: e.target.value })} placeholder="Slogan..." /></div><div><Label className="text-xs">URL do Logo</Label><Input value={branding.companyLogoUrl || ""} onChange={(e) => updateBranding({ companyLogoUrl: e.target.value })} placeholder="https://example.com/logo.png" /></div></div></section>
- <section><h4 className="font-bold text-sm mb-3">🎨 Cores</h4><div className="grid grid-cols-2 gap-3">
- {[['primaryColor','Cor Principal'],['secondaryColor','Cor Secundária'],['accentColor','Cor de Acento'],['backgroundColor','Cor de Fundo']].map(([k,l]) => (
- <div key={k} className="space-y-2"><Label className="text-xs">{l}</Label><div className="flex gap-2"><input type="color" value={branding[k as keyof CompanyBranding] as string} onChange={(e) => updateBranding({ [k]: e.target.value })} className="w-12 h-10 rounded-md border border-border cursor-pointer" /><Input value={branding[k as keyof CompanyBranding] as string} onChange={(e) => updateBranding({ [k]: e.target.value })} className="flex-1" /></div></div>
- ))}
- <div className="space-y-2 col-span-2"><Label className="text-xs">Cor do Texto</Label><div className="flex gap-2"><input type="color" value={branding.textColor} onChange={(e) => updateBranding({ textColor: e.target.value })} className="w-12 h-10 rounded-md border border-border cursor-pointer" /><Input value={branding.textColor} onChange={(e) => updateBranding({ textColor: e.target.value })} className="flex-1" /></div></div></div></section>
- <section><h4 className="font-bold text-sm mb-3">🖼️ Imagem de Fundo</h4><Label className="text-xs">URL</Label><Input value={branding.backgroundImageUrl || ""} onChange={(e) => updateBranding({ backgroundImageUrl: e.target.value })} placeholder="https://example.com/background.png" /></section>
- <Button variant="destructive" onClick={() => onBrandingChange?.(DEFAULT_BRANDING)} className="w-full">Repor Marca Padrão</Button>
  </TabsContent>
  </Tabs>
  </SheetContent>

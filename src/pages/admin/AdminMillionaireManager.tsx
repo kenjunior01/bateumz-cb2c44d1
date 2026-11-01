@@ -89,8 +89,6 @@ export default function AdminMillionaireManager() {
   const [totalQuestions, setTotalQuestions] = useState(15);
   const [timePerQuestion, setTimePerQuestion] = useState(30);
   const [primaryColor, setPrimaryColor] = useState("#fbbf24");
-  const [backgroundColor, setBackgroundColor] = useState("#0a0e17");
-  const [backgroundImage, setBackgroundImage] = useState("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const [companySlogan, setCompanySlogan] = useState("");
   const [currency, setCurrency] = useState("MZN");
@@ -154,8 +152,6 @@ export default function AdminMillionaireManager() {
     setTotalQuestions(game.total_questions);
     setTimePerQuestion(game.time_per_question);
     setPrimaryColor(game.primary_color || "#fbbf24");
-    setBackgroundColor(game.background_color || "#0a0e17");
-    setBackgroundImage(game.background_image_url || "");
     setCompanyLogoUrl(game.company_logo_url || "");
     setCompanySlogan(game.company_slogan || "");
     setPrizeStructure(game.prize_structure || DEFAULT_PRIZE_STRUCTURE);
@@ -190,8 +186,6 @@ export default function AdminMillionaireManager() {
           total_questions: totalQuestions,
           time_per_question: timePerQuestion,
           primary_color: primaryColor,
-          background_color: backgroundColor,
-          background_image_url: backgroundImage,
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
           prize_structure: adjustedPrizeStructure,
@@ -240,8 +234,6 @@ export default function AdminMillionaireManager() {
           total_questions: totalQuestions,
           time_per_question: timePerQuestion,
           primary_color: primaryColor,
-          background_color: backgroundColor,
-          background_image_url: backgroundImage,
           company_logo_url: companyLogoUrl,
           company_slogan: companySlogan,
           prize_structure: adjustedPrizeStructure,
@@ -348,8 +340,6 @@ export default function AdminMillionaireManager() {
     setTotalQuestions(15);
     setTimePerQuestion(30);
     setPrimaryColor("#fbbf24");
-    setBackgroundColor("#0a0e17");
-    setBackgroundImage("");
     setCompanyLogoUrl("");
     setCompanySlogan("");
     setPrizeStructure(DEFAULT_PRIZE_STRUCTURE);
@@ -530,33 +520,6 @@ export default function AdminMillionaireManager() {
                     />
                   </div>
                 </div>
-
-                <div>
-                  <Label>Cor de Fundo</Label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="w-12 h-10 rounded cursor-pointer"
-                    />
-                    <Input
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <ImageUpload
-                  label="Imagem de Fundo"
-                  value={backgroundImage}
-                  onChange={setBackgroundImage}
-                  placeholder="URL da imagem de fundo"
-                  bucketName="game-images"
-                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

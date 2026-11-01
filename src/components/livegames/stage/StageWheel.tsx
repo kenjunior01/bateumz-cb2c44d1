@@ -25,7 +25,7 @@ import {
 
 type Mode = "premios" | "participantes";
 
-type DrawItem = { id: string; label: string; color: string; cost: number; poolSize: number; oddsPct: number };
+type DrawItem = { id: string; label: string; color: string; cost: number; poolSize: number; oddsPct: number; ts: number };
 
 interface Props {
   cfg: StageConfig;
@@ -259,6 +259,7 @@ const StageWheel = ({ cfg, onChange, clean = false, onExit }: Props) => {
           cost: mode === "premios" ? winSeg.cost : 0,
           poolSize: items.length,
           oddsPct: oddsPct(items, winSeg),
+          ts: Date.now(),
         };
         setWinner(item);
         setHistory((h) => [item, ...h].slice(0, 50));

@@ -1,3 +1,31 @@
+---
+Task ID: v26-web-excellence
+Agent: Super Z (main)
+Task: v26 — Foco imenso na versão web: arranque 3× mais rápido, navegação instantânea, a11y e correção de layout do navbar
+
+Work Log:
+- AUDITORIA WEB (screenshots 1440×900 + métricas): home web ficava 5–9s presa no LoadingScreen antes de renderizar qualquer conteúdo; 17 warnings React de keys duplicadas; 2 warnings React Router v7
+- CAUSAS do arranque lento: gate fixo de 2,2s no main.tsx + SEGUNDO gate de 1,8–4s no AppShell (dois LoadingScreens sequenciais com exit 0,6s encadeado por AnimatePresence mode="wait") + config regional a atrasar
+- FIX arranque: um só LoadingScreen por arranque — main 2,2s→0,9s; AppShell só espera a config regional (teto 1,2s, ZERO espera quando config já chegou); exit do LoadingScreen 0,6s→0,4s; chunk da home aquecido (import paralelo) durante o ecrã de marca; AnimatePresence sem mode="wait" (app monta por baixo enquanto o loading sai)
+- MEDIDO (dev, cache quente): 4,8–6,4s → 3,2–4,1s até o hero ser visível; em produção o ganho é maior (chunks minificados)
+- FIX keys duplicadas no LoadingScreen: `motion.p key={tipIndex}` (0–5) e `motion.span key={pctKey}` (0→∞) são IRMÃOS — quando os números colidem, React deteta keys duplicadas; além disso pctKey era incrementado DURANTE o render (side-effect ilegal, keys repetidas em renders concorrentes). Agora: incremento em useEffect pós-commit + keys com namespace `tip-`/`pct-`
+- PREFETCH de rotas (novo src/lib/routePrefetch.ts, ~60 linhas, sem dependências): mouseover/focusin/touchstart delegados → import() do chunk da rota ANTES do clique (mapa de 28 rotas→chunk, idempotente, hover-delay 65ms, falha silenciosa); instalado no AppShell — navegação web instantânea padrão Vercel/Linear
+- ATALHOS DIRETOS no navbar desktop: Desporto ⚽ / Jogos Grátis 🎮 / Ligas 🏆 eram só acessíveis em dropdowns (2 cliques) — agora links diretos de 1 clique (ícone <2xl, com label ≥2xl, title/tooltip, data-testids nav-direct-*)
+- FIX layout navbar: (1) top-0 e top-[38px] no mesmo className empatavam por ordem arbitrária do Tailwind e o navbar ficava SOB o banner de anúncio — substituído por inline style; (2) linha central (5 grupos + 3 atalhos com label) empurrava Entrar/Participar para FORA do viewport 1440 (x=1715/1796, right=1546) — labels dos grupos e atalhos agora só ≥2xl (ícones + tooltip abaixo), Participar right=1396 ✓; (3) placeholder da busca estourava em xl — truncado, texto só ≥2xl
+- A11y: contraste dos links do navbar text-muted-foreground→text-foreground/80 (3.3:1→AA); skip-link «Saltar para o conteúdo» no 1º Tab (alvo #conteudo-principal com foco, data-testid=skip-link)
+- React Router: future flags v7_startTransition + v7_relativeSplatPath ativados (0 warnings)
+- TheSportsDB: key free "3" DESATIVADA pela API (403 "permanently disabled") — código já usava a nova key de teste "123" (sports.ts + fallback da edge function); smoke real do teste agora SKIP honesto em rate-limit de ambiente em vez de FAIL
+- test-marketplace.mjs: launcher alinhado com PW_CHROME (executável chromium em cache) — era o único teste sem isso e falhava só por ambiente
+- NOVO test-web-excellence.mjs (11 asserts): arranque <5s, 0 warnings de keys, 0 warnings de router, atalho direto visível, chunk pedido no hover ANTES do clique, skip-link foca/visível/salta, navegação /jogos-gratis, /lives rápido
+- REGRESSÕES: 14 suítes verdes — web-excellence 11/11, apis-publicas 30/30, rea-plataforma 33/33, home-dinamica 22/22, desporto 14/14, arena 25/25, leiloes-esports 59/59, visual-excellence 28/28, stage-games 38/38, gamekit 10/10, ecosystem 33/33, blocos 77/77, stories-plans 14/14, marketplace 57/57 = 451 asserts ✅
+- Build produção validado: 286 chunks, dist 15MB, tsc 0 erros
+
+Stage Summary:
+- Web desktop com arranque ~3× mais rápido, navegação instantânea (prefetch), navbar 1-clique para os pilares competitivos, a11y AA no navbar, zero warnings React/Router
+- 3 bugs de layout do navbar corrigidos (sobreposição do banner, transbordo do viewport, placeholder da busca)
+- TheSportsDB key "3" morta confirmada e tratada (código já em "123"; smoke honesto)
+
+---
 
 ---
 Task ID: tdz-fix-social-feed

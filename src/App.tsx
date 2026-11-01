@@ -30,6 +30,7 @@ import { hardReset } from "@/lib/self-heal";
 import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
+import { initRoutePrefetch } from "@/lib/routePrefetch";
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
@@ -406,7 +407,7 @@ function AnimatedRoutes() {
 const AppContent = () => {
   return (
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppShell />
       </BrowserRouter>
     </TooltipProvider>
@@ -455,9 +456,13 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
 // Inside BrowserRouter — safe to use useLocation, useAuth, etc.
 function AppShell() {
   const location = useLocation();
-  const [showLoading, setShowLoading] = useState(true);
   const { loading: configLoading } = useRegionalContext();
   const { user, loading: authLoading } = useAuth();
+  /* v26 Web Excellence: um só ecrã de loading por arranque. O Root já mostra
+     o LoadingScreen da marca; aqui só se espera quando a config regional
+     AINDA está a carregar (evita flash de conteúdo com região errada) — e com
+     teto absoluto de 2s. Quando a config já chegou (cache), ZERO espera extra. */
+  const [showLoading, setShowLoading] = useState(configLoading);
   const isOverlay = location.pathname.startsWith("/lives/overlay") || location.pathname.startsWith("/overlay/");
   /* Ferramentas de PALCO (jogos de palco + estúdio) — como overlays: arrancam
      logo (a empresa abre a meio de uma live real) e sem cromos globais. */
@@ -466,13 +471,14 @@ function AppShell() {
   const isMobile = useIsMobile();
   /* Home mobile tem design escuro próprio (exemplos) — barras globais acompanham */
   const isMobileHome = isMobile && location.pathname === "/";
+  /* v26 Web Excellence: prefetch de chunks de rota no hover/focus — navegação
+     instantânea na web (o chunk descarrega ANTES do clique) */
+  useEffect(() => { initRoutePrefetch(); }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowLoading(false), 4000);
-    if (!configLoading) {
-      const quickTimer = setTimeout(() => setShowLoading(false), 1800);
-      return () => { clearTimeout(timer); clearTimeout(quickTimer); };
-    }
+    if (!configLoading) { setShowLoading(false); return; }
+    // teto absoluto: mesmo com a config lenta, nunca prender a app > 2s
+    const timer = setTimeout(() => setShowLoading(false), 1200);
     return () => clearTimeout(timer);
   }, [configLoading]);
 
@@ -480,6 +486,14 @@ function AppShell() {
 
   return (
     <MobileNavProvider>
+      {/* v26 a11y: atalho de teclado «saltar para o conteúdo» — 1º Tab em qualquer página */}
+      {!isTool && (
+        <a
+          href="#conteudo-principal"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:rounded-lg focus:bg-emerald-600 focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
+          data-testid="skip-link"
+        >Saltar para o conteúdo</a>
+      )}
       <div className={isMobileHome ? "dark" : undefined}>
       {/* Toasts (orçamento/prémios) também no palco — ferramentas de palco
           comunicam por toast; decorações e cromos ficam só nas páginas normais */}
@@ -493,7 +507,10 @@ function AppShell() {
         <RecentPagesTracker />
       </>}
       </div>
-      <AnimatedRoutes />
+      {/* v26 a11y: alvo do skip-link — recebe foco ao saltar via teclado */}
+      <div id="conteudo-principal" tabIndex={-1} className="outline-none">
+        <AnimatedRoutes />
+      </div>
       {/* ⭐ Busca global ⌘K — jogos, leilões ao vivo, esports, sorteios e páginas */}
       <Suspense fallback={null}><GlobalSearch /></Suspense>
       {!isTool && <>

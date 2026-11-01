@@ -193,7 +193,7 @@ async function runSuite(browser, label, viewport) {
   await context.close();
 }
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME, args: ["--no-sandbox"] } : {});
 try {
   await runSuite(browser, "DESKTOP", { width: 1280, height: 900 });
   await runSuite(browser, "MOBILE", { width: 390, height: 844 });

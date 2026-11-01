@@ -348,10 +348,11 @@ const Navbar = () => {
         animate={{ y: hidden ? -100 : 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         onMouseMove={handleMouseMove}
-        className={
-          "navbar-shell fixed top-0 left-0 right-0 z-50 hidden lg:block transition-transform duration-300" +
-          (announcementDismissed ? " top-0" : (currentAnnouncement && !announcementDismissed ? "top-[38px]" : "top-0"))
-        }
+        className="navbar-shell fixed left-0 right-0 z-50 hidden lg:block transition-[top] duration-300"
+        /* v26 fix: top-0 e top-[38px] no mesmo className empatavam (ordem
+           arbitrária do Tailwind) e o navbar ficava SOB o banner de anúncio.
+           Inline style decide sem ambiguidade. */
+        style={{ top: currentAnnouncement && !announcementDismissed ? 38 : 0 }}
       >
         <div className="navbar-spotlight" aria-hidden="true" />
 
@@ -426,18 +427,22 @@ const Navbar = () => {
                   {groups.map((g, gi) => (
                     <NavigationMenuItem key={g.label}>
                       <NavigationMenuTrigger
+                        title={g.label}
                         className={
                           "navbar-trigger bg-transparent text-sm font-medium transition-all duration-200 data-[state=open]:text-foreground " +
-                          "text-muted-foreground hover:text-foreground " +
+                          "text-foreground/80 hover:text-foreground " +
                           "hover:bg-secondary/50 data-[state=open]:bg-secondary/50 " +
                           "rounded-lg px-3 py-2"
                         }
                       >
                         <span className="flex items-center gap-2">
-                          <span className="navbar-group-icon">
+                          <span className="navbar-group-icon" aria-hidden="true">
                             <g.icon className="h-[11px] w-[11px]" strokeWidth={2.2} />
                           </span>
-                          {g.label}
+                          {/* v26: label só em ≥1536px — abaixo disso só o ícone
+                              (com tooltip), para a linha do navbar nunca
+                              empurrar as ações (busca/auth) fora do viewport */}
+                          <span className="hidden 2xl:inline">{g.label}</span>
                           {(gi === 2 || (gi === 0 && liveCount > 0)) && (
                             <span className="relative flex h-2 w-2">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
@@ -539,6 +544,26 @@ const Navbar = () => {
                       </NavigationMenuContent>
                     </NavigationMenuItem>
                   ))}
+                  {/* v26 Web excellence: atalhos diretos de 1 clique para os pilares
+                      competitivos — antes só acessíveis em dropdowns (2 cliques) */}
+                  {[
+                    { to: "/desporto", label: "Desporto", icon: Medal, testid: "nav-direct-desporto" },
+                    { to: "/jogos-gratis", label: "Jogos Grátis", icon: Joystick, testid: "nav-direct-jogos-gratis" },
+                    { to: "/ligas", label: "Ligas", icon: Trophy, testid: "nav-direct-ligas" },
+                  ].map((d) => (
+                    <NavigationMenuItem key={d.to}>
+                      <Link
+                        to={d.to}
+                        title={d.label}
+                        className="navbar-trigger navbar-direct hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-foreground/80 transition-all duration-200 hover:bg-secondary/50 hover:text-foreground xl:flex"
+                        data-testid={d.testid}
+                        onClick={() => sfx.click()}
+                      >
+                        <d.icon className="h-[11px] w-[11px]" strokeWidth={2.2} />
+                        <span className="hidden 2xl:inline">{d.label}</span>
+                      </Link>
+                    </NavigationMenuItem>
+                  ))}
                 </NavigationMenuList>
               </NavigationMenu>
             </div>
@@ -552,7 +577,7 @@ const Navbar = () => {
                 data-testid="navbar-busca"
               >
                 <Search className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                <span className="hidden xl:inline">{t("nav.search.placeholder")}</span>
+                <span className="hidden max-w-40 truncate 2xl:inline">{t("nav.search.placeholder")}</span>
                 <kbd className="navbar-kbd hidden xl:inline-flex">⌘K</kbd>
               </button>
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">

@@ -194,12 +194,16 @@ const LoadingScreen = () => {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState(0);
   const [tipIndex] = useState(Math.floor(Math.random() * 6));
-  // FIX: key única monotónica para o contador de % — antes key={Math.floor(progress)}
-  // repetia valores (0, 1, 5...) e gerava «two children with the same key»
-  const pctKeyRef = useRef(0);
+  // FIX v26: key monotónica do contador de % — a versão anterior incrementava
+  // uma ref DURANTE o render; em renders concorrentes descartados a mesma key
+  // podia repetir-se («two children with the same key»). Agora o incremento é
+  // um efeito pós-commit com hook de estado, à prova de renders repetidos.
+  const [pctKey, setPctKey] = useState(0);
   const lastPctRef = useRef(-1);
   const flPct = Math.floor(progress);
-  if (flPct !== lastPctRef.current) { lastPctRef.current = flPct; pctKeyRef.current += 1; }
+  useEffect(() => {
+    if (flPct !== lastPctRef.current) { lastPctRef.current = flPct; setPctKey(k => k + 1); }
+  }, [flPct]);
   const canvasRef = useParticles(60);
   const progressMotion = useMotionValue(0);
   const progressWidth = useTransform(progressMotion, [0, 100], ["0%", "100%"]);
@@ -315,7 +319,7 @@ const LoadingScreen = () => {
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
       style={{ background: "hsl(var(--background))" }}
       exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }} />
       <canvas ref={burstCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 8 }} />
@@ -493,7 +497,7 @@ const LoadingScreen = () => {
 
           <div className="flex items-center justify-between mt-2">
             <motion.p
-              key={tipIndex}
+              key={`tip-${tipIndex}`}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className="text-[11px] text-muted-foreground"
@@ -501,7 +505,7 @@ const LoadingScreen = () => {
               {TIPS[tipIndex]}
             </motion.p>
             <motion.span
-              key={pctKeyRef.current}
+              key={`pct-${pctKey}`}
               initial={{ scale: 1.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-[11px] font-mono font-bold text-muted-foreground"

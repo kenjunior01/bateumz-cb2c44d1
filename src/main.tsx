@@ -31,12 +31,17 @@ const Root = () => {
 
   useEffect(() => {
     if (isStageTool) return;
-    const timer = setTimeout(() => setLoading(false), 2200);
+    // v26 Web excellence: aquecer o chunk da home DURANTE o ecrã de marca —
+    // quando o loading sai, a home já está descarregada (na rede, é puro
+    // paralelismo; em dev, esconde a transformação on-demand do vite).
+    import("./pages/Index.tsx").catch(() => {});
+    // O ecrã de loading é marca, não prisão — 0.9s e a app arranca.
+    const timer = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {loading ? <LoadingScreen key="loading" /> : <App key="app" />}
     </AnimatePresence>
   );

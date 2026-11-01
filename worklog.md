@@ -1,4 +1,23 @@
 ---
+Task ID: v26.1-web-ux
+Agent: Super Z (main)
+Task: v26.1 — UX web: scroll restoration + foco SPA + investigação profunda do skip-link
+
+Work Log:
+- SCROLL RESTORATION: a SPA mantinha a posição de scroll entre rotas (clicar num link do rodapé abria a página seguinte a meio) — cada pathname novo agora faz scrollTo(top) no AnimatedRoutes; mudanças só de query (filtros/?game=) preservam o scroll
+- FOCO SPA: após navegar, #conteudo-principal recebe foco (leitores de ecrã anunciam a nova página); NO MOUNT não foca (senão o 1º Tab saltava o skip-link — bug autoinfligido descoberto por A/B: o "sequential focus navigation starting point" do Chrome passava a ser o wrapper, cujo 1º focusable era o CTA do banner)
+- SKIP-LINK: o Blink salta elementos fixed/clipped FORA do viewport (sr-only com clip e -translate-y-24 ambos falhavam) — técnica final: opacity-0 SEMPRE no viewport + focus:opacity-100; assert E2E confirma 1º Tab → skip-link → Enter → conteúdo
+- Descoberta (diag com scroll-behavior:smooth): window.scrollTo sem behavior explicito é ANIMADO em toda a app — leituras de scrollY imediatas eram 0; o código de rota usa behavior:"auto" (vence o CSS)
+- test-marketplace.mjs: launcher alinhado com PW_CHROME — 57/57 (era o único teste sem isso)
+- test-web-excellence: 13/13 (novo assert 7b de scroll restoration)
+- Regressões: apis-publicas 30/30, rea-plataforma 33/33, home-dinamica 22/22, desporto 14/14, leiloes-esports 59/59
+
+Stage Summary:
+- Navegação web com comportamento de app nativa: topo da página + anúncio a leitores de ecrã + teclado começa sempre no skip-link
+- Total v26+v26.1: 15 suítes verdes (≈465 asserts), tsc 0 erros
+
+---
+---
 Task ID: v26-web-excellence
 Agent: Super Z (main)
 Task: v26 — Foco imenso na versão web: arranque 3× mais rápido, navegação instantânea, a11y e correção de layout do navbar

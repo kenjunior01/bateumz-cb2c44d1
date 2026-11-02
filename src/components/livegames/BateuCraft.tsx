@@ -4,10 +4,10 @@
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Motor, Captura, Modo } from "@/game/blocos/engine";
+import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES } from "@/game/blocos/engine";
 import { infoItem } from "@/game/blocos/inventario";
 import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
-import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown } from "lucide-react";
+import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn } from "lucide-react";
 
 interface Props {
   onScore?: (score: number) => void;
@@ -71,6 +71,59 @@ function IconeItem({ id, qtd, tamanho = 34 }: { id: number; qtd?: number; tamanh
   );
 }
 
+// ── Minimapa: amostra real do mundo (chunks carregados) ─────
+const CORES_MAPA: Record<number, string> = {
+  1: "#5db03a", 2: "#7a5636", 3: "#8f8f8f", 4: "#7d7d7d", 5: "#e2d39a",
+  6: "#3a6fd8", 7: "#9a6b39", 8: "#3e8c2a", 9: "#b78b52", 11: "#a37c46",
+  15: "#b78b52", 16: "#6e6e6e", 17: "#f0c542", 18: "#bfe6f0", 19: "#c23a3a", 20: "#c89a62",
+};
+function MiniMapa({ motor, mostrar, aoTocar }: { motor: Motor; mostrar: boolean; aoTocar: () => void }) {
+  const cvRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!mostrar) return;
+    const desenhar = () => {
+      const cv = cvRef.current;
+      if (!cv || motor.fase !== "jogando") return;
+      const d = motor.miniMapa(24);
+      const ctx = cv.getContext("2d");
+      if (!ctx) return;
+      const px = cv.width / d.lado;
+      ctx.fillStyle = "#0a0a14"; ctx.fillRect(0, 0, cv.width, cv.height);
+      for (let z = 0; z < d.lado; z++) for (let x = 0; x < d.lado; x++) {
+        const id = d.celulas[z * d.lado + x];
+        if (!id) continue;
+        ctx.fillStyle = CORES_MAPA[id] ?? "#666";
+        ctx.fillRect(x * px, z * px, px + 0.5, px + 0.5);
+      }
+      // mobs vermelhos (monstros) / rosas (porcos)
+      for (const m of d.mobs) {
+        const mx = (m.x - (d.px - 24)) * px, mz = (m.z - (d.pz - 24)) * px;
+        ctx.fillStyle = m.tipo === "porco" ? "#f0a0b0" : "#e02a2a";
+        ctx.fillRect(mx - 1.5, mz - 1.5, 3, 3);
+      }
+      // seta do jogador (aponta na direção do yaw)
+      const cx2 = cv.width / 2, cy2 = cv.height / 2;
+      const ang = -d.yaw + Math.PI;
+      ctx.save();
+      ctx.translate(cx2, cy2); ctx.rotate(ang);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4, 5); ctx.lineTo(0, 2.5); ctx.lineTo(-4, 5); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      // moldura
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(0.75, 0.75, cv.width - 1.5, cv.height - 1.5);
+    };
+    desenhar();
+    const t = setInterval(desenhar, 500);
+    return () => clearInterval(t);
+  }, [motor, mostrar]);
+  if (!mostrar) return null;
+  return (
+    <canvas ref={cvRef} width={96} height={96} data-testid="bc-minimapa" onClick={aoTocar}
+      className="rounded-lg shadow-lg border border-white/20 cursor-pointer" />
+  );
+}
+
 export default function BateuCraft({ onScore, onExit }: Props) {
   const telaRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,6 +139,8 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
   const [raioRender, setRaioRender] = useState(motorRef.current.raioRender);
   const [voando, setVoando] = useState(false);
+  const [mostrarMapa, setMostrarMapa] = useState(true);
+  const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
 
   // ── Estado da UI ← motor ──
   const vidaAnterior = useRef<number | null>(null);
@@ -191,6 +246,23 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       // avatar
       definirAvatar: (p: any) => motorRef.current.definirPreferencias(p),
       lerAvatar: () => motorRef.current.lerPreferencias(),
+      // v28: câmaras, cama, escada, criativo, minimapa
+      ciclarCamara: () => { const m2 = motorRef.current.ciclarCamara(); setCamaraModo(m2); return m2; },
+      definirCamara: (m2: CamaraModo) => { motorRef.current.definirCamara(m2); setCamaraModo(m2); },
+      camara: () => motorRef.current.camaraModo,
+      camaraNome: () => CAMARA_NOMES[motorRef.current.camaraModo],
+      dormir: () => { motorRef.current.dormirPedido = true; },
+      agachar: (v: boolean) => { motorRef.current.entrada.agachado = v; },
+      zoom: (v: boolean) => { motorRef.current.entrada.zoom = v; },
+      blocosCriativos: () => motorRef.current.listaBlocosCriativos(),
+      darBloco: (id: number, qtd?: number) => motorRef.current.darBloco(id, qtd),
+      miniMapa: () => motorRef.current.miniMapa(24),
+      spawnarMob: (tipo: "porco" | "zumbi" | "estourador", dx = 3, dz = 0) => {
+        const mm = motorRef.current;
+        return mm.gestor.spawnar(tipo, mm.px + dx, mm.py + 2, mm.pz + dz);
+      },
+      tremer: () => motorRef.current.tremerT,
+      spawnProprio: () => motorRef.current.spawnProprio,
     };
     return () => { try { delete (window as any).__blocos; } catch { /* ignore */ } };
   }, []);
@@ -206,6 +278,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       m.entrada.correr = !!teclas["shift"];
       m.entrada.subir = !!teclas[" "];
       m.entrada.descer = !!teclas["control"];
+      m.entrada.zoom = !!teclas["z"];
     };
     const baixo = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -219,7 +292,9 @@ export default function BateuCraft({ onScore, onExit }: Props) {
         else { setModal(null); m.pausado = false; }
       }
       if (k === "f" && m.modo === "criativo") m.criativoVoar = !m.criativoVoar; // voar (criativo)
-      if (k === "f5") { e.preventDefault(); m.primeiraPessoa = !m.primeiraPessoa; }
+      if (k === "f5") { e.preventDefault(); setCamaraModo(m.ciclarCamara()); } // ciclar 5 câmaras
+      if (k === "c") m.entrada.agachado = !m.entrada.agachado; // agachar (alternar)
+      if (k === "m") setMostrarMapa((v) => !v); // minimapa
       sincronizar();
     };
     const cima = (e: KeyboardEvent) => { teclas[e.key.toLowerCase()] = false; sincronizar(); };
@@ -463,7 +538,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-creditos">
               <Trophy size={13} className="text-amber-300" /> {cap.creditos}
             </div>
-            <button onClick={abrirPausa} data-testid="bc-pausa" className="bg-black/40 rounded-lg p-1.5 text-white"><Pause size={16} /></button>
+            <button onClick={abrirPausa} data-testid="bc-pausa" className="bg-black/40 rounded-lg p-1.5 text-white pointer-events-auto"><Pause size={16} /></button>
           </div>
 
           {/* avisos */}
@@ -475,8 +550,8 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             ))}
           </div>
 
-          {/* mira */}
-          {cap.primeiraPessoa && (
+          {/* mira (nas câmaras com mira: 1ª pessoa e ombro) */}
+          {(cap.primeiraPessoa || cap.camara === "ombro") && !cap.zoom && (
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
               <div className="w-5 h-5 relative" data-testid="bc-mira">
                 <div className="absolute inset-0 m-auto w-0.5 h-5 bg-white/80 mix-blend-difference" />
@@ -519,10 +594,25 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             ))}
           </div>
 
+          {/* minimapa (v28) — topo direita, sob o relógio */}
+          {fase === "jogando" && (
+            <div className="absolute top-11 right-2">
+              <MiniMapa motor={m} mostrar={mostrarMapa} aoTocar={() => setMostrarMapa((v) => !v)} />
+            </div>
+          )}
+
           {/* botões coluna direita */}
           <div className="absolute right-2 top-12 flex flex-col gap-2">
+            <button onClick={() => setMostrarMapa((v) => !v)} data-testid="bc-mapa"
+              className={`w-10 h-10 rounded-xl flex items-center justify-center ${mostrarMapa ? "bg-black/45 text-emerald-300" : "bg-black/45 text-white"}`}><MapIcon size={18} /></button>
             <button onClick={() => setModal("inv")} data-testid="bc-inventario" className="w-10 h-10 rounded-xl bg-black/45 text-white flex items-center justify-center"><Backpack size={18} /></button>
-            <button onClick={() => { m.primeiraPessoa = !m.primeiraPessoa; }} data-testid="bc-camara" className="w-10 h-10 rounded-xl bg-black/45 text-white flex items-center justify-center"><Camera size={18} /></button>
+            <button onClick={() => setCamaraModo(m.ciclarCamara())} data-testid="bc-camara" title={`Câmara: ${CAMARA_NOMES[camaraModo]} (F5)`}
+              className="w-10 h-10 rounded-xl bg-black/45 text-white flex items-center justify-center relative">
+              <Camera size={18} />
+              {cap?.zoom && <ZoomIn size={12} className="absolute -top-1 -right-1 text-amber-300" />}
+            </button>
+            <button onClick={() => { m.entrada.agachado = !m.entrada.agachado; }} data-testid="bc-agachar"
+              className={`w-10 h-10 rounded-xl flex items-center justify-center text-[9px] font-black ${cap?.agachado ? "bg-emerald-500 text-black" : "bg-black/45 text-white"}`}>AGX</button>
           </div>
 
           {/* ═══ CONTROLOS MÓVEIS ═══ */}
@@ -561,6 +651,14 @@ export default function BateuCraft({ onScore, onExit }: Props) {
                     <button data-testid="bc-comer" onTouchStart={() => { m.comerPedido = true; }}
                       className="w-16 h-16 rounded-full bg-lime-600/90 text-white font-black text-xs border-2 border-black/40 shadow-lg active:scale-90">COMER</button>
                   ) : null; })()}
+                  {(cap.primeiraPessoa || cap.camara === "ombro") && (
+                    <button data-testid="bc-zoom"
+                      onTouchStart={() => { m.entrada.zoom = true; }}
+                      onTouchEnd={() => { m.entrada.zoom = false; }}
+                      className="w-14 h-14 rounded-full bg-indigo-700/90 text-white font-black text-[10px] border-2 border-black/40 shadow-lg active:scale-90 flex flex-col items-center justify-center">
+                      <ZoomIn size={16} /> ZOOM
+                    </button>
+                  )}
                   <button data-testid="bc-minerar"
                     onTouchStart={() => { m.entrada.minerando = true; }}
                     onTouchEnd={() => { m.entrada.minerando = false; }}
@@ -641,6 +739,22 @@ export default function BateuCraft({ onScore, onExit }: Props) {
                 </button>
               ))}
             </div>
+            {/* v28: seletor de blocos no criativo */}
+            {cap?.modo === "criativo" && (
+              <div className="mt-4">
+                <p className="text-white/40 text-[10px] font-bold uppercase mb-1">BLOCOS (CRIATIVO) — toca para levar 64 à hotbar</p>
+                <div className="grid grid-cols-9 gap-1">
+                  {m.listaBlocosCriativos().map((id) => (
+                    <button key={id} data-testid={`bc-cri-bloco-${id}`}
+                      onClick={() => { m.darBloco(id, 64); }}
+                      className="aspect-square rounded-md bg-sky-500/15 ring-1 ring-sky-400/40 flex items-center justify-center active:scale-90"
+                      title={infoItem(id).nome}>
+                      <IconeItem id={id} tamanho={26} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -665,8 +779,11 @@ export default function BateuCraft({ onScore, onExit }: Props) {
               DISTÂNCIA: {raioRender === 2 ? "PERTO" : raioRender === 3 ? "NORMAL" : "LONGE"}
             </button>
             <button onClick={() => setModal("ajuda")} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm">COMO JOGAR</button>
-            <button onClick={() => { m.primeiraPessoa = !m.primeiraPessoa; setModal(null); m.pausado = false; }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm">
-              CÂMARA: {cap?.primeiraPessoa ? "1ª PESSOA" : "3ª PESSOA"}
+            <button onClick={() => setCamaraModo(m.ciclarCamara())} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm" data-testid="bc-camara-modo">
+              CÂMARA: {CAMARA_NOMES[camaraModo]}
+            </button>
+            <button onClick={() => setMostrarMapa((v) => !v)} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm" data-testid="bc-minimapa-toggle">
+              MINIMAPA: {mostrarMapa ? "ON" : "OFF"}
             </button>
             <button onClick={sair} className="py-3 rounded-xl font-bold text-white bg-red-700 active:scale-95" data-testid="bc-sair">GUARDAR E SAIR</button>
           </div>
@@ -709,6 +826,12 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <p><b className="text-amber-300">Minerar:</b> {ehToque ? "mantém MINERAR pressionado" : "mantém o botão esquerdo no bloco"}</p>
             <p><b className="text-amber-300">Colocar / atacar:</b> {ehToque ? "botões POR e ATACAR" : "botão direito coloca · esquerto ataca mobs"}</p>
             <p><b className="text-amber-300">Comer:</b> {ehToque ? "botão COMER aparece quando tens comida na mão" : "botão direito com comida na mão"}</p>
+            <p><b className="text-amber-300">Câmaras (5):</b> {ehToque ? "ícone da câmara cicla os modos" : "F5 cicla"} — 1ª pessoa · 3ª pessoa · ombro · top-down · cinema (órbita)</p>
+            <p><b className="text-amber-300">Zoom:</b> {ehToque ? "mantém ZOOM" : "mantém Z"} — telescópio nas câmaras 1ª/ombro</p>
+            <p><b className="text-amber-300">Agachar:</b> {ehToque ? "botão AGX" : "tecla C"} — andas devagar e a câmara baixa</p>
+            <p><b className="text-amber-300">Minimapa:</b> {ehToque ? "toque no mapa ou botão do mapa" : "tecla M"} — terreno real, mobs e a tua seta</p>
+            <p><b className="text-amber-300">Cama:</b> cria com 3 tábuas + 3 folhas · usa-a à noite para dormir (salta a noite), curar e definir o renascimento</p>
+            <p><b className="text-amber-300">Escada:</b> 7 tábuas → 3 escadas · encosta e usa SALTAR/DESCER para escalar</p>
             <p><b className="text-amber-300">Voar / mergulhar:</b> {ehToque ? "VOAR no criativo · DESCER na água ou a voar" : "F voa no criativo · Ctrl desce na água e no voo"}</p>
             <p><b className="text-amber-300">Mochila:</b> tecla E ou mochila no topo · aí crias ferramentas e fundes minérios · toca num item da mochila para o levar à hotbar</p>
             <p><b className="text-amber-300">Sobrevive:</b> come carne e maçãs, constrói abrigo antes da noite — os Zumbis LEGO aparecem no escuro e o Estourador explode! Coloca tochas: elas iluminam de verdade.</p>

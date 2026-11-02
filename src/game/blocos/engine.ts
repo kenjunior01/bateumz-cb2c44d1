@@ -2,6 +2,8 @@
 // BATEUCRAFT — Motor principal
 // Física · raycast DDA · quebrar/colocar · sobrevivência ·
 // dia/noite · chunks dinâmicos · save · ganchos __blocos (E2E)
+// v28: 5 tipos de câmara · zoom · balanço · tremor · agachar ·
+// cama (dormir + spawn) · escada · minimapa · seletor criativo
 // ============================================================
 
 import * as THREE from "three";
@@ -12,19 +14,24 @@ import { Receita } from "./constants";
 import { criarMinifig, criarItemMao, AvatarLego } from "./lego";
 import { Aleatorio } from "./noise";
 import {
-  B, BLOCOS, CHUNK, GRAVIDADE, SALTO, VEL_ANDAR, VEL_CORRER,
+  B, BLOCOS, CHUNK, ALTURA, GRAVIDADE, SALTO, VEL_ANDAR, VEL_CORRER,
   VIDA_MAX, FOME_MAX, AR_MAX, DIA_SEGUNDOS, ALCANCE, RAIO_EXPLOSAO,
   dropDe, CORES, ITENS, CONQUISTAS, I,
 } from "./constants";
 
 export type Modo = "sobrevivencia" | "criativo";
 export type Fase = "menu" | "jogando" | "morto" | "pausa";
+export type CamaraModo = "primeira" | "terceira" | "ombro" | "topo" | "cinema";
+export const CAMARA_NOMES: Record<CamaraModo, string> = {
+  primeira: "1ª PESSOA", terceira: "3ª PESSOA", ombro: "OMBRO", topo: "TOP-DOWN", cinema: "CINEMA",
+};
+const ORDEM_CAMARAS: CamaraModo[] = ["primeira", "terceira", "ombro", "topo", "cinema"];
 
 export interface Entrada {
   frente: number; lado: number;      // joystick / teclas (-1..1)
   olharX: number; olharY: number;    // delta acumulado (radianos)
   salto: boolean; correr: boolean; subir: boolean; descer: boolean;
-  minerando: boolean;
+  minerando: boolean; agachado: boolean; zoom: boolean;
 }
 
 export interface Captura {
@@ -43,6 +50,10 @@ export interface Captura {
   avisos: { texto: string; tipo: "conquista" | "info" | "dano" }[];
   ctaWhats: boolean;
   primeiraPessoa: boolean;
+  camara: CamaraModo;
+  agachado: boolean; zoom: boolean; naEscada: boolean;
+  mobsDerrotados: number;
+  spawnDefinido: boolean;
   naAgua: boolean; voando: boolean;
   blocosQuebrados: number; blocosColocados: number;
   passos: number;
@@ -59,6 +70,13 @@ export class Motor {
 
   // som / desempenho (preferências locais)
   mudo = false; raioRender = 3;
+
+  // câmara: 5 modos + zoom + balanço + tremor (v28)
+  camaraModo: CamaraModo = "primeira";
+  private alturaOlhoAtual = 1.62;
+  private fovAtual = 75;
+  tremerT = 0;
+  get primeiraPessoa() { return this.camaraModo === "primeira"; }
 
   // luzes reais das tochas colocadas
   luzesTocha: THREE.PointLight[] = [];
@@ -84,12 +102,13 @@ export class Motor {
 
   // jogador
   px = 0; py = 40; pz = 0; vx = 0; vy = 0; vz = 0;
-  yaw = 0; pitch = 0; noChao = false; naAgua = false; cabecaAgua = false;
+  yaw = 0; pitch = 0; noChao = false; naAgua = false; cabecaAgua = false; naEscada = false;
   vida = VIDA_MAX; fome = FOME_MAX; ar = AR_MAX;
   tempo = DIA_SEGUNDOS * 0.25; // começa de manhã
   dia = 1; primeiraNoiteFeita = false;
   causaMorte = "";
-  primeiraPessoa = true;
+  spawnProprio: [number, number, number] | null = null;
+  mobsDerrotados = 0;
 
   // interação
   mira: { x: number; y: number; z: number; id: number } | null = null;
@@ -105,7 +124,8 @@ export class Motor {
   blocosQuebrados = 0; blocosColocados = 0;
 
   // internals
-  entrada: Entrada = { frente: 0, lado: 0, olharX: 0, olharY: 0, salto: false, correr: false, subir: false, descer: false, minerando: false };
+  entrada: Entrada = { frente: 0, lado: 0, olharX: 0, olharY: 0, salto: false, correr: false, subir: false, descer: false, minerando: false, agachado: false, zoom: false };
+  dormirPedido = false;
   private relogioUltimo = 0; private acumFPS = 0; private nFPS = 0; fps = 60;
   private ultimoEstado = 0; private ultimoSave = 0; private animacaoAndar = 0;
   onEstado: ((c: Captura) => void) | null = null;
@@ -119,6 +139,24 @@ export class Motor {
       const r = Number(localStorage.getItem("bateu_blocos_dist"));
       if (r >= 2 && r <= 4) this.raioRender = Math.floor(r);
     } catch { /* ignore */ }
+    try {
+      const c = localStorage.getItem("bateu_blocos_camara") as CamaraModo | null;
+      if (c && ORDEM_CAMARAS.includes(c)) this.camaraModo = c;
+    } catch { /* ignore */ }
+  }
+
+  // ── Câmara (5 modos, cicla com F5 / botão) ───────────────────
+  ciclarCamara(): CamaraModo {
+    const i = ORDEM_CAMARAS.indexOf(this.camaraModo);
+    this.camaraModo = ORDEM_CAMARAS[(i + 1) % ORDEM_CAMARAS.length];
+    try { localStorage.setItem("bateu_blocos_camara", this.camaraModo); } catch { /* ignore */ }
+    this.avisos.push({ texto: `Câmara: ${CAMARA_NOMES[this.camaraModo]}`, tipo: "info", t: 1.6 });
+    return this.camaraModo;
+  }
+  definirCamara(m: CamaraModo) {
+    if (!ORDEM_CAMARAS.includes(m)) return;
+    this.camaraModo = m;
+    try { localStorage.setItem("bateu_blocos_camara", m); } catch { /* ignore */ }
   }
 
   // ── Arranque ─────────────────────────────────────────────────
@@ -199,6 +237,8 @@ export class Motor {
       this.primeiraNoiteFeita = guardado.primeiraNoiteFeita ?? false;
       this.blocosQuebrados = guardado.blocosQuebrados ?? 0;
       this.blocosColocados = guardado.blocosColocados ?? 0;
+      this.spawnProprio = guardado.spawn ?? null;
+      this.mobsDerrotados = guardado.mobsDerrotados ?? 0;
       for (const [k, v] of Object.entries(guardado.edits ?? {})) this.mundo.edits.set(k, v as number);
       // reconstruir tochas conhecidas a partir das edições do save
       for (const [k, v] of this.mundo.edits) if (v === B.TOCHA) this.mundo.tochas.add(k);
@@ -364,17 +404,19 @@ export class Motor {
   particulasAtivas(): number { return this.poolParticulas.filter((p) => p.t > 0).length; }
 
   // ── Raycast DDA voxel ────────────────────────────────────────
+  get alturaOlho() { return this.entrada.agachado ? 1.32 : 1.62; }
   private raycast(): { x: number; y: number; z: number; id: number } | null {
     const dir = new THREE.Vector3(
       -Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch),
     ).normalize();
-    let x = Math.floor(this.px), y = Math.floor(this.py + 1.62), z = Math.floor(this.pz);
+    const olhoY = this.py + this.alturaOlho;
+    let x = Math.floor(this.px), y = Math.floor(olhoY), z = Math.floor(this.pz);
     const passo = new THREE.Vector3(Math.abs(dir.x) < 1e-9 ? 1e9 : Math.abs(1 / dir.x),
       Math.abs(dir.y) < 1e-9 ? 1e9 : Math.abs(1 / dir.y),
       Math.abs(dir.z) < 1e-9 ? 1e9 : Math.abs(1 / dir.z));
     const sinal = [dir.x < 0 ? -1 : 1, dir.y < 0 ? -1 : 1, dir.z < 0 ? -1 : 1];
     let tMaxX = (sinal[0] > 0 ? (x + 1 - this.px) : (this.px - x)) * passo.x;
-    let tMaxY = (sinal[1] > 0 ? (y + 1 - (this.py + 1.62)) : ((this.py + 1.62) - y)) * passo.y;
+    let tMaxY = (sinal[1] > 0 ? (y + 1 - olhoY) : (olhoY - y)) * passo.y;
     let tMaxZ = (sinal[2] > 0 ? (z + 1 - this.pz) : (this.pz - z)) * passo.z;
     let face: [number, number, number] = [0, 0, 0];
     for (let i = 0; i < 60; i++) {
@@ -423,6 +465,7 @@ export class Motor {
     if (id === B.AR || id === B.ROCHA_MAE) return;
     this.mundo.setBloco(x, y, z, B.AR);
     this.blocosQuebrados++;
+    if (this.blocosQuebrados >= 200) this.conquista("mineiro");
     this.som("quebrar");
     this.spawnParticulas(x + 0.5, y + 0.5, z + 0.5, CORES[id]?.[0] ?? "#9a9a9a", 10);
     this.fome = Math.max(0, this.fome - 0.02);
@@ -445,6 +488,8 @@ export class Motor {
 
   colocar() {
     if (this.fase !== "jogando" || !this.mira) return;
+    // usar a cama (dormir) em vez de colocar bloco na cara dela
+    if (this.mira.id === B.CAMA) { this.dormir(); return; }
     const s = this.inv.selecionado();
     if (!s || s.id >= 100) return;
     // posição adjacente = bloco visado + face atingida
@@ -453,11 +498,13 @@ export class Motor {
     const z = this.mira.z + this.ultimaFace[2];
     if (y < 0 || y >= 80) return;
     if (this.mundo.getBloco(x, y, z) !== B.AR && this.mundo.getBloco(x, y, z) !== B.AGUA) return;
-    // não colocar dentro do jogador
-    if (this.colideComJogador(x, y, z)) return;
+    // não colocar dentro do jogador (exceto escada/tocha, que não são sólidas)
+    const novoSolido = BLOCOS[s.id]?.solido ?? true;
+    if (novoSolido && this.colideComJogador(x, y, z)) return;
     if (this.modo === "sobrevivencia") this.inv.consumirSelecionado(1);
     this.mundo.setBloco(x, y, z, s.id);
     this.blocosColocados++;
+    if (this.blocosColocados >= 100) this.conquista("arquiteto");
     this.som("colocar");
     this.emitirEstado(true);
   }
@@ -480,6 +527,8 @@ export class Motor {
       this.som("golpe");
       if (mob.tipo === "estourador" && !mob.vivo) this.conquista("estourador_derrotado");
       if (!mob.vivo) {
+        this.mobsDerrotados++;
+        this.conquista("safari");
         for (const d of this.gestor.dropDoMob(mob.tipo, this.rnd)) this.inv.adicionar(d.id, d.qtd);
       }
     }
@@ -496,6 +545,34 @@ export class Motor {
     this.fome = Math.min(FOME_MAX, this.fome + item.comida);
     if (this.modo === "sobrevivencia") this.inv.consumirSelecionado(1);
     this.som("comer");
+    this.emitirEstado(true);
+  }
+
+  // ── Dormir (cama): salta a noite e define o renascimento ──
+  dormir() {
+    if (this.fase !== "jogando" || !this.mira || this.mira.id !== B.CAMA) return;
+    if (!this.noite) {
+      this.avisos.push({ texto: "Só podes dormir à noite", tipo: "info", t: 2.5 });
+      return;
+    }
+    // monstros por perto impedem o sono
+    for (const mob of this.gestor.mobs) {
+      if (!mob.vivo || mob.tipo === "porco") continue;
+      if (Math.hypot(mob.x - this.px, mob.z - this.pz) < 9) {
+        this.avisos.push({ texto: "Há monstros por perto! Não podes dormir.", tipo: "info", t: 2.5 });
+        return;
+      }
+    }
+    // saltar para a manhã do dia seguinte
+    this.tempo = (Math.floor(this.tempo / DIA_SEGUNDOS) + 1) * DIA_SEGUNDOS;
+    this.dia = Math.floor(this.tempo / DIA_SEGUNDOS) + 1;
+    this.primeiraNoiteFeita = true;
+    this.spawnProprio = [this.mira.x + 0.5, this.mira.y + 1.02, this.mira.z + 0.5];
+    this.vida = Math.min(VIDA_MAX, this.vida + 4);
+    this.ar = AR_MAX;
+    this.conquista("bom_descanso");
+    this.avisos.push({ texto: "Dormiste bem — renascimento definido junto à cama ✓", tipo: "info", t: 3.5 });
+    this.som("criar");
     this.emitirEstado(true);
   }
 
@@ -583,8 +660,13 @@ export class Motor {
     const cabecaAguaAgora = this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 1.62), Math.floor(this.pz)) === B.AGUA;
     this.naAgua = naAguaAgora; this.cabecaAgua = cabecaAguaAgora;
 
-    // direção de movimento relativa ao yaw
-    const velBase = this.entrada.correr ? VEL_CORRER : VEL_ANDAR;
+    // escada: escalada se o corpo está dentro de uma (v28)
+    const emEscada = this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 0.4), Math.floor(this.pz)) === B.ESCADA ||
+      this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 1.2), Math.floor(this.pz)) === B.ESCADA;
+    this.naEscada = emEscada;
+
+    // direção de movimento relativa ao yaw (agachado anda devagar, v28)
+    const velBase = (this.entrada.correr ? VEL_CORRER : VEL_ANDAR) * (this.entrada.agachado ? 0.45 : 1);
     const vel = this.modo === "criativo" && this.criativoVoar ? velBase * 1.7 : this.naAgua ? velBase * 0.55 : velBase;
     let mx = 0, mz = 0;
     if (this.fase === "jogando") {
@@ -597,7 +679,12 @@ export class Motor {
     this.vx += (mx - this.vx) * Math.min(1, acc * dt);
     this.vz += (mz - this.vz) * Math.min(1, acc * dt);
 
-    if (this.modo === "criativo" && (this.criativoVoar || !this.noChao && this.entrada.salto)) {
+    if (emEscada) {
+      // escalada: sobe/desce; parado, fica preso à escada
+      const vVert = (this.entrada.salto || this.entrada.subir ? 1 : 0) - (this.entrada.descer ? 1 : 0);
+      this.vy = vVert * 3.2;
+      this.noChao = false; this.danoQuedaVy = 0;
+    } else if (this.modo === "criativo" && (this.criativoVoar || !this.noChao && this.entrada.salto)) {
       // voo criativo
       const vVert = (this.entrada.salto || this.entrada.subir ? 1 : 0) - (this.entrada.descer ? 1 : 0);
       this.vy = vVert * velBase * 1.2;
@@ -646,16 +733,21 @@ export class Motor {
     }
     if (this.py < -12) this.receberDano(1000, "vazio");
 
-    // passos somam fome
+    // passos somam fome + som de passos (v28: "passo" estava definido mas nunca chamado)
     const andou = Math.hypot(this.vx, this.vz) * dt;
     if (andou > 0.001) { this.animacaoAndar += andou * 2.2; this.passosAcumulados += andou; }
-    if (this.passosAcumulados > 1.6) { this.passosAcumulados = 0; if (this.modo === "sobrevivencia") this.fome = Math.max(0, this.fome - 0.015); }
+    if (this.passosAcumulados > 1.6) {
+      this.passosAcumulados = 0;
+      if (this.modo === "sobrevivencia") this.fome = Math.max(0, this.fome - 0.015);
+      if (this.noChao && !this.naAgua) this.som("passo");
+    }
   }
   private passosAcumulados = 0;
 
   receberDano(qtd: number, causa: string) {
     if (this.modo === "criativo" || this.fase !== "jogando") return;
     this.vida -= qtd;
+    this.tremerT = 0.35; // tremor de câmara (v28)
     this.avisos.push({ texto: `-${qtd} ${causa === "queda" ? "de queda" : causa === "afogamento" ? "afogamento" : ""}`, tipo: "dano", t: 1.2 });
     this.som("dano");
     if (this.vida <= 0) {
@@ -670,12 +762,41 @@ export class Motor {
   }
 
   renascer() {
-    const [sx, sy, sz] = this.mundo.spawnPos();
+    const [sx, sy, sz] = this.spawnProprio ?? this.mundo.spawnPos();
     this.px = sx; this.py = sy; this.pz = sz;
     this.vx = this.vy = this.vz = 0;
     this.vida = VIDA_MAX; this.fome = FOME_MAX; this.ar = AR_MAX;
     this.fase = "jogando";
     this.emitirEstado(true);
+  }
+
+  // ── Seletor de blocos criativos (v28) ──────────────
+  listaBlocosCriativos(): number[] {
+    return [B.RELVA, B.TERRA, B.PEDRA, B.PEDREGULHO, B.AREIA, B.TRONCO, B.FOLHAS,
+      B.TABUAS, B.VIDRO, B.TOCHA, B.MESA, B.FORNALHA, B.CAMA, B.ESCADA];
+  }
+  darBloco(id: number, qtd = 64) { if (id > 0 && id < 100 && BLOCOS[id]) this.inv.adicionar(id, qtd); }
+
+  // ── Minimapa: amostra real dos chunks carregados (sem invenções) ──
+  miniMapa(meiolado = 24): {
+    lado: number; px: number; pz: number; yaw: number;
+    celulas: Uint8Array; mobs: { x: number; z: number; tipo: string }[];
+  } {
+    const lado = meiolado * 2;
+    const celulas = new Uint8Array(lado * lado);
+    for (let dz = 0; dz < lado; dz++) for (let dx = 0; dx < lado; dx++) {
+      const x = Math.floor(this.px) - meiolado + dx, z = Math.floor(this.pz) - meiolado + dz;
+      // topo da coluna nos chunks carregados (dados reais, incluindo edições)
+      let id = 0;
+      for (let y = ALTURA - 1; y >= 0; y--) {
+        const b = this.mundo.getBloco(x, y, z);
+        if (b !== B.AR) { id = b; break; }
+      }
+      celulas[dz * lado + dx] = id;
+    }
+    const mobs = this.gestor.mobs.filter((m) => m.vivo && Math.abs(m.x - this.px) < meiolado && Math.abs(m.z - this.pz) < meiolado)
+      .map((m) => ({ x: m.x, z: m.z, tipo: m.tipo }));
+    return { lado, px: this.px, pz: this.pz, yaw: this.yaw, celulas, mobs };
   }
 
   // ── Sobrevivência: fome, ar, regen ──────────────────────────
@@ -744,6 +865,7 @@ export class Motor {
       if (this.atacarPedido) { this.atacar(); this.atacarPedido = false; }
       if (this.colocarPedido) { this.colocar(); this.colocarPedido = false; }
       if (this.comerPedido) { this.comer(); this.comerPedido = false; }
+      if (this.dormirPedido) { this.dormir(); this.dormirPedido = false; }
 
       // mobs
       const r = this.gestor.atualizar(dt, this.px, this.py, this.pz, this.noite);
@@ -764,10 +886,12 @@ export class Motor {
           this.receberDano(Math.round((1 - d / (RAIO_EXPLOSAO + 2)) * 14), "explosao");
           this.vx += (this.px - e.x) * 2; this.vy += 5; this.vz += (this.pz - e.z) * 2;
         }
+        this.tremerT = 0.5; // tremor de câmara na explosão (v28)
       }
     }
 
     if (this.swingT > 0) this.swingT -= dt;
+    if (this.tremerT > 0) this.tremerT = Math.max(0, this.tremerT - dt * 1.8); // tremor decai no passo (determinístico)
     this.atualizarCeu(dt);
     this.atualizarChunks();
     this.atualizarParticulas(dt);
@@ -795,26 +919,70 @@ export class Motor {
 
   // ── Render ──────────────────────────────────────────────────
   render(dtSegundos: number) {
-    // câmara
-    const olhoY = this.py + 1.62;
-    if (this.primeiraPessoa) {
-      this.camara.position.set(this.px, olhoY, this.pz);
-      this.camara.rotation.set(this.pitch, this.yaw, 0, "YXZ");
+    // altura do olho (agachar baixa a câmara com suavidade)
+    const alvoOlho = this.entrada.agachado && !this.primeiraPessoa ? 1.32 : 1.62;
+    this.alturaOlhoAtual += (alvoOlho - this.alturaOlhoAtual) * Math.min(1, dtSegundos * 10);
+    const tremer = () => this.tremerT > 0 ? (this.rnd.proximo() - 0.5) * this.tremerT * 0.12 : 0;
+    // balanço do passo (1ª pessoa): sobe e desce ao andar no chão
+    const aAndar = Math.hypot(this.vx, this.vz) > 0.5 && this.noChao && this.fase === "jogando";
+    const bobY = aAndar ? Math.sin(this.animacaoAndar * 6) * 0.045 : 0;
+    const bobX = aAndar ? Math.cos(this.animacaoAndar * 3) * 0.028 : 0;
+
+    const modo = this.camaraModo;
+    if (modo === "primeira") {
+      this.camara.position.set(this.px + bobX * 0.4, this.py + this.alturaOlhoAtual + bobY, this.pz);
+      this.camara.rotation.set(this.pitch + tremer(), this.yaw + tremer(), 0, "YXZ");
       if (this.avatar) this.avatar.grupo.visible = false;
-    } else {
+    } else if (modo === "terceira") {
       const boom = 4.2;
       const dir = new THREE.Vector3(
         Math.sin(this.yaw) * Math.cos(this.pitch), -Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch),
       );
       let dist = boom;
       for (let t = 0.4; t <= boom; t += 0.25) {
-        const cx = this.px + dir.x * t, cy = olhoY + dir.y * t, cz = this.pz + dir.z * t;
+        const cx = this.px + dir.x * t, cy = this.py + this.alturaOlhoAtual + dir.y * t, cz = this.pz + dir.z * t;
         if (this.mundo.solido(cx, cy, cz)) { dist = t - 0.3; break; }
       }
-      this.camara.position.set(this.px + dir.x * dist, olhoY + dir.y * dist, this.pz + dir.z * dist);
-      this.camara.rotation.set(this.pitch, this.yaw, 0, "YXZ");
-      if (this.avatar) {
-        this.avatar.grupo.visible = this.fase !== "menu";
+      this.camara.position.set(this.px + dir.x * dist, this.py + this.alturaOlhoAtual + dir.y * dist, this.pz + dir.z * dist);
+      this.camara.rotation.set(this.pitch + tremer(), this.yaw + tremer(), 0, "YXZ");
+    } else if (modo === "ombro") {
+      // câmara de ombro: próxima e deslocada para a direita (mira precisa)
+      const boom = 2.4;
+      const dir = new THREE.Vector3(
+        Math.sin(this.yaw) * Math.cos(this.pitch), -Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch),
+      );
+      const lat = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw)); // direita do jogador
+      let dist = boom;
+      for (let t = 0.4; t <= boom; t += 0.2) {
+        const cx = this.px + dir.x * t + lat.x * 0.85, cy = this.py + this.alturaOlhoAtual + 0.18 + dir.y * t, cz = this.pz + dir.z * t + lat.z * 0.85;
+        if (this.mundo.solido(cx, cy, cz)) { dist = t - 0.2; break; }
+      }
+      const fLat = 0.85 * (dist / boom);
+      this.camara.position.set(
+        this.px + dir.x * dist + lat.x * fLat,
+        this.py + this.alturaOlhoAtual + 0.18 + dir.y * dist,
+        this.pz + dir.z * dist + lat.z * fLat,
+      );
+      this.camara.rotation.set(this.pitch + tremer(), this.yaw + tremer(), 0, "YXZ");
+    } else if (modo === "topo") {
+      // vista de cima (estratégica / mapeamento)
+      this.camara.position.set(this.px, this.py + 24, this.pz + 0.01);
+      this.camara.rotation.set(-Math.PI / 2 + 0.14, this.yaw + Math.PI + tremer(), 0, "YXZ");
+    } else {
+      // cinema: órbita lenta à volta do jogador (apanhar construções)
+      const ang = performance.now() / 1000 * 0.22;
+      const raio = 5.5;
+      let altura = this.py + 2.4;
+      const cx0 = this.px + Math.cos(ang) * raio, cz0 = this.pz + Math.sin(ang) * raio;
+      if (this.mundo.solido(cx0, altura, cz0)) altura = this.py + 4.2;
+      this.camara.position.set(cx0, altura, cz0);
+      this.camara.lookAt(this.px, this.py + 1.2, this.pz);
+      if (this.tremerT > 0) { this.camara.rotation.x += tremer(); this.camara.rotation.y += tremer(); }
+    }
+    // avatar visível em todas as câmaras exceto 1ª pessoa
+    if (this.avatar && this.fase !== "menu") {
+      this.avatar.grupo.visible = modo !== "primeira";
+      if (modo !== "primeira") {
         this.avatar.grupo.position.set(this.px, this.py, this.pz);
         this.avatar.grupo.rotation.y = this.yaw + Math.PI;
         const balanco = Math.sin(this.animacaoAndar * 6) * 0.6;
@@ -829,8 +997,15 @@ export class Motor {
         } else if (!s) { (this as any)._maoId = 0; this.avatar.mao.clear(); }
       }
     }
-    // mão + item em 1ª pessoa (presa à câmara, balança e golpeia)
-    if (this.fase === "jogando" && this.primeiraPessoa) {
+    // FOV dinâmico: zoom (telescópio) · sprint (sensação de velocidade)
+    const fovAlvo = this.entrada.zoom ? 28 : this.entrada.correr && aAndar ? 82 : 75;
+    this.fovAtual += (fovAlvo - this.fovAtual) * Math.min(1, dtSegundos * 9);
+    if (Math.abs(this.camara.fov - this.fovAtual) > 0.1) {
+      this.camara.fov = this.fovAtual;
+      this.camara.updateProjectionMatrix();
+    }
+    // mão + item em 1ª pessoa (presa à câmara, balança e golpeia) — escondida em zoom
+    if (this.fase === "jogando" && modo === "primeira" && !this.entrada.zoom) {
       const sel2 = this.inv.selecionado();
       if ((sel2?.id ?? 0) !== this.maoFPId) {
         this.maoFPId = sel2?.id ?? 0;
@@ -856,8 +1031,8 @@ export class Motor {
         }
       }
     } else this.maoFP.visible = false;
-    // realce do bloco visado + progresso
-    if (this.mira && this.fase === "jogando") {
+    // realce do bloco visado + progresso (nas câmaras com mira: 1ª, 3ª, ombro)
+    if (this.mira && this.fase === "jogando" && (modo === "primeira" || modo === "terceira" || modo === "ombro")) {
       this.realce.visible = true;
       this.realce.position.set(this.mira.x + 0.5, this.mira.y + 0.5, this.mira.z + 0.5);
       const esc = 1 + Math.sin(performance.now() / 90) * 0.02 * (this.entrada.minerando ? 1 : 0);
@@ -888,6 +1063,12 @@ export class Motor {
       avisos: this.avisos.map((a) => ({ texto: a.texto, tipo: a.tipo })),
       ctaWhats: this.ctaWhats,
       primeiraPessoa: this.primeiraPessoa,
+      camara: this.camaraModo,
+      agachado: this.entrada.agachado,
+      zoom: this.entrada.zoom,
+      naEscada: this.naEscada,
+      mobsDerrotados: this.mobsDerrotados,
+      spawnDefinido: !!this.spawnProprio,
       naAgua: this.naAgua, voando: this.modo === "criativo" && this.criativoVoar,
       blocosQuebrados: this.blocosQuebrados, blocosColocados: this.blocosColocados,
       passos: Math.floor(this.animacaoAndar),
@@ -906,7 +1087,7 @@ export class Motor {
     if (!this.mundo || this.fase === "menu") return;
     try {
       const dados = {
-        v: 1, semente: this.mundo.semente, modo: this.modo,
+        v: 2, semente: this.mundo.semente, modo: this.modo,
         pos: [this.px, this.py, this.pz], yaw: this.yaw, pitch: this.pitch,
         vida: this.vida, fome: this.fome, dia: this.dia, tempo: this.tempo,
         primeiraNoiteFeita: this.primeiraNoiteFeita,
@@ -914,6 +1095,7 @@ export class Motor {
         creditos: this.creditos, conquistas: this.conquistas,
         edits: Object.fromEntries(this.mundo.edits),
         blocosQuebrados: this.blocosQuebrados, blocosColocados: this.blocosColocados,
+        spawn: this.spawnProprio, mobsDerrotados: this.mobsDerrotados,
       };
       localStorage.setItem("bateu_blocos_save", JSON.stringify(dados));
     } catch { /* armazenamento cheio — segue */ }

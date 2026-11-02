@@ -8,6 +8,7 @@ export const B = {
   AR: 0, RELVA: 1, TERRA: 2, PEDRA: 3, PEDREGULHO: 4, AREIA: 5, AGUA: 6,
   TRONCO: 7, FOLHAS: 8, TABUAS: 9, CARVAO_M: 10, FERRO_M: 11, OURO_M: 12,
   DIAMANTE_M: 13, ROCHA_MAE: 14, MESA: 15, FORNALHA: 16, TOCHA: 17, VIDRO: 18,
+  CAMA: 19, ESCADA: 20,
 } as const;
 
 // ── Itens (ids ≥ 100, só inventário) ─────────────────────────
@@ -32,7 +33,7 @@ export const NOMES: Record<number, string> = {
   [B.CARVAO_M]: "Minério de Carvão", [B.FERRO_M]: "Minério de Ferro",
   [B.OURO_M]: "Minério de Ouro", [B.DIAMANTE_M]: "Minério de Diamante",
   [B.ROCHA_MAE]: "Rocha-Mãe", [B.MESA]: "Mesa de Criação", [B.FORNALHA]: "Fornalha",
-  [B.TOCHA]: "Tocha", [B.VIDRO]: "Vidro",
+  [B.TOCHA]: "Tocha", [B.VIDRO]: "Vidro", [B.CAMA]: "Cama", [B.ESCADA]: "Escada",
   [I.GRAVETO]: "Graveto", [I.CARVAO]: "Carvão", [I.DIAMANTE]: "Diamante",
   [I.BARRA_FERRO]: "Barra de Ferro", [I.BARRA_OURO]: "Barra de Ouro",
   [I.CARNE_CRUA]: "Carne Crua", [I.CARNE_ASSADA]: "Carne Assada", [I.MACA]: "Maçã",
@@ -54,6 +55,7 @@ export const CORES: Record<number, [string, string]> = {
   [B.DIAMANTE_M]: ["#8f8f8f", "#4fe0d8"], [B.ROCHA_MAE]: ["#3a3a3a", "#1c1c1c"],
   [B.MESA]: ["#b78b52", "#7a5636"], [B.FORNALHA]: ["#6e6e6e", "#3d3d3d"],
   [B.TOCHA]: ["#f0c542", "#8a5a2a"], [B.VIDRO]: ["#bfe6f0", "#9cc8d8"],
+  [B.CAMA]: ["#c23a3a", "#f0f0f0"], [B.ESCADA]: ["#b78b52", "#8a6a3a"],
   [I.GRAVETO]: ["#9a6b39", "#6d4a26"], [I.CARVAO]: ["#2b2b2b", "#111"],
   [I.DIAMANTE]: ["#4fe0d8", "#2bb3ac"], [I.BARRA_FERRO]: ["#d8d8d8", "#a8a8a8"],
   [I.BARRA_OURO]: ["#f0d04a", "#c9a628"], [I.CARNE_CRUA]: ["#e08a7a", "#c05a4a"],
@@ -113,6 +115,8 @@ export const BLOCOS: Record<number, DefBloco> = {
   [B.FORNALHA]: D({ nome: NOMES[B.FORNALHA], dureza: 5, ferramenta: "picareta", tier: 1, tiles: [19, 19, 20] }),
   [B.TOCHA]: D({ nome: NOMES[B.TOCHA], dureza: 0.05, tiles: [21, 21, 21], solido: false, transparente: true, brilho: 1 }),
   [B.VIDRO]: D({ nome: NOMES[B.VIDRO], dureza: 0.6, tiles: [22, 22, 22], transparente: true }),
+  [B.CAMA]: D({ nome: NOMES[B.CAMA], dureza: 0.5, tiles: [23, 23, 23] }),
+  [B.ESCADA]: D({ nome: NOMES[B.ESCADA], dureza: 0.8, tiles: [24, 24, 24], solido: false, transparente: true }),
 };
 
 export const ehBloco = (id: number) => id > 0 && id < 100;
@@ -143,6 +147,8 @@ export const RECEITAS: Receita[] = [
   { id: "fun_ouro", nome: "2× Barra de Ouro", resultado: [I.BARRA_OURO, 2], ingredientes: [[B.OURO_M, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
   { id: "fun_carne", nome: "2× Carne Assada", resultado: [I.CARNE_ASSADA, 2], ingredientes: [[I.CARNE_CRUA, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
   { id: "fun_vidro", nome: "2× Vidro", resultado: [B.VIDRO, 2], ingredientes: [[B.AREIA, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
+  { id: "cama", nome: "Cama", resultado: [B.CAMA, 1], ingredientes: [[B.TABUAS, 3], [B.FOLHAS, 3]], mesa: false, categoria: "criacao", desc: "Dorme à noite e define o teu ponto de renascimento." },
+  { id: "escada", nome: "3× Escada", resultado: [B.ESCADA, 3], ingredientes: [[B.TABUAS, 7]], mesa: true, categoria: "criacao", desc: "Escala paredes sem saltos." },
 ];
 
 // ── Física / mundo ────────────────────────────────────────────
@@ -162,5 +168,9 @@ export const CONQUISTAS: Conquista[] = [
   { id: "primeiro_diamante", nome: "DIAMANTE!", creditos: 25, desc: "Encontraste o tesouro mais raro do mundo." },
   { id: "primeira_noite", nome: "Sobrevivente da Noite", creditos: 8, desc: "Sobreviveste à primeira noite." },
   { id: "estourador_derrotado", nome: "Desarme Perfeito", creditos: 10, desc: "Derrotaste um Estourador antes de ele explodir." },
+  { id: "bom_descanso", nome: "Bom Descanso", creditos: 5, desc: "Dormiste numa cama e definiste o renascimento." },
+  { id: "safari", nome: "Safari", creditos: 6, desc: "Derrotaste o teu primeiro mob." },
+  { id: "mineiro", nome: "Mineiro Dedicado", creditos: 8, desc: "Quebraste 200 blocos." },
+  { id: "arquiteto", nome: "Arquiteto", creditos: 8, desc: "Colocaste 100 blocos." },
 ];
 export const WHATSAPP = "258848547887";

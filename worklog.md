@@ -1,4 +1,31 @@
 ---
+Task ID: v28-craft-camaras-sistema
+Agent: Super Z (main)
+Task: v28 — BateuCraft «tudo o que faltava»: 5 tipos de câmara (1ª/3ª/ombro/top-down/cinema) + zoom telescópio + balanço e tremor de câmara + agachar + cama (dormir/spawn) + escada (escalada) + seletor de blocos criativo + minimapa real + som de passos + 4 conquistas + save v2
+
+Work Log:
+- INVENTÁRIO DE FALTAS (pedido: «câmaras, sistema de jogo e tudo o que esteja em falta»): a câmara era só 1 booleana (1ª↔3ª); sem agachar, cama, escada, minimapa, zoom, seletor criativo (criativo dava apenas 4 tipos de bloco); som "passo" definido no motor desde v27 mas NUNCA chamado; 0 conquistas de construção/caça
+- CÂMARAS ×5: CamaraModo ("primeira"|"terceira"|"ombro"|"topo"|"cinema") + ORDEM + ciclarCamara()/definirCamara() persistidos em bateu_blocos_camara; aviso «Câmara: …» ao ciclar; render() reescrito por modo — ombro: boom 2,4 + desvio lateral 0,85 com colisão; topo: py+24 com pitch −90°+14°; cinema: órbita performance.now()*0,22 raio 5,5 com lookAt e fuga ao chão; avatar LEGO visível em TODOS os modos menos 1ª (antes só em 3ª); realce do bloco só nas câmaras com mira (1ª/3ª/ombro); primeiraPessoa mantido como getter para compat
+- ZOOM + BOB + TREMOR + FOV: entrada.zoom (Z/botão ZOOM móvel, só em 1ª/ombro) → FOV 75→28; FOV 82 ao correr a andar; bob de passo (bobX/bobY por animacaoAndar) na 1ª pessoa; tremerT 0,35 no dano e 0,5 na explosão com decaimento NO passo() (determinístico para pump E2E — 1.ª versão decaía no render e o teste ficava reativo à RAF)
+- AGACHAR: entrada.agachado (C alterna; AGX no HUD) → velocidade ×0,45 + olho 1,62→1,32 com lerp (alturaOlhoAtual); raycast passa a usar alturaOlho getter
+- CAMA (B.CAMA=19, tile 23, receita 3 tábuas+3 folhas): usar a cama (POR/botão direito) chama dormir() — recusas HONESTAS: de dia («Só podes dormir à noite»), com monstros num raio 9 («Há monstros por perto!»); à noite: tempo salta para f=0.0 do dia seguinte, cura 4 de vida, ar cheio, spawnProprio = cima da cama, conquista bom_descanso; renascer() usa spawnProprio (morte já não devolve ao spawn do mundo); save guarda spawn
+- ESCADA (B.ESCADA=20, tile 24, receita 7 tábuas→3, não sólida): física deteta escada no corpo (py+0,4/py+1,2) → vy = ±3,2 controlado, danoQuedaVy=0; colocável sem colisão com o jogador (regra «não sólido» no colocar())
+- SELETOR CRIATIVO: listaBlocosCriativos() = 14 blocos colocáveis (relva→escada); darBloco(id, qtd=64); secção BLOCOS (CRIATIVO) no modal MOCHILA só em modo criativo
+- MINIMAPA REAL: motor.miniMapa(24) amostra 48×48 do TOPO das colunas dos chunks carregados (dados reais incluindo edições — zero invenção) + mobs vivos no raio; componente React desenha a cada 500ms com CORES_MAPA por id, mobs vermelhos/rosa, seta do jogador por yaw; toggle M/botão/toque no mapa; 500ms é barato (sem geração de terreno)
+- SOM DE PASSOS: passosAcumulados > 1,6 no chão fora de água → som("passo") (ligado, faltava)
+- CONQUISTAS +4 (11 total): bom_descanso 5cr · safari 6cr (1º mob derrotado — contador mobsDerrotados no atacar()) · mineiro 8cr (200 quebrados) · arquiteto 8cr (100 colocados)
+- SAVE v2: spawn + mobsDerrotados + compatibilidade com saves v1 (defaults)
+- BUG REAL apanhado pelo E2E novo: botão de PAUSA vivia num contentor pointer-events-none — NUNCA foi clicável (Playwright esperou 30s) → pointer-events-auto; também: colocar() permitia colocar blocos sólidos dentro de não-sólidos mirados... unificada a regra novoSolido
+- UI: botão da câmara cicla com title (F5), ZOOM móvel contextual, AGX, botão do mapa, pausa com CÂMARA: <modo> + MINIMAPA ON/OFF, ajuda reescrita (câmaras, zoom, agachar, minimapa, cama, escada), toast do nome da câmara
+- Hooks E2E v28: ciclarCamara/definirCamara/camara/camaraNome/dormir/agachar/zoom/blocosCriativos/darBloco/miniMapa/spawnarMob/tremer/spawnProprio
+- test-craft-camaras.mjs NOVO: 62 asserts verdes — 5 câmaras pela ordem + wrap + persistência + rejeição de inválidos + avatar por modo + posições (topo py+24, cinema raio>3, ombro lateral>1,2); zoom FOV medido; agachar medido por distância percorrida (< 0,6×); tremor ativa/decai por pump; cama: cria, coloca, mira, recusa de dia, salta noite, spawn junto à cama, morte→renasce na cama, zumbi impede; escada eleva >1,2 sem dano; seletor 14 blocos + darBloco 64/qtd; minimapa 48×48 com sólidos>200 + porco; arquiteto por colocação real; safari com espada-diamante (yaw pela convenção dir=−sin,−cos do motor); save v2; HUD/pausa/ajuda; 0 erros de consola
+- REGRESSÕES: test-blocos 91/91 ✅ · desporto 14/14 ✅ · rea-plataforma 33/33 ✅ · home-dinamica 22/22 ✅ · apis-publicas 30/30 ✅ = 252 asserts verdes no total
+- tsc 0 erros · DOC: secção 6 do REA-BATEUCRAFT.md (9 evidências → decisões → implementação, na linha da metodologia)
+
+Stage Summary:
+- O BateuCraft fecha o ciclo «jogo completo»: câmara para cada tarefa (jogar, ver a minifig, mirar, mapear, filmar), corpo com postura e feedback físico, noite que se dorme, paredes que se escalam, caça que conta, e um minimapa que mostra o mundo de verdade — 62 asserts novos, 252 verdes no total, zero dados inventados
+- Motor 943→1119 linhas; UI 765→895 linhas; +2 blocos, +1 tile row no atlas, +4 conquistas
+---
 Task ID: v27-bateucraft-completo
 Agent: Super Z (main)
 Task: v27 — BateuCraft completo: 5 bugs bloqueantes corrigidos (pausa que não pausava, comer impossível, rato sem pointer lock, CONTINUAR ignorava o modo, slots 9–35 inacessíveis) + luz de tochas, céu, partículas, mão em 1ª pessoa, controlos móveis novos

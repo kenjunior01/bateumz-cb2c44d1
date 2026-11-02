@@ -7,7 +7,7 @@
 import { Aleatorio } from "./noise";
 
 export const TILE = 16;
-export const COLS_ATLAS = 8, LINHAS_ATLAS = 3;
+export const COLS_ATLAS = 8, LINHAS_ATLAS = 4;
 
 // Índices dos tiles no atlas
 export const T = {
@@ -15,6 +15,7 @@ export const T = {
   AGUA: 6, TRONCO_TOPO: 7, TRONCO_LADO: 8, FOLHAS: 9, FOLHAS_ALT: 10, TABUAS: 11,
   CARVAO: 12, FERRO: 13, OURO: 14, DIAMANTE: 15, ROCHA_MAE: 16, MESA_TOPO: 17,
   MESA_LADO: 18, FORNALHA_TOPO: 19, FORNALHA_FRENTE: 20, TOCHA: 21, VIDRO: 22,
+  CAMA: 23, ESCADA: 24,
 };
 
 type Pixel = [number, number, number];
@@ -48,7 +49,7 @@ function pintar(
 const MISTURAR = (a: Pixel, b: Pixel, t: number): Pixel =>
   [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/** Cria o atlas completo (128×48) */
+/** Cria o atlas completo (128×64) */
 export function criarAtlas(): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = COLS_ATLAS * TILE; cv.height = LINHAS_ATLAS * TILE;
@@ -177,6 +178,19 @@ export function criarAtlas(): HTMLCanvasElement {
     const mold: Pixel = hex("#8fb8c8"), brilho: Pixel = hex("#ffffff");
     for (let i = 0; i < 16; i++) { px(i, 0, mold); px(i, 15, mold); px(0, i, mold); px(15, i, mold); }
     for (let i = 2; i < 7; i++) px(i, 9 - i + 2, brilho);
+  });
+  // 23 cama — manta vermelha + travesseiro branco
+  pintar(ctx, 7, 2, "#c23a3a", 10, 42, (px) => {
+    const traves: Pixel = hex("#f0f0f0"), travesSombra: Pixel = hex("#cfcfcf"), manta: Pixel = hex("#a02a2a");
+    for (let y = 1; y < 6; y++) for (let x = 1; x < 15; x++) px(x, y, (x + y) % 4 === 0 ? travesSombra : traves);
+    for (let x = 0; x < 16; x++) px(x, 6, manta);
+    for (let y = 10; y < 16; y += 5) for (let x = 1; x < 15; x++) px(x, y, manta);
+  });
+  // 24 escada — degraus em madeira
+  pintar(ctx, 0, 3, "#8a6238", 8, 43, (px) => {
+    const lado: Pixel = hex("#b78b52"), degrau: Pixel = hex("#c89a62"), sombra: Pixel = hex("#5d4028");
+    for (let y = 0; y < 16; y++) { px(2, y, lado); px(3, y, lado); px(12, y, lado); px(13, y, lado); }
+    for (const dy of [1, 2, 7, 8, 13, 14]) for (let x = 2; x < 14; x++) px(x, dy, (x + dy) % 3 === 0 ? sombra : degrau);
   });
 
   return cv;

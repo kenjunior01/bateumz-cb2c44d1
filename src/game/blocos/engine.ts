@@ -16,7 +16,7 @@ import { Aleatorio } from "./noise";
 import {
   B, BLOCOS, CHUNK, ALTURA, GRAVIDADE, SALTO, VEL_ANDAR, VEL_CORRER,
   VIDA_MAX, FOME_MAX, AR_MAX, DIA_SEGUNDOS, ALCANCE, RAIO_EXPLOSAO,
-  dropDe, CORES, ITENS, CONQUISTAS, I,
+  dropDe, CORES, ITENS, CONQUISTAS, I, PRECISA_DE_APOIO,
 } from "./constants";
 
 export type Modo = "sobrevivencia" | "criativo";
@@ -70,6 +70,10 @@ export class Motor {
 
   // som / desempenho (preferências locais)
   mudo = false; raioRender = 3;
+  // qualidade automática (v29): se o aparelho não aguenta, baixamos
+  // resolução primeiro, depois raio — sempre com aviso honesto ao jogador
+  qualidadeAuto = true;
+  private fpsBaixoT = 0; private passosQualidade = 0;
 
   // câmara: 5 modos + zoom + balanço + tremor (v28)
   camaraModo: CamaraModo = "primeira";
@@ -172,7 +176,7 @@ export class Motor {
     if (!this.renderer) {
       this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      this.cena.fog = new THREE.Fog(0x87ceeb, 30, 90);
+      this.cena.fog = new THREE.Fog(0x87ceeb, 24, 76); // v29: horizonte mais suave (árvores/erva distantes diluem antes)
       this.sol = new THREE.DirectionalLight(0xffffff, 1.4);
       this.ambiente = new THREE.HemisphereLight(0xbfe3ff, 0x8a7a5a, 0.85);
       this.cena.add(this.sol, this.ambiente);
@@ -206,13 +210,20 @@ export class Motor {
       this.estrelas = new THREE.Points(geoEstrelas, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
       this.cena.add(this.estrelas);
       this.nuvens = new THREE.Group();
-      const matNuvem = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.42, fog: false });
+      const matNuvem = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, fog: false });
+      // v29: nuvens em "conjuntos" de blocos mais finos — menos placa, mais fofas
       for (let i = 0; i < 9; i++) {
-        const nuvem = new THREE.Mesh(
-          new THREE.BoxGeometry(9 + this.rnd.proximo() * 14, 1.4, 6 + this.rnd.proximo() * 9), matNuvem,
-        );
-        nuvem.position.set((this.rnd.proximo() - 0.5) * 180, 64 + this.rnd.proximo() * 9, (this.rnd.proximo() - 0.5) * 180);
-        this.nuvens.add(nuvem);
+        const conjunto = new THREE.Group();
+        const puffs = 2 + Math.floor(this.rnd.proximo() * 3);
+        for (let p = 0; p < puffs; p++) {
+          const nuvem = new THREE.Mesh(
+            new THREE.BoxGeometry(5 + this.rnd.proximo() * 9, 0.9, 4 + this.rnd.proximo() * 7), matNuvem,
+          );
+          nuvem.position.set((this.rnd.proximo() - 0.5) * 11, (this.rnd.proximo() - 0.5) * 1.2, (this.rnd.proximo() - 0.5) * 8);
+          conjunto.add(nuvem);
+        }
+        conjunto.position.set((this.rnd.proximo() - 0.5) * 180, 64 + this.rnd.proximo() * 9, (this.rnd.proximo() - 0.5) * 180);
+        this.nuvens.add(conjunto);
       }
       this.cena.add(this.nuvens);
       // pool de partículas (cubinhos LEGO que voam ao quebrar)
@@ -255,6 +266,9 @@ export class Motor {
         this.inv.adicionar(B.VIDRO, 64); this.inv.adicionar(B.TOCHA, 64);
       } else {
         this.inv.adicionar(I.MACA, 2); // arranque gentil
+        // dica inicial honesta (v29): o primeiro objetivo do género é madeira
+        this.avisos.push({ texto: "Soque um tronco para apanhar madeira!", tipo: "info", t: 9 });
+        this.avisos.push({ texto: "Constrói um abrigo antes do anoitecer…", tipo: "info", t: 12 });
       }
     }
 
@@ -279,6 +293,26 @@ export class Motor {
 
     this.fase = "jogando";
     this.emitirEstado(true);
+  }
+
+  // ── Qualidade automática (v29) — honesta: avisa sempre o que fez ──
+  private ajustarQualidade(dt: number) {
+    if (!this.qualidadeAuto || this.fase !== "jogando" || !this.renderer) return;
+    if (this.fps > 0 && this.fps < 24) this.fpsBaixoT += dt;
+    else this.fpsBaixoT = Math.max(0, this.fpsBaixoT - dt * 2);
+    if (this.fpsBaixoT > 4 && this.passosQualidade < 4) {
+      this.fpsBaixoT = 0;
+      const pr = this.renderer.getPixelRatio();
+      if (pr > 1.05) {
+        this.renderer.setPixelRatio(Math.max(1, pr - 0.5));
+        this.redimensionar();
+        this.avisos.push({ texto: "Desempenho baixo — resolução reduzida", tipo: "info", t: 3 });
+      } else if (this.raioRender > 2) {
+        this.raioRender -= 1;
+        this.avisos.push({ texto: `Desempenho baixo — raio de render: ${this.raioRender}`, tipo: "info", t: 3 });
+      } else return;
+      this.passosQualidade++;
+    }
   }
 
   // ── Preferências do avatar (personalização LEGO) ─────────────
@@ -483,7 +517,9 @@ export class Motor {
       const d = this.rnd.chance(0.08) ? { id: 107 as number, qtd: 1 } : null;
       if (d) this.inv.adicionar(d.id, d.qtd);
     }
-    // mob morto por bloco removido? não aplicável
+    // apoio: erva/flores/cacto em cima caem também (v29, coluna toda no cacto)
+    const acima = this.mundo.getBloco(x, y + 1, z);
+    if (PRECISA_DE_APOIO.has(acima)) this.quebrar(x, y + 1, z, true);
   }
 
   colocar() {
@@ -498,6 +534,8 @@ export class Motor {
     const z = this.mira.z + this.ultimaFace[2];
     if (y < 0 || y >= 80) return;
     if (this.mundo.getBloco(x, y, z) !== B.AR && this.mundo.getBloco(x, y, z) !== B.AGUA) return;
+    // erva/flores/cacto precisam de chão sólido por baixo (v29)
+    if (PRECISA_DE_APOIO.has(s.id) && !this.mundo.solido(x, y - 1, z)) return;
     // não colocar dentro do jogador (exceto escada/tocha, que não são sólidas)
     const novoSolido = BLOCOS[s.id]?.solido ?? true;
     if (novoSolido && this.colideComJogador(x, y, z)) return;
@@ -770,10 +808,11 @@ export class Motor {
     this.emitirEstado(true);
   }
 
-  // ── Seletor de blocos criativos (v28) ──────────────
+  // ── Seletor de blocos criativos (v28 + decorações v29) ──────
   listaBlocosCriativos(): number[] {
     return [B.RELVA, B.TERRA, B.PEDRA, B.PEDREGULHO, B.AREIA, B.TRONCO, B.FOLHAS,
-      B.TABUAS, B.VIDRO, B.TOCHA, B.MESA, B.FORNALHA, B.CAMA, B.ESCADA];
+      B.TABUAS, B.VIDRO, B.TOCHA, B.MESA, B.FORNALHA, B.CAMA, B.ESCADA,
+      B.ERVA, B.FLOR_AM, B.FLOR_VM, B.CACTO];
   }
   darBloco(id: number, qtd = 64) { if (id > 0 && id < 100 && BLOCOS[id]) this.inv.adicionar(id, qtd); }
 
@@ -892,6 +931,7 @@ export class Motor {
 
     if (this.swingT > 0) this.swingT -= dt;
     if (this.tremerT > 0) this.tremerT = Math.max(0, this.tremerT - dt * 1.8); // tremor decai no passo (determinístico)
+    this.ajustarQualidade(dt);
     this.atualizarCeu(dt);
     this.atualizarChunks();
     this.atualizarParticulas(dt);

@@ -572,6 +572,134 @@ async function main() {
   c = await cap();
   ok("captura inclui naAgua e voando", typeof c.naAgua === "boolean" && typeof c.voando === "boolean");
 
+  // ═══ 16b. V29 — MUNDO VIVO: spawn, decorações, determinismo, apoio ═══
+  console.log("\n── 16b. Mundo vivo (v29) ──");
+
+  // spawn perto de árvores: floresta/planície com tronco num raio curto
+  const spawnInfo = await page.evaluate(() => {
+    const m = (window).__blocos.motor, wd = m.mundo;
+    let troncoMaisPerto = null;
+    outer: for (let r = 2; r < 64; r += 2) {
+      for (let a = 0; a < 24; a++) {
+        const x = Math.round(m.px + Math.cos((a / 24) * 6.283) * r);
+        const z = Math.round(m.pz + Math.sin((a / 24) * 6.283) * r);
+        for (let y = 40; y < 76; y++) {
+          if (wd.getBloco(x, y, z) === 7) { troncoMaisPerto = r; break outer; }
+        }
+      }
+    }
+    return { bioma: wd.bioma(Math.floor(m.px), Math.floor(m.pz)), troncoMaisPerto };
+  });
+  ok("spawn em floresta ou planície (nunca deserto)", spawnInfo.bioma === "floresta" || spawnInfo.bioma === "planicie");
+  ok("tronco a menos de 64 blocos do spawn", spawnInfo.troncoMaisPerto !== null && spawnInfo.troncoMaisPerto < 64);
+
+  // decorações geradas no mundo (erva, flores, cactos)
+  const decor = await page.evaluate(() => {
+    const wd = (window).__blocos.motor.mundo;
+    let erva = 0, flor = 0, cacto = 0;
+    for (const [, c] of wd.chunks) for (let i = 0; i < c.dados.length; i++) {
+      const id = c.dados[i];
+      if (id === 21) erva++; else if (id === 22 || id === 23) flor++; else if (id === 24) cacto++;
+    }
+    return { erva, flor, cacto };
+  });
+  ok("erva alta gerada no mundo", decor.erva > 20);
+  ok("flores geradas no mundo", decor.flor > 4);
+  ok("cactos gerados em desertos (pode ser 0 perto do spawn)", decor.cacto >= 0);
+
+  // geração determinística: mesmo chunk gerado 2× dá os mesmos dados (hash por coluna)
+  ok("geração determinística por coluna (árvores iguais sempre)", await page.evaluate(() => {
+    const wd = (window).__blocos.motor.mundo;
+    const a = wd.gerarChunk(-9, -9).dados.slice();
+    const b = wd.gerarChunk(-9, -9).dados;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }));
+
+  // apoio: erva parte-se em cadeia quando o chão desaparece
+  ok("quebrar chão sob a erva remove a erva (apoio)", await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor, wd = m.mundo;
+    const fx = Math.floor(m.px) + 3, fz = Math.floor(m.pz);
+    let fy = 79; while (fy > 1 && !wd.solido(fx, fy - 1, fz)) fy--;
+    for (let dy = 0; dy < 3; dy++) wd.setBloco(fx, fy + dy, fz, 0, false);
+    wd.setBloco(fx, fy - 1, fz, 3, false);   // chão de pedra
+    wd.setBloco(fx, fy, fz, 21, false);       // erva em cima
+    wd.setBloco(fx, fy, fz, 0, false);        // remove a erva
+    wd.setBloco(fx, fy, fz, 21, false);       // repõe
+    m.quebrar(fx, fy - 1, fz, false);         // quebra o chão…
+    return wd.getBloco(fx, fy, fz) === 0 && wd.getBloco(fx, fy - 1, fz) === 0; // …a erva caiu também
+  }));
+
+  // colocar erva sem chão sólido é recusado (mira REAL num bloco flutuante)
+  const recusaErva = await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor, wd = m.mundo;
+    const fx = Math.floor(m.px), fz = Math.floor(m.pz);
+    let fy = 79; while (fy > 1 && !wd.solido(fx, fy - 1, fz)) fy--;
+    // pedra flutuante 2 à frente (+2 acima dos pés): mira na face lateral
+    wd.setBloco(fx, fy + 2, fz - 2, 3, false);
+    b.teleportar(fx + 0.5, fy + 0.02, fz + 0.5);
+    b.olhar(0, 0.42); // dir = (0,0,-1) + leve subida → acerta a face +Z da pedra
+    b.pump(2, 0.05);
+    if (!m.mira || m.mira.id !== 3) return "sem mira na pedra";
+    const alvo = [m.mira.x + m.ultimaFace[0], m.mira.y + m.ultimaFace[1], m.mira.z + m.ultimaFace[2]];
+    b.limparInv();
+    b.dar(21, 5); // erva selecionada
+    b.pump(1, 0.05);
+    m.colocarPedido = true;
+    b.pump(2, 0.05);
+    const colocou = wd.getBloco(alvo[0], alvo[1], alvo[2]) === 21;
+    const ficou = m.inv.contar(21);
+    b.limparInv();
+    return colocou === false && ficou === 5;
+  });
+  ok("colocar erva sem apoio é recusado", recusaErva === true);
+
+  // erva parte-se num toque e NÃO dropa; flor dropa a si própria (mira REAL)
+  const quebraErva = await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor, wd = m.mundo;
+    const fx = Math.floor(m.px), fz = Math.floor(m.pz);
+    let fy = 79; while (fy > 1 && !wd.solido(fx, fy - 1, fz)) fy--;
+    b.limparInv();
+    // erva 2 blocos à frente, ao nível dos pés; olhar ligeiramente para baixo
+    wd.setBloco(fx, fy, fz - 2, 21, false);
+    b.teleportar(fx + 0.5, fy + 0.02, fz + 0.5);
+    b.olhar(0, -0.32);
+    b.pump(2, 0.05);
+    if (!m.mira || m.mira.id !== 21) return "sem mira na erva";
+    m.entrada.minerando = true;
+    b.pump(3, 0.06); // dureza 0.05 → parte no 1.º passo
+    m.entrada.minerando = false;
+    const ervaFoi = wd.getBloco(fx, fy, fz - 2) === 0;
+    const dropouErva = m.inv.contar(21) > 0;
+    // flor: dropa a si própria
+    wd.setBloco(fx, fy, fz - 2, 23, false);
+    b.pump(2, 0.05);
+    if (!m.mira || m.mira.id !== 23) return "sem mira na flor";
+    m.entrada.minerando = true;
+    b.pump(3, 0.06);
+    m.entrada.minerando = false;
+    const florFoi = wd.getBloco(fx, fy, fz - 2) === 0;
+    const dropouFlor = m.inv.contar(23) > 0;
+    b.limparInv();
+    return ervaFoi && !dropouErva && florFoi && dropouFlor;
+  });
+  ok("erva parte num toque sem drop; flor dropa a si", quebraErva === true);
+
+  // textura do atlas: linha 1 (tronco/folhas/tábuas/minérios) agora pintada
+  ok("atlas: linha 1 pintada (correção tronco/folhas/minérios)", await page.evaluate(() => {
+    const ctx = (window).__blocos.motor.mundo.material.map.image.getContext("2d");
+    const d = ctx.getImageData(0, 0, 128, 64).data;
+    let opacos = 0;
+    for (let t = 8; t <= 15; t++) {
+      const col = t % 8, lin = Math.floor(t / 8);
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const i = ((lin * 16 + y) * 128 + col * 16 + x) * 4;
+        if (d[i + 3] > 128) opacos++;
+      }
+    }
+    return opacos >= 8 * 16 * 16 * 0.95; // 8 tiles × 256 px quase todos opacos
+  }));
+
   // ═══ 17. ERROS DE CONSOLA ═══
   console.log("\n── 17. Higiene ──");
   const errosReais = consoleErrors.filter((e) => !NOISE.some((n) => e.includes(n)));

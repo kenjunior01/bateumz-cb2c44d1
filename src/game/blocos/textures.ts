@@ -15,7 +15,7 @@ export const T = {
   AGUA: 6, TRONCO_TOPO: 7, TRONCO_LADO: 8, FOLHAS: 9, FOLHAS_ALT: 10, TABUAS: 11,
   CARVAO: 12, FERRO: 13, OURO: 14, DIAMANTE: 15, ROCHA_MAE: 16, MESA_TOPO: 17,
   MESA_LADO: 18, FORNALHA_TOPO: 19, FORNALHA_FRENTE: 20, TOCHA: 21, VIDRO: 22,
-  CAMA: 23, ESCADA: 24,
+  CAMA: 23, ESCADA: 24, ERVA: 25, FLOR_AM: 26, FLOR_VM: 27, CACTO_TOPO: 28, CACTO_LADO: 29,
 };
 
 type Pixel = [number, number, number];
@@ -48,6 +48,19 @@ function pintar(
 
 const MISTURAR = (a: Pixel, b: Pixel, t: number): Pixel =>
   [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/** Tile 16×16 com FUNDO TRANSPARENTE (cruz de erva/flores — v29) */
+function pintarAlfa(ctx: CanvasRenderingContext2D, col: number, linha: number, desenhar: (px: (x: number, y: number, cor: string) => void) => void) {
+  const img = ctx.createImageData(TILE, TILE);
+  const hexP = (c: string): Pixel => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+  const set = (x: number, y: number, c: Pixel) => {
+    if (x < 0 || x >= TILE || y < 0 || y >= TILE) return;
+    const i = (y * TILE + x) * 4;
+    img.data[i] = clamp255(c[0]); img.data[i + 1] = clamp255(c[1]); img.data[i + 2] = clamp255(c[2]); img.data[i + 3] = 255;
+  };
+  desenhar((x, y, cor) => set(x, y, hexP(cor)));
+  ctx.putImageData(img, col * TILE, linha * TILE);
+}
 
 /** Cria o atlas completo (128×64) */
 export function criarAtlas(): HTMLCanvasElement {
@@ -101,24 +114,25 @@ export function criarAtlas(): HTMLCanvasElement {
       if (d < 2.2) px(x, y, centro); else if (Math.abs((d % 3) - 1.4) < 0.55) px(x, y, anel);
     }
   });
-  // 8 tronco lado — casca vertical
-  pintar(ctx, 8, 0, "#6d4a26", 10, 19, (px) => {
+  // 8 tronco lado — casca vertical (col 0, linha 1 — CORRIGIDO v29: estava em (8,0)
+  // fora do atlas de 8 colunas, e a casca/folhas/tábuas/minérios nunca eram desenhados!)
+  pintar(ctx, 0, 1, "#6d4a26", 10, 19, (px) => {
     const casca: Pixel = hex("#8a6034");
     for (let x = 0; x < 16; x += 3) for (let y = 0; y < 16; y++) if ((x + y) % 5 !== 0) px(x, y, casca);
   });
   // 9 folhas
-  pintar(ctx, 9, 0, "#3e8c2a", 20, 20, (px) => {
+  pintar(ctx, 1, 1, "#3e8c2a", 20, 20, (px) => {
     const esc: Pixel = hex("#2c6a1c"), buraco: Pixel = hex("#255c17");
     for (let i = 0; i < 20; i++) px(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), esc);
     for (let i = 0; i < 6; i++) px(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), buraco);
   });
   // 10 folhas alternativa (outono suave)
-  pintar(ctx, 10, 0, "#43882d", 22, 21, (px) => {
+  pintar(ctx, 2, 1, "#43882d", 22, 21, (px) => {
     const lima: Pixel = hex("#6aa53c");
     for (let i = 0; i < 12; i++) px(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), lima);
   });
   // 11 tábuas — pranchas horizontais
-  pintar(ctx, 11, 1, "#b78b52", 8, 22, (px) => {
+  pintar(ctx, 3, 1, "#b78b52", 8, 22, (px) => {
     const linha: Pixel = hex("#8a6238"), veio: Pixel = hex("#a37c46");
     for (let y = 0; y < 16; y++) { if (y % 4 === 3) for (let x = 0; x < 16; x++) px(x, y, linha); else for (let x = 0; x < 16; x++) if ((x * 3 + y) % 9 === 0) px(x, y, veio); }
     px(7, 1, linha); px(3, 5, linha); px(12, 9, linha); px(6, 13, linha);
@@ -132,10 +146,10 @@ export function criarAtlas(): HTMLCanvasElement {
         px(mx, my, gema); px(mx + 1, my, gemaEsc); px(mx, my + 1, gemaEsc); px(mx + 1, my + 1, gema);
       }
     });
-  mina(12, 1, 31, "#2b2b2b");   // carvão
-  mina(13, 1, 32, "#d8af93");   // ferro
-  mina(14, 1, 33, "#f0d04a");   // ouro
-  mina(15, 1, 34, "#4fe0d8");   // diamante
+  mina(4, 1, 31, "#2b2b2b");   // carvão
+  mina(5, 1, 32, "#d8af93");   // ferro
+  mina(6, 1, 33, "#f0d04a");   // ouro
+  mina(7, 1, 34, "#4fe0d8");   // diamante
   // 16 rocha-mãe
   pintar(ctx, 0, 2, "#3a3a3a", 16, 35, (px) => {
     const esc: Pixel = hex("#1c1c1c"), clr: Pixel = hex("#555");
@@ -191,6 +205,52 @@ export function criarAtlas(): HTMLCanvasElement {
     const lado: Pixel = hex("#b78b52"), degrau: Pixel = hex("#c89a62"), sombra: Pixel = hex("#5d4028");
     for (let y = 0; y < 16; y++) { px(2, y, lado); px(3, y, lado); px(12, y, lado); px(13, y, lado); }
     for (const dy of [1, 2, 7, 8, 13, 14]) for (let x = 2; x < 14; x++) px(x, dy, (x + dy) % 3 === 0 ? sombra : degrau);
+  });
+
+  // 25 erva alta — lâminas verdes DENSAS em fundo transparente (v29:
+  // textura esparsa desintegra-se em linhas à distância; esta lê-se como mato)
+  pintarAlfa(ctx, 1, 3, (px) => {
+    const tons = ["#4f9e2f", "#5aa832", "#3a7a20", "#6ab53e", "#57a62e"];
+    for (let bx = 0; bx < 16; bx++) {
+      const alt = 6 + ((bx * 7 + 3) % 6); // 6–11 px, alterna por coluna
+      const c1 = tons[bx % tons.length], c2 = tons[(bx + 2) % tons.length];
+      const curva = (bx + ((bx * 5) % 3)) % 3 === 0 ? (bx % 2 ? 1 : -1) : 0;
+      for (let y = 15; y > 15 - alt; y--) {
+        const t = (15 - y) / alt;
+        px(bx + (t > 0.6 ? curva : 0), y, y % 3 === 0 ? c2 : c1);
+      }
+    }
+    // bases preenchidas para ler bem à distância
+    for (let x = 1; x < 15; x++) px(x, 15, tons[x % tons.length]);
+  });
+  // 26 flor amarela — haste + pétalas (v29)
+  pintarAlfa(ctx, 2, 3, (px) => {
+    for (let y = 8; y < 16; y++) px(7, y, "#3a7a20");
+    px(6, 11, "#4f9e2f"); px(9, 10, "#4f9e2f");
+    const p = "#f0d04a", p2 = "#d4b02e", c = "#c98a1a";
+    for (const [fx, fy] of [[6, 4], [8, 4], [5, 5], [9, 5], [6, 6], [8, 6], [7, 3], [7, 7]] as const) px(fx, fy, p);
+    px(7, 5, c); px(6, 5, p2); px(8, 5, p2);
+  });
+  // 27 flor vermelha (v29)
+  pintarAlfa(ctx, 3, 3, (px) => {
+    for (let y = 8; y < 16; y++) px(8, y, "#3a7a20");
+    px(7, 12, "#4f9e2f"); px(10, 11, "#4f9e2f");
+    const p = "#e03a3a", p2 = "#b82828", c = "#f0c542";
+    for (const [fx, fy] of [[7, 3], [9, 3], [6, 4], [10, 4], [7, 5], [9, 5], [8, 2], [8, 6]] as const) px(fx, fy, p);
+    px(8, 4, c); px(7, 4, p2); px(9, 4, p2);
+  });
+  // 28 cacto topo — verde com centro claro (v29)
+  pintar(ctx, 4, 3, "#3f8c3f", 8, 47, (px) => {
+    const centro: Pixel = hex("#5aa84a"), borda: Pixel = hex("#2c6a2c");
+    for (let i = 0; i < 16; i++) { px(i, 0, borda); px(i, 15, borda); px(0, i, borda); px(15, i, borda); }
+    for (let y = 3; y < 13; y++) for (let x = 3; x < 13; x++) px(x, y, centro);
+  });
+  // 29 cacto lado — estrias verticais + espinhos (v29)
+  pintar(ctx, 5, 3, "#3f8c3f", 8, 48, (px) => {
+    const sulco: Pixel = hex("#2c6a2c"), espinho: Pixel = hex("#e8f0d8"), claro: Pixel = hex("#54a044");
+    for (const sx of [2, 7, 12]) for (let y = 0; y < 16; y++) px(sx, y, sulco);
+    for (const sx of [4, 9, 14]) for (let y = 1; y < 16; y += 2) if ((sx + y) % 4 === 0) px(sx, y, claro);
+    for (const [ex, ey] of [[0, 3], [15, 5], [0, 11], [15, 9]] as const) px(ex, ey, espinho);
   });
 
   return cv;

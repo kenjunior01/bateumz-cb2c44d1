@@ -1,4 +1,30 @@
 ---
+Task ID: v29-craft-mundo-vivo
+Agent: Super Z (main)
+Task: v29 — resposta a «Tentei jogar mas não está muito [bom]»: diagnóstico jogando de verdade → spawn perto de floresta (antes: deserto com 0 árvores em 400 blocos!) · mundo vivo com 4 blocos novos (Erva Alta, Flor Amarela, Flor Vermelha, Cacto) em cruz com alfa · BUG RAIZ do atlas descoberto: tiles 8–15 (tronco/folhas/tábuas/minérios) desenhados fora do atlas de 8 colunas desde a v26 — nunca foram pintados! · geração determinística por coluna (árvores mudavam entre sessões) · qualidade automática honesta por FPS · fog mais suave · nuvens em conjuntos · dicas de onboarding
+
+Work Log:
+- DIAGNÓSTICO AO VIVO (agent-browser, deep-link /lives?game=mmorpg): varredura espiral no motor → 0 troncos num raio de 400 blocos do spawn; bioma à volta 93% deserto; world.ts spawnPos() só verificava «h > NÍVEL_MAR+1 && bioma !== montanha» → nascia-se em deserto e a progressão (tronco→tábuas→mesa→picareta) começava bloqueada
+- SPAWN PERTO DE FLORESTA: spawnPos() reescrito com varredura em anéis determinísticos (r=0→360, passo 8, +offset angular r*0,35): 1.ª floresta acima do mar devolve logo; planície aceita a partir de r>120; fallback «qualquer» → fallback antigo. E2E: tronco < 64 blocos do spawn
+- BUG DO ATLAS (raiz dos «riscos no céu»): criarAtlas() pintava tiles 8–15 em (col 8…15, linha 0) — FORA do atlas de 8 colunas (128px); putImageData recusava em silêncio → linha 1 do atlas NUNCA foi pintada desde a v26; faces de tronco/folhas/tábuas/minérios caíam no clamp da borda → salpicos escuros alongados (riscos) e texturas erradas. Corrigido para (0,1)…(7,1). Diagnóstico com contagem de píxeis opacos por tile via getImageData: t8–t15 = 0 opacos antes; 2048/2048 depois
+- 4 BLOCOS NOVOS: B.ERVA=21 (cruz, sem colisão, dureza 0,05, drop null) · B.FLOR_AM=22 · B.FLOR_VM=23 (cruz, dropam a si) · B.CACTO=24 (cubo sólido, tiles [28,28,29], dropa a si); PRECISA_DE_APOIO (erva/flores/cacto) → quebrar(x,y-1) em cascata (coluna toda no cacto) + colocar() recusa sem chão sólido; densidades: erva 7% planície/5,5% floresta, flores ~0,9%, cacto 1,4% da areia (altura 1–3)
+- MESHER EM CRUZ: emitirCruz() no construirMalha — 2 planos diagonais × 2 winddings (visível dos dois lados), normal (0,1,0), luz por profundidade, SEM AO; RECOLHA de ½ texel nas UV (0.5/(COLS*TILE)) — sem ela o filtro vizinho-mais-próximo sangra o tile contíguo → contornos escuros em cada cruz (apanhado ao vivo, corrigido)
+- TEXTURAS ALFA: pintarAlfa() novo (fundo transparente verdadeiro) — erva densa de 16 lâminas (1.ª versão com 5 lâminas desintegrava-se em linhas à distância — apanhado em screenshot e corrigido), flores com pétalas, cacto com sulcos+espinhos; T.ERVA=25…T.CACTO_LADO=29
+- DETERMINISMO POR COLUNA: noise.ts hashCol(x,z,sal) (perm-table, sem suavização); gerarChunk usa hashCol em vez de rndArvores.proximo() partilhado — a sequência do PRNG partilhado dependia da ORDEM de geração dos chunks (mundo diferente entre sessões, construções podiam colidir com árvores «novas»); agora o mesmo (x,z) dá sempre a mesma árvore/erva/flor/cacto; E2E: gerarChunk 2× → dados idênticos
+- QUALIDADE AUTOMÁTICA HONESTA: ajustarQualidade(dt) no passo() — fps<24 durante 4 s → 1.º pixelRatio −0,5 (até 1), depois raio 3→2, SEMPRE com aviso honesto («Desempenho baixo — resolução reduzida»); máx. 4 passos; qualidadeAuto=true por omissão (desligável)
+- AMBIENTE: fog 30→90 → 24→76 (árvores/erva distantes diluem antes de virarem palitos); nuvens em conjuntos de 2–4 blocos finos (0,9) com deriva/embrulho mantidos; dicas iniciais em novo jogo de sobrevivência («Soque um tronco…» 9 s + «Constrói um abrigo…» 12 s)
+- SELETOR CRIATIVO 14→18 (erva, 2 flores, cacto); test-craft-camaras atualizado (18 + inclui 21..24)
+- test-blocos.mjs +10 asserts (secção 16b «Mundo vivo v29»): spawn floresta/planície, tronco<64, erva>20, flores>4, cactos≥0, determinismo, apoio em cascata, recusa de colocação sem apoio, erva sem drop/flor com drop (mira REAL com olhar+minerando — 1.ª versão com mira sintética falhou porque o passo() recalcula mira por raycast), atlas linha 1 pintada ≥95%
+- REGRESSÕES: test-blocos 101/101 ✅ · craft-camaras 63/63 ✅ · desporto 14/14 ✅ · rea-plataforma 33/33 ✅ · home-dinamica 22/22 ✅ · apis-publicas 30/30 ✅ · stage-games 38/38 ✅ · gamekit 9/10 (falha PRÉ-EXISTENTE «canvas do Bounce», confirmada também com git stash na árvore limpa v28) · tsc 0
+- VISUAL AO VIVO pós-fix: floresta no spawn com troncos+copa corretos, erva densa, flores vermelhas/amarelas, deserto com cactos espinhosos, CÉU LIMPO sem riscos
+
+Stage Summary:
+- O «não está muito» tinha três raízes verdadeiras: nascimento sem árvores (progressão bloqueada), mundo vazio e um bug de atlas silencioso desde a v26 que riscava o céu. As três estão corrigidas com medição antes/depois, 10 asserts novos e 300+ asserts verdes no total — o mundo agora nasce vivo, determinístico e legível
+- world.ts 291→337 linhas; engine.ts 1124→1159; textures.ts 237→283; constants.ts 177→205; noise.ts +9
+
+---
+
+---
 Task ID: v28-craft-camaras-sistema
 Agent: Super Z (main)
 Task: v28 — BateuCraft «tudo o que faltava»: 5 tipos de câmara (1ª/3ª/ombro/top-down/cinema) + zoom telescópio + balanço e tremor de câmara + agachar + cama (dormir/spawn) + escada (escalada) + seletor de blocos criativo + minimapa real + som de passos + 4 conquistas + save v2

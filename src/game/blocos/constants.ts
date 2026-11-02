@@ -8,8 +8,11 @@ export const B = {
   AR: 0, RELVA: 1, TERRA: 2, PEDRA: 3, PEDREGULHO: 4, AREIA: 5, AGUA: 6,
   TRONCO: 7, FOLHAS: 8, TABUAS: 9, CARVAO_M: 10, FERRO_M: 11, OURO_M: 12,
   DIAMANTE_M: 13, ROCHA_MAE: 14, MESA: 15, FORNALHA: 16, TOCHA: 17, VIDRO: 18,
-  CAMA: 19, ESCADA: 20,
+  CAMA: 19, ESCADA: 20, ERVA: 21, FLOR_AM: 22, FLOR_VM: 23, CACTO: 24,
 } as const;
+
+// Decorações: erva/flores em cruz, cacto em cubo (v29)
+export const CRUZ: ReadonlySet<number> = new Set([B.ERVA, B.FLOR_AM, B.FLOR_VM]);
 
 // ── Itens (ids ≥ 100, só inventário) ─────────────────────────
 export const I = {
@@ -34,6 +37,8 @@ export const NOMES: Record<number, string> = {
   [B.OURO_M]: "Minério de Ouro", [B.DIAMANTE_M]: "Minério de Diamante",
   [B.ROCHA_MAE]: "Rocha-Mãe", [B.MESA]: "Mesa de Criação", [B.FORNALHA]: "Fornalha",
   [B.TOCHA]: "Tocha", [B.VIDRO]: "Vidro", [B.CAMA]: "Cama", [B.ESCADA]: "Escada",
+  [B.ERVA]: "Erva Alta", [B.FLOR_AM]: "Flor Amarela", [B.FLOR_VM]: "Flor Vermelha",
+  [B.CACTO]: "Cacto",
   [I.GRAVETO]: "Graveto", [I.CARVAO]: "Carvão", [I.DIAMANTE]: "Diamante",
   [I.BARRA_FERRO]: "Barra de Ferro", [I.BARRA_OURO]: "Barra de Ouro",
   [I.CARNE_CRUA]: "Carne Crua", [I.CARNE_ASSADA]: "Carne Assada", [I.MACA]: "Maçã",
@@ -56,6 +61,8 @@ export const CORES: Record<number, [string, string]> = {
   [B.MESA]: ["#b78b52", "#7a5636"], [B.FORNALHA]: ["#6e6e6e", "#3d3d3d"],
   [B.TOCHA]: ["#f0c542", "#8a5a2a"], [B.VIDRO]: ["#bfe6f0", "#9cc8d8"],
   [B.CAMA]: ["#c23a3a", "#f0f0f0"], [B.ESCADA]: ["#b78b52", "#8a6a3a"],
+  [B.ERVA]: ["#5aa832", "#3a7a20"], [B.FLOR_AM]: ["#f0d04a", "#4f9e2f"],
+  [B.FLOR_VM]: ["#e03a3a", "#4f9e2f"], [B.CACTO]: ["#3f8c3f", "#2c6a2c"],
   [I.GRAVETO]: ["#9a6b39", "#6d4a26"], [I.CARVAO]: ["#2b2b2b", "#111"],
   [I.DIAMANTE]: ["#4fe0d8", "#2bb3ac"], [I.BARRA_FERRO]: ["#d8d8d8", "#a8a8a8"],
   [I.BARRA_OURO]: ["#f0d04a", "#c9a628"], [I.CARNE_CRUA]: ["#e08a7a", "#c05a4a"],
@@ -89,6 +96,7 @@ export interface DefBloco {
   drop: number | null; // id que cai (null = nada); default = o próprio
   tiles: [number, number, number]; // [topo, baixo, lado] índices do atlas
   solido: boolean; transparente?: boolean; liquido?: boolean; brilho?: number;
+  cruz?: boolean; // renderizado em 2 planos diagonais (erva/flores)
 }
 
 const D = (o: Partial<DefBloco> & { nome: string; dureza: number; tiles: [number, number, number] }): DefBloco => ({
@@ -117,7 +125,14 @@ export const BLOCOS: Record<number, DefBloco> = {
   [B.VIDRO]: D({ nome: NOMES[B.VIDRO], dureza: 0.6, tiles: [22, 22, 22], transparente: true }),
   [B.CAMA]: D({ nome: NOMES[B.CAMA], dureza: 0.5, tiles: [23, 23, 23] }),
   [B.ESCADA]: D({ nome: NOMES[B.ESCADA], dureza: 0.8, tiles: [24, 24, 24], solido: false, transparente: true }),
+  [B.ERVA]: D({ nome: NOMES[B.ERVA], dureza: 0.05, tiles: [25, 25, 25], solido: false, transparente: true, cruz: true, drop: null }),
+  [B.FLOR_AM]: D({ nome: NOMES[B.FLOR_AM], dureza: 0.05, tiles: [26, 26, 26], solido: false, transparente: true, cruz: true }),
+  [B.FLOR_VM]: D({ nome: NOMES[B.FLOR_VM], dureza: 0.05, tiles: [27, 27, 27], solido: false, transparente: true, cruz: true }),
+  [B.CACTO]: D({ nome: NOMES[B.CACTO], dureza: 0.7, tiles: [28, 28, 29] }),
 };
+
+// Blocos que caem se o bloco por baixo for removido (v29)
+export const PRECISA_DE_APOIO: ReadonlySet<number> = new Set([B.ERVA, B.FLOR_AM, B.FLOR_VM, B.CACTO]);
 
 export const ehBloco = (id: number) => id > 0 && id < 100;
 export const dropDe = (id: number) => { const d = BLOCOS[id]; if (!d) return null; return d.drop === -1 ? id : d.drop; };

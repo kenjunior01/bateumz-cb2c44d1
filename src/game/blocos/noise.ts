@@ -28,6 +28,15 @@ export class Ruido {
   private hash2(x: number, y: number): number {
     return this.perm[(this.perm[x & 255] + y) & 255] / 255;
   }
+
+  /** Hash determinístico POR COLUNA (inteiro) — sem suavização.
+   *  Usado para árvores/decorações: o mesmo (x,z)+semente dá SEMPRE
+   *  o mesmo resultado, independentemente da ordem em que os chunks
+   *  são gerados (corrige mundos diferentes entre sessões). */
+  hashCol(x: number, z: number, sal = 0): number {
+    const xi = (x + sal * 37) | 0, zi = (z - sal * 91) | 0;
+    return this.perm[(this.perm[xi & 255] + zi) & 255] / 255;
+  }
   private hash3(x: number, y: number, z: number): number {
     return this.perm[(this.perm[(this.perm[x & 255] + y) & 255] + z) & 255] / 255;
   }

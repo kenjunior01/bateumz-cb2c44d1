@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants";
 import { Ruido, Aleatorio } from "./noise";
-import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS } from "./textures";
+import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS, TILE } from "./textures";
 
 export interface Chunk { cx: number; cz: number; dados: Uint8Array; malha?: THREE.Mesh; malhaAgua?: THREE.Mesh; sujo: boolean }
 
@@ -82,11 +82,12 @@ export class Mundo {
         else if (y <= NIVEL_MAR) id = B.AGUA;
         dados[idx(lx, y, lz)] = id;
       }
-      // árvore (só em terra firme acima do mar)
+      // árvore (só em terra firme acima do mar) — hash POR COLUNA: o mesmo
+      // (x,z) dá sempre árvores iguais, seja qual for a ordem dos chunks (v29)
       if (h > NIVEL_MAR + 1 && dados[idx(lx, h, lz)] === B.RELVA) {
-        const pArvore = bioma === "floresta" ? 0.035 : bioma === "planicie" ? 0.008 : 0;
-        if (this.rndArvores.proximo() < pArvore && lx > 1 && lx < CHUNK - 2 && lz > 1 && lz < CHUNK - 2) {
-          const alt = 4 + Math.floor(this.rndArvores.proximo() * 3);
+        const pArvore = bioma === "floresta" ? 0.05 : bioma === "planicie" ? 0.016 : 0;
+        if (this.ruido.hashCol(x, z, 11) < pArvore && lx > 1 && lx < CHUNK - 2 && lz > 1 && lz < CHUNK - 2) {
+          const alt = 4 + Math.floor(this.ruido.hashCol(x, z, 29) * 3);
           for (let t = 1; t <= alt; t++) dados[idx(lx, h + t, lz)] = B.TRONCO;
           for (let dy = alt - 2; dy <= alt + 1; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
             const dist = Math.abs(dx) + Math.abs(dz) + Math.abs(dy - alt + 0.5) * 1.4;
@@ -96,6 +97,21 @@ export class Mundo {
                 dados[idx(px2, py, pz2)] = B.FOLHAS;
             }
           }
+        }
+      }
+      // ── decorações do chão (v29): erva, flores, cactos — hash por coluna ──
+      const topo = dados[idx(lx, h, lz)];
+      if (h > NIVEL_MAR + 1 && h + 1 < ALTURA && dados[idx(lx, h + 1, lz)] === B.AR) {
+        const d1 = this.ruido.hashCol(x, z, 53);
+        if (bioma === "deserto" && topo === B.AREIA) {
+          if (d1 < 0.014) {
+            const altC = 1 + Math.floor(this.ruido.hashCol(x, z, 71) * 3);
+            for (let t = 1; t <= altC && h + t < ALTURA; t++) dados[idx(lx, h + t, lz)] = B.CACTO;
+          }
+        } else if (topo === B.RELVA) {
+          if (d1 < (bioma === "planicie" ? 0.07 : 0.055)) dados[idx(lx, h + 1, lz)] = B.ERVA;
+          else if (d1 < (bioma === "planicie" ? 0.079 : 0.067)) dados[idx(lx, h + 1, lz)] = B.FLOR_AM;
+          else if (d1 < (bioma === "planicie" ? 0.088 : 0.079)) dados[idx(lx, h + 1, lz)] = B.FLOR_VM;
         }
       }
     }
@@ -231,6 +247,31 @@ export class Mundo {
       { dir: [0, 0, -1], verts: [[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]], sombra: 0.65, escolher: "lado" },
     ];
 
+    // blocos em CRUZ (erva, flores): 2 planos diagonais × 2 lados, sem AO (v29)
+    const emitirCruz = (x: number, y: number, z: number, tile: number, luz: number) => {
+      const { u0, v0, u1, v1 } = Mundo.UVs(tile);
+      // RECOLHA de ½ texel: sem ela, o filtro vizinho mais próximo sangra
+      // o tile contíguo do atlas nas bordas → contornos escuros em cada erva/flor
+      const m = 0.5 / (COLS_ATLAS * TILE);
+      const mv = 0.5 / (LINHAS_ATLAS * TILE);
+      const uA = u0 + m, uB = u1 - m, vA = v0 + mv, vB = v1 - mv;
+      const planos: [[number, number], [number, number]][] = [
+        [[0.09, 0.09], [0.91, 0.91]],
+        [[0.91, 0.09], [0.09, 0.91]],
+      ];
+      for (const [[ax, az], [bx, bz]] of planos) {
+        for (const inv of [false, true]) { // 2ª passagem com windding invertido = visível dos dois lados
+          const ini = pos.length / 3;
+          const vs = inv
+            ? [[bx, 0, bz], [ax, 0, az], [ax, 1, az], [bx, 1, bz]]
+            : [[ax, 0, az], [bx, 0, bz], [bx, 1, bz], [ax, 1, az]];
+          for (const [vx, vy, vz] of vs) { pos.push(x + vx, y + vy, z + vz); nor.push(0, 1, 0); cor.push(luz, luz, luz); }
+          uv.push(uA, vA, uB, vA, uB, vB, uA, vB);
+          ind.push(ini, ini + 1, ini + 2, ini, ini + 2, ini + 3);
+        }
+      }
+    };
+
     for (let lx = 0; lx < CHUNK; lx++) for (let lz = 0; lz < CHUNK; lz++) {
       const wx = baseX + lx, wz = baseZ + lz;
       const superficie = this.alturaTerreno(wx, wz);
@@ -239,6 +280,12 @@ export class Mundo {
         if (id === B.AR) continue;
         const def = BLOCOS[id];
         if (!def) continue;
+        // cruz: 2 planos diagonais com alfa (erva/flores) — nunca oclui vizinhos
+        if (def.cruz) {
+          const profC = Math.max(0, Math.min(1, (superficie - 3 - y) / 9));
+          emitirCruz(wx, y, wz, def.tiles[0], 1 - profC * 0.72);
+          continue;
+        }
         const aguada = !!def.liquido;
         for (const f of FACES) {
           const nx = wx + f.dir[0], ny = y + f.dir[1], nz = wz + f.dir[2];
@@ -278,14 +325,30 @@ export class Mundo {
     c.sujo = false;
   }
 
-  // posição segura de spawn: topo da coluna
+  // posição segura de spawn — AGORA perto de floresta (v29):
+  // a progressão começa por soque um tronco, por isso o jogador
+  // tem de nascer com árvores à vista. Procura floresta em anéis
+  // (determinístico), depois planície; deserto/montanha são evitados.
   spawnPos(): [number, number, number] {
-    for (let tent = 0; tent < 200; tent++) {
-      const x = Math.floor(this.rndArvores.intervalo(-20, 20));
-      const z = Math.floor(this.rndArvores.intervalo(-20, 20));
-      const h = this.alturaTerreno(x, z);
-      if (h > NIVEL_MAR + 1 && this.bioma(x, z) !== "montanha") return [x + 0.5, h + 1.02, z + 0.5];
+    let planicie: [number, number, number] | null = null;
+    let qualquer: [number, number, number] | null = null;
+    for (let r = 0; r <= 360; r += 8) {
+      const passos = Math.max(1, Math.floor((r * 6.283) / 8));
+      for (let a = 0; a < passos; a++) {
+        const ang = (a / passos) * 6.283 + r * 0.35;
+        const x = Math.round(Math.cos(ang) * r), z = Math.round(Math.sin(ang) * r);
+        const h = this.alturaTerreno(x, z);
+        if (h <= NIVEL_MAR + 1) continue;
+        const b = this.bioma(x, z);
+        const pos: [number, number, number] = [x + 0.5, h + 1.02, z + 0.5];
+        if (b === "floresta") return pos;
+        if (b === "planicie" && !planicie) planicie = pos;
+        if (!qualquer) qualquer = pos;
+      }
+      if (r >= 120 && planicie) return planicie; // planície a >120 blocos já serve
     }
+    if (planicie) return planicie;
+    if (qualquer) return qualquer;
     return [0.5, this.alturaTerreno(0, 0) + 1.02, 0.5];
   }
 }

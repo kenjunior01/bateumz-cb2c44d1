@@ -271,7 +271,8 @@ async function main() {
 
   // ═══ 8. SELETOR CRIATIVO ═══
   console.log("\n── 8. Blocos criativos ──");
-  ok("14 blocos na lista criativa", await page.evaluate(() => (window).__blocos.blocosCriativos().length === 14));
+  ok("18 blocos na lista criativa (v29: +erva, +2 flores, +cacto)", await page.evaluate(() => (window).__blocos.blocosCriativos().length === 18));
+  ok("criativa inclui ERVA, FLOR_AM, FLOR_VM e CACTO", await page.evaluate(() => { const l = (window).__blocos.blocosCriativos(); return [21,22,23,24].every((id) => l.includes(id)); }));
   ok("inclui CAMA e ESCADA", await page.evaluate(() => {
     const l = (window).__blocos.blocosCriativos();
     return l.includes(19) && l.includes(20);

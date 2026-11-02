@@ -15,6 +15,7 @@ const idx = (x: number, y: number, z: number) => (y * CHUNK + z) * CHUNK + x;
 export class Mundo {
   chunks = new Map<string, Chunk>();
   edits = new Map<string, number>(); // alterações do jogador "x,y,z" -> id
+  tochas = new Set<string>();       // posições de tochas colocadas (para luz real)
   ruido: Ruido; rndArvores: Aleatorio;
   grupo = new THREE.Group();
   material!: THREE.MeshLambertMaterial;
@@ -133,8 +134,10 @@ export class Mundo {
     if (!c) return;
     const lx = ((x % CHUNK) + CHUNK) % CHUNK, lz = ((z % CHUNK) + CHUNK) % CHUNK;
     c.dados[idx(lx, y, lz)] = id;
+    const chave = `${x},${y},${z}`;
+    if (id === B.TOCHA) this.tochas.add(chave); else this.tochas.delete(chave);
     if (marcarEdit) {
-      this.edits.set(`${x},${y},${z}`, id);
+      this.edits.set(chave, id);
       // editar também na génese futura (regen de chunk descarregado)
     }
     c.sujo = true;

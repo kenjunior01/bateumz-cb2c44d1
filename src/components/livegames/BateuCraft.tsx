@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Motor, Captura, Modo } from "@/game/blocos/engine";
 import { infoItem } from "@/game/blocos/inventario";
-import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX } from "@/game/blocos/constants";
-import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User } from "lucide-react";
+import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
+import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown } from "lucide-react";
 
 interface Props {
   onScore?: (score: number) => void;
@@ -77,20 +77,51 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const motorRef = useRef<Motor>(new Motor());
   const [fase, setFase] = useState<"menu" | "jogando" | "morto">("menu");
   const [cap, setCap] = useState<Captura | null>(null);
-  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar">(null);
+  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar" | "trofeus">(null);
   const [aCarregar, setACarregar] = useState(false);
   const [receitaSel, setReceitaSel] = useState<"criacao" | "fundicao">("criacao");
   const [motorPronto, setMotorPronto] = useState(false);
+  const [flashDano, setFlashDano] = useState(0);
+  const [nomeItem, setNomeItem] = useState<{ nome: string; k: number } | null>(null);
+  const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
+  const [raioRender, setRaioRender] = useState(motorRef.current.raioRender);
+  const [voando, setVoando] = useState(false);
 
   // ── Estado da UI ← motor ──
+  const vidaAnterior = useRef<number | null>(null);
   useEffect(() => {
     const m = motorRef.current;
     m.onEstado = (c) => {
       setCap(c);
       setFase(c.fase === "morto" ? "morto" : "jogando");
+      setVoando(c.voando);
+      // flash vermelho ao perder vida
+      if (vidaAnterior.current !== null && c.vida < vidaAnterior.current - 0.01) {
+        setFlashDano((k) => k + 1);
+      }
+      vidaAnterior.current = c.vida;
     };
     setMotorPronto(true);
   }, []);
+
+  // nome do item selecionado (toast sobre a hotbar)
+  const itemAnterior = useRef<string>("");
+  useEffect(() => {
+    if (!cap) return;
+    const s = cap.slots[cap.selecao];
+    const chave = s ? `${cap.selecao}:${s.id}` : `${cap.selecao}:vazio`;
+    if (chave !== itemAnterior.current) {
+      itemAnterior.current = chave;
+      if (s) setNomeItem({ nome: infoItem(s.id).nome, k: Date.now() });
+    }
+  }, [cap]);
+
+  // expirar o toast do nome do item
+  useEffect(() => {
+    if (!nomeItem) return;
+    const t = setTimeout(() => setNomeItem(null), 1400);
+    return () => clearTimeout(t);
+  }, [nomeItem]);
 
   // ── Loop rAF ──
   useEffect(() => {
@@ -146,6 +177,17 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       definirFome: (v: number) => { motorRef.current.fome = v; },
       definirHora: (f: number) => { motorRef.current.tempo = motorRef.current.dia * 600 - 600 + f * 600; },
       limparInv: () => motorRef.current.inv.limpar(),
+      // v27: preferências, tochas, partículas, mochila
+      pausar: (v: boolean) => { motorRef.current.pausado = v; },
+      alternarSom: () => { setSomMudo(motorRef.current.alternarSom()); },
+      estadoSom: () => motorRef.current.mudo,
+      definirRaio: (n: number) => { motorRef.current.definirRaio(n); setRaioRender(motorRef.current.raioRender); },
+      raio: () => motorRef.current.raioRender,
+      tochas: () => [...motorRef.current.mundo.tochas],
+      luzesAtivas: () => motorRef.current.luzesTocha.filter((l) => l.intensity > 0).length,
+      particulas: () => motorRef.current.particulasAtivas(),
+      moverParaHotbar: (i: number) => motorRef.current.inv.moverParaHotbar(i),
+      modoSave: () => motorRef.current.lerModoSave(),
       // avatar
       definirAvatar: (p: any) => motorRef.current.definirPreferencias(p),
       lerAvatar: () => motorRef.current.lerPreferencias(),
@@ -164,15 +206,19 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       m.entrada.correr = !!teclas["shift"];
       m.entrada.subir = !!teclas[" "];
       m.entrada.descer = !!teclas["control"];
-      m.criativoVoar = !!teclas["f"] ? !m.criativoVoar : m.criativoVoar;
     };
     const baixo = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       teclas[k] = true;
       if (m.fase === "menu") return;
       if (k >= "1" && k <= "9") m.inv.selecao = parseInt(k) - 1;
-      if (k === "e") { setModal((v) => (v === "inv" ? null : "inv")); m.pausado = false; }
-      if (k === "escape") { setModal((v) => (v ? null : "pausa")); }
+      if (k === "e" && (modal === null || modal === "inv")) { setModal((v) => (v === "inv" ? null : "inv")); m.pausado = false; }
+      if (k === "escape") {
+        if (modal === "pausa") { m.pausado = false; setModal(null); }
+        else if (!modal && m.fase === "jogando") { m.pausado = true; setModal("pausa"); }
+        else { setModal(null); m.pausado = false; }
+      }
+      if (k === "f" && m.modo === "criativo") m.criativoVoar = !m.criativoVoar; // voar (criativo)
       if (k === "f5") { e.preventDefault(); m.primeiraPessoa = !m.primeiraPessoa; }
       sincronizar();
     };
@@ -186,7 +232,12 @@ export default function BateuCraft({ onScore, onExit }: Props) {
     const baixoRato = (e: MouseEvent) => {
       if (m.fase !== "jogando" || modal) return;
       if (e.button === 0) { m.entrada.minerando = true; m.atacarPedido = true; }
-      if (e.button === 2) m.colocarPedido = true;
+      if (e.button === 2) {
+        // comida selecionada → comer; senão colocar bloco
+        const s = m.inv.selecionado();
+        if (s && ITENS[s.id]?.comida) m.comerPedido = true;
+        else m.colocarPedido = true;
+      }
     };
     const cimaRato = (e: MouseEvent) => { if (e.button === 0) m.entrada.minerando = false; };
     const roda = (e: WheelEvent) => {
@@ -211,6 +262,22 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       window.removeEventListener("contextmenu", menu);
     };
   }, [modal]);
+
+  // capturar o rato (desktop): o olhar com rato exige pointer lock
+  const capturarRato = useCallback(() => {
+    if (ehToque) return;
+    const c = canvasRef.current;
+    if (!c || document.pointerLockElement === c) return;
+    try { (c.requestPointerLock() as unknown as Promise<void> | undefined)?.catch?.(() => { /* negado */ }); } catch { /* sem pointer lock */ }
+  }, []);
+  // libertar o rato sempre que um modal abre
+  useEffect(() => {
+    if (modal && document.pointerLockElement) { try { document.exitPointerLock(); } catch { /* ignore */ } }
+  }, [modal]);
+  // morrer liberta o rato (o jogador precisa de clicar em RENASCER)
+  useEffect(() => {
+    if (fase === "morto" && document.pointerLockElement) { try { document.exitPointerLock(); } catch { /* ignore */ } }
+  }, [fase]);
 
   // ── Toque: olhar arrastando na área do canvas ──
   const toqueUltimo = useRef<{ x: number; y: number } | null>(null);
@@ -265,9 +332,26 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       setACarregar(false);
       if (ehToque) {
         try { void telaRef.current?.requestFullscreen?.(); } catch { /* sem fullscreen */ }
+      } else {
+        setTimeout(() => capturarRato(), 80); // rato capturado para olhar
       }
     }, 50);
   };
+
+  // ── Pausa real: congela o motor enquanto o modal está aberto ──
+  const abrirPausa = useCallback(() => {
+    motorRef.current.pausado = true;
+    setModal("pausa");
+  }, []);
+  const fecharPausa = useCallback(() => {
+    motorRef.current.pausado = false;
+    setModal(null);
+  }, []);
+  // fechar qualquer modal devolve o jogo ao estado correto (despausa se estava em pausa)
+  const fecharModal = useCallback(() => {
+    motorRef.current.pausado = false;
+    setModal(null);
+  }, []);
 
   const sair = () => {
     const m = motorRef.current;
@@ -282,8 +366,19 @@ export default function BateuCraft({ onScore, onExit }: Props) {
 
   return (
     <div ref={telaRef} className="fixed inset-0 z-[60] select-none overflow-hidden bg-black" style={{ height: "100dvh" }} data-testid="bc-raiz">
+      <style>{`
+        @keyframes bcDano { 0% { opacity: 0.6; } 100% { opacity: 0; } }
+        .bc-dano-flash { background: radial-gradient(ellipse at center, rgba(190,0,0,0) 42%, rgba(170,10,10,0.7) 100%); animation: bcDano 0.45s ease-out forwards; }
+        @keyframes bcToast { 0% { opacity: 0; transform: translate(-50%, 8px); } 14% { opacity: 1; transform: translate(-50%, 0); } 78% { opacity: 1; } 100% { opacity: 0; } }
+        .bc-item-toast { animation: bcToast 1.4s ease-out forwards; }
+      `}</style>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full touch-none" style={{ height: "100dvh" }}
-        onTouchMove={aoTocarTela} onTouchStart={aoTocarTela} onTouchEnd={aoLargarTela} data-testid="bc-canvas" />
+        onTouchMove={aoTocarTela} onTouchStart={aoTocarTela} onTouchEnd={aoLargarTela} onClick={capturarRato} data-testid="bc-canvas" />
+
+      {/* vinheta de dano */}
+      {flashDano > 0 && (
+        <div key={flashDano} className="absolute inset-0 pointer-events-none bc-dano-flash" data-testid="bc-dano" />
+      )}
 
       {/* ═══ MENU PRINCIPAL ═══ */}
       {fase === "menu" && !aCarregar && (
@@ -308,7 +403,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
               <Hammer size={20} /> CRIATIVO (voar + blocos)
             </button>
             {temSave && (
-              <button onClick={() => iniciar("sobrevivencia", true)} data-testid="bc-continuar"
+              <button onClick={() => iniciar(motorRef.current.lerModoSave() ?? "sobrevivencia", true)} data-testid="bc-continuar"
                 className="w-full py-3 rounded-xl font-bold text-white bg-amber-600 hover:bg-amber-500 active:scale-95 transition shadow-[0_4px_0_#92400e]">
                 CONTINUAR MUNDO
               </button>
@@ -368,7 +463,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-creditos">
               <Trophy size={13} className="text-amber-300" /> {cap.creditos}
             </div>
-            <button onClick={() => setModal("pausa")} data-testid="bc-pausa" className="bg-black/40 rounded-lg p-1.5 text-white"><Pause size={16} /></button>
+            <button onClick={abrirPausa} data-testid="bc-pausa" className="bg-black/40 rounded-lg p-1.5 text-white"><Pause size={16} /></button>
           </div>
 
           {/* avisos */}
@@ -405,6 +500,13 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             </div>
           )}
 
+          {/* toast: nome do item selecionado */}
+          {nomeItem && (
+            <div key={nomeItem.k} className="absolute bottom-[76px] left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-lg bc-item-toast pointer-events-none" data-testid="bc-nome-item">
+              {nomeItem.nome}
+            </div>
+          )}
+
           {/* hotbar */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 p-1 bg-black/45 rounded-xl border border-white/10" data-testid="bc-hotbar">
             {cap.slots.slice(0, 9).map((s, i) => (
@@ -435,12 +537,30 @@ export default function BateuCraft({ onScore, onExit }: Props) {
               </div>
               <div className="absolute right-3 bottom-16 flex flex-col items-end gap-2">
                 <div className="flex gap-2">
+                  {cap.modo === "criativo" && (
+                    <button data-testid="bc-voar" onTouchStart={() => { m.criativoVoar = !m.criativoVoar; }}
+                      className={`w-14 h-14 rounded-full font-black text-[10px] border-2 border-black/40 shadow-lg active:scale-90 ${voando ? "bg-sky-400 text-black" : "bg-slate-700/90 text-white"}`}>VOAR</button>
+                  )}
+                  {(cap.naAgua || voando) && (
+                    <button data-testid="bc-mergulhar"
+                      onTouchStart={() => { m.entrada.descer = true; }}
+                      onTouchEnd={() => { m.entrada.descer = false; }}
+                      className="w-14 h-14 rounded-full bg-blue-700/90 text-white font-black text-[10px] border-2 border-black/40 shadow-lg active:scale-90 flex flex-col items-center justify-center">
+                      <ChevronDown size={16} /> DESCER
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
                   <button data-testid="bc-atacar" onTouchStart={() => { m.atacarPedido = true; }}
                     className="w-14 h-14 rounded-full bg-red-600/85 text-white font-black text-xs border-2 border-black/40 shadow-lg active:scale-90">ATACAR</button>
                   <button data-testid="bc-colocar" onTouchStart={() => { m.colocarPedido = true; }}
                     className="w-14 h-14 rounded-full bg-amber-600/85 text-white font-black text-xs border-2 border-black/40 shadow-lg active:scale-90">POR</button>
                 </div>
                 <div className="flex gap-2">
+                  {(() => { const s = cap.slots[cap.selecao]; return s && ITENS[s.id]?.comida ? (
+                    <button data-testid="bc-comer" onTouchStart={() => { m.comerPedido = true; }}
+                      className="w-16 h-16 rounded-full bg-lime-600/90 text-white font-black text-xs border-2 border-black/40 shadow-lg active:scale-90">COMER</button>
+                  ) : null; })()}
                   <button data-testid="bc-minerar"
                     onTouchStart={() => { m.entrada.minerando = true; }}
                     onTouchEnd={() => { m.entrada.minerando = false; }}
@@ -479,7 +599,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
 
       {/* ═══ MODAL: INVENTÁRIO + CRIAÇÃO ═══ */}
       {modal === "inv" && (
-        <div className="absolute inset-0 bg-black/70 flex items-end md:items-center justify-center p-2 md:p-6" onClick={() => setModal(null)}>
+        <div className="absolute inset-0 bg-black/70 flex items-end md:items-center justify-center p-2 md:p-6" onClick={fecharModal}>
           <div className="bg-slate-900 border border-white/15 rounded-2xl w-full max-w-2xl max-h-[82dvh] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()} data-testid="bc-modal-inv">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-white font-black text-lg">MOCHILA</h3>
@@ -511,12 +631,12 @@ export default function BateuCraft({ onScore, onExit }: Props) {
                 </div>
               ))}
             </div>
-            <p className="text-white/40 text-[10px] font-bold uppercase mb-1">Inventário — toca para selecionar</p>
+            <p className="text-white/40 text-[10px] font-bold uppercase mb-1">Mochila — toca num slot abaixo para o levar à hotbar</p>
             <div className="grid grid-cols-9 gap-1">
               {cap?.slots.map((s, i) => (
                 <button key={i} data-testid={`bc-inv-${i}`}
-                  onClick={() => { m.inv.selecao = Math.min(i, 8); }}
-                  className={`aspect-square rounded-md flex items-center justify-center ${cap.selecao === i ? "bg-white/20 ring-1 ring-white" : "bg-black/40"}`}>
+                  onClick={() => { if (i >= 9) { m.inv.moverParaHotbar(i); } else { m.inv.selecao = i; } }}
+                  className={`aspect-square rounded-md flex items-center justify-center ${cap.selecao === i ? "bg-white/20 ring-1 ring-white" : i >= 9 && s ? "bg-amber-500/15 ring-1 ring-amber-500/40" : "bg-black/40"}`}>
                   {s && <IconeItem id={s.id} qtd={s.qtd} tamanho={26} />}
                 </button>
               ))}
@@ -530,10 +650,22 @@ export default function BateuCraft({ onScore, onExit }: Props) {
         <div className="absolute inset-0 bg-black/75 flex items-center justify-center" data-testid="bc-modal-pausa">
           <div className="bg-slate-900 border border-white/15 rounded-2xl p-6 w-full max-w-xs flex flex-col gap-3">
             <h3 className="text-white font-black text-xl text-center">PAUSA</h3>
-            <button onClick={() => { setModal(null); }} className="py-3 rounded-xl font-bold text-white bg-emerald-600 shadow-[0_4px_0_#065f46] active:scale-95">CONTINUAR</button>
-            <button onClick={() => { m.guardar(); setModal(null); }} className="py-3 rounded-xl font-bold text-white bg-sky-600 active:scale-95" data-testid="bc-guardar">GUARDAR MUNDO</button>
-            <button onClick={() => setModal("ajuda")} className="py-3 rounded-xl font-bold text-white bg-slate-700 active:scale-95">COMO JOGAR</button>
-            <button onClick={() => { m.primeiraPessoa = !m.primeiraPessoa; setModal(null); }} className="py-3 rounded-xl font-bold text-white bg-slate-700 active:scale-95">
+            <button onClick={fecharPausa} className="py-3 rounded-xl font-bold text-white bg-emerald-600 shadow-[0_4px_0_#065f46] active:scale-95" data-testid="bc-continuar-jogo">CONTINUAR</button>
+            <button onClick={() => { m.guardar(); m.avisos.push({ texto: "Mundo guardado ✓", tipo: "info", t: 2 }); setModal(null); m.pausado = false; }} className="py-3 rounded-xl font-bold text-white bg-sky-600 active:scale-95" data-testid="bc-guardar">GUARDAR MUNDO</button>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setModal("trofeus")} className="py-2.5 rounded-xl font-bold text-white bg-amber-600/90 active:scale-95 flex items-center justify-center gap-1.5 text-sm" data-testid="bc-trofeus">
+                <Award size={15} /> {cap?.conquistas.length ?? 0}/{CONQUISTAS.length}
+              </button>
+              <button onClick={() => setSomMudo(m.alternarSom())} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 flex items-center justify-center gap-1.5 text-sm" data-testid="bc-som">
+                {somMudo ? <VolumeX size={15} /> : <Volume2 size={15} />} SOM {somMudo ? "OFF" : "ON"}
+              </button>
+            </div>
+            <button onClick={() => { const prox = raioRender >= 4 ? 2 : raioRender + 1; m.definirRaio(prox); setRaioRender(m.raioRender); }}
+              className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm" data-testid="bc-distancia">
+              DISTÂNCIA: {raioRender === 2 ? "PERTO" : raioRender === 3 ? "NORMAL" : "LONGE"}
+            </button>
+            <button onClick={() => setModal("ajuda")} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm">COMO JOGAR</button>
+            <button onClick={() => { m.primeiraPessoa = !m.primeiraPessoa; setModal(null); m.pausado = false; }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm">
               CÂMARA: {cap?.primeiraPessoa ? "1ª PESSOA" : "3ª PESSOA"}
             </button>
             <button onClick={sair} className="py-3 rounded-xl font-bold text-white bg-red-700 active:scale-95" data-testid="bc-sair">GUARDAR E SAIR</button>
@@ -541,19 +673,48 @@ export default function BateuCraft({ onScore, onExit }: Props) {
         </div>
       )}
 
+      {/* ═══ MODAL: CONQUISTAS ═══ */}
+      {modal === "trofeus" && cap && (
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={() => setModal("pausa")}>
+          <div className="bg-slate-900 border border-white/15 rounded-2xl p-5 w-full max-w-md text-white max-h-[85dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid="bc-modal-trofeus">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-lg">CONQUISTAS</h3>
+              <span className="text-amber-300 font-bold text-sm flex items-center gap-1"><Trophy size={14} /> {cap.conquistas.length}/{CONQUISTAS.length} · {cap.creditos} créditos</span>
+            </div>
+            <div className="space-y-2">
+              {CONQUISTAS.map((c) => {
+                const feita = cap.conquistas.includes(c.id);
+                return (
+                  <div key={c.id} className={`rounded-xl p-3 border ${feita ? "bg-amber-500/15 border-amber-500/40" : "bg-slate-800/70 border-white/10 opacity-70"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`font-bold text-sm ${feita ? "text-amber-300" : "text-white/80"}`}>{feita ? "★ " : "☆ "}{c.nome}</p>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${feita ? "bg-amber-500 text-black" : "bg-slate-700 text-white/50"}`}>+{c.creditos}</span>
+                    </div>
+                    <p className="text-white/60 text-xs mt-0.5">{c.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => setModal("pausa")} className="mt-4 w-full py-2.5 rounded-xl font-black bg-amber-500 text-black">VOLTAR</button>
+          </div>
+        </div>
+      )}
+
       {/* ═══ MODAL: AJUDA ═══ */}
       {modal === "ajuda" && (
-        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={fecharModal}>
           <div className="bg-slate-900 border border-white/15 rounded-2xl p-5 w-full max-w-md text-white text-sm space-y-2 max-h-[85dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid="bc-modal-ajuda">
             <h3 className="font-black text-lg mb-1">COMO JOGAR</h3>
             <p><b className="text-amber-300">Mover:</b> {ehToque ? "joystick à esquerda · arrasta o ecrã para olhar" : "WASD · rato para olhar (clica no ecrã para capturar)"}</p>
             <p><b className="text-amber-300">Minerar:</b> {ehToque ? "mantém MINERAR pressionado" : "mantém o botão esquerdo no bloco"}</p>
             <p><b className="text-amber-300">Colocar / atacar:</b> {ehToque ? "botões POR e ATACAR" : "botão direito coloca · esquerto ataca mobs"}</p>
-            <p><b className="text-amber-300">Mochila:</b> tecla E ou mochila no topo · aí crias ferramentas e fundes minérios</p>
-            <p><b className="text-amber-300">Sobrevive:</b> come carne e maçãs, constrói abrigo antes da noite — os Zumbis LEGO aparecem no escuro e o Estourador explode!</p>
+            <p><b className="text-amber-300">Comer:</b> {ehToque ? "botão COMER aparece quando tens comida na mão" : "botão direito com comida na mão"}</p>
+            <p><b className="text-amber-300">Voar / mergulhar:</b> {ehToque ? "VOAR no criativo · DESCER na água ou a voar" : "F voa no criativo · Ctrl desce na água e no voo"}</p>
+            <p><b className="text-amber-300">Mochila:</b> tecla E ou mochila no topo · aí crias ferramentas e fundes minérios · toca num item da mochila para o levar à hotbar</p>
+            <p><b className="text-amber-300">Sobrevive:</b> come carne e maçãs, constrói abrigo antes da noite — os Zumbis LEGO aparecem no escuro e o Estourador explode! Coloca tochas: elas iluminam de verdade.</p>
             <p><b className="text-amber-300">Progressão:</b> madeira → tábuas → mesa → picareta → pedra → fornalha → ferro → DIAMANTE. É difícil de propósito.</p>
             <p><b className="text-emerald-300">Créditos:</b> conquistas dão créditos Bateu — troca por histórias e 1 GB via WhatsApp.</p>
-            <button onClick={() => setModal(null)} className="mt-2 w-full py-2.5 rounded-xl font-black bg-amber-500 text-black">ENTENDI</button>
+            <button onClick={fecharModal} className="mt-2 w-full py-2.5 rounded-xl font-black bg-amber-500 text-black">ENTENDI</button>
           </div>
         </div>
       )}

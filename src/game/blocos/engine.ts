@@ -43,13 +43,12 @@ export interface Captura {
   avisos: { texto: string; tipo: "conquista" | "info" | "dano" }[];
   ctaWhats: boolean;
   primeiraPessoa: boolean;
+  naAgua: boolean; voando: boolean;
   blocosQuebrados: number; blocosColocados: number;
   passos: number;
 }
 
 interface Aviso { texto: string; tipo: "conquista" | "info" | "dano"; t: number }
-
-const RAIO_RENDER = 3;
 
 export class Motor {
   fase: Fase = "menu";
@@ -57,6 +56,24 @@ export class Motor {
   mundo!: Mundo; gestor!: GestorMobs;
   inv = new Inventario();
   rnd = new Aleatorio(12345);
+
+  // som / desempenho (preferências locais)
+  mudo = false; raioRender = 3;
+
+  // luzes reais das tochas colocadas
+  luzesTocha: THREE.PointLight[] = [];
+  private tochaTimer = 0;
+
+  // céu: sol, lua, estrelas, nuvens
+  private solDisco!: THREE.Sprite; private luaDisco!: THREE.Sprite;
+  private estrelas!: THREE.Points; private nuvens!: THREE.Group;
+
+  // partículas de quebra/explosão
+  private poolParticulas: { m: THREE.Mesh; vx: number; vy: number; vz: number; t: number; tMax: number }[] = [];
+
+  // mão em 1ª pessoa
+  private maoFP = new THREE.Group(); private maoFPId = 0; swingT = 0;
+  private avisoNoiteDia = 0;
 
   // cena
   renderer!: THREE.WebGLRenderer; cena = new THREE.Scene();
@@ -96,6 +113,14 @@ export class Motor {
   atacarPedido = false; colocarPedido = false; comerPedido = false;
   criativoVoar = false;
 
+  constructor() {
+    try { this.mudo = localStorage.getItem("bateu_blocos_som") === "1"; } catch { /* ignore */ }
+    try {
+      const r = Number(localStorage.getItem("bateu_blocos_dist"));
+      if (r >= 2 && r <= 4) this.raioRender = Math.floor(r);
+    } catch { /* ignore */ }
+  }
+
   // ── Arranque ─────────────────────────────────────────────────
   iniciar(canvas: HTMLCanvasElement, modo: Modo, carregar = false) {
     this.modo = modo;
@@ -115,6 +140,11 @@ export class Motor {
       this.cena.add(this.sol, this.ambiente);
       this.luzTocha = new THREE.PointLight(0xffb050, 0, 9, 1.6);
       this.cena.add(this.luzTocha);
+      // luzes das tochas COLOCADAS no mundo (as 6 mais próximas)
+      for (let i = 0; i < 6; i++) {
+        const l = new THREE.PointLight(0xffa843, 0, 10, 1.5);
+        this.luzesTocha.push(l); this.cena.add(l);
+      }
       // caixa de realce do bloco visado
       const caixa = new THREE.BoxGeometry(1.002, 1.002, 1.002);
       this.realce = new THREE.LineSegments(caixa, new THREE.LineBasicMaterial({ color: 0x101010, transparent: true, opacity: 0.7 }));
@@ -122,6 +152,41 @@ export class Motor {
       this.cena.add(this.realce);
       this.mundo.grupo.name = "mundo";
       this.cena.add(this.mundo.grupo);
+      // ── CÉU: sol, lua, estrelas, nuvens (quadradinhos LEGO) ──
+      this.solDisco = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffe58a, fog: false, transparent: true, depthWrite: false }));
+      this.solDisco.scale.setScalar(24);
+      this.luaDisco = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xd8e4f0, fog: false, transparent: true, depthWrite: false }));
+      this.luaDisco.scale.setScalar(15);
+      this.cena.add(this.solDisco, this.luaDisco);
+      const posEstrelas: number[] = [];
+      for (let i = 0; i < 320; i++) {
+        const a = this.rnd.proximo() * Math.PI * 2, e = Math.asin(this.rnd.proximo() * 0.92);
+        posEstrelas.push(Math.cos(a) * Math.cos(e) * 190, Math.sin(e) * 190, Math.sin(a) * Math.cos(e) * 190);
+      }
+      const geoEstrelas = new THREE.BufferGeometry();
+      geoEstrelas.setAttribute("position", new THREE.Float32BufferAttribute(posEstrelas, 3));
+      this.estrelas = new THREE.Points(geoEstrelas, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+      this.cena.add(this.estrelas);
+      this.nuvens = new THREE.Group();
+      const matNuvem = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.42, fog: false });
+      for (let i = 0; i < 9; i++) {
+        const nuvem = new THREE.Mesh(
+          new THREE.BoxGeometry(9 + this.rnd.proximo() * 14, 1.4, 6 + this.rnd.proximo() * 9), matNuvem,
+        );
+        nuvem.position.set((this.rnd.proximo() - 0.5) * 180, 64 + this.rnd.proximo() * 9, (this.rnd.proximo() - 0.5) * 180);
+        this.nuvens.add(nuvem);
+      }
+      this.cena.add(this.nuvens);
+      // pool de partículas (cubinhos LEGO que voam ao quebrar)
+      const geoP = new THREE.BoxGeometry(0.095, 0.095, 0.095);
+      for (let i = 0; i < 90; i++) {
+        const m = new THREE.Mesh(geoP, new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+        m.visible = false; this.cena.add(m);
+        this.poolParticulas.push({ m, vx: 0, vy: 0, vz: 0, t: 0, tMax: 1 });
+      }
+      // mão em 1ª pessoa vive presa à câmara
+      this.cena.add(this.camara);
+      this.camara.add(this.maoFP);
     }
 
     if (guardado) {
@@ -135,6 +200,8 @@ export class Motor {
       this.blocosQuebrados = guardado.blocosQuebrados ?? 0;
       this.blocosColocados = guardado.blocosColocados ?? 0;
       for (const [k, v] of Object.entries(guardado.edits ?? {})) this.mundo.edits.set(k, v as number);
+      // reconstruir tochas conhecidas a partir das edições do save
+      for (const [k, v] of this.mundo.edits) if (v === B.TOCHA) this.mundo.tochas.add(k);
       [this.px, this.py, this.pz] = guardado.pos;
       this.yaw = guardado.yaw ?? 0; this.pitch = guardado.pitch ?? 0;
     } else {
@@ -158,11 +225,12 @@ export class Motor {
     this.avatar = criarMinifig({ torso: prefs.torso, pernas: prefs.pernas, chapeu: prefs.chapeu, corChapeu: prefs.corChapeu });
     this.avatar.grupo.visible = false;
     this.cena.add(this.avatar.grupo);
+    this.pausado = false; this.maoFPId = 0; this.swingT = 0;
 
     // gerar chunks iniciais
     const cx = Math.floor(this.px / CHUNK), cz = Math.floor(this.pz / CHUNK);
-    for (let dx = -RAIO_RENDER; dx <= RAIO_RENDER; dx++)
-      for (let dz = -RAIO_RENDER; dz <= RAIO_RENDER; dz++) {
+    for (let dx = -this.raioRender; dx <= this.raioRender; dx++)
+      for (let dz = -this.raioRender; dz <= this.raioRender; dz++) {
         const c = this.mundo.garantir(cx + dx, cz + dz);
         this.mundo.construirMalha(c);
       }
@@ -196,7 +264,7 @@ export class Motor {
   get horaFrac() { return (this.tempo % DIA_SEGUNDOS) / DIA_SEGUNDOS; }
   get noite() { const f = this.horaFrac; return f >= 0.5 && f < 0.95; }
 
-  private atualizarCeu() {
+  private atualizarCeu(dt = 0) {
     const f = this.horaFrac;
     // paleta: manhã, dia, pôr-do-sol, noite
     const cores: [number, number[]][] = [
@@ -224,7 +292,76 @@ export class Motor {
     const comTocha = s && s.id === B.TOCHA;
     this.luzTocha.intensity = comTocha ? 1.4 : 0;
     this.luzTocha.position.set(this.px, this.py + 1.4, this.pz);
+
+    // ── sol / lua (arco celeste real: nasce ao amanhecer f=0, pico ao meio-dia f=0.25, põe-se ao pôr-do-sol f=0.5) ──
+    const theta = f * Math.PI * 2;
+    const seno = Math.sin(theta), coseno = Math.cos(theta);
+    this.solDisco.position.set(this.px + coseno * 175, seno * 175 + 4, this.pz + 55);
+    this.luaDisco.position.set(this.px - coseno * 175, -seno * 175 + 4, this.pz - 55);
+    (this.solDisco.material as THREE.SpriteMaterial).opacity = Math.max(0, Math.min(1, (seno + 0.12) * 6));
+    (this.luaDisco.material as THREE.SpriteMaterial).opacity = Math.max(0, Math.min(1, (-seno + 0.12) * 6));
+    // ── estrelas (aparecem ao anoitecer) ──
+    const alvo = f > 0.5 && f < 0.95 ? Math.min(1, Math.min(f - 0.5, 0.95 - f) * 8) : 0;
+    const matEst = this.estrelas.material as THREE.PointsMaterial;
+    matEst.opacity += (alvo * 0.9 - matEst.opacity) * Math.min(1, dt * 3);
+    this.estrelas.position.set(this.px, 0, this.pz);
+    this.estrelas.rotation.y += dt * 0.004;
+    // ── nuvens: deriva lenta + embrulho à volta do jogador ──
+    for (const nuvem of this.nuvens.children) {
+      nuvem.position.x += dt * 1.1;
+      const dx2 = nuvem.position.x - this.px, dz2 = nuvem.position.z - this.pz;
+      if (dx2 > 110) nuvem.position.x -= 220;
+      if (dx2 < -110) nuvem.position.x += 220;
+      if (dz2 > 110) nuvem.position.z -= 220;
+      if (dz2 < -110) nuvem.position.z += 220;
+    }
   }
+
+  // ── Luzes das tochas colocadas (as 6 mais próximas) ───────
+  private atualizarLuzesTochas() {
+    const cand: { d: number; x: number; y: number; z: number }[] = [];
+    for (const k of this.mundo.tochas) {
+      const [tx, ty, tz] = k.split(",").map(Number);
+      const d = (tx - this.px) ** 2 + (ty - this.py) ** 2 + (tz - this.pz) ** 2;
+      if (d < 1600) cand.push({ d, x: tx, y: ty, z: tz });
+    }
+    cand.sort((a, b) => a.d - b.d);
+    for (let i = 0; i < this.luzesTocha.length; i++) {
+      const l = this.luzesTocha[i];
+      const t = cand[i];
+      if (t) {
+        l.position.set(t.x + 0.5, t.y + 0.55, t.z + 0.5);
+        l.intensity = 1.25;
+      } else l.intensity = 0;
+    }
+  }
+
+  // ── Partículas LEGO (quebra / explosão) ────────────────
+  private spawnParticulas(x: number, y: number, z: number, cor: string, qtd: number, forca = 1) {
+    let postos = 0;
+    for (const p of this.poolParticulas) {
+      if (p.t > 0) continue;
+      p.t = 0.35 + this.rnd.proximo() * 0.3; p.tMax = p.t;
+      (p.m.material as THREE.MeshBasicMaterial).color.set(cor);
+      p.m.position.set(x + (this.rnd.proximo() - 0.5) * 0.7, y + (this.rnd.proximo() - 0.5) * 0.7, z + (this.rnd.proximo() - 0.5) * 0.7);
+      p.vx = (this.rnd.proximo() - 0.5) * 3.4 * forca;
+      p.vy = (1.4 + this.rnd.proximo() * 2.6) * forca;
+      p.vz = (this.rnd.proximo() - 0.5) * 3.4 * forca;
+      p.m.visible = true;
+      if (++postos >= qtd) break;
+    }
+  }
+  private atualizarParticulas(dt: number) {
+    for (const p of this.poolParticulas) {
+      if (p.t <= 0) continue;
+      p.t -= dt;
+      if (p.t <= 0) { p.m.visible = false; continue; }
+      p.vy -= 13 * dt;
+      p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
+      p.m.scale.setScalar(Math.max(0.15, p.t / p.tMax));
+    }
+  }
+  particulasAtivas(): number { return this.poolParticulas.filter((p) => p.t > 0).length; }
 
   // ── Raycast DDA voxel ────────────────────────────────────────
   private raycast(): { x: number; y: number; z: number; id: number } | null {
@@ -287,6 +424,7 @@ export class Motor {
     this.mundo.setBloco(x, y, z, B.AR);
     this.blocosQuebrados++;
     this.som("quebrar");
+    this.spawnParticulas(x + 0.5, y + 0.5, z + 0.5, CORES[id]?.[0] ?? "#9a9a9a", 10);
     this.fome = Math.max(0, this.fome - 0.02);
     if (dropa) {
       const drop = dropDe(id);
@@ -333,6 +471,7 @@ export class Motor {
 
   atacar(): Mob | null {
     if (this.fase !== "jogando") return null;
+    this.swingT = 0.3;
     const s = this.inv.selecionado();
     const item = s ? ITENS[s.id] : undefined;
     const dano = item?.dano ?? 1;
@@ -396,7 +535,24 @@ export class Motor {
 
   // ── Sons sintetizados (WebAudio, sem ficheiros) ──────────────
   private audioCtx: AudioContext | null = null;
+  alternarSom(): boolean {
+    this.mudo = !this.mudo;
+    try { localStorage.setItem("bateu_blocos_som", this.mudo ? "1" : "0"); } catch { /* ignore */ }
+    return this.mudo;
+  }
+  definirRaio(n: number) {
+    this.raioRender = Math.max(2, Math.min(4, Math.floor(n)));
+    try { localStorage.setItem("bateu_blocos_dist", String(this.raioRender)); } catch { /* ignore */ }
+  }
+  /** Modo guardado no save (para o botão CONTINUAR usar o modo certo) */
+  lerModoSave(): Modo | null {
+    try {
+      const sv = JSON.parse(localStorage.getItem("bateu_blocos_save") || "null");
+      return sv?.modo === "criativo" ? "criativo" : sv?.modo === "sobrevivencia" ? "sobrevivencia" : null;
+    } catch { return null; }
+  }
   som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao") {
+    if (this.mudo) return;
     try {
       if (!this.audioCtx) this.audioCtx = new AudioContext();
       const ctx = this.audioCtx;
@@ -449,6 +605,7 @@ export class Motor {
       this.vy -= GRAVIDADE * 0.28 * dt;
       if (this.vy < -2.2) this.vy = -2.2;
       if (this.entrada.salto) this.vy = 3.4;
+      if (this.entrada.descer) this.vy = -3.0; // mergulhar (móvel: botão MERGULHAR)
     } else {
       this.vy -= GRAVIDADE * dt;
       if (this.vy < -40) this.vy = -40;
@@ -545,16 +702,16 @@ export class Motor {
     const cx = Math.floor(this.px / CHUNK), cz = Math.floor(this.pz / CHUNK);
     // garantir à volta
     let orcamento = 2;
-    for (let r = 0; r <= RAIO_RENDER && orcamento > 0; r++) {
+    for (let r = 0; r <= this.raioRender && orcamento > 0; r++) {
       for (let dx = -r; dx <= r && orcamento > 0; dx++) for (let dz = -r; dz <= r && orcamento > 0; dz++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
         const c = this.mundo.garantir(cx + dx, cz + dz);
         if (c.sujo || !c.malha) { this.mundo.construirMalha(c); orcamento--; }
       }
     }
-    // descarregar longe
+    // descartar longe
     for (const [k, c] of this.mundo.chunks) {
-      if (Math.max(Math.abs(c.cx - cx), Math.abs(c.cz - cz)) > RAIO_RENDER + 2) {
+      if (Math.max(Math.abs(c.cx - cx), Math.abs(c.cz - cz)) > this.raioRender + 2) {
         for (const m of [c.malha, c.malhaAgua]) if (m) { this.mundo.grupo.remove(m); m.geometry.dispose(); }
         this.mundo.chunks.delete(k);
       }
@@ -574,6 +731,11 @@ export class Motor {
       const antes = this.dia;
       this.dia = Math.floor(this.tempo / DIA_SEGUNDOS) + 1;
       if (antes !== this.dia && !this.primeiraNoiteFeita && this.horaFrac < 0.5) { this.primeiraNoiteFeita = true; this.conquista("primeira_noite"); }
+      // aviso do anoitecer (1× por dia)
+      if (this.horaFrac > 0.42 && this.horaFrac < 0.5 && this.avisoNoiteDia !== this.dia) {
+        this.avisoNoiteDia = this.dia;
+        this.avisos.push({ texto: "A noite está a chegar — abriga-te!", tipo: "info", t: 3.5 });
+      }
 
       this.fisica(dt);
       this.sobrevivencia(dt);
@@ -591,8 +753,12 @@ export class Motor {
       if (this.gestor.explosaoPendente) {
         const e = this.gestor.explosaoPendente;
         this.gestor.explosaoPendente = null;
-        this.mundo.explodir(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), this.rnd);
+        const removidos = this.mundo.explodir(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), this.rnd);
         this.som("explosao");
+        for (let i = 0; i < removidos.length && i < 30; i += 2) {
+          const [rx, ry, rz] = removidos[i];
+          this.spawnParticulas(rx + 0.5, ry + 0.5, rz + 0.5, "#5a5a5a", 4, 2.2);
+        }
         const d = Math.hypot(this.px - e.x, this.py - e.y, this.pz - e.z);
         if (d < RAIO_EXPLOSAO + 2) {
           this.receberDano(Math.round((1 - d / (RAIO_EXPLOSAO + 2)) * 14), "explosao");
@@ -601,8 +767,13 @@ export class Motor {
       }
     }
 
-    this.atualizarCeu();
+    if (this.swingT > 0) this.swingT -= dt;
+    this.atualizarCeu(dt);
     this.atualizarChunks();
+    this.atualizarParticulas(dt);
+    // luzes das tochas colocadas (reavaliar ~3×/s)
+    this.tochaTimer += dt;
+    if (this.tochaTimer > 0.33) { this.tochaTimer = 0; this.atualizarLuzesTochas(); }
 
     // sibilo do estourador em fusão
     for (const mob of this.gestor.mobs) {
@@ -658,6 +829,33 @@ export class Motor {
         } else if (!s) { (this as any)._maoId = 0; this.avatar.mao.clear(); }
       }
     }
+    // mão + item em 1ª pessoa (presa à câmara, balança e golpeia)
+    if (this.fase === "jogando" && this.primeiraPessoa) {
+      const sel2 = this.inv.selecionado();
+      if ((sel2?.id ?? 0) !== this.maoFPId) {
+        this.maoFPId = sel2?.id ?? 0;
+        this.maoFP.clear();
+        if (sel2) {
+          const item2 = criarItemMao(sel2.id, CORES[sel2.id]);
+          item2.scale.setScalar(sel2.id < 100 ? 1.2 : 1.05);
+          this.maoFP.add(item2);
+        }
+      }
+      this.maoFP.visible = !!sel2;
+      if (sel2) {
+        const aBalanca = Math.sin(this.animacaoAndar * 6) * 0.022;
+        const baseX = 0.44, baseY = -0.42 + aBalanca, baseZ = -0.75;
+        this.maoFP.position.set(baseX, baseY, baseZ);
+        this.maoFP.rotation.set(-0.2, 0.5, 0.08);
+        if (this.swingT > 0) {
+          const g = 1 - this.swingT / 0.3; // 0→1 durante o golpe
+          this.maoFP.rotation.x = -0.25 - Math.sin(g * Math.PI) * 1.15;
+          this.maoFP.position.z = baseZ - Math.sin(g * Math.PI) * 0.18;
+        } else if (this.entrada.minerando) {
+          this.maoFP.rotation.x = -0.25 - Math.abs(Math.sin(performance.now() / 110)) * 0.55;
+        }
+      }
+    } else this.maoFP.visible = false;
     // realce do bloco visado + progresso
     if (this.mira && this.fase === "jogando") {
       this.realce.visible = true;
@@ -690,6 +888,7 @@ export class Motor {
       avisos: this.avisos.map((a) => ({ texto: a.texto, tipo: a.tipo })),
       ctaWhats: this.ctaWhats,
       primeiraPessoa: this.primeiraPessoa,
+      naAgua: this.naAgua, voando: this.modo === "criativo" && this.criativoVoar,
       blocosQuebrados: this.blocosQuebrados, blocosColocados: this.blocosColocados,
       passos: Math.floor(this.animacaoAndar),
     };

@@ -301,6 +301,9 @@ async function main() {
   ok("dano letal → fase morto", c.fase === "morto");
   ok("causa da morte em português", c.causaMorte.length > 3);
   ok("ecrã de morte visível", await page.getByTestId("bc-morto").isVisible());
+  // a morte liberta o pointer lock (como carregar Esc) — o cursor volta para o RENASCER
+  await page.evaluate(() => { try { document.exitPointerLock(); } catch { /* ignore */ } });
+  await page.waitForTimeout(150);
   await page.getByTestId("bc-renascer").click();
   await pump(2);
   c = await cap();
@@ -453,8 +456,124 @@ async function main() {
   ok("conquista DIAMANTE dá 25 créditos", c.creditos >= 25);
   ok("CTA WhatsApp aparece com ≥25 créditos", c.ctaWhats === true);
 
-  // ═══ 16. ERROS DE CONSOLA ═══
-  console.log("\n── 16. Higiene ──");
+  // ═══ 16. NOVIDADES: pausa real, tochas, partículas, mochila, som ═══
+  console.log("\n── 16. Pausa real, tochas, partículas, mochila ──");
+  await arena();
+
+  // pausa real: motor congelado
+  await page.evaluate(() => { (window).__blocos.pausar(true); });
+  ok("pausa congela o motor (tempo não avança)", await page.evaluate(() => {
+    const m = (window).__blocos.motor;
+    const t0 = m.tempo; for (let i = 0; i < 20; i++) m.passo(0.1);
+    return m.tempo === t0;
+  }));
+  await page.evaluate(() => { (window).__blocos.pausar(false); });
+  ok("sair da pausa retoma o tempo", await page.evaluate(() => {
+    const m = (window).__blocos.motor;
+    const t0 = m.tempo; for (let i = 0; i < 5; i++) m.passo(0.1); return m.tempo > t0;
+  }));
+
+  // tochas colocadas iluminam
+  const tocha = await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor;
+    const fx = Math.floor(m.px) + 2, fz = Math.floor(m.pz);
+    let fy = 79; while (fy > 1 && !m.mundo.solido(fx, fy - 1, fz)) fy--;
+    m.mundo.setBloco(fx, fy, fz, 17); // TOCHA
+    for (let i = 0; i < 20; i++) m.passo(0.1); // ativa o timer das luzes
+    return { tochas: m.mundo.tochas.size, luzes: m.luzesTocha.filter((l) => l.intensity > 0).length };
+  });
+  ok("tocha colocada registada no mundo", tocha.tochas >= 1);
+  ok("tocha colocada acende luz real", tocha.luzes >= 1);
+
+  // partículas ao quebrar
+  const particulas = await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor;
+    const fx = Math.floor(m.px), fz = Math.floor(m.pz) - 2;
+    let fy = 79; while (fy > 1 && !m.mundo.solido(fx, fy - 1, fz)) fy--;
+    m.mundo.setBloco(fx, fy, fz, 2); // TERRA à frente
+    m.yaw = 0; m.pitch = -0.45;
+    b.minerarHold(true);
+    let pico = 0;
+    for (let i = 0; i < 40; i++) { m.passo(0.05); pico = Math.max(pico, m.particulasAtivas()); }
+    b.minerarHold(false);
+    return pico;
+  });
+  ok("quebrar bloco solta partículas LEGO", particulas > 0);
+
+  // mochila: mover para hotbar
+  const mochila = await page.evaluate(() => {
+    const b = (window).__blocos, inv = b.motor.inv;
+    b.limparInv();
+    inv.slots[10] = { id: 9, qtd: 5 }; // tábuas na mochila
+    const movido = b.moverParaHotbar(10);
+    const naHotbar = inv.slots.slice(0, 9).some((s) => s && s.id === 9);
+    // hotbar cheia: troca com o selecionado
+    for (let j = 0; j < 9; j++) inv.slots[j] = { id: 3, qtd: 1 };
+    inv.slots[11] = { id: 107, qtd: 2 };
+    b.selecionar(0);
+    b.moverParaHotbar(11);
+    const trocaOk = inv.slots[0]?.id === 107 && inv.slots[11]?.id === 3;
+    return { movido, naHotbar, trocaOk };
+  });
+  ok("item da mochila passa à hotbar", mochila.movido && mochila.naHotbar);
+  ok("hotbar cheia: item troca com o selecionado", mochila.trocaOk);
+
+  // som on/off persistente
+  const som = await page.evaluate(() => {
+    const b = (window).__blocos;
+    const antes = b.estadoSom();
+    b.alternarSom();
+    const depois = b.estadoSom();
+    const guardado = localStorage.getItem("bateu_blocos_som");
+    b.alternarSom(); // volta ao original
+    return { antes, depois, guardado };
+  });
+  ok("som liga/desliga e persiste", som.depois === !som.antes && som.guardado === (som.depois ? "1" : "0"));
+
+  // distância de render
+  ok("distância de render 2..4 persistida", await page.evaluate(() => {
+    const b = (window).__blocos;
+    b.definirRaio(4);
+    const r4 = b.raio() === 4 && localStorage.getItem("bateu_blocos_dist") === "4";
+    b.definirRaio(99);
+    const clamp = b.raio() === 4;
+    b.definirRaio(3);
+    return r4 && clamp;
+  }));
+
+  // aviso do anoitecer
+  await page.evaluate(() => { (window).__blocos.definirHora(0.44); });
+  await pump(3);
+  c = await cap();
+  ok("aviso 'A noite está a chegar' aparece", c.avisos.some((a) => a.texto.includes("noite")));
+
+  // flash de dano na UI
+  await page.evaluate(() => { const b = (window).__blocos; b.definirVida(10); b.motor.receberDano(2, "queda"); });
+  await pump(2);
+  ok("flash vermelho de dano na UI", await aguardar(() => page.getByTestId("bc-dano").isVisible().catch(() => false), 8, "flash de dano"));
+
+  // modo do save (CONTINUAR usa o modo certo)
+  ok("modoSave devolve o modo guardado", await page.evaluate(() => {
+    const b = (window).__blocos, m = b.motor;
+    const modoOriginal = m.modo;
+    m.modo = "criativo"; b.guardar();
+    const criativo = b.modoSave() === "criativo";
+    m.modo = modoOriginal; b.guardar();
+    return criativo;
+  }));
+
+  // céu: sol, lua, estrelas e nuvens existem
+  ok("céu com sol, lua, estrelas e nuvens", await page.evaluate(() => {
+    const m = (window).__blocos.motor;
+    return !!m.solDisco && !!m.luaDisco && !!m.estrelas && !!m.nuvens && m.nuvens.children.length > 0;
+  }));
+
+  // captura com novos campos
+  c = await cap();
+  ok("captura inclui naAgua e voando", typeof c.naAgua === "boolean" && typeof c.voando === "boolean");
+
+  // ═══ 17. ERROS DE CONSOLA ═══
+  console.log("\n── 17. Higiene ──");
   const errosReais = consoleErrors.filter((e) => !NOISE.some((n) => e.includes(n)));
   ok(`sem erros de consola (${errosReais.length})`, errosReais.length === 0);
   if (errosReais.length) console.log("   →", errosReais.slice(0, 4).join("\n   → "));

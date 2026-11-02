@@ -59,6 +59,21 @@ export class Inventario {
   }
 
   selecionado(): Slot | null { return this.slots[this.selecao]; }
+
+  /** Move um slot da mochila (9–35) para a hotbar (0–8): 1.ª vaga, senão troca com o selecionado */
+  moverParaHotbar(i: number): boolean {
+    if (i < 9 || i > 35) return false;
+    const s = this.slots[i];
+    if (!s) return false;
+    for (let j = 0; j < 9; j++) {
+      if (!this.slots[j]) { this.slots[j] = s; this.slots[i] = null; return true; }
+    }
+    const j = this.selecao;
+    const troca = this.slots[j];
+    this.slots[j] = s; this.slots[i] = troca ?? null;
+    return true;
+  }
+
   consumirSelecionado(n = 1) {
     const s = this.slots[this.selecao];
     if (!s) return;

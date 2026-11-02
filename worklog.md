@@ -1,4 +1,32 @@
 ---
+Task ID: v27-bateucraft-completo
+Agent: Super Z (main)
+Task: v27 — BateuCraft completo: 5 bugs bloqueantes corrigidos (pausa que não pausava, comer impossível, rato sem pointer lock, CONTINUAR ignorava o modo, slots 9–35 inacessíveis) + luz de tochas, céu, partículas, mão em 1ª pessoa, controlos móveis novos
+
+Work Log:
+- AUDITORIA de completude (revisão linha a linha do motor + UI): 5 falhas que tornavam o jogo incompleto — (1) o modal PAUSA nunca punha `m.pausado = true` (mobs continuavam a atacar com o ecrã de pausa aberto); (2) COMER era INACESSÍVEL no jogo real (comerPedido só era ativado pelo gancho de teste — sem tecla, sem botão de rato, sem botão móvel); (3) a ajuda prometia «clica no ecrã para capturar» mas NENHUMA linha chamava requestPointerLock — o rato não olhava no desktop; (4) CONTINUAR MUNDO arrancava sempre em sobrevivência mesmo com save criativo; (5) slots 9–35 da mochila contavam para receitas mas eram inacessíveis (impossível segurar/usar)
+- FIX pausa real: abrirPausa/fecharPausa sincronizam `m.pausado` com o modal; Escape abre pausa só em fase "jogando" (morte liberta o rato sem abrir pausa); fechar qualquer modal despausa (fecharModal) — antes, COMO JOGAR aberto da pausa congelava o jogo sem modal
+- FIX comer: botão direito com comida na mão come (senão coloca); botão móvel COMER aparece contextualmente quando o slot selecionado é comida (ITENS[id].comida)
+- FIX pointer lock: capturarRato() no clique do canvas + 80ms após iniciar (desktop); modais e morte libertam o rato (exitPointerLock); descoberta E2E: com pointer lock ativo, cliques sintéticos são retargetados — o clique no RENASCER falhava «bc-morto intercepts» → a morte agora liberta o rato (UX real) e o teste libera antes de clicar
+- FIX continuar: novo Motor.lerModoSave() lê o modo do save; CONTINUAR usa o modo guardado
+- FIX mochila: novo Inventario.moverParaHotbar(i) — 1.ª vaga da hotbar, senão troca com o selecionado; tocar num slot da mochila (≥9) leva-o à hotbar (slots com item destacados a âmbar)
+- LUZ REAL DE TOCHAS: Mundo.tochas (Set mantido no setBloco — colocar/quebrar/explosão) + 6 PointLights no motor que seguem as tochas mais próximas (reavaliadas 3×/s); tochas do save reconstruídas das edições na carga; tocha na mão continua a iluminar
+- CÉU: sol e lua (sprites em arco celeste real — nascer f=0, meio-dia f=0.25, pôr-do-sol f=0.5, opacidade esvai no horizonte), 320 estrelas com fade ao anoitecer + rotação lenta, 9 nuvens LEGO com deriva e embrulho à volta do jogador
+- PARTÍCULAS: pool de 90 cubinhos LEGO — quebra de bloco solta 10 partículas da cor do bloco, explosão do Estourador solta até 60 (força 2.2), gravidade + escala decrescente
+- MÃO EM 1ª PESSOA: grupo preso à câmara (cena.add(camara)), item via criarItemMao (bloco 1.2×, ferramenta 1.05×), balanço ao andar, golpe ao atacar/minerar
+- CONTROLOS MÓVEIS NOVOS: VOAR (criativo, com estado ativo azul), DESCER (MERGULHAR na água / descer em voo — engine: entrada.descer na água = vy −3.0); tecla F agora alterna voo de forma correta (antes o toggle vivia no sincronizar e realternava ao premir outras teclas com F segurado)
+- UI/UX: vinheta vermelha de dano (radial, 0.45s, detetada por diferença de vida), toast com o nome do item ao mudar de seleção (1.4s), modal CONQUISTAS (n/7 + créditos + descrições, acessível da pausa), SOM ON/OFF persistente (bateu_blocos_som), DISTÂNCIA PERTO/NORMAL/LONGE (raioRender 2/3/4, persistente, clamped), toast «Mundo guardado ✓» no guardar manual, aviso «A noite está a chegar» 1×/dia, ajuda atualizada (comer, voar/mergulhar, tochas, mochila)
+- Hooks E2E novos: pausar/alternarSom/estadoSom/definirRaio/raio/tochas/luzesAtivas/particulas/moverParaHotbar/modoSave
+- test-blocos.mjs: nova secção 16 com 14 asserts (pausa congela o tempo, tocha acende luz real, partículas > 0, mochila→hotbar com troca, som persiste, distância persistida com clamp, aviso do anoitecer, flash de dano, modoSave, céu completo, captura.naAgua/voando) — suite 77→91 asserts
+- VISUAL verificado por screenshot (menu, dia, noite+tochas, mobile criativo): mão inicialmente 2.1× era 37% do ecrã → 1.2×/1.05× (~20%); sol/lua com arco corrigido (o ângulo da luz não é arco celeste — o sol apareceria à noite)
+- REGRESSÕES: test-blocos 91/91 ✅, test-stage-games 38/38 ✅, test-gamekit 10/10 ✅; tsc 0 erros; smoke mobile sem pageerrors (VOAR alterna, DESCER aparece em voo)
+
+Stage Summary:
+- O BateuCraft passa de «demo jogável» a jogo completo: sobrevivência com pausa honesta, comer funcional, rato que olha no desktop, mochila 100% acessível, mundo noturno com estrelas e tochas que iluminam de verdade, feedback visual de dano e de quebra — 91 asserts E2E verdes, zero dados inventados
+- Motor 743→870 linhas; UI 603→766 linhas; regressões verdes (stage-games 38, gamekit 10)
+
+---
+---
 Task ID: v26.2-web-perf
 Agent: Super Z (main)
 Task: v26.2 — Foco web: config regional SWR (deep-links deixam de esperar 1.2s), warm de chunks em deep-link, dedup de pedidos repetidos (tournaments 3×→1×, counts 2×→1×, lives 2×→1×)

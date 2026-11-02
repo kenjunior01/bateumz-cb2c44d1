@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { initBootSelfHeal } from "./lib/self-heal";
+import { warmRouteChunkFor } from "./lib/routePrefetch";
 import App from "./App.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import "./index.css";
@@ -35,6 +36,9 @@ const Root = () => {
     // quando o loading sai, a home já está descarregada (na rede, é puro
     // paralelismo; em dev, esconde a transformação on-demand do vite).
     import("./pages/Index.tsx").catch(() => {});
+    // v26.2: deep-link? aquece TAMBÉM o chunk da rota actual em paralelo —
+    // antes, o chunk só começava a descarregar DEPOIS do ecrã de marca.
+    warmRouteChunkFor(window.location.pathname);
     // O ecrã de loading é marca, não prisão — 0.9s e a app arranca.
     const timer = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(timer);

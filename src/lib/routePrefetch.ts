@@ -89,3 +89,21 @@ export function initRoutePrefetch() {
   // mobile: o toque já leva ao clique; aquecer no primeiro toque não custa nada
   document.addEventListener("touchstart", onFocusIn, { passive: true });
 }
+
+/**
+ * v26.2 Web Excellence — aquece o chunk da rota ACTUAL durante o ecrã de marca.
+ *
+ * O main.tsx só aquecia a home; quem chegava por deep-link (/desporto,
+ * /jogos-gratis, partilha nas redes) via o ecrã de marca e SÓ DEPOIS começava a
+ * descarregar o chunk da rota — serializado. Chamado no arranque, este helper
+ * resolve o chunk do pathname corrente em paralelo com a marca.
+ */
+export function warmRouteChunkFor(pathname: string) {
+  if (!pathname || pathname === "/") return; // a home já é aquecida pelo main.tsx
+  for (const [re, load] of ROUTE_CHUNKS) {
+    if (re.test(pathname)) {
+      load().catch(() => { /* silencioso: o lazy() volta a pedir */ });
+      return;
+    }
+  }
+}

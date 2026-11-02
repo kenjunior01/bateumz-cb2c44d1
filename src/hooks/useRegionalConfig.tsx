@@ -244,16 +244,63 @@ export const applyRegionalBranding = (branding: RegionalBranding) => {
 };
 
 /**
+ * v26.2 Web Excellence — cache local da config regional (stale-while-revalidate).
+ *
+ * Medido antes de implementar: um deep-link demorava ~2.9s a mostrar conteúdo
+ * TANTO na 1.ª visita COMO na 2.ª — o gate do AppShell esperava sempre a config
+ * (até ao teto de 1.2s) porque loadConfig repetia o pipeline completo
+ * (region + regional_branding + regional_settings) em CADA carregamento.
+ *
+ * Agora: na 2.ª visita a config hidrata do localStorage DE IMEDIATO
+ * (loading=false no 1.º render — zero espera, zero flash de região errada) e a
+ * revalidação corre em segundo plano. A cache só é aceite se tiver a forma
+ * esperada (country_code + branding + settings) — dados a meio corrompidos são
+ * ignorados, sem invenção: o fallback é o pipeline normal.
+ */
+const CONFIG_CACHE_KEY = 'bateu_config_cache';
+
+function isValidConfig(c: any): c is RegionalConfig {
+  return !!c && typeof c === 'object'
+    && typeof c.country_code === 'string'
+    && !!c.branding && typeof c.branding === 'object'
+    && !!c.settings && typeof c.settings === 'object';
+}
+
+let bootCache: RegionalConfig | null | undefined;
+
+/** Lê (1× por sessão) a config regional guardada no carregamento anterior. */
+function readBootCache(): RegionalConfig | null {
+  if (bootCache !== undefined) return bootCache;
+  bootCache = null;
+  try {
+    const raw = localStorage.getItem(CONFIG_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (isValidConfig(parsed)) bootCache = parsed;
+    }
+  } catch { /* cache corrompida ou storage indisponível — pipeline normal */ }
+  return bootCache;
+}
+
+function writeConfigCache(config: RegionalConfig) {
+  try { localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config)); } catch { /* quota */ }
+}
+
+/**
  * Hook to use regional configuration
  */
 export const useRegionalConfig = () => {
-  const [config, setConfig] = useState<RegionalConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  // v26.2: hidratação síncrona a partir da cache do carregamento anterior.
+  const cached = readBootCache();
+  const [config, setConfig] = useState<RegionalConfig | null>(cached);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
-  const loadConfig = async () => {
+  const loadConfig = async (opts?: { background?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.background) {
+        setLoading(true);
+      }
       setError(null);
 
       const countryCode = await detectUserRegion();
@@ -262,6 +309,7 @@ export const useRegionalConfig = () => {
       const regionalConfig = await fetchRegionalConfig(countryCode);
       if (regionalConfig) {
         setConfig(regionalConfig);
+        writeConfigCache(regionalConfig);
         applyRegionalBranding(regionalConfig.branding);
       } else {
         setError(`Could not load config for region: ${countryCode}`);
@@ -275,7 +323,15 @@ export const useRegionalConfig = () => {
   };
 
   useEffect(() => {
-    loadConfig();
+    if (cached) {
+      // Marca e favicon da região aplicados antes do 1.º paint útil; a rede
+      // revalida em segundo plano (stale-while-revalidate).
+      applyRegionalBranding(cached.branding);
+      loadConfig({ background: true });
+    } else {
+      loadConfig();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshConfig = async () => {

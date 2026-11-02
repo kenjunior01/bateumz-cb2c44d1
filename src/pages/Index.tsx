@@ -9,6 +9,8 @@ import StoriesCarousel from "@/components/StoriesCarousel";
 import DailyMissions from "@/components/engagement/DailyMissions";
 import Footer from "@/components/Footer";
 import { getTournaments, getTournamentStandings } from "@/lib/tournaments";
+// v26.2: counts partilhados (stats e ticker leem o MESMO count 1× só da rede)
+import { countRows } from "@/lib/counts";
 const WinnersSection = lazy(() => import("@/components/WinnersSection").then(m => ({ default: m.default })));
 const TrustSignals = lazy(() => import("@/components/TrustSignals").then(m => ({ default: m.default })));
 const PopularLeaderboard = lazy(() => import("@/components/PopularLeaderboard").then(m => ({ default: m.default })));
@@ -281,12 +283,14 @@ export default function Index() {
       try {
         const [usersRes, rafflesRes, regionsRes] = await Promise.all([
           (supabase as any).from("profiles_public").select("user_id", { count: "exact", head: true }),
-          (supabase as any).from("raffles").select("id", { count: "exact", head: true }).eq("status", "active"),
+          // v26.2: counts partilhados — o ticker em baixo lê os MESMOS valores;
+          // a rede vê 1 pedido por tabela/30s em vez de 2 em cada montagem
+          countRows("raffles", { col: "status", val: "active" }),
           (supabase as any).from("regions").select("id", { count: "exact", head: true }),
         ]);
         setRealStats({
           users: typeof usersRes.count === "number" ? usersRes.count : 0,
-          raffles: typeof rafflesRes.count === "number" ? rafflesRes.count : 0,
+          raffles: typeof rafflesRes === "number" ? rafflesRes : 0,
           regions: typeof regionsRes.count === "number" ? regionsRes.count : 0,
         });
       } catch { /* silent */ }
@@ -311,8 +315,8 @@ export default function Index() {
         const [winP, ending, activeCnt, livesCnt] = await Promise.all([
           supabase.from("participants").select("user_id,raffle_id,ticket_number,created_at").eq("status", "winner").order("created_at", { ascending: false }).limit(2),
           supabase.from("raffles").select("id,title,end_date").eq("status", "active").not("end_date", "is", null).order("end_date", { ascending: true }).limit(2),
-          supabase.from("raffles").select("id", { count: "exact", head: true }).eq("status", "active"),
-          supabase.from("live_sessions").select("*", { count: "exact", head: true }).eq("status", "active"),
+          countRows("raffles", { col: "status", val: "active" }),
+          countRows("live_sessions", { col: "status", val: "active" }),
         ]);
         const items: TickerItem[] = [];
         if (winP.data && winP.data.length > 0) {
@@ -330,8 +334,8 @@ export default function Index() {
           });
         }
         ((ending.data || []) as any[]).forEach((r) => { if (r.title) items.push({ type: "game", text: `Acaba em breve: ${r.title}`, color: PURPLE }); });
-        if (typeof activeCnt.count === "number" && activeCnt.count > 0) items.push({ type: "win", text: `${activeCnt.count} ${activeCnt.count === 1 ? "sorteio ativo" : "sorteios ativos"} agora`, color: GOLD });
-        if (typeof livesCnt.count === "number" && livesCnt.count > 0) items.push({ type: "live", text: `${livesCnt.count} ${livesCnt.count === 1 ? "live ao vivo" : "lives ao vivo"} agora`, color: CYAN });
+        if (typeof activeCnt === "number" && activeCnt > 0) items.push({ type: "win", text: `${activeCnt} ${activeCnt === 1 ? "sorteio ativo" : "sorteios ativos"} agora`, color: GOLD });
+        if (typeof livesCnt === "number" && livesCnt > 0) items.push({ type: "live", text: `${livesCnt} ${livesCnt === 1 ? "live ao vivo" : "lives ao vivo"} agora`, color: CYAN });
         setTickerItems([...items, ...TICKER_FALLBACK]);
       } catch { setTickerItems(TICKER_FALLBACK); }
 

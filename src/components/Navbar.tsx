@@ -21,6 +21,8 @@ import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { abrirBuscaGlobal } from "@/components/search/GlobalSearch";
 import bateuLogo from "@/assets/bateu-logo.png";
+// v26.2: counts partilhados (1 pedido/30s por tabela+filtro em toda a app)
+import { countRows } from "@/lib/counts";
 
 // supabase is used directly as (supabase as any) below
 
@@ -115,16 +117,11 @@ const Navbar = () => {
   // Live activity count — real-time pulse of how many streams are active right now
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const { count } = await (supabase as any)
-          .from("live_sessions")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "active");
-        if (mounted) setLiveCount(count || 0);
-      } catch {
-        if (mounted) setLiveCount(0);
-      }
+    // v26.2: count partilhado via lib/counts (TTL 30s, dedup) — o Interval e o
+    // realtime apenas relêem; a rede vê ~1 pedido/30s para TODA a app.
+    const load = () => {
+      countRows("live_sessions", { col: "status", val: "active" })
+        .then((n) => { if (mounted) setLiveCount(n ?? 0); });
     };
     load();
     const ch = (supabase as any)

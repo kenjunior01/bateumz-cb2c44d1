@@ -17,6 +17,8 @@ import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import bateuLogo from "@/assets/bateu-logo.png";
+// v26.2: contador de lives partilhado (1 pedido por app em vez de 1 por componente)
+import { getActiveLiveCount, subscribeActiveLiveCount } from "@/lib/liveCount";
 
 type NavItem = {
   icon: typeof Home;
@@ -193,17 +195,11 @@ export default function MobileMenuDrawer() {
   useEffect(() => { setMenuOpen(false); }, [location.pathname, setMenuOpen]);
 
   useEffect(() => {
-    const loadLive = async () => {
-      const { count } = await (supabase as any)
-        .from("lives").select("id", { count: "exact", head: true }).eq("status", "active");
-      setLiveCount(count || 0);
-    };
-    loadLive();
-    const ch = supabase
-      .channel("mob-menu-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "lives" }, loadLive)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // v26.2: lê do getter partilhado (TTL 30s, dedup) — sem pedido próprio
+    let mounted = true;
+    getActiveLiveCount().then((n) => { if (mounted) setLiveCount(n ?? 0); });
+    const unsub = subscribeActiveLiveCount((n) => { if (mounted) setLiveCount(n ?? 0); }, { realtime: true });
+    return () => { mounted = false; unsub(); };
   }, []);
 
   useEffect(() => {

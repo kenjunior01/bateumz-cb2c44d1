@@ -2,6 +2,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 const sb: any = supabase;
 
+// v26.2 — cache curta de leitura (60s) + dedup de pedidos em voo, por status.
+// FALHAS também ficam em cache (negativa, 15s): a tabela pode não existir no
+// projecto remoto (404/PGRST205) — sem isto, CADA chamante repetia o pedido
+// falhado à rede (medido: 3× na home). O erro volta a ser lançado ao chamante
+// igualzinho — só deixa de custar um pedido novo.
+const TOURNAMENTS_TTL_MS = 60_000;
+const TOURNAMENTS_ERROR_TTL_MS = 15_000;
+const tournamentsCache = new Map<string, { at: number; data: Tournament[] }>();
+const tournamentsErrorCache = new Map<string, { at: number; error: unknown }>();
+const tournamentsInFlight = new Map<string, Promise<Tournament[]>>();
+/** Testes E2E: invalida a cache explicitamente (nunca usado em produção). */
+export function __invalidateTournamentsCache() {
+  tournamentsCache.clear();
+  tournamentsErrorCache.clear();
+  tournamentsInFlight.clear();
+}
+
 // ===== Types =====
 export type TournamentStatus = "draft" | "active" | "completed";
 
@@ -60,18 +77,45 @@ export async function createTournament(
 export async function getTournaments(
   status?: TournamentStatus
 ): Promise<Tournament[]> {
-  let query = sb
-    .from("tournaments")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // v26.2 Web Excellence — cache curta partilhada por status (60s + in-flight
+  // dedup). Medido: a home pedia a MESMA lista "active" 3× em simultâneo
+  // (Index + EsportsRollUp + GamesTournamentsRollUp), cada componente por sua
+  // conta. Dados continuam reais; apenas 1 pedido por minuto serve todos.
+  const key = status ?? "__all";
+  const now = Date.now();
+  const cached = tournamentsCache.get(key);
+  if (cached && now - cached.at < TOURNAMENTS_TTL_MS) return cached.data;
+  const cachedErr = tournamentsErrorCache.get(key);
+  if (cachedErr && now - cachedErr.at < TOURNAMENTS_ERROR_TTL_MS) throw cachedErr.error;
+  const inFlight = tournamentsInFlight.get(key);
+  if (inFlight) return inFlight;
 
-  if (status) {
-    query = query.eq("status", status);
+  const exec = (async () => {
+    let query = sb
+      .from("tournaments")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      tournamentsErrorCache.set(key, { at: Date.now(), error });
+      throw error;
+    }
+    const rows = (data ?? []) as Tournament[];
+    tournamentsCache.set(key, { at: Date.now(), data: rows });
+    return rows;
+  })();
+
+  tournamentsInFlight.set(key, exec);
+  try {
+    return await exec;
+  } finally {
+    tournamentsInFlight.delete(key);
   }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as Tournament[];
 }
 
 export async function getTournamentById(id: string): Promise<Tournament | null> {

@@ -1,4 +1,28 @@
 ---
+Task ID: v26.2-web-perf
+Agent: Super Z (main)
+Task: v26.2 — Foco web: config regional SWR (deep-links deixam de esperar 1.2s), warm de chunks em deep-link, dedup de pedidos repetidos (tournaments 3×→1×, counts 2×→1×, lives 2×→1×)
+
+Work Log:
+- AUDITORIA (Playwright, 13 rotas × desktop+mobile + probe de rede): deep-link demorava ~2.9s a mostrar conteúdo TANTO na 1.ª COMO na 2.ª visita — a cache da região poupava só o geo-IP; home disparava 45 pedidos Supabase/geo com duplicados (tournaments ×3, raffles-count ×2, live_sessions ×2, lives-head ×2, participants ×2)
+- CAUSA 1 (config): useRegionalConfig repetia o pipeline completo (region + regional_branding + regional_settings) em CADA carregamento e o AppShell esperava (teto 1.2s) — mesmo com bateu_region/bateu_branding em cache
+- FIX SWR: nova cache bateu_config_cache (config completa validada por forma: country_code+branding+settings) — na 2.ª visita hidrata SÍNCRONAMENTE no 1.º render (loading=false imediato, marca aplicada antes do paint útil) e revalida em 2.º plano; cache corrompida é ignorada (fallback = pipeline normal, sem invenção); refreshConfig manual continua forçando reload
+- CAUSA 2 (deep-link frio): main.tsx só aquecia o chunk da home — quem chegava por /desporto etc. só começava a descarregar o chunk DEPOIS do ecrã de marca
+- FIX: warmRouteChunkFor(pathname) em routePrefetch.ts (reaproveita o mapa ROUTE_CHUNKS do prefetch de hover) — o chunk da rota actual descarrega EM PARALELO com o ecrã de marca
+- CAUSA 3 (pedidos repetidos): 3 componentes pedia getTournaments("active") independentemente (Index + EsportsRollUp + GamesTournamentsRollUp); Index pedia os MESMOS counts 2× (stats + ticker); Navbar pedia live_sessions-count outra vez; MobileTopBar + MobileMenuDrawer pedia lives-count em paralelo (ambos montados, um visível só em mobile)
+- FIX caches partilhadas: getTournaments com cache 60s + in-flight dedup + CACHE NEGATIVA de falhas 15s (a tabela pode não existir no remoto → 404/PGRST205; antes do fix o `throw` ANTES de gravar a cache fazia cada chamante repetir o pedido falhado); novo lib/counts.ts (countRows por tabela+filtro, TTL 30s, devolve null honesto quando a fonte falha); novo lib/liveCount.ts (contador de lives partilhado + 1 canal realtime global que invalida a cache em vez de N canais por componente)
+- Consumidores migrados: Index (stats+ticker via countRows), Navbar (live_sessions via countRows), MobileTopBar + MobileMenuDrawer (via getActiveLiveCount/subscribeActiveLiveCount)
+- MEDIDO DEPOIS (mesma metodologia, GET-only para excluir preflight OPTIONS): tournaments 3→1 na home; raffles-count/live_sessions-count/lives-head ≤1; deep-link /desporto com conteúdo em ~2.2-2.4s em dev (dev ainda é dominado pela transform on-demand do vite; em produção os chunks são estáticos e o warm paralelo vale mais); clique→/desporto 389-432ms
+- test-web-v262.mjs NOVO (11 asserts): cache escrita e com forma válida, conteúdo de deep-link <9s (dev), chunk pedido nos primeiros 1600ms, dedups ≤1, região/branding persistidos, navegação client-side <3s
+- REGRESSÕES: 15 suítes verdes — web-v262 11/11, web-excellence 13/13, apis-publicas 30/30, rea-plataforma 33/33, home-dinamica 22/22, desporto 14/14, leiloes-esports 59/59, arena 25/25, visual-excellence 28/28, stage-games 38/38, gamekit 10/10, ecosystem 33/33, blocos 77/77, stories-plans 14/14, marketplace 57/57 ≈ 477 asserts
+- tsc 0 erros; build produção OK (dist 15MB; avisos «overwrites» pré-existentes do plugin de compressão)
+
+Stage Summary:
+- Web com boot honesto e barato: quem regressa não espera pela config (hidratação local + revalidação), deep-links aquecem o chunk certo durante a marca, e a rede vê ~metade dos pedidos repetidos que via antes — sem um único dado inventado (null = indisponível, erro continua a ser erro, só custa menos)
+- Total v26+v26.1+v26.2: 15 suítes verdes (≈477 asserts), tsc 0 erros
+
+---
+---
 Task ID: v26.1-web-ux
 Agent: Super Z (main)
 Task: v26.1 — UX web: scroll restoration + foco SPA + investigação profunda do skip-link

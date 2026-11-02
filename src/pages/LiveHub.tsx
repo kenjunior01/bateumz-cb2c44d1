@@ -94,6 +94,8 @@ const MinesGame = lazy(() => import("@/components/livegames/MinesGame"));
 const PlinkoGame = lazy(() => import("@/components/livegames/PlinkoGame"));
 const CrashGame = lazy(() => import("@/components/livegames/CrashGame"));
 const HiLoGame = lazy(() => import("@/components/livegames/HiLoGame"));
+const BlackjackGame = lazy(() => import("@/components/livegames/BlackjackGame"));
+const PokemonGuess = lazy(() => import("@/components/livegames/PokemonGuess"));
 const RaspadinhaGame = lazy(() => import("@/components/livegames/RaspadinhaGame"));
 const KenoGame = lazy(() => import("@/components/livegames/KenoGame"));
 const LimboGame = lazy(() => import("@/components/livegames/LimboGame"));
@@ -146,7 +148,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "raspadinha" | "keno" | "limbo" | "snakesladders";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders";
 
 interface SavedWheelGame {
   id: string;
@@ -184,6 +186,8 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "memory", icon: Brain, emoji: "🧠", grad: "from-indigo-500 to-purple-600" },
   { id: "urusse", icon: Gamepad2, emoji: "🧴", grad: "from-green-700 to-amber-900" },
   { id: "mexerica", icon: Zap, emoji: "✋", grad: "from-amber-600 to-red-700" },
+  { id: "blackjack", icon: Spade, emoji: "♠", grad: "from-emerald-600 to-teal-700" },
+  { id: "pokemon", icon: Sparkles, emoji: "✨", grad: "from-amber-500 to-red-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1421,6 +1425,20 @@ const LiveHub = () => {
                   <LimboGame onScore={recordScore("Limbo")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
+              {active === "blackjack" && (
+                <motion.div key="blackjack" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Blackjack">
+                    <BlackjackGame onScore={recordScore("Blackjack")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "pokemon" && (
+                <motion.div key="pokemon" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Pokémon Quiz">
+                    <PokemonGuess onScore={recordScore("Pokémon Quiz")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
               </Suspense>
             </AnimatePresence>
             </GameFullscreenWrapper>

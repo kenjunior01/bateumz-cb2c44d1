@@ -365,3 +365,25 @@ Work Log:
 Stage Summary:
 - Plataforma agora consome 3 APIs públicas de classe mundial com padrão v23/v24: hub de jogos grátis real, banco de perguntas à prova de rate-limit com escada de dificuldade, e desporto com a liga de Portugal
 - Zero APIs decorativas: todas as candidatas foram testadas ao vivo e as que não funcionam no browser foram descartadas com prova
+
+---
+Task ID: design-apis-v30
+Agent: Super Z (main)
+Task: Skills de design (taste-skill · ui-ux-pro-max · design-motion-principles) aplicados + novas APIs do public-apis que fazem sentido
+
+Work Log:
+- 3 skills estudados na fonte e APLICADOS: (1) design-motion-principles → tokens de motion no :root (--dur-instant/fast/base/slow/deliberate + 4 curvas; spring SÓ em recompensa), anti-slop (zero pulsos decorativos nos novos componentes; dívida honesta: 325 whileHover scale mapeados, não varridos às cegas); (2) ui-ux-pro-max → foco visível universal com especificidade zero :where(a,button,summary,[tabindex]):focus-visible, estados completos, .numeric-data tabular-nums; (3) taste-skill → assets REAIS em vez de imitação (PNG oficial das cartas, arte oficial Pokémon), screenshots verificados a 375/768/1440
+- APIs candidatas validadas ao vivo com curl ANTES do código: deckofcardsapi.com ✅ (200+CORS*) · pokeapi.co ✅ · open.er-api.com ✅ · date.nager.at ❌ (sem CORS) · punkapi ❌ (sem resposta)
+- NOVO src/lib/deckOfCards.ts + BlackjackGame.tsx: sapateiro REAL de 6 decks embaralhado no servidor, imagens PNG oficiais, Ás flexível, banca para em 17, natural 3:2 (2,5×), empate devolve; erros honestos (meio do jogo → "aposta devolvida"; boot → retry sem promessa falsa); registrado no LiveHub (GameId, lazy, GAME_DEFS, case) + i18n en/pt/pt-BR (convenção do hub)
+- NOVO src/lib/pokeapi.ts + PokemonGuess.tsx: "Quem é esse Pokémon?" — silhueta = arte oficial com brightness(0), 4 opções com nomes REAIS (1 alvo + 3 distratores), revelação com tipos/altura/peso reais; respeito à API partilhada (1 pedido para TODOS os nomes + 1 por alvo, cache 7 dias); nome canónico EN (a API não tem pt — nota honesta); crypto.getRandomValues
+- NOVO src/lib/exchangeRates.ts + CurrencyConverter.tsx (na /wallet): taxas reais USD/EUR/AOA/MZN/BRL/ZAR, cache 6h, data REAL do fornecedor exibida, aviso honesto de taxa guardada quando offline, troca de moedas, atribuição
+- Fundação de design em index.css (bloco v30): tokens + foco universal + utilitários tipográficos
+- Bugs reais corrigidos no caminho: (1) loop infinito de render no Blackjack (boot→setDeck→boot…) — baralho em useRef; (2) "aposta devolvida" desonesta em erro de boot — flag refunded só com aposta em jogo; (3) toFixed em EN ("0.4 m") — toLocaleString pt-PT
+- E2E NOVO test-v30-apis-design.mjs 31/31 + 3 smokes REAIS (as 3 APIs respondem deste ambiente); regressões: craft-v29 63/63 · craft-camaras 64/64 · blocos 101/101 · desporto 14/14 · rea-plataforma 33/33 · home-dinamica 22/22 · apis-publicas 30/30 = 327 + 31 = 358 verdes
+- tsc 0 · screenshots 375/768/1440 verificadas (painéis calmos, atribuições visíveis)
+- Doc: docs/REA-apis-publicas-v30.md
+
+Stage Summary:
+- Plataforma mais incrível com MOVIMENTO COM PROPÓSITO e assets reais (não mais brilho): Blackjack 21 com baralho de verdade, Pokémon com arte oficial de verdade, conversor com taxas de verdade
+- Fundação de design (tokens + foco + tipografia) aplicada a toda a plataforma via index.css
+- Princípios mantidos: zero dados inventados, estados de erro honestos, atribuição explícita nas 3 integrações

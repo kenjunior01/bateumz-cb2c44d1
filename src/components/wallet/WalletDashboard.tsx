@@ -23,6 +23,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { getTransactions, getWallet, type WalletTransaction } from "@/lib/wallet";
 import DepositModal from "@/components/wallet/DepositModal";
 import WithdrawalModal from "@/components/wallet/WithdrawalModal";
+import CurrencyConverter from "@/components/wallet/CurrencyConverter";
 import { Link } from "react-router-dom";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
@@ -171,6 +172,9 @@ export default function WalletDashboard() {
         </CardContent>
       </Card>
       </GlowPulse>
+
+      {/* v30 — Conversor de moedas com taxas REAIS (ExchangeRate-API) */}
+      <CurrencyConverter />
 
       <Card>
         <CardHeader className="pb-3">

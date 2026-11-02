@@ -5814,3 +5814,61 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .game-art .ga-float, .game-art .ga-pulse, .game-art .ga-wheel, .game-art .ga-stars { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v30 — FUNDAÇÃO DE DESIGN (skills: design-motion-principles ·
+   ui-ux-pro-max · taste-skill)
+
+   1. TOKENS DE MOTION — durações e curvas únicas para TODA a plataforma.
+      Filosofia Emil Kowalski: animação rápida e com propósito — "deve
+      isto animar-se?" antes de "como animar?". Jakub Krehel: subtil,
+      consistente, sem surpresas. Jhey Tompkins: lúdico APENAS nos
+      momentos de recompensa (confetti de vitória, revelação de jogo).
+   2. FOCUS VISÍVEL UNIVERSAL — nenhum controlo navegável por teclado
+      fica sem indicador (ui-ux-pro-max: accessible focus states).
+      :where() = especificidade zero → estilos de componente ganham
+      sempre, mas nada fica sem foco.
+   3. TIPOGRAFIA — números de dados em tabular-nums (colunas alinhadas,
+      skill taste: aligned figures) e títulos de ecrã com tracking
+      apertado (hierarquia clara no primeiro ecrã).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* Durações — calibradas por tipo de mudança de estado */
+    --dur-instant: 100ms;   /* feedback de toque imediato */
+    --dur-fast: 160ms;      /* hover/focus, opacidade */
+    --dur-base: 240ms;      /* entrada/saída de cartas, popovers */
+    --dur-slow: 400ms;      /* transições de página/panorâmicas */
+    --dur-deliberate: 600ms;/* revelações de recompensa (lúdico) */
+
+    /* Curvas — standard = maioridade das UI; spring SÓ em recompensa */
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+/* Foco visível universal — zero especificidade para não duplicar
+   anéis de componentes; garante indicador em botões/links crus
+   (grelhas de jogos, chips, cartões clicáveis). */
+@layer base {
+  :where(a, button, summary, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+}
+
+/* Utilitários de refinamento tipográfico */
+@layer utilities {
+  .font-display-tight {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  .numeric-data {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}

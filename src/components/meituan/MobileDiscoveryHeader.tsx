@@ -51,7 +51,9 @@ export default function MobileDiscoveryHeader({
   const navigate = useNavigate();
 
   return (
-    <header className={`md:hidden ${sticky ? "sticky top-0" : "relative"} z-40 bg-background/95 backdrop-blur-md border-b border-border/40 -mx-4 px-4 pt-2 pb-2`}>
+    <header className={`md:hidden ${sticky ? "sticky top-0" : "relative"} z-40 bg-background/95 backdrop-blur-md border-b border-border/40 -mx-3 px-3 pt-2 pb-2`}>
+      {/* v31 FIX: o sangramento era -mx-4 mas a maioria dos pais usa px-3 → 4px de
+          scroll horizontal em todo o telemóvel (medido a 375px). Igualado a px-3. */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => (backTo ? navigate(backTo) : navigate(-1))}
@@ -94,7 +96,7 @@ export default function MobileDiscoveryHeader({
       )}
 
       {categories.length > 0 && (
-        <div className="mt-2 -mx-4 px-4">
+        <div className="mt-2 -mx-3 px-3">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar snap-x">
 
             {categories.map((cat) => {

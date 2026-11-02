@@ -387,3 +387,28 @@ Stage Summary:
 - Plataforma mais incrível com MOVIMENTO COM PROPÓSITO e assets reais (não mais brilho): Blackjack 21 com baralho de verdade, Pokémon com arte oficial de verdade, conversor com taxas de verdade
 - Fundação de design (tokens + foco + tipografia) aplicada a toda a plataforma via index.css
 - Princípios mantidos: zero dados inventados, estados de erro honestos, atribuição explícita nas 3 integrações
+
+---
+Task ID: xadrez-clima-v31
+Agent: Super Z (main)
+Task: Lichess (puzzle de xadrez real) + Open-Meteo (clima real no BateuCraft) — validação ao vivo antes do código
+
+Work Log:
+- VALIDAÇÃO AO VIVO com curl ANTES do código: lichess puzzle/daily 200+CORS* ✅ · geocoding-api.open-meteo 200 ✅ · archive-api.open-meteo 200 (prova da forma da família) ✅ · forecast 429 (IP partilhad­o do sandbox, SKIP honesto) · chess.com 403 Cloudflare ❌ descartada · wttr.in sem resposta ❌ · restcountries 301→legacy ❌ descartada
+- FORMATO LICHESS confirmado empiricamente (probe com chess.js sobre a resposta real): fen = posição DEPOIS da jogada do adversário; lastMove informativo; solution = linha UCI completa que repete legal end-to-end
+- NOVO src/lib/lichessPuzzle.ts: cache pela chave do dia UTC (1 pedido/dia/navegador) + dedupe em voo + stale-on-error honesto (puzzle de ontem com aviso); fetch com cache:"no-store" — o E2E apanhou o HTTP-cache do browser a contornar a nossa cache
+- NOVO ChessPuzzle.tsx + registo no LiveHub (GameId "chesspuzzle", lazy, GAME_DEFS, render, i18n en/pt/pt-BR): tabuleiro 8×8 clássico, peças Unicode padrão, alvos legais por chess.js 1.4, promoção pela variante da solução, resposta do adversário automática, "ver a solução" só após 2 erros (vale 1), jogadores/ratings/perf reais da fonte, tabuleiro virado 180° nas negras
+- BUG REAL (apanhado pelo E2E): jogada legal mas errada era APLICADA ao tabuleiro antes da rejeição — corrigido: comparação UCI ANTES de mutar; errada nunca toca no tabuleiro
+- BUG REAL (FEN do teste): a "escada" original era posição ilegal (Rh1 já atacava Kh8 em pé) — desenhada de novo (Ra1·Rb2·Kg1, 1.Ra7! Kg8 2.Rb8#) e verificada com chess.js
+- NOVO src/lib/openMeteo.ts: geocode + current, cache 30 min/cidade + dedupe + stale-on-error <6h, WMO→pt, wmoParaMeteo (≥95 tempestade · 51-67/80-82 chuva · resto limpo) · NEVE → LIMPO com nota honesta "não simulada"
+- BateuCraft CLIMA REAL: botão na pausa + modal (busca de cidades reais, painel com temp/desc/vento/hora real, atribuição CC BY 4.0, desativar), chip real no HUD (temp arredondada), persistência localStorage, refetch 10 min com pin no motor de 11 min
+- BUG REAL (apanhado pelo E2E): com clima persistido, o efeito corria no MENU → definirMeteo → emitirEstado → setCap forçava "jogando" contra motor sem mundo (crash mundo.getBloco) — corrigido: motor só com fase!=="menu" + re-aplicar ao começar a jogar
+- BUGS DE PLATAFORMA corrigidos: (1) MobileDiscoveryHeader sangrava -mx-4 sobre pais px-3 → 4px de scroll horizontal no telemóvel em 7 páginas (medido 375px) — igualado a -mx-3; (2) modal da pausa sem scroll não cabia (max-h-88dvh overflow-y-auto); (3) ganchos E2E novos: abrirPausa, modalAtual, climaEstado/climaAtivar/climaDesativar
+- E2E NOVO test-v31-xadrez-clima 45/45 (3 corridas seguidas) + smokes reais: lichess ✅ geocoding ✅ forecast 429 SKIP honesto; lição registada: waitForSelector do Playwright falha por starvation de rAF sob o loop 60fps do jogo ("resolved to visible" sem commit) → todas as esperas migradas para waitForFunction (predicado sobre o DOM real)
+- REGRESSÕES: craft-v29 63 · craft-camaras 64 · blocos 101 · desporto 14 · plataforma 33 · home 22 · APIs-v25 30 · v30 31 · web-excellence 13 = 371 verdes, 0 falhas · tsc 0 · vite build OK
+- Screenshots verificadas: xadrez 375/768/1440 + craft com clima real aplicado (aviso "Começou a chover" do motor + chip 27°C no HUD)
+- DOC: docs/REA-apis-publicas-v31.md (tabela de candidatas com provas e veredictos)
+
+Stage Summary:
+- O mundo do jogo encontrou o mundo real: o puzzle diário é o mesmo para o planeta inteiro e o céu do BateuCraft segue a meteorologia REAL da cidade do jogador
+- Zero teatro: chess.com/wttr/restcountries descartados com provas, forecast 429 documentado como pendência honesta, neve nunca finge chuva

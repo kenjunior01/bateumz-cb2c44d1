@@ -7,7 +7,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES, Meteo } from "@/game/blocos/engine";
 import { infoItem } from "@/game/blocos/inventario";
 import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
-import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive } from "lucide-react";
+import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive, CloudSun, MapPin, Search, RefreshCw } from "lucide-react";
+import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
 interface Props {
   onScore?: (score: number) => void;
@@ -15,6 +16,28 @@ interface Props {
 }
 
 const ehToque = typeof window !== "undefined" && ("ontouchstart" in window || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
+
+// ── Clima REAL (v31, Open-Meteo): estado do módulo ────────────
+interface ClimaRealEstado {
+  ativa: boolean;
+  cidade: CidadeEncontrada | null;
+  clima: ClimaAtual | null;
+  erro: string;
+}
+const LS_CLIMA_REAL = "bateumz.climaReal";
+
+function carregarClimaReal(): ClimaRealEstado {
+  try {
+    const raw = localStorage.getItem(LS_CLIMA_REAL);
+    if (raw) {
+      const p = JSON.parse(raw) as { ativa?: boolean; cidade?: CidadeEncontrada };
+      if (p?.ativa && p?.cidade?.nome && typeof p.cidade.latitude === "number") {
+        return { ativa: true, cidade: p.cidade, clima: null, erro: "" };
+      }
+    }
+  } catch { /* localStorage indisponível */ }
+  return { ativa: false, cidade: null, clima: null, erro: "" };
+}
 
 // ── Ícones do HUD ─────────────────────────────────────────────
 function Coracoes({ vida }: { vida: number }) {
@@ -130,7 +153,9 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const motorRef = useRef<Motor>(new Motor());
   const [fase, setFase] = useState<"menu" | "jogando" | "morto">("menu");
   const [cap, setCap] = useState<Captura | null>(null);
-  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar" | "trofeus" | "bau">(null);
+  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar" | "trofeus" | "bau" | "clima">(null);
+  const modalRef = useRef(modal);
+  useEffect(() => { modalRef.current = modal; }, [modal]);
   const [aCarregar, setACarregar] = useState(false);
   const [receitaSel, setReceitaSel] = useState<"criacao" | "fundicao">("criacao");
   const [motorPronto, setMotorPronto] = useState(false);
@@ -141,6 +166,76 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const [voando, setVoando] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(true);
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
+
+  // ── Clima REAL (v31): o tempo do mundo real dentro do jogo ──────
+  const [climaReal, setClimaReal] = useState<ClimaRealEstado>(carregarClimaReal);
+  const climaRealRef = useRef(climaReal);
+  useEffect(() => { climaRealRef.current = climaReal; }, [climaReal]);
+  const [climaBusca, setClimaBusca] = useState<{ query: string; aProcurar: boolean; resultados: CidadeEncontrada[]; erro: string }>({ query: "", aProcurar: false, resultados: [], erro: "" });
+
+  /** Procura cidades reais (geocoding Open-Meteo) para escolher. */
+  const buscarClima = useCallback(async () => {
+    const q = climaBusca.query.trim();
+    if (!q || climaBusca.aProcurar) return;
+    setClimaBusca((s) => ({ ...s, aProcurar: true, erro: "" }));
+    try {
+      const rs = await procurarCidade(q);
+      setClimaBusca((s) => ({ ...s, aProcurar: false, resultados: rs, erro: rs.length === 0 ? "Nenhuma cidade encontrada com esse nome." : "" }));
+    } catch (e) {
+      setClimaBusca((s) => ({ ...s, aProcurar: false, resultados: [], erro: e instanceof Error ? e.message : "Sem ligação ao geocoding da Open-Meteo" }));
+    }
+  }, [climaBusca.query, climaBusca.aProcurar]);
+
+  /** Ativa o clima real para uma cidade (guardada em localStorage). */
+  const ativarClimaReal = useCallback((cidade: CidadeEncontrada) => {
+    setClimaReal({ ativa: true, cidade, clima: null, erro: "" });
+    try { localStorage.setItem(LS_CLIMA_REAL, JSON.stringify({ ativa: true, cidade })); } catch { /* quota */ }
+  }, []);
+
+  /** Desativa: o jogo volta ao ciclo meteorológico simulado do motor. */
+  const desativarClimaReal = useCallback(() => {
+    setClimaReal({ ativa: false, cidade: null, clima: null, erro: "" });
+    try { localStorage.setItem(LS_CLIMA_REAL, JSON.stringify({ ativa: false })); } catch { /* quota */ }
+  }, []);
+
+  // Ciclo de busca do clima real: agora + a cada 10 min enquanto ativa.
+  // Aplica o meteo REAL ao motor (pin 11 min > intervalo de 10 min) — MAS
+  // só quando o jogo está a decorrer: no menu o motor ainda não tem mundo
+  // (iniciar não correu) e emitirEstado forçaria a UI para "jogando" contra
+  // um motor não inicializado (crash real encontrado pelo E2E v31).
+  // Em erro: mensagem honesta e o motor segue o seu ciclo simulado.
+  useEffect(() => {
+    if (!climaReal.ativa || !climaReal.cidade) return;
+    let vivo = true;
+    const cidade = climaReal.cidade;
+    const buscar = async () => {
+      try {
+        const clima = await getClimaAtual(cidade);
+        if (!vivo) return;
+        setClimaReal((s) => ({ ...s, clima, erro: "" }));
+        if (motorRef.current.fase !== "menu") {
+          motorRef.current.definirMeteo(wmoParaMeteo(clima.codigoWmo), 660);
+        }
+      } catch (e) {
+        if (!vivo) return;
+        setClimaReal((s) => ({ ...s, erro: e instanceof Error ? e.message : "Sem ligação à Open-Meteo" }));
+      }
+    };
+    buscar();
+    const t = setInterval(buscar, 600_000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [climaReal.ativa, climaReal.cidade]);
+
+  // Ao começar a jogar (ou recarregar com clima guardado), aplica o último
+  // clima real conhecido ao motor — o mundo começa com o tempo do mundo real.
+  useEffect(() => {
+    if (fase !== "jogando") return;
+    const c = climaReal.clima;
+    if (climaReal.ativa && c) {
+      motorRef.current.definirMeteo(wmoParaMeteo(c.codigoWmo), 660);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase]);
 
   // baú aberto (v29): o motor decide; a UI reage
   useEffect(() => {
@@ -239,6 +334,8 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       limparInv: () => motorRef.current.inv.limpar(),
       // v27: preferências, tochas, partículas, mochila
       pausar: (v: boolean) => { motorRef.current.pausado = v; },
+      abrirPausa: () => { motorRef.current.pausado = true; setModal("pausa"); },
+      modalAtual: () => modalRef.current,
       alternarSom: () => { setSomMudo(motorRef.current.alternarSom()); },
       estadoSom: () => motorRef.current.mudo,
       definirRaio: (n: number) => { motorRef.current.definirRaio(n); setRaioRender(motorRef.current.raioRender); },
@@ -285,6 +382,21 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       equipar: () => motorRef.current.equiparArmadura(),
       despir: () => motorRef.current.despirArmadura(),
       itemSelecionado: () => motorRef.current.inv.selecionado(),
+      // v31: clima real (Open-Meteo)
+      climaEstado: () => {
+        const c = climaRealRef.current;
+        return {
+          ativa: c.ativa,
+          cidade: c.cidade?.nome ?? null,
+          clima: c.clima ? { temperatura: c.clima.temperatura, codigoWmo: c.clima.codigoWmo, meteoJogo: wmoParaMeteo(c.clima.codigoWmo) } : null,
+          erro: c.erro,
+        };
+      },
+      climaAtivar: (nome: string) => procurarCidade(nome).then((rs) => {
+        if (rs[0]) { ativarClimaReal(rs[0]); return rs[0]; }
+        throw new Error("Cidade não encontrada");
+      }),
+      climaDesativar: () => desativarClimaReal(),
     };
     return () => { try { delete (window as any).__blocos; } catch { /* ignore */ } };
   }, []);
@@ -561,10 +673,16 @@ export default function BateuCraft({ onScore, onExit }: Props) {
 
           {/* relógio + dia + meteorologia — topo direita */}
           <div className="absolute top-2 right-2 flex items-center gap-2 pointer-events-none">
-            <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-meteo" title={cap.meteo}>
+            <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-meteo"
+              title={climaReal.ativa && climaReal.clima ? `Clima real de ${climaReal.clima.cidade.nome}: ${wmoDescricaoPt(climaReal.clima.codigoWmo)} · Open-Meteo` : undefined}>
               {cap.meteo === "chuva" ? <CloudRain size={14} className="text-sky-300" /> :
                 cap.meteo === "tempestade" ? <CloudLightning size={14} className="text-amber-300" /> :
                 cap.noite ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-300" />}
+              {climaReal.ativa && climaReal.clima && (
+                <span className="text-sky-300 tabular-nums" data-testid="bc-clima-hud">
+                  {Math.round(climaReal.clima.temperatura)}°C
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-dia">
               Dia {cap.dia}
@@ -848,8 +966,8 @@ export default function BateuCraft({ onScore, onExit }: Props) {
 
       {/* ═══ MODAL: PAUSA ═══ */}
       {modal === "pausa" && (
-        <div className="absolute inset-0 bg-black/75 flex items-center justify-center" data-testid="bc-modal-pausa">
-          <div className="bg-slate-900 border border-white/15 rounded-2xl p-6 w-full max-w-xs flex flex-col gap-3">
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" data-testid="bc-modal-pausa">
+          <div className="bg-slate-900 border border-white/15 rounded-2xl p-6 w-full max-w-xs flex flex-col gap-3 max-h-[88dvh] overflow-y-auto">
             <h3 className="text-white font-black text-xl text-center">PAUSA</h3>
             <button onClick={fecharPausa} className="py-3 rounded-xl font-bold text-white bg-emerald-600 shadow-[0_4px_0_#065f46] active:scale-95" data-testid="bc-continuar-jogo">CONTINUAR</button>
             <button onClick={() => { m.guardar(); m.avisos.push({ texto: "Mundo guardado ✓", tipo: "info", t: 2 }); setModal(null); m.pausado = false; }} className="py-3 rounded-xl font-bold text-white bg-sky-600 active:scale-95" data-testid="bc-guardar">GUARDAR MUNDO</button>
@@ -872,7 +990,95 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <button onClick={() => setMostrarMapa((v) => !v)} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm" data-testid="bc-minimapa-toggle">
               MINIMAPA: {mostrarMapa ? "ON" : "OFF"}
             </button>
+            <button onClick={() => setModal("clima")} className="py-2.5 rounded-xl font-bold text-white bg-sky-800 active:scale-95 text-sm flex items-center justify-center gap-1.5" data-testid="bc-clima-btn">
+              <CloudSun size={14} className={climaReal.ativa ? "text-sky-300" : "text-white/60"} />
+              CLIMA REAL: {climaReal.ativa ? "ON" : "OFF"}
+            </button>
             <button onClick={sair} className="py-3 rounded-xl font-bold text-white bg-red-700 active:scale-95" data-testid="bc-sair">GUARDAR E SAIR</button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: CLIMA REAL (v31, Open-Meteo) ═══ */}
+      {modal === "clima" && (
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={() => setModal("pausa")}>
+          <div className="bg-slate-900 border border-white/15 rounded-2xl p-5 w-full max-w-md text-white max-h-[85dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid="bc-modal-clima">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-black text-lg flex items-center gap-2"><CloudSun size={18} className="text-sky-300" /> CLIMA REAL</h3>
+              <button onClick={() => setModal("pausa")} data-testid="bc-clima-fechar" className="text-white/70"><X size={18} /></button>
+            </div>
+            <p className="text-white/60 text-xs mb-3">
+              O tempo do mundo real, dentro do jogo — céu, chuva e trovoada seguem a
+              meteorologia da cidade que escolheres. Fonte sem chave, gratuita.
+            </p>
+
+            {/* estado atual do clima real */}
+            {climaReal.ativa && (
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 mb-3 space-y-1" data-testid="bc-clima-estado">
+                {climaReal.clima ? (
+                  <>
+                    <p className="font-bold text-sm flex items-center gap-1.5">
+                      <MapPin size={13} className="text-sky-300" />
+                      {climaReal.clima.cidade.nome}{climaReal.clima.cidade.pais ? `, ${climaReal.clima.cidade.pais}` : ""}
+                      <span className="ml-auto text-sky-300 font-black tabular-nums" data-testid="bc-clima-temp">{climaReal.clima.temperatura.toLocaleString("pt-PT", { maximumFractionDigits: 1 })}°C</span>
+                    </p>
+                    <p className="text-xs text-white/80">
+                      {wmoDescricaoPt(climaReal.clima.codigoWmo) || `Código WMO ${climaReal.clima.codigoWmo}`}
+                      {wmoEhNeve(climaReal.clima.codigoWmo) && <span className="text-amber-300"> (neve não simulada no jogo)</span>}
+                      {" → "}no jogo: <b className="text-sky-300">{wmoParaMeteo(climaReal.clima.codigoWmo).toUpperCase()}</b>
+                    </p>
+                    <p className="text-[11px] text-white/50">
+                      Vento {climaReal.clima.ventoKmh.toLocaleString("pt-PT", { maximumFractionDigits: 1 })} km/h · observado às{" "}
+                      {new Date(climaReal.clima.observadoEm).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} · atualiza a cada 10 min
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-white/70">{climaReal.erro ? "Sem dados ainda — ver o erro abaixo." : "A pedir o clima real…"}</p>
+                )}
+                {climaReal.erro && (
+                  <p className="text-xs text-rose-300 font-bold" data-testid="bc-clima-erro">
+                    ⚠ {climaReal.erro} — o jogo segue o ciclo simulado até a rede voltar.
+                  </p>
+                )}
+                <p className="text-[10px] text-white/40">{OPENMETEO_ATTRIBUTION}</p>
+              </div>
+            )}
+
+            {/* busca de cidade (geocoding real) */}
+            <div className="flex gap-2 mb-2">
+              <input
+                value={climaBusca.query ?? ""}
+                onChange={(e) => setClimaBusca((s) => ({ ...s, query: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") buscarClima(); }}
+                placeholder="Cidade (ex.: Luanda, Maputo…)"
+                data-testid="bc-clima-input"
+                className="flex-1 rounded-xl bg-slate-800 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/35 outline-none focus:border-sky-400"
+              />
+              <button onClick={buscarClima} disabled={climaBusca.aProcurar} data-testid="bc-clima-buscar"
+                className="px-3 rounded-xl bg-sky-600 font-bold text-sm active:scale-95 disabled:opacity-50 flex items-center gap-1.5">
+                {climaBusca.aProcurar ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+              </button>
+            </div>
+            {climaBusca.erro && <p className="text-xs text-rose-300 font-bold mb-2" data-testid="bc-clima-busca-erro">{climaBusca.erro}</p>}
+            {climaBusca.resultados.length > 0 && (
+              <div className="space-y-1.5 mb-2" data-testid="bc-clima-resultados">
+                {climaBusca.resultados.map((r, i) => (
+                  <button key={`${r.nome}-${r.latitude}-${i}`} onClick={() => ativarClimaReal(r)} data-testid={`bc-clima-result-${i}`}
+                    className="w-full text-left rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 active:scale-[0.99]">
+                    <MapPin size={13} className="text-sky-300 shrink-0" />
+                    <span className="font-bold">{r.nome}</span>
+                    <span className="text-white/50 text-xs truncate">{[r.regiao, r.pais].filter(Boolean).join(", ")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {climaReal.ativa && (
+              <button onClick={desativarClimaReal} data-testid="bc-clima-desativar"
+                className="w-full py-2.5 rounded-xl font-bold text-white bg-slate-700 active:scale-95 text-sm">
+                DESATIVAR (voltar ao clima simulado)
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -922,6 +1128,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <p><b className="text-amber-300">Voar / mergulhar:</b> {ehToque ? "VOAR no criativo · DESCER na água ou a voar" : "F voa no criativo · Ctrl desce na água e no voo"}</p>
             <p><b className="text-amber-300">Mochila:</b> tecla E ou mochila no topo · aí crias ferramentas e fundes minérios · toca num item da mochila para o levar à hotbar</p>
             <p><b className="text-amber-300">Agricultura:</b> enxada lava relva/terra → sementes plantam trigo → colhe dourado = trigo + sementes · 3 trigos = pão · a chuva acelera o crescimento</p>
+            <p><b className="text-amber-300">Clima Real:</b> na pausa, liga o tempo do mundo real (Open-Meteo) — escolhe a cidade e o céu do jogo segue a meteorologia real dessa cidade</p>
             <p><b className="text-amber-300">TNT:</b> 4 areias + 5 carvões · coloca-a e ataca-a para acender — 2,6 s e BOOM (afasta-te!)</p>
             <p><b className="text-amber-300">Baú:</b> 8 tábuas · ataca-o para abrir — 18 posições guardadas no teu mundo, nada se perde</p>
             <p><b className="text-amber-300">Armadura:</b> peitorais de couro (15%), ferro (30%) e diamante (45%) absorvem dano — equipa na mochila</p>

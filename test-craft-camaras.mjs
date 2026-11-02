@@ -271,8 +271,9 @@ async function main() {
 
   // ═══ 8. SELETOR CRIATIVO ═══
   console.log("\n── 8. Blocos criativos ──");
-  ok("18 blocos na lista criativa (v29: +erva, +2 flores, +cacto)", await page.evaluate(() => (window).__blocos.blocosCriativos().length === 18));
+  ok("20 blocos na lista criativa (v29: +erva/flores/cacto + TNT/baú)", await page.evaluate(() => (window).__blocos.blocosCriativos().length === 20));
   ok("criativa inclui ERVA, FLOR_AM, FLOR_VM e CACTO", await page.evaluate(() => { const l = (window).__blocos.blocosCriativos(); return [21,22,23,24].every((id) => l.includes(id)); }));
+  ok("criativa inclui TNT e BAU", await page.evaluate(() => { const l = (window).__blocos.blocosCriativos(); return [28,29].every((id) => l.includes(id)); }));
   ok("inclui CAMA e ESCADA", await page.evaluate(() => {
     const l = (window).__blocos.blocosCriativos();
     return l.includes(19) && l.includes(20);
@@ -344,9 +345,9 @@ async function main() {
     m.spawnProprio = [m.px, m.py, m.pz];
     (window).__blocos.guardar();
   });
-  ok("save v2 guarda câmara, spawn e mobsDerrotados", await page.evaluate(() => {
+  ok("save v3 guarda câmara, spawn e mobsDerrotados (v2+)", await page.evaluate(() => {
     const sv = JSON.parse(localStorage.getItem("bateu_blocos_save") || "{}");
-    return sv.v === 2 && sv.spawn && Array.isArray(sv.spawn) && typeof sv.mobsDerrotados === "number";
+    return sv.v >= 2 && sv.spawn && Array.isArray(sv.spawn) && typeof sv.mobsDerrotados === "number";
   }));
   ok("modo do save ainda legível para CONTINUAR", await page.evaluate(() => (window).__blocos.modoSave() === "sobrevivencia"));
 

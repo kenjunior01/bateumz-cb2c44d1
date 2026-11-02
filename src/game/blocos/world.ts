@@ -169,13 +169,13 @@ export class Mundo {
     return !!d && d.solido;
   }
 
-  // ── Explosão (Estourador) — destrói blocos num raio ─────────
-  explodir(cx: number, cy: number, cz: number, rnd: Aleatorio): [number, number, number][] {
+  // ── Explosão (Estourador / TNT) — destrói blocos num raio ──
+  explodir(cx: number, cy: number, cz: number, rnd: Aleatorio, raio = RAIO_EXPLOSAO): [number, number, number][] {
     const removidos: [number, number, number][] = [];
-    const r = Math.ceil(RAIO_EXPLOSAO);
+    const r = Math.ceil(raio);
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
       const d = Math.hypot(dx, dy, dz);
-      if (d > RAIO_EXPLOSAO + rnd.proximo() * 0.6) continue;
+      if (d > raio + rnd.proximo() * 0.6) continue;
       const x = cx + dx, y = cy + dy, z = cz + dz;
       const id = this.getBloco(x, y, z);
       if (id === B.AR || id === B.AGUA || id === B.ROCHA_MAE) continue;

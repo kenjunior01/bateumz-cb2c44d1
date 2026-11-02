@@ -209,3 +209,64 @@ export function criarEstourador(): THREE.Group {
   (g as any).__pernas = pernas;
   return g;
 }
+
+/** Vaca LEGO — corpo branco com manchas castanhas, chifres (passiva, v29) */
+export function criarVaca(): THREE.Group {
+  const g = new THREE.Group();
+  const branca = MAT("#e8e0d0"), mancha = MAT("#7a4a2a"), rosa = MAT("#d8a888");
+  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.5, 0.95), branca);
+  corpo.position.y = 0.62;
+  // manchas do couro
+  const m1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.24, 0.4), mancha);
+  m1.position.set(0.02, 0.72, 0.18);
+  const m2 = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.34), mancha);
+  m2.position.set(-0.14, 0.64, -0.3);
+  const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.32), branca);
+  cabeca.position.set(0, 0.82, 0.6);
+  const texturaCara = new THREE.CanvasTexture(criarCaraLego("#e8e0d0", "vaca"));
+  texturaCara.colorSpace = THREE.SRGBColorSpace; texturaCara.magFilter = THREE.NearestFilter;
+  (cabeca as any).material = [branca, branca, branca, branca, new THREE.MeshLambertMaterial({ map: texturaCara }), branca];
+  // chifres
+  for (const sx of [-1, 1]) {
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.08), rosa);
+    ch.position.set(sx * 0.18, 1.08, 0.56);
+    g.add(ch);
+  }
+  const pernaGeo = new THREE.BoxGeometry(0.16, 0.36, 0.16);
+  const pernas: THREE.Mesh[] = [];
+  for (const [px, pz] of [[-0.24, 0.32], [0.24, 0.32], [-0.24, -0.32], [0.24, -0.32]]) {
+    const p = new THREE.Mesh(pernaGeo, rosa);
+    p.position.set(px, 0.18, pz);
+    pernas.push(p); g.add(p);
+  }
+  g.add(corpo, m1, m2, cabeca);
+  (g as any).__pernas = pernas;
+  return g;
+}
+
+/** Galinha LEGO — corpo pequeno branco, bico laranja, crista vermelha (passiva, v29) */
+export function criarGalinha(): THREE.Group {
+  const g = new THREE.Group();
+  const branca = MAT("#f0ece2"), laranja = MAT("#f0a020"), vermelha = MAT("#e02a2a");
+  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.46), branca);
+  corpo.position.y = 0.4;
+  const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.28, 0.24), branca);
+  cabeca.position.set(0, 0.72, 0.24);
+  const texturaCara = new THREE.CanvasTexture(criarCaraLego("#f0ece2", "galinha"));
+  texturaCara.colorSpace = THREE.SRGBColorSpace; texturaCara.magFilter = THREE.NearestFilter;
+  (cabeca as any).material = [branca, branca, branca, branca, new THREE.MeshLambertMaterial({ map: texturaCara }), branca];
+  const crista = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.14), vermelha);
+  crista.position.set(0, 0.9, 0.24);
+  const bico = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.14), laranja);
+  bico.position.set(0, 0.68, 0.4);
+  const pernaGeo = new THREE.BoxGeometry(0.07, 0.24, 0.07);
+  const pernas: THREE.Mesh[] = [];
+  for (const px of [-0.09, 0.09]) {
+    const p = new THREE.Mesh(pernaGeo, laranja);
+    p.position.set(px, 0.12, 0.02);
+    pernas.push(p); g.add(p);
+  }
+  g.add(corpo, cabeca, crista, bico);
+  (g as any).__pernas = pernas;
+  return g;
+}

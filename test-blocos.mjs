@@ -396,7 +396,7 @@ async function main() {
   const posSave = (await cap()).pos;
   await page.reload({ waitUntil: "domcontentloaded" });
   ok("ganchos após reload", await aguardar(blocos, 60, "ganchos reload"));
-  ok("botão CONTINUAR aparece com save", await page.getByTestId("bc-continuar").isVisible());
+  ok("botão CONTINUAR aparece com save", await aguardar(async () => page.getByTestId("bc-continuar").isVisible(), 40, "botão continuar visível"));
   await page.getByTestId("bc-continuar").click();
   ok("mundo carregado", await aguardar(async () => (await cap())?.fase === "jogando", 80, "continuar"));
   c = await cap();

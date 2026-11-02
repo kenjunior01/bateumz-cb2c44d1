@@ -12,9 +12,10 @@ const MAX_EMPILHA = (id: number) => (id >= 100 && ITENS[id]?.maximo ? ITENS[id].
 
 export class Inventario {
   slots: (Slot | null)[] = new Array(36).fill(null);
+  armadura: Slot | null = null; // peitoral equipado (v29)
   selecao = 0;
 
-  limpar() { this.slots.fill(null); this.selecao = 0; }
+  limpar() { this.slots.fill(null); this.armadura = null; this.selecao = 0; }
 
   /** Adiciona item; devolve quantidade efetivamente guardada */
   adicionar(id: number, qtd: number): number {
@@ -59,6 +60,34 @@ export class Inventario {
   }
 
   selecionado(): Slot | null { return this.slots[this.selecao]; }
+
+  /** Redução de dano do peitoral equipado (0 = nada) */
+  get reducaoArmadura(): number {
+    return this.armadura ? (ITENS[this.armadura.id]?.armadura ?? 0) : 0;
+  }
+
+  /** Equipa o item selecionado se for peitoral; troca com o atual */
+  equiparArmadura(): boolean {
+    const s = this.slots[this.selecao];
+    if (!s) return false;
+    if (!(ITENS[s.id]?.armadura)) return false;
+    const antigo = this.armadura;
+    this.armadura = { id: s.id, qtd: 1 };
+    s.qtd -= 1;
+    if (s.qtd <= 0) this.slots[this.selecao] = null;
+    if (antigo) this.adicionar(antigo.id, 1); // o peitoral anterior volta para a mochila
+    return true;
+  }
+
+  /** Desequipa a armadura para a mochila (só se couber — sem perdas) */
+  despirArmadura(): boolean {
+    if (!this.armadura) return false;
+    const a = this.armadura;
+    this.armadura = null;
+    const guardado = this.adicionar(a.id, 1);
+    if (guardado === 0) { this.armadura = a; return false; } // mochila cheia: mantém equipada
+    return true;
+  }
 
   /** Move um slot da mochila (9–35) para a hotbar (0–8): 1.ª vaga, senão troca com o selecionado */
   moverParaHotbar(i: number): boolean {

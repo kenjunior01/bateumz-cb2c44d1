@@ -4,27 +4,35 @@
 // dia/noite · chunks dinâmicos · save · ganchos __blocos (E2E)
 // v28: 5 tipos de câmara · zoom · balanço · tremor · agachar ·
 // cama (dormir + spawn) · escada · minimapa · seletor criativo
+// v29: AGRICULTURA (enxada · terra arada · trigo · pão) · TNT
+// (fusível + explosão) · BAÚ (18 posições) · ARMADURA
+// (peitorais com absorção) · VACA E GALINHA · METEOROLOGIA
+// (chuva · tempestade · trovoada · relâmpagos · crescimento)
 // ============================================================
 
 import * as THREE from "three";
 import { Mundo } from "./world";
-import { GestorMobs, Mob } from "./mobs";
-import { Inventario, avaliarReceitas, criarReceita, pertoDe } from "./inventario";
+import { GestorMobs, Mob, TipoMob, ehPassivo } from "./mobs";
+import { Inventario, avaliarReceitas, criarReceita, pertoDe, Slot } from "./inventario";
 import { Receita } from "./constants";
 import { criarMinifig, criarItemMao, AvatarLego } from "./lego";
 import { Aleatorio } from "./noise";
 import {
   B, BLOCOS, CHUNK, ALTURA, GRAVIDADE, SALTO, VEL_ANDAR, VEL_CORRER,
   VIDA_MAX, FOME_MAX, AR_MAX, DIA_SEGUNDOS, ALCANCE, RAIO_EXPLOSAO,
-  dropDe, CORES, ITENS, CONQUISTAS, I, PRECISA_DE_APOIO,
+  RAIO_TNT, FUSIVEL_TNT, TEMPO_CRESCER, CRESCER_CHUVA, BAU_SLOTS,
+  PRECISA_DE_APOIO,
+  dropDe, CORES, ITENS, CONQUISTAS, I, NOMES,
 } from "./constants";
 
 export type Modo = "sobrevivencia" | "criativo";
 export type Fase = "menu" | "jogando" | "morto" | "pausa";
 export type CamaraModo = "primeira" | "terceira" | "ombro" | "topo" | "cinema";
+export type Meteo = "limpo" | "chuva" | "tempestade";
 export const CAMARA_NOMES: Record<CamaraModo, string> = {
   primeira: "1ª PESSOA", terceira: "3ª PESSOA", ombro: "OMBRO", topo: "TOP-DOWN", cinema: "CINEMA",
 };
+export const METEO_NOMES: Record<Meteo, string> = { limpo: "LIMPO", chuva: "CHUVA", tempestade: "TEMPESTADE" };
 const ORDEM_CAMARAS: CamaraModo[] = ["primeira", "terceira", "ombro", "topo", "cinema"];
 
 export interface Entrada {
@@ -57,9 +65,17 @@ export interface Captura {
   naAgua: boolean; voando: boolean;
   blocosQuebrados: number; blocosColocados: number;
   passos: number;
+  // v29
+  meteo: Meteo;
+  armadura: { id: number; nome: string; reducao: number } | null;
+  bauAberto: { chave: string; slots: (Slot | null)[] } | null;
+  tntAtivos: number;
+  plantacoes: number;
 }
 
 interface Aviso { texto: string; tipo: "conquista" | "info" | "dano"; t: number }
+
+interface TntAcesa { x: number; y: number; z: number; t: number; malha: THREE.Mesh }
 
 export class Motor {
   fase: Fase = "menu";
@@ -126,6 +142,19 @@ export class Motor {
   avisos: Aviso[] = [];
   ctaWhats = false;
   blocosQuebrados = 0; blocosColocados = 0;
+
+  // ── v29: agricultura · TNT · baús · meteorologia ──
+  plantas = new Map<string, number>();   // "x,y,z" → segundos restantes até amadurecer
+  tntAcesas: TntAcesa[] = [];
+  baus = new Map<string, (Slot | null)[]>(); // "x,y,z" → 18 posições
+  bauAberto: string | null = null;
+  meteo: Meteo = "limpo";
+  meteoT = 90; // segundos até mudar de tempo
+  relampagoT = 0; // flash branco em curso (tempestade)
+  chuvaNivel = 0; // 0..1 suavizado (partículas + som + céu)
+  private chuvaPool: THREE.Mesh[] = [];
+  private chuvaGain: GainNode | null = null;
+  private plantaTick = 0;
 
   // internals
   entrada: Entrada = { frente: 0, lado: 0, olharX: 0, olharY: 0, salto: false, correr: false, subir: false, descer: false, minerando: false, agachado: false, zoom: false };
@@ -233,6 +262,14 @@ export class Motor {
         m.visible = false; this.cena.add(m);
         this.poolParticulas.push({ m, vx: 0, vy: 0, vz: 0, t: 0, tMax: 1 });
       }
+      // pool de gotas de chuva (v29): agulhas finas que caem à volta do jogador
+      const geoChuva = new THREE.BoxGeometry(0.03, 0.5, 0.03);
+      const matChuva = new THREE.MeshBasicMaterial({ color: 0xa8c8e8, transparent: true, opacity: 0.55, fog: false });
+      for (let i = 0; i < 260; i++) {
+        const g = new THREE.Mesh(geoChuva, matChuva);
+        g.visible = false; this.cena.add(g);
+        this.chuvaPool.push(g);
+      }
       // mão em 1ª pessoa vive presa à câmara
       this.cena.add(this.camara);
       this.camara.add(this.maoFP);
@@ -250,6 +287,20 @@ export class Motor {
       this.blocosColocados = guardado.blocosColocados ?? 0;
       this.spawnProprio = guardado.spawn ?? null;
       this.mobsDerrotados = guardado.mobsDerrotados ?? 0;
+      // v29: armadura, baús, plantações e meteorologia do save
+      this.inv.armadura = guardado.armadura ?? null;
+      for (const [k, slots] of Object.entries(guardado.baus ?? {})) {
+        const arr = slots as (Slot | null)[];
+        if (Array.isArray(arr)) this.baus.set(k, arr.slice(0, BAU_SLOTS));
+      }
+      for (const [k, seg] of Object.entries(guardado.plantas ?? {})) {
+        const n = Number(seg);
+        if (Number.isFinite(n) && n > 0) this.plantas.set(k, n);
+      }
+      if (guardado.meteo === "chuva" || guardado.meteo === "tempestade" || guardado.meteo === "limpo") {
+        this.meteo = guardado.meteo;
+      }
+      this.meteoT = guardado.meteoT ?? 90;
       for (const [k, v] of Object.entries(guardado.edits ?? {})) this.mundo.edits.set(k, v as number);
       // reconstruir tochas conhecidas a partir das edições do save
       for (const [k, v] of this.mundo.edits) if (v === B.TOCHA) this.mundo.tochas.add(k);
@@ -280,6 +331,16 @@ export class Motor {
     this.avatar.grupo.visible = false;
     this.cena.add(this.avatar.grupo);
     this.pausado = false; this.maoFPId = 0; this.swingT = 0;
+    // limpar TNT acesas e estado transitório de um jogo anterior (v29)
+    for (const t of this.tntAcesas) { this.cena.remove(t.malha); t.malha.geometry.dispose(); }
+    this.tntAcesas = [];
+    this.bauAberto = null;
+    this.relampagoT = 0;
+    if (guardado?.semente === undefined) { // mundo novo: começa limpo
+      this.plantas.clear(); this.baus.clear();
+      this.meteo = "limpo"; this.meteoT = 90 + this.rnd.inteiro(0, 60);
+      this.inv.armadura = null;
+    }
 
     // gerar chunks iniciais
     const cx = Math.floor(this.px / CHUNK), cz = Math.floor(this.pz / CHUNK);
@@ -354,11 +415,16 @@ export class Motor {
         break;
       }
     }
-    this.cena.background = new THREE.Color(cor);
-    (this.cena.fog as THREE.Fog).color = new THREE.Color(cor);
-    const luzDia = this.noite ? 0.16 : f > 0.45 && f < 0.55 ? 0.7 : 1.35;
+    // ── v29 METEOROLOGIA: céu escurece com chuva, clareia nos relâmpagos ──
+    const escuro = 1 - this.chuvaNivel * 0.55;
+    let final = new THREE.Color(cor).multiplyScalar(escuro);
+    if (this.relampagoT > 0) final = final.lerp(new THREE.Color(0xf0f4ff), Math.min(1, this.relampagoT * 7));
+    this.cena.background = final;
+    (this.cena.fog as THREE.Fog).color = final;
+    const luzDia = (this.noite ? 0.16 : f > 0.45 && f < 0.55 ? 0.7 : 1.35) * (1 - this.chuvaNivel * 0.42)
+      + (this.relampagoT > 0 ? 1.2 : 0);
     this.sol.intensity = luzDia;
-    this.ambiente.intensity = this.noite ? 0.3 : 0.85;
+    this.ambiente.intensity = (this.noite ? 0.3 : 0.85) * (1 - this.chuvaNivel * 0.3) + (this.relampagoT > 0 ? 0.7 : 0);
     const ang = f * Math.PI * 2 - Math.PI / 2;
     this.sol.position.set(Math.cos(ang) * 60, Math.abs(Math.sin(ang)) * 80 + 10, 30);
     // tocha na mão ilumina
@@ -497,12 +563,34 @@ export class Motor {
   private quebrar(x: number, y: number, z: number, dropa: boolean) {
     const id = this.mundo.getBloco(x, y, z);
     if (id === B.AR || id === B.ROCHA_MAE) return;
+    // TNT quebrada cai para o inventário e cancela nada (nunca foi acesa)
     this.mundo.setBloco(x, y, z, B.AR);
     this.blocosQuebrados++;
     if (this.blocosQuebrados >= 200) this.conquista("mineiro");
     this.som("quebrar");
     this.spawnParticulas(x + 0.5, y + 0.5, z + 0.5, CORES[id]?.[0] ?? "#9a9a9a", 10);
     this.fome = Math.max(0, this.fome - 0.02);
+    // ── v29: colheita de trigo (dos dois estágios) ──
+    if (id === B.TRIGO_M) {
+      if (this.modo === "sobrevivencia" || dropa) {
+        this.inv.adicionar(I.TRIGO, 1);
+        this.inv.adicionar(I.SEMENTES, this.rnd.inteiro(1, 2));
+      }
+      this.conquista("agricultor");
+      this.som("comer");
+      return;
+    }
+    if (id === B.TRIGO_J) {
+      if (this.modo === "sobrevivencia" || dropa) this.inv.adicionar(I.SEMENTES, 1); // ainda jovem: só sementes
+      return;
+    }
+    // baú quebrado: os itens dele voltam para a mochila (nada se perde)
+    if (id === B.BAU) {
+      const chave = `${x},${y},${z}`;
+      const slots = this.baus.get(chave);
+      if (slots) for (const s of slots) if (s) this.inv.adicionar(s.id, s.qtd);
+      this.baus.delete(chave);
+    }
     if (dropa) {
       const drop = dropDe(id);
       if (drop) {
@@ -526,8 +614,17 @@ export class Motor {
     if (this.fase !== "jogando" || !this.mira) return;
     // usar a cama (dormir) em vez de colocar bloco na cara dela
     if (this.mira.id === B.CAMA) { this.dormir(); return; }
+    // abrir baú em vez de colocar bloco na cara dele (v29)
+    if (this.mira.id === B.BAU) { this.abrirBau(); return; }
     const s = this.inv.selecionado();
-    if (!s || s.id >= 100) return;
+    if (!s) return;
+    // ── v29 AGRICULTURA: enxada lava a terra; sementes plantam ──
+    if (s.id >= 100) {
+      const item = ITENS[s.id];
+      if (item?.ferramenta === "enxada") { this.arar(); return; }
+      if (s.id === I.SEMENTES) { this.plantar(); return; }
+      return; // itens não colocáveis
+    }
     // posição adjacente = bloco visado + face atingida
     const x = this.mira.x + this.ultimaFace[0];
     const y = this.mira.y + this.ultimaFace[1];
@@ -544,7 +641,249 @@ export class Motor {
     this.blocosColocados++;
     if (this.blocosColocados >= 100) this.conquista("arquiteto");
     this.som("colocar");
+    if (s.id === B.BAU) { this.baus.set(`${x},${y},${z}`, new Array(BAU_SLOTS).fill(null)); } // baú novo com 18 posições vazias
     this.emitirEstado(true);
+  }
+
+  // ── v29 AGRICULTURA ─────────────────────────────────────────
+  /** Enxada: transforma relva/terra com face superior visada em terra arada */
+  private arar() {
+    if (!this.mira) return;
+    const id = this.mira.id;
+    if (id !== B.RELVA && id !== B.TERRA) {
+      this.avisos.push({ texto: "A enxada só lava relva ou terra", tipo: "info", t: 1.8 });
+      return;
+    }
+    // tem de ter ar por cima (o campo precisa de luz)
+    if (this.mundo.getBloco(this.mira.x, this.mira.y + 1, this.mira.z) !== B.AR) return;
+    this.swingT = 0.3;
+    this.mundo.setBloco(this.mira.x, this.mira.y, this.mira.z, B.TERRA_ARADA);
+    this.som("quebrar");
+    this.emitirEstado(true);
+  }
+  /** Sementes: planta trigo jovem em terra arada */
+  private plantar() {
+    if (!this.mira) return;
+    if (this.mira.id !== B.TERRA_ARADA) {
+      this.avisos.push({ texto: "Plantas só em Terra Arada (usa a enxada)", tipo: "info", t: 2 });
+      return;
+    }
+    if (this.mundo.getBloco(this.mira.x, this.mira.y + 1, this.mira.z) !== B.AR) return;
+    const x = this.mira.x, y = this.mira.y + 1, z = this.mira.z;
+    if (this.modo === "sobrevivencia") this.inv.consumirSelecionado(1);
+    this.mundo.setBloco(x, y, z, B.TRIGO_J);
+    this.plantas.set(`${x},${y},${z}`, TEMPO_CRESCER * (this.meteo === "limpo" ? 1 : CRESCER_CHUVA));
+    this.som("colocar");
+    this.emitirEstado(true);
+  }
+
+  // ── v29 BAÚ: 18 posições por posição no mundo ────────────────
+  abrirBau() {
+    if (this.fase !== "jogando" || !this.mira || this.mira.id !== B.BAU) return;
+    const chave = `${this.mira.x},${this.mira.y},${this.mira.z}`;
+    if (!this.baus.has(chave)) this.baus.set(chave, new Array(BAU_SLOTS).fill(null)); // baú antigo sem registo
+    this.bauAberto = chave;
+    this.som("colocar");
+    this.emitirEstado(true);
+  }
+  fecharBau() { if (this.bauAberto) { this.bauAberto = null; this.emitirEstado(true); } }
+  slotsBau(chave: string): (Slot | null)[] {
+    let b = this.baus.get(chave);
+    if (!b) { b = new Array(BAU_SLOTS).fill(null); this.baus.set(chave, b); }
+    return b;
+  }
+  /** Guarda o slot i da mochila no baú aberto (1.ª vaga) */
+  bauDepositar(i: number): boolean {
+    if (!this.bauAberto || i < 0 || i > 35) return false;
+    const s = this.inv.slots[i];
+    if (!s) return false;
+    const bau = this.slotsBau(this.bauAberto);
+    // encher pilhas iguais primeiro
+    if (s.id >= 100 || true) {
+      const max = s.id >= 100 ? (ITENS[s.id]?.maximo ?? 64) : 64;
+      for (const bs of bau) {
+        if (bs && bs.id === s.id && bs.qtd < max) {
+          const caber = Math.min(max - bs.qtd, s.qtd);
+          bs.qtd += caber; s.qtd -= caber;
+          if (s.qtd <= 0) { this.inv.slots[i] = null; this.conquista("cofre"); this.emitirEstado(true); return true; }
+        }
+      }
+      for (let j = 0; j < bau.length; j++) {
+        if (!bau[j]) {
+          bau[j] = { id: s.id, qtd: s.qtd };
+          this.inv.slots[i] = null;
+          this.conquista("cofre");
+          this.emitirEstado(true);
+          return true;
+        }
+      }
+    }
+    this.avisos.push({ texto: "Baú cheio", tipo: "info", t: 1.6 });
+    return false;
+  }
+  /** Retira o slot i do baú aberto para a mochila */
+  bauRetirar(i: number): boolean {
+    if (!this.bauAberto || i < 0 || i >= BAU_SLOTS) return false;
+    const bau = this.slotsBau(this.bauAberto);
+    const s = bau[i];
+    if (!s) return false;
+    const guardado = this.inv.adicionar(s.id, s.qtd);
+    if (guardado === 0) { this.avisos.push({ texto: "Mochila cheia", tipo: "info", t: 1.6 }); return false; }
+    s.qtd -= guardado;
+    if (s.qtd <= 0) bau[i] = null;
+    this.emitirEstado(true);
+    return true;
+  }
+
+  // ── v29 ARMADURA ───────────────────────────────────────
+  equiparArmadura(): boolean {
+    if (this.fase !== "jogando") return false;
+    const ok = this.inv.equiparArmadura();
+    if (ok) {
+      this.conquista("blindado");
+      this.som("criar");
+      this.emitirEstado(true);
+    }
+    return ok;
+  }
+  despirArmadura(): boolean {
+    if (this.fase !== "jogando") return false;
+    const ok = this.inv.despirArmadura();
+    if (ok) this.emitirEstado(true);
+    return ok;
+  }
+
+  // ── v29 TNT: acende · fusível · explosão enorme ──────
+  private acenderTnt(x: number, y: number, z: number) {
+    const chave = `${x},${y},${z}`;
+    if (this.tntAcesas.some((t) => `${t.x},${t.y},${t.z}` === chave)) return; // já acesa
+    this.mundo.setBloco(x, y, z, B.AR); // sai do mundo e vira entidade com fusível
+    const malha = new THREE.Mesh(
+      new THREE.BoxGeometry(0.94, 0.94, 0.94),
+      new THREE.MeshLambertMaterial({ color: 0xd83a2a }),
+    );
+    malha.position.set(x + 0.5, y + 0.5, z + 0.5);
+    this.cena.add(malha);
+    this.tntAcesas.push({ x, y, z, t: FUSIVEL_TNT, malha });
+    this.som("sibilo");
+    this.avisos.push({ texto: "TNT acesa — afasta-te!", tipo: "dano", t: 2 });
+    this.emitirEstado(true);
+  }
+  private atualizarTnt(dt: number) {
+    for (let i = this.tntAcesas.length - 1; i >= 0; i--) {
+      const t = this.tntAcesas[i];
+      t.t -= dt;
+      // piscar acelerado até explodir
+      const piscar = Math.sin(performance.now() / (60 + t.t * 90)) > 0;
+      t.malha.material instanceof THREE.MeshLambertMaterial &&
+        t.malha.material.emissive.setRGB(piscar ? 0.9 : 0.05, piscar ? 0.55 : 0.02, 0.02);
+      t.malha.scale.setScalar(1 + (1 - Math.max(0, t.t) / FUSIVEL_TNT) * 0.35);
+      if (t.t <= 0) {
+        this.cena.remove(t.malha); t.malha.geometry.dispose();
+        this.tntAcesas.splice(i, 1);
+        this.explodirNoMundo(t.x + 0.5, t.y + 0.5, t.z + 0.5, RAIO_TNT);
+        this.conquista("demolidor");
+      }
+    }
+  }
+  /** Explosão genérica (TNT): destrói blocos, partículas, dano e tremor */
+  private explodirNoMundo(ex: number, ey: number, ez: number, raio: number) {
+    const removidos = this.mundo.explodir(Math.floor(ex), Math.floor(ey), Math.floor(ez), this.rnd, raio);
+    this.som("explosao");
+    for (let i = 0; i < removidos.length && i < 40; i += 2) {
+      const [rx, ry, rz] = removidos[i];
+      this.spawnParticulas(rx + 0.5, ry + 0.5, rz + 0.5, "#5a5a5a", 4, 2.4);
+    }
+    this.spawnParticulas(ex, ey, ez, "#f0a030", 24, 3.2);
+    const d = Math.hypot(this.px - ex, this.py - ey, this.pz - ez);
+    if (d < raio + 2.5) {
+      const qtd = Math.round((1 - d / (raio + 2.5)) * 18);
+      if (qtd > 0) this.receberDano(qtd, "explosao");
+      this.vx += (this.px - ex) * 2.2; this.vy += 6; this.vz += (this.pz - ez) * 2.2;
+    }
+    this.tremerT = 0.8;
+  }
+
+  // ── v29 METEOROLOGIA: limpo → chuva → tempestade → limpo ──
+  definirMeteo(m: Meteo, segundos = 0) {
+    if (m !== "limpo" && m !== "chuva" && m !== "tempestade") return;
+    this.meteo = m;
+    this.meteoT = segundos > 0 ? segundos : (m === "limpo" ? 150 : 75);
+    this.avisos.push({ texto: m === "limpo" ? "O céu abriu ☀" : m === "chuva" ? "Começou a chover ☂ — o trigo adora!" : "TEMPESTADE ⚡ afasta-te de estruturas altas!", tipo: "info", t: 3.5 });
+    this.emitirEstado(true);
+  }
+  private atualizarMeteo(dt: number) {
+    this.meteoT -= dt;
+    if (this.meteoT <= 0) {
+      // transições honestas e determinísticas: limpo→chuva→(tempestade 1/3 das vezes)→limpo
+      if (this.meteo === "limpo") { this.meteo = "chuva"; this.meteoT = 60 + this.rnd.inteiro(0, 60); }
+      else if (this.meteo === "chuva") {
+        if (this.rnd.chance(0.34) && this.noite) { this.meteo = "tempestade"; this.meteoT = 40 + this.rnd.inteiro(0, 40); }
+        else { this.meteo = "limpo"; this.meteoT = 120 + this.rnd.inteiro(0, 90); }
+      }
+      else { this.meteo = "limpo"; this.meteoT = 150 + this.rnd.inteiro(0, 90); }
+      const nomes: Record<string, string> = { limpo: "O céu abriu ☀", chuva: "Começou a chover ☂ — o trigo adora!", tempestade: "TEMPESTADE ⚡ afasta-te de estruturas altas!" };
+      this.avisos.push({ texto: nomes[this.meteo], tipo: "info", t: 3.5 });
+    }
+    // nível de chuva suavizado (0..1) para partículas, céu e som
+    const alvo = this.meteo === "limpo" ? 0 : this.meteo === "chuva" ? 0.65 : 1;
+    this.chuvaNivel += (alvo - this.chuvaNivel) * Math.min(1, dt * 1.2);
+    // relâmpagos na tempestade
+    if (this.meteo === "tempestade") {
+      if (this.relampagoT > 0) {
+        this.relampagoT -= dt;
+        if (this.relampagoT <= 0 && this.chuvaGain === null) this.som("trovao");
+      } else if (this.rnd.proximo() < dt * 0.14) {
+        this.relampagoT = 0.14;
+      }
+    } else this.relampagoT = Math.max(0, this.relampagoT - dt);
+  }
+  /** Partículas de chuva: agulhas que caem num cilindro à volta do jogador */
+  private atualizarChuva(dt: number) {
+    const ativa = this.chuvaNivel > 0.04;
+    const n = Math.floor(this.chuvaPool.length * Math.min(1, this.chuvaNivel * 1.15));
+    for (let i = 0; i < this.chuvaPool.length; i++) {
+      const g = this.chuvaPool[i];
+      if (!ativa || i >= n) { g.visible = false; continue; }
+      if (!g.visible) {
+        const a = this.rnd.proximo() * Math.PI * 2, r = 4 + this.rnd.proximo() * 14;
+        g.position.set(this.px + Math.cos(a) * r, this.py + 9 + this.rnd.proximo() * 6, this.pz + Math.sin(a) * r);
+        g.visible = true;
+      }
+      g.position.y -= dt * 21;
+      if (g.position.y < this.py - 4) g.visible = false; // caiu abaixo: recicla
+    }
+    // som de chuva: ruído filtrado em loop (intensidade segue o nível)
+    if (this.mudo || !ativa) { this.pararChuva(); return; }
+    try {
+      if (!this.audioCtx) this.audioCtx = new AudioContext();
+      if (this.audioCtx.state === "suspended") void this.audioCtx.resume();
+      if (!this.chuvaGain) {
+        const dur = 2, sr = this.audioCtx.sampleRate;
+        const buf = this.audioCtx.createBuffer(1, sr * dur, sr);
+        const canal = buf.getChannelData(0);
+        for (let i = 0; i < canal.length; i++) canal[i] = (Math.random() * 2 - 1) * 0.4;
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        const filtro = this.audioCtx.createBiquadFilter();
+        filtro.type = "lowpass"; filtro.frequency.value = 900;
+        this.chuvaGain = this.audioCtx.createGain();
+        this.chuvaGain.gain.value = 0;
+        src.connect(filtro); filtro.connect(this.chuvaGain); this.chuvaGain.connect(this.audioCtx.destination);
+        src.start();
+        (this.chuvaGain as unknown as { __src?: AudioBufferSourceNode }).__src = src;
+      }
+      this.chuvaGain.gain.value = this.chuvaNivel * 0.14;
+    } catch { /* áudio indisponível — segue o jogo */ }
+  }
+  private pararChuva() {
+    if (this.chuvaGain) {
+      try { this.chuvaGain.gain.value = 0; } catch { /* ignore */ }
+      const src = (this.chuvaGain as unknown as { __src?: AudioBufferSourceNode }).__src;
+      if (src) { try { src.stop(); } catch { /* ignore */ } }
+      try { this.chuvaGain.disconnect(); } catch { /* ignore */ }
+      this.chuvaGain = null;
+    }
   }
 
   private colideComJogador(x: number, y: number, z: number): boolean {
@@ -556,6 +895,9 @@ export class Motor {
 
   atacar(): Mob | null {
     if (this.fase !== "jogando") return null;
+    // ── v29: TNT acende com um golpe; baú abre com um golpe ──
+    if (this.mira && this.mira.id === B.TNT) { this.acenderTnt(this.mira.x, this.mira.y, this.mira.z); return null; }
+    if (this.mira && this.mira.id === B.BAU) { this.abrirBau(); return null; }
     this.swingT = 0.3;
     const s = this.inv.selecionado();
     const item = s ? ITENS[s.id] : undefined;
@@ -630,6 +972,7 @@ export class Motor {
       this.som("criar");
       if (["pic_mad", "pic_ped", "pic_fer", "pic_dia"].includes(idReceita)) this.conquista("primeira_picareta");
       if (idReceita === "fun_fer") this.conquista("primeiro_ferro");
+      if (idReceita === "pao") this.conquista("padeiro");
       this.emitirEstado(true);
       return { ok: true, motivo: "" };
     }
@@ -666,7 +1009,7 @@ export class Motor {
       return sv?.modo === "criativo" ? "criativo" : sv?.modo === "sobrevivencia" ? "sobrevivencia" : null;
     } catch { return null; }
   }
-  som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao") {
+  som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao" | "trovao") {
     if (this.mudo) return;
     try {
       if (!this.audioCtx) this.audioCtx = new AudioContext();
@@ -681,6 +1024,7 @@ export class Motor {
         criar: ["triangle", 520, 0.1, 0.12, 140], conquista: ["sine", 660, 0.3, 0.15, 220],
         dano: ["sawtooth", 110, 0.15, 0.2, -30], passo: ["triangle", 90, 0.04, 0.05, 10],
         sibilo: ["sawtooth", 1400, 0.5, 0.06, 900], explosao: ["sawtooth", 70, 0.5, 0.4, -40],
+        trovao: ["sawtooth", 55, 0.9, 0.5, -25],
       };
       const [forma, freq, dur, vol, desliza] = config[tipo];
       osc.type = forma;
@@ -784,15 +1128,19 @@ export class Motor {
 
   receberDano(qtd: number, causa: string) {
     if (this.modo === "criativo" || this.fase !== "jogando") return;
-    this.vida -= qtd;
+    // ── v29: o peitoral absorve parte do dano (explosões incluídas) ──
+    const reducao = this.inv.reducaoArmadura;
+    let efetivo = qtd;
+    if (reducao > 0 && qtd < 1000) efetivo = Math.max(1, Math.round(qtd * (1 - reducao)));
+    this.vida -= efetivo;
     this.tremerT = 0.35; // tremor de câmara (v28)
-    this.avisos.push({ texto: `-${qtd} ${causa === "queda" ? "de queda" : causa === "afogamento" ? "afogamento" : ""}`, tipo: "dano", t: 1.2 });
+    this.avisos.push({ texto: `-${efetivo} ${causa === "queda" ? "de queda" : causa === "afogamento" ? "afogamento" : ""}`, tipo: "dano", t: 1.2 });
     this.som("dano");
     if (this.vida <= 0) {
       this.vida = 0;
       this.fase = "morto";
       this.causaMorte = causa === "queda" ? "Caiste de alto" : causa === "afogamento" ? "Afogaste-te" :
-        causa === "fome" ? "Morreste de fome" : causa === "explosao" ? "Um Estourador apanhou-te" :
+        causa === "fome" ? "Morreste de fome" : causa === "explosao" ? "Explodiu ao teu lado" :
           causa === "vazio" ? "Caiste para fora do mundo" : "Foste derrotado";
       this.morteRecente = 1;
       this.emitirEstado(true); // UI reage de imediato
@@ -808,11 +1156,11 @@ export class Motor {
     this.emitirEstado(true);
   }
 
-  // ── Seletor de blocos criativos (v28 + decorações v29) ──────
+  // ── Seletor de blocos criativos (v28 + ervas v29-mundo vivo + TNT/baú v29) ──
   listaBlocosCriativos(): number[] {
     return [B.RELVA, B.TERRA, B.PEDRA, B.PEDREGULHO, B.AREIA, B.TRONCO, B.FOLHAS,
       B.TABUAS, B.VIDRO, B.TOCHA, B.MESA, B.FORNALHA, B.CAMA, B.ESCADA,
-      B.ERVA, B.FLOR_AM, B.FLOR_VM, B.CACTO];
+      B.ERVA, B.FLOR_AM, B.FLOR_VM, B.CACTO, B.TNT, B.BAU];
   }
   darBloco(id: number, qtd = 64) { if (id > 0 && id < 100 && BLOCOS[id]) this.inv.adicionar(id, qtd); }
 
@@ -914,19 +1262,14 @@ export class Motor {
       if (this.gestor.explosaoPendente) {
         const e = this.gestor.explosaoPendente;
         this.gestor.explosaoPendente = null;
-        const removidos = this.mundo.explodir(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), this.rnd);
-        this.som("explosao");
-        for (let i = 0; i < removidos.length && i < 30; i += 2) {
-          const [rx, ry, rz] = removidos[i];
-          this.spawnParticulas(rx + 0.5, ry + 0.5, rz + 0.5, "#5a5a5a", 4, 2.2);
-        }
-        const d = Math.hypot(this.px - e.x, this.py - e.y, this.pz - e.z);
-        if (d < RAIO_EXPLOSAO + 2) {
-          this.receberDano(Math.round((1 - d / (RAIO_EXPLOSAO + 2)) * 14), "explosao");
-          this.vx += (this.px - e.x) * 2; this.vy += 5; this.vz += (this.pz - e.z) * 2;
-        }
-        this.tremerT = 0.5; // tremor de câmara na explosão (v28)
+        this.explodirNoMundo(e.x, e.y, e.z, RAIO_EXPLOSAO);
       }
+
+      // ── v29: TNT acesas · plantações · meteorologia · chuva ──
+      this.atualizarTnt(dt);
+      this.atualizarPlantacoes(dt);
+      this.atualizarMeteo(dt);
+      this.atualizarChuva(dt);
     }
 
     if (this.swingT > 0) this.swingT -= dt;
@@ -956,6 +1299,21 @@ export class Motor {
     this.emitirEstado();
   }
   private _sibiloTocado = false;
+
+  /** v29: trigo cresce — a chuva acelera (CRESCER_CHUVA) */
+  private atualizarPlantacoes(dt: number) {
+    if (this.plantas.size === 0) return;
+    for (const [chave, restam] of this.plantas) {
+      const novo = restam - dt;
+      if (novo <= 0) {
+        const [x, y, z] = chave.split(",").map(Number);
+        if (this.mundo.getBloco(x, y, z) === B.TRIGO_J) {
+          this.mundo.setBloco(x, y, z, B.TRIGO_M);
+          this.plantas.delete(chave);
+        } else this.plantas.delete(chave); // planta foi quebrada — sai da fila
+      } else this.plantas.set(chave, novo);
+    }
+  }
 
   // ── Render ──────────────────────────────────────────────────
   render(dtSegundos: number) {
@@ -1112,6 +1470,12 @@ export class Motor {
       naAgua: this.naAgua, voando: this.modo === "criativo" && this.criativoVoar,
       blocosQuebrados: this.blocosQuebrados, blocosColocados: this.blocosColocados,
       passos: Math.floor(this.animacaoAndar),
+      // v29
+      meteo: this.meteo,
+      armadura: this.inv.armadura ? { id: this.inv.armadura.id, nome: NOMES[this.inv.armadura.id] ?? "Peitoral", reducao: this.inv.reducaoArmadura } : null,
+      bauAberto: this.bauAberto ? { chave: this.bauAberto, slots: this.slotsBau(this.bauAberto).map((s) => s ? { id: s.id, qtd: s.qtd } : null) } : null,
+      tntAtivos: this.tntAcesas.length,
+      plantacoes: this.plantas.size,
     };
   }
 
@@ -1127,7 +1491,7 @@ export class Motor {
     if (!this.mundo || this.fase === "menu") return;
     try {
       const dados = {
-        v: 2, semente: this.mundo.semente, modo: this.modo,
+        v: 3, semente: this.mundo.semente, modo: this.modo,
         pos: [this.px, this.py, this.pz], yaw: this.yaw, pitch: this.pitch,
         vida: this.vida, fome: this.fome, dia: this.dia, tempo: this.tempo,
         primeiraNoiteFeita: this.primeiraNoiteFeita,
@@ -1136,6 +1500,11 @@ export class Motor {
         edits: Object.fromEntries(this.mundo.edits),
         blocosQuebrados: this.blocosQuebrados, blocosColocados: this.blocosColocados,
         spawn: this.spawnProprio, mobsDerrotados: this.mobsDerrotados,
+        // v29: armadura · baús · plantações · meteorologia
+        armadura: this.inv.armadura,
+        baus: Object.fromEntries(this.baus),
+        plantas: Object.fromEntries([...this.plantas.entries()].map(([k, v]) => [k, Math.round(v * 10) / 10])),
+        meteo: this.meteo, meteoT: Math.round(this.meteoT),
       };
       localStorage.setItem("bateu_blocos_save", JSON.stringify(dados));
     } catch { /* armazenamento cheio — segue */ }
@@ -1150,6 +1519,7 @@ export class Motor {
 
   parar() {
     this.guardar();
+    this.pararChuva();
     this.fase = "menu";
   }
 

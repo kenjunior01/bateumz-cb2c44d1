@@ -1,15 +1,17 @@
 // ============================================================
-// BATEUCRAFT — Mobs com IA: Porco (passivo), Zumbi (noturno),
-// Estourador (explosivo). Física simples + colisão com o mundo.
+// BATEUCRAFT — Mobs com IA: Porco, Vaca e Galinha (passivos),
+// Zumbi (noturno), Estourador (explosivo). Física simples +
+// colisão com o mundo.
 // ============================================================
 
 import * as THREE from "three";
 import { Mundo } from "./world";
 import { Aleatorio } from "./noise";
 import { B, GRAVIDADE } from "./constants";
-import { criarZumbi, criarPorco, criarEstourador } from "./lego";
+import { criarZumbi, criarPorco, criarEstourador, criarVaca, criarGalinha } from "./lego";
 
-export type TipoMob = "porco" | "zumbi" | "estourador";
+export type TipoMob = "porco" | "vaca" | "galinha" | "zumbi" | "estourador";
+export const ehPassivo = (t: TipoMob) => t === "porco" || t === "vaca" || t === "galinha";
 
 export interface Mob {
   tipo: TipoMob;
@@ -30,6 +32,8 @@ export interface Mob {
 
 const PERFIS: Record<TipoMob, { hp: number; vel: number; dano: number; altura: number }> = {
   porco: { hp: 10, vel: 1.4, dano: 0, altura: 0.9 },
+  vaca: { hp: 12, vel: 1.2, dano: 0, altura: 1.15 },
+  galinha: { hp: 6, vel: 1.6, dano: 0, altura: 0.7 },
   zumbi: { hp: 20, vel: 2.1, dano: 3, altura: 1.7 },
   estourador: { hp: 20, vel: 2.4, dano: 0, altura: 1.6 },
 };
@@ -52,6 +56,8 @@ export class GestorMobs {
       const a = criarZumbi();
       g = a.grupo; bracos = [a.bracoE, a.bracoD];
     } else if (tipo === "porco") { g = criarPorco(); }
+    else if (tipo === "vaca") { g = criarVaca(); }
+    else if (tipo === "galinha") { g = criarGalinha(); }
     else { g = criarEstourador(); }
     const mob: Mob = {
       tipo, x, y, z, vx: 0, vy: 0, vz: 0, yaw: this.rnd.proximo() * Math.PI * 2,
@@ -88,6 +94,8 @@ export class GestorMobs {
     };
     if (noite && this.contar("zumbi") < 8) tentar("zumbi");
     if (!noite && this.contar("porco") < 6 && this.rnd.chance(0.5)) tentar("porco");
+    if (!noite && this.contar("vaca") < 4 && this.rnd.chance(0.4)) tentar("vaca");
+    if (!noite && this.contar("galinha") < 4 && this.rnd.chance(0.4)) tentar("galinha");
     if (this.contar("estourador") < 2 && this.rnd.chance(0.12)) tentar("estourador");
   }
 
@@ -113,7 +121,7 @@ export class GestorMobs {
       if (mob.estado === "fundir") { /* fundição em curso — não perturbar */ }
       else if (mob.tipo === "zumbi" && dist < 18) mob.estado = "perseguir";
       else if (mob.tipo === "estourador" && dist < 12) mob.estado = "perseguir";
-      else if (mob.tipo === "porco" && mob.estado === "fugir" && mob.temporizador > 0) { /* mantém */ }
+      else if (ehPassivo(mob.tipo) && mob.estado === "fugir" && mob.temporizador > 0) { /* mantém */ }
       else if (mob.temporizador <= 0) {
         mob.estado = "vagar";
         mob.temporizador = this.rnd.intervalo(2, 5);
@@ -222,7 +230,7 @@ export class GestorMobs {
       melhor.piscaDano = 0.18;
       // knockback
       melhor.vx += Math.sin(yaw) * 4; melhor.vz += Math.cos(yaw) * 4; melhor.vy = 3;
-      if (melhor.tipo === "porco") { melhor.estado = "fugir"; melhor.temporizador = 4; }
+      if (ehPassivo(melhor.tipo)) { melhor.estado = "fugir"; melhor.temporizador = 4; }
       if (melhor.hp <= 0) this.matar(melhor, true);
     }
     return melhor;
@@ -246,6 +254,12 @@ export class GestorMobs {
 
   dropDoMob(tipo: TipoMob, rnd: Aleatorio): { id: number; qtd: number }[] {
     if (tipo === "porco") return [{ id: 105, qtd: rnd.inteiro(1, 2) }]; // carne crua
+    if (tipo === "vaca") {
+      const drops = [{ id: 105, qtd: rnd.inteiro(1, 2) }]; // carne crua
+      if (rnd.chance(0.7)) drops.push({ id: 122, qtd: rnd.inteiro(1, 2) }); // couro
+      return drops;
+    }
+    if (tipo === "galinha") return [{ id: 105, qtd: 1 }]; // carne crua
     if (tipo === "estourador") return rnd.chance(0.6) ? [{ id: 101, qtd: rnd.inteiro(1, 2) }] : []; // carvão
     if (tipo === "zumbi") return rnd.chance(0.35) ? [{ id: 100, qtd: rnd.inteiro(1, 2) }] : []; // gravetos
     return [];

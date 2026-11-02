@@ -7,7 +7,7 @@
 import { Aleatorio } from "./noise";
 
 export const TILE = 16;
-export const COLS_ATLAS = 8, LINHAS_ATLAS = 4;
+export const COLS_ATLAS = 8, LINHAS_ATLAS = 5;
 
 // Índices dos tiles no atlas
 export const T = {
@@ -16,7 +16,7 @@ export const T = {
   CARVAO: 12, FERRO: 13, OURO: 14, DIAMANTE: 15, ROCHA_MAE: 16, MESA_TOPO: 17,
   MESA_LADO: 18, FORNALHA_TOPO: 19, FORNALHA_FRENTE: 20, TOCHA: 21, VIDRO: 22,
   CAMA: 23, ESCADA: 24, ERVA: 25, FLOR_AM: 26, FLOR_VM: 27, CACTO_TOPO: 28, CACTO_LADO: 29,
-};
+  TERRA_ARADA: 30, TRIGO_VERDE: 31, TRIGO_OURO: 32, TNT_TOPO: 33, TNT_LADO: 34, BAU_TOPO: 35, BAU_LADO: 36,};
 
 type Pixel = [number, number, number];
 
@@ -253,11 +253,66 @@ export function criarAtlas(): HTMLCanvasElement {
     for (const [ex, ey] of [[0, 3], [15, 5], [0, 11], [15, 9]] as const) px(ex, ey, espinho);
   });
 
+  // ── v29 sistemas avançados: tiles 30-36 (linha 4 do atlas) ──
+  // 30 terra arada — sulcos húmidos
+  pintar(ctx, 6, 3, "#5d4028", 10, 44, (px) => {
+    const sulco: Pixel = hex("#46301c"), humido: Pixel = hex("#6b4a2c");
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (y % 5 === 2) px(x, y, sulco);
+      else if (y % 5 === 1 && x % 4 < 2) px(x, y, humido);
+    }
+  });
+  // 31 trigo jovem — brotos verdes
+  pintar(ctx, 7, 3, "#5d4028", 10, 45, (px) => {
+    const broto: Pixel = hex("#7ab04a"), folha: Pixel = hex("#8ec45c");
+    for (let x = 1; x < 16; x += 4) for (let y = 9; y < 16; y++) {
+      px(x, y, broto);
+      if (y < 12) px(x + 1, y, folha);
+    }
+  });
+  // 32 trigo maduro — espigas douradas
+  pintar(ctx, 0, 4, "#5d4028", 8, 46, (px) => {
+    const caule: Pixel = hex("#b8932a"), espiga: Pixel = hex("#e8c858"), topo: Pixel = hex("#f0d878");
+    for (let x = 1; x < 16; x += 4) for (let y = 3; y < 16; y++) px(x, y, caule);
+    for (let x = 1; x < 16; x += 4) for (let y = 1; y < 6; y++) px(x, y, espiga);
+    for (let x = 1; x < 16; x += 4) { px(x, 0, topo); px(x + 1, 2, espiga); }
+  });
+  // 33 TNT topo — pavio cruzado
+  pintar(ctx, 1, 4, "#d83a2a", 10, 47, (px) => {
+    const cruz: Pixel = hex("#f0e8d8"), pavio: Pixel = hex("#2b2b2b");
+    for (let i = 0; i < 16; i++) { px(i, 7, cruz); px(i, 8, cruz); px(7, i, cruz); px(8, i, cruz); }
+    px(7, 7, pavio); px(8, 8, pavio);
+  });
+  // 34 TNT lado — barril vermelho com rótulo
+  pintar(ctx, 2, 4, "#d83a2a", 10, 48, (px) => {
+    const faixa: Pixel = hex("#f0e8d8"), letra: Pixel = hex("#1c1c1c");
+    for (let y = 4; y < 12; y++) for (let x = 0; x < 16; x++) px(x, y, faixa);
+    const T2 = [[0, 0], [1, 0], [2, 0], [1, 1], [1, 2], [1, 3], [1, 4]];
+    const N = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [2, 2], [3, 3], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4]];
+    for (const [ox, ly] of T2) px(2 + ox, 5 + ly, letra);
+    for (const [ox, ly] of T2) px(7 + ox, 5 + ly, letra);
+    for (const [ox, ly] of N) px(10 + ox, 5 + ly, letra);
+  });
+  // 35 baú topo — tábuas com faixa de metal
+  pintar(ctx, 3, 4, "#b78b52", 8, 49, (px) => {
+    const faixa: Pixel = hex("#8a8a8a"), fech: Pixel = hex("#f0c542");
+    for (let i = 0; i < 16; i++) { px(i, 0, faixa); px(i, 15, faixa); px(0, i, faixa); px(15, i, faixa); }
+    for (let x = 0; x < 16; x++) px(x, 7, faixa);
+    px(6, 6, fech); px(7, 6, fech); px(6, 7, fech); px(7, 7, fech); px(8, 6, fech); px(8, 7, fech);
+  });
+  // 36 baú lado — tábuas com fechadura
+  pintar(ctx, 4, 4, "#a37c46", 8, 50, (px) => {
+    const linha: Pixel = hex("#6d4a26"), fech: Pixel = hex("#f0c542"), sombraF: Pixel = hex("#8a6a20");
+    for (let y = 0; y < 16; y++) { if (y % 4 === 3) for (let x = 0; x < 16; x++) px(x, y, linha); }
+    for (let y = 6; y < 11; y++) for (let x = 6; x < 10; x++) px(x, y, fech);
+    px(7, 9, sombraF); px(8, 9, sombraF); px(7, 10, sombraF);
+  });
+
   return cv;
 }
 
 /** Cara de personagem LEGO (amarela, olhos e sorriso) para a cabeça cilíndrica */
-export function criarCaraLego(cor: string, tipo: "heroi" | "zumbi" | "estourador" | "porco"): HTMLCanvasElement {
+export function criarCaraLego(cor: string, tipo: "heroi" | "zumbi" | "estourador" | "porco" | "vaca" | "galinha"): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = 64; cv.height = 64;
   const ctx = cv.getContext("2d")!;
@@ -292,6 +347,21 @@ export function criarCaraLego(cor: string, tipo: "heroi" | "zumbi" | "estourador
     ctx.fillStyle = "#d06a8a"; ctx.fillRect(22, 32, 20, 14);
     ctx.fillStyle = "#8a3a54"; ctx.fillRect(26, 36, 4, 6); ctx.fillRect(34, 36, 4, 6);
     olho(14, 18, 7, 8, "#fff", "#181818"); olho(43, 18, 7, 8, "#fff", "#181818");
+  }
+  if (tipo === "vaca") {
+    // vaca: focinho largo + manchas
+    ctx.fillStyle = "#e8c8a8"; ctx.fillRect(20, 34, 24, 16);
+    ctx.fillStyle = "#8a5a3a"; ctx.fillRect(24, 38, 5, 7); ctx.fillRect(35, 38, 5, 7);
+    olho(12, 18, 8, 9, "#fff", "#181818"); olho(44, 18, 8, 9, "#fff", "#181818");
+    ctx.fillStyle = "rgba(60,35,20,0.55)";
+    ctx.fillRect(2, 2, 12, 10); ctx.fillRect(50, 6, 10, 8);
+  }
+  if (tipo === "galinha") {
+    // galinha: bico + olhos grandes
+    ctx.fillStyle = "#f0a020"; ctx.fillRect(26, 34, 12, 9);
+    ctx.fillStyle = "#c87818"; ctx.fillRect(28, 40, 8, 3);
+    olho(12, 16, 9, 11, "#fff", "#c02a2a"); olho(43, 16, 9, 11, "#fff", "#c02a2a");
+    ctx.fillStyle = "#e02a2a"; ctx.fillRect(28, 8, 8, 6); // crista
   }
   return cv;
 }

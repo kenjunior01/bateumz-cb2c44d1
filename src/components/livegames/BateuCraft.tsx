@@ -4,10 +4,10 @@
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES } from "@/game/blocos/engine";
+import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES, Meteo } from "@/game/blocos/engine";
 import { infoItem } from "@/game/blocos/inventario";
 import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
-import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn } from "lucide-react";
+import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive } from "lucide-react";
 
 interface Props {
   onScore?: (score: number) => void;
@@ -130,7 +130,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const motorRef = useRef<Motor>(new Motor());
   const [fase, setFase] = useState<"menu" | "jogando" | "morto">("menu");
   const [cap, setCap] = useState<Captura | null>(null);
-  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar" | "trofeus">(null);
+  const [modal, setModal] = useState<null | "inv" | "pausa" | "ajuda" | "avatar" | "trofeus" | "bau">(null);
   const [aCarregar, setACarregar] = useState(false);
   const [receitaSel, setReceitaSel] = useState<"criacao" | "fundicao">("criacao");
   const [motorPronto, setMotorPronto] = useState(false);
@@ -141,6 +141,11 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const [voando, setVoando] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(true);
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
+
+  // baú aberto (v29): o motor decide; a UI reage
+  useEffect(() => {
+    if (cap?.bauAberto) setModal((v) => (v === null || v === "bau" ? "bau" : v));
+  }, [cap?.bauAberto?.chave]);
 
   // ── Estado da UI ← motor ──
   const vidaAnterior = useRef<number | null>(null);
@@ -257,12 +262,29 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       blocosCriativos: () => motorRef.current.listaBlocosCriativos(),
       darBloco: (id: number, qtd?: number) => motorRef.current.darBloco(id, qtd),
       miniMapa: () => motorRef.current.miniMapa(24),
-      spawnarMob: (tipo: "porco" | "zumbi" | "estourador", dx = 3, dz = 0) => {
+      spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha", dx = 3, dz = 0) => {
         const mm = motorRef.current;
         return mm.gestor.spawnar(tipo, mm.px + dx, mm.py + 2, mm.pz + dz);
       },
       tremer: () => motorRef.current.tremerT,
       spawnProprio: () => motorRef.current.spawnProprio,
+      // v29: agricultura · TNT · baú · armadura · meteorologia
+      meteo: () => motorRef.current.meteo,
+      definirMeteo: (m2: Meteo, seg?: number) => motorRef.current.definirMeteo(m2, seg),
+      chuvaNivel: () => motorRef.current.chuvaNivel,
+      relampago: () => motorRef.current.relampagoT > 0,
+      plantas: () => motorRef.current.plantas.size,
+      tnt: () => motorRef.current.tntAcesas.length,
+      baus: () => [...motorRef.current.baus.keys()],
+      abrirBau: () => motorRef.current.abrirBau(),
+      fecharBau: () => motorRef.current.fecharBau(),
+      bauDepositar: (i: number) => motorRef.current.bauDepositar(i),
+      bauRetirar: (i: number) => motorRef.current.bauRetirar(i),
+      armadura: () => motorRef.current.inv.armadura,
+      reducao: () => motorRef.current.inv.reducaoArmadura,
+      equipar: () => motorRef.current.equiparArmadura(),
+      despir: () => motorRef.current.despirArmadura(),
+      itemSelecionado: () => motorRef.current.inv.selecionado(),
     };
     return () => { try { delete (window as any).__blocos; } catch { /* ignore */ } };
   }, []);
@@ -424,6 +446,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   }, []);
   // fechar qualquer modal devolve o jogo ao estado correto (despausa se estava em pausa)
   const fecharModal = useCallback(() => {
+    motorRef.current.fecharBau(); // baú fecha sempre que um modal fecha
     motorRef.current.pausado = false;
     setModal(null);
   }, []);
@@ -527,12 +550,23 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <div className="text-[10px] text-white/85 font-mono bg-black/35 rounded px-1.5 py-0.5 w-fit">
               {cap.pos.map((v) => v.toFixed(0)).join(", ")} · {cap.fps} fps
             </div>
+            {/* armadura equipada (v29) */}
+            {cap.armadura && (
+              <div className="flex items-center gap-1 bg-black/35 rounded px-1.5 py-0.5 w-fit" data-testid="bc-armadura-hud">
+                <Shield size={11} className="text-sky-300" />
+                <span className="text-[10px] text-white/85 font-bold">{Math.round(cap.armadura.reducao * 100)}%</span>
+              </div>
+            )}
           </div>
 
-          {/* relógio + dia — topo direita */}
+          {/* relógio + dia + meteorologia — topo direita */}
           <div className="absolute top-2 right-2 flex items-center gap-2 pointer-events-none">
+            <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-meteo" title={cap.meteo}>
+              {cap.meteo === "chuva" ? <CloudRain size={14} className="text-sky-300" /> :
+                cap.meteo === "tempestade" ? <CloudLightning size={14} className="text-amber-300" /> :
+                cap.noite ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-300" />}
+            </div>
             <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-dia">
-              {cap.noite ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-300" />}
               Dia {cap.dia}
             </div>
             <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1 text-white text-xs font-bold" data-testid="bc-creditos">
@@ -729,6 +763,27 @@ export default function BateuCraft({ onScore, onExit }: Props) {
                 </div>
               ))}
             </div>
+            {/* v29: armadura — equipar/despir */}
+            <div className="flex items-center gap-2 bg-slate-800/80 rounded-xl p-2 mb-4" data-testid="bc-armadura-row">
+              <div className="w-9 h-9 rounded-lg bg-black/40 flex items-center justify-center">
+                {cap?.armadura ? <IconeItem id={cap.armadura.id} tamanho={22} /> : <Shield size={18} className="text-white/30" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-bold">
+                  {cap?.armadura ? `${cap.armadura.nome} — absorve ${Math.round(cap.armadura.reducao * 100)}% do dano` : "Sem peitoral equipado"}
+                </p>
+                <p className="text-white/50 text-[10px]">Toca numa armadura na mochila e usa o botão ao lado</p>
+              </div>
+              {(() => {
+                const s = cap?.slots[cap.selecao];
+                const ehArmadura = s && ITENS[s.id]?.armadura;
+                return cap?.armadura ? (
+                  <button onClick={() => m.despirArmadura()} data-testid="bc-despir" className="px-3 py-1.5 rounded-lg text-xs font-black bg-slate-600 text-white active:scale-95">DESPIR</button>
+                ) : ehArmadura ? (
+                  <button onClick={() => m.equiparArmadura()} data-testid="bc-equipar" className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white active:scale-95">EQUIPAR</button>
+                ) : null;
+              })()}
+            </div>
             <p className="text-white/40 text-[10px] font-bold uppercase mb-1">Mochila — toca num slot abaixo para o levar à hotbar</p>
             <div className="grid grid-cols-9 gap-1">
               {cap?.slots.map((s, i) => (
@@ -755,6 +810,38 @@ export default function BateuCraft({ onScore, onExit }: Props) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: BAÚ (v29) ═══ */}
+      {modal === "bau" && cap?.bauAberto && (
+        <div className="absolute inset-0 bg-black/70 flex items-end md:items-center justify-center p-2 md:p-6" onClick={fecharModal}>
+          <div className="bg-slate-900 border border-white/15 rounded-2xl w-full max-w-lg p-4" onClick={(e) => e.stopPropagation()} data-testid="bc-modal-bau">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white font-black text-lg flex items-center gap-2"><Archive size={20} className="text-amber-300" /> BAÚ</h3>
+              <button onClick={fecharModal} className="p-1.5 rounded-lg bg-slate-700 text-white" data-testid="bc-bau-fechar"><X size={16} /></button>
+            </div>
+            <p className="text-white/50 text-[10px] mb-1">Toca num item do baú para o levar à mochila</p>
+            <div className="grid grid-cols-9 gap-1 mb-4">
+              {cap.bauAberto.slots.map((s, i) => (
+                <button key={i} data-testid={`bc-bau-slot-${i}`}
+                  onClick={() => m.bauRetirar(i)}
+                  className="aspect-square rounded-md bg-amber-600/15 ring-1 ring-amber-500/40 flex items-center justify-center active:scale-90">
+                  {s && <IconeItem id={s.id} qtd={s.qtd} tamanho={26} />}
+                </button>
+              ))}
+            </div>
+            <p className="text-white/40 text-[10px] font-bold uppercase mb-1">Mochila — toca num item para o guardar no baú</p>
+            <div className="grid grid-cols-9 gap-1">
+              {cap.slots.map((s, i) => (
+                <button key={i} data-testid={`bc-bau-inv-${i}`}
+                  onClick={() => m.bauDepositar(i)}
+                  className={`aspect-square rounded-md flex items-center justify-center ${s ? "bg-sky-500/15 ring-1 ring-sky-400/40 active:scale-90" : "bg-black/40"}`}>
+                  {s && <IconeItem id={s.id} qtd={s.qtd} tamanho={26} />}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -834,6 +921,12 @@ export default function BateuCraft({ onScore, onExit }: Props) {
             <p><b className="text-amber-300">Escada:</b> 7 tábuas → 3 escadas · encosta e usa SALTAR/DESCER para escalar</p>
             <p><b className="text-amber-300">Voar / mergulhar:</b> {ehToque ? "VOAR no criativo · DESCER na água ou a voar" : "F voa no criativo · Ctrl desce na água e no voo"}</p>
             <p><b className="text-amber-300">Mochila:</b> tecla E ou mochila no topo · aí crias ferramentas e fundes minérios · toca num item da mochila para o levar à hotbar</p>
+            <p><b className="text-amber-300">Agricultura:</b> enxada lava relva/terra → sementes plantam trigo → colhe dourado = trigo + sementes · 3 trigos = pão · a chuva acelera o crescimento</p>
+            <p><b className="text-amber-300">TNT:</b> 4 areias + 5 carvões · coloca-a e ataca-a para acender — 2,6 s e BOOM (afasta-te!)</p>
+            <p><b className="text-amber-300">Baú:</b> 8 tábuas · ataca-o para abrir — 18 posições guardadas no teu mundo, nada se perde</p>
+            <p><b className="text-amber-300">Armadura:</b> peitorais de couro (15%), ferro (30%) e diamante (45%) absorvem dano — equipa na mochila</p>
+            <p><b className="text-amber-300">Meteorologia:</b> chuva e tempestades com trovoada · trigo cresce ×2,4 com chuva · céu escurece de verdade</p>
+            <p><b className="text-amber-300">Animais:</b> vacas e galinhas vagueiam de dia — carne e couro para o peitoral</p>
             <p><b className="text-amber-300">Sobrevive:</b> come carne e maçãs, constrói abrigo antes da noite — os Zumbis LEGO aparecem no escuro e o Estourador explode! Coloca tochas: elas iluminam de verdade.</p>
             <p><b className="text-amber-300">Progressão:</b> madeira → tábuas → mesa → picareta → pedra → fornalha → ferro → DIAMANTE. É difícil de propósito.</p>
             <p><b className="text-emerald-300">Créditos:</b> conquistas dão créditos Bateu — troca por histórias e 1 GB via WhatsApp.</p>

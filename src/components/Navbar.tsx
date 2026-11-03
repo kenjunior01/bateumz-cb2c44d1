@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -233,6 +233,7 @@ const Navbar = () => {
         { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
         { label: "⚽ Desporto Real", href: "/desporto", icon: Medal, desc: "Jornadas, resultados e classificação reais das grandes ligas + palpites parimutuel entre jogadores", badge: "NOVO", trending: true },
         { label: "🎮 Jogos Grátis", href: "/jogos-gratis", icon: Joystick, desc: "Catálogo real de jogos free-to-play para PC e browser — filtra por género e joga na hora", badge: "NOVO" },
+        { label: "🏙️ Cidade Bateu", href: "/cidade", icon: Landmark, desc: "O mundo-âncora da plataforma: cidade voxel viva onde cada distrito é um portal — sorteios, desporto, lives, jogos e mais", badge: "NOVO", trending: true },
         { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },
         { label: t("nav.lives"), href: "/lives", icon: Radio, desc: t("nav.lives.desc") },
         { label: t("nav.blog"), href: "/blog", icon: Newspaper, desc: t("nav.blog.desc") },
@@ -276,6 +277,7 @@ const Navbar = () => {
     { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
     { label: "Desporto", href: "/desporto", icon: Medal },
     { label: "Jogos Grátis", href: "/jogos-gratis", icon: Joystick },
+    { label: "Cidade Bateu", href: "/cidade", icon: Landmark },
     { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
     { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
     { label: "Alienação", href: "/alienacao", icon: KeyRound },

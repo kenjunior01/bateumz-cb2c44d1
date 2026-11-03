@@ -433,3 +433,23 @@ Stage Summary:
 - BateuCraft ganhou o sistema que faltava do género: PESCA de ponta a ponta com espera honesta, janela de perícia e peixes raros raros de verdade — e a Aranha dá propósito à noite sem matar o dia
 - A plataforma come o mundo real pela 6.ª API: pratos reais com fotos reais e regiões reais da TheMealDB
 - Tudo com as três regras de sempre: zero dados inventados, erros honestos, atribuição explícita
+
+---
+Task ID: cidade-bateu-v1-v33
+Agent: Super Z (main)
+Task: CIDADE BATEU v1 — o jogo-âncora da plataforma (mundo voxel onde cada distrito é um portal real) · MZ · AO · CV
+
+Work Log:
+- DECISÃO PREVIA ao código: o utilizador pediu o jogo principal que envolve toda a plataforma → desenho "cidade voxel = plataforma": 10 distritos-portais com rotas REAIS verificadas em App.tsx (marketplace/leiloes/desporto/esports/jogos/lives/negocios/community/jogos-gratis/concursos), Praça do Imbondeiro central, Tua Casa, Sala de Troféus; semente FIXA 20251103 (mesma cidade para todos — base multiplayer)
+- MOTOR: só 2 ganchos novos no engine.ts (fabricaMundo + spawnFixo) — por omissão o motor comporta-se exactamente como antes; MundoCidade extends Mundo (plateau plano r≤58 com fusão suave até r72, bioma planície na cidade, carimbo determinístico: praça pavimentada + imbondeiro de copa larga + 10 caminhos radiais com postes de tocha + 10 edifícios 9×9 com materiais distintos, janelas de vidro, portas viradas à praça, telhados completos 9×9 + limpeza de árvores até y+12 + Tua Casa 7×7 com cama/baú/mesa + pavilhão de troféus); GestorPacífico por closures (só passivos, noite=false forçado — hub não pode matar)
+- PÁGINA /cidade (CidadeBateu.tsx ~620 linhas): ecrã de início com clima real + semente + chip de fontes; HUD (relógio HH:MM do mundo, meteo do motor, clima real Maputo 24,8°, créditos, minimapa com pontos coloridos dos distritos, 5ª câmara persistida, som); rótulos flutuantes 3D→ecrã a 8 Hz com âncora adaptativa (y+4.5 perto / y+8.5 longe); CTA "Entrar →" por proximidade <8 blocos navega para a rota REAL; missões urbanas diárias determinísticas (circuito 4 distritos · destaque do dia rotativo · lar doce lar) registadas SÓ por proximidade 3D, +15 créditos cada, confetti no fecho; Sala de Troféus honesta (atividade local + atribuição open-meteo); controlos desktop (pointer-lock, WASD, F5 câmaras, E interagir, F voar) e móveis (joystick, olhar, saltar, correr); createPortal para body
+- BUGS REAIS apanhados: (1) ALTURA_PLATEAU importado de constants (não existe lá) → lazy route em branco — tsc não apanhou, probe sim; (2) wrapper PageTransition com filter:blur(0px) cria containing block e esmaga fixed inset-0 (altura 0, html interceptava cliques) → createPortal(document.body); (3) âncora dos rótulos saía do frustum junto aos edifícios (NDC>1.15) → CTA nunca aparecia; (4) regex do mock /api\.open-meteo\.com/ casava com geocoding-api.… (Playwright prioriza o último route) → âncora ^https://; (5) toLocaleString pt-PT = "26,4" → asserção /26[.,]4/; (6) telhados em anel + árvores dentro dos edifícios vistos em screenshot aérea → telhado completo + limpeza + tochas 1/9
+- i18N: 26 chaves cidade.* nos 6 blocos (pt · pt-BR · en · es · fr · hi) ancoradas por desporto.real único; navegação: Navbar (dropdown Gaming + quickActions) e MobileMenuDrawer com Landmark + "Cidade Bateu"
+- E2E NOVO test-cidade.mjs 31/31: início/clima/spawn sem NaN/blocos reais da cidade/5 câmaras/3 missões/4 portais por proximidade/créditos 45 por visitas reais/CTA→/lives/troféus/relógio/mobile 375/zero erros consola
+- REGRESSÕES: blocos 101/101 (motor intacto) · APIs-v25 30/30 · tsc 0 · screenshots v33 verificadas (início · 3ª pessoa na praça com HUD · aérea com 10 distritos e telhados completos)
+- DOC: docs/REA-cidade-bateu-v33.md (decisões, honestidade, bugs, pendências M1–M3 multiplayer)
+
+Stage Summary:
+- A bateumz deixou de ser um site com jogos: agora tem UM LUGAR — a Cidade Bateu, onde a atividade de toda a plataforma vira geografia e cada ganho é um edifício
+- Zero plágio por construção: motor próprio, texturas canvas, imbondeiro e distritos com identidade MZ·AO·CV — mecânica do género é livre, a expressão é nossa
+- Três regras intactas: créditos só de visitas reais por proximidade 3D, clima indisponível diz-se indisponível, open-meteo com fonte visível

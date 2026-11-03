@@ -6,7 +6,7 @@ import {
   MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen,
   Gift, Store, Gamepad2, Bell, Search, Flame, Wallet, Clock, Heart,
   BadgeCheck, LogOut, Settings, User, X, Home, Layers, TrendingUp,
-  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins, Medal, Joystick
+  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins, Medal, Joystick, Landmark
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -58,6 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
       { icon: Target, labelKey: "tournament.title", href: "/tournaments", grad: "from-emerald-500 to-teal-600", badge: "NOVO" },
       { icon: Medal, labelKey: "desporto.real", href: "/desporto", grad: "from-green-500 to-emerald-700", badge: "NOVO" },
       { icon: Joystick, labelKey: "games.free", href: "/jogos-gratis", grad: "from-violet-500 to-fuchsia-600", badge: "NOVO" },
+      { icon: Landmark, labelKey: "cidade.titulo", href: "/cidade", grad: "from-amber-500 to-rose-600", badge: "NOVO" },
     ],
   },
   {

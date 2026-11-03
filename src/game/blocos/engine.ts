@@ -178,6 +178,10 @@ export class Motor {
   morteRecente = 0;
   atacarPedido = false; colocarPedido = false; comerPedido = false;
   criativoVoar = false;
+  // v33 (Cidade Bateu): ganchos opcionais — por omissão o motor comporta-se
+  // exactamente como antes (mundo procedural + spawn natural).
+  fabricaMundo: ((semente: number) => Mundo) | null = null;
+  spawnFixo: [number, number, number] | null = null;
 
   constructor() {
     try { this.mudo = localStorage.getItem("bateu_blocos_som") === "1"; } catch { /* ignore */ }
@@ -211,7 +215,7 @@ export class Motor {
     const guardado = carregar ? this.lerSave() : null;
     const semente = guardado?.semente ?? (Date.now() % 1000000);
     const mundoAnterior = this.mundo; // para limpar da cena depois
-    this.mundo = new Mundo(semente);
+    this.mundo = this.fabricaMundo ? this.fabricaMundo(semente) : new Mundo(semente);
     this.gestor = new GestorMobs(this.mundo, semente);
     this.rnd = new Aleatorio(semente + 777);
 
@@ -320,7 +324,7 @@ export class Motor {
       [this.px, this.py, this.pz] = guardado.pos;
       this.yaw = guardado.yaw ?? 0; this.pitch = guardado.pitch ?? 0;
     } else {
-      const [sx, sy, sz] = this.mundo.spawnPos();
+      const [sx, sy, sz] = this.spawnFixo ?? this.mundo.spawnPos();
       this.px = sx; this.py = sy; this.pz = sz;
       this.vida = VIDA_MAX; this.fome = FOME_MAX; this.ar = AR_MAX;
       this.inv.limpar();

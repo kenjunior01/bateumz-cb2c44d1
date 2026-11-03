@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch({ args: ["--no-sandbox"], executablePath: process.env.PW_CHROME || undefined });
+const page = await browser.newPage();
+page.on("pageerror", (e) => console.log("PAGEERROR:", String(e).slice(0, 300)));
+page.on("console", (m) => { if (m.type() === "error") console.log("CONSOLE:", m.text().slice(0, 300)); });
+await page.goto("http://localhost:8099/cidade", { waitUntil: "networkidle", timeout: 30000 }).catch((e) => console.log("GOTO:", String(e).slice(0, 200)));
+await page.waitForTimeout(4000);
+const html = await page.evaluate(() => document.body.innerHTML.slice(0, 600));
+console.log("BODY:", html.replace(/\s+/g, " ").slice(0, 500));
+const root = await page.evaluate(() => document.getElementById("root")?.children.length ?? -1);
+console.log("ROOT CHILDREN:", root);
+await browser.close();

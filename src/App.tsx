@@ -179,6 +179,7 @@ const BracketsPage = lazy(() => import("./pages/esports/BracketsPage.tsx"));
 const FantasyPage = lazy(() => import("./pages/esports/FantasyPage.tsx"));
 const DesportoHub = lazy(() => import("./pages/desporto/DesportoHub.tsx"));
 const FreeGamesHub = lazy(() => import("./pages/games-gratis/FreeGamesHub.tsx"));
+const CidadeBateu = lazy(() => import("./pages/CidadeBateu.tsx"));
 const GlobalSearch = lazy(() => import("./components/search/GlobalSearch.tsx"));
 
 const queryClient = new QueryClient();
@@ -289,6 +290,7 @@ function AnimatedRoutes() {
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/desporto" element={<DesportoHub />} />
             <Route path="/jogos-gratis" element={<FreeGamesHub />} />
+            <Route path="/cidade" element={<CidadeBateu />} />
             <Route path="/ligas" element={<LeaguesListPage />} />
             <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
             <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="brackets" element={<BracketsPage />} />            <Route path="fantasy" element={<FantasyPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>

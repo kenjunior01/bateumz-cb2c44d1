@@ -62,13 +62,15 @@ export const posDistrito = (di: Distrito): [number, number] =>
 export const POS_CASA: [number, number] = [Math.round(Math.cos(0.314) * 14), Math.round(Math.sin(0.314) * 14)];
 /** Sala de Troféus — pavilhão aberto a sul da praça. */
 export const POS_TROFEUS: [number, number] = [0, 12];
+/** Quiosque da Praça (v34) — rádio da cidade + quiz, a NE do imbondeiro. */
+export const POS_QUIOSQUE: [number, number] = [5, -5];
 
 /** Portal mais próximo se estiveres a ≤ `alcance` blocos (null = nenhum). */
 export function portalPerto(
   x: number, z: number, alcance = 8,
-): { tipo: "distrito" | "casa" | "trofeus"; distrito?: Distrito; dist: number } | null {
-  let melhor: { tipo: "distrito" | "casa" | "trofeus"; distrito?: Distrito; dist: number } | null = null;
-  const considerar = (tipo: "distrito" | "casa" | "trofeus", bx: number, bz: number, distrito_?: Distrito) => {
+): { tipo: "distrito" | "casa" | "trofeus" | "quiosque"; distrito?: Distrito; dist: number } | null {
+  let melhor: { tipo: "distrito" | "casa" | "trofeus" | "quiosque"; distrito?: Distrito; dist: number } | null = null;
+  const considerar = (tipo: "distrito" | "casa" | "trofeus" | "quiosque", bx: number, bz: number, distrito_?: Distrito) => {
     const dist = Math.hypot(x - bx, z - bz);
     if (dist <= alcance && (!melhor || dist < melhor.dist)) melhor = { tipo, distrito: distrito_, dist };
   };
@@ -78,6 +80,7 @@ export function portalPerto(
   }
   considerar("casa", POS_CASA[0], POS_CASA[1]);
   considerar("trofeus", POS_TROFEUS[0], POS_TROFEUS[1]);
+  considerar("quiosque", POS_QUIOSQUE[0], POS_QUIOSQUE[1]);
   return melhor;
 }
 
@@ -108,6 +111,7 @@ export class MundoCidade extends Mundo {
     const bx = cx * CHUNK, bz = cz * CHUNK;
     if (bx > RAIO_FUSAO + 8 || bz > RAIO_FUSAO + 8 || bx + CHUNK < -RAIO_FUSAO - 8 || bz + CHUNK < -RAIO_FUSAO - 8) return c;
     this.carimbarPraca(c);
+    this.carimbarQuiosque(c);
     this.carimbarCasa(c);
     this.carimbarTrofeus(c);
     for (const di of DISTRITOS) this.carimbarDistrito(c, di);
@@ -169,6 +173,19 @@ export class MundoCidade extends Mundo {
         }
       }
     }
+  }
+
+  // ── Quiosque da Praça (v34: rádio da cidade + quiz) ───────
+  private carimbarQuiosque(c: Chunk) {
+    const [qx, qz] = POS_QUIOSQUE;
+    for (let x = qx - 1; x <= qx + 1; x++) for (let z = qz - 1; z <= qz + 1; z++) {
+      this.por(c, x, ALTURA_PLATEAU, z, B.TABUAS);       // pavimento
+      this.por(c, x, ALTURA_PLATEAU + 4, z, B.FOLHAS);   // telhado de folha
+    }
+    for (const [px, pz] of [[qx - 1, qz - 1], [qx + 1, qz - 1], [qx - 1, qz + 1], [qx + 1, qz + 1]] as [number, number][])
+      this.coluna(c, px, ALTURA_PLATEAU + 3, pz, B.TRONCO); // postes
+    this.por(c, qx, ALTURA_PLATEAU + 1, qz, B.MESA);       // balcão do quiosque
+    this.por(c, qx, ALTURA_PLATEAU + 5, qz, B.TOCHA);      // tocha no topo
   }
 
   // ── A Casa do Jogador (existe desde o dia 1) ────────────────

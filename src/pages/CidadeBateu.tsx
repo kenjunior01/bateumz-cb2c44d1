@@ -10,13 +10,13 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
-  Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw,
+  Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store,
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
 import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
-  POS_CASA, POS_TROFEUS, ALTURA_PLATEAU, type Distrito,
+  POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, type Distrito,
 } from "@/game/cidade/cidade";
 import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade } from "@/game/cidade/missoes";
 import {
@@ -24,10 +24,13 @@ import {
   type CidadeEncontrada, type ClimaAtual,
 } from "@/lib/openMeteo";
 import { fireConfetti } from "@/lib/celebrate";
+import { getArAtual, rotuloAqi, AQI_ATTRIBUTION, type ArAtual } from "@/lib/airQuality";
+import RadiosPALOP from "@/components/lives/RadiosPALOP";
+import QuizPraca from "@/components/cidade/QuizPraca";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 
-interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" }
+interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" }
 interface Aviso { texto: string; k: number }
 
 const CORES_MAPA: Record<number, string> = {
@@ -92,13 +95,18 @@ export default function CidadeBateu() {
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
   const [rotulos, setRotulos] = useState<Rotulo[]>([]);
-  const [portal, setPortal] = useState<{ nome: string; rota: string; tipo: "distrito" | "casa" | "trofeus" } | null>(null);
+  const [portal, setPortal] = useState<{ nome: string; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" } | null>(null);
   const [relogio, setRelogio] = useState("--:--");
   const [noite, setNoite] = useState(false);
-  const [modal, setModal] = useState<"trofeus" | null>(null);
+  const [modal, setModal] = useState<"trofeus" | "quiosque" | null>(null);
+  const [tabQuiosque, setTabQuiosque] = useState<"radio" | "quiz">("radio");
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [missaoTick, setMissaoTick] = useState(0); // força re-render do painel de missões
   const [climaReal, setClimaReal] = useState<{ cidade?: CidadeEncontrada; clima?: ClimaAtual; erro?: string; ativa: boolean }>({ ativa: false });
+  // v34 — qualidade do ar REAL (Open-Meteo Air Quality) para a mesma cidade
+  const [ar, setAr] = useState<ArAtual | "erro" | null>(null);
+  const arRef = useRef<ArAtual | "erro" | null>(null);
+  useEffect(() => { arRef.current = ar; }, [ar]);
   const climaRef = useRef(climaReal);
   useEffect(() => { climaRef.current = climaReal; }, [climaReal]);
   const [creditos, setCreditos] = useState(creditosCidade());
@@ -122,6 +130,11 @@ export default function CidadeBateu() {
         if (!vivo) return;
         setClimaReal({ cidade: cidades[0], clima, ativa: true });
         motorRef.current.definirMeteo(wmoParaMeteo(clima.codigoWmo), 660);
+        try {
+          const arAg = await getArAtual(cidades[0].latitude, cidades[0].longitude);
+          if (!vivo) return;
+          setAr(arAg);
+        } catch { if (vivo) setAr("erro"); }
       } catch (e) {
         if (!vivo) return;
         setClimaReal({ ativa: false, erro: e instanceof Error ? e.message : String(e) });
@@ -163,6 +176,8 @@ export default function CidadeBateu() {
       rotulos: () => rotulosRef.current,
       portalPerto: (x: number, z: number) => portalPerto(x, z),
       clima: () => climaRef.current,
+      ar: () => arRef.current,
+      abrirQuiosque: () => setModal("quiosque"),
     };
     return () => { try { delete (window as any).__cidade; } catch { /* ignore */ } };
   }, []);
@@ -230,11 +245,21 @@ export default function CidadeBateu() {
             visivel: v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15,
             perto: prox?.tipo === "trofeus",
           });
+          v.set(POS_QUIOSQUE[0] + 0.5, ALTURA_PLATEAU + 7, POS_QUIOSQUE[1] + 0.5).project(m.camara);
+          novos.push({
+            id: "__quiosque__", nome: t("cidade.quiosque"), cor: "#2dd4bf", rota: "", tipo: "quiosque",
+            x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h,
+            visivel: v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15,
+            perto: prox?.tipo === "quiosque",
+          });
           setRotulos(novos);
 
           // prompt de portal
           if (prox) {
-            const nome = prox.tipo === "casa" ? t("cidade.casa") : prox.tipo === "trofeus" ? t("cidade.trofeus") : prox.distrito?.nome ?? "";
+            const nome = prox.tipo === "casa" ? t("cidade.casa")
+              : prox.tipo === "trofeus" ? t("cidade.trofeus")
+              : prox.tipo === "quiosque" ? t("cidade.quiosque")
+              : prox.distrito?.nome ?? "";
             setPortal({ nome, rota: prox.distrito?.rota ?? "", tipo: prox.tipo });
             // registar visita UMA vez por entrada
             const chave = prox.tipo === "casa" ? "__casa__" : prox.tipo === "trofeus" ? "__trofeus__" : prox.distrito?.id ?? null;
@@ -285,6 +310,7 @@ export default function CidadeBateu() {
   const abrirPortalAtual = useCallback(() => {
     if (!portal) return;
     if (portal.tipo === "trofeus") { setModal("trofeus"); return; }
+    if (portal.tipo === "quiosque") { setTabQuiosque("radio"); setModal("quiosque"); return; }
     if (portal.tipo === "distrito" && portal.rota) entrarPortal(portal.rota);
   }, [portal, entrarPortal]);
 
@@ -483,6 +509,7 @@ export default function CidadeBateu() {
                   {r.tipo === "distrito" && <MapPin size={10} className="inline mr-1 -mt-0.5" />}
                   {r.tipo === "casa" && <Home size={10} className="inline mr-1 -mt-0.5" />}
                   {r.tipo === "trofeus" && <Trophy size={10} className="inline mr-1 -mt-0.5" />}
+                  {r.tipo === "quiosque" && <Store size={10} className="inline mr-1 -mt-0.5" />}
                   {r.nome}
                 </div>
                 {r.perto && portal?.nome === r.nome && portal.tipo === "distrito" && (
@@ -496,12 +523,14 @@ export default function CidadeBateu() {
             </div>
           ))}
 
-          {/* prompt central (casa/troféus) */}
+          {/* prompt central (casa/troféus/quiosque) */}
           {portal && portal.tipo !== "distrito" && (
             <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20">
               <button onClick={abrirPortalAtual} data-testid="cd-portal-especial"
                 className="px-5 py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-xl active:scale-95">
-                {portal.tipo === "trofeus" ? <><Trophy size={14} className="inline mr-1 -mt-0.5" />{t("cidade.abrirTrofeus")}</> : <><Home size={14} className="inline mr-1 -mt-0.5" />{portal.nome}</>}
+                {portal.tipo === "trofeus" && <><Trophy size={14} className="inline mr-1 -mt-0.5" />{t("cidade.abrirTrofeus")}</>}
+                {portal.tipo === "quiosque" && <><Radio size={14} className="inline mr-1 -mt-0.5" />{t("cidade.quiosqueAbrir")}</>}
+                {portal.tipo === "casa" && <><Home size={14} className="inline mr-1 -mt-0.5" />{portal.nome}</>}
               </button>
             </div>
           )}
@@ -579,6 +608,31 @@ export default function CidadeBateu() {
         </>
       )}
 
+      {/* ═══ MODAL: QUIOSQUE DA PRAÇA (v34 — rádio + quiz reais) ═══ */}
+      {modal === "quiosque" && (
+        <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+          <div className="bg-slate-900 border border-teal-400/25 rounded-2xl p-4 w-full max-w-md text-white max-h-[88dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()} data-testid="cd-modal-quiosque">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-lg flex items-center gap-2"><Store size={18} className="text-teal-300" />{t("cidade.quiosque")}</h3>
+              <button onClick={() => setModal(null)} className="text-white/70 text-xl leading-none" data-testid="cd-quiosque-fechar">×</button>
+            </div>
+            <div className="flex gap-1.5 mb-3">
+              <button onClick={() => setTabQuiosque("radio")} data-testid="cd-quiosque-tab-radio"
+                className={`flex-1 py-2 rounded-xl text-[12px] font-black border transition ${tabQuiosque === "radio" ? "bg-teal-400/15 border-teal-300/60 text-teal-200" : "border-white/15 text-white/60"}`}>
+                <Radio size={13} className="inline mr-1 -mt-0.5" />{t("cidade.tabRadio")}
+              </button>
+              <button onClick={() => setTabQuiosque("quiz")} data-testid="cd-quiosque-tab-quiz"
+                className={`flex-1 py-2 rounded-xl text-[12px] font-black border transition ${tabQuiosque === "quiz" ? "bg-teal-400/15 border-teal-300/60 text-teal-200" : "border-white/15 text-white/60"}`}>
+                <Sparkles size={13} className="inline mr-1 -mt-0.5" />{t("cidade.tabQuiz")}
+              </button>
+            </div>
+            {tabQuiosque === "radio" ? <RadiosPALOP compacto /> : <QuizPraca />}
+            <p className="text-[10px] text-white/40 mt-3">{t("cidade.honesto")}</p>
+          </div>
+        </div>
+      )}
+
       {/* ═══ MODAL: SALA DE TROFÉUS ═══ */}
       {modal === "trofeus" && (
         <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onClick={() => setModal(null)}>
@@ -610,7 +664,17 @@ export default function CidadeBateu() {
                   <span className="ml-auto text-sky-300">{climaReal.clima.temperatura.toLocaleString("pt-PT", { maximumFractionDigits: 1 })}°C</span>
                 </p>
                 <p className="text-white/60 mt-1">{t("cidade.climaSinc")}</p>
+                {typeof ar === "object" && ar !== null && (
+                  <p className="mt-1.5 font-bold" data-testid="cd-aqi">
+                    {t("cidade.aqi")}: <span style={{ color: rotuloAqi(ar.aqi).cor }} data-testid="cd-aqi-valor">{rotuloAqi(ar.aqi).rotulo} (EAQI {ar.aqi})</span>
+                    {ar.pm25 !== null && <span className="text-white/50 font-normal"> · PM2.5 {ar.pm25.toLocaleString("pt-PT", { maximumFractionDigits: 1 })} µg/m³</span>}
+                  </p>
+                )}
+                {ar === "erro" && (
+                  <p className="mt-1.5 text-white/50" data-testid="cd-aqi-erro">{t("cidade.aqiIndisp")}</p>
+                )}
                 <p className="text-[10px] text-white/40 mt-1 flex items-center gap-1"><Info size={10} /> {OPENMETEO_ATTRIBUTION}</p>
+                <p className="text-[10px] text-white/40 flex items-center gap-1"><Info size={10} /> {AQI_ATTRIBUTION}</p>
               </div>
             )}
             <p className="text-[10px] text-white/40">{t("cidade.honesto")} · {t("cidade.semente")}: {SEED_CIDADE}</p>

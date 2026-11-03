@@ -61,6 +61,13 @@ function adicionarCreditos(n: number) {
   try { localStorage.setItem(K_CREDITOS, String(creditosCidade() + n)); } catch { /* quota */ }
 }
 
+/** v34 — ganhos de atividade real além das missões (ex.: quiz da praça).
+ *  Só é chamada depois de a atividade acontecer de facto no jogo. */
+export function adicionarCreditosCidade(n: number) {
+  if (!Number.isFinite(n) || n <= 0) return;
+  adicionarCreditos(Math.floor(n));
+}
+
 /** Registra uma visita a um portal (chamada só quando o jogador está mesmo lá).
  *  Devolve as missões concluídas por este registo ([] se nenhuma). */
 export function registarVisita(idPortal: string): Missao[] {

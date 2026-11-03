@@ -120,6 +120,7 @@ import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper"
 import EngagementBar from "@/components/engagement/EngagementBar";
 import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
 import { useSEO } from "@/hooks/useSEO";
+import RadiosPALOP from "@/components/lives/RadiosPALOP";
 
 
 // Per-game error boundary so one crashing game does not kill the whole page
@@ -682,6 +683,13 @@ const LiveHub = () => {
                 </motion.button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ⭐ v34 — Rádios PALOP ao vivo (dados REAIS do Radio Browser) */}
+        {!isImmersiveWorld && (
+          <div className="mb-4" data-testid="livehub-radios">
+            <RadiosPALOP />
           </div>
         )}
 

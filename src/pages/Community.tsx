@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import { useSEO } from "@/hooks/useSEO";
+import SabiasQue from "@/components/community/SabiasQue";
 
 interface Message {
   id: string;
@@ -245,6 +246,9 @@ export default function Community() {
           activeCategory={filter}
           onCategoryChange={setFilter}
         />
+
+        {/* ⭐ v34 — Sabias que? (resumo REAL da Wikipédia PT, PALOP) */}
+        <SabiasQue />
 
         {/* Desktop header - enhanced with gradient accent */}
         <motion.div

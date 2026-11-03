@@ -9,6 +9,7 @@ import {
   type FxData,
 } from "@/lib/exchangeRates";
 import { cn } from "@/lib/utils";
+import FxTrend from "@/components/wallet/FxTrend";
 
 // ═══════════════════════════════════════════════════════════════════════
 // CONVERSOR DE MOEDAS — taxas REAIS da ExchangeRate-API (v30)
@@ -140,6 +141,9 @@ export default function CurrencyConverter() {
               {" · "}Taxa de {fx.providerDate || new Date(fx.updatedAt).toLocaleDateString("pt-PT")}
               {stale && " (guardada no teu dispositivo — sem ligação para renovar)"}
             </p>
+
+            {/* v34 — tendência real de 30 dias (BCE/Frankfurter, só moedas publicadas) */}
+            <FxTrend from={from} to={to} />
           </>
         )}
 

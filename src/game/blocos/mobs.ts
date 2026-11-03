@@ -8,9 +8,9 @@ import * as THREE from "three";
 import { Mundo } from "./world";
 import { Aleatorio } from "./noise";
 import { B, GRAVIDADE } from "./constants";
-import { criarZumbi, criarPorco, criarEstourador, criarVaca, criarGalinha } from "./lego";
+import { criarZumbi, criarPorco, criarEstourador, criarVaca, criarGalinha, criarAranha } from "./lego";
 
-export type TipoMob = "porco" | "vaca" | "galinha" | "zumbi" | "estourador";
+export type TipoMob = "porco" | "vaca" | "galinha" | "zumbi" | "estourador" | "aranha";
 export const ehPassivo = (t: TipoMob) => t === "porco" || t === "vaca" || t === "galinha";
 
 export interface Mob {
@@ -36,6 +36,7 @@ const PERFIS: Record<TipoMob, { hp: number; vel: number; dano: number; altura: n
   galinha: { hp: 6, vel: 1.6, dano: 0, altura: 0.7 },
   zumbi: { hp: 20, vel: 2.1, dano: 3, altura: 1.7 },
   estourador: { hp: 20, vel: 2.4, dano: 0, altura: 1.6 },
+  aranha: { hp: 12, vel: 2.6, dano: 2, altura: 0.8 }, // rápida e baixa — caça à noite (v32)
 };
 
 export class GestorMobs {
@@ -58,6 +59,7 @@ export class GestorMobs {
     } else if (tipo === "porco") { g = criarPorco(); }
     else if (tipo === "vaca") { g = criarVaca(); }
     else if (tipo === "galinha") { g = criarGalinha(); }
+    else if (tipo === "aranha") { g = criarAranha(); }
     else { g = criarEstourador(); }
     const mob: Mob = {
       tipo, x, y, z, vx: 0, vy: 0, vz: 0, yaw: this.rnd.proximo() * Math.PI * 2,
@@ -93,6 +95,7 @@ export class GestorMobs {
       }
     };
     if (noite && this.contar("zumbi") < 8) tentar("zumbi");
+    if (noite && this.contar("aranha") < 3 && this.rnd.chance(0.3)) tentar("aranha");
     if (!noite && this.contar("porco") < 6 && this.rnd.chance(0.5)) tentar("porco");
     if (!noite && this.contar("vaca") < 4 && this.rnd.chance(0.4)) tentar("vaca");
     if (!noite && this.contar("galinha") < 4 && this.rnd.chance(0.4)) tentar("galinha");
@@ -121,6 +124,8 @@ export class GestorMobs {
       if (mob.estado === "fundir") { /* fundição em curso — não perturbar */ }
       else if (mob.tipo === "zumbi" && dist < 18) mob.estado = "perseguir";
       else if (mob.tipo === "estourador" && dist < 12) mob.estado = "perseguir";
+      else if (mob.tipo === "aranha" && noite && dist < 14) mob.estado = "perseguir";
+      else if (mob.tipo === "aranha" && !noite && mob.estado === "perseguir") mob.estado = "vagar"; // neutra de dia (v32)
       else if (ehPassivo(mob.tipo) && mob.estado === "fugir" && mob.temporizador > 0) { /* mantém */ }
       else if (mob.temporizador <= 0) {
         mob.estado = "vagar";
@@ -137,6 +142,9 @@ export class GestorMobs {
         if (mob.tipo === "estourador" && dist < 2.6) { mob.estado = "fundir"; mob.temporizador = 1.4; }
         if (mob.tipo === "zumbi" && dist < 1.5 && Math.abs(dy) < 2.2 && mob.atacarCd <= 0) {
           dano += perfil.dano; fonte = "zumbi"; mob.atacarCd = 1.1;
+        }
+        if (mob.tipo === "aranha" && dist < 1.4 && Math.abs(dy) < 1.8 && mob.atacarCd <= 0) {
+          dano += perfil.dano; fonte = "aranha"; mob.atacarCd = 1.2;
         }
       } else if (mob.estado === "fugir") {
         dirYaw = Math.atan2(-dx, -dz);
@@ -200,7 +208,7 @@ export class GestorMobs {
         });
       } else g.scale.set(1, 1, 1);
     }
-    // zumbis desfazem-se ao amanhecer
+    // zumbis desfazem-se ao amanhecer (as aranhas ficam, mas ficam neutras)
     if (!noite) {
       for (const mob of this.mobs) {
         if (mob.vivo && mob.tipo === "zumbi") { this.matar(mob, false); }
@@ -262,6 +270,7 @@ export class GestorMobs {
     if (tipo === "galinha") return [{ id: 105, qtd: 1 }]; // carne crua
     if (tipo === "estourador") return rnd.chance(0.6) ? [{ id: 101, qtd: rnd.inteiro(1, 2) }] : []; // carvão
     if (tipo === "zumbi") return rnd.chance(0.35) ? [{ id: 100, qtd: rnd.inteiro(1, 2) }] : []; // gravetos
+    if (tipo === "aranha") return [{ id: 126, qtd: rnd.inteiro(1, 2) }]; // fio — sempre (v32)
     return [];
   }
 }

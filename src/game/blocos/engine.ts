@@ -8,6 +8,8 @@
 // (fusível + explosão) · BAÚ (18 posições) · ARMADURA
 // (peitorais com absorção) · VACA E GALINHA · METEOROLOGIA
 // (chuva · tempestade · trovoada · relâmpagos · crescimento)
+// v32: PESCA (vara · boia · picada · 3 peixes reais · fundição) ·
+// ARANHA (hostil à noite, neutra de dia, dropa fio)
 // ============================================================
 
 import * as THREE from "three";
@@ -21,7 +23,7 @@ import {
   B, BLOCOS, CHUNK, ALTURA, GRAVIDADE, SALTO, VEL_ANDAR, VEL_CORRER,
   VIDA_MAX, FOME_MAX, AR_MAX, DIA_SEGUNDOS, ALCANCE, RAIO_EXPLOSAO,
   RAIO_TNT, FUSIVEL_TNT, TEMPO_CRESCER, CRESCER_CHUVA, BAU_SLOTS,
-  PRECISA_DE_APOIO,
+  PRECISA_DE_APOIO, PESCA_ALCANCE, PESCA_ESPERA_MIN, PESCA_ESPERA_MAX, PESCA_JANELA,
   dropDe, CORES, ITENS, CONQUISTAS, I, NOMES,
 } from "./constants";
 
@@ -71,6 +73,9 @@ export interface Captura {
   bauAberto: { chave: string; slots: (Slot | null)[] } | null;
   tntAtivos: number;
   plantacoes: number;
+  // v32
+  pesca: { estado: "lancada" | "picada"; t: number } | null;
+  peixesPescados: number;
 }
 
 interface Aviso { texto: string; tipo: "conquista" | "info" | "dano"; t: number }
@@ -155,6 +160,14 @@ export class Motor {
   private chuvaPool: THREE.Mesh[] = [];
   private chuvaGain: GainNode | null = null;
   private plantaTick = 0;
+
+  // ── v32: pesca ──
+  pescaEstado: "parado" | "lancada" | "picada" = "parado";
+  pescaTimer = 0; // espera até picada OU janela da picada (conforme o estado)
+  private pescaBobber: THREE.Mesh | null = null;
+  private pescaLinha: THREE.Line | null = null;
+  private pescaAlvo: [number, number, number] = [0, 0, 0]; // posição da boia
+  peixesPescados = 0;
 
   // internals
   entrada: Entrada = { frente: 0, lado: 0, olharX: 0, olharY: 0, salto: false, correr: false, subir: false, descer: false, minerando: false, agachado: false, zoom: false };
@@ -906,6 +919,7 @@ export class Motor {
     if (mob) {
       this.som("golpe");
       if (mob.tipo === "estourador" && !mob.vivo) this.conquista("estourador_derrotado");
+      if (mob.tipo === "aranha" && !mob.vivo) this.conquista("aracnologo");
       if (!mob.vivo) {
         this.mobsDerrotados++;
         this.conquista("safari");
@@ -926,6 +940,122 @@ export class Motor {
     if (this.modo === "sobrevivencia") this.inv.consumirSelecionado(1);
     this.som("comer");
     this.emitirEstado(true);
+  }
+
+  // ── v32: PESCA ──────────────────────────────────────────
+  // Raycast DDA que procura ÁGUA (o raycast normal ignora-a).
+  private miraAgua(): { x: number; y: number; z: number } | null {
+    const dir = new THREE.Vector3(
+      -Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch),
+    ).normalize();
+    const olhoY = this.py + this.alturaOlho;
+    let x = Math.floor(this.px), y = Math.floor(olhoY), z = Math.floor(this.pz);
+    const passo = new THREE.Vector3(Math.abs(dir.x) < 1e-9 ? 1e9 : Math.abs(1 / dir.x),
+      Math.abs(dir.y) < 1e-9 ? 1e9 : Math.abs(1 / dir.y),
+      Math.abs(dir.z) < 1e-9 ? 1e9 : Math.abs(1 / dir.z));
+    const sinal = [dir.x < 0 ? -1 : 1, dir.y < 0 ? -1 : 1, dir.z < 0 ? -1 : 1];
+    let tMaxX = (sinal[0] > 0 ? (x + 1 - this.px) : (this.px - x)) * passo.x;
+    let tMaxY = (sinal[1] > 0 ? (y + 1 - olhoY) : (olhoY - y)) * passo.y;
+    let tMaxZ = (sinal[2] > 0 ? (z + 1 - this.pz) : (this.pz - z)) * passo.z;
+    for (let i = 0; i < 80; i++) {
+      const id = this.mundo.getBloco(x, y, z);
+      if (id === B.AGUA) return { x, y, z };
+      if (id !== B.AR) return null; // sólido no caminho: sem linha
+      if (tMaxX < tMaxY && tMaxX < tMaxZ) { if (tMaxX > PESCA_ALCANCE) break; x += sinal[0]; tMaxX += passo.x; }
+      else if (tMaxY < tMaxZ) { if (tMaxY > PESCA_ALCANCE) break; y += sinal[1]; tMaxY += passo.y; }
+      else { if (tMaxZ > PESCA_ALCANCE) break; z += sinal[2]; tMaxZ += passo.z; }
+    }
+    return null;
+  }
+
+  /** Ação do botão ATACAR com a vara selecionada: lançar / recolher / fisgar. */
+  pescarAcao() {
+    if (this.fase !== "jogando") return;
+    if (this.pescaEstado === "parado") {
+      const agua = this.miraAgua();
+      if (!agua) {
+        this.avisos.push({ texto: "Aponta para a água para lançar a linha", tipo: "info", t: 2 });
+        return;
+      }
+      if (!this.pescaBobber) {
+        const g = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshLambertMaterial({ color: "#e03a3a" }));
+        this.pescaBobber = g;
+      }
+      this.pescaAlvo = [agua.x + 0.5, agua.y + 0.82, agua.z + 0.5];
+      this.pescaBobber.position.set(...this.pescaAlvo);
+      this.pescaBobber.visible = true;
+      if (!this.pescaLinha) {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        this.pescaLinha = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: "#d8d8d8" }));
+      }
+      this.pescaLinha.visible = true;
+      this.cena.add(this.pescaBobber, this.pescaLinha);
+      this.pescaEstado = "lancada";
+      this.pescaTimer = PESCA_ESPERA_MIN + this.rnd.proximo() * (PESCA_ESPERA_MAX - PESCA_ESPERA_MIN);
+      this.som("salpicar");
+      this.emitirEstado(true);
+      return;
+    }
+    if (this.pescaEstado === "lancada") {
+      this.limparPesca();
+      this.avisos.push({ texto: "Recolheste a linha", tipo: "info", t: 1.6 });
+      return;
+    }
+    // picada → FISGAR: peixe decidido aqui (raro é raro de verdade)
+    const r = this.rnd.proximo();
+    const peixe = r < 0.6 ? I.PEIXE_SARDINHA : r < 0.9 ? I.PEIXE_CARAPAU : I.PEIXE_CORVINA;
+    this.inv.adicionar(peixe, 1);
+    this.peixesPescados++;
+    this.limparPesca();
+    this.conquista("pescador");
+    this.som("comer");
+    this.avisos.push({ texto: `Pescaste: ${NOMES[peixe]}!`, tipo: "conquista", t: 3 });
+    this.emitirEstado(true);
+  }
+
+  private limparPesca() {
+    if (this.pescaBobber) { this.pescaBobber.visible = false; try { this.cena.remove(this.pescaBobber); } catch { /* cena ausente */ } }
+    if (this.pescaLinha) { this.pescaLinha.visible = false; try { this.cena.remove(this.pescaLinha); } catch { /* cena ausente */ } }
+    this.pescaEstado = "parado";
+    this.pescaTimer = 0;
+  }
+
+  private atualizarPesca(dt: number) {
+    if (this.pescaEstado === "parado") return;
+    // afastou-se da boia → recolhe honestamente
+    const d = Math.hypot(this.px - this.pescaAlvo[0], this.pz - this.pescaAlvo[2]);
+    if (d > PESCA_ALCANCE + 2) {
+      this.limparPesca();
+      this.avisos.push({ texto: "Afastaste-te da linha — recolhida", tipo: "info", t: 2 });
+      return;
+    }
+    if (this.pescaEstado === "lancada") {
+      this.pescaTimer -= dt;
+      // boia flutua enquanto espera
+      if (this.pescaBobber) this.pescaBobber.position.y = this.pescaAlvo[1] + Math.sin(performance.now() / 380) * 0.035;
+      if (this.pescaTimer <= 0) {
+        this.pescaEstado = "picada";
+        this.pescaTimer = PESCA_JANELA; // janela para fisgar
+        this.som("salpicar");
+        if (this.pescaBobber) this.pescaBobber.position.y = this.pescaAlvo[1] - 0.3; // boia afunda
+        this.spawnParticulas(this.pescaAlvo[0], this.pescaAlvo[1], this.pescaAlvo[2], "#9cc8d8", 6, 0.7);
+        this.emitirEstado(true);
+      }
+    } else if (this.pescaEstado === "picada") {
+      this.pescaTimer -= dt;
+      if (this.pescaTimer <= 0) {
+        this.limparPesca();
+        this.avisos.push({ texto: "Escapou-te!", tipo: "info", t: 2 });
+        this.emitirEstado(true);
+      }
+    }
+    // linha: da mão à boia
+    if (this.pescaLinha && this.pescaBobber && this.pescaLinha.visible) {
+      const pos = this.pescaLinha.geometry.attributes.position as THREE.BufferAttribute;
+      pos.setXYZ(0, this.px, this.py + 1.4, this.pz);
+      pos.setXYZ(1, this.pescaBobber.position.x, this.pescaBobber.position.y, this.pescaBobber.position.z);
+      pos.needsUpdate = true;
+    }
   }
 
   // ── Dormir (cama): salta a noite e define o renascimento ──
@@ -973,6 +1103,7 @@ export class Motor {
       if (["pic_mad", "pic_ped", "pic_fer", "pic_dia"].includes(idReceita)) this.conquista("primeira_picareta");
       if (idReceita === "fun_fer") this.conquista("primeiro_ferro");
       if (idReceita === "pao") this.conquista("padeiro");
+      if (idReceita === "vara_pesca") this.conquista("tecelao");
       this.emitirEstado(true);
       return { ok: true, motivo: "" };
     }
@@ -1009,7 +1140,7 @@ export class Motor {
       return sv?.modo === "criativo" ? "criativo" : sv?.modo === "sobrevivencia" ? "sobrevivencia" : null;
     } catch { return null; }
   }
-  som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao" | "trovao") {
+  som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao" | "trovao" | "salpicar") {
     if (this.mudo) return;
     try {
       if (!this.audioCtx) this.audioCtx = new AudioContext();
@@ -1025,6 +1156,7 @@ export class Motor {
         dano: ["sawtooth", 110, 0.15, 0.2, -30], passo: ["triangle", 90, 0.04, 0.05, 10],
         sibilo: ["sawtooth", 1400, 0.5, 0.06, 900], explosao: ["sawtooth", 70, 0.5, 0.4, -40],
         trovao: ["sawtooth", 55, 0.9, 0.5, -25],
+        salpicar: ["sine", 620, 0.18, 0.14, -260],
       };
       const [forma, freq, dur, vol, desliza] = config[tipo];
       osc.type = forma;
@@ -1249,7 +1381,12 @@ export class Motor {
       this.sobrevivencia(dt);
       this.mira = this.raycast();
       this.executarQuebra(dt);
-      if (this.atacarPedido) { this.atacar(); this.atacarPedido = false; }
+      if (this.atacarPedido) {
+        const sAtk = this.inv.selecionado();
+        if (sAtk && sAtk.id === I.VARA_PESCA) this.pescarAcao();
+        else this.atacar();
+        this.atacarPedido = false;
+      }
       if (this.colocarPedido) { this.colocar(); this.colocarPedido = false; }
       if (this.comerPedido) { this.comer(); this.comerPedido = false; }
       if (this.dormirPedido) { this.dormir(); this.dormirPedido = false; }
@@ -1270,6 +1407,8 @@ export class Motor {
       this.atualizarPlantacoes(dt);
       this.atualizarMeteo(dt);
       this.atualizarChuva(dt);
+      // ── v32: pesca ──
+      this.atualizarPesca(dt);
     }
 
     if (this.swingT > 0) this.swingT -= dt;
@@ -1476,6 +1615,9 @@ export class Motor {
       bauAberto: this.bauAberto ? { chave: this.bauAberto, slots: this.slotsBau(this.bauAberto).map((s) => s ? { id: s.id, qtd: s.qtd } : null) } : null,
       tntAtivos: this.tntAcesas.length,
       plantacoes: this.plantas.size,
+      // v32
+      pesca: this.pescaEstado === "parado" ? null : { estado: this.pescaEstado, t: Math.round(this.pescaTimer * 10) / 10 },
+      peixesPescados: this.peixesPescados,
     };
   }
 

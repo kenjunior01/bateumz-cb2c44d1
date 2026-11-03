@@ -412,3 +412,24 @@ Work Log:
 Stage Summary:
 - O mundo do jogo encontrou o mundo real: o puzzle diário é o mesmo para o planeta inteiro e o céu do BateuCraft segue a meteorologia REAL da cidade do jogador
 - Zero teatro: chess.com/wttr/restcountries descartados com provas, forecast 429 documentado como pendência honesta, neve nunca finge chuva
+
+---
+Task ID: pesca-aranha-sabores-v32
+Agent: Super Z (main)
+Task: BateuCraft — PESCA completa + ARANHA (noite hostil/dia neutro) · Web — Sabores do Mundo (TheMealDB validada ao vivo)
+
+Work Log:
+- VALIDAÇÃO AO VIVO com curl ANTES do código: themealdb random.php 200+CORS* ✅ · list.php?a=list 200 ✅ (o smoke E2E mediu 195 regiões reais e prato real "Beef Brisket Pot Roast") · datamuse 200+CORS mas descartada COM CORS OK (dados só em EN — sem sentido em plataforma de 5 idiomas) · artic 403 ❌ · jikan timeout ×3 ❌ · coingecko 429 persistente (IP partilhado) pendência honesta · ipapi 403 ❌ · dictionaryapi 403 ❌ · dicionario-aberto https→301→http (mixed content) ❌
+- BateuCraft PESCA: vara (3 gravetos + 2 fio na mesa) · miraAgua próprio (raycast DDA que PROCURA água — o normal ignora-a; sólido no caminho recusa com aviso honesto) · lançar → espera 3–8 s (Aleatorio do motor) → boia flutua → PICADA afunda a boia + partículas + som salpicar novo → janela 1,4 s → fisgar (sardinha 60% · carapau 30% · corvina 10% decididos no momento da fisga — raro é raro) · escapou/recolher/afastou-se>10 blocos = recolhe honesto · chip HUD bc-pesca (calmo → urgente) · fundição 2 peixes+carvão → 2× Peixe Assado (8 fome) · pesca transiente: save mantém v3
+- BateuCraft ARANHA: modelo LEGO próprio (8 patas animáveis, 2+3 olhos vermelhos) · hp 12, vel 2,6, dano 2 · noite persegue a 14 blocos, DIA NEUTRA (vagar, não morde — verificada vida intacta), sobrevive ao amanhecer (zumbi desfaz-se — coerente) · drop SEMPRE 1–2 fio → fecha o ciclo aranha→fio→vara→pesca · spawn noturno máx 3 vivas
+- Conquistas 16→19: Tecelão (5) · Pescador (8) · Aracnólogo (8) — creditos/som/avisos padrão; save v3 persiste as novas
+- Web SABORES DO MUNDO: src/lib/mealDB.ts (cache 24h pratos/7d regiões, dedupe em voo, MealDbError honesta, distratores da lista REAL list.php, crypto no sorteio) + SaboresDoMundo.tsx (foto oficial strMealThumb, "De onde é este prato?", revelação com nome ORIGINAL + categoria + link meal.php?i=, confetti no acerto, zero pulsos decorativos — skill motion) · registrado no LiveHub (GameId "sabores", lazy, GAME_DEFS, render, i18n en/pt/pt-BR pela convenção do hub)
+- BUGS REAIS apanhados pelo E2E: (1) a Mesa de Criação do teste A2 estava NO CAMINHO do lançamento A4 — miraAgua recusou a linha (jogo certo!) e 8 asserts caíram em cascata — teste limpa mesa/fornalha antes de pescar; (2) fome === 18 exato vs decaída da sobrevivência → Math.round; (3) corrida mock/abort no E2E web — abort instalado ANTES do clique
+- E2E NOVO test-v32-pesca-sabores.mjs 56/56 (receitas · craft · fundição · comer · lançar/picada/fisgar/escapar/recolher/sem-água · aranha noite/dia/amanhecer · conquistas · save · mobile 375 · foto/opções/revelação/erro/cache/catálogo/overflow) + smoke REAL TheMealDB ✅
+- REGRESSÕES: craft-v29 63 · camaras 64 · blocos 101 · desporto 14 · plataforma 33 · home 22 · APIs-v25 30 · v30 31 · v31 46 (o smoke do forecast Open-Meteo passou REAL desta vez!) · web-excellence 13 = 473 verdes, 0 falhas · tsc 0 · build OK
+- DOC: docs/REA-bateucraft-v32.md
+
+Stage Summary:
+- BateuCraft ganhou o sistema que faltava do género: PESCA de ponta a ponta com espera honesta, janela de perícia e peixes raros raros de verdade — e a Aranha dá propósito à noite sem matar o dia
+- A plataforma come o mundo real pela 6.ª API: pratos reais com fotos reais e regiões reais da TheMealDB
+- Tudo com as três regras de sempre: zero dados inventados, erros honestos, atribuição explícita

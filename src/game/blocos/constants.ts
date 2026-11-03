@@ -22,6 +22,8 @@ export const I = {
   ESPADA_MADEIRA: 112, ESPADA_PEDRA: 113, ESPADA_FERRO: 114, ESPADA_DIAMANTE: 115,
   PA_MADEIRA: 116, SEMENTES: 117, TRIGO: 118, ENXADA_MADEIRA: 119, ENXADA_FERRO: 120,
   PAO: 121, COURO: 122, ARMADURA_COURO: 123, ARMADURA_FERRO: 124, ARMADURA_DIAMANTE: 125,
+  FIO: 126, VARA_PESCA: 127, PEIXE_SARDINHA: 128, PEIXE_CARAPAU: 129,
+  PEIXE_CORVINA: 130, PEIXE_ASSADO: 131,
 } as const;
 
 export interface DefItem {
@@ -54,6 +56,9 @@ export const NOMES: Record<number, string> = {
   [I.ENXADA_MADEIRA]: "Enxada de Madeira", [I.ENXADA_FERRO]: "Enxada de Ferro",
   [I.COURO]: "Couro", [I.ARMADURA_COURO]: "Peitoral de Couro",
   [I.ARMADURA_FERRO]: "Peitoral de Ferro", [I.ARMADURA_DIAMANTE]: "Peitoral de Diamante",
+  [I.FIO]: "Fio", [I.VARA_PESCA]: "Vara de Pesca",
+  [I.PEIXE_SARDINHA]: "Sardinha", [I.PEIXE_CARAPAU]: "Carapau",
+  [I.PEIXE_CORVINA]: "Corvina", [I.PEIXE_ASSADO]: "Peixe Assado",
 };
 
 // Cores para ícones do HUD (gradiente CSS) e fallback 3D
@@ -86,6 +91,9 @@ export const CORES: Record<number, [string, string]> = {
   [I.ENXADA_FERRO]: ["#d8d8d8", "#a8a8a8"], [I.COURO]: ["#a0683a", "#7a4a24"],
   [I.ARMADURA_COURO]: ["#a0683a", "#7a4a24"], [I.ARMADURA_FERRO]: ["#d8d8d8", "#a8a8a8"],
   [I.ARMADURA_DIAMANTE]: ["#4fe0d8", "#2bb3ac"],
+  [I.FIO]: ["#e8e8e8", "#b8b8b8"], [I.VARA_PESCA]: ["#a07840", "#6a4a24"],
+  [I.PEIXE_SARDINHA]: ["#8ab8d8", "#5a88a8"], [I.PEIXE_CARAPAU]: ["#a8c0d0", "#7890a0"],
+  [I.PEIXE_CORVINA]: ["#687890", "#48586a"], [I.PEIXE_ASSADO]: ["#c08850", "#906030"],
 };
 
 // Ferramentas: multiplicador de velocidade e dano (progressão rara e difícil)
@@ -111,6 +119,13 @@ export const ITENS: Record<number, DefItem> = {
   [I.ARMADURA_COURO]: { nome: NOMES[I.ARMADURA_COURO], cor: "#a0683a", cor2: "#7a4a24", armadura: 0.15, maximo: 1 },
   [I.ARMADURA_FERRO]: { nome: NOMES[I.ARMADURA_FERRO], cor: "#d8d8d8", cor2: "#a8a8a8", armadura: 0.3, maximo: 1 },
   [I.ARMADURA_DIAMANTE]: { nome: NOMES[I.ARMADURA_DIAMANTE], cor: "#4fe0d8", cor2: "#2bb3ac", armadura: 0.45, maximo: 1 },
+  // v32: pesca — fio, vara e peixes reais da costa (comida honesta, sardinha < carapau < corvina)
+  [I.FIO]: { nome: NOMES[I.FIO], cor: "#e8e8e8", cor2: "#b8b8b8", maximo: 64 },
+  [I.VARA_PESCA]: { nome: NOMES[I.VARA_PESCA], cor: "#a07840", cor2: "#6a4a24", maximo: 1 },
+  [I.PEIXE_SARDINHA]: { nome: NOMES[I.PEIXE_SARDINHA], cor: "#8ab8d8", cor2: "#5a88a8", comida: 3, maximo: 64 },
+  [I.PEIXE_CARAPAU]: { nome: NOMES[I.PEIXE_CARAPAU], cor: "#a8c0d0", cor2: "#7890a0", comida: 4, maximo: 64 },
+  [I.PEIXE_CORVINA]: { nome: NOMES[I.PEIXE_CORVINA], cor: "#687890", cor2: "#48586a", comida: 5, maximo: 64 },
+  [I.PEIXE_ASSADO]: { nome: NOMES[I.PEIXE_ASSADO], cor: "#c08850", cor2: "#906030", comida: 8, maximo: 64 },
 };
 
 export interface DefBloco {
@@ -199,6 +214,10 @@ export const RECEITAS: Receita[] = [
   { id: "arm_couro", nome: "Peitoral de Couro", resultado: [I.ARMADURA_COURO, 1], ingredientes: [[I.COURO, 5], [I.GRAVETO, 2]], mesa: true, categoria: "criacao", desc: "Absorve 15% do dano." },
   { id: "arm_fer", nome: "Peitoral de Ferro", resultado: [I.ARMADURA_FERRO, 1], ingredientes: [[I.BARRA_FERRO, 5], [I.GRAVETO, 2]], mesa: true, categoria: "criacao", desc: "Absorve 30% do dano." },
   { id: "arm_dia", nome: "Peitoral de Diamante", resultado: [I.ARMADURA_DIAMANTE, 1], ingredientes: [[I.DIAMANTE, 5], [I.GRAVETO, 2]], mesa: true, categoria: "criacao", desc: "Absorve 45% do dano." },
+  { id: "vara_pesca", nome: "Vara de Pesca", resultado: [I.VARA_PESCA, 1], ingredientes: [[I.GRAVETO, 3], [I.FIO, 2]], mesa: true, categoria: "criacao", desc: "Lança a linha na água e espera a picada." },
+  { id: "fun_sardinha", nome: "2× Peixe Assado", resultado: [I.PEIXE_ASSADO, 2], ingredientes: [[I.PEIXE_SARDINHA, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
+  { id: "fun_carapau", nome: "2× Peixe Assado", resultado: [I.PEIXE_ASSADO, 2], ingredientes: [[I.PEIXE_CARAPAU, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
+  { id: "fun_corvina", nome: "2× Peixe Assado", resultado: [I.PEIXE_ASSADO, 2], ingredientes: [[I.PEIXE_CORVINA, 2], [I.CARVAO, 1]], mesa: false, categoria: "fundicao" },
 ];
 
 // ── Física / mundo ────────────────────────────────────────────
@@ -213,6 +232,11 @@ export const FUSIVEL_TNT = 2.6;      // segundos até estourar
 export const TEMPO_CRESCER = 26;     // segundos por fase do trigo (sol)
 export const CRESCER_CHUVA = 0.42;   // multiplicador do tempo: chove → cresce ×2,4 mais rápido
 export const BAU_SLOTS = 18;
+// v32: pesca — espera honesta e janela curta (raro é raro)
+export const PESCA_ALCANCE = 8;      // blocos até à água (mais que o alcance do braço)
+export const PESCA_ESPERA_MIN = 3;   // s até à picada (sorteado 3–8 s)
+export const PESCA_ESPERA_MAX = 8;
+export const PESCA_JANELA = 1.4;     // s para fisgar depois da picada
 
 export interface Conquista { id: string; nome: string; creditos: number; desc: string }
 export const CONQUISTAS: Conquista[] = [
@@ -232,5 +256,8 @@ export const CONQUISTAS: Conquista[] = [
   { id: "demolidor", nome: "Demolidor", creditos: 10, desc: "Explodiste TNT." },
   { id: "cofre", nome: "Cofre Seguro", creditos: 5, desc: "Guardaste um item num baú." },
   { id: "blindado", nome: "Blindado", creditos: 7, desc: "Vesti-te com um peitoral." },
+  { id: "tecelao", nome: "Tecelão", creditos: 5, desc: "Criaste a tua primeira vara de pesca." },
+  { id: "pescador", nome: "Pescador", creditos: 8, desc: "Pescaste o teu primeiro peixe." },
+  { id: "aracnologo", nome: "Aracnólogo", creditos: 8, desc: "Derrotaste uma Aranha." },
 ];
 export const WHATSAPP = "258848547887";

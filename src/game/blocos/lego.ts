@@ -270,3 +270,40 @@ export function criarGalinha(): THREE.Group {
   (g as any).__pernas = pernas;
   return g;
 }
+
+/** Aranha LEGO — corpo preto, 2 olhos vermelhos grandes + 6 pequenos, 8 patas (hostil à noite, v32) */
+export function criarAranha(): THREE.Group {
+  const g = new THREE.Group();
+  const preto = MAT("#1c1c1c"), pretoEsc = MAT("#101010"), vermelho = MAT("#e03a3a");
+  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.62), preto);
+  corpo.position.y = 0.36;
+  const abd = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.26, 0.4), pretoEsc);
+  abd.position.set(0, 0.38, -0.44);
+  const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.26), preto);
+  cabeca.position.set(0, 0.34, 0.42);
+  // olhos: 2 grandes frontais + 3 pequenos por cima (aranhas LEGO têm muitos olhos)
+  for (const sx of [-1, 1]) {
+    const olho = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.03), vermelho);
+    olho.position.set(sx * 0.08, 0.38, 0.56);
+    g.add(olho);
+  }
+  for (const [sx, sy] of [[-0.12, 0.44], [0, 0.46], [0.12, 0.44]] as [number, number][]) {
+    const mini = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), vermelho);
+    mini.position.set(sx, sy, 0.55);
+    g.add(mini);
+  }
+  // 8 patas finas dobradas para cima (4 de cada lado), animáveis pelo __pernas
+  const pernaGeo = new THREE.BoxGeometry(0.06, 0.42, 0.06);
+  const pernas: THREE.Mesh[] = [];
+  for (const sx of [-1, 1]) {
+    for (const [pz, dy] of [[0.28, 0.06], [0.1, 0.12], [-0.1, 0.12], [-0.28, 0.06]] as [number, number][]) {
+      const p = new THREE.Mesh(pernaGeo, pretoEsc);
+      p.position.set(sx * 0.36, 0.26 + dy, pz);
+      p.rotation.z = sx * 0.6; // abre para fora
+      pernas.push(p); g.add(p);
+    }
+  }
+  g.add(corpo, abd, cabeca);
+  (g as any).__pernas = pernas;
+  return g;
+}

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES, Meteo } from "@/game/blocos/engine";
 import { infoItem } from "@/game/blocos/inventario";
 import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
-import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive, CloudSun, MapPin, Search, RefreshCw } from "lucide-react";
+import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive, CloudSun, MapPin, Search, RefreshCw, Fish } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
 interface Props {
@@ -359,7 +359,7 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       blocosCriativos: () => motorRef.current.listaBlocosCriativos(),
       darBloco: (id: number, qtd?: number) => motorRef.current.darBloco(id, qtd),
       miniMapa: () => motorRef.current.miniMapa(24),
-      spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha", dx = 3, dz = 0) => {
+      spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha" | "aranha", dx = 3, dz = 0) => {
         const mm = motorRef.current;
         return mm.gestor.spawnar(tipo, mm.px + dx, mm.py + 2, mm.pz + dz);
       },
@@ -382,6 +382,9 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       equipar: () => motorRef.current.equiparArmadura(),
       despir: () => motorRef.current.despirArmadura(),
       itemSelecionado: () => motorRef.current.inv.selecionado(),
+      // v32: pesca
+      pesca: () => motorRef.current.captura().pesca,
+      peixes: () => motorRef.current.peixesPescados,
       // v31: clima real (Open-Meteo)
       climaEstado: () => {
         const c = climaRealRef.current;
@@ -731,6 +734,15 @@ export default function BateuCraft({ onScore, onExit }: Props) {
           {nomeItem && (
             <div key={nomeItem.k} className="absolute bottom-[76px] left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-lg bc-item-toast pointer-events-none" data-testid="bc-nome-item">
               {nomeItem.nome}
+            </div>
+          )}
+
+          {/* pesca (v32): estado da linha — calmo a esperar, urgente na picada */}
+          {cap.pesca && (
+            <div data-testid="bc-pesca"
+              className={`absolute bottom-[108px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black shadow-lg pointer-events-none ${cap.pesca.estado === "picada" ? "bg-red-600 text-white animate-pulse" : "bg-black/60 text-sky-200"}`}>
+              <Fish size={14} />
+              {cap.pesca.estado === "picada" ? "PICOU! Puxa já!" : "A esperar a picada…"}
             </div>
           )}
 

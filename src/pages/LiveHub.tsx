@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Suspense, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
@@ -97,6 +97,7 @@ const HiLoGame = lazy(() => import("@/components/livegames/HiLoGame"));
 const BlackjackGame = lazy(() => import("@/components/livegames/BlackjackGame"));
 const PokemonGuess = lazy(() => import("@/components/livegames/PokemonGuess"));
 const ChessPuzzle = lazy(() => import("@/components/livegames/ChessPuzzle"));
+const SaboresDoMundo = lazy(() => import("@/components/livegames/SaboresDoMundo"));
 const RaspadinhaGame = lazy(() => import("@/components/livegames/RaspadinhaGame"));
 const KenoGame = lazy(() => import("@/components/livegames/KenoGame"));
 const LimboGame = lazy(() => import("@/components/livegames/LimboGame"));
@@ -149,7 +150,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
 
 interface SavedWheelGame {
   id: string;
@@ -190,6 +191,7 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "blackjack", icon: Spade, emoji: "♠", grad: "from-emerald-600 to-teal-700" },
   { id: "pokemon", icon: Sparkles, emoji: "✨", grad: "from-amber-500 to-red-600" },
   { id: "chesspuzzle", icon: Crown, emoji: "♞", grad: "from-emerald-800 to-slate-900" },
+  { id: "sabores", icon: UtensilsCrossed, emoji: "🍤", grad: "from-orange-500 to-amber-600" },
 ];
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -1445,6 +1447,13 @@ const LiveHub = () => {
                 <motion.div key="chesspuzzle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Puzzle de Xadrez">
                     <ChessPuzzle onScore={recordScore("Xadrez Puzzle")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "sabores" && (
+                <motion.div key="sabores" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Sabores do Mundo">
+                    <SaboresDoMundo onScore={recordScore("Sabores do Mundo")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>
               )}

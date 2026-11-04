@@ -1,26 +1,4 @@
 ---
-Task ID: v34-apis-publicas-plataforma-jogo
-Agent: Super Z (main)
-Task: v34 — resposta a «acrescenta tudo que for necessário dessas apis (public-apis) para estar tudo bem enquadrado na plataforma e o jogo também muito bem»: 4 APIs novas validadas ao vivo + Quiosque da Praça no jogo-âncora
-
-Work Log:
-- MÉTODO (3 regras permanentes): probes ao vivo ANTES do código (scripts/probe-apis-v34.sh / v34b.sh com status+CORS+payload) · descartadas com prova: TheAudioDB (404 nas chaves free 1 e 2), Quotable (TLS handshake pendurado), Open Library (timeout ×2 — mesmo critério do jikan v32) · Frankfurter descoberto em migração de domínio (api.frankfurter.app → 301 → api.frankfurter.dev)
-- RADIO BROWSER (rádios PALOP ao vivo): src/lib/radioBrowser.ts — /json/stations/bycountrycodeexact/{MZ,AO,CV} com hidebroken=true, ordenação por votos, limite 12, 3 espelhos em cascata (de1/nl1/fi1), cache 6 h + stale-on-error honesto, filtros: só stream HTTPS (páginas https não tocam http) · componente RadiosPALOP (tabs 🇲🇿🇦🇴🇨🇻, UM <audio> partilhado, A ligar… → ● A emitir → ERRO VISÍVEL do stream) integrado no LiveHub (/lives) depois do «AO VIVO AGORA» · 1.ª estação real de MZ na probe: «Rádio Moçambique Antena Nacional»
-- WIKIPÉDIA PT («Sabias que?» na /community): src/lib/wikipediaSabias.ts — resumos oficiais /api/rest_v1/page/summary com 17 artigos PALOP verificados 1 a 1 ao vivo (Moçambique/Angola/Cabo Verde + 3 histórias + Maputo/Luanda/Praia/Mindelo/Ilha de Moçambique + Marrabenta/Morna/Kizomba/Semba/Funaná/Imbondeiro), rotação diária UTC determinística, cache 24 h, thumbnail com onError, link oficial, CC BY-SA visível · BUG real de honestidade apanhado na probe: 429 do Wikimedia é rate-limit do IP partilhado (não 404) — reconfirmado no smoke real do E2E
-- FRANKFURTER (tendência 30 dias na carteira): src/lib/frankfurter.ts + FxTrend.tsx dentro do Conversor de Moedas (v30) — série real BCE em sparkline SVG + variação % (1.º→último) + min–max + período da fonte · HONESTIDADE MONETÁRIA: BCE não publica MZN/AOA/CVE → nota «histórico indisponível» e mantém a taxa atual da ExchangeRate-API; nunca inventamos série
-- AIR QUALITY (cidade): src/lib/airQuality.ts — EAQI europeu + PM2.5 reais para a cidade do clima (Maputo), bandas oficiais do índice europeu traduzidas (Boa/Razoável/Moderada/Fraca/Má/Extremamente má), cache 30 min · linha «Qualidade do ar» no painel de clima da Sala de Troféus com dupla atribuição Open-Meteo (CC BY 4.0)
-- QUIOSQUE DA PRAÇA (sempre algo para fazer, dentro do mundo): POS_QUIOSQUE [5,-5] a NE do imbondeiro, carimbo 3×3 (balcão MESA, postes, telhado de folhas, tocha) · portalPerto ganha tipo «quiosque» · rótulo flutuante teal + prompt «Abrir o Quiosque» + modal com tabs Rádio da Cidade | Quiz · QUIZ DA PRAÇA: 6 perguntas REAIS da Open Trivia DB em escada 2 fáceis→2 médias→2 difíceis via getReadyQuestions (decodificada + shuffle crypto), +2 créditos por acerto creditados SÓ no fim (adicionarCreditosCidade nova em missoes.ts), confetti ≥65%, nota honesta «perguntas em inglês — a fonte não tem catálogo PT, nada é traduzido por conta própria»
-- BUGS REAIS apanhados pelo E2E: (1) mensagem de erro do stream de rádio apagava-se a si própria (condicionada a «ativo» que o próprio erro põe a false); (2) QuizPraca assumia formato {text,options} mas getLadderQuestions devolve o formato BRUTO da API (contrato real consumido pelo Milionário) → TypeError «reading 'map'» engolido pelo ErrorBoundary — corrigido construindo a escada com getReadyQuestions SEM tocar no contrato do Milionário; (3) flake rAF reincidente (lição v31): cliques do Playwright pendurados sob o loop 60 fps → dispatchEvent + waitForFunction no quiz
-- i18n: 19 chaves cidade.* novas × 6 línguas (quiosque/quiosqueAbrir/tabRadio/tabQuiz/quizIntro/quizComecar/quizTentar/quizAcertos/quizCerto/quizErrado/quizSeguinte/quizVerResultado/quizRepetir/quizNota/quizIndisp/quizAcarregar/quizZero/aqi/aqiIndisp)
-- test-apis-v34.mjs NOVO: 35 asserts + 4 smokes reais (Radio Browser MZ · Wikipédia «Moçambique» · Frankfurter EUR→USD · EAQI Maputo) — rádios no LiveHub com troca de país e stream offline→erro honesto; Sabias que? com erro→retry em contexto limpo; conversor: nota honesta MZN + sparkline USD→EUR (▲ 2,22% do mock + período real); cidade: quiosque carimbado (MESA 15/FOLHAS 8/TOCHA 17), portal por proximidade, rádio no modal, quiz 6/6 com +12 créditos reais no localStorage, AQI «Razoável (EAQI 22)» nos troféus; mobile 390 sem overflow
-- REGRESSÕES: test-cidade 31/31 ✅ · test-apis-publicas (v25) 30/30 ✅ · test-v30-apis-design 31/31 ✅ · tsc 0 · vite build OK
-- VISUAL: 8 screenshots shots-v34/ verificadas (rádios no hub, sabias que desktop+mobile, trend, praça com rótulo do quiosque, modal rádio, modal quiz, troféus com AQI)
-
-Stage Summary:
-- A plataforma ganha 4 fontes reais novas (rádios PALOP ao vivo, saber PALOP da Wikipédia, histórico BCE, ar de Maputo) e o jogo-âncora ganha o seu primeiro PONTO DE ATIVIDADE interior: o Quiosque da Praça — ouvir a rádio real do teu país ou jogar o quiz com perguntas reais sem sair do mundo. Total v34: 35 asserts novos + 4 smokes reais, 97 verdes nas 4 suítes tocadas
-- Zero dados inventados mantidos: cada número novo (rádio, resumo, taxa, AQI, pergunta) veio da sua fonte com atribuição visível; 3 APIs descartadas com prova registada
-
----
 Task ID: v29-bateucraft-sistemas-avancados
 Agent: Super Z (main)
 Task: v29 — BateuCraft «sistemas muito mais avançados e completos»: AGRICULTURA (enxada · terra arada · sementes · trigo 2 estágios · pão) + TNT (fusível + explosão grande) + BAÚ (18 posições por posição, persistido) + ARMADURA (3 peitorais com absorção real de dano) + VACA e GALINHA (mobs passivos com drops) + METEOROLOGIA (chuva · tempestade · relâmpagos · trovoada · céu escurece · trigo cresce ×2,4) + save v3
@@ -455,23 +433,42 @@ Stage Summary:
 - BateuCraft ganhou o sistema que faltava do género: PESCA de ponta a ponta com espera honesta, janela de perícia e peixes raros raros de verdade — e a Aranha dá propósito à noite sem matar o dia
 - A plataforma come o mundo real pela 6.ª API: pratos reais com fotos reais e regiões reais da TheMealDB
 - Tudo com as três regras de sempre: zero dados inventados, erros honestos, atribuição explícita
-
 ---
-Task ID: cidade-bateu-v1-v33
+Task ID: v33-cidade-retoques + v34-veloren
 Agent: Super Z (main)
-Task: CIDADE BATEU v1 — o jogo-âncora da plataforma (mundo voxel onde cada distrito é um portal real) · MZ · AO · CV
+Task: v33 — retoques visuais da CIDADE BATEU (telhados completos 9×9 · limpeza de árvores sobre edifícios · tochas nos caminhos s%9===4) + verificação final · v34 — análise Veloren × Bateumz: linguagem recomendada e plano N3
 
 Work Log:
-- DECISÃO PREVIA ao código: o utilizador pediu o jogo principal que envolve toda a plataforma → desenho "cidade voxel = plataforma": 10 distritos-portais com rotas REAIS verificadas em App.tsx (marketplace/leiloes/desporto/esports/jogos/lives/negocios/community/jogos-gratis/concursos), Praça do Imbondeiro central, Tua Casa, Sala de Troféus; semente FIXA 20251103 (mesma cidade para todos — base multiplayer)
-- MOTOR: só 2 ganchos novos no engine.ts (fabricaMundo + spawnFixo) — por omissão o motor comporta-se exactamente como antes; MundoCidade extends Mundo (plateau plano r≤58 com fusão suave até r72, bioma planície na cidade, carimbo determinístico: praça pavimentada + imbondeiro de copa larga + 10 caminhos radiais com postes de tocha + 10 edifícios 9×9 com materiais distintos, janelas de vidro, portas viradas à praça, telhados completos 9×9 + limpeza de árvores até y+12 + Tua Casa 7×7 com cama/baú/mesa + pavilhão de troféus); GestorPacífico por closures (só passivos, noite=false forçado — hub não pode matar)
-- PÁGINA /cidade (CidadeBateu.tsx ~620 linhas): ecrã de início com clima real + semente + chip de fontes; HUD (relógio HH:MM do mundo, meteo do motor, clima real Maputo 24,8°, créditos, minimapa com pontos coloridos dos distritos, 5ª câmara persistida, som); rótulos flutuantes 3D→ecrã a 8 Hz com âncora adaptativa (y+4.5 perto / y+8.5 longe); CTA "Entrar →" por proximidade <8 blocos navega para a rota REAL; missões urbanas diárias determinísticas (circuito 4 distritos · destaque do dia rotativo · lar doce lar) registadas SÓ por proximidade 3D, +15 créditos cada, confetti no fecho; Sala de Troféus honesta (atividade local + atribuição open-meteo); controlos desktop (pointer-lock, WASD, F5 câmaras, E interagir, F voar) e móveis (joystick, olhar, saltar, correr); createPortal para body
-- BUGS REAIS apanhados: (1) ALTURA_PLATEAU importado de constants (não existe lá) → lazy route em branco — tsc não apanhou, probe sim; (2) wrapper PageTransition com filter:blur(0px) cria containing block e esmaga fixed inset-0 (altura 0, html interceptava cliques) → createPortal(document.body); (3) âncora dos rótulos saía do frustum junto aos edifícios (NDC>1.15) → CTA nunca aparecia; (4) regex do mock /api\.open-meteo\.com/ casava com geocoding-api.… (Playwright prioriza o último route) → âncora ^https://; (5) toLocaleString pt-PT = "26,4" → asserção /26[.,]4/; (6) telhados em anel + árvores dentro dos edifícios vistos em screenshot aérea → telhado completo + limpeza + tochas 1/9
-- i18N: 26 chaves cidade.* nos 6 blocos (pt · pt-BR · en · es · fr · hi) ancoradas por desporto.real único; navegação: Navbar (dropdown Gaming + quickActions) e MobileMenuDrawer com Landmark + "Cidade Bateu"
-- E2E NOVO test-cidade.mjs 31/31: início/clima/spawn sem NaN/blocos reais da cidade/5 câmaras/3 missões/4 portais por proximidade/créditos 45 por visitas reais/CTA→/lives/troféus/relógio/mobile 375/zero erros consola
-- REGRESSÕES: blocos 101/101 (motor intacto) · APIs-v25 30/30 · tsc 0 · screenshots v33 verificadas (início · 3ª pessoa na praça com HUD · aérea com 10 distritos e telhados completos)
-- DOC: docs/REA-cidade-bateu-v33.md (decisões, honestidade, bugs, pendências M1–M3 multiplayer)
+- V33 (cidade.ts): telhado completo (antes só anel — parecia inacabado) · limpeza B.AR em y+6..y+12 sobre edifícios distritais (árvores nasciam nos telhados) · tochas nos caminhos a cada s%9===4 (densidade calibrada) · casa com telhado completo · âncoras E2E testadas y=36 não mudaram
+- VERIFICAÇÃO V33 (estava pendente, output perdido): npx tsc --noEmit = 0 erros ✅ · test-cidade.mjs re-run = 31/31 PASSOU ✅ (clima real chip, relógio HH:MM, troféus com créditos reais, joystick móvel, zero erros de consola)
+- V34 (docs/REA-veloren-v34.md): análise do repositório veloren/veloren a pedido («terias como criar algo similar com a linguagem mais adaptável à plataforma?»)
+  - FACTOS VERIFICADOS com fontes (repo + book.veloren.net + HN): Rust 74,9% · GPL-3 · 7,7k★ · 370 contribuidores · crates client/server/server-cli/common/network/world/voxygen/plugin/rtsim · ECS specs SoA PARTILHADO entre cliente e servidor · render wgpu · plataformas Windows/macOS/Linux — NÃO existe build oficial browser/WASM · servidor dedicado com guias PC/Docker/Raspberry Pi · veloren-auth para multiplayer
+  - RESPOSTA: SIM viável, NUNCA por cópia — GPLv3 obrigaria a libertar o código do jogo; plataforma é proprietária → o repo serve para ESTUDAR arquitetura (ideias não têm copyright, código tem)
+  - LINGUAGEM RECOMENDADA: TypeScript full-stack (única com UM código nos DOIS lados — browser + Node autoritativo, espelhando o padrão do crate `common` do Veloren) · Rust fica como RESERVA cirúrgica para N4 (WASM para meshing/worldgen quente, ou servidor dedicado se o Node não aguentar tick) — decisão por profilagem, não por modismo
+  - JÁ TEMOS do modelo Veloren: seed determinística (SEED_CIDADE=20251103 = cidade igual para todos), núcleo separado do render, Supabase no papel do veloren-auth, BateuCraft = build mode, PWA/APK = launcher, worklog = devblog
+  - A ADOTAR (mapa N3/N4): servidor autoritativo tick fixo 20 Hz · predição do cliente + reconciliação (sensação CoD Mobile) · interest management por raio · cidade-core isomórfico · transporte HONESTO: browsers não têm UDP bruto → WebSocket (WebRTC DataChannel só se o lag justificar) · Supabase Realtime para chat/eventos, ws próprio para posições
+  - LIMITAÇÕES HONESTAS documentadas: escala Node (dezenas/jogadores por instância a confirmar com PoC de 50 bots; centenas = sharding por distrito ou Rust), profundidade RPG do Veloren = 6 anos/370 contribuidores (o nosso foco é retenção por integração — escolha de design), sem build browser deles = só o padrão é transferível
+  - PLANO N3-PoC «Cidade partilhada» escrito no doc: core.ts puro → server/ Node+ws tick 20 Hz anti-teleport → predição+interpolação 100 ms → E2E 2 tabs + 50 bots → métricas de aprovação (drift <1 bloco/s, CPU <50%)
+  - Zero código do Veloren copiado; todas as afirmações com URL de fonte consultada a 2026-11-04
 
 Stage Summary:
-- A bateumz deixou de ser um site com jogos: agora tem UM LUGAR — a Cidade Bateu, onde a atividade de toda a plataforma vira geografia e cada ganho é um edifício
-- Zero plágio por construção: motor próprio, texturas canvas, imbondeiro e distritos com identidade MZ·AO·CV — mecânica do género é livre, a expressão é nossa
-- Três regras intactas: créditos só de visitas reais por proximidade 3D, clima indisponível diz-se indisponível, open-meteo com fonte visível
+- A Cidade Bateu fecha a v33 verificada (31/31 + tsc 0): praça com telhados acabados, caminhos iluminados, skyline limpa
+- A v34 responde com honestidade: o caminho Veloren para a bateumz é TypeScript full-stack com servidor autoritativo próprio (padrão common/server do Veloren recriado em TS), Rust guardado para quando a profilagm pedir — e o GPLv3 impede copiar, só inspira
+---
+Task ID: v35-veloren
+Agent: Super Z (main)
+Task: v35 — ANÁLISE VELOREN × BATEUMZ: linguagem recomendada e plano N3 «Cidade partilhada» (docs/REA-veloren-v35.md)
+
+Work Log:
+- FACTOS VERIFICADOS com fontes (repo + book.veloren.net + HN, consultados 2026-11-04): Veloren = RPG voxel multiplayer em Rust 74,9% · GPL-3 · 7,7k★ · 370 contribuidores · crates client/server/server-cli/common/network/world/voxygen · ECS specs SoA PARTILHADO cliente+servidor · render wgpu · Windows/macOS/Linux — SEM build oficial browser/WASM · servidor dedicado com guias PC/Docker/Raspberry Pi · veloren-auth no multiplayer
+- RESPOSTA: SIM viável, NUNCA por cópia — GPLv3 obrigaria a libertar o código do jogo (plataforma é proprietária) → o repo serve para ESTUDAR arquitetura (ideias não têm copyright, código tem)
+- LINGUAGEM RECOMENDADA: TypeScript full-stack — espelha o padrão do crate `common` do Veloren com um núcleo isomórfico cidade-core (browser renderiza, Node autoritativo simula); Rust fica como RESERVA cirúrgica para N4 (WASM para meshing/worldgen quente ou servidor dedicado se o Node não aguentar tick) — decisão por profilagem, não por modismo
+- JÁ TEMOS do modelo Veloren: seed determinística SEED_CIDADE (cidade igual para todos), núcleo separado do render, Supabase no papel do veloren-auth, BateuCraft = build mode, PWA/APK = launcher, worklog = devblog
+- A ADOTAR (mapa N3/N4): servidor autoritativo tick 20 Hz · predição do cliente + reconciliação (sensação CoD Mobile) · interest management por raio · transporte HONESTO: browsers não têm UDP bruto → WebSocket (WebRTC DataChannel só se o lag justificar) · Supabase Realtime para chat/eventos, ws próprio para posições
+- LIMITAÇÕES HONESTAS: escala Node (dezenas/instância a confirmar com PoC 50 bots; centenas = sharding por distrito ou Rust), profundidade RPG deles = 6 anos/370 contribuidores (o nosso foco é retenção por integração — escolha assumida), sem build browser deles = só o padrão é transferível
+- PLANO N3-PoC no doc: core.ts puro → server/ Node+ws tick 20 Hz anti-teleport → predição+interpolação 100 ms → E2E 2 tabs + 50 bots → métricas (drift <1 bloco/s, CPU <50%)
+- Nota de processo: rebase sobre v33/v34 remotos (a v34 APIs públicas já estava no remoto; doc renomeado REA-veloren-v34→v35 para não colidir com o número usado pelas APIs)
+- Zero código do Veloren copiado; todas as afirmações com URL de fonte
+
+Stage Summary:
+- O caminho Veloren para a bateumz é TypeScript full-stack com servidor autoritativo próprio (o padrão common/server recriado em TS), Rust guardado para quando a profilagm pedir — e o GPLv3 impede copiar, só inspira: N3-PoC «Cidade partilhada» pronto a aprovar

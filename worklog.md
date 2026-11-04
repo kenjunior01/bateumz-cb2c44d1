@@ -513,3 +513,17 @@ Work Log:
 
 Stage Summary:
 - O N3 deixou de ser PoC: cliente e servidor correm AS MESMAS regras (core.ts), o servidor é autoritativo a sério (orçamento + corrigido — os 2 furos reais que o E2E apanhou estão fechados com prova) e a Praça tem voz: chat com bolhas, sanitizado e limitado nas duas pontas
+
+## v38 — VIDA NA CIDADE: progressão · missões · exploração · ambiente · dificuldade (2026-11-04)
+
+Pedido: «Continue e adicione todo sistema bem feito de progressao missoes,e exploracao ambientacao dificuldades e tudo bem feito».
+
+**Estudo real do Veloren aplicado** (clone esparso, ficheiro:linha em docs/REA-progressao-v38.md): curva de skill points EXATA do grupo General (skillset/mod.rs:101-113, logística 70→~760 XP) · grupos independentes (mod.rs:89) → 4 ramos · WaypointArea (location.rs:34) → marcos · hard truth: Veloren NÃO tem quests nem seletor de dificuldade (só Hardcore, hardcore.rs:5) → diferenciadores nossos.
+
+**Novos módulos** (puros, citados): progressao.ts (perfil XP/níveis/pontos, 4 ramos com efeitos REAIS — Atleta aplica escalaVel real no motor 1,06/1,12/1,18 ≤ orçamento MP 12; Sábio paga quiz; Cidadão paga missões; Explorador multiplica descobertas) · marcos.ts (10 marcos: 4 urbanos + 6 naturais MEDIDOS no worldgen real pela sonda esbuild+node — Colina das Areias 42/deserto, Árvore do Caminho Sul topo FOLHAS, etc.) · ambiente.ts (WebAudio sintetizado: pássaros dia, grilos noite, brisa; pássaros calam com chuva) · missoes.ts (XP de atividade real + cadeia «Roteiro do Imbondeiro» 6 capítulos: casa→quiosque→quiz3→2 naturais→noite na praça→8/10 distritos) · QuizPraca (bónus Sábio + aoFim XP).
+
+**UI**: ecrã inicial com seletor de dificuldade · HUD nível+XP+pontos · painel de missões com capítulo da cadeia · Diário (3 tabs: Progresso/Exploração/Dificuldade) · toasts de nível e marcos com confetti · i18n 28 chaves × 6 línguas (en/pt/pt-BR/es/fr/hi).
+
+**Furos reais apanhados pelo E2E**: quiósque nunca registava visita (chave=null → impossível o cap. 2) · marcoPerto devolvia só o mais próximo (praça nunca descobria) · curva ×10 errada (verificada por código) · rAF a 2 fps no sandbox (raster por software — provado com git stash que v37 corre igual) estrangulava envios MP → gancho mpPasso + harness realinhado (precedente v37/v36).
+
+**Verificação**: test-progressao-v38 39/39 · cidade 32/32 · mp-v37 26/26 · mp-v36 14/14 · apis-v34 35/35 (4 smokes reais) · blocos 101/101 · tsc 0 · build OK · 5 screenshots verificadas (início/HUD/Diário×3).

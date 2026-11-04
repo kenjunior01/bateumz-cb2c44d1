@@ -76,6 +76,7 @@ async function main() {
     const m = window.__cidade.motor;
     for (let i = 1; i <= 20; i++) {
       window.__cidade.teleportar(i, m.mundo.alturaTerreno(i, 6.5) + 1.02, 6.5);
+      window.__cidade.mpPasso(0.12); // v38 — envio pelo relógio do teste (rAF a 2 fps no sandbox)
       await new Promise((r) => setTimeout(r, 120));
     }
   });

@@ -91,7 +91,8 @@ async function main() {
   console.log("— Missões");
   ok("painel de missões visível", await page.getByTestId("cd-missoes").isVisible().catch(() => false));
   const nMissoes = await page.getByTestId("cd-missoes").locator("div.text-\\[11px\\]").count();
-  ok("3 missões urbanas", nMissoes === 3);
+  ok("3 missões diárias + capítulo do Roteiro (v38)", nMissoes === 4);
+  ok("painel do Roteiro presente", await page.getByTestId("cd-cadeia").isVisible().catch(() => false));
 
   const visitas = [
     ["sorteios", 20.5, 36, 0], ["leiloes", 16.7, 36, 12.2],

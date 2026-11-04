@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
   Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store, Globe,
-  MessageCircle, Send,
+  MessageCircle, Send, BookOpen, Compass, Footprints, Brain, Gauge,
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
@@ -19,7 +19,15 @@ import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
   POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, SPAWN_PRACA, type Distrito,
 } from "@/game/cidade/cidade";
-import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade } from "@/game/cidade/missoes";
+import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade, estadoCadeia, registarQuiz, registarNoitePraca, descobrirMarco, creditoMissaoAtual } from "@/game/cidade/missoes";
+// v38 — progressão, exploração e ambiente (padrões do estudo Veloren)
+import {
+  lerPerfil, guardarPerfil, ganharXP, gastarPonto, nivelDeXP, xpNoNivel,
+  DIFICULDADES, RAMOS, NIVEL_MAX_RAMO, escalaVelocidade, bonusQuizCreditos, bonusCreditoMissao,
+  type Perfil, type Ramo, type Dificuldade,
+} from "@/game/cidade/progressao";
+import { MARCOS, marcoPerto, marcosPerto } from "@/game/cidade/marcos";
+import { AmbienteSonoro } from "@/game/cidade/ambiente";
 import {
   procurarCidade, getClimaAtual, wmoParaMeteo, OPENMETEO_ATTRIBUTION,
   type CidadeEncontrada, type ClimaAtual,
@@ -100,8 +108,10 @@ export default function CidadeBateu() {
   const [portal, setPortal] = useState<{ nome: string; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" } | null>(null);
   const [relogio, setRelogio] = useState("--:--");
   const [noite, setNoite] = useState(false);
-  const [modal, setModal] = useState<"trofeus" | "quiosque" | null>(null);
+  const [modal, setModal] = useState<"trofeus" | "quiosque" | "diario" | null>(null);
   const [tabQuiosque, setTabQuiosque] = useState<"radio" | "quiz">("radio");
+  // v38 — Diário: 3 separadores (Progresso · Exploração · Dificuldade)
+  const [tabDiario, setTabDiario] = useState<"progresso" | "exploracao" | "dificuldade">("progresso");
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [missaoTick, setMissaoTick] = useState(0); // força re-render do painel de missões
   const [climaReal, setClimaReal] = useState<{ cidade?: CidadeEncontrada; clima?: ClimaAtual; erro?: string; ativa: boolean }>({ ativa: false });
@@ -112,6 +122,14 @@ export default function CidadeBateu() {
   const climaRef = useRef(climaReal);
   useEffect(() => { climaRef.current = climaReal; }, [climaReal]);
   const [creditos, setCreditos] = useState(creditosCidade());
+
+  // ── v38 — progressão (perfil local honesto), exploração e ambiente ──
+  const [perfilV, setPerfilV] = useState(0); // força re-render quando o perfil muda
+  const ambienteRef = useRef<AmbienteSonoro | null>(null);
+  const noiteAntesRef = useRef(false);
+  const nivelVistoRef = useRef(1); // para celebrar subidas de nível
+  const bump = useCallback(() => setPerfilV((k) => k + 1), []);
+  void perfilV;
 
   // ── v36 — presença partilhada (PoC N3, padrões Veloren do estudo v36):
   // só liga se houver URL (?mp=ws://… ou localStorage bateu_cidade_mp_url) —
@@ -201,6 +219,12 @@ export default function CidadeBateu() {
     m.iniciar(cv, "criativo", false);
     if (m.gestor) pacificarGestor(m.gestor, m.mundo); // cidade sempre pacífica
     m.yaw = Math.PI; // olha para norte (praça)
+    // v38 — progressão aplica efeitos reais + ambiente sonoro (gesto = clique)
+    const perfil = lerPerfil();
+    m.escalaVel = escalaVelocidade(perfil);
+    nivelVistoRef.current = nivelDeXP(perfil.xp);
+    if (!ambienteRef.current) ambienteRef.current = new AmbienteSonoro();
+    ambienteRef.current.ligar();
     setFase("jogando");
     m.redimensionar();
     // v36 — presença partilhada opt-in (nunca liga sem URL explícita)
@@ -230,7 +254,7 @@ export default function CidadeBateu() {
       creditos: () => creditosCidade(),
       missao: () => estadoMissao(),
       rotulos: () => rotulosRef.current,
-      portalPerto: (x: number, z: number) => portalPerto(x, z),
+      portalPerto: (x: number, z: number, r?: number) => portalPerto(x, z, r ?? DIFICULDADES[lerPerfil().dificuldade].raioPortal),
       clima: () => climaRef.current,
       ar: () => arRef.current,
       abrirQuiosque: () => setModal("quiosque"),
@@ -245,6 +269,37 @@ export default function CidadeBateu() {
       mpFalar: (texto: string) => mpRef.current?.falar(texto) ?? false,
       mpFalas: () => mpRef.current?.falasInfo() ?? [],
       ultimaCorrecao: () => ultimaCorrecaoRef.current,
+      // v38 — envio MP determinístico (mesmo contrato do ciclo rAF; o raster
+      // por software do sandbox corre a ~2 fps e estrangula o ritmo de envio)
+      mpPasso: (dt: number) => mpRef.current?.passo(dt, motorRef.current.px, motorRef.current.pz, motorRef.current.yaw),
+      // ── v38 — progressão, exploração e ambiente (ganchos E2E) ──
+      perfil: () => lerPerfil(),
+      darXP: (n: number) => {
+        const ev = ganharXP(lerPerfil(), n);
+        bump();
+        return { xp: ev.perfil.xp, pontos: ev.perfil.pontos, subiuPara: ev.subiuPara ?? null };
+      },
+      gastarPonto: (ramo: string) => {
+        const r = gastarPonto(lerPerfil(), ramo as Ramo);
+        if (r) motorRef.current.escalaVel = escalaVelocidade(r);
+        bump();
+        return r;
+      },
+      definirDificuldade: (d: string) => {
+        const reg = DIFICULDADES[d as Dificuldade];
+        if (!reg) return null;
+        const p = lerPerfil();
+        p.dificuldade = reg.id;
+        guardarPerfil(p);
+        bump();
+        return p;
+      },
+      descobertas: () => lerPerfil().marcos,
+      marcoPerto: (x: number, z: number) => marcoPerto(x, z),
+      cadeia: () => estadoCadeia(lerPerfil()),
+      ambiente: () => ambienteRef.current?.estado() ?? { ativo: false, noite: false, chuva: 0 },
+      escalaVel: () => motorRef.current.escalaVel,
+      missoesHoje: () => missoesDeHoje(),
     };
     return () => { try { delete (window as any).__cidade; } catch { /* ignore */ } };
   }, []);
@@ -284,7 +339,9 @@ export default function CidadeBateu() {
         if (cv) {
           const w = cv.clientWidth, h = cv.clientHeight;
           const v = new THREE.Vector3();
-          const prox = portalPerto(m.px, m.pz, 8);
+          // v38 — raios de proximidade vêm da dificuldade do perfil (honesto)
+          const raioPortal = DIFICULDADES[lerPerfil().dificuldade].raioPortal;
+          const prox = portalPerto(m.px, m.pz, raioPortal);
           const novos: Rotulo[] = DISTRITOS.map((di) => {
             const [bx, bz] = posDistrito(di);
             // âncora baixa quando estás perto (evita sair do frustum por cima)
@@ -329,8 +386,12 @@ export default function CidadeBateu() {
               : prox.tipo === "quiosque" ? t("cidade.quiosque")
               : prox.distrito?.nome ?? "";
             setPortal({ nome, rota: prox.distrito?.rota ?? "", tipo: prox.tipo });
-            // registar visita UMA vez por entrada
-            const chave = prox.tipo === "casa" ? "__casa__" : prox.tipo === "trofeus" ? "__trofeus__" : prox.distrito?.id ?? null;
+            // registar visita UMA vez por entrada (v38: "__quiosque__" também conta —
+            // antes caía em `null` e o quiósque nunca registava visita/cadeia)
+            const chave = prox.tipo === "casa" ? "__casa__"
+              : prox.tipo === "trofeus" ? "__trofeus__"
+              : prox.tipo === "quiosque" ? "__quiosque__"
+              : prox.distrito?.id ?? null;
             if (chave && portalAtual.current !== chave) {
               portalAtual.current = chave;
               const feitas = registarVisita(chave);
@@ -345,6 +406,28 @@ export default function CidadeBateu() {
             setPortal(null);
             portalAtual.current = null;
           }
+
+          // ── v38 — descoberta de marcos (padrão WaypointArea, location.rs:34;
+          // TODOS os do raio — o mais-próximo-sozinho deixava a praça sem descobrir) ──
+          const perfilAgora = lerPerfil();
+          const cercas = marcosPerto(m.px, m.pz, DIFICULDADES[perfilAgora.dificuldade].raioMarco);
+          for (const cerca of cercas) {
+            if (perfilAgora.marcos.includes(cerca.marco.id)) continue;
+            const res = descobrirMarco(cerca.marco.id);
+            if (res) {
+              fireConfetti({ intensity: "low" });
+              setAviso({ texto: t("cidade.marcoNovo", { nome: cerca.marco.nome, xp: String(res.xpGanho) }), k: Date.now() });
+              bump();
+            }
+          }
+          // ── v38 — festa de subida de nível (uma vez por nível) ──
+          const nv = nivelDeXP(perfilAgora.xp);
+          if (nv > nivelVistoRef.current) {
+            const ganhoPontos = nv - nivelVistoRef.current;
+            nivelVistoRef.current = nv;
+            fireConfetti({ intensity: "medium" });
+            setAviso({ texto: t("cidade.nivelSubiu", { n: String(nv), p: String(ganhoPontos) }), k: Date.now() });
+          }
         }
       }
 
@@ -356,6 +439,16 @@ export default function CidadeBateu() {
         setRelogio(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
         setNoite(m.noite);
         setMpN(mpRef.current?.nNoMundo ?? 0); // v36
+        // v38 — anoitecer na praça (capítulo da cadeia) + ambiente sonoro
+        if (m.noite && !noiteAntesRef.current && Math.hypot(m.px, m.pz) < 10) {
+          const caps = registarNoitePraca();
+          if (caps.length) {
+            bump();
+            setAviso({ texto: `★ ${t("cidade.cadeiaTitulo")}: ${caps[0].titulo}`, k: Date.now() });
+          }
+        }
+        noiteAntesRef.current = m.noite;
+        ambienteRef.current?.passo(m.noite, m.chuvaNivel);
       }
     };
     raf = requestAnimationFrame(ciclo);
@@ -460,6 +553,10 @@ export default function CidadeBateu() {
 
   const missao = missoesDeHoje();
   void missaoTick;
+  // v38 — cadeia atual + perfil para HUD (re-render sobe com missaoTick/perfilV)
+  const cadeiaAgora = estadoCadeia(lerPerfil());
+  const perfilAgora = lerPerfil();
+  const defDif = (d: Dificuldade) => { const p = lerPerfil(); p.dificuldade = d; guardarPerfil(p); bump(); };
 
   // Portal para body: evita que wrappers com filter/transform criem um
   // containing block e esmaguem o layout fixed do jogo.
@@ -488,6 +585,19 @@ export default function CidadeBateu() {
                   {di.nome}
                 </div>
               ))}
+            </div>
+
+            {/* v38 — dificuldade escolhe-se no arranque (e no Diário) */}
+            <div className="mt-5" data-testid="cd-dif-inicio">
+              <p className="text-[11px] uppercase tracking-widest text-white/50 mb-1.5 flex items-center justify-center gap-1"><Gauge size={12} /> {t("cidade.difTitulo")}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["passeio", "cidadao", "desafiador"] as Dificuldade[]).map((d) => (
+                  <button key={d} onClick={() => defDif(d)} data-testid={`cd-dif-${d}`}
+                    className={`py-2 rounded-xl text-[11px] font-black border transition ${perfilAgora.dificuldade === d ? "bg-amber-400/15 border-amber-300/60 text-amber-200" : "border-white/15 text-white/60"}`}>
+                    {t(`cidade.dif${d.charAt(0).toUpperCase()}${d.slice(1)}`)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button onClick={entrar} data-testid="cd-entrar"
@@ -530,6 +640,24 @@ export default function CidadeBateu() {
               <p className="text-sm font-black leading-tight flex items-center gap-1" data-testid="cd-creditos">
                 <Sparkles size={13} className="text-amber-300" /> {creditos} <span className="text-[10px] font-bold text-white/50">{t("cidade.creditos")}</span>
               </p>
+              {/* v38 — nível + XP (curva do estudo Veloren, atividade real) */}
+              {(() => {
+                const p = lerPerfil();
+                const nv = nivelDeXP(p.xp);
+                const { noNivel, custo } = xpNoNivel(p.xp);
+                return (
+                  <div className="mt-1" data-testid="cd-nivel">
+                    <p className="text-[10px] font-bold text-violet-300 leading-none flex items-center gap-1">
+                      {t("cidade.nivel")} {nv}
+                      {p.pontos > 0 && <span className="text-amber-300" data-testid="cd-pontos">· {p.pontos} {t("cidade.pontos")}</span>}
+                    </p>
+                    <div className="h-1 rounded bg-white/15 mt-0.5 w-full">
+                      <div className="h-1 rounded bg-violet-400 transition-all" data-testid="cd-xp-bar"
+                        style={{ width: `${Math.min(100, (noNivel / Math.max(1, custo)) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -570,9 +698,13 @@ export default function CidadeBateu() {
                 className="p-2.5 rounded-xl bg-black/55 border border-white/15 text-white active:scale-95 backdrop-blur" title={CAMARA_NOMES[camaraModo]}>
                 <Camera size={16} />
               </button>
-              <button onClick={() => { const m = motorRef.current; setSomMudo(!m.alternarSom()); }}
-                className="p-2.5 rounded-xl bg-black/55 border border-white/15 text-white active:scale-95 backdrop-blur">
+              <button onClick={() => { const m = motorRef.current; setSomMudo(!m.alternarSom()); ambienteRef.current?.alternarMudo(); }}
+                className="p-2.5 rounded-xl bg-black/55 border border-white/15 text-white active:scale-95 backdrop-blur" data-testid="cd-som-btn">
                 {somMudo ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              <button onClick={() => { setTabDiario("progresso"); setModal("diario"); }} data-testid="cd-diario-btn"
+                className="p-2.5 rounded-xl bg-black/55 border border-white/15 text-white active:scale-95 backdrop-blur">
+                <BookOpen size={16} />
               </button>
               <button onClick={() => setModal("trofeus")} data-testid="cd-trofeus-btn"
                 className="p-2.5 rounded-xl bg-black/55 border border-white/15 text-white active:scale-95 backdrop-blur">
@@ -643,6 +775,31 @@ export default function CidadeBateu() {
                   </div>
                 );
               })}
+              {/* v38 — capítulo atual do Roteiro do Imbondeiro */}
+              <div className="pt-1.5 mt-1 border-t border-white/10" data-testid="cd-cadeia">
+                {!cadeiaAgora.completo && cadeiaAgora.capitulo && (
+                  <>
+                    <p className="text-[9px] uppercase tracking-widest text-violet-300/80 mb-0.5 flex items-center gap-1">
+                      <Compass size={10} /> {t("cidade.cadeiaTitulo")} · {t("cidade.capitulo", { n: String(cadeiaAgora.indice + 1) })}
+                    </p>
+                    <div className="text-[11px] leading-tight text-white/85">
+                      <div className="flex items-center gap-1">
+                        <span>•</span>
+                        <span className="flex-1">{cadeiaAgora.capitulo.titulo} — {cadeiaAgora.capitulo.desc}</span>
+                        <span className="tabular-nums text-white/45">{cadeiaAgora.prog}/{cadeiaAgora.alvo}</span>
+                      </div>
+                      {cadeiaAgora.alvo > 1 && (
+                        <div className="h-1 rounded bg-white/10 mt-0.5 ml-3.5">
+                          <div className="h-1 rounded bg-violet-400 transition-all" style={{ width: `${(cadeiaAgora.prog / cadeiaAgora.alvo) * 100}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                {cadeiaAgora.completo && (
+                  <p className="text-[11px] text-emerald-300 flex items-center gap-1"><Trophy size={11} /> {t("cidade.cadeiaFeito")}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -718,6 +875,125 @@ export default function CidadeBateu() {
         </>
       )}
 
+      {/* ═══ MODAL: DIÁRIO (v38 — progressão · exploração · dificuldade) ═══ */}
+      {modal === "diario" && (
+        <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+          <div className="bg-slate-900 border border-violet-400/25 rounded-2xl p-4 w-full max-w-md text-white max-h-[88dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()} data-testid="cd-modal-diario">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-lg flex items-center gap-2"><BookOpen size={18} className="text-violet-300" />{t("cidade.diario")}</h3>
+              <button onClick={() => setModal(null)} className="text-white/70 text-xl leading-none" data-testid="cd-diario-fechar">×</button>
+            </div>
+            <div className="flex gap-1.5 mb-3">
+              {(["progresso", "exploracao", "dificuldade"] as const).map((tab) => (
+                <button key={tab} onClick={() => setTabDiario(tab)} data-testid={`cd-diario-tab-${tab}`}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-black border transition ${tabDiario === tab ? "bg-violet-400/15 border-violet-300/60 text-violet-200" : "border-white/15 text-white/60"}`}>
+                  {tab === "progresso" ? t("cidade.tabProgressao") : tab === "exploracao" ? t("cidade.tabExploracao") : t("cidade.tabDificuldade")}
+                </button>
+              ))}
+            </div>
+
+            {tabDiario === "progresso" && (() => {
+              const p = lerPerfil();
+              const nv = nivelDeXP(p.xp);
+              const { noNivel, custo } = xpNoNivel(p.xp);
+              const descs: Record<Ramo, string> = {
+                explorador: t("cidade.ramoExploradorDesc"),
+                atleta: t("cidade.ramoAtletaDesc"),
+                sabio: t("cidade.ramoSabioDesc"),
+                cidadao: t("cidade.ramoCidadaoDesc"),
+              };
+              const icones: Record<Ramo, typeof Compass> = { explorador: Compass, atleta: Footprints, sabio: Brain, cidadao: Home };
+              const nomes: Record<Ramo, string> = {
+                explorador: t("cidade.ramoExplorador"), atleta: t("cidade.ramoAtleta"),
+                sabio: t("cidade.ramoSabio"), cidadao: t("cidade.ramoCidadao"),
+              };
+              return (
+                <div className="space-y-3" data-testid="cd-diario-progresso">
+                  <div className="rounded-xl border border-violet-400/25 bg-violet-400/5 p-3">
+                    <p className="text-2xl font-black text-violet-200" data-testid="cd-diario-nivel">{t("cidade.nivel")} {nv}</p>
+                    <div className="h-1.5 rounded bg-white/10 mt-2">
+                      <div className="h-1.5 rounded bg-violet-400 transition-all" style={{ width: `${Math.min(100, (noNivel / Math.max(1, custo)) * 100)}%` }} />
+                    </div>
+                    <p className="text-[10px] text-white/50 mt-1 tabular-nums">{noNivel} / {custo} {t("cidade.xp")}</p>
+                    <p className="text-[11px] text-amber-300 font-bold mt-1" data-testid="cd-diario-pontos">{p.pontos} {t("cidade.pontos")}</p>
+                  </div>
+                  {RAMOS.map((r) => {
+                    const Icone = icones[r];
+                    const nivel = p.skills[r];
+                    const max = nivel >= NIVEL_MAX_RAMO;
+                    return (
+                      <div key={r} className="rounded-xl border border-white/10 bg-white/5 p-2.5 flex items-center gap-2.5" data-testid={`cd-ramo-${r}`}>
+                        <Icone size={17} className="text-violet-300 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-black">
+                            {nomes[r]}
+                            <span className="ml-1.5 text-white/45 font-bold">{"●".repeat(nivel)}{"○".repeat(NIVEL_MAX_RAMO - nivel)}</span>
+                          </p>
+                          <p className="text-[10px] text-white/55 leading-tight">{descs[r]}</p>
+                        </div>
+                        <button onClick={() => { const rr = gastarPonto(lerPerfil(), r); if (rr) motorRef.current.escalaVel = escalaVelocidade(rr); bump(); }}
+                          disabled={p.pontos < 1 || max} data-testid={`cd-aprender-${r}`}
+                          className="px-2.5 py-1.5 rounded-lg text-[10px] font-black bg-violet-400/20 border border-violet-300/50 text-violet-200 disabled:opacity-35 disabled:cursor-not-allowed active:scale-95">
+                          {t("cidade.aprender")}
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <p className="text-[10px] text-white/40">{t("cidade.difNota")}</p>
+                </div>
+              );
+            })()}
+
+            {tabDiario === "exploracao" && (() => {
+              const p = lerPerfil();
+              return (
+                <div className="space-y-2" data-testid="cd-diario-exploracao">
+                  <p className="text-[12px] font-bold text-white/80" data-testid="cd-marcos-contagem">
+                    {t("cidade.marcosContagem", { a: String(p.marcos.length), b: String(MARCOS.length) })}
+                  </p>
+                  {MARCOS.map((mk) => {
+                    const achou = p.marcos.includes(mk.id);
+                    return (
+                      <div key={mk.id} className={`rounded-xl border p-2.5 ${achou ? "border-emerald-400/30 bg-emerald-400/5" : "border-white/10 bg-white/5"}`} data-testid={`cd-marco-${mk.id}`}>
+                        <p className={`text-[12px] font-black flex items-center gap-1.5 ${achou ? "text-emerald-200" : "text-white/45"}`}>
+                          <MapPin size={12} /> {achou ? mk.nome : "???"}
+                          {mk.natural && <span className="text-[9px] uppercase tracking-wider text-white/35">· {t("cidade.natural")}</span>}
+                        </p>
+                        {achou && <p className="text-[10px] text-white/60 leading-tight mt-0.5">{mk.desc}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {tabDiario === "dificuldade" && (() => {
+              const p = lerPerfil();
+              return (
+                <div className="space-y-2" data-testid="cd-diario-dificuldade">
+                  {(["passeio", "cidadao", "desafiador"] as Dificuldade[]).map((d) => {
+                    const ativo = p.dificuldade === d;
+                    return (
+                      <button key={d} onClick={() => { defDif(d); }}
+                        data-testid={`cd-dif-card-${d}`}
+                        className={`w-full text-left rounded-xl border p-3 transition ${ativo ? "border-amber-300/60 bg-amber-400/10" : "border-white/15 bg-white/5"}`}>
+                        <p className={`text-[13px] font-black flex items-center gap-1.5 ${ativo ? "text-amber-200" : "text-white/85"}`}>
+                          <Gauge size={13} /> {t(`cidade.dif${d.charAt(0).toUpperCase()}${d.slice(1)}`)}
+                          {ativo && <span className="ml-auto text-[10px] text-amber-300">✓</span>}
+                        </p>
+                        <p className="text-[10px] text-white/55 leading-tight mt-0.5">{t(`cidade.dif${d.charAt(0).toUpperCase()}${d.slice(1)}Desc`)}</p>
+                      </button>
+                    );
+                  })}
+                  <p className="text-[10px] text-white/40">{t("cidade.difNota")}</p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* ═══ MODAL: QUIOSQUE DA PRAÇA (v34 — rádio + quiz reais) ═══ */}
       {modal === "quiosque" && (
         <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onClick={() => setModal(null)}>
@@ -737,7 +1013,19 @@ export default function CidadeBateu() {
                 <Sparkles size={13} className="inline mr-1 -mt-0.5" />{t("cidade.tabQuiz")}
               </button>
             </div>
-            {tabQuiosque === "radio" ? <RadiosPALOP compacto /> : <QuizPraca />}
+            {tabQuiosque === "radio" ? <RadiosPALOP compacto /> : (
+              <QuizPraca
+                bonusPorAcerto={bonusQuizCreditos(lerPerfil())}
+                aoFim={(acertos) => {
+                  // v38 — XP real pelos acertos + capítulos da cadeia que fechem
+                  const r = registarQuiz(acertos);
+                  setCreditos(creditosCidade());
+                  bump();
+                  if (r.capitulos.length) setAviso({ texto: `★ ${t("cidade.cadeiaTitulo")}: ${r.capitulos[0].titulo}`, k: Date.now() });
+                  else if (r.xpGanho > 0) setAviso({ texto: `+${r.xpGanho} XP`, k: Date.now() });
+                }}
+              />
+            )}
             <p className="text-[10px] text-white/40 mt-3">{t("cidade.honesto")}</p>
           </div>
         </div>
@@ -759,7 +1047,7 @@ export default function CidadeBateu() {
                 const feita = e.reclamadas.includes(ms.id);
                 return (
                   <p key={ms.id} className={feita ? "text-emerald-300" : "text-white/80"}>
-                    {feita ? "🏆" : "◻"} {ms.desc} <span className="text-white/40">(+15 {t("cidade.creditos")})</span>
+                    {feita ? "🏆" : "◻"} {ms.desc} <span className="text-white/40">(+{creditoMissaoAtual()} {t("cidade.creditos")})</span>
                   </p>
                 );
               })}

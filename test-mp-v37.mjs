@@ -62,12 +62,16 @@ async function main() {
   ok("chip HUD mostra 2 no mundo", /^\s*2\s/.test(chipTxt ?? ""), `texto="${chipTxt}"`);
 
   console.log("— Movimento partilhado (predito no cliente, validado no servidor)");
-  // passos de 1 bloco a cada 120 ms = 8,3 b/s < MAX_VEL 12 — movimento honesto
+  // v38 — envios conduzidos pelo relógio do teste (mpPasso, mesmo contrato do
+  // rAF): o raster por software deste sandbox corre a ~2 fps e o ritmo de envio
+  // do rAF real não chega ao orçamento do servidor (medido: stash v37 = 2 fps
+  // também). 1 bloco a cada 125 ms = 8 b/s < MAX_VEL 12 — movimento honesto.
   await A.evaluate(async () => {
-    const m = window.__cidade.motor;
     for (let i = 1; i <= 20; i++) {
+      const m = window.__cidade.motor;
       window.__cidade.teleportar(i, m.mundo.alturaTerreno(i, 6.5) + 1.02, 6.5);
-      await new Promise((r) => setTimeout(r, 120));
+      window.__cidade.mpPasso(0.125);
+      await new Promise((r) => setTimeout(r, 125));
     }
   });
   await B.waitForFunction(() => {

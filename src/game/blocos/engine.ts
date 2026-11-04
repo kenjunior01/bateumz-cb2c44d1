@@ -91,6 +91,9 @@ export class Motor {
 
   // som / desempenho (preferências locais)
   mudo = false; raioRender = 3;
+  // v38 — multiplicador real de velocidade (Atleta da progressão; 1 = igual;
+  // máx 1.18 → 6.96 b/s, abaixo do orçamento MAX_VEL=12 do servidor v37)
+  escalaVel = 1;
   // qualidade automática (v29): se o aparelho não aguenta, baixamos
   // resolução primeiro, depois raio — sempre com aviso honesto ao jogador
   qualidadeAuto = true;
@@ -1183,8 +1186,9 @@ export class Motor {
       this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 1.2), Math.floor(this.pz)) === B.ESCADA;
     this.naEscada = emEscada;
 
-    // direção de movimento relativa ao yaw (agachado anda devagar, v28)
-    const velBase = (this.entrada.correr ? VEL_CORRER : VEL_ANDAR) * (this.entrada.agachado ? 0.45 : 1);
+    // direção de movimento relativa ao yaw (agachado anda devagar, v28;
+    // escalaVel = Atleta da progressão v38, 1 por defeito)
+    const velBase = (this.entrada.correr ? VEL_CORRER : VEL_ANDAR) * (this.entrada.agachado ? 0.45 : 1) * this.escalaVel;
     const vel = this.modo === "criativo" && this.criativoVoar ? velBase * 1.7 : this.naAgua ? velBase * 0.55 : velBase;
     let mx = 0, mz = 0;
     if (this.fase === "jogando") {

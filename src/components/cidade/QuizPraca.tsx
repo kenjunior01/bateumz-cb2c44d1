@@ -18,7 +18,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 type Fase = "inicio" | "jogando" | "resultado" | "erro";
 const CREDITO_POR_ACERTO = 2;
 
-export default function QuizPraca() {
+export default function QuizPraca(props?: {
+  /** v38 — bónus de créditos por acerto (competência Sábio; 0 por defeito). */
+  bonusPorAcerto?: number;
+  /** v38 — chamado 1× no fim com os acertos reais (paga XP/missões). */
+  aoFim?: (acertos: number) => void;
+}) {
   const { t } = useLanguage();
   const [fase, setFase] = useState<Fase>("inicio");
   const [perguntas, setPerguntas] = useState<ReadyQuestion[]>([]);
@@ -63,10 +68,12 @@ export default function QuizPraca() {
   const seguinte = () => {
     if (idx + 1 >= perguntas.length) {
       // recompensa honesta: só agora, pelo que realmente acertaste
-      const ganho = acertos * CREDITO_POR_ACERTO;
+      const bonus = Math.max(0, Math.floor(props?.bonusPorAcerto ?? 0));
+      const ganho = acertos * (CREDITO_POR_ACERTO + bonus);
       if (ganho > 0) adicionarCreditosCidade(ganho);
       setCreditosGanhos(ganho);
       setFase("resultado");
+      try { props?.aoFim?.(acertos); } catch { /* nunca parte o quiz */ }
       if (acertos >= Math.ceil(perguntas.length * 0.65)) fireConfetti({ intensity: "medium" });
     } else {
       setIdx((i) => i + 1);

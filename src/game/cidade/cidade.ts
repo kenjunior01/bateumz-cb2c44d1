@@ -14,11 +14,12 @@ import { B, CHUNK, ALTURA } from "../blocos/constants";
 import { Mundo, type Chunk } from "../blocos/world";
 import { GestorMobs } from "../blocos/mobs";
 import { Aleatorio } from "../blocos/noise";
+import { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA } from "./core";
 
-/** Semente fixa da cidade — a mesma para todo o mundo, para sempre. */
-export const SEED_CIDADE = 20251103;
-/** Altura do plateau da cidade (superfície andável = ALTURA_PLATEAU + 1). */
-export const ALTURA_PLATEAU = 34;
+// v37 — fonte única passou a ser core.ts (padrão `common` do Veloren:
+// cliente e servidor partilham as mesmas constantes); re-exportado aqui
+// para todos os imports existentes continuarem a funcionar.
+export { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA };
 /** Raio do plateau plano (para além disso o terreno natural regressa). */
 export const RAIO_PLATEAU = 58;
 /** Raio onde o plateau termina de fundir com o terreno natural. */

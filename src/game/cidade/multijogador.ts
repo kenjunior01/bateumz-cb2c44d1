@@ -1,11 +1,13 @@
-// Cidade Bateu — cliente de presença partilhada (PoC N3, v36)
+// Cidade Bateu — cliente de presença partilhada (v37 — N3 completo)
 // Padrões do estudo Veloren (docs/REA-veloren-estudo-v36.md): mensagens nomeadas
-// (common/net/src/msg/*), interpolação, reconexão honesta, throttle por distância no
-// servidor. Zero código Veloren — implementação própria TS. Sem servidor, o jogo fica
-// 100% local como antes (estado "off" — nunca finge multiplayer).
+// (common/net/src/msg/*), interpolação, reconexão honesta, throttle por distância
+// no servidor. v37: regras vindas do CORE ISOMÓRFICO (padrão `common` — a mesma
+// validaMovimento/limpaFala que o servidor executa), chat da praça com bolha de
+// fala e reconciliação honesta (`corrigido` → aviso + ajuste). Zero código
+// Veloren. Sem servidor, o jogo fica 100% local como antes (nunca finge MP).
 
 import * as THREE from "three";
-import { ALTURA_PLATEAU } from "./cidade";
+import { ALTURA_PLATEAU, FALA_RATE_MS, limpaFala } from "./core";
 
 export type EstadoMP = "off" | "a_ligar" | "ligado" | "erro";
 
@@ -60,20 +62,59 @@ const lerpAng = (a: number, b: number, t: number) => {
   return a + d * t;
 };
 
+/** Bolha de fala (canvas → sprite) — igual ao padrão das etiquetas, 100% local. */
+function bolhaFala(texto: string): THREE.Sprite {
+  const t = texto.slice(0, 140);
+  const cv = document.createElement("canvas");
+  cv.width = 512; cv.height = 160;
+  const ctx = cv.getContext("2d")!;
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  ctx.roundRect?.(10, 10, 492, 116, 22);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(236, 124); ctx.lineTo(256, 152); ctx.lineTo(276, 124); ctx.closePath();
+  ctx.fill();
+  ctx.font = "600 30px system-ui, sans-serif";
+  ctx.fillStyle = "#0f172a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const palavras = t.split(" ");
+  const linhas: string[] = [];
+  let linha = "";
+  for (const p of palavras) {
+    const teste = linha ? `${linha} ${p}` : p;
+    if (ctx.measureText(teste).width > 460 && linha) { linhas.push(linha); linha = p; } else linha = teste;
+    if (linhas.length === 3) break;
+  }
+  if (linhas.length < 3 && linha) linhas.push(linha);
+  linhas.forEach((l, i) => ctx.fillText(l, 256, 40 + i * 34));
+  const tex = new THREE.CanvasTexture(cv);
+  tex.needsUpdate = true;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  spr.scale.set(2.9, 0.9, 1);
+  spr.renderOrder = 6;
+  return spr;
+}
+
+export interface FalaInfo { id: number; nome: string; texto: string; em: number }
+
 export class CidadeMP {
   estado: EstadoMP = "off";
   private ws: WebSocket | null = null;
   private remotos = new Map<number, Remoto>();
+  private falas: FalaInfo[] = [];               // histórico local (últimas 12)
+  private bolhas = new Map<number, { spr: THREE.Sprite; ate: number }>();
   private url = ""; private nome = "";
   private tentativa = 0; private queroLigado = false;
   private timerRecon: ReturnType<typeof setTimeout> | null = null;
   private ultimoPosMs = 0;
+  private ultimaFalaLocal = 0;
   private agora = () => performance.now();
 
   constructor(private opts: {
     alturaEm: (x: number, z: number) => number;
     onEstado: (e: EstadoMP, info?: string) => void;
     onAviso: (texto: string) => void;
+    onFala?: (f: FalaInfo) => void;              // v37 — chat da praça
+    onCorrecao?: (x: number, z: number) => void; // v37 — reconciliação honesta
   }) {}
 
   ligar(url: string, nome: string) {
@@ -113,6 +154,23 @@ export class CidadeMP {
       }
       if (m.t === "entrou") { guarda.criarRemoto(m.id, m.nome, 0, 0, 0); guarda.opts.onAviso(`🌐 ${m.nome} chegou à cidade`); return; }
       if (m.t === "saiu") { guarda.removerRemoto(m.id); return; }
+      if (m.t === "corrigido") {
+        // v37 — o servidor cortou um salto ilegal: ajusta a posição local com aviso
+        if (typeof m.x === "number" && typeof m.z === "number" && Number.isFinite(m.x) && Number.isFinite(m.z))
+          guarda.opts.onCorrecao?.(m.x, m.z);
+        return;
+      }
+      if (m.t === "fala") {
+        const texto = limpaFala(m.texto);
+        if (!texto || typeof m.nome !== "string") return; // sanitiza MESMO vindo do servidor
+        const f: FalaInfo = { id: Number(m.id) || 0, nome: m.nome.slice(0, 24), texto, em: Date.now() };
+        guarda.falas.push(f);
+        if (guarda.falas.length > 12) guarda.falas.shift();
+        guarda.opts.onFala?.(f);
+        const r = guarda.remotos.get(f.id);
+        if (r) guarda.mostrarBolha(f.id, texto);
+        return;
+      }
       if (m.t === "estado") {
         for (const j of m.jogadores ?? []) {
           const r = guarda.remotos.get(j.id);
@@ -162,6 +220,7 @@ export class CidadeMP {
   private removerRemoto(id: number) {
     const r = this.remotos.get(id);
     if (!r) return;
+    this.removerBolha(id);
     r.grupo.removeFromParent();
     r.etiqueta.material.map?.dispose();
     r.etiqueta.material.dispose();
@@ -176,6 +235,39 @@ export class CidadeMP {
     this.remotos.delete(id);
   }
 
+  // ── v37 — chat da praça ──────────────────────────────
+  private mostrarBolha(id: number, texto: string) {
+    const r = this.remotos.get(id);
+    if (!r) return;
+    this.removerBolha(id);
+    const spr = bolhaFala(texto);
+    spr.position.y = 2.95;
+    r.grupo.add(spr);
+    this.bolhas.set(id, { spr, ate: Date.now() + 4000 });
+  }
+
+  private removerBolha(id: number) {
+    const b = this.bolhas.get(id);
+    if (!b) return;
+    b.spr.removeFromParent();
+    b.spr.material.map?.dispose();
+    b.spr.material.dispose();
+    this.bolhas.delete(id);
+  }
+
+  /** envia fala (sanitizada aqui e no servidor) · false = limitada/vazia — honesto */
+  falar(texto: string): boolean {
+    const limpo = limpaFala(texto);
+    if (!limpo) return false;
+    const agora = Date.now();
+    if (agora - this.ultimaFalaLocal < FALA_RATE_MS) return false; // mesma regra do servidor
+    if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    this.ultimaFalaLocal = agora;
+    try { this.ws.send(JSON.stringify({ t: "fala", texto: limpo })); return true; } catch { return false; }
+  }
+
+  falasInfo(): FalaInfo[] { return [...this.falas]; }
+
   /** chamado a cada frame com a posição do jogador LOCAL (que continua predito no cliente) */
   passo(dt: number, meuX: number, meuZ: number, meuRy: number) {
     const agora = Date.now();
@@ -184,6 +276,8 @@ export class CidadeMP {
       this.ultimoPosMs = agora;
       try { this.ws.send(JSON.stringify({ t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100 })); } catch { /* ignora */ }
     }
+    // bolhas expiradas saem (4 s de vida honesta)
+    for (const [id, b] of this.bolhas) if (agora > b.ate) this.removerBolha(id);
     // interpolação suave (buffer implícito: alvo vem a 10 Hz, render a 60)
     const k = Math.min(1, dt * 8);
     const vistos = new Set<number>();
@@ -209,6 +303,8 @@ export class CidadeMP {
     if (this.timerRecon) { clearTimeout(this.timerRecon); this.timerRecon = null; }
     if (this.ws) { try { this.ws.close(); } catch { /* ignore */ } this.ws = null; }
     for (const id of [...this.remotos.keys()]) this.removerRemoto(id);
+    for (const id of [...this.bolhas.keys()]) this.removerBolha(id);
+    this.falas = [];
     this.setEstado("off");
   }
 }

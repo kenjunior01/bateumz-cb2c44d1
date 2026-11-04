@@ -11,12 +11,13 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
   Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store, Globe,
+  MessageCircle, Send,
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
 import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
-  POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, type Distrito,
+  POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, SPAWN_PRACA, type Distrito,
 } from "@/game/cidade/cidade";
 import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade } from "@/game/cidade/missoes";
 import {
@@ -26,7 +27,7 @@ import {
 import { fireConfetti } from "@/lib/celebrate";
 import { getArAtual, rotuloAqi, AQI_ATTRIBUTION, type ArAtual } from "@/lib/airQuality";
 import RadiosPALOP from "@/components/lives/RadiosPALOP";
-import { CidadeMP, type EstadoMP } from "@/game/cidade/multijogador"; // v36 — presença partilhada (PoC N3)
+import { CidadeMP, type EstadoMP, type FalaInfo } from "@/game/cidade/multijogador"; // v36/37 — presença partilhada + chat da praça
 import QuizPraca from "@/components/cidade/QuizPraca";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -119,6 +120,18 @@ export default function CidadeBateu() {
   const [mpEstado, setMpEstado] = useState<EstadoMP>("off");
   const [mpInfo, setMpInfo] = useState<string | null>(null);
   const [mpN, setMpN] = useState(0);
+  // v37 — chat da praça + reconciliação honesta
+  const [mpFalas, setMpFalas] = useState<FalaInfo[]>([]);
+  const [chatTexto, setChatTexto] = useState("");
+  const ultimaCorrecaoRef = useRef<{ x: number; z: number; em: number } | null>(null);
+
+  const enviarFala = useCallback(() => {
+    const texto = chatTexto.trim();
+    if (!texto) return;
+    const enviada = mpRef.current?.falar(texto) ?? false;
+    if (enviada) setChatTexto("");
+    else setAviso({ texto: t("cidade.mpChatLimitada"), k: Date.now() });
+  }, [chatTexto, t]);
 
   useEffect(() => {
     const mp = new CidadeMP({
@@ -126,8 +139,21 @@ export default function CidadeBateu() {
         try { return motorRef.current.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU; }
         catch { return ALTURA_PLATEAU; }
       },
-      onEstado: (e, info) => { setMpEstado(e); setMpInfo(info ?? null); },
+      onEstado: (e, info) => { setMpEstado(e); setMpInfo(info ?? null); if (e === "off") setMpFalas([]); },
       onAviso: (texto) => setAviso({ texto, k: Date.now() }),
+      // v37 — chat da praça
+      onFala: (f) => setMpFalas((p) => [...p.slice(-7), f]),
+      // v37 — reconciliação: o servidor cortou um salto ilegal → ajusta com aviso honesto
+      onCorrecao: (x, z) => {
+        const m = motorRef.current;
+        try {
+          m.px = x; m.pz = z;
+          m.py = (m.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU) + 1.02;
+          m.vx = m.vy = m.vz = 0;
+        } catch { /* mundo ainda não pronto */ }
+        ultimaCorrecaoRef.current = { x, z, em: Date.now() };
+        setAviso({ texto: t("cidade.mpCorrigido"), k: Date.now() });
+      },
     });
     mpRef.current = mp;
     return () => { mp.desligar(); mpRef.current = null; };
@@ -171,7 +197,7 @@ export default function CidadeBateu() {
     const cv = canvasRef.current;
     if (!cv || m.fase !== "menu") return;
     m.fabricaMundo = () => new MundoCidade();
-    m.spawnFixo = [0.5, ALTURA_PLATEAU + 1.02, 6.5]; // praça, virado ao imbondeiro
+    m.spawnFixo = [SPAWN_PRACA[0], ALTURA_PLATEAU + 1.02, SPAWN_PRACA[1]]; // praça (spawn do core.ts — igual ao servidor)
     m.iniciar(cv, "criativo", false);
     if (m.gestor) pacificarGestor(m.gestor, m.mundo); // cidade sempre pacífica
     m.yaw = Math.PI; // olha para norte (praça)
@@ -215,6 +241,10 @@ export default function CidadeBateu() {
         const n = nome || localStorage.getItem("bateu_cidade_nome") || `Viajante-${Math.floor(100 + Math.random() * 900)}`;
         mpRef.current?.ligar(url, n);
       },
+      // v37 — chat da praça + reconciliação (ganchos E2E)
+      mpFalar: (texto: string) => mpRef.current?.falar(texto) ?? false,
+      mpFalas: () => mpRef.current?.falasInfo() ?? [],
+      ultimaCorrecao: () => ultimaCorrecaoRef.current,
     };
     return () => { try { delete (window as any).__cidade; } catch { /* ignore */ } };
   }, []);
@@ -367,6 +397,9 @@ export default function CidadeBateu() {
       m.entrada.descer = !!teclas["control"];
     };
     const baixo = (e: KeyboardEvent) => {
+      // v37 — a escrever no chat: o teclado é do texto, não do jogo
+      const alvo = e.target as HTMLElement | null;
+      if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA")) return;
       const k = e.key.toLowerCase();
       teclas[k] = true;
       if (k === "f5") { e.preventDefault(); setCamaraModo(m.ciclarCamara()); }
@@ -612,6 +645,34 @@ export default function CidadeBateu() {
               })}
             </div>
           </div>
+
+          {/* v37 — chat da praça (só com mundo partilhado ligado) */}
+          {mpEstado === "ligado" && (
+            <div className="absolute bottom-[11.5rem] md:bottom-[9.5rem] left-3 z-20 w-56" data-testid="cd-chat">
+              <div className="rounded-2xl bg-black/60 border border-white/15 backdrop-blur p-2 text-white space-y-1 mb-1.5 min-h-[2.1rem] flex flex-col justify-end">
+                {mpFalas.length === 0 ? (
+                  <p className="text-[10px] text-white/40 px-1 flex items-center gap-1"><MessageCircle size={10} /> {t("cidade.mpChatVazio")}</p>
+                ) : mpFalas.slice(-4).map((f, i) => (
+                  <p key={`${f.em}-${f.id}-${i}`} className="text-[11px] leading-tight break-words" data-testid="cd-chat-linha">
+                    <span className="font-black text-sky-300">{f.nome}: </span>
+                    <span className="text-white/90">{f.texto}</span>
+                  </p>
+                ))}
+              </div>
+              <div className="flex gap-1.5">
+                <input value={chatTexto} onChange={(e) => setChatTexto(e.target.value)}
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") enviarFala(); }}
+                  onKeyUp={(e) => e.stopPropagation()}
+                  data-testid="cd-chat-input" maxLength={140} enterKeyHint="send"
+                  placeholder={t("cidade.mpChatFala")}
+                  className="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white text-xs outline-none focus:border-sky-400/60 backdrop-blur" />
+                <button onClick={enviarFala} data-testid="cd-chat-enviar" aria-label={t("cidade.mpChatEnviar")}
+                  className="px-2.5 rounded-xl bg-sky-500/80 border border-white/15 text-white active:scale-95 backdrop-blur">
+                  <Send size={13} />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* aviso/toast */}
           {aviso && (

@@ -24,6 +24,11 @@ const NOISE = [
 ];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// pageerror registado CEDO (o registo tardio não via erros antigos — falha honesta v36)
+const pageErrors = new Map(); // nome -> string[]
+const escutaErros = (nome, pg) =>
+  pg.on("pageerror", (e) => { if (!pageErrors.has(nome)) pageErrors.set(nome, []); pageErrors.get(nome).push(String(e)); });
+
 const MOCKS = (page) => {
   page.route(/geocoding-api\.open-meteo\.com/, (route) =>
     route.fulfill({ json: { results: [{ name: "Maputo", country: "Moçambique", admin1: "Maputo Cidade", latitude: -25.97, longitude: 32.58 }] } }));
@@ -36,10 +41,12 @@ const MOCKS = (page) => {
 async function entraCidade(browser, nome) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   MOCKS(page);
+  escutaErros(nome, page);
   await page.goto(`${BASE}/cidade`, { waitUntil: "domcontentloaded" });
   await page.getByTestId("cd-inicio").waitFor({ state: "visible", timeout: 15000 });
   await page.evaluate((n) => { localStorage.setItem("bateu_cidade_nome", n); }, nome);
-  await page.getByTestId("cd-entrar").click();
+  // dispatchEvent: clique com 2 motores three.js a correr esmagava o hit-target do Playwright (flake rAF conhecido desde a v31)
+  await page.getByTestId("cd-entrar").dispatchEvent("click");
   await page.waitForFunction(() => window.__cidade?.fase() === "jogando", null, { timeout: 15000 });
   await page.evaluate((u) => window.__cidade.mpLigar(u), MP_URL);
   await page.waitForFunction(() => window.__cidade?.mpEstado?.() === "ligado", null, { timeout: 10000 });
@@ -63,13 +70,13 @@ async function main() {
   ok("chip HUD mostra 2 no mundo", /^\s*2\s/.test(chipTxt ?? ""), `texto="${chipTxt}"`);
 
   console.log("— Movimento partilhado");
-  // Ana anda em passos de 2 blocos (dentro da tolerância do clamp) até x=20
-  const Y = "ALTURA";
+  // v37: passos de 1 bloco/120 ms = 8,3 b/s — o orçamento honesto (MAX_VEL 12)
+  // rejeita os antigos saltos de 2 blocos/140 ms (14,3 b/s era velocidade ilegal)
   await A.evaluate(async () => {
     const m = window.__cidade.motor;
-    for (let i = 1; i <= 10; i++) {
-      window.__cidade.teleportar(i * 2, m.mundo.alturaTerreno(i * 2, 6.5) + 1.02, 6.5);
-      await new Promise((r) => setTimeout(r, 140));
+    for (let i = 1; i <= 20; i++) {
+      window.__cidade.teleportar(i, m.mundo.alturaTerreno(i, 6.5) + 1.02, 6.5);
+      await new Promise((r) => setTimeout(r, 120));
     }
   });
   await B.waitForFunction(() => {
@@ -100,31 +107,30 @@ async function main() {
   for (const ws of bots) try { ws.close(); } catch { /* ignore */ }
 
   console.log("— Offline honesto");
+  // A e B fechados antes de C: 3 motores WebGL no mesmo chromium esmagavam o clique (flake v36 real)
+  await A.close(); await B.close();
   const C = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   MOCKS(C);
+  escutaErros("C", C);
   await C.goto(`${BASE}/cidade`, { waitUntil: "domcontentloaded" });
   await C.getByTestId("cd-inicio").waitFor({ state: "visible", timeout: 15000 });
-  await C.getByTestId("cd-entrar").click();
+  await C.getByTestId("cd-entrar").dispatchEvent("click");
   await C.waitForFunction(() => window.__cidade?.fase() === "jogando", null, { timeout: 15000 });
   await C.evaluate(() => window.__cidade.mpLigar("ws://localhost:8799")); // nada a ouvir
   await C.waitForFunction(() => window.__cidade?.mpEstado?.() === "erro", null, { timeout: 9000 }).catch(() => {});
   ok("estado honesto 'erro' sem servidor", await C.evaluate(() => window.__cidade.mpEstado() === "erro"));
   ok("chip mostra modo solo/offline", (await C.getByTestId("cd-mp-estado").textContent().catch(() => "")).length > 3);
 
-  // erros de consola reais (com filtro de ruído conhecido)
-  for (const [nome, pg] of [["A", A], ["B", B], ["C", C]]) {
-    const errs = [];
-    pg.on("pageerror", (e) => errs.push(String(e)));
-    // (os handlers foram registados tarde — usamos só o pageerror novo)
-    ok(`${nome}: sem pageerror no fim da sessão`, errs.length === 0, errs.slice(0, 2).join(" | "));
-    void nome;
+  // erros de consola reais (registados cedo em escutaErros)
+  for (const nome of ["Ana-MZ", "Bruno-AO", "C"]) {
+    const errs = pageErrors.get(nome) ?? [];
+    ok(`${nome}: sem pageerror na sessão`, errs.length === 0, errs.slice(0, 2).join(" | "));
   }
 
   await browser.close();
   console.log(`\n📊 RESULTADO: ${passed} passaram · ${failed} falharam`);
   if (fails.length) console.log("Falhas: " + fails.join(" · "));
   process.exit(failed ? 1 : 0);
-  void Y;
 }
 
 main().catch((e) => { console.error("FALHA FATAL:", e); process.exit(1); });

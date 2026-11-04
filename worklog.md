@@ -472,3 +472,22 @@ Work Log:
 
 Stage Summary:
 - O caminho Veloren para a bateumz é TypeScript full-stack com servidor autoritativo próprio (o padrão common/server recriado em TS), Rust guardado para quando a profilagm pedir — e o GPLv3 impede copiar, só inspira: N3-PoC «Cidade partilhada» pronto a aprovar
+---
+Task ID: v36-veloren-estudo-aplicado
+Agent: Super Z (main)
+Task: v36 — ESTUDO REAL do código Veloren (clone esparso) → APLICADO: presença partilhada multiplayer na Cidade Bateu (PoC N3) com padrões Veloren + diferenciadores que ele não tem
+
+Work Log:
+- ESTUDO (docs/REA-veloren-estudo-v36.md, todas as afirmações com ficheiro:linha do clone em /home/z/my-project/veloren-study): TPS=30 (server-cli/src/main.rs:49) · max_players default 100 (settings/mod.rs:226) · regiões de 512 blocos REGION_LOG2=9 (region.rs:62-64) + CHUNK_FUZZ/REGION_FUZZ (presence.rs) · throttle por distância (sys/entity_sync.rs:123) · MAX_GAME_DT=1/5s (clock.rs:53) · Network/Participant/Stream multiprotocolo TCP/UDP/QUIC/MPSC (network/src/lib.rs) · ServerMsg/ServerGeneral com EntitySync/CreateEntity/DeleteEntity/TerrainChunkUpdate (msg/server.rs) · chunks comprimidos E codificados como PNG GPU-ready (DeflatedChonk/QuadPng) · meteo SIMULADO no servidor (server/src/weather) · rtsim NPC com vida própria
+- PADRÕES ADOTADOS (implementação própria, zero código copiado — GPLv3): servidor Node com tick 30 TPS + relógio dt máx 200ms · grelha de regiões 32 blocos + raio de interesse 40 · snapshots 10 Hz · throttle por distância (perto 10Hz · médio 5Hz · longe 2Hz, padrão entity_sync) · cap 64 (deles 100 — cidade menor) · msgs nomeadas JSON (ola/bemvindo/entrou/saiu/pos/estado/rejeitado) · clamp de velocidade (12 b/s × tolerância 2,2) = anti-teleport · heartbeat ping/pong 15s + timeout 60s · strikes para malformados
+- SERVER server/cidade-servidor.mjs (~130 linhas, ws): presença partilhada autoritativa simplificada; SMOKE scripts/smoke-mp-v36.mjs 4/4 (bemvindo cruzado, entrou, movimento partilhado x=10, anti-teleport: salto 100→clamp 13,72)
+- CLIENT src/game/cidade/multijogador.ts (~210 linhas): CidadeMP com estados honestos off/a_ligar/ligado/erro · reconexão backoff 2s→15s · interpolação k=dt*8 (alvos 10Hz, render 60fps) · lerp angular com wrap · avatares voxel (pernas/corpo/cabeça + cor por id) com etiqueta canvas-sprite · ghosts removidos após 15s sem news · dispose completo (geometrias/materiais/texturas) · envio 10Hz da posição LOCAL (predição fica no cliente — autoridade total documentada como passo seguinte)
+- PÁGINA: MP OPT-IN — só liga com ?mp=ws://… ou localStorage bateu_cidade_mp_url (nunca sem URL explícita; sem servidor = solo como sempre) · chip HUD com Globe: "N no mundo" / a ligar / offline honesto · aviso no chat quando alguém chega · ganchos E2E mpEstado/mpRemotos/mpLigar · i18n 4 chaves × 6 línguas (mpLigando/mpErro/mpNoMundo/mpNota) via scripts/add-mp-i18n-v36.py (âncora aqiIndisp, ordem en/pt/pt-BR/es/fr/hi)
+- E2E NOVO test-mp-v36.mjs 14/14 à PRIMEIRA: 2 jogadores ligam e vêem-se mutuamente · chip "2 no mundo" · Ana anda até x=20 e Bruno vê (interpolado) · anti-teleport através do stack todo (salto 100 clampado <25) · 8 bots ws + 2 humanos = chip 10 · offline: estado erro + chip modo solo · ZERO pageerror nos 3 contextos
+- REGRESSÕES: tsc 0 · test-cidade 31/31 (solo intocado — MP é opt-in)
+- DIFERENCIADORES documentados (o que o Veloren NÃO tem): cidade-portal com 10 secções REAIS da plataforma · dados reais do mundo no jogo (openMeteo, Radio Browser PALOP, Open Trivia, EAQI, Wikipédia PT) · web-first zero-instalação (PWA/APK) · 6 idiomas pt-first MZ/AO/CV · economia integrada (créditos/missões)
+- HONESTO: PoC valida presença+movimento; reconciliação completa do jogador local, física no servidor (phys/collision como modelo), chat e chunks pela rede = N3 completo/N2
+
+Stage Summary:
+- O estudo deixou de ser papel: os padrões do Veloren (tick 30, regiões, throttle por distância, msgs nomeadas, cap) agora CORREM na Cidade Bateu — 10 pessoas já se vêem na Praça do Imbondeiro, com servidor autoritativo a clampar teleports e modo solo honesto quando não há mundo partilhado
+- A linguagem provou-se: o mesmo TypeScript que renderiza o mundo no browser serve o servidor sem uma linha de Rust — e o caminho N4 (WASM/Rust se profilagm pedir) continua aberto e documentado

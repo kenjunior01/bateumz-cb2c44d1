@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
-  Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store,
+  Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store, Globe,
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
@@ -26,6 +26,7 @@ import {
 import { fireConfetti } from "@/lib/celebrate";
 import { getArAtual, rotuloAqi, AQI_ATTRIBUTION, type ArAtual } from "@/lib/airQuality";
 import RadiosPALOP from "@/components/lives/RadiosPALOP";
+import { CidadeMP, type EstadoMP } from "@/game/cidade/multijogador"; // v36 — presença partilhada (PoC N3)
 import QuizPraca from "@/components/cidade/QuizPraca";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -111,6 +112,27 @@ export default function CidadeBateu() {
   useEffect(() => { climaRef.current = climaReal; }, [climaReal]);
   const [creditos, setCreditos] = useState(creditosCidade());
 
+  // ── v36 — presença partilhada (PoC N3, padrões Veloren do estudo v36):
+  // só liga se houver URL (?mp=ws://… ou localStorage bateu_cidade_mp_url) —
+  // sem servidor o jogo fica 100% local como sempre (honesto).
+  const mpRef = useRef<CidadeMP | null>(null);
+  const [mpEstado, setMpEstado] = useState<EstadoMP>("off");
+  const [mpInfo, setMpInfo] = useState<string | null>(null);
+  const [mpN, setMpN] = useState(0);
+
+  useEffect(() => {
+    const mp = new CidadeMP({
+      alturaEm: (x, z) => {
+        try { return motorRef.current.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU; }
+        catch { return ALTURA_PLATEAU; }
+      },
+      onEstado: (e, info) => { setMpEstado(e); setMpInfo(info ?? null); },
+      onAviso: (texto) => setAviso({ texto, k: Date.now() }),
+    });
+    mpRef.current = mp;
+    return () => { mp.desligar(); mpRef.current = null; };
+  }, []);
+
   const missaoEstado = useRef(estadoMissao());
   const rotulosRef = useRef<Rotulo[]>([]);
   useEffect(() => { rotulosRef.current = rotulos; }, [rotulos]);
@@ -155,6 +177,14 @@ export default function CidadeBateu() {
     m.yaw = Math.PI; // olha para norte (praça)
     setFase("jogando");
     m.redimensionar();
+    // v36 — presença partilhada opt-in (nunca liga sem URL explícita)
+    try {
+      const urlMp = new URLSearchParams(window.location.search).get("mp") || localStorage.getItem("bateu_cidade_mp_url");
+      if (urlMp && mpRef.current) {
+        const nome = localStorage.getItem("bateu_cidade_nome") || `Viajante-${Math.floor(100 + Math.random() * 900)}`;
+        mpRef.current.ligar(urlMp, nome);
+      }
+    } catch { /* sem MP — fica solo honesto */ }
   }, []);
 
   // ── Ganchos E2E determinísticos ──
@@ -178,6 +208,13 @@ export default function CidadeBateu() {
       clima: () => climaRef.current,
       ar: () => arRef.current,
       abrirQuiosque: () => setModal("quiosque"),
+      // v36 — ganchos MP para E2E (nunca ligam sem URL explícita)
+      mpEstado: () => mpRef.current?.estado ?? "off",
+      mpRemotos: () => mpRef.current?.remotosInfo() ?? [],
+      mpLigar: (url: string, nome?: string) => {
+        const n = nome || localStorage.getItem("bateu_cidade_nome") || `Viajante-${Math.floor(100 + Math.random() * 900)}`;
+        mpRef.current?.ligar(url, n);
+      },
     };
     return () => { try { delete (window as any).__cidade; } catch { /* ignore */ } };
   }, []);
@@ -207,6 +244,7 @@ export default function CidadeBateu() {
       const m = motorRef.current;
       if (m.fase === "menu") return;
       m.passo(dt);
+      mpRef.current?.passo(dt, m.px, m.pz, m.yaw); // v36 — envio 10 Hz + interpolação dos remotos
       if (canvasRef.current) m.render(dt);
 
       // rótulos 3D → ecrã (limitado a ~8 Hz)
@@ -287,6 +325,7 @@ export default function CidadeBateu() {
         const hh = Math.floor(f * 24), mm = Math.floor(((f * 24) % 1) * 60);
         setRelogio(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
         setNoite(m.noite);
+        setMpN(mpRef.current?.nNoMundo ?? 0); // v36
       }
     };
     raf = requestAnimationFrame(ciclo);
@@ -439,6 +478,7 @@ export default function CidadeBateu() {
               )}
             </div>
             <p className="mt-2 text-[10px] text-white/35">{t("cidade.fonte")} · open-meteo.com · {t("cidade.semente")}: {SEED_CIDADE}</p>
+            <p className="mt-1 text-[10px] text-white/35">{t("cidade.mpNota")}</p>
           </div>
         </div>
       )}
@@ -478,6 +518,15 @@ export default function CidadeBateu() {
                 <span className="text-white/50 flex items-center gap-1"><CloudOff size={12} /> {t("cidade.climaOff")}</span>
               )}
             </div>
+            {/* v36 — presença partilhada (só aparece quando há MP ativo) */}
+            {mpEstado !== "off" && (
+              <div className="px-3 py-2 rounded-xl bg-black/55 border border-white/15 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur" data-testid="cd-mp">
+                <Globe size={12} className={mpEstado === "ligado" ? "text-emerald-300" : mpEstado === "erro" ? "text-rose-300" : "text-white/50 animate-pulse"} />
+                {mpEstado === "ligado" && <span data-testid="cd-mp-n">{mpN} {t("cidade.mpNoMundo")}</span>}
+                {mpEstado === "a_ligar" && <span data-testid="cd-mp-estado">{t("cidade.mpLigando")}{mpInfo ? ` · ${mpInfo}` : ""}</span>}
+                {mpEstado === "erro" && <span data-testid="cd-mp-estado">{t("cidade.mpErro")}{mpInfo ? ` — ${mpInfo}` : ""}</span>}
+              </div>
+            )}
           </div>
 
           {/* topo direita: minimapa + botões */}

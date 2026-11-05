@@ -76,6 +76,12 @@ export default defineConfig(({ mode, command }) => ({
         scope: "/",
         shortcuts: [
           {
+            name: "Cidade Bateu",
+            short_name: "Cidade",
+            description: "O mundo voxel da Bateu — 10 distritos que são secções reais da plataforma",
+            url: "/cidade",
+          },
+          {
             name: "Alienação de Bens",
             short_name: "Alienação",
             description: "Viaturas, imóveis e equipamentos em leasing, leilão e rent-to-own",

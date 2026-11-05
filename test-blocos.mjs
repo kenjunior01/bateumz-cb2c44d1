@@ -68,12 +68,14 @@ async function main() {
   });
 
   // limpar saves antigos APENAS na primeira carga (reload precisa do save)
+  // v39: também o IDB (bateu_armazem) — o save agora vive lá primariamente
   await page.addInitScript(() => {
     try {
       if (!localStorage.getItem("__blocos_test_init")) {
         localStorage.setItem("__blocos_test_init", "1");
         localStorage.removeItem("bateu_blocos_save");
         localStorage.removeItem("bateu_blocos_avatar");
+        indexedDB.deleteDatabase("bateu_armazem");
       }
     } catch { /* ignore */ }
   });

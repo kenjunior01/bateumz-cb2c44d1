@@ -13,6 +13,7 @@
 // ============================================================
 
 import * as THREE from "three";
+import { idbDefinir, idbObter, idbRemover, espelharLS } from "../armazem";
 import { Mundo } from "./world";
 import { GestorMobs, Mob, TipoMob, ehPassivo } from "./mobs";
 import { Inventario, avaliarReceitas, criarReceita, pertoDe, Slot } from "./inventario";
@@ -186,7 +187,23 @@ export class Motor {
   fabricaMundo: ((semente: number) => Mundo) | null = null;
   spawnFixo: [number, number, number] | null = null;
 
+  // ── v39 — persistência honesta (IndexedDB + localStorage) ──
+  // O save vive no IDB (armazem.ts) com espelho em localStorage.
+  // A leitura escolhe SEMPRE o registo com `ts` mais recente — nunca
+  // um espelho antigo por cima de um save novo. Falhas NUNCA são
+  // silenciosas: viram avisos no jogo e resultado no captura/ganchos.
+  static readonly CHAVE_SAVE = "bateu_blocos_save";
+  private saveIDB: any | null = null;          // cache do envelope IDB (payload com ts)
+  private prontoSaveIDB: Promise<void>;
+  ultimoResultadoSave: { ok: boolean; onde: string | null; erro?: string } | null = null;
+
   constructor() {
+    // pré-carregar o save do IDB (assíncrono) — o botão CONTINUAR só
+    // aparece depois de `quandoSavePronto()` para não esconder um save
+    // que só existe no IDB (race eliminado)
+    this.prontoSaveIDB = idbObter(Motor.CHAVE_SAVE).then((env) => {
+      this.saveIDB = env ? (env.v as any) : null;
+    });
     try { this.mudo = localStorage.getItem("bateu_blocos_som") === "1"; } catch { /* ignore */ }
     try {
       const r = Number(localStorage.getItem("bateu_blocos_dist"));
@@ -211,6 +228,9 @@ export class Motor {
     this.camaraModo = m;
     try { localStorage.setItem("bateu_blocos_camara", m); } catch { /* ignore */ }
   }
+
+  /** Resolve quando o save do IDB já foi pré-carregado (v39). */
+  quandoSavePronto(): Promise<void> { return this.prontoSaveIDB; }
 
   // ── Arranque ─────────────────────────────────────────────────
   iniciar(canvas: HTMLCanvasElement, modo: Modo, carregar = false) {
@@ -1140,12 +1160,11 @@ export class Motor {
     this.raioRender = Math.max(2, Math.min(4, Math.floor(n)));
     try { localStorage.setItem("bateu_blocos_dist", String(this.raioRender)); } catch { /* ignore */ }
   }
-  /** Modo guardado no save (para o botão CONTINUAR usar o modo certo) */
+  /** Modo guardado no save (para o botão CONTINUAR usar o modo certo).
+   *  v39: lê o MESMO save que lerSave() — espelho LS ou IDB, o mais recente. */
   lerModoSave(): Modo | null {
-    try {
-      const sv = JSON.parse(localStorage.getItem("bateu_blocos_save") || "null");
-      return sv?.modo === "criativo" ? "criativo" : sv?.modo === "sobrevivencia" ? "sobrevivencia" : null;
-    } catch { return null; }
+    const sv = this.lerSave();
+    return sv?.modo === "criativo" ? "criativo" : sv?.modo === "sobrevivencia" ? "sobrevivencia" : null;
   }
   som(tipo: "quebrar" | "colocar" | "golpe" | "comer" | "criar" | "conquista" | "dano" | "passo" | "sibilo" | "explosao" | "trovao" | "salpicar") {
     if (this.mudo) return;
@@ -1636,11 +1655,12 @@ export class Motor {
     if (this.onEstado) this.onEstado(this.captura());
   }
 
-  // ── Guardar / carregar ──────────────────────────────────────
-  guardar() {
-    if (!this.mundo || this.fase === "menu") return;
-    try {
-      const dados = {
+  // ── Guardar / carregar (v39 — honesto, IDB + espelho LS) ────
+  /** Guarda o mundo. ESCREVE os dois armazéns e devolve o resultado
+   *  HONESTO (nunca finge). Aviso no jogo só quando AMBOS falham. */
+  async guardar(): Promise<{ ok: boolean; onde: string | null; bytes: number; erro?: string }> {
+    if (!this.mundo || this.fase === "menu") return { ok: false, onde: null, bytes: 0, erro: "sem mundo" };
+    const dados = {
         v: 3, semente: this.mundo.semente, modo: this.modo,
         pos: [this.px, this.py, this.pz], yaw: this.yaw, pitch: this.pitch,
         vida: this.vida, fome: this.fome, dia: this.dia, tempo: this.tempo,
@@ -1655,20 +1675,46 @@ export class Motor {
         baus: Object.fromEntries(this.baus),
         plantas: Object.fromEntries([...this.plantas.entries()].map(([k, v]) => [k, Math.round(v * 10) / 10])),
         meteo: this.meteo, meteoT: Math.round(this.meteoT),
-      };
-      localStorage.setItem("bateu_blocos_save", JSON.stringify(dados));
-    } catch { /* armazenamento cheio — segue */ }
+        // v39 — carimbo temporal: a leitura escolhe sempre o registo mais recente
+        ts: Date.now(),
+    };
+    // 1) espelho localStorage (arranque síncrono imediato, quando cabe)
+    const ls = espelharLS(Motor.CHAVE_SAVE, dados);
+    // 2) IDB — armazém primário (quota grande; o edits map cresce sem aviso)
+    const idb = await idbDefinir(Motor.CHAVE_SAVE, dados);
+    const resultado = idb.ok ? { ok: true, onde: idb.onde, bytes: idb.bytes }
+      : ls.ok ? { ok: true, onde: "ls", bytes: ls.bytes }
+      : { ok: false, onde: null, bytes: ls.bytes, erro: idb.erro || ls.erro || "sem armazenamento" };
+    this.ultimoResultadoSave = resultado;
+    // honesto: aviso no jogo SÓ quando ambos falham (o jogador precisa de saber)
+    if (!resultado.ok) {
+      this.avisos.push({ texto: "⚠ Save falhou (sem espaço?): o progresso corre risco", tipo: "dano", t: 4 });
+    }
+    return resultado;
   }
 
+  /** Save mais recente entre o espelho LS e o IDB (regra do `ts`). */
   private lerSave(): any {
-    try { return JSON.parse(localStorage.getItem("bateu_blocos_save") || "null"); } catch { return null; }
+    let ls: any = null;
+    try { ls = JSON.parse(localStorage.getItem(Motor.CHAVE_SAVE) || "null"); } catch { ls = null; }
+    const idb = this.saveIDB;
+    if (ls && idb) return (typeof idb.ts === "number" && idb.ts > (ls.ts ?? 0)) ? idb : ls;
+    return ls ?? idb;
   }
 
-  temSave(): boolean { return !!localStorage.getItem("bateu_blocos_save"); }
-  apagarSave() { localStorage.removeItem("bateu_blocos_save"); }
+  temSave(): boolean {
+    try { if (localStorage.getItem(Motor.CHAVE_SAVE)) return true; } catch { /* ignore */ }
+    return this.saveIDB != null;
+  }
+
+  async apagarSave(): Promise<void> {
+    try { localStorage.removeItem(Motor.CHAVE_SAVE); } catch { /* ignore */ }
+    this.saveIDB = null;
+    await idbRemover(Motor.CHAVE_SAVE);
+  }
 
   parar() {
-    this.guardar();
+    void this.guardar(); // espelho LS é síncrono — o save existe já; IDB segue em ms
     this.pararChuva();
     this.fase = "menu";
   }

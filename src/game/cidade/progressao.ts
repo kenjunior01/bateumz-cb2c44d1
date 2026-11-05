@@ -11,9 +11,12 @@
 //  · Dificuldade: o Veloren NÃO tem seletor de dificuldade — só o marcador
 //    Hardcore (common/src/comp/hardcore.rs:5, permadeath). Os nossos 3 níveis
 //    com efeitos medíveis são um diferenciador próprio.
-// Honestidade: tudo local (localStorage), tudo derivado de atividade REAL.
+// Honestidade: tudo local (localStorage + espelho IndexedDB do armazem.ts
+// desde a v39 — sobrevive a limpezas de LS), tudo derivado de atividade REAL.
 // Puro TS — sem DOM além de localStorage guardado (o servidor pode importar).
 // ============================================================
+
+import { idbDefinir, restaurarLSdeIDB } from "../armazem";
 
 // ── Dificuldade ───────────────────────────────────────────────
 export type Dificuldade = "passeio" | "cidadao" | "desafiador";
@@ -102,8 +105,22 @@ export function lerPerfil(): Perfil {
   return perfilNovo();
 }
 
-export function guardarPerfil(p: Perfil) {
-  try { localStorage.setItem(K_PERFIL, JSON.stringify(p)); } catch { /* quota */ }
+export function guardarPerfil(p: Perfil): boolean {
+  let ok = false;
+  try { localStorage.setItem(K_PERFIL, JSON.stringify(p)); ok = true; }
+  catch { /* quota — o espelho IDB (abaixo) é o armazém resiliente desde a v39 */ }
+  // v39 — espelho IndexedDB: o progresso (agora com XP/marcos/cadeia)
+  // sobrevive a limpezas de localStorage. Fire-and-forget; falha nunca é
+  // silenciosa para quem pedir (restaurarPerfilDeIDB devolve o estado real).
+  void idbDefinir(K_PERFIL, p);
+  return ok;
+}
+
+/** v39 — repõe o perfil do IDB quando o localStorage o perdeu (limpeza
+ *  do browser, modo privado). true = reposto; false = LS são ou nada válido. */
+export function restaurarPerfilDeIDB(): Promise<boolean> {
+  return restaurarLSdeIDB(K_PERFIL, K_PERFIL,
+    (v) => !!v && v.versao === 38 && typeof v.xp === "number");
 }
 
 /** Nível atual dado o XP total (soma dos custos 1..n). */

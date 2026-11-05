@@ -18,6 +18,7 @@ import {
   DIFICULDADES, lerPerfil, guardarPerfil, ganharXP, multXPExploracao,
   bonusCreditoMissao, type Perfil,
 } from "./progressao";
+import { idbDefinir, restaurarLSdeIDB } from "../armazem";
 
 const K_ESTADO = "bateu_cidade_missao";
 const K_CREDITOS = "bateu_cidade_creditos";
@@ -55,8 +56,16 @@ export function estadoMissao(): EstadoMissao {
   return { dia: hojeISO(), visitados: [], reclamadas: [] };
 }
 
-function guardarEstado(e: EstadoMissao) {
-  try { localStorage.setItem(K_ESTADO, JSON.stringify(e)); } catch { /* quota */ }
+// v39 — o estado das missões e os créditos também têm espelho no IDB:
+// quando o browser limpa o localStorage, o progresso sobrevive.
+const estadoMissaoValido = (v: any): boolean => !!v && typeof v.dia === "string";
+const creditosValidos = (v: any): boolean => typeof v === "number" && Number.isFinite(v) && v >= 0;
+
+function guardarEstado(e: EstadoMissao): boolean {
+  let ok = false;
+  try { localStorage.setItem(K_ESTADO, JSON.stringify(e)); ok = true; } catch { /* quota — o espelho IDB segue; resultado devolvido */ }
+  void idbDefinir(K_ESTADO, e);
+  return ok;
 }
 
 /** As missões de hoje — determinísticas por dia (mesmas para todos),
@@ -76,8 +85,22 @@ export function creditosCidade(): number {
   try { return Number(localStorage.getItem(K_CREDITOS)) || 0; } catch { return 0; }
 }
 
-function adicionarCreditos(n: number) {
-  try { localStorage.setItem(K_CREDITOS, String(creditosCidade() + n)); } catch { /* quota */ }
+function adicionarCreditos(n: number): boolean {
+  const novo = creditosCidade() + n;
+  let ok = false;
+  try { localStorage.setItem(K_CREDITOS, String(novo)); ok = true; } catch { /* quota — espelho IDB segue */ }
+  void idbDefinir(K_CREDITOS, novo);
+  return ok;
+}
+
+/** v39 — repõe missões/créditos/perfil do IDB quando o localStorage os
+ *  perdeu. Devolve o que foi reposto (honesto: false = nada faltava). */
+export async function restaurarProgressoCidadeDeIDB(): Promise<{ perfil: boolean; missao: boolean; creditos: boolean }> {
+  const perfil = await restaurarLSdeIDB("bateu_cidade_perfil", "bateu_cidade_perfil",
+    (v) => !!v && v.versao === 38 && typeof v.xp === "number");
+  const missao = await restaurarLSdeIDB(K_ESTADO, K_ESTADO, estadoMissaoValido);
+  const creditos = await restaurarLSdeIDB(K_CREDITOS, K_CREDITOS, creditosValidos);
+  return { perfil, missao, creditos };
 }
 
 /** v34 — ganhos de atividade real além das missões (ex.: quiz da praça).

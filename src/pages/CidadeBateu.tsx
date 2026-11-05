@@ -19,7 +19,7 @@ import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
   POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, SPAWN_PRACA, type Distrito,
 } from "@/game/cidade/cidade";
-import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade, estadoCadeia, registarQuiz, registarNoitePraca, descobrirMarco, creditoMissaoAtual } from "@/game/cidade/missoes";
+import { estadoMissao, missoesDeHoje, registarVisita, progressoMissao, creditosCidade, estadoCadeia, registarQuiz, registarNoitePraca, descobrirMarco, creditoMissaoAtual, restaurarProgressoCidadeDeIDB } from "@/game/cidade/missoes";
 // v38 — progressão, exploração e ambiente (padrões do estudo Veloren)
 import {
   lerPerfil, guardarPerfil, ganharXP, gastarPonto, nivelDeXP, xpNoNivel,
@@ -130,6 +130,18 @@ export default function CidadeBateu() {
   const nivelVistoRef = useRef(1); // para celebrar subidas de nível
   const bump = useCallback(() => setPerfilV((k) => k + 1), []);
   void perfilV;
+  // v39 — recuperação honesta: se o browser limpou o localStorage, o
+  // progresso (perfil/missões/créditos) volta do espelho IndexedDB.
+  const restauradoRef = useRef<{ perfil: boolean; missao: boolean; creditos: boolean } | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    restaurarProgressoCidadeDeIDB().then((r) => {
+      if (!vivo) return;
+      restauradoRef.current = r;
+      if (r.perfil || r.missao || r.creditos) bump(); // refresca HUD com o progresso reposto
+    });
+    return () => { vivo = false; };
+  }, [bump]);
 
   // ── v36 — presença partilhada (PoC N3, padrões Veloren do estudo v36):
   // só liga se houver URL (?mp=ws://… ou localStorage bateu_cidade_mp_url) —
@@ -274,6 +286,8 @@ export default function CidadeBateu() {
       mpPasso: (dt: number) => mpRef.current?.passo(dt, motorRef.current.px, motorRef.current.pz, motorRef.current.yaw),
       // ── v38 — progressão, exploração e ambiente (ganchos E2E) ──
       perfil: () => lerPerfil(),
+      // v39 — resultado da recuperação IDB→LS (E2E)
+      restaurado: () => restauradoRef.current,
       darXP: (n: number) => {
         const ev = ganharXP(lerPerfil(), n);
         bump();

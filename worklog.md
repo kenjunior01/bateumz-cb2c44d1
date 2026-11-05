@@ -527,3 +527,30 @@ Pedido: «Continue e adicione todo sistema bem feito de progressao missoes,e exp
 **Furos reais apanhados pelo E2E**: quiósque nunca registava visita (chave=null → impossível o cap. 2) · marcoPerto devolvia só o mais próximo (praça nunca descobria) · curva ×10 errada (verificada por código) · rAF a 2 fps no sandbox (raster por software — provado com git stash que v37 corre igual) estrangulava envios MP → gancho mpPasso + harness realinhado (precedente v37/v36).
 
 **Verificação**: test-progressao-v38 39/39 · cidade 32/32 · mp-v37 26/26 · mp-v36 14/14 · apis-v34 35/35 (4 smokes reais) · blocos 101/101 · tsc 0 · build OK · 5 screenshots verificadas (início/HUD/Diário×3).
+
+## v39 — PERSISTÊNCIA HONESTA + OFFLINE REAL (roteiro N1) (2026-11-05)
+
+Pedido: «continue» (v38 concluída e push; segue o roteiro N1: IndexedDB · PWA offline).
+
+**Furo real fechado**: TODOS os saves viviam em localStorage com `catch { /* quota */ }` SILENCIOSO — quando os ~5 MB enchiam (o `edits` map do BateuCraft cresce sem aviso), o jogo perdia o progresso sem dizer uma palavra, e o botão GUARDAR MUNDO dizia «✓» mesmo a falhar. Violação direta da regra nº 2 da plataforma (erros honestos).
+
+**Novo módulo `src/game/armazem.ts`** (puro TS, zero deps, Node-safe): IndexedDB (`bateu_armazem`) como armazém primário com envelope `{ ts, v }` · localStorage como espelho de arranque síncrono · leitura com regra do `ts` (o registo mais recente ganha — um espelho velho NUNCA cobre um save novo) · `estimarEspaco()` com navigator.storage.estimate (null honesto quando o browser não revela) · `restaurarLSdeIDB()` com validador (dados inválidos nunca entram) · ganchos `__armazem` para E2E.
+
+**Motor BateuCraft (engine.ts)**: `guardar()` agora assíncrono e HONESTO — escreve os dois armazéns e devolve o resultado real; aviso no jogo só quando AMBOS falham («⚠ Save falhou (sem espaço?): o progresso corre risco») · carimbo `ts` no save · pré-carregamento do IDB no construtor + `quandoSavePronto()` (o CONTINUAR nunca mais esconde um save que só existe no IDB) · `lerModoSave()`/`temSave()`/`lerSave()` leem o mais recente dos dois · `apagarSave()` limpa os dois.
+
+**Página BateuCraft**: botão GUARDAR MUNDO diz a VERDADE (await do resultado; «✓» só quando guardou; «⚠ Não foi possível guardar: …» quando não) · linha de quota REAL no menu («Armazenamento: X MB usados de Y MB», «—» quando não revelado) · CONTINUAR só depois do IDB pré-carregado · ganchos `ultimoSave/savePronto/espaco`.
+
+**Cidade (progressao.ts + missoes.ts)**: perfil, estado de missões e créditos com espelho IDB fire-and-forget; `restaurarProgressoCidadeDeIDB()` repõe o que o localStorage perdeu (validador versão 38) — a UI faz bump no boot e o gancho `__cidade.restaurado()` devolve exatamente o que foi reposto (false = nada faltava, honesto).
+
+**PWA**: atalho «Cidade Bateu» no manifest (start /cidade).
+
+**E2E NOVO `test-offline-v39.mjs` 35/35**: Parte A (dev) — roundtrip IDB · guardar honesto nos dois armazéns · regra do ts PROVADA (espelho velho +50 blocos nunca vence o IDB novo) · save só-no-IDB continua · apagar limpa os dois · XP da Cidade sobrevive à limpeza do LS com flags de recuperação exatas. Parte B (BUILD real + `vite preview` + service worker): `/` e `/cidade` abrem OFFLINE pelo precache, fase jogando, chunks gerados localmente, spawn na praça, MP honesto «off», clima SEM temperatura inventada, zero pageerrors.
+
+**Furos do E2E apanhados**: body do home avaliado antes do React renderizar (domcontentloaded ≠ renderizado → esperar innerText>200) · CONTINUAR avaliado pelo motor antes do re-render do React (esperar o BOTÃO, não o temSave()) · test-blocos limpava só o LS (o IDB teria re-injetado o save) → limpa ambos.
+
+**Verificação**: tsc 0 · test-offline-v39 35/35 · cidade 32/32 · blocos 101/101 · progressao-v38 39/39 · mp-v37 26/26 · mp-v36 14/14 · apis-v34 35/35 (429 Wikipédia transitório, recuperou) · desporto 14/14 · rea-plataforma 33/33 · home-dinamica 22/22 (as 3 regressões pendentes desde a v25 estão VERDES — verificadas nesta sessão) · build OK (precache 315 entradas / 9,2 MB).
+
+**Honesto (o que fica para N2/N4)**: malhagem de chunks em Web Worker (a geração de dados cabe num worker; a malhagem usa objetos THREE no main thread — cirurgia maior, anotada) · persistência no servidor autoritativo (N3 guarda posições, não saves) · o «onde: idb|ls» do resultado é informativo, não promessa de durabilidade além do que o browser permite.
+
+Stage Summary:
+- O fim do «guardado ✓» mentiroso: a plataforma agora diz ONDE o save ficou, QUANTO espaço real resta, e RECUPERA o progresso quando o browser limpa o localStorage — e a cidade inteira joga SEM rede, com cada fonte ausente a dizer honestamente que não está lá.

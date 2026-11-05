@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Motor, Captura, Modo, CamaraModo, CAMARA_NOMES, Meteo } from "@/game/blocos/engine";
+import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
 import { CONQUISTAS, WHATSAPP, VIDA_MAX, FOME_MAX, ITENS } from "@/game/blocos/constants";
 import { X, Play, Hammer, Sun, Moon, Camera, Backpack, Pause, Heart, Drumstick, Trophy, MessageCircle, Info, User, Volume2, VolumeX, Award, ChevronDown, Map as MapIcon, ZoomIn, Shield, CloudRain, CloudLightning, Archive, CloudSun, MapPin, Search, RefreshCw, Fish } from "lucide-react";
@@ -159,6 +160,10 @@ export default function BateuCraft({ onScore, onExit }: Props) {
   const [aCarregar, setACarregar] = useState(false);
   const [receitaSel, setReceitaSel] = useState<"criacao" | "fundicao">("criacao");
   const [motorPronto, setMotorPronto] = useState(false);
+  // v39 — o CONTINUAR só aparece depois de o save do IDB ter sido
+  // pré-carregado (um save que só existe no IDB nunca fica escondido)
+  const [savePronto, setSavePronto] = useState(false);
+  const [espacoEst, setEspacoEst] = useState<{ uso: number; quota: number } | null | "pendente" >("pendente");
   const [flashDano, setFlashDano] = useState(0);
   const [nomeItem, setNomeItem] = useState<{ nome: string; k: number } | null>(null);
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
@@ -259,6 +264,14 @@ export default function BateuCraft({ onScore, onExit }: Props) {
     setMotorPronto(true);
   }, []);
 
+  // ── v39 — save do IDB pré-carregado + quota real de armazenamento ──
+  useEffect(() => {
+    let vivo = true;
+    motorRef.current.quandoSavePronto().then(() => { if (vivo) setSavePronto(true); });
+    estimarEspaco().then((e) => { if (vivo) setEspacoEst(e); });
+    return () => { vivo = false; };
+  }, []);
+
   // nome do item selecionado (toast sobre a hotbar)
   const itemAnterior = useRef<string>("");
   useEffect(() => {
@@ -315,6 +328,10 @@ export default function BateuCraft({ onScore, onExit }: Props) {
       guardar: () => motorRef.current.guardar(),
       apagarSave: () => motorRef.current.apagarSave(),
       temSave: () => motorRef.current.temSave(),
+      // v39 — persistência honesta (ganchos E2E)
+      ultimoSave: () => motorRef.current.ultimoResultadoSave,
+      savePronto: () => motorRef.current.quandoSavePronto(),
+      espaco: () => estimarEspaco(),
       // ações
       minerarHold: (v: boolean) => { motorRef.current.entrada.minerando = v; },
       colocar: () => { motorRef.current.colocarPedido = true; },
@@ -573,7 +590,8 @@ export default function BateuCraft({ onScore, onExit }: Props) {
     onExit?.();
   };
 
-  const temSave = motorPronto && motorRef.current.temSave();
+  // v39 — só depois do IDB pré-carregado (save só-no-IDB nunca fica escondido)
+  const temSave = motorPronto && savePronto && motorRef.current.temSave();
   const m = motorRef.current;
   const receitas = cap ? m.receitas() : null;
 
@@ -634,6 +652,12 @@ export default function BateuCraft({ onScore, onExit }: Props) {
           </div>
           <button onClick={sair} className="text-white/60 underline text-sm">Voltar à plataforma</button>
           <p className="text-white/40 text-xs text-center max-w-xs">Joga sem registo · o teu mundo fica guardado neste aparelho</p>
+          {/* v39 — quota REAL do aparelho (navigator.storage.estimate); "—" quando o browser não expõe — nunca inventamos números */}
+          <p className="text-white/35 text-[11px] text-center" data-testid="bc-espaco">
+            {espacoEst === "pendente" ? "" : espacoEst
+              ? `Armazenamento: ${mbLegivel(espacoEst.uso)} MB usados de ${mbLegivel(espacoEst.quota)} MB`
+              : "Armazenamento: quota não revelada pelo navegador"}
+          </p>
         </div>
       )}
 
@@ -982,7 +1006,13 @@ export default function BateuCraft({ onScore, onExit }: Props) {
           <div className="bg-slate-900 border border-white/15 rounded-2xl p-6 w-full max-w-xs flex flex-col gap-3 max-h-[88dvh] overflow-y-auto">
             <h3 className="text-white font-black text-xl text-center">PAUSA</h3>
             <button onClick={fecharPausa} className="py-3 rounded-xl font-bold text-white bg-emerald-600 shadow-[0_4px_0_#065f46] active:scale-95" data-testid="bc-continuar-jogo">CONTINUAR</button>
-            <button onClick={() => { m.guardar(); m.avisos.push({ texto: "Mundo guardado ✓", tipo: "info", t: 2 }); setModal(null); m.pausado = false; }} className="py-3 rounded-xl font-bold text-white bg-sky-600 active:scale-95" data-testid="bc-guardar">GUARDAR MUNDO</button>
+            {/* v39 — honesto: o toast diz a VERDADE. Se ambos os armazéns falharem,
+                o jogador sabe que o progresso corre risco — nunca mais "guardado ✓" mentiroso. */}
+            <button onClick={async () => {
+              const r = await m.guardar();
+              m.avisos.push({ texto: r.ok ? "Mundo guardado ✓" : `⚠ Não foi possível guardar: ${r.erro ?? "sem armazenamento"}`, tipo: r.ok ? "info" : "dano", t: r.ok ? 2 : 4 });
+              setModal(null); m.pausado = false;
+            }} className="py-3 rounded-xl font-bold text-white bg-sky-600 active:scale-95" data-testid="bc-guardar">GUARDAR MUNDO</button>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setModal("trofeus")} className="py-2.5 rounded-xl font-bold text-white bg-amber-600/90 active:scale-95 flex items-center justify-center gap-1.5 text-sm" data-testid="bc-trofeus">
                 <Award size={15} /> {cap?.conquistas.length ?? 0}/{CONQUISTAS.length}

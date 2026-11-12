@@ -23,6 +23,8 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { formatMZN } from "@/lib/currency";
 import bateuLogo from "@/assets/bateu-logo.png";
 import Footer from "@/components/Footer";
+import TrustBar from "@/components/TrustBar";
+import HeroAgora from "@/components/HeroAgora";
 import DailyMissions from "@/components/engagement/DailyMissions";
 
 const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
@@ -289,6 +291,14 @@ export default function MobileHomeApp() {
     <div className="dark min-h-screen bg-[#050508] text-zinc-100" style={{ paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
       {/* ambiente roxo suave (versão B) */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 h-64 bg-[radial-gradient(ellipse_60%_100%_at_50%_100%,rgba(124,58,237,0.16),transparent_70%)]" />
+
+      {/* ═══ v39 auditoria (P0 2): barra de confiança no primeiro ecrã —
+          país activo, +18, protecção/transparência/suporte a um toque ═══ */}
+      <TrustBar />
+
+      {/* ═══ v39 auditoria (P0 3): hero funcional — as três entradas claras
+          (Jogar · Sorteios ao vivo · Desporto) antes de qualquer feed ═══ */}
+      <HeroAgora />
 
       {/* ═══ topo global MobileTopBar (pesquisa + sino + avatar + menu) ═══ */}
 

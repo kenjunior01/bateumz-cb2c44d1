@@ -8,16 +8,16 @@
     <link rel="canonical" href="https://bateu.online/" />
 
     <!-- Primary Meta Tags -->
-    <title>Bateu — Plataforma de Jogos, Sorteios ao Vivo e Apostas Esportivas</title>
-    <meta name="description" content="Bateu é a plataforma líder em jogos online, sorteios ao vivo com prémios reais, apostas P2P e torneios de esports. Jogue, concorra e ganhe com 100% de transparência e verificação justa. Disponível em Moçambique, Brasil, Angola e mais 9 países." />
-    <meta name="keywords" content="sorteios online, jogos ao vivo, apostas esportivas, P2P betting, torneios esports, prémios reais, Moçambique, Brasil, Angola, Portugal, raffles, jogos instantâneos" />
+    <title>Bateu — Jogos Online, Sorteios ao Vivo e Desporto</title>
+    <meta name="description" content="Joga, acompanha e participa em jogos e sorteios ao vivo com resultados verificáveis. Feita para Moçambique, Angola, Cabo Verde e Brasil. +18 — joga com responsabilidade." />
+    <meta name="keywords" content="sorteios online, jogos ao vivo, desporto, torneios esports, prémios reais, Moçambique, Angola, Cabo Verde, Brasil, raffles, jogos grátis" />
     <meta name="author" content="Bateu" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://bateu.online/" />
-    <meta property="og:title" content="Bateu — Plataforma de Jogos, Sorteios ao Vivo e Apostas Esportivas" />
-    <meta property="og:description" content="Jogue, concorra e ganhe prémios reais. Sorteios ao vivo, apostas P2P, torneios de esports e jogos exclusivos com 100% de transparência." />
+    <meta property="og:title" content="Bateu — Jogos Online, Sorteios ao Vivo e Desporto" />
+    <meta property="og:description" content="Joga, acompanha e participa em jogos e sorteios ao vivo com resultados verificáveis. +18 — joga com responsabilidade." />
     <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bd21f8dd-eda4-4443-8c1d-e2d7381d0894/id-preview-f4e30fa7--e2705fd6-9dd9-4a6f-a990-09889c32175c.lovable.app-1786955424283.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -28,8 +28,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Bateu — Plataforma de Jogos, Sorteios ao Vivo e Apostas Esportivas" />
-    <meta name="twitter:description" content="Jogue, concorra e ganhe prémios reais. Sorteios ao vivo, apostas P2P, torneios de esports e jogos exclusivos." />
+    <meta name="twitter:title" content="Bateu — Jogos Online, Sorteios ao Vivo e Desporto" />
+    <meta name="twitter:description" content="Joga, acompanha e participa em jogos e sorteios ao vivo com resultados verificáveis. +18 — joga com responsabilidade." />
     <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bd21f8dd-eda4-4443-8c1d-e2d7381d0894/id-preview-f4e30fa7--e2705fd6-9dd9-4a6f-a990-09889c32175c.lovable.app-1786955424283.png" />
 
     <!-- Favicon & PWA -->
@@ -43,19 +43,10 @@
     <meta name="msapplication-TileColor" content="#0a0a0f" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Hreflang — 12 países -->
+    <!-- Hreflang honesto (auditoria 6 Nov 2026): só mercados com perfil
+         operacional activo. Os 12 alternates apontavam TODOS à mesma URL —
+         ruído para crawlers e promessa de cobertura não validada por país. -->
     <link rel="alternate" hreflang="pt-MZ" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="pt-BR" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="pt-AO" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="pt-PT" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="es" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="fr" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="en-GB" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="en-US" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="de" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="it" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="en-IN" href="https://bateu.online/" />
-    <link rel="alternate" hreflang="en-CA" href="https://bateu.online/" />
     <link rel="alternate" hreflang="x-default" href="https://bateu.online/" />
 
     <!-- Preconnect -->
@@ -69,7 +60,7 @@
       "@type": "WebSite",
       "name": "Bateu",
       "url": "https://bateu.online",
-      "description": "Plataforma líder em jogos online, sorteios ao vivo com prémios reais, apostas P2P e torneios de esports em Moçambique, Brasil, Angola e mais 9 países.",
+      "description": "Jogos online, sorteios ao vivo e desporto com resultados verificáveis, feitos para Moçambique, Angola, Cabo Verde e Brasil.",
       "inLanguage": ["pt-MZ", "pt-BR", "pt-PT", "en"],
       "potentialAction": {
         "@type": "SearchAction",
@@ -107,7 +98,84 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- ═══════════════════════════════════════════════════════════════
+           v39 SHELL DE ARRANQUE (auditoria bateu.online, P0 1):
+           HTML+CSS puros — aparecem ANTES de qualquer JavaScript.
+           Em rede lenta o utilizador vê logo a marca e uma barra real;
+           se o bundle falhar (script abortado, erro de JS, cache podre),
+           o script-vigia abaixo revela um fallback NAVEGÁVEL com links
+           <a> que funcionam mesmo sem JS + “Tentar novamente”.
+           Quando a app monta, main.tsx remove este shell e desarma o vigia.
+           ═══════════════════════════════════════════════════════════════ -->
+      <div id="bateu-shell" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0a0f;color:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px">
+        <img src="/assets/bateu-logo.png" alt="Bateu" width="72" height="72" style="width:72px;height:72px;border-radius:18px" />
+        <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em">Bateu</div>
+        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#9ca3af">A preparar a tua arena</div>
+        <div style="width:min(260px,70vw);height:6px;border-radius:999px;background:#1c2333;overflow:hidden" aria-hidden="true">
+          <style>#bateu-shell-barra{width:35%;height:100%;border-radius:999px;background:linear-gradient(90deg,#009140,#FFD700,#D7263D);animation:bateuBoot 1.6s ease-in-out infinite}@keyframes bateuBoot{0%{transform:translateX(-105%)}100%{transform:translateX(300%)}}</style>
+          <div id="bateu-shell-barra"></div>
+        </div>
+        <!-- Fallback navegável: fica escondido até o vigia revelar -->
+        <div id="bateu-boot-erro" style="display:none;max-width:420px;flex-direction:column;align-items:center;gap:14px" role="alert">
+          <div style="font-size:14px;font-weight:600;color:#fbbf24" id="bateu-boot-razao">A inicialização está a demorar mais do que o esperado.</div>
+          <button type="button" onclick="location.reload()" style="padding:10px 22px;border-radius:12px;border:0;font-weight:700;font-size:14px;background:linear-gradient(90deg,#009140,#0bb854);color:#fff;cursor:pointer">Tentar novamente</button>
+          <div style="font-size:12px;color:#9ca3af;line-height:1.9">
+            Ou entra directo (funciona mesmo sem JavaScript):<br />
+            <a href="/jogos" style="color:#38bdf8;margin:0 6px">Jogos</a>
+            <a href="/lives" style="color:#38bdf8;margin:0 6px">Ao vivo</a>
+            <a href="/concursos" style="color:#38bdf8;margin:0 6px">Sorteios</a>
+            <a href="/suporte" style="color:#38bdf8;margin:0 6px">Suporte</a>
+          </div>
+        </div>
+      </div>
+      <noscript>
+        <div style="position:fixed;inset:auto 0 0 0;z-index:10000;background:#151d2e;color:#f8fafc;padding:12px 16px;text-align:center;font-family:system-ui,sans-serif;font-size:13px">
+          A Bateu precisa de JavaScript para o mundo a sério — mas podes navegar:
+          <a href="/jogos" style="color:#38bdf8;margin:0 4px">Jogos</a> ·
+          <a href="/lives" style="color:#38bdf8;margin:0 4px">Ao vivo</a> ·
+          <a href="/suporte" style="color:#38bdf8;margin:0 4px">Suporte</a>
+        </div>
+      </noscript>
+    </div>
+
+    <!-- ═══ VIGIA DE ARRANQUE: corre antes do bundle (script inline).
+         Se a app não montar dentro do prazo (default 10 s, testes podem
+         usar ?bootTimeout=ms — 1…60000), ou se algum script abortar,
+         revela o painel de erro naveável do shell. Zero dependências. -->
+    <script>
+      (function () {
+        var estado = { montado: false, mostrado: false };
+        window.__bateuMontado = function () { estado.montado = true; };
+        function revelar(razao) {
+          if (estado.mostrado) return;
+          estado.mostrado = true;
+          var painel = document.getElementById('bateu-boot-erro');
+          if (!painel) return;
+          painel.style.display = 'flex';
+          var barra = document.getElementById('bateu-shell-barra');
+          if (barra) barra.style.animationPlayState = 'paused';
+          if (razao) {
+            var r = document.getElementById('bateu-boot-razao');
+            if (r) r.textContent = razao;
+          }
+        }
+        window.__bateuBootRevelar = revelar;
+        var pr = parseInt(new URLSearchParams(location.search).get('bootTimeout') || '', 10);
+        if (!(pr > 0 && pr <= 60000)) pr = 10000;
+        setTimeout(function () {
+          if (!estado.montado) revelar('A inicialização demora mais do que o esperado — a ligação pode estar lenta.');
+        }, pr);
+        window.addEventListener('error', function (e) {
+          if (estado.montado || estado.mostrado) return;
+          var alvo = e && e.target;
+          var foiScript = alvo && (alvo.tagName === 'SCRIPT' ||
+            (alvo.tagName === 'LINK' && (alvo.rel || '').indexOf('stylesheet') !== -1));
+          if (foiScript || !alvo) revelar('Ocorreu um erro ao carregar a aplicação. Tenta novamente — os links abaixo continuam a funcionar.');
+        }, true);
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

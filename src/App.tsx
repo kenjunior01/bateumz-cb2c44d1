@@ -108,6 +108,10 @@ const Terms = lazy(() => import("./pages/Terms.tsx"));
 const Privacy = lazy(() => import("./pages/Privacy.tsx"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
 const FAQ = lazy(() => import("./pages/FAQ.tsx"));
+// v39 auditoria bateu.online: suporte e protecção do jogador como páginas
+// públicas próprias (plano 0–14 dias: «publicar suporte…» + «a um toque»)
+const Suporte = lazy(() => import("./pages/Suporte.tsx"));
+const Protecao = lazy(() => import("./pages/Protecao.tsx"));
 const RaffleHistory = lazy(() => import("./pages/RaffleHistory.tsx"));
 const MyTickets = lazy(() => import("./pages/MyTickets.tsx"));
 const EditRaffle = lazy(() => import("./pages/dashboard/EditRaffle.tsx"));
@@ -245,6 +249,8 @@ function AnimatedRoutes() {
             <Route path="/privacy" element={<Navigate to="/privacidade" replace />} />
             <Route path="/como-funciona" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/suporte" element={<Suporte />} />
+            <Route path="/protecao" element={<Protecao />} />
             <Route path="/historico" element={<RaffleHistory />} />
             <Route path="/concursos" element={<SorteiosLayout />}>            <Route index element={<Contests />} />          </Route>
             <Route path="/blog" element={<Blog />} />

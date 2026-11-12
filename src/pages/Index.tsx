@@ -5,6 +5,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
+import TrustBar from "@/components/TrustBar";
+import HeroAgora from "@/components/HeroAgora";
 import StoriesCarousel from "@/components/StoriesCarousel";
 import DailyMissions from "@/components/engagement/DailyMissions";
 import Footer from "@/components/Footer";
@@ -242,8 +244,8 @@ const HOW_IT_WORKS_STEPS = [
 
 /* ─── Fair Play Items ─── */
 const FAIR_PLAY_ITEMS = [
-  { icon: Eye, title: "100% Transparência", desc: "Todos os resultados são verificáveis e públicos. Sem algoritmos ocultos.", color: CYAN },
-  { icon: BanIcon, title: "Sem Apostas com Dinheiro Real", desc: "Nenhuma aposta com dinheiro real. Plataforma 100% legal e segura.", color: PURPLE },
+  { icon: Eye, title: "Transparência verificável", desc: "Todos os resultados são verificáveis e públicos. Sem algoritmos ocultos.", color: CYAN },
+  { icon: BanIcon, title: "Sem Apostas com Dinheiro Real", desc: "Nenhuma aposta com dinheiro real. Regras visíveis antes de cada entrada.", color: PURPLE },
   { icon: Coins, title: "Moeda Virtual Apenas", desc: "Luck Coins — moeda virtual da plataforma. Diversão sem riscos financeiros.", color: GOLD },
   { icon: Heart, title: "Jogo Responsável", desc: "Ferramentas integradas de jogo responsável: limites, pausas e alertas.", color: GREEN },
 ];
@@ -256,7 +258,26 @@ export default function Index() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { sfx } = useSoundEffects();
-  useSEO({ title: 'Jogos Online, Sorteios ao Vivo e Apostas Esportivas', description: 'Bateu é a plataforma líder em jogos online, sorteios ao vivo com prémios reais, apostas P2P e torneios de esports. Disponível em 12 países africanos e europeus. Jogue gratuitamente.', canonicalPath: '/' });
+  useSEO({ title: 'Jogos Online, Sorteios ao Vivo e Desporto', description: 'Joga, acompanha e participa em jogos e sorteios ao vivo com resultados verificáveis. Feita para Moçambique, Angola, Cabo Verde e Brasil. +18 — joga com responsabilidade.', canonicalPath: '/' });
+
+  // v39 auditoria (P0 2): altura real do navbar fixo (78px) + faixa promocional
+  // dispensável acima dele — a TrustBar nunca pode ficar escondida atrás.
+  const [navOffset, setNavOffset] = useState(0);
+  useEffect(() => {
+    const nav = document.querySelector(".navbar-shell");
+    if (!nav) return;
+    const apply = () => {
+      const bottom = nav.getBoundingClientRect().bottom;
+      if (bottom > 0) setNavOffset(Math.ceil(bottom));
+    };
+    apply();
+    nav.addEventListener("transitionend", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      nav.removeEventListener("transitionend", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
   /* NOTA: no mobile, o retorno antecipado para MobileHomeApp acontece DEPOIS de todos os hooks (regras dos hooks respeitadas). */
 
   const [activePillar, setActivePillar] = useState<string | null>(null);
@@ -385,6 +406,17 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ background: "#050508" }}>
       <Navbar />
+      {/* v39 auditoria (P0 2): barra de confiança no primeiro ecrã — país
+          activo, +18 e ligações reais para protecção/transparência/suporte.
+          O navbar é FIXED (e a faixa promocional acima dele é dispensável):
+          medimos o fundo real dele e aplicamos como padding — re-medido no
+          transitionend para nunca ficar escondida nem com folga a mais. */}
+      <div style={{ paddingTop: navOffset || undefined }}>
+        <TrustBar />
+        {/* v39 auditoria (P0 3): hero funcional — «O que queres fazer agora?»
+            com as três entradas claras antes de qualquer banner */}
+        <HeroAgora />
+      </div>
       {/* ═══════════ HERO — proposta de valor imediata ═══════════ */}
       <motion.section
         className="relative min-h-[85vh] flex flex-col items-center justify-center overflow-hidden"
@@ -444,7 +476,7 @@ export default function Index() {
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-8 leading-relaxed">
             A plataforma definitiva de esports, sorteios e jogos online.
             <br className="hidden sm:block" />
-            <span className="text-zinc-300 font-semibold"><TypingText texts={['Apostas entre jogadores', 'Sorteios ao vivo', 'Jogos exclusivos', 'Torneios de eSports']} typingSpeed={70} deleteSpeed={35} pauseDuration={2500} cursorColor={CYAN} soundEnabled={false} className="text-lg sm:text-xl md:text-2xl font-bold" /> — 100% transparente.</span>
+            <span className="text-zinc-300 font-semibold"><TypingText texts={['Apostas entre jogadores', 'Sorteios ao vivo', 'Jogos exclusivos', 'Torneios de eSports']} typingSpeed={70} deleteSpeed={35} pauseDuration={2500} cursorColor={CYAN} soundEnabled={false} className="text-lg sm:text-xl md:text-2xl font-bold" /> — resultados verificáveis.</span>
           </motion.p>
 
           {/* ⭐ Categorias do catálogo — padrão Poki "o que vais jogar hoje?" (REA) */}

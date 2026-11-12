@@ -121,6 +121,9 @@ const Footer = () => {
             <Link to="/privacidade" className="region-link hover:opacity-80 transition-opacity">{t("footer.privacy")}</Link>
             <Link to="/community" className="region-link hover:opacity-80 transition-opacity">{t("footer.community")}</Link>
             <Link to="/faq" className="region-link hover:opacity-80 transition-opacity">{t("footer.faq")}</Link>
+            {/* v39 auditoria (0–14 dias): suporte publicado + protecção a um toque */}
+            <Link to="/suporte" data-testid="footer-suporte" className="region-link hover:opacity-80 transition-opacity">{t("footer.support")}</Link>
+            <Link to="/protecao" data-testid="footer-protecao" className="region-link hover:opacity-80 transition-opacity">{t("footer.protection")}</Link>
           </div>
           <p className="text-sm text-muted-foreground">
             © 2026 Bateu. {t("footer.rights")}

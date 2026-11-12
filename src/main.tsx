@@ -5,6 +5,7 @@ import { initBootSelfHeal } from "./lib/self-heal";
 import { warmRouteChunkFor } from "./lib/routePrefetch";
 import App from "./App.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
+import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import "./index.css";
 import "./micro-interactions.css";
 
@@ -31,6 +32,13 @@ const Root = () => {
   const [loading, setLoading] = useState(!isStageTool);
 
   useEffect(() => {
+    // v39 auditoria (P0 1): o shell HTML estático do index.html cumpriu o seu
+    // papel (marca + barra + fallback navegável ANTES de qualquer JS). No
+    // primeiro commit da React desarmamos o vigia e removemos o shell —
+    // exactamente quando o ecrã de marca React assume. Se a React nunca
+    // montar (bundle abortado / erro fatal), o vigia revela o painel de erro.
+    (window as unknown as { __bateuMontado?: () => void }).__bateuMontado?.();
+    document.getElementById("bateu-shell")?.remove();
     if (isStageTool) return;
     // v26 Web excellence: aquecer o chunk da home DURANTE o ecrã de marca —
     // quando o loading sai, a home já está descarregada (na rede, é puro
@@ -46,7 +54,13 @@ const Root = () => {
 
   return (
     <AnimatePresence>
-      {loading ? <LoadingScreen key="loading" /> : <App key="app" />}
+      {loading ? (
+        <LoadingScreen key="loading" />
+      ) : (
+        <ErrorBoundary key="app">
+          <App />
+        </ErrorBoundary>
+      )}
     </AnimatePresence>
   );
 };

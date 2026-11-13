@@ -61,7 +61,7 @@ async function main() {
     ok("cartões de plano Grátis/Empresarial/Corporativa", await page.locator("[data-testid='plan-card-free']").isVisible().catch(() => false) && await page.locator("[data-testid='plan-card-business']").isVisible().catch(() => false) && await page.locator("[data-testid='plan-card-corporate']").isVisible().catch(() => false));
     ok("preço Empresarial 1.500 MT", await page.locator("[data-testid='plan-card-business']").getByText(/1.500|1500/i).first().isVisible().catch(() => false));
     ok("calculadora presente", await page.locator("#calculadora").isVisible().catch(() => false));
-    ok("tabela de custos com 0%", await page.getByText(/Custos 100% transparentes/i).first().isVisible().catch(() => false) && await page.locator("[data-testid='fee-raffle']").getByText("0%").isVisible().catch(() => false));
+    ok("tabela de custos com 0%", await page.getByText(/Custos abertos na tabela/i).first().isVisible().catch(() => false) && await page.locator("[data-testid='fee-raffle']").getByText("0%").isVisible().catch(() => false));
     ok("passos do zero ao primeiro ganho", await page.getByText(/Do zero ao primeiro ganho/i).first().isVisible().catch(() => false));
 
     // calculadora interativa: 0% de comissão sempre + líquido reage ao slider

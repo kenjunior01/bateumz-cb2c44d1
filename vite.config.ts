@@ -67,7 +67,7 @@ export default defineConfig(({ mode, command }) => ({
       manifest: {
         name: "Bateu — Jogos, Sorteios ao Vivo, Alienação e Stories",
         short_name: "Bateu",
-        description: "Plataforma líder em jogos online, sorteios ao vivo com prémios reais, alienação de bens (leasing, leilões, rent-to-own), stories sociais e torneios de esports. 12 países, 100% transparente.",
+        description: "Joga, acompanha e participa em jogos e sorteios ao vivo com resultados verificáveis, alienação de bens (leasing, leilão, rent-to-own), stories sociais e torneios de esports. Feita para Moçambique, Angola, Cabo Verde e Brasil. +18 — joga com responsabilidade.",
         theme_color: "#0a0a0f",
         background_color: "#0a0a0f",
         display: "standalone",
@@ -75,6 +75,12 @@ export default defineConfig(({ mode, command }) => ({
         start_url: "/",
         scope: "/",
         shortcuts: [
+          {
+            name: "BATEU RPG: Lendas",
+            short_name: "BATEU RPG",
+            description: "RPG de exploração voxel — 6 regiões com níveis, missões, XP e o Guardião das Ruínas",
+            url: "/lives?game=mmorpg",
+          },
           {
             name: "Cidade Bateu",
             short_name: "Cidade",

@@ -612,3 +612,19 @@ Pedido: «Esse rpg é que nem aquele o maior e melhor rpg que existe que partilh
 **Verificação**: tsc 0 · rpg-v41 72/72 · cidade 32/32 · v31 39/39 (1ª corrida flake de timing no 73→limpo, verde em corrida limpa) · v32 17/17 · apis 34→35 (Wikipédia real 429 do IP da sandbox entre corridas — endpoint 200 por curl com UA; flake externo, não código) · build OK · build confirma dist. · 4 screenshots verificadas (menu com COMO JOGAR+atribuição, ajuda completa, mapa com regiões/POI/seta/★, pausa com sessão).
 
 **Honesto (o que fica)**: o mapa não mostra terreno real (regiões simplificadas a círculos — o dado que existe é o do core); neve continua «não simulada» (73→LIMPO); multiplayer continua só na CIDADE.
+
+## v43 — VAZAMENTOS da auditoria «confiança primeiro» fechados + menus de sistema (PWA) e cartão do hub alinhados (2026-11-13)
+
+Pedido: «continue» (seguindo v41/v42 — «aprimorando tudo que está em falta, tanto os menus») — varredura final de resíduos: 3 sítios onde a verdade antiga escapou às versões anteriores, todos de cara visível ou de sistema.
+
+**Cartão do hub desalinhado (resíduo do craft)**: `GAME_DEFS` do LiveHub ainda mostrava o mmorpg com ⛏️ e gradiente verde do BateuCraft — o catálogo (v41) e o MobileSocialFeed já tinham ⚔️/rosa-âmbar, mas a grelha GAMES do hub (a 1.ª coisa que o utilizador vê em /lives) ficou para trás. Alinhado com o catálogo: ⚔️ + `from-rose-600 via-amber-500 to-yellow-400`. Probe E2E ao vivo: cartão visível, ⚔️ presente, ⛏️ zero no DOM.
+
+**MANIFEST do PWA com promessas mortas (o furo real — v40 esqueceu o manifest)**: a auditoria v40 limpou «líder»/«100% transparente»/«12 países» do index.html, do SEO e da UI — mas a `description` do manifest.webmanifest continuava com as 3 na mesma frase («Plataforma líder… 12 países, 100% transparente»). Instalar a app na homescreen regravava o texto não verificável no sistema. Alinhado palavra por palavra com o meta description do index.html (resultados verificáveis · MZ/AO/CV/BR · +18). Verificado no build: `dist/manifest.webmanifest` contém «verificáveis» e não contém «líder»/«12 países»/«100%».
+
+**Menus de sistema (PWA shortcuts)**: o shortcut «BATEU RPG: Lendas» (url `/lives?game=mmorpg`) agora é a 1.ª entrada — long-press do ícone instalado abre o jogo de bandeira directamente; seguido de Cidade, Alienação e Stories (rotas confirmadas no router).
+
+**«100% transparentes» do ecossistema de negócios**: B2B — o título da tabela de custos dizia «Custos 100% transparentes»; o «100%» é o mesmo quantificador absoluto que a v40 cortou. A tabela É a prova — título agora «Custos abertos na tabela» (verificável: está mesmo abaixo). Os 2 testes que esperavam a frase antiga (test-ecosystem, test-stories-plans) actualizados; ambos verdes.
+
+**Verificação**: tsc 0 · rpg-v41 72/72 · cidade 32/32 · auditoria-v40 50/50 · ecosystem 33/33 (actualizado) · stories-plans 14/14 (actualizado) · desporto 14/14 · home 22/22 · rea-plataforma 33/33 · build OK + manifest validado por JSON (description honesta, 4 shortcuts na ordem certa).
+
+**Honesto (o que fica)**: descrição antiga só existia em caches de SW já instalados nos aparelhos (self-heal v39 purge ao próximo deploy); neve no RPG continua LIMPO honesto; mapa simplificado a círculos (dados reais do core, terreno não renderizado).

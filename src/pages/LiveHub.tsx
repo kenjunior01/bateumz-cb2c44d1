@@ -173,7 +173,7 @@ interface SavedWheelGame {
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "aetheria", icon: Globe, emoji: "🪽", grad: "from-sky-500 via-indigo-500 to-violet-600" },
-  { id: "mmorpg", icon: Globe, emoji: "⛏️", grad: "from-emerald-600 via-green-500 to-lime-400" },
+  { id: "mmorpg", icon: Globe, emoji: "⚔️", grad: "from-rose-600 via-amber-500 to-yellow-400" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },

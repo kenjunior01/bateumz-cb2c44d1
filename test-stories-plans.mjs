@@ -110,7 +110,7 @@ async function main() {
 
     // tabela 0%
     await page.goto(`${BASE}/negocios`, { waitUntil: "domcontentloaded" });
-    await waitBodyPattern(page, /Custos 100% transparentes/i);
+    await waitBodyPattern(page, /Custos abertos na tabela/i);
     await page.waitForTimeout(1200);
     ok("tabela mostra 0% em todos os pilares", await page.locator("[data-testid='fee-raffle']").getByText("0%").isVisible().catch(() => false)
       && await page.locator("[data-testid='fee-contest']").getByText("0%").isVisible().catch(() => false)

@@ -421,7 +421,7 @@ export default function BusinessEcosystem() {
       <section className="px-4 py-12">
         <div className="mx-auto max-w-4xl">
           <h2 className="text-center text-2xl font-extrabold md:text-4xl">
-            Custos <span className="text-emerald-300">100% transparentes</span>
+            Custos <span className="text-emerald-300">abertos na tabela</span>
           </h2>
           <p className="mt-3 text-center text-sm text-slate-300">
             Uma tabela, zero surpresas. Quem vende não paga comissão — a mensalidade é o único custo.

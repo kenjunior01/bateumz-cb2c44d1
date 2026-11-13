@@ -83,7 +83,7 @@ const BounceGame = lazy(() => import("@/components/livegames/BounceGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
-const BateuCraft = lazy(() => import("@/components/livegames/BateuCraft"));
+const BateuRPG = lazy(() => import("@/components/livegames/BateuRPG"));
 const AetheriaGame = lazy(() => import("@/components/livegames/AetheriaGame"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
@@ -708,11 +708,11 @@ const LiveHub = () => {
               <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>⚔️</motion.span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-display text-base font-black text-white">⛏️ BATEUCRAFT: MUNDO LEGO</span>
+                  <span className="font-display text-base font-black text-white">⚔️ BATEU RPG: LENDAS</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-lime-400 text-white text-[8px] font-black animate-pulse">JOGO PRINCIPAL · DESTAQUE</span>
                 </div>
                 <p className="text-[10px] font-semibold text-white/80 truncate">
-                  Mundo voxel com personagens LEGO: minera, cria ferramentas, funde ferro e sobrevive à noite aos Zumbis!
+                  RPG de exploração voxel: 6 regiões, missões de história, XP e níveis, chefes e noites perigosas!
                 </p>
               </div>
               <span className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[10px] font-black">JOGAR ▶</span>
@@ -1351,8 +1351,8 @@ const LiveHub = () => {
                    fica espremido no fluxo da página (bug "fica num quadrado") */
                 <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
-                  <GameErrorBoundary gameName="BateuCraft: Mundo LEGO">
-                    <BateuCraft onScore={(creditos: number) => recordScore("BateuCraft")("BateuCraft", creditos)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+                  <GameErrorBoundary gameName="BATEU RPG: Lendas">
+                    <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "aetheria" && createPortal(

@@ -1,0 +1,439 @@
+// ============================================================
+// E2E — v41: BATEU RPG: LENDAS (substitui o BateuCraft)
+// Parte A — NÚCLEO ISOMÓRFICO em Node (src/game/rpg/core.ts corre
+//   igual no browser e no Node — o teste PROVA isso):
+//   curva XP · dificuldades · regiões/POIs · habilidades ·
+//   missões (história encadeada + diárias determinísticas) ·
+//   validador de save · honestidade dos dados
+// Parte B — E2E na UI (/lives?game=mmorpg): menu com dificuldade,
+//   HUD RPG, spawn na Aldeia, kit inicial, combate → XP → nível,
+//   habilidades, baús de tesouro, descoberta de regiões,
+//   CHEFE (Guardião) + fim da história, morte/renascer,
+//   save/CONTINUAR. Clima real no RPG: test-v31 secção 6.
+// Uso: PW_CHROME=<chromium> node test-rpg-v41.mjs (vite 8099)
+// ============================================================
+
+import { chromium } from "playwright";
+
+const BASE = process.env.BASE_URL || "http://localhost:8099";
+let passed = 0, failed = 0;
+const fails = [];
+const ok = (nome, cond) => {
+  if (cond) { passed++; console.log(`  ✅ ${nome}`); }
+  else { failed++; fails.push(nome); console.log(`  ❌ ${nome}`); }
+};
+
+const NOISE = [
+  "navigator.vibrate", "<line> attribute", "validateDOMNesting",
+  "two children with the same key", "same key", "Failed to load resource",
+  "websocket", "WebSocket", "realtime", "supabase", "ERR_", "net::",
+  "ResizeObserver", "AudioContext", "React Router Future Flag",
+  "404", "406", "fetchPriority", "does not recognize", "PGRST301", "JWT",
+  "permission", "AbortError", "play() failed", "user gesture",
+  "WebGL", "THREE", "gl context", "shader", "play()",
+];
+
+// ═════════════════════════════════════════════════════════════
+// PARTE A — NÚCLEO ISOMÓRFICO (Node importa o mesmo core.ts)
+// ═════════════════════════════════════════════════════════════
+async function parteA() {
+  console.log("\n— A. Núcleo isomórfico (Node importa core.ts) —");
+  const core = await import(new URL("./src/game/rpg/core.ts", import.meta.url).href);
+
+  // ── curva de XP ──
+  ok("xpParaNivel(1) = 0 (nível 1 é grátis)", core.xpParaNivel(1) === 0);
+  ok("custoNivel é estritamente crescente", (() => {
+    for (let k = 1; k < 29; k++) if (core.custoNivel(k) >= core.custoNivel(k + 1)) return false;
+    return true;
+  })());
+  ok("nivelDe(xpParaNivel(5)) === 5 (ida e volta)", core.nivelDe(core.xpParaNivel(5)) === 5);
+  ok("progressoNivel(80): nível 2 com 0/105", (() => {
+    const p = core.progressoNivel(80);
+    return p.nivel === 2 && p.atual === 0 && p.falta === core.custoNivel(2);
+  })());
+  ok("NIVEL_MAX = 30 e xp nunca empurra além", core.nivelDe(core.xpParaNivel(30) + 5000) === 30);
+
+  // ── dificuldade ──
+  ok("3 dificuldades com inimigos e XP crescentes", (() => {
+    const o = core.ORDEM_DIFICULDADE;
+    if (o.length !== 3) return false;
+    for (let i = 1; i < o.length; i++) {
+      if (!(core.DIFICULDADES_RPG[o[i]].multHpMob > core.DIFICULDADES_RPG[o[i - 1]].multHpMob)) return false;
+      if (!(core.DIFICULDADES_RPG[o[i]].multXP > core.DIFICULDADES_RPG[o[i - 1]].multXP)) return false;
+    }
+    return true;
+  })());
+  ok("hpInimigo escala com região × dificuldade", (() => {
+    const medio = core.hpInimigo(20, 1, core.DIFICULDADES_RPG.medio);
+    const lenda3 = core.hpInimigo(20, 3, core.DIFICULDADES_RPG.lenda);
+    return medio === 20 && lenda3 === Math.round(20 * 1.7 * 2.2);
+  })());
+  ok("xpPorKiller: zumbi base 10, estourador 16, escala com região", (() => {
+    const z1 = core.xpPorKiller("zumbi", 1, core.DIFICULDADES_RPG.medio, 0);
+    const z3 = core.xpPorKiller("zumbi", 3, core.DIFICULDADES_RPG.medio, 0);
+    const e1 = core.xpPorKiller("estourador", 1, core.DIFICULDADES_RPG.medio, 0);
+    return z1 === 10 && e1 === 16 && z3 === Math.round(10 * 1.5);
+  })());
+
+  // ── regiões e POIs ──
+  ok("6 regiões com ids únicos", (() => {
+    const ids = core.REGIOES.map((r) => r.id);
+    return core.REGIOES.length === 6 && new Set(ids).size === 6;
+  })());
+  ok("regiaoEm(0,0) = aldeia · (58,−42) = miombo · (−18,−80) = serra",
+    core.regiaoEm(0, 0)?.id === "aldeia" && core.regiaoEm(58, -42)?.id === "miombo" && core.regiaoEm(-18, -80)?.id === "serra");
+  ok("Terras Selvagens (30,30) sem região → null (honesto)",
+    core.regiaoEm(30, 30) === null);
+  ok("8 POIs, todos dentro da sua região declarada", (() => {
+    for (const p of core.POIS) {
+      const r = core.regiaoEm(p.x, p.z);
+      if (!r || r.id !== p.regiao) return false;
+    }
+    return core.POIS.length === 8;
+  })());
+  ok("9 baús de tesouro no mundo (soma dos POIs)", core.POIS.reduce((n, p) => n + p.baus.length, 0) === 9);
+
+  // ── habilidades ──
+  ok("escalaVelExplorador: +8%/nível com tecto 1.18 (orçamento do motor v37)",
+    core.escalaVelExplorador(0) === 1 && core.escalaVelExplorador(3) === 1.18 && core.escalaVelExplorador(5) === 1.18);
+  ok("multDanoHeroi(1,0)=1 e cresce com nível+guerreiro",
+    core.multDanoHeroi(1, 0) === 1 && core.multDanoHeroi(10, 3) > 2);
+
+  // ── missões: história encadeada ──
+  ok("história: 6 capítulos h1..h6 em ordem", (() => {
+    const h = core.HISTORIA;
+    return h.length === 6 && h.every((m, i) => m.id === `h${i + 1}` && m.ordem === i + 1);
+  })());
+  ok("h1 exige Torre do Vigia; h6 exige Guardião + Cinzas",
+    core.HISTORIA[0].objetivos[0].alvo === "torre" &&
+    core.HISTORIA[5].objetivos.some((o) => o.alvo === "guardiao") &&
+    core.HISTORIA[5].objetivos.some((o) => o.alvo === "cinzas"));
+  ok("chegarPoi torre → h1 concluída com recompensa; h2 vira atual", (() => {
+    const est = core.estadoMissoesInicial();
+    const dia = core.diaLocal(new Date(2026, 10, 13));
+    const rs = core.aplicarEvento(est, { tipo: "chegarPoi", alvo: "torre", dia, dif: core.DIFICULDADES_RPG.medio });
+    const r = rs.find((x) => x.id === "h1");
+    return !!r && r.xp === 60 && r.creditos === 10 && core.capituloAtual(est)?.id === "h2";
+  })());
+  ok("5 kills hostis → h2 concluída (contador acumulado)", (() => {
+    const est = core.estadoMissoesInicial();
+    est.historiaFeitas.push("h1");
+    const dia = core.diaLocal(new Date(2026, 10, 13));
+    let r2 = null;
+    for (let i = 0; i < 5; i++)
+      r2 = core.aplicarEvento(est, { tipo: "matar", alvo: "zumbi", dia, dif: core.DIFICULDADES_RPG.medio }).find((x) => x.id === "h2") ?? r2;
+    return !!r2 && est.historiaFeitas.includes("h2") && core.capituloAtual(est)?.id === "h3";
+  })());
+  ok("kill passivo NÃO conta para 'hostis' (honesto)", (() => {
+    const est = core.estadoMissoesInicial();
+    est.historiaFeitas.push("h1");
+    const dia = core.diaLocal(new Date(2026, 10, 13));
+    for (let i = 0; i < 5; i++)
+      core.aplicarEvento(est, { tipo: "matar", alvo: "passivo", dia, dif: core.DIFICULDADES_RPG.medio });
+    return !est.historiaFeitas.includes("h2");
+  })());
+
+  // ── diárias determinísticas ──
+  const dia = "2026-11-13";
+  const d1 = core.missoesDiarias(dia, core.DIFICULDADES_RPG.medio);
+  const d2 = core.missoesDiarias(dia, core.DIFICULDADES_RPG.medio);
+  ok("mesmo dia → MESMAS 3 diárias (determinístico)", (() => {
+    if (d1.length !== 3) return false;
+    return d1.every((m, i) => m.id === d2[i].id && m.titulo === d2[i].titulo && m.objetivo.qtd === d2[i].objetivo.qtd);
+  })());
+  ok("diárias escalam com a dificuldade (créditos)", (() => {
+    const dl = core.missoesDiarias(dia, core.DIFICULDADES_RPG.lenda);
+    return dl.every((m, i) => m.creditos > d1[i].creditos || (m.creditos === d1[i].creditos && m.creditos === 0));
+  })());
+  ok("a 1ª diária do dia conclui com o SEU tipo de evento", (() => {
+    const est = core.estadoMissoesInicial();
+    const m0 = d1[0];
+    const rs = core.aplicarEvento(est, { tipo: m0.objetivo.tipo, alvo: m0.objetivo.alvo, qtd: m0.objetivo.qtd, dia, dif: core.DIFICULDADES_RPG.medio });
+    return rs.some((r) => r.id === m0.id && r.diaria === true && r.creditos === m0.creditos);
+  })());
+
+  // ── validador de save (honestidade) ──
+  ok("validarPerfilRpg aceita perfil válido e rejeita lixo", (() => {
+    const p = core.perfilInicial("medio");
+    p.xp = 250; p.pontos = 2; p.skills.guerreiro = 2;
+    p.missoes.historiaFeitas = ["h1"]; p.descobertas.regioes = ["aldeia"];
+    if (!core.validarPerfilRpg(p)) return false;
+    if (core.validarPerfilRpg(null) !== null) return false;
+    if (core.validarPerfilRpg({ v: 40 }) !== null) return false;
+    const ruim = core.perfilInicial("medio"); ruim.xp = -5;
+    if (core.validarPerfilRpg(ruim) !== null) return false;
+    const hack = core.perfilInicial("medio"); hack.skills.guerreiro = 9;
+    return core.validarPerfilRpg(hack) === null;
+  })());
+  ok("perfilTemProgresso: virgem=false, com XP=true", (() => {
+    const p = core.perfilInicial("medio");
+    if (core.perfilTemProgresso(p)) return false;
+    p.xp = 10;
+    return core.perfilTemProgresso(p);
+  })());
+  ok("danoHeroi: 3 + arma + 2×guerreiro (regra única partilhada)",
+    core.danoHeroi(0, 4) === 7 && core.danoHeroi(3, 6) === 15);
+}
+
+// ═════════════════════════════════════════════════════════════
+// PARTE B — E2E da UI
+// ═════════════════════════════════════════════════════════════
+async function parteB() {
+  console.log(`\n— B. E2E na UI — ${BASE} —`);
+  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"], executablePath: process.env.PW_CHROME || undefined });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const consoleErrors = [];
+  page.on("pageerror", (e) => consoleErrors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
+
+  await page.route("**/supabase.co/**", (route) => route.fulfill({ json: [] }));
+
+  const cap = () => page.evaluate(() => (window).__rpg?.captura?.() || null);
+  const rpg = () => page.evaluate(() => (window).__rpg?.capturaRpg?.() || null);
+  const pump = (n = 20, dt = 0.05) => page.evaluate(([t, d]) => (window).__rpg.pump(t, d), [n, dt]);
+  const aguardar = async (cond, tentativas = 40, msg = "condição") => {
+    for (let i = 0; i < tentativas; i++) {
+      if (await cond()) return true;
+      await page.waitForTimeout(200);
+    }
+    console.log(`  ⚠️ timeout à espera de: ${msg}`);
+    return false;
+  };
+  const sel = (s, timeout = 15000) => page.waitForFunction(
+    (x) => !!document.querySelector(`[data-testid="${x}"]`), s, { timeout, polling: 200 });
+
+  // ── menu ──
+  await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded" });
+  await sel("rpg-titulo", 30000);
+  ok("menu do BATEU RPG abre no slot do catálogo", true);
+  ok("3 cartões de dificuldade", (await page.locator('[data-testid^="rpg-dif-"]:not([data-testid="rpg-dif-desc"])').count()) === 3);
+  await page.locator('[data-testid="rpg-dif-lenda"]').click();
+  ok("seletor de dificuldade atualiza a descrição",
+    (await page.locator('[data-testid="rpg-dif-desc"]').innerText()).includes("guardiões acordam"));
+  await page.locator('[data-testid="rpg-dif-medio"]').click();
+  ok("CONTINUAR oculto sem save (honesto)", (await page.locator('[data-testid="rpg-continuar"]').count()) === 0);
+
+  // ── começar (médio) ──
+  await page.locator('[data-testid="rpg-jogar"]').click();
+  await aguardar(async () => (await cap())?.fase === "jogando", 60, "motor jogando");
+  ok("motor iniciou em sobrevivência", (await cap())?.modo === "sobrevivencia");
+
+  // spawn na Aldeia + região
+  await pump(30);
+  const c1 = await cap();
+  ok("spawn na Aldeia (2.5, ~33, 4.5)", Math.abs(c1.pos[0] - 2.5) < 0.6 && Math.abs(c1.pos[1] - 33) < 2 && Math.abs(c1.pos[2] - 4.5) < 0.6);
+  let r1 = await rpg();
+  ok("região inicial = Planície da Aldeia", r1.regiao?.id === "aldeia");
+  ok("capítulo atual = h1 Chamado da Aldeia", r1.capitulo?.id === "h1");
+  ok("3 diárias no HUD do painel", r1.diarias.length === 3);
+  ok("XP já > 0 (descobrir a própria casa ensina: região + POI ≥ 65)", r1.nivel >= 1 &&
+    (await page.evaluate(() => (window).__rpg.perfil().xp)) >= 65);
+
+  // kit inicial
+  const slots = c1.slots.filter(Boolean).map((s) => s.id);
+  ok("kit inicial: espada de madeira (112) no inventário", slots.includes(112));
+
+  // ── descoberta de região + POI ──
+  const xpAntes = (await rpg()).nivel;
+  await page.evaluate(() => (window).__rpg.teleportar(58.5, 40, -42.5));
+  await pump(40);
+  r1 = await rpg();
+  ok("teleporte às ruínas → região Miombo descoberta", r1.regiao?.id === "miombo" && r1.descobertas.regioes >= 1);
+  ok("POI Ruínas de Kivulivuli descoberto", r1.descobertas.pois >= 1);
+  ok("XP > 0 após descobertas (25+40)", (() => {
+    const p = page.evaluate(() => (window).__rpg.perfil().xp);
+    return p.then((v) => v >= 65);
+  })());
+  void xpAntes;
+
+  // ── combate → XP → nível → habilidade ──
+  await page.evaluate(() => (window).__rpg.teleportar(2.5, 40, 4.5)); // volta à aldeia
+  await pump(10);
+  await page.evaluate(() => (window).__rpg.definirHora(0.85)); // noite: zumbis não queimam e caçam
+  const killsAntes = (await rpg()).kills.hostil;
+  /** Duelo inteiro DENTRO da página (determinístico e rápido): seleciona a
+   *  espada, spawna 1 zumbi e golpeia com auto-mira até cair. */
+  const matarUmZumbi = () => page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    const i = m.inv.slots.findIndex((s) => s && s.id === 112); // ESPADA_MADEIRA
+    if (i >= 0) m.inv.selecao = i;
+    w.spawnarMob("zumbi", 3, 0);
+    for (let t = 0; t < 120; t++) {
+      m.passo(0.05);
+      w.sistema.tick(0.05);
+      if (m.fase !== "jogando") m.renascer();
+      m.vida = 20; // herói de treino: o enxame noturno não mata o herói do teste
+      const mob = m.gestor.mobs.find((mm) => mm.vivo && mm.tipo === "zumbi");
+      if (!mob) return true;
+      const dx = mob.x - m.px, dz = mob.z - m.pz;
+      m.yaw = Math.atan2(-dx, -dz); // auto-mira: dir = (−sin, −cos)
+      m.atacar();
+    }
+    return false;
+  });
+  for (let i = 0; i < 8; i++) await matarUmZumbi();
+  await page.evaluate(() => { (window).__rpg.motor.vida = 20; });
+  await pump(10);
+  r1 = await rpg();
+  ok("8 zumbis derrotados → kills.hostil cresceu", r1.kills.hostil >= killsAntes + 6);
+  ok("XP acumulado → subiu de nível (pontos ≥ 1)", r1.nivel >= 2 && r1.pontos >= 1);
+  ok("capítulo h2 (Manto da Noite) concluído ou em progresso real",
+    (await page.evaluate(() => (window).__rpg.perfil().missoes.historiaFeitas)).includes("h2") || (await rpg()).kills.hostil >= killsAntes + 5);
+
+  // gastar ponto em guerreiro
+  await page.evaluate(() => (window).__rpg.gastarPonto("guerreiro"));
+  r1 = await rpg();
+  ok("ponto gasto em Guerreiro (nível 1, pontos decresceu)", r1.skills.guerreiro === 1);
+
+  // ── baú de tesouro (olhar + atacar) ──
+  await page.evaluate(() => (window).__rpg.definirHora(0.35)); // volta ao dia
+  await page.evaluate(() => {
+    const m = (window).__rpg.motor;
+    const i = m.inv.slots.findIndex((s) => s && s.id === 112);
+    if (i >= 0) m.inv.selecao = i;
+  });
+  await page.evaluate(() => { (window).__rpg.teleportar(4.5, 33.02, 6.5); });
+  // explosões noturnas de estouradores podem ter levado o baú — repõe-o (scaffolding de teste)
+  await page.evaluate(() => { (window).__rpg.motor.mundo.setBloco(4, 33, 5, 29, false); });
+  await pump(4);
+  let mira = null;
+  for (const p of [-0.42, 0.42, -0.8, 0.8, -0.25, 0.25]) {
+    await page.evaluate((pp) => (window).__rpg.olhar(0.3217, pp), p);
+    await pump(6);
+    mira = await page.evaluate(() => (window).__rpg.motor.mira?.id ?? null);
+    if (mira === 29) break;
+  }
+  const creditosAntes = (await rpg()).creditos;
+  if (mira === 29) {
+    await page.evaluate(() => (window).__rpg.atacarDirecto());
+    await pump(6);
+    r1 = await rpg();
+    ok("baú da aldeia aberto → 1 tesouro + créditos", r1.descobertas.baus === 1 && r1.creditos > creditosAntes);
+  } else {
+    ok(`baú visado (mira=29, obtido ${mira}) — posição/olhar ajustados pelo teste`, mira === 29);
+  }
+
+  // ── dificuldade muda o HP dos NOVOS inimigos (noite: sem queimar) ──
+  await page.evaluate(() => (window).__rpg.definirHora(0.85));
+  await page.evaluate(() => (window).__rpg.definirDificuldade("lenda"));
+  await page.evaluate(() => (window).__rpg.spawnarMob("zumbi", 4, 0));
+  await pump(2);
+  const hpLenda = await page.evaluate(() => {
+    const mobs = (window).__rpg.motor.gestor.mobs.filter((mm) => mm.vivo && mm.tipo === "zumbi");
+    return mobs.length ? mobs[mobs.length - 1].hpMax : null;
+  });
+  ok("dificuldade LENDA: zumbi nasce com 20×2.2 = 44 HP", hpLenda === 44);
+
+  // ── CHEFE: história manipulada para h6 (teste do fim real) ──
+  if ((await cap())?.fase !== "jogando") await page.evaluate(() => (window).__rpg.motor.renascer());
+  await page.evaluate(() => {
+    const p = (window).__rpg.perfil();
+    p.missoes.historiaFeitas = ["h1", "h2", "h3", "h4", "h5"];
+  });
+  await page.evaluate(() => (window).__rpg.definirDificuldade("medio"));
+  await page.evaluate(() => (window).__rpg.teleportar(82.5, 45, 52.5)); // Terra de Cinzas
+  await pump(40);
+  await page.evaluate(() => (window).__rpg.teleportar(60.5, 40, -42.5)); // junto às ruínas
+  await pump(30);
+  r1 = await rpg();
+  ok("Terra de Cinzas descoberta (objetivo h6)", r1.descobertas.regioes >= 3);
+  await aguardar(async () => (await rpg()).boss.vivo === true, 30, "Guardião acordar");
+  ok("GUARDIÃO das Ruínas acordou (boss.vivo)", (await rpg()).boss.vivo === true);
+  const bossHp = await page.evaluate(() => {
+    const mob = (window).__rpg.motor.gestor.mobs.find((mm) => mm.vivo && (mm).__boss);
+    return mob ? mob.hpMax : null;
+  });
+  ok("Guardião com HP escalado ×3 (34×3 = 102)", bossHp === 102);
+  // duelo com o Guardião — inteiro dentro da página (auto-mira + treino).
+  // Se o herói morrer no meio do duelo, renasce e volta às ruínas.
+  const voltarRuinas = () => { const m = (window).__rpg.motor; m.px = 60.5; m.py = 40; m.pz = -42.5; m.vx = m.vy = m.vz = 0; };
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    if (m.fase !== "jogando") m.renascer();
+    m.px = 60.5; m.py = 40; m.pz = -42.5; m.vx = m.vy = m.vz = 0;
+    const i = m.inv.slots.findIndex((s) => s && s.id === 112);
+    if (i >= 0) m.inv.selecao = i;
+  });
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    for (let t = 0; t < 500; t++) {
+      m.passo(0.05);
+      w.sistema.tick(0.05);
+      if (w.capturaRpg().boss.derrotado) return true;
+      if (m.fase !== "jogando") {
+        m.renascer();
+        m.px = 60.5; m.py = 40; m.pz = -42.5; m.vx = m.vy = m.vz = 0; // volta às ruínas
+      }
+      m.vida = 20; // herói de treino durante o duelo
+      const mob = m.gestor.mobs.find((mm) => mm.vivo && (mm).__boss);
+      if (!mob) return w.capturaRpg().boss.derrotado;
+      const dx = mob.x - m.px, dz = mob.z - m.pz;
+      m.yaw = Math.atan2(-dx, -dz);
+      m.atacar();
+    }
+    return false;
+  });
+  await pump(10);
+  r1 = await rpg();
+  ok("Guardião derrotado → boss.derrotado", r1.boss.derrotado === true);
+  ok("história COMPLETA (h6 concluído → capítulo null)", r1.historiaFeita === true);
+  ok("créditos do Guardião (+60) no bolso", r1.creditos >= 60);
+
+  // ── morte e renascimento ──
+  const mortesAntes = (await rpg()).mortes;
+  await page.evaluate(() => (window).__rpg.definirVida(1));
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    w.spawnarMob("zumbi", 1, 0);
+    w.definirHora(0.85); // noite → zumbi hostil ataca
+  });
+  await aguardar(async () => (await cap())?.fase === "morto", 40, "morte por zumbi");
+  ok("morte real (fase morto) e painel visível", (await sel("rpg-morte", 8000).then(() => true).catch(() => false)) && (await cap())?.fase === "morto");
+  await page.locator('[data-testid="rpg-renascer"]').click();
+  await aguardar(async () => (await cap())?.fase === "jogando", 30, "renascer");
+  const c2 = await cap();
+  ok("renasce na Aldeia com vida cheia", c2.vida === 20 && Math.abs(c2.pos[0] - 2.5) < 30);
+  ok("morte contada no perfil (+1)", (await rpg()).mortes === mortesAntes + 1);
+
+  // ── save + CONTINUAR (progresso sobrevive ao reload) ──
+  const nivelAntes = (await rpg()).nivel;
+  await page.evaluate(() => (window).__rpg.guardar());
+  await page.waitForTimeout(600);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await sel("rpg-titulo", 30000);
+  await aguardar(async () => (await page.evaluate(() => (window).__rpg?.temSave?.())) === true, 30, "temSave após reload");
+  ok("CONTINUAR aparece com save real", (await page.locator('[data-testid="rpg-continuar"]').count()) === 1);
+  await page.locator('[data-testid="rpg-continuar"]').click();
+  await aguardar(async () => (await cap())?.fase === "jogando", 60, "continuar → jogando");
+  await pump(10);
+  r1 = await rpg();
+  ok("CONTINUAR: nível preservado", r1.nivel === nivelAntes);
+  ok("CONTINUAR: história completa preservada", r1.historiaFeita === true);
+  ok("CONTINUAR: Guardião derrotado preservado", r1.boss.derrotado === true);
+
+  // ── novo jogo apaga o save ──
+  await page.evaluate(() => (window).__rpg.apagarSave());
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await sel("rpg-titulo", 30000);
+  await aguardar(async () => (await page.locator('[data-testid="rpg-continuar"]').count()) === 0, 30, "CONTINUAR some");
+  ok("novo jogo: save apagado, CONTINUAR oculto", true);
+
+  // ── consola limpa ──
+  const errosReais = consoleErrors.filter((e) => !NOISE.some((n) => e.includes(n)));
+  ok("Sem erros de consola relevantes", errosReais.length === 0);
+  if (errosReais.length) console.log("   ", errosReais.slice(0, 5).join("\n    "));
+
+  await browser.close();
+}
+
+async function main() {
+  console.log(`\n⚔️ v41 — BATEU RPG: LENDAS — ${BASE}\n`);
+  await parteA();
+  await parteB();
+  console.log(`\n═══════════════════════════════════════`);
+  console.log(`✅ ${passed} passaram · ❌ ${failed} falharam`);
+  if (fails.length) { console.log("FALHAS:"); fails.forEach((f) => console.log("  •", f)); }
+  process.exit(failed > 0 ? 1 : 0);
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });

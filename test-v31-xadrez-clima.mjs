@@ -3,7 +3,8 @@
 // · Puzzle de Xadrez do Dia (lichess.org/api/puzzle/daily)
 //   — formato confirmado empiricamente com chess.js
 //   (fen = posição DEPOIS da jogada do adversário; solution = linha UCI)
-// · Clima Real no BateuCraft (Open-Meteo: geocoding + forecast)
+// · Clima Real no BATEU RPG (Open-Meteo: geocoding + forecast) — a parte
+//   do BateuCraft foi REFORMADA com o jogo (substituído pelo BATEU RPG na v41)
 // Mocks determinísticos por cenário + smokes REAIS:
 //   lichess 200 ✅ e geocoding 200 ✅ validados com curl em 2026-11-02;
 //   forecast com 429 do IP partilhado → SKIP honesto (documentado).
@@ -115,8 +116,13 @@ async function main() {
     route.fulfill({ json: PUZZLES[cenarioPuzzle] });
   };
   await page.route(/lichess\.org\/api\/puzzle\/daily/, rotaLichess);
-  await page.route(/geocoding-api\.open-meteo\.com\/v1\/search/, (route) =>
-    route.fulfill({ json: { results: CIDADES.map(({ name, country, admin1, latitude, longitude }) => ({ name, country, admin1, latitude, longitude })) } }));
+  await page.route(/geocoding-api\.open-meteo\.com\/v1\/search/, (route) => {
+    const q = (new URL(route.request().url()).searchParams.get("name") ?? "").toLowerCase();
+    const rs = CIDADES
+      .filter((c) => !q || c.name.toLowerCase().includes(q))
+      .map(({ name, country, admin1, latitude, longitude }) => ({ name, country, admin1, latitude, longitude }));
+    route.fulfill({ json: { results: rs } });
+  });
   const forecastHandler = (route) => {
     const u = new URL(route.request().url());
     const lat = parseFloat(u.searchParams.get("latitude") ?? "0");
@@ -261,121 +267,63 @@ async function main() {
   ok("Sem scroll horizontal a 375px", overflowX <= 2);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  // ══════════════ 6. CLIMA REAL NO BATEUCRAFT ══════════════
-  console.log("\n— 6. Clima Real no BateuCraft (Open-Meteo mock) —");
+  // ══════════════ 6. CLIMA REAL NO BATEU RPG ══════════════
+  console.log("\n— 6. Clima Real no BATEU RPG (Open-Meteo mock) —");
   await limparCaches();
   await recarregar(`${BASE}/lives?game=mmorpg`);
-  await esperarSel("bc-jogar", 60000);
-  await page.locator('[data-testid="bc-jogar"]').click();
-  await page.waitForTimeout(1500);
-  const meteo = () => page.evaluate(() => (window).__blocos?.meteo?.());
-  const climaEstado = () => page.evaluate(() => (window).__blocos?.climaEstado?.());
+  await esperarSel("rpg-clima-input", 30000);
+  const meteo = () => page.evaluate(() => (window).__rpg?.meteo?.());
+  const climaEstado = () => page.evaluate(() => (window).__rpg?.climaEstado?.());
+  ok("Menu do RPG abre com campo de clima real", true);
 
-  /** Abre a pausa de forma determinística (com diagnóstico se o modal fugir). */
-  const abrirPausaSegura = async () => {
-    await page.evaluate(() => { (window).__blocos?.abrirPausa?.(); });
-    try {
-      await esperarSel("bc-modal-pausa", 15000);
-    } catch {
-      const diag = await page.evaluate(() => ({
-        pausado: (window).__blocos?.motor?.pausado,
-        fase: (window).__blocos?.captura?.()?.fase,
-        modal: (window).__blocos?.modalAtual?.(),
-        modaisNoDom: document.querySelectorAll('[data-testid="bc-modal-pausa"]').length,
-        portalsCraft: document.querySelectorAll("body > div.fixed.inset-0").length,
-        temCanvas: !!document.querySelector('[data-testid="bc-canvas"]'),
-        url: location.href, vw: innerWidth,
-      }));
-      console.log("  [diagnóstico] modal não ficou aberto:", JSON.stringify(diag));
-      // amostragem: flicker ou desapareceu para sempre?
-      for (let i = 0; i < 8; i++) {
-        await page.waitForTimeout(250);
-        const s = await page.evaluate(() => ({
-          dom: document.querySelectorAll('[data-testid="bc-modal-pausa"]').length,
-          modal: (window).__blocos?.modalAtual?.(),
-          p: (window).__blocos?.motor?.pausado,
-        }));
-        console.log(`  [amostra ${i}] dom:${s.dom} modal:${s.modal} pausado:${s.p}`);
-      }
-      await page.evaluate(() => { (window).__blocos?.abrirPausa?.(); });
-      await esperarSel("bc-modal-pausa", 15000);
-    }
-  };
+  // Luanda: código 95 → trovoada → tempestade
+  await page.fill('[data-testid="rpg-clima-input"]', "Luanda");
+  await page.locator('[data-testid="rpg-clima-ativar"]').click();
+  await esperarSel("rpg-clima-cidade", 15000);
+  let estado = await climaEstado();
+  ok("Geocoding devolve a cidade pedida (Luanda)", estado?.ativa === true && estado?.cidade === "Luanda");
+  ok("Código WMO 95 → meteoJogo TEMPESTADE", estado?.clima?.meteoJogo === "tempestade");
 
-  /** Clique nativo determinístico (o modal da pausa pode re-renderizar sob o Playwright). */
-  const clicar = (sel) => page.evaluate((s) => document.querySelector(`[data-testid="${s}"]`)?.click(), sel);
-  await abrirPausaSegura();
-  await clicar("bc-clima-btn");
-  await esperarSel("bc-modal-clima", 15000, () => clicar("bc-clima-btn"));
-  ok("Modal Clima Real abre da pausa", true);
-
-  await page.fill('[data-testid="bc-clima-input"]', "Luanda");
-  await clicar("bc-clima-buscar");
-  await esperarSel("bc-clima-result-0", 15000, () => clicar("bc-clima-buscar"));
-  ok("Geocoding devolve 4 cidades reais mockadas", (await page.locator('[data-testid="bc-clima-resultados"] button').count()) === 4);
-  await clicar("bc-clima-result-0"); // Luanda, código 95
-  await esperarSel("bc-clima-temp", 15000, () => clicar("bc-clima-result-0"));
-  const estadoTxt = await page.locator('[data-testid="bc-clima-estado"]').innerText();
-  ok("Temperatura REAL (27,4°C) com locale pt-PT", /27[.,]4/.test(estadoTxt));
-  ok("Código WMO 95 → trovoada → jogo TEMPESTADE", estadoTxt.includes("TEMPESTADE"));
-  ok("Motor recebeu meteo tempestade", (await meteo()) === "tempestade");
-  ok("HUD mostra chip real (27°C)", (await page.locator('[data-testid="bc-clima-hud"]').innerText()).includes("27"));
-  ok("Atribuição Open-Meteo CC BY 4.0 no painel", estadoTxt.includes("Open-Meteo"));
+  // começar o jogo → o motor recebe o clima real do menu
+  await page.evaluate(() => { (window).__rpg?.iniciar?.(); });
+  await page.waitForFunction(() => (window).__rpg?.motor?.fase === "jogando", null, { timeout: 30000 });
+  await page.waitForFunction(() => (window).__rpg?.meteo?.() === "tempestade", null, { timeout: 15000 });
+  ok("Motor recebeu meteo tempestade (clima REAL)", true);
 
   // outra cidade → refetch imediato (chuva, código 61)
-  await page.fill('[data-testid="bc-clima-input"]', "Benguela");
-  await clicar("bc-clima-buscar");
-  await esperarSel("bc-clima-result-1", 15000, () => clicar("bc-clima-buscar"));
-  await clicar("bc-clima-result-1");
-  await page.waitForFunction(() => (window).__blocos?.meteo?.() === "chuva", undefined, { timeout: 15000 });
+  await page.evaluate(() => (window).__rpg?.climaAtivar?.("Benguela"));
+  await page.waitForFunction(() => (window).__rpg?.meteo?.() === "chuva", null, { timeout: 15000 });
   ok("Código WMO 61 → chuva no motor", true);
-  await page.waitForFunction(() => (document.querySelector('[data-testid="bc-clima-hud"]')?.textContent ?? "").includes("20"), undefined, { timeout: 10000 });
-  ok("HUD atualiza para 20°C", true);
 
   // neve: honestidade — o jogo não simula neve
-  await page.fill('[data-testid="bc-clima-input"]', "Menongue");
-  await clicar("bc-clima-buscar");
-  await esperarSel("bc-clima-result-3", 15000, () => clicar("bc-clima-buscar"));
-  await clicar("bc-clima-result-3");
-  await page.waitForFunction(() => (document.querySelector('[data-testid="bc-clima-estado"]')?.textContent ?? "").includes("Neve"), undefined, { timeout: 15000 });
-  const estadoNeve = await page.locator('[data-testid="bc-clima-estado"]').innerText();
-  ok("Neve WMO 73: descrição real + nota honesta", estadoNeve.includes("Neve") && estadoNeve.includes("não simulada"));
-  await page.waitForFunction(() => (window).__blocos?.meteo?.() === "limpo", undefined, { timeout: 10000 });
-  ok("Neve NUNCA finge chuva (jogo: LIMPO)", estadoNeve.includes("LIMPO"));
+  await page.evaluate(() => (window).__rpg?.climaAtivar?.("Menongue"));
+  await page.waitForFunction(() => (window).__rpg?.meteo?.() === "limpo", null, { timeout: 10000 });
+  estado = await climaEstado();
+  ok("Neve WMO 73: o jogo NUNCA finge chuva (LIMPO)", estado?.clima?.meteoJogo === "limpo" && estado?.clima?.codigoWmo === 73);
 
-  // persistência: recarregar mantém a cidade ativa e volta a pedir o clima
+  // persistência: recarregar mantém a cidade ativa
   await recarregar(`${BASE}/lives?game=mmorpg`);
-  await esperarSel("bc-jogar", 60000);
-  await page.locator('[data-testid="bc-jogar"]').click();
-  await page.waitForTimeout(1000);
+  await esperarSel("rpg-clima-cidade", 30000);
   const persistida = await climaEstado();
   ok("Clima real persiste após recarregar (cidade)", persistida?.ativa === true && persistida?.cidade === "Menongue");
-  await abrirPausaSegura();
-  ok("Botão da pausa mostra CLIMA REAL: ON", (await page.locator('[data-testid="bc-clima-btn"]').innerText()).includes("ON"));
-  await clicar("bc-clima-btn");
-  await esperarSel("bc-clima-estado", 15000, () => clicar("bc-clima-btn"));
 
   // erro honesto: forecast em baixo → mensagem real, motor segue ciclo simulado
   await page.route(/api\.open-meteo\.com\/v1\/forecast/, (route) => route.abort());
-  await page.fill('[data-testid="bc-clima-input"]', "Namibe");
-  await clicar("bc-clima-buscar");
-  await esperarSel("bc-clima-result-2", 15000, () => clicar("bc-clima-buscar"));
-  await clicar("bc-clima-result-2");
-  await esperarSel("bc-clima-erro", 15000, () => clicar("bc-clima-result-2"));
-  const erroTxt = await page.locator('[data-testid="bc-clima-erro"]').innerText();
+  await page.evaluate(() => (window).__rpg?.climaAtivar?.("Namibe"));
+  await esperarSel("rpg-clima-erro", 15000);
+  const erroTxt = await page.locator('[data-testid="rpg-clima-erro"]').innerText();
   ok("Forecast em baixo → erro HONESTO (sem fingir)", erroTxt.includes("Open-Meteo"));
   ok("Motor segue ciclo simulado em erro", ["limpo", "chuva", "tempestade"].includes(await meteo()));
   await page.unroute(/api\.open-meteo\.com\/v1\/forecast/);
   await page.route(/api\.open-meteo\.com\/v1\/forecast/, forecastHandler);
 
   // desativar: volta ao clima simulado do motor
-  await clicar("bc-clima-desativar");
+  await page.locator('[data-testid="rpg-clima-desativar"]').click();
   await page.waitForTimeout(400);
   const desativado = await climaEstado();
   ok("Desativar: ativa=false e sem cidade", desativado?.ativa === false && desativado?.cidade === null);
-  ok("HUD perde o chip real", (await page.locator('[data-testid="bc-clima-hud"]').count()) === 0);
-  ok("Persistência gravada como OFF", await page.evaluate(() => {
-    try { return JSON.parse(localStorage.getItem("bateumz.climaReal") || "{}").ativa === false; } catch { return false; }
+  ok("Persistência gravada como OFF (chave removida ou ativa=false)", await page.evaluate(() => {
+    try { const raw = localStorage.getItem("bateumz.climaReal"); if (!raw) return true; return JSON.parse(raw).ativa === false; } catch { return false; }
   }));
 
   // ══════════════ consola ══════════════

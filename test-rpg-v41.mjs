@@ -271,11 +271,38 @@ async function parteB() {
   ok("legenda do mapa: miombo descoberto (nome real) · cinzas ainda ocultas (???)",
     (await page.locator('[data-testid="rpg-mapa-regiao-miombo"]').innerText()).includes("Miombo Profundo") &&
     (await page.locator('[data-testid="rpg-mapa-regiao-cinzas"]').innerText()).includes("???"));
+
+  // ── v44 · BASE DE TERRENO REAL do mapa (amostragem honesta do mundo) ──
+  const base1 = await page.evaluate(() => (window).__rpg?.mapaBase?.());
+  ok("mapa base amostrado: >=40k amostras reais de alturaTerreno+bioma", !!base1 && base1.amostras >= 40000);
+  console.log(`   ↳ mapaBase: ${base1?.amostras} amostras · água ${base1?.agua} · rocha ${base1?.rocha} · floresta ${base1?.floresta} · ${base1?.ms}ms`);
+  ok("mapa base: água do mar da costa presente (dados reais)", !!base1 && base1.agua > 30);
+  ok("mapa base: rocha/picos da serra presentes", !!base1 && base1.rocha > 10);
+  ok("mapa base: floresta do miombo presente", !!base1 && base1.floresta > 30);
+  const temAguaPx = await page.evaluate(() => {
+    const cv = document.querySelector('[data-testid="rpg-mapa-canvas"]');
+    if (!cv) return false;
+    const cx2 = cv.getContext("2d");
+    const d = cx2.getImageData(0, 0, cv.width, cv.height).data;
+    let azuis = 0;
+    // água real (mesmo sob o véu das regiões não descobertas): b domina e r
+    // fica baixo — a rocha clara da serra não passa (r alto).
+    for (let i = 0; i < d.length; i += 40) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (b >= 30 && b <= 170 && r < 60 && b - r >= 20 && b - g >= 12) azuis++;
+    }
+    return azuis > 30;
+  });
+  ok("canvas do mapa tem água pintada (pixels azuis do terreno real)", temAguaPx);
+  ok("mapa mostra a fonte dos dados (terreno real · semente fixa)",
+    (await page.locator('[data-testid="rpg-mapa-fonte"]').innerText()).includes("semente fixa"));
   await page.keyboard.press("Escape");
   await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (ESC)");
   await page.keyboard.press("m");
   await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 1, 10, "mapa reabriu (M)");
   ok("tecla M abre o mapa e volta a fechar", true);
+  const base2 = await page.evaluate(() => (window).__rpg?.mapaBase?.());
+  ok("mapa base em cache: reabrir NÃO re-amostra (mesma base de terreno)", !!base2 && base2.amostras === base1.amostras && base2.ms === base1.ms);
   await page.keyboard.press("m");
   await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (M)");
 

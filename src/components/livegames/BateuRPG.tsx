@@ -16,7 +16,7 @@ import {
 } from "@/game/rpg/core";
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
-import { ITENS } from "@/game/blocos/constants";
+import { ITENS, NIVEL_MAR } from "@/game/blocos/constants";
 import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
@@ -293,6 +293,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         throw new Error("Cidade não encontrada");
       }),
       climaDesativar: () => desativarClimaReal(),
+      // v44: contagens honestas da base de terreno real do mapa
+      mapaBase: () => ({ ...mapaBaseInfoRef.current }),
     };
     return () => { try { delete (window as any).__rpg; } catch { /* ignore */ } };
   }, []);
@@ -471,6 +473,49 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const MeteoIcone = cap ? (METEO_ICONE[cap.meteo] ?? CloudSun) : CloudSun;
 
   // ── Mapa do mundo (canvas) — redesenhado a cada frame enquanto aberto ──
+  // v44: base de TERRENO REAL amostrada do mundo (alturaTerreno+bioma do
+  // MundoRPG — os mesmos dados que geram os chunks, semente SEED_RPG) pintada
+  // UMA vez num canvas fora do ecrã e copiada com drawImage a cada frame.
+  // Nada inventado: água onde o terreno fica sob o NIVEL_MAR, areia na faixa
+  // da costa, rocha/picos da serra por altura real, floresta do miombo e
+  // planície pelo bioma real. Contagens honestas expostas no __rpg.mapaBase.
+  const mapaBaseRef = useRef<HTMLCanvasElement | null>(null);
+  const mapaBaseInfoRef = useRef<{ amostras: number; agua: number; rocha: number; floresta: number; ms: number }>(
+    { amostras: 0, agua: 0, rocha: 0, floresta: 0, ms: 0 });
+  const renderMapaBase = useCallback(() => {
+    const t0 = performance.now();
+    const T = 660, EXT = 132, PASSO = 3; // 3px ≈ 1,2 blocos de mundo
+    const cv = document.createElement("canvas");
+    cv.width = T; cv.height = T;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    const mundo = motorRef.current.mundo;
+    let amostras = 0, agua = 0, rocha = 0, floresta = 0;
+    for (let sy = 0; sy < T; sy += PASSO) {
+      for (let sx = 0; sx < T; sx += PASSO) {
+        const x = (sx / T) * (2 * EXT) - EXT;
+        const z = (sy / T) * (2 * EXT) - EXT;
+        const h = mundo.alturaTerreno(x, z);
+        const b = mundo.bioma(x, z);
+        amostras++;
+        let cor: string;
+        if (h < NIVEL_MAR - 6) { cor = "#16336e"; agua++; }
+        else if (h < NIVEL_MAR - 1) { cor = "#1e4a94"; agua++; }
+        else if (h <= NIVEL_MAR + 1) cor = "#d3c088";               // areia da costa
+        else if (h > 66) { cor = "#c9d2dc"; rocha++; }              // picos da serra
+        else if (h > 52) { cor = "#8b93a1"; rocha++; }              // rocha alta da serra
+        else if (b === "montanha") { cor = "#7d8590"; rocha++; }
+        else if (b === "floresta") { cor = h % 2 ? "#2b5e33" : "#275431"; floresta++; }
+        else if (b === "deserto") cor = "#c0a96b";
+        else cor = h % 2 ? "#3f7a36" : "#397031";                   // planície
+        ctx.fillStyle = cor;
+        ctx.fillRect(sx, sy, PASSO, PASSO);
+      }
+    }
+    mapaBaseRef.current = cv;
+    mapaBaseInfoRef.current = { amostras, agua, rocha, floresta, ms: Math.round(performance.now() - t0) };
+  }, []);
+
   const desenharMapa = useCallback(() => {
     const cv = mapaCanvasRef.current;
     if (!cv) return;
@@ -481,8 +526,10 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     const EXT = 132; // mundo de −132 a +132 (cobre todas as regiões)
     const px = (x: number) => ((x + EXT) / (2 * EXT)) * T;
     const pz = (z: number) => ((z + EXT) / (2 * EXT)) * T;
-    ctx.fillStyle = "#0a140d";
-    ctx.fillRect(0, 0, T, T);
+    // v44: base de terreno real (amostrada uma vez, cacheada fora do ecrã)
+    if (!mapaBaseRef.current) renderMapaBase();
+    if (mapaBaseRef.current) ctx.drawImage(mapaBaseRef.current, 0, 0);
+    else { ctx.fillStyle = "#0a140d"; ctx.fillRect(0, 0, T, T); }
     // grelha suave
     ctx.strokeStyle = "rgba(255,255,255,0.05)";
     ctx.lineWidth = 1;
@@ -493,22 +540,23 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     const s = sistemaRef.current;
     const desc = s.perfil.descobertas;
     // Terras Selvagens (fora das regiões)
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = "bold 13px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Terras Selvagens", px(-98), pz(-6));
     ctx.fillText("Terras Selvagens", px(96), pz(-84));
-    // regiões
+    // regiões (v44: terreno real por baixo — descoberta leva um tint suave da
+    // cor da região; não descoberta leva um véu escuro, só «???» + Nv)
     for (const r of REGIOES) {
       const descoberta = desc.regioes.includes(r.id);
       ctx.beginPath();
       ctx.arc(px(r.cx), pz(r.cz), (r.raio / (2 * EXT)) * T, 0, Math.PI * 2);
-      ctx.fillStyle = r.cor + (descoberta ? "33" : "15");
+      ctx.fillStyle = descoberta ? r.cor + "26" : "rgba(4,8,6,0.62)";
       ctx.fill();
       ctx.strokeStyle = descoberta ? r.cor : "rgba(255,255,255,0.12)";
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.fillStyle = descoberta ? "#ffffff" : "rgba(255,255,255,0.35)";
+      ctx.fillStyle = descoberta ? "#ffffff" : "rgba(255,255,255,0.4)";
       ctx.font = "bold 15px sans-serif";
       ctx.fillText(descoberta ? r.nome : "???", px(r.cx), pz(r.cz) - 4);
       ctx.font = "bold 11px sans-serif";
@@ -1042,6 +1090,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     </div>
                     <p className="text-white/45 text-[10px]">
                       ★ objetivo atual · ◆ locais com baú · seta branca = tu. Descobertas: {rpg.descobertas.regioes}/{rpg.totalRegioes} regiões · {rpg.descobertas.pois}/{rpg.totalPois} locais · {rpg.descobertas.baus}/{rpg.totalBaus} baús
+                    </p>
+                    <p className="text-white/30 text-[9px]" data-testid="rpg-mapa-fonte">
+                      Terreno real amostrado do mundo (semente fixa — água, costa, serra e miombo são os mesmos dados que geram os blocos) · regiões não descobertas ficam cobertas até lá chegares.
                     </p>
                   </div>
                 )}

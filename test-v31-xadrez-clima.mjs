@@ -297,7 +297,16 @@ async function main() {
 
   // neve: honestidade — o jogo não simula neve
   await page.evaluate(() => (window).__rpg?.climaAtivar?.("Menongue"));
-  await page.waitForFunction(() => (window).__rpg?.meteo?.() === "limpo", null, { timeout: 10000 });
+  // FURO de timing apanhado em corridas repetidas: o wait do MOTOR só
+  // (meteo===«limpo») era satisfeito pelo ciclo natural chuva→limpo do
+  // motor, ANTES do climaAtivar resolver — e a leitura apanhava a cidade
+  // anterior (Luanda, chuva). Esperar pelo ESTADO do clima real (cidade +
+  // código 73 + mapeamento limpo) e só depois o motor.
+  await page.waitForFunction(() => {
+    const e = (window).__rpg?.climaEstado?.();
+    return e?.ativa && e?.cidade === "Menongue" && e?.clima?.codigoWmo === 73 && e?.clima?.meteoJogo === "limpo";
+  }, null, { timeout: 15000 });
+  await page.waitForFunction(() => (window).__rpg?.meteo?.() === "limpo", null, { timeout: 15000 });
   estado = await climaEstado();
   ok("Neve WMO 73: o jogo NUNCA finge chuva (LIMPO)", estado?.clima?.meteoJogo === "limpo" && estado?.clima?.codigoWmo === 73);
 

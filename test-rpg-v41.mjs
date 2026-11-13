@@ -213,6 +213,23 @@ async function parteB() {
   await page.locator('[data-testid="rpg-dif-medio"]').click();
   ok("CONTINUAR oculto sem save (honesto)", (await page.locator('[data-testid="rpg-continuar"]').count()) === 0);
 
+  // ── menu v42: COMO JOGAR + atribuição ──
+  await page.locator('[data-testid="rpg-como-jogar"]').click();
+  await sel("rpg-ajuda-menu", 5000);
+  const ajudaTxt = await page.locator('[data-testid="rpg-ajuda-menu"]').innerText();
+  ok("COMO JOGAR abre no menu com controlos reais (WASD + joystick + teclas)",
+    ajudaTxt.includes("WASD") && ajudaTxt.includes("Joystick") && ajudaTxt.includes("GUARDIÃO"));
+  ok("ajuda credencia as fontes (Open-Meteo + Veloren GPLv3 + motor partilhado)",
+    (await page.locator('[data-testid="rpg-ajuda-fontes"]').innerText()).includes("Open-Meteo") &&
+    (await page.locator('[data-testid="rpg-ajuda-fontes"]').innerText()).includes("Veloren"));
+  await page.locator('[data-testid="rpg-fechar-ajuda-menu"]').click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-ajuda-menu"]').count()) === 0, 10, "ajuda fechou");
+  ok("rodapé de atribuição v42 no menu (Open-Meteo + Veloren + CIDADE BATEU)",
+    (await page.locator('[data-testid="rpg-atribuicao"]').innerText()).includes("Open-Meteo") &&
+    (await page.locator('[data-testid="rpg-atribuicao"]').innerText()).includes("Veloren") &&
+    (await page.locator('[data-testid="rpg-atribuicao"]').innerText()).includes("CIDADE BATEU"));
+  ok("recomeçar não aparece sem save (só com progresso real)", (await page.locator('[data-testid="rpg-recomecar"]').count()) === 0);
+
   // ── começar (médio) ──
   await page.locator('[data-testid="rpg-jogar"]').click();
   await aguardar(async () => (await cap())?.fase === "jogando", 60, "motor jogando");
@@ -245,6 +262,22 @@ async function parteB() {
     return p.then((v) => v >= 65);
   })());
   void xpAntes;
+
+  // ── MAPA DO MUNDO (menu novo da v42) ──
+  await page.locator('[data-testid="rpg-btn-mapa"]').click();
+  await sel("rpg-mapa", 5000);
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa-canvas"]').getAttribute("width")) === "660", 10, "mapa desenhado");
+  ok("MAPA do mundo abre do HUD com canvas desenhado (660px)", true);
+  ok("legenda do mapa: miombo descoberto (nome real) · cinzas ainda ocultas (???)",
+    (await page.locator('[data-testid="rpg-mapa-regiao-miombo"]').innerText()).includes("Miombo Profundo") &&
+    (await page.locator('[data-testid="rpg-mapa-regiao-cinzas"]').innerText()).includes("???"));
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (ESC)");
+  await page.keyboard.press("m");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 1, 10, "mapa reabriu (M)");
+  ok("tecla M abre o mapa e volta a fechar", true);
+  await page.keyboard.press("m");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (M)");
 
   // ── combate → XP → nível → habilidade ──
   await page.evaluate(() => (window).__rpg.teleportar(2.5, 40, 4.5)); // volta à aldeia
@@ -284,6 +317,26 @@ async function parteB() {
   await page.evaluate(() => (window).__rpg.gastarPonto("guerreiro"));
   r1 = await rpg();
   ok("ponto gasto em Guerreiro (nível 1, pontos decresceu)", r1.skills.guerreiro === 1);
+
+  // ── pausa v42: sessão + MAPA/AJUDA ──
+  await page.locator('[data-testid="rpg-btn-pausa"]').click();
+  await sel("rpg-pausa-info", 5000);
+  ok("pausa mostra a sessão (dificuldade MÉDIO, nível, história)",
+    (await page.locator('[data-testid="rpg-pausa-dif"]').innerText()).includes("MÉDIO") &&
+    (await page.locator('[data-testid="rpg-pausa-info"]').innerText()).includes("Nível"));
+  await page.locator('[data-testid="rpg-pausa-mapa"]').click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 1, 10, "mapa pela pausa");
+  ok("MAPA abre a partir da pausa", true);
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou");
+  await page.keyboard.press("Escape"); // reabre a pausa
+  await aguardar(async () => (await page.locator('[data-testid="rpg-pausa-ajuda"]').count()) === 1, 10, "pausa reabriu");
+  await page.locator('[data-testid="rpg-pausa-ajuda"]').click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-modal"]').innerText()).includes("COMO JOGAR"), 10, "ajuda pela pausa");
+  ok("AJUDA abre a partir da pausa (controlos + fontes no mesmo painel)",
+    (await page.locator('[data-testid="rpg-modal"]').innerText()).includes("WASD"));
+  await page.keyboard.press("Escape"); // fecha e retoma o jogo
+  await aguardar(async () => (await page.locator('[data-testid="rpg-modal"]').count()) === 0, 10, "modal fechou");
 
   // ── baú de tesouro (olhar + atacar) ──
   await page.evaluate(() => (window).__rpg.definirHora(0.35)); // volta ao dia
@@ -403,6 +456,12 @@ async function parteB() {
   await sel("rpg-titulo", 30000);
   await aguardar(async () => (await page.evaluate(() => (window).__rpg?.temSave?.())) === true, 30, "temSave após reload");
   ok("CONTINUAR aparece com save real", (await page.locator('[data-testid="rpg-continuar"]').count()) === 1);
+  // recomeçar com confirmação (UI honesta da v42) — primeiro "manter", depois o teste programático apaga
+  await page.locator('[data-testid="rpg-recomecar"]').click();
+  await sel("rpg-recomecar-confirm", 5000);
+  await page.locator('[data-testid="rpg-recomecar-confirm"] button:has-text("manter o save")').click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-recomecar-confirm"]').count()) === 0, 10, "confirmação fechou");
+  ok("recomeçar pede confirmação · \"manter o save\" preserva o CONTINUAR", (await page.locator('[data-testid="rpg-continuar"]').count()) === 1);
   await page.locator('[data-testid="rpg-continuar"]').click();
   await aguardar(async () => (await cap())?.fase === "jogando", 60, "continuar → jogando");
   await pump(10);

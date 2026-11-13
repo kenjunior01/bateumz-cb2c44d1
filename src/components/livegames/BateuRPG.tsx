@@ -17,7 +17,7 @@ import {
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
 import { ITENS } from "@/game/blocos/constants";
-import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp } from "lucide-react";
+import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
 interface Props {
@@ -124,7 +124,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const [fase, setFase] = useState<"inicio" | "jogando" | "morto">("inicio");
   const [cap, setCap] = useState<ReturnType<Motor["captura"]> | null>(null);
   const [rpg, setRpg] = useState<CapturaRpg | null>(null);
-  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa">(null);
+  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda">(null);
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
   const [aCarregar, setACarregar] = useState(false);
@@ -139,6 +139,11 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const [buscaCidade, setBuscaCidade] = useState("");
   const [buscando, setBuscando] = useState(false);
   const modalRef = useRef<null | typeof modal>(null);
+  const [ajudaMenu, setAjudaMenu] = useState(false);
+  const [confRecomecar, setConfRecomecar] = useState(false);
+  const mapaCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rpgRef = useRef<CapturaRpg | null>(null);
+  const desenharMapaRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
   useEffect(() => { modalRef.current = modal; }, [modal]);
   const [creditosEnviados, setCreditosEnviados] = useState(0);
 
@@ -197,7 +202,10 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         sistemaRef.current.tick(dt);
         if (canvasRef.current) m.render(dt);
         // HUD a ~12 Hz (o motor emite o resto)
-        setRpg(sistemaRef.current.captura());
+        const capturaAgora = sistemaRef.current.captura();
+        rpgRef.current = capturaAgora;
+        setRpg(capturaAgora);
+        if (modalRef.current === "mapa") desenharMapaRef.current();
       }
     };
     raf = requestAnimationFrame(ciclo);
@@ -333,6 +341,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       if (k >= "1" && k <= "9") m.inv.selecao = parseInt(k) - 1;
       if (k === "j") setModal((v) => (v === "missoes" ? null : "missoes"));
       if (k === "k") setModal((v) => (v === "habilidades" ? null : "habilidades"));
+      if (k === "m") setModal((v) => (v === "mapa" ? null : "mapa"));
       if (k === "escape") {
         if (modalRef.current === "pausa") { m.pausado = false; setModal(null); }
         else if (modalRef.current) { setModal(null); m.pausado = false; }
@@ -461,6 +470,144 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const s = sistemaRef.current;
   const MeteoIcone = cap ? (METEO_ICONE[cap.meteo] ?? CloudSun) : CloudSun;
 
+  // ── Mapa do mundo (canvas) — redesenhado a cada frame enquanto aberto ──
+  const desenharMapa = useCallback(() => {
+    const cv = mapaCanvasRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    const T = 660;
+    if (cv.width !== T) { cv.width = T; cv.height = T; }
+    const EXT = 132; // mundo de −132 a +132 (cobre todas as regiões)
+    const px = (x: number) => ((x + EXT) / (2 * EXT)) * T;
+    const pz = (z: number) => ((z + EXT) / (2 * EXT)) * T;
+    ctx.fillStyle = "#0a140d";
+    ctx.fillRect(0, 0, T, T);
+    // grelha suave
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 1;
+    for (let g = -120; g <= 120; g += 30) {
+      ctx.beginPath(); ctx.moveTo(px(g), 0); ctx.lineTo(px(g), T); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, pz(g)); ctx.lineTo(T, pz(g)); ctx.stroke();
+    }
+    const s = sistemaRef.current;
+    const desc = s.perfil.descobertas;
+    // Terras Selvagens (fora das regiões)
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.font = "bold 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Terras Selvagens", px(-98), pz(-6));
+    ctx.fillText("Terras Selvagens", px(96), pz(-84));
+    // regiões
+    for (const r of REGIOES) {
+      const descoberta = desc.regioes.includes(r.id);
+      ctx.beginPath();
+      ctx.arc(px(r.cx), pz(r.cz), (r.raio / (2 * EXT)) * T, 0, Math.PI * 2);
+      ctx.fillStyle = r.cor + (descoberta ? "33" : "15");
+      ctx.fill();
+      ctx.strokeStyle = descoberta ? r.cor : "rgba(255,255,255,0.12)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = descoberta ? "#ffffff" : "rgba(255,255,255,0.35)";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(descoberta ? r.nome : "???", px(r.cx), pz(r.cz) - 4);
+      ctx.font = "bold 11px sans-serif";
+      ctx.fillStyle = descoberta ? r.cor : "rgba(255,255,255,0.3)";
+      ctx.fillText(`Nv ${r.nivel}`, px(r.cx), pz(r.cz) + 12);
+    }
+    // POIs (◆ baús)
+    for (const p of POIS) {
+      const descoberto = desc.pois.includes(p.id);
+      ctx.save();
+      ctx.translate(px(p.x), pz(p.z));
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = descoberto ? "#fbbf24" : "rgba(255,255,255,0.25)";
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.restore();
+      if (descoberto) {
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.font = "bold 10px sans-serif";
+        ctx.fillText(p.nome, px(p.x), pz(p.z) - 9);
+      }
+    }
+    // objetivo atual (★)
+    const obj = rpgRef.current?.objetivo;
+    if (obj && Number.isFinite(obj.x)) {
+      ctx.fillStyle = "#f472b6";
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillText("★", px(obj.x), pz(obj.z) + 7);
+    }
+    // jogador (seta branca; frente = −z a yaw 0 → rotação −yaw)
+    const m = motorRef.current;
+    ctx.save();
+    ctx.translate(px(m.px), pz(m.pz));
+    ctx.rotate(-m.yaw);
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -10); ctx.lineTo(7, 8); ctx.lineTo(0, 4); ctx.lineTo(-7, 8);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // Norte
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillText("N", T - 20, 22);
+  }, []);
+  useEffect(() => { desenharMapaRef.current = desenharMapa; }, [desenharMapa]);
+
+  // ── Como jogar — usado no modal (a jogar) e no menu inicial ──
+  const renderAjuda = () => (
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="text-white/80 text-xs font-bold mb-1 flex items-center gap-1"><Trophy size={13} /> O OBJETIVO DA LENDA</p>
+        <p className="text-white/60 text-[11px] leading-relaxed">Explora 6 regiões (Nv 1–5) e 8 locais, abre os 9 baús de tesouro, vive 6 capítulos de história e derrota o GUARDIÃO nas Ruínas de Kivulivuli. Cada baú rende créditos para a plataforma; cada caçada, noite sobrevivida e capítulo rende XP até ao nível 30.</p>
+      </div>
+      <div>
+        <p className="text-white/80 text-xs font-bold mb-1">CONTROLOS — COMPUTADOR</p>
+        <ul className="text-white/60 text-[11px] grid grid-cols-2 gap-x-2 gap-y-0.5">
+          <li>WASD — mover</li>
+          <li>Espaço — saltar</li>
+          <li>Shift — correr</li>
+          <li>Z — zoom</li>
+          <li>Rato — olhar</li>
+          <li>Clique esq. — minerar/atacar</li>
+          <li>Clique dir. — comer</li>
+          <li>1–9 / roda — hotbar</li>
+          <li>J — missões</li>
+          <li>K — habilidades</li>
+          <li>M — mapa do mundo</li>
+          <li>ESC — pausa</li>
+          <li>F5 — câmara</li>
+        </ul>
+      </div>
+      <div>
+        <p className="text-white/80 text-xs font-bold mb-1">CONTROLOS — TELEMÓVEL</p>
+        <ul className="text-white/60 text-[11px] list-disc ml-4">
+          <li>Joystick (canto inferior esquerdo) para andar; arrasta o ecrã para olhar</li>
+          <li>Botões ATACAR · SALTAR · COMER; toca nos itens da hotbar</li>
+          <li>Botões MISSÕES · DIÁRIO · MAPA · HAB. · pausa no topo do HUD</li>
+        </ul>
+      </div>
+      <div>
+        <p className="text-white/80 text-xs font-bold mb-1">COMO SE PROGRESSA</p>
+        <ul className="text-white/60 text-[11px] list-disc ml-4">
+          <li>XP vem de caçadas, noites sobrevividas, baús, capítulos e diárias (3 por dia, iguais para todos)</li>
+          <li>Cada nível dá 1 ponto: GUERREIRO (+dano) · EXPLORADOR (+velocidade) · SÁBIO (+XP e cura fora de combate)</li>
+          <li>A dificuldade (escolhida no menu) muda a vida e o dano dos inimigos e o valor das recompensas</li>
+          <li>O progresso guarda-se sozinho a cada 8 s neste aparelho (IndexedDB + localStorage)</li>
+          <li>Morrer não apaga a lenda: renasces na Aldeia com XP, missões e descobertas</li>
+        </ul>
+      </div>
+      <div className="border-t border-white/10 pt-2">
+        <p className="text-white/50 text-[10px] leading-relaxed" data-testid="rpg-ajuda-fontes">
+          Fontes: clima real por {OPENMETEO_ATTRIBUTION} · arquitetura de mundo aberto estudada de Veloren (GPLv3) — só a forma do skillset e a separação mundo/estado inspiraram o código, que é próprio · motor voxel partilhado com a CIDADE BATEU.
+        </p>
+      </div>
+    </div>
+  );
+
   // ══════════════════════ RENDER ══════════════════════
   return (
     <div className="fixed inset-0 z-50 bg-[#101c14] select-none" data-testid="rpg-root">
@@ -518,6 +665,23 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 </button>
               )}
             </div>
+            <button onClick={() => setAjudaMenu(true)} data-testid="rpg-como-jogar"
+              className="w-full py-2 rounded-xl font-bold text-white/80 bg-white/10 hover:bg-white/15 transition text-xs flex items-center justify-center gap-1">
+              <HelpCircle size={14} /> COMO JOGAR
+            </button>
+            {savePronto && temSave && (
+              confRecomecar ? (
+                <div className="w-full flex gap-2" data-testid="rpg-recomecar-confirm">
+                  <button onClick={() => { void s.apagarSave().then(() => { setTemSave(false); setConfRecomecar(false); }); }}
+                    className="flex-1 py-2 rounded-xl font-black text-white bg-rose-700 hover:bg-rose-600 transition text-[11px]">APAGAR E RECOMEÇAR</button>
+                  <button onClick={() => setConfRecomecar(false)}
+                    className="flex-1 py-2 rounded-xl font-bold text-white/70 bg-white/10 hover:bg-white/15 transition text-[11px]">manter o save</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfRecomecar(true)} data-testid="rpg-recomecar"
+                  className="text-white/35 underline text-[11px]">recomeçar do zero (apaga o save)</button>
+              )
+            )}
 
             {/* clima real */}
             <div className="w-full bg-black/40 rounded-2xl p-3 border border-white/10">
@@ -555,6 +719,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 <Camera size={14} /> {camaraModo === "primeira" ? "1ª PESSOA" : camaraModo === "terceira" ? "3ª PESSOA" : "OMBRO"}
               </button>
             </div>
+            <p className="text-white/25 text-[9px] text-center leading-relaxed max-w-xs" data-testid="rpg-atribuicao">
+              v42 · clima real por Open-Meteo.com · arquitetura aberta estudada de Veloren (GPLv3 — só a forma, código próprio) · motor voxel partilhado com a CIDADE BATEU
+            </p>
             <button onClick={sair} className="text-white/60 underline text-sm">Voltar à plataforma</button>
             <p className="text-white/35 text-[11px] text-center max-w-xs">Joga sem registo · o progresso (XP, missões, descobertas) fica neste aparelho — sobrevive a limpezas do localStorage via IndexedDB</p>
             <p className="text-white/30 text-[10px] text-center" data-testid="rpg-espaco">
@@ -562,6 +729,19 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 ? `Armazenamento: ${mbLegivel(espacoEst.uso)} MB usados de ${mbLegivel(espacoEst.quota)} MB`
                 : "Armazenamento: quota não revelada pelo navegador"}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ AJUDA no menu inicial ═══ */}
+      {fase === "inicio" && ajudaMenu && (
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={() => setAjudaMenu(false)}>
+          <div className="bg-[#15221a] rounded-2xl border border-white/15 max-w-lg w-full max-h-[85vh] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()} data-testid="rpg-ajuda-menu">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-white font-black text-lg flex items-center gap-2"><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</h2>
+              <button onClick={() => setAjudaMenu(false)} data-testid="rpg-fechar-ajuda-menu" className="text-white/60 hover:text-white"><X size={20} /></button>
+            </div>
+            {renderAjuda()}
           </div>
         </div>
       )}
@@ -675,11 +855,13 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 </button>
               ))}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <button onClick={() => setModal("missoes")} data-testid="rpg-btn-missoes"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><BookOpen size={13} /> MISSÕES</button>
               <button onClick={() => setModal("diario")} data-testid="rpg-btn-diario"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><MapIcon size={13} /> DIÁRIO</button>
+              <button onClick={() => setModal("mapa")} data-testid="rpg-btn-mapa"
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Compass size={13} /> MAPA</button>
               <button onClick={() => setModal("habilidades")} data-testid="rpg-btn-habilidades"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> HAB.</button>
               <button onClick={() => { m.pausado = true; setModal("pausa"); }} data-testid="rpg-btn-pausa"
@@ -722,6 +904,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     {modal === "missoes" && <><BookOpen size={18} className="text-fuchsia-400" /> MISSÕES</>}
                     {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> DIÁRIO DE EXPLORAÇÃO</>}
                     {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> HABILIDADES</>}
+                    {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> MAPA DO MUNDO</>}
+                    {modal === "ajuda" && <><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</>}
                     {modal === "pausa" && <><Pause size={18} className="text-white" /> PAUSA</>}
                   </h2>
                   <button onClick={() => { setModal(null); m.pausado = false; }} data-testid="rpg-fechar-modal" className="text-white/60 hover:text-white"><X size={20} /></button>
@@ -841,11 +1025,49 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   </div>
                 )}
 
+                {/* MAPA DO MUNDO */}
+                {modal === "mapa" && (
+                  <div className="flex flex-col gap-2" data-testid="rpg-mapa">
+                    <canvas ref={mapaCanvasRef} className="w-full rounded-xl border border-white/10" data-testid="rpg-mapa-canvas" />
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {REGIOES.map((r) => {
+                        const descoberta = sistemaRef.current.perfil.descobertas.regioes.includes(r.id);
+                        return (
+                          <div key={r.id} className="flex items-center gap-1.5 text-[10px]" data-testid={`rpg-mapa-regiao-${r.id}`}>
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: descoberta ? r.cor : "rgba(255,255,255,0.2)" }} />
+                            <span className={descoberta ? "text-white/80" : "text-white/35"}>{descoberta ? r.nome : "???"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-white/45 text-[10px]">
+                      ★ objetivo atual · ◆ locais com baú · seta branca = tu. Descobertas: {rpg.descobertas.regioes}/{rpg.totalRegioes} regiões · {rpg.descobertas.pois}/{rpg.totalPois} locais · {rpg.descobertas.baus}/{rpg.totalBaus} baús
+                    </p>
+                  </div>
+                )}
+
+                {/* AJUDA */}
+                {modal === "ajuda" && renderAjuda()}
+
                 {/* PAUSA */}
                 {modal === "pausa" && (
                   <div className="flex flex-col gap-2.5">
                     <button onClick={() => { setModal(null); m.pausado = false; capturarRato(); }} data-testid="rpg-retomar"
                       className="w-full py-3 rounded-xl font-black text-white bg-emerald-700 hover:bg-emerald-600">RETOMAR</button>
+                    <div className="bg-black/30 rounded-xl p-2.5 text-[10px] text-white/60 grid grid-cols-2 gap-y-0.5" data-testid="rpg-pausa-info">
+                      <span>Dificuldade: <b className="text-white" data-testid="rpg-pausa-dif">{rpg.dificuldade.nome}</b></span>
+                      <span>Nível: <b className="text-white">{rpg.nivel}/{NIVEL_MAX}</b></span>
+                      <span>Créditos: <b className="text-white">{rpg.creditos}</b></span>
+                      <span>Mortes: <b className="text-white">{rpg.mortes}</b></span>
+                      <span>Descobertas: <b className="text-white">{rpg.descobertas.regioes}/{rpg.totalRegioes} · {rpg.descobertas.pois}/{rpg.totalPois}</b></span>
+                      <span>História: <b className="text-white">{rpg.historiaFeita ? "completa" : `capítulo ${rpg.capitulo?.id.replace("h", "")}/6`}</b></span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => setModal("mapa")} data-testid="rpg-pausa-mapa"
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> MAPA</button>
+                      <button onClick={() => setModal("ajuda")} data-testid="rpg-pausa-ajuda"
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> AJUDA</button>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={() => { setSomMudo(m.alternarSom()); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs">
                         {somMudo ? "SOM: DESLIGADO" : "SOM: LIGADO"}

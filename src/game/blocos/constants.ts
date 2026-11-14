@@ -138,6 +138,14 @@ export const ITENS: Record<number, DefItem> = {
   [I.PEIXE_CARAPAU]: { nome: NOMES[I.PEIXE_CARAPAU], cor: "#a8c0d0", cor2: "#7890a0", comida: 4, maximo: 64 },
   [I.PEIXE_CORVINA]: { nome: NOMES[I.PEIXE_CORVINA], cor: "#687890", cor2: "#48586a", comida: 5, maximo: 64 },
   [I.PEIXE_ASSADO]: { nome: NOMES[I.PEIXE_ASSADO], cor: "#c08850", cor2: "#906030", comida: 8, maximo: 64 },
+  // v48: materiais no REGISTO de itens — sempre foram reais (receitas de
+  // fundição/ferragens), mas faltavam aqui; o espólio dos baús do RPG exige
+  // que TODO item entregue seja ITENS ou BLOCOS (fonte única, zero exceção).
+  [I.GRAVETO]: { nome: NOMES[I.GRAVETO], cor: "#9a6b39", cor2: "#6d4a26", maximo: 64 },
+  [I.CARVAO]: { nome: NOMES[I.CARVAO], cor: "#2b2b2b", cor2: "#111111", maximo: 64 },
+  [I.DIAMANTE]: { nome: NOMES[I.DIAMANTE], cor: "#4fe0d8", cor2: "#2bb3ac", maximo: 64 },
+  [I.BARRA_FERRO]: { nome: NOMES[I.BARRA_FERRO], cor: "#d8d8d8", cor2: "#a8a8a8", maximo: 64 },
+  [I.BARRA_OURO]: { nome: NOMES[I.BARRA_OURO], cor: "#f0d04a", cor2: "#c9a628", maximo: 64 },
 };
 
 export interface DefBloco {

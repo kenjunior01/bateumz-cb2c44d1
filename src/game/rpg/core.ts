@@ -1,10 +1,14 @@
 // ============================================================
-// BATEU RPG: LENDAS — NÚCLEO ISOMÓRFICO (v41)
+// BATEU RPG: LENDAS — NÚCLEO ISOMÓRFICO (v41 · v48)
 // Padrão estudado do Veloren (docs/REA-veloren-v35.md): o crate
 // `common` é partilhado entre client e servidor para que as duas
 // pontas apliquem AS MESMAS regras. Este ficheiro corre IGUAL no
 // browser (vite) e no Node (type stripping — verificado na v37).
-// ZERO imports · zero DOM · zero three.js · fonte única da verdade.
+// zero DOM · zero three.js · fonte única da verdade.
+// v48 — o único import é DADOS puros do motor (I/B de constants.ts,
+// padrão do core da cidade desde a v47): o espólio dos baús refere
+// os IDs REAIS dos itens em vez de duplicar números (extensão .ts
+// explícita — o Node não resolve imports sem extensão).
 //
 // Diferenciação honesta (documentada no REA-progressao-v38): o
 // Veloren NÃO tem seletor de dificuldade — só Hardcore (permadeath,
@@ -13,6 +17,8 @@
 // a FORMA matemática do skillset (logística — skillset/mod.rs:101),
 // nunca código GPL.
 // ============================================================
+
+import { B, I } from "../blocos/constants.ts";
 
 // ── Mundo ─────────────────────────────────────────────────────
 export const SEED_RPG = 20251113;          // fixo: todos os jogadores vêem o mesmo mundo
@@ -128,6 +134,25 @@ export function poiEm(x: number, z: number, raio: number): Poi | null {
   }
   return melhor;
 }
+
+// ── Espólio dos baús (v48) — a mesa é DETERMINÍSTICA e IGUAL para
+// todos os jogadores (mesma filosofia da semente fixa: o baú X do POI Y
+// entrega sempre o mesmo espólio). Todos os itens são REAIS do motor
+// partilhado (ITENS/BLOCOS em blocos/constants.ts) — zero item inventado.
+// Coerente com cada POI: caçadores têm carne e couro, o porto tem peixe,
+// a cova tem tochas, a forja guarda o peitoral de ferro do fim da lenda.
+export type ItemEspolio = { id: number; qtd: number };
+export const ESPOLIO_BAUS: Record<string, ItemEspolio[]> = {
+  "poi:aldeia:1":    [{ id: I.PAO, qtd: 2 }, { id: I.MACA, qtd: 1 }],
+  "poi:torre:1":    [{ id: B.TOCHA, qtd: 6 }, { id: I.CARNE_ASSADA, qtd: 2 }],
+  "poi:cacadores:1": [{ id: I.CARNE_ASSADA, qtd: 3 }, { id: I.COURO, qtd: 1 }, { id: I.ESPADA_PEDRA, qtd: 1 }],
+  "poi:baoba:1":    [{ id: I.MACA, qtd: 3 }, { id: I.PAO, qtd: 1 }],
+  "poi:porto:1":    [{ id: I.PEIXE_ASSADO, qtd: 3 }, { id: I.FIO, qtd: 2 }],
+  "poi:cova:1":     [{ id: B.TOCHA, qtd: 8 }, { id: I.CARNE_CRUA, qtd: 2 }],
+  "poi:ruinas:1":   [{ id: I.BARRA_FERRO, qtd: 2 }, { id: I.CARNE_ASSADA, qtd: 1 }],
+  "poi:ruinas:2":   [{ id: I.ARMADURA_COURO, qtd: 1 }, { id: I.PAO, qtd: 2 }],
+  "poi:forja:1":    [{ id: I.ARMADURA_FERRO, qtd: 1 }, { id: I.BARRA_FERRO, qtd: 2 }],
+};
 
 // ── XP / Níveis (forma logística do skillset Veloren, escalada) ──
 export const NIVEL_MAX = 30;
@@ -468,6 +493,12 @@ export interface PerfilRpg {
   bossDerrotado: boolean;
   /** Última posição (para CONTINUAR) — honesto: o mundo regenera igual (semente fixa). */
   pos: [number, number, number] | null;
+  /** v48: mochila do motor guardada com o perfil (36 posições + peitoral).
+   *  Sem isto, o espólio dos baús desapareceria no CONTINUAR com o baú já
+   *  marcado aberto (perda silenciosa — furo fechado). Opcional: saves
+   *  v41 antigos não têm estes campos e continuam válidos (kit de sempre). */
+  inv: ({ id: number; qtd: number } | null)[] | null;
+  invArm: { id: number; qtd: number } | null;
   ts: number;
 }
 
@@ -486,6 +517,8 @@ export function perfilInicial(dif: DificuldadeRpg = "medio"): PerfilRpg {
     blocos: 0,
     bossDerrotado: false,
     pos: null,
+    inv: null,
+    invArm: null,
     ts: 0,
   };
 }
@@ -506,6 +539,21 @@ export function validarPerfilRpg(v: unknown): PerfilRpg | null {
   if (typeof p.mortes !== "number" || typeof p.blocos !== "number") return null;
   if (typeof p.bossDerrotado !== "boolean") return null;
   if (p.pos !== null && (!Array.isArray(p.pos) || p.pos.length !== 3)) return null;
+  // v48: mochila opcional — inválida NUNCA entra (cai em null e o herói
+  // recebe o kit de sempre); peitoral só com id/qtd reais.
+  const invValida = (a: unknown): ({ id: number; qtd: number } | null)[] | null => {
+    if (a === undefined) return null;
+    if (!Array.isArray(a) || a.length > 36) return null;
+    return a.map((s) =>
+      s && typeof s === "object" && typeof (s as any).id === "number" && (s as any).id > 0
+        && typeof (s as any).qtd === "number" && (s as any).qtd > 0
+        ? { id: (s as any).id, qtd: Math.floor((s as any).qtd) } : null);
+  };
+  const armValida = (a: unknown): { id: number; qtd: number } | null => {
+    if (!a || typeof a !== "object") return null;
+    const s = a as any;
+    return typeof s.id === "number" && s.id > 0 ? { id: s.id, qtd: 1 } : null;
+  };
   const base = perfilInicial(p.dificuldade);
   return {
     v: 41,
@@ -521,6 +569,8 @@ export function validarPerfilRpg(v: unknown): PerfilRpg | null {
     blocos: p.blocos,
     bossDerrotado: p.bossDerrotado,
     pos: p.pos ?? null,
+    inv: invValida(p.inv),
+    invArm: armValida(p.invArm),
     ts: typeof p.ts === "number" ? p.ts : 0,
   };
 }
@@ -528,4 +578,12 @@ export function validarPerfilRpg(v: unknown): PerfilRpg | null {
 /** O save é válido para CONTINUAR só se tiver algo além do perfil virgem. */
 export function perfilTemProgresso(p: PerfilRpg): boolean {
   return p.xp > 0 || p.missoes.concluidasTotal > 0 || p.descobertas.regioes.length > 0 || p.descobertas.pois.length > 0 || p.kills.hostil > 0;
+}
+
+/** Texto do espólio de um baú para avisos/UI — ex.: "2× Pão, 1× Maçã".
+ *  Os nomes vêm do motor partilhado (NOMES) — zero duplicação. */
+export function textoEspolio(chave: string, NOMES: Record<number, string>): string {
+  const esp = ESPOLIO_BAUS[chave];
+  if (!esp) return "";
+  return esp.map((e) => `${e.qtd}× ${NOMES[e.id] ?? "?"}`).join(", ");
 }

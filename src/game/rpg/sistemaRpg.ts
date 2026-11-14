@@ -12,7 +12,7 @@
 
 import { Motor } from "../blocos/engine";
 import { type Mob, type TipoMob, ehPassivo } from "../blocos/mobs";
-import { B, ALTURA, I, VIDA_MAX } from "../blocos/constants";
+import { B, ALTURA, I, VIDA_MAX, NOMES } from "../blocos/constants";
 import { idbDefinir, idbObter, idbRemover, espelharLS, restaurarLSdeIDB } from "../armazem";
 import { MundoRPG } from "./mundoRpg";
 import {
@@ -23,7 +23,7 @@ import {
   RAMOS_RPG, NIVEL_MAX_RAMO_RPG, type RamoRpg,
   escalaVelExplorador, raioDescoberta, xpPorKiller, hpInimigo, multDanoHeroi,
   HISTORIA, capituloAtual, aplicarEvento, estadoMissoesInicial, progressoObjetivo,
-  diaLocal, missoesDiarias,
+  diaLocal, missoesDiarias, ESPOLIO_BAUS,
   perfilInicial, validarPerfilRpg, perfilTemProgresso, type PerfilRpg, type RecompensaMissao,
 } from "./core";
 
@@ -103,13 +103,28 @@ export class SistemaRPG {
     const g = m.gestor;
 
     // kit inicial honesto: espada de madeira, pão, maçãs, tochas
-    m.inv.adicionar(I.ESPADA_MADEIRA, 1);
-    m.inv.adicionar(I.PAO, 3);
-    m.inv.adicionar(I.MACA, 2);
-    m.inv.adicionar(B.TOCHA, 10);
-    // o herói desperta com a espada NA MÃO (a espada pode não cair no slot 0)
-    const idxEspada = m.inv.slots.findIndex((sl) => sl && sl.id === I.ESPADA_MADEIRA);
-    if (idxEspada >= 0) m.inv.selecao = idxEspada;
+    // v48 — SÓ quando NÃO há mochila guardada: com save, a mochila do motor
+    // volta INTEIRA (espólio dos baús incluído — o baú já aberto não volta a
+    // pagar; perder os itens seria perda silenciosa, furo fechado).
+    const invSalva = this.perfil.inv;
+    if (invSalva && invSalva.some((s) => s)) {
+      m.inv.limpar();
+      for (let i = 0; i < 36 && i < invSalva.length; i++) {
+        const s = invSalva[i];
+        if (s) m.inv.slots[i] = { id: s.id, qtd: s.qtd };
+      }
+      if (this.perfil.invArm) m.inv.armadura = { id: this.perfil.invArm.id, qtd: 1 };
+      const idxEspadaSalva = m.inv.slots.findIndex((sl) => sl && sl.id === I.ESPADA_MADEIRA);
+      if (idxEspadaSalva >= 0) m.inv.selecao = idxEspadaSalva;
+    } else {
+      m.inv.adicionar(I.ESPADA_MADEIRA, 1);
+      m.inv.adicionar(I.PAO, 3);
+      m.inv.adicionar(I.MACA, 2);
+      m.inv.adicionar(B.TOCHA, 10);
+      // o herói desperta com a espada NA MÃO (a espada pode não cair no slot 0)
+      const idxEspada = m.inv.slots.findIndex((sl) => sl && sl.id === I.ESPADA_MADEIRA);
+      if (idxEspada >= 0) m.inv.selecao = idxEspada;
+    }
 
     // ── spawns RPG: população viva por região/noite/dificuldade ──
     g.tentarSpawns = (segundos: number, noite: boolean, px: number, pz: number) => {
@@ -259,7 +274,9 @@ export class SistemaRPG {
   }
 
   // ── baú de tesouro ────────────────────────────────────────────
-  private abrirTesouro(x: number, y: number, z: number) {
+  /** v48: público — o E2E pode abrir um baú pelo CAMINHO REAL (mesma função
+   *  da mira/ataque) sem depender de mirar pixel-perfeito no canvas. */
+  abrirTesouro(x: number, y: number, z: number) {
     for (const p of POIS) {
       for (const b of p.baus) {
         if (b.x === x && b.y === y && b.z === z) {
@@ -272,7 +289,23 @@ export class SistemaRPG {
           const cred = Math.round(6 * this.dif.multCred);
           this.ganharXP(xp, false);
           this.perfil.creditos += cred;
-          this.aviso(`Baú de tesouro aberto: +${xp} XP, +${cred} créditos.`, "descoberta", 3.5);
+          // v48 — espólio REAL do baú (mesma mesa determinística para todos:
+          // core.ESPOLIO_BAUS). O inventário é o do motor partilhado — o que
+          // não couber é contado HONESTAMENTE (o baú abriu; não há chute).
+          let espolioTxt = "";
+          let perdidos = 0;
+          const esp = ESPOLIO_BAUS[b.chave];
+          if (esp && this.motor) {
+            const partes: string[] = [];
+            for (const e of esp) {
+              const guardado = this.motor.inv.adicionar(e.id, e.qtd);
+              if (guardado > 0) partes.push(`${guardado}× ${NOMES[e.id] ?? "?"}`);
+              if (guardado < e.qtd) perdidos += e.qtd - guardado;
+            }
+            espolioTxt = partes.length ? ` · espólio: ${partes.join(", ")}` : "";
+            if (perdidos > 0) this.aviso(`Mochila cheia — ${perdidos} item(ns) do espólio não couberam (perdidos: o baú abriu).`, "info", 4);
+          }
+          this.aviso(`Baú de tesouro aberto: +${xp} XP, +${cred} créditos${espolioTxt}.`, "descoberta", 3.5);
           this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "abrirBaus", qtd: 1, dia: diaLocal(), dif: this.dif }));
           return;
         }
@@ -444,6 +477,9 @@ export class SistemaRPG {
   async guardar(): Promise<{ ok: boolean; onde: "idb+ls" | "ls" | "idb" | "nenhum"; erro?: string }> {
     if (!this.motor) return { ok: false, onde: "nenhum", erro: "motor não ligado" };
     this.perfil.pos = [Math.round(this.motor.px * 10) / 10, Math.round(this.motor.py * 10) / 10, Math.round(this.motor.pz * 10) / 10];
+    // v48: a mochila guarda-se com a lenda (espólio incluído — sem perda silenciosa)
+    this.perfil.inv = this.motor.inv.slots.map((s) => (s ? { id: s.id, qtd: s.qtd } : null));
+    this.perfil.invArm = this.motor.inv.armadura ? { id: this.motor.inv.armadura.id, qtd: 1 } : null;
     this.perfil.ts = Date.now();
     const ls = espelharLS(CHAVE_SAVE_RPG, this.perfil);
     const idb = await idbDefinir(CHAVE_SAVE_RPG, this.perfil);

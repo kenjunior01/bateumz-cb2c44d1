@@ -4,6 +4,8 @@
 // nível, missão, bússola, boss) · Missões / Diário / Habilidades ·
 // controlos móveis · morte e renascimento · clima REAL (Open-Meteo)
 // Substitui o BateuCraft na plataforma (v41 — pedido do utilizador).
+// v48 — MOCHILA (as 36 posições do motor: hotbar + 27, peitoral
+// equipar/despir, mover para hotbar) + espólio REAL nos baús.
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -17,7 +19,7 @@ import {
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
 import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK } from "@/game/blocos/constants";
-import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle } from "lucide-react";
+import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle, Backpack } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
 interface Props {
@@ -124,7 +126,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const [fase, setFase] = useState<"inicio" | "jogando" | "morto">("inicio");
   const [cap, setCap] = useState<ReturnType<Motor["captura"]> | null>(null);
   const [rpg, setRpg] = useState<CapturaRpg | null>(null);
-  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda">(null);
+  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda" | "mochila">(null);
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
   const [aCarregar, setACarregar] = useState(false);
@@ -292,6 +294,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       selecionar: (i: number) => { motorRef.current.inv.selecao = i; },
       dar: (id: number, qtd = 1) => motorRef.current.inv.adicionar(id, qtd),
       limparInv: () => motorRef.current.inv.limpar(),
+      // v48: abrir um baú pelo CAMINHO REAL (mesma função da mira/ataque)
+      abrirTesouro: (x: number, y: number, z: number) => sistemaRef.current.abrirTesouro(x, y, z),
       pausar: (v: boolean) => { motorRef.current.pausado = v; },
       ciclarCamara: () => { const c = motorRef.current.ciclarCamara(); setCamaraModo(c); return c; },
       // clima real (Open-Meteo)
@@ -367,6 +371,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       if (k === "j") setModal((v) => (v === "missoes" ? null : "missoes"));
       if (k === "k") setModal((v) => (v === "habilidades" ? null : "habilidades"));
       if (k === "m") setModal((v) => (v === "mapa" ? null : "mapa"));
+      if (k === "i") setModal((v) => (v === "mochila" ? null : "mochila"));
       if (k === "escape") {
         if (modalRef.current === "pausa") { m.pausado = false; setModal(null); }
         else if (modalRef.current) { setModal(null); m.pausado = false; }
@@ -712,6 +717,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <li>Clique esq. — minerar/atacar</li>
           <li>Clique dir. — comer</li>
           <li>1–9 / roda — hotbar</li>
+          <li>I — mochila (36 posições; clique na mochila move para a hotbar; peitoral equipa no slot selecionado)</li>
           <li>J — missões</li>
           <li>K — habilidades</li>
           <li>M — mapa do mundo</li>
@@ -725,13 +731,14 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <ul className="text-white/60 text-[11px] list-disc ml-4">
           <li>Joystick (canto inferior esquerdo) para andar; arrasta o ecrã para olhar</li>
           <li>Botões ATACAR · SALTAR · COMER; toca nos itens da hotbar</li>
-          <li>Botões MISSÕES · DIÁRIO · MAPA · HAB. · pausa no topo do HUD</li>
+          <li>Botões MISSÕES · DIÁRIO · MAPA · MOCHILA · HAB. · pausa no topo do HUD</li>
         </ul>
       </div>
       <div>
         <p className="text-white/80 text-xs font-bold mb-1">COMO SE PROGRESSA</p>
         <ul className="text-white/60 text-[11px] list-disc ml-4">
           <li>XP vem de caçadas, noites sobrevividas, baús, capítulos e diárias (3 por dia, iguais para todos)</li>
+          <li>Os baús dos locais entregam também ESPÓLIO real — comida, tochas, barras e peitorais; a mesma mesa para todos, determinística como a semente</li>
           <li>Cada nível dá 1 ponto: GUERREIRO (+dano) · EXPLORADOR (+velocidade) · SÁBIO (+XP e cura fora de combate)</li>
           <li>A dificuldade (escolhida no menu) muda a vida e o dano dos inimigos e o valor das recompensas</li>
           <li>O progresso guarda-se sozinho a cada 8 s neste aparelho (IndexedDB + localStorage)</li>
@@ -1011,6 +1018,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Compass size={13} /> MAPA</button>
               <button onClick={() => setModal("habilidades")} data-testid="rpg-btn-habilidades"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> HAB.</button>
+              <button onClick={() => setModal("mochila")} data-testid="rpg-btn-mochila"
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Backpack size={13} /> MOCHILA</button>
               <button onClick={() => { m.pausado = true; setModal("pausa"); }} data-testid="rpg-btn-pausa"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white"><Pause size={13} /></button>
             </div>
@@ -1051,6 +1060,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     {modal === "missoes" && <><BookOpen size={18} className="text-fuchsia-400" /> MISSÕES</>}
                     {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> DIÁRIO DE EXPLORAÇÃO</>}
                     {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> HABILIDADES</>}
+                    {modal === "mochila" && <><Backpack size={18} className="text-lime-400" /> MOCHILA</>}
                     {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> MAPA DO MUNDO</>}
                     {modal === "ajuda" && <><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</>}
                     {modal === "pausa" && <><Pause size={18} className="text-white" /> PAUSA</>}
@@ -1172,6 +1182,71 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   </div>
                 )}
 
+                {/* MOCHILA (v48) — as 36 posições do motor partilhado */}
+                {modal === "mochila" && (() => {
+                  const armEq = cap.armadura;
+                  const selSlot = cap.slots[cap.selecao] ?? null;
+                  const defSel = selSlot ? ITENS[selSlot.id] : undefined;
+                  const ocupadas = cap.slots.filter(Boolean).length;
+                  return (
+                    <div className="flex flex-col gap-2.5" data-testid="rpg-mochila">
+                      <div className="bg-black/30 rounded-xl p-2.5 border border-white/10 flex items-center justify-between gap-2" data-testid="rpg-mochila-armadura">
+                        {armEq ? (
+                          <>
+                            <p className="text-white text-[11px] font-bold" data-testid="rpg-armadura-nome">
+                              Equipado: {armEq.nome} <span className="text-emerald-300">(−{Math.round(armEq.reducao * 100)}% do dano recebido)</span>
+                            </p>
+                            <button onClick={() => { m.inv.despirArmadura(); setCap(m.captura()); }} data-testid="rpg-despir"
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">DESPIN</button>
+                          </>
+                        ) : (
+                          <p className="text-white/50 text-[11px]">Sem peitoral equipado — seleciona um peitoral na mochila para equipar.</p>
+                        )}
+                      </div>
+                      <p className="text-white/60 text-[10px] font-bold">HOTBAR (1–9) — clique seleciona</p>
+                      <div className="grid grid-cols-9 gap-1">
+                        {cap.slots.slice(0, 9).map((slot, i) => (
+                          <button key={i} onClick={() => { m.inv.selecao = i; setCap(m.captura()); }} data-testid={`rpg-mslot-${i}`}
+                            className={`aspect-square rounded-[4px] border-2 flex items-center justify-center ${cap.selecao === i ? "border-white bg-white/15" : "border-white/20 bg-black/30"}`}>
+                            {slot && <IconeItem id={slot.id} qtd={slot.qtd} tamanho={24} />}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-white/60 text-[10px] font-bold">MOCHILA (27) — clique move o item para a hotbar</p>
+                      <div className="grid grid-cols-9 gap-1">
+                        {cap.slots.slice(9).map((slot, i) => (
+                          <button key={i} onClick={() => { m.inv.moverParaHotbar(i + 9); setCap(m.captura()); }} data-testid={`rpg-mslot-${i + 9}`}
+                            className="aspect-square rounded-[4px] border-2 border-white/20 bg-black/30 flex items-center justify-center">
+                            {slot && <IconeItem id={slot.id} qtd={slot.qtd} tamanho={24} />}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-2.5 border border-white/10 min-h-[46px]" data-testid="rpg-mochila-selecionado">
+                        {selSlot ? (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-white text-[11px] font-bold">{infoItem(selSlot.id).nome} <span className="text-white/40">×{selSlot.qtd}</span></p>
+                              <p className="text-white/50 text-[10px]">
+                                {defSel?.dano ? `dano ${defSel.dano}` : defSel?.comida ? `comida +${defSel.comida}` : defSel?.armadura ? `absorve ${Math.round(defSel.armadura * 100)}% do dano` : "material/bloco — colocar ou minerar"}
+                              </p>
+                            </div>
+                            {defSel?.armadura && (
+                              <button onClick={() => { m.inv.equiparArmadura(); setCap(m.captura()); }} data-testid="rpg-equipar"
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">EQUIPAR</button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-white/40 text-[10px]">Slot selecionado vazio — escolhe na hotbar ou na mochila.</p>
+                        )}
+                      </div>
+                      <p className="text-white/45 text-[10px]">Posições ocupadas: <b className="text-white">{ocupadas}/36</b> · comida come-se da hotbar (clique direito / botão COMER).</p>
+                      <p className="text-white/30 text-[9px]" data-testid="rpg-mochila-fonte">
+                        A mochila é a do motor partilhado (36 posições — CIDADE BATEU e RPG são o mesmo inventário de dados). Os baús dos locais entregam espólio real — a mesma mesa para todos os jogadores, determinística como a semente do mundo.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {/* MAPA DO MUNDO */}
                 {modal === "mapa" && (
                   <div className="flex flex-col gap-2" data-testid="rpg-mapa">
@@ -1212,9 +1287,11 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                       <span>Descobertas: <b className="text-white">{rpg.descobertas.regioes}/{rpg.totalRegioes} · {rpg.descobertas.pois}/{rpg.totalPois}</b></span>
                       <span>História: <b className="text-white">{rpg.historiaFeita ? "completa" : `capítulo ${rpg.capitulo?.id.replace("h", "")}/6`}</b></span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button onClick={() => setModal("mapa")} data-testid="rpg-pausa-mapa"
                         className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> MAPA</button>
+                      <button onClick={() => setModal("mochila")} data-testid="rpg-pausa-mochila"
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Backpack size={14} /> MOCHILA</button>
                       <button onClick={() => setModal("ajuda")} data-testid="rpg-pausa-ajuda"
                         className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> AJUDA</button>
                     </div>

@@ -7,7 +7,8 @@
 //   validador de save · honestidade dos dados
 // Parte B — E2E na UI (/lives?game=mmorpg): menu com dificuldade,
 //   HUD RPG, spawn na Aldeia, kit inicial, combate → XP → nível,
-//   habilidades, baús de tesouro, descoberta de regiões,
+//   habilidades, baús de tesouro (v48: com ESPÓLIO real), descoberta
+//   de regiões, MOCHILA (36 posições · mover · peitoral · cheia honesta),
 //   CHEFE (Guardião) + fim da história, morte/renascer,
 //   save/CONTINUAR. Clima real no RPG: test-v31 secção 6.
 // Uso: PW_CHROME=<chromium> node test-rpg-v41.mjs (vite 8099)
@@ -92,6 +93,41 @@ async function parteA() {
     return core.POIS.length === 8;
   })());
   ok("9 baús de tesouro no mundo (soma dos POIs)", core.POIS.reduce((n, p) => n + p.baus.length, 0) === 9);
+
+  // ── v48: espólio determinístico dos baús ──
+  const ct = await import(new URL("./src/game/blocos/constants.ts", import.meta.url).href);
+  ok("ESPOLIO_BAUS cobre EXATAMENTE as 9 chaves dos baús", (() => {
+    const chaves = core.POIS.flatMap((p) => p.baus.map((b) => b.chave));
+    const esp = Object.keys(core.ESPOLIO_BAUS);
+    return chaves.length === 9 && esp.length === 9 && chaves.every((c) => esp.includes(c)) && new Set(esp).size === 9;
+  })());
+  ok("todo o espólio é REAL do motor (ITENS ou BLOCOS) com qtd ≥ 1", (() => {
+    for (const lista of Object.values(core.ESPOLIO_BAUS)) {
+      if (!Array.isArray(lista) || lista.length === 0) return false;
+      for (const e of lista) {
+        const real = (ct.ITENS[e.id] ?? (e.id < 100 ? ct.BLOCOS[e.id] : null));
+        if (!real || !Number.isInteger(e.qtd) || e.qtd < 1) return false;
+      }
+    }
+    return true;
+  })());
+  ok("mesma chave → a MESMA mesa (determinística como a semente)",
+    core.ESPOLIO_BAUS["poi:forja:1"] === core.ESPOLIO_BAUS["poi:forja:1"] &&
+    JSON.stringify(core.ESPOLIO_BAUS["poi:porto:1"]) === JSON.stringify(core.ESPOLIO_BAUS["poi:porto:1"]));
+  ok("Forja Perdida entrega peitoral de ferro (recompensa do fim da lenda)",
+    core.ESPOLIO_BAUS["poi:forja:1"].some((e) => e.id === ct.I.ARMADURA_FERRO));
+  ok("textoEspolio lê os NOMES do motor partilhado (zero duplicação)",
+    core.textoEspolio("poi:aldeia:1", ct.NOMES).includes("Pão") && core.textoEspolio("poi:nenhum", ct.NOMES) === "");
+  ok("validador: mochila guardada entra · mochila corrompida degrada para null (kit de sempre)", (() => {
+    const base = JSON.parse(JSON.stringify(core.perfilInicial("medio")));
+    base.xp = 100;
+    const comInv = core.validarPerfilRpg({ ...base, v: 41, inv: [{ id: 112, qtd: 1 }, ...Array(35).fill(null)], invArm: { id: 123, qtd: 1 } });
+    const corrompida = core.validarPerfilRpg({ ...base, v: 41, inv: "lixo" });
+    const semInv = core.validarPerfilRpg({ ...base, v: 41 }); // save v41 antigo
+    return !!comInv && comInv.inv?.[0]?.id === 112 && comInv.invArm?.id === 123
+      && corrompida !== null && corrompida.inv === null
+      && semInv !== null && semInv.inv === null;
+  })());
 
   // ── habilidades ──
   ok("escalaVelExplorador: +8%/nível com tecto 1.18 (orçamento do motor v37)",
@@ -470,27 +506,100 @@ async function parteB() {
   }
   const creditosAntes = (await rpg()).creditos;
   if (mira === 29) {
+    // contagens ANTES do baú (delta honesto — o motor também dá o kit dele)
+    const invAntes = await page.evaluate(() => {
+      const inv = (window).__rpg.motor.inv;
+      return { pao: inv.contar(121), maca: inv.contar(107) };
+    });
     await page.evaluate(() => (window).__rpg.atacarDirecto());
     await pump(6);
     r1 = await rpg();
     ok("baú da aldeia aberto → 1 tesouro + créditos", r1.descobertas.baus === 1 && r1.creditos > creditosAntes);
+    // v48: espólio real entra na mochila (+2 pão, +1 maçã — a mesa da aldeia)
+    const invDepois = await page.evaluate(() => {
+      const inv = (window).__rpg.motor.inv;
+      return { pao: inv.contar(121), maca: inv.contar(107) };
+    });
+    ok(`espólio do baú na mochila (pão +2 · maçã +1; obtido +${invDepois.pao - invAntes.pao}/+${invDepois.maca - invAntes.maca})`,
+      invDepois.pao === invAntes.pao + 2 && invDepois.maca === invAntes.maca + 1);
+    ok("aviso do baú lista o espólio real (mesma mesa para todos)",
+      r1.avisos.some((a) => a.texto.includes("espólio") && a.texto.includes("Pão") && a.texto.includes("Maçã")));
   } else {
     ok(`baú visado (mira=29, obtido ${mira}) — posição/olhar ajustados pelo teste`, mira === 29);
   }
 
-  // ── dificuldade muda o HP dos NOVOS inimigos (noite: sem queimar) ──
-  await page.evaluate(() => (window).__rpg.definirHora(0.85));
-  await page.evaluate(() => (window).__rpg.definirDificuldade("lenda"));
-  await page.evaluate(() => (window).__rpg.spawnarMob("zumbi", 4, 0));
+  // ── v48 · MOCHILA (inventário do motor partilhado, 36 posições) ──
+  await page.evaluate(() => { (window).__rpg.motor.vida = 20; }); // herói de treino durante os cliques
+  await page.locator('[data-testid="rpg-btn-mochila"]').click();
+  await sel("rpg-mochila", 5000);
+  ok("MOCHILA abre do HUD com as 36 posições reais do motor", (await page.locator('[data-testid^="rpg-mslot-"]').count()) === 36);
+  ok("mochila honesta: contagem de posições ocupadas visível",
+    (await page.locator('[data-testid="rpg-mochila"]').innerText()).includes("/36"));
+  ok("rodapé credencia a fonte (motor partilhado + espólio determinístico)",
+    (await page.locator('[data-testid="rpg-mochila-fonte"]').innerText()).includes("motor partilhado"));
+  // item colocado no fundo da mochila (slot 20) move para a hotbar pelo clique REAL
+  await page.evaluate(() => { (window).__rpg.motor.inv.slots[20] = { id: 106, qtd: 1 }; });
+  await page.locator('[data-testid="rpg-mslot-20"]').click();
   await pump(2);
-  const hpLenda = await page.evaluate(() => {
-    const mobs = (window).__rpg.motor.gestor.mobs.filter((mm) => mm.vivo && mm.tipo === "zumbi");
-    return mobs.length ? mobs[mobs.length - 1].hpMax : null;
+  ok("clique no slot da mochila move o item para a hotbar (moverParaHotbar real)", await page.evaluate(() =>
+    (window).__rpg.motor.inv.slots.slice(0, 9).some((s) => s && s.id === 106)));
+  await page.keyboard.press("i");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mochila"]').count()) === 0, 10, "mochila fechou (I)");
+  await page.keyboard.press("i");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mochila"]').count()) === 1, 10, "mochila reabriu (I)");
+  ok("tecla I abre e fecha a mochila", true);
+  // peitoral de couro: mochila → hotbar → selecionado → EQUIPAR (efeito real do motor)
+  await page.evaluate(() => (window).__rpg.dar(123, 1));
+  let idxArm = await page.evaluate(() => (window).__rpg.motor.inv.slots.findIndex((s) => s && s.id === 123));
+  if (idxArm >= 9) await page.locator(`[data-testid="rpg-mslot-${idxArm}"]`).click(); // mochila → hotbar
+  idxArm = await page.evaluate(() => (window).__rpg.motor.inv.slots.findIndex((s) => s && s.id === 123));
+  await page.locator(`[data-testid="rpg-mslot-${idxArm}"]`).click(); // seleciona
+  await page.locator('[data-testid="rpg-equipar"]').click();
+  const arm1 = (await cap()).armadura;
+  ok("peitoral de couro equipado pela mochila (−15% de dano, dado REAL do motor)", arm1?.id === 123 && Math.abs(arm1.reducao - 0.15) < 1e-9);
+  await page.locator('[data-testid="rpg-despir"]').click();
+  ok("DESPIN devolve o peitoral à mochila (sem perdas)", (await cap()).armadura === null);
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mochila"]').count()) === 0, 10, "mochila fechou (ESC)");
+
+  // mochila CHEIA → o espólio que não cabe é declarado HONESTAMENTE (forja, via caminho real)
+  await page.evaluate(() => {
+    const inv = (window).__rpg.motor.inv;
+    inv.limpar();
+    for (let i = 0; i < 36; i++) inv.slots[i] = { id: 4, qtd: 64 }; // pedregulho (id 4, stack 64)
   });
-  ok("dificuldade LENDA: zumbi nasce com 20×2.2 = 44 HP", hpLenda === 44);
+  await page.evaluate(() => (window).__rpg.abrirTesouro(82, 34, 52)); // baú da Forja Perdida (peitoral de ferro + barras)
+  await pump(4);
+  const avisosCheia = (await rpg()).avisos.map((a) => a.texto).join(" | ");
+  ok("mochila cheia: espólio NÃO entra e a perda é declarada (zero fuga)",
+    avisosCheia.includes("cheia") && avisosCheia.includes("perdidos"));
+  ok("baú da forja contado como aberto mesmo com mochila cheia (honesto)", (await rpg()).descobertas.baus >= 2);
+  // repõe o kit mínimo para as secções seguintes (duelo do Guardião usa a espada)
+  await page.evaluate(() => { (window).__rpg.limparInv(); (window).__rpg.dar(112, 1); });
+
+  // ── dificuldade muda o HP dos NOVOS inimigos (noite: sem queimar) ──
+  // v48: referência DIRETA do mob nascido (spawnarMob devolve o Mob) — a 1.ª
+  // versão lia o último zumbi vivo e corria com spawns naturais/explosões
+  // do mundo em jogo (furos reais das corridas 1 e 4).
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    w.definirHora(0.85);
+    w.definirDificuldade("lenda");
+    (window).__zumbiLenda = w.spawnarMob("zumbi", 4, 0);
+  });
+  await pump(2);
+  const hpLenda = await page.evaluate(() => (window).__zumbiLenda?.hpMax ?? null);
+  ok("dificuldade LENDA: zumbi nasce com 20×2.2 = 44 HP (referência direta do mob nascido)", hpLenda === 44);
 
   // ── CHEFE: história manipulada para h6 (teste do fim real) ──
-  if ((await cap())?.fase !== "jogando") await page.evaluate(() => (window).__rpg.motor.renascer());
+  // v48: mundo limpo pelo matar real antes do caminho pelas Cinzas — os
+  // estouradores da região matavam o herói durante o pump e o Guardião
+  // não acordava dentro da janela (furo real da corrida 4).
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    for (const mob of [...m.gestor.mobs]) if (mob.vivo) m.gestor.matar(mob, false);
+    if (m.fase !== "jogando") m.renascer();
+  });
   await page.evaluate(() => {
     const p = (window).__rpg.perfil();
     p.missoes.historiaFeitas = ["h1", "h2", "h3", "h4", "h5"];
@@ -498,8 +607,10 @@ async function parteB() {
   await page.evaluate(() => (window).__rpg.definirDificuldade("medio"));
   await page.evaluate(() => (window).__rpg.teleportar(82.5, 45, 52.5)); // Terra de Cinzas
   await pump(40);
+  await page.evaluate(() => { (window).__rpg.motor.vida = 20; }); // herói de treino no caminho
   await page.evaluate(() => (window).__rpg.teleportar(60.5, 40, -42.5)); // junto às ruínas
   await pump(30);
+  await page.evaluate(() => { (window).__rpg.motor.vida = 20; });
   r1 = await rpg();
   ok("Terra de Cinzas descoberta (objetivo h6)", r1.descobertas.regioes >= 3);
   await aguardar(async () => (await rpg()).boss.vivo === true, 30, "Guardião acordar");
@@ -581,6 +692,10 @@ async function parteB() {
   ok("CONTINUAR: nível preservado", r1.nivel === nivelAntes);
   ok("CONTINUAR: história completa preservada", r1.historiaFeita === true);
   ok("CONTINUAR: Guardião derrotado preservado", r1.boss.derrotado === true);
+  ok("CONTINUAR: mochila restaurada DO SAVE (espada 1× sem duplicar; kit NÃO re-adicionado — tocha 0 prova o caminho)", await page.evaluate(() => {
+    const w = (window).__rpg, inv = w.motor.inv;
+    return inv.contar(112) === 1 && inv.contar(17) === 0 && !!w.perfil().inv?.some((s) => s?.id === 112);
+  }));
 
   // ── novo jogo apaga o save ──
   await page.evaluate(() => (window).__rpg.apagarSave());

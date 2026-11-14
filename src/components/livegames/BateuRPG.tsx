@@ -309,6 +309,10 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           receitas: RECEITAS.length,
         };
       },
+      // v50: itens NO CHÃO (lista real + contadores honestos) e largar pela
+      // MESMA função da tecla Q / botão da mochila
+      itensChao: () => sistemaRef.current.listaItensChao(),
+      largar: () => sistemaRef.current.largarSelecionado(),
       pausar: (v: boolean) => { motorRef.current.pausado = v; },
       ciclarCamara: () => { const c = motorRef.current.ciclarCamara(); setCamaraModo(c); return c; },
       // clima real (Open-Meteo)
@@ -386,6 +390,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       if (k === "m") setModal((v) => (v === "mapa" ? null : "mapa"));
       if (k === "i") setModal((v) => (v === "mochila" ? null : "mochila"));
       if (k === "f") setModal((v) => (v === "forja" ? null : "forja"));
+      // v50: Q larga 1 unidade do slot selecionado (fica no chão, recolha
+      // por proximidade — padrão Veloren/Minecraft, via REAL do sistema)
+      if (k === "q") sistemaRef.current.largarSelecionado();
       if (k === "escape") {
         if (modalRef.current === "pausa") { m.pausado = false; setModal(null); }
         else if (modalRef.current) { setModal(null); m.pausado = false; }
@@ -732,6 +739,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <li>Clique dir. — comer</li>
           <li>1–9 / roda — hotbar</li>
           <li>I — mochila (36 posições; clique na mochila move para a hotbar; peitoral equipa no slot selecionado)</li>
+          <li>Q — largar 1 do item selecionado (fica no chão; recolhe ao aproximar-te)</li>
           <li>F — forja: criar e fundir (mesa/fornalha reais só na Forja Perdida)</li>
           <li>J — missões</li>
           <li>K — habilidades</li>
@@ -753,6 +761,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <p className="text-white/80 text-xs font-bold mb-1">COMO SE PROGRESSA</p>
         <ul className="text-white/60 text-[11px] list-disc ml-4">
           <li>XP vem de caçadas, noites sobrevividas, baús, capítulos e diárias (3 por dia, iguais para todos)</li>
+          <li>Os inimigos derrotados deixam o loot NO CHÃO onde caíram — aproxima-te e ele desliza até ti (magnete a 3 blocos); o que não couber na mochila FICA onde está, nada desaparece por decisão silenciosa</li>
+          <li>Itens no chão duram 120 s e o mundo guarda até 48 (o mais velho sai primeiro — as saídas são contadas no chip do HUD); o chão guarda-se com a lenda no save</li>
           <li>Os baús dos locais entregam também ESPÓLIO real — comida, tochas, barras e peitorais; a mesma mesa para todos, determinística como a semente</li>
           <li>Cada nível dá 1 ponto: GUERREIRO (+dano) · EXPLORADOR (+velocidade) · SÁBIO (+XP e cura fora de combate)</li>
           <li>A dificuldade (escolhida no menu) muda a vida e o dano dos inimigos e o valor das recompensas</li>
@@ -1016,6 +1026,13 @@ export default function BateuRPG({ onScore, onExit }: Props) {
 
           {/* ── hotbar + botões ── */}
           <div className="absolute bottom-2 right-2 flex flex-col items-end gap-2">
+            {/* v50: o que está MESMO no chão (contagens honestas do sistema) */}
+            {rpg.itensChao.total > 0 && (
+              <div data-testid="rpg-chao-chip" className="px-2 py-1 rounded-lg bg-black/55 border border-amber-500/30 text-white/90 text-[10px] font-bold">
+                {rpg.itensChao.total} item{rpg.itensChao.total > 1 ? "s" : ""} no chão
+                {rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap > 0 ? ` · ${rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap} saíram` : ""}
+              </div>
+            )}
             <div className="flex gap-1 bg-black/45 rounded-lg p-1.5" data-testid="rpg-hotbar">
               {cap.slots.slice(0, 9).map((slot, i) => (
                 <button key={i} onClick={() => { m.inv.selecao = i; }} data-testid={`rpg-slot-${i}`}
@@ -1252,6 +1269,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                               <button onClick={() => { m.inv.equiparArmadura(); setCap(m.captura()); }} data-testid="rpg-equipar"
                                 className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">EQUIPAR</button>
                             )}
+                            {/* v50: largar 1 do slot selecionado — a MESMA via da tecla Q */}
+                            <button onClick={() => { sistemaRef.current.largarSelecionado(); setCap(m.captura()); setRpg(sistemaRef.current.captura()); }} data-testid="rpg-largar"
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">LARGAR 1</button>
                           </div>
                         ) : (
                           <p className="text-white/40 text-[10px]">Slot selecionado vazio — escolhe na hotbar ou na mochila.</p>

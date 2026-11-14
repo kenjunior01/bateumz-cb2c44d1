@@ -499,6 +499,11 @@ export interface PerfilRpg {
    *  v41 antigos não têm estes campos e continuam válidos (kit de sempre). */
   inv: ({ id: number; qtd: number } | null)[] | null;
   invArm: { id: number; qtd: number } | null;
+  /** v50: itens NO CHÃO guardados com a lenda — sem isto, o loot largado
+   *  (Q) ou ainda não recolhido evaporaria no CONTINUAR (perda silenciosa,
+   *  o mesmo furo que a v48 fechou para a mochila). Opcional: saves antigos
+   *  não têm o campo e continuam válidos (o chão nasce vazio). */
+  itensChao: { id: number; qtd: number; x: number; y: number; z: number }[] | null;
   ts: number;
 }
 
@@ -519,6 +524,7 @@ export function perfilInicial(dif: DificuldadeRpg = "medio"): PerfilRpg {
     pos: null,
     inv: null,
     invArm: null,
+    itensChao: null,
     ts: 0,
   };
 }
@@ -554,6 +560,20 @@ export function validarPerfilRpg(v: unknown): PerfilRpg | null {
     const s = a as any;
     return typeof s.id === "number" && s.id > 0 ? { id: s.id, qtd: 1 } : null;
   };
+  // v50: itens no chão — inválidos NUNCA entram (degradados; o mundo nasce
+  // sem eles); coords não finitas e cap > 48 são cortados, não rebentam.
+  const chaoValida = (a: unknown): { id: number; qtd: number; x: number; y: number; z: number }[] | null => {
+    if (a === undefined) return null;
+    if (!Array.isArray(a)) return null;
+    const itens = a
+      .filter((e) => e && typeof e === "object"
+        && typeof (e as any).id === "number" && (e as any).id > 0
+        && typeof (e as any).qtd === "number" && (e as any).qtd > 0
+        && ["x", "y", "z"].every((k) => typeof (e as any)[k] === "number" && Number.isFinite((e as any)[k])))
+      .slice(0, 48)
+      .map((e) => ({ id: (e as any).id, qtd: Math.floor((e as any).qtd), x: (e as any).x, y: (e as any).y, z: (e as any).z }));
+    return itens;
+  };
   const base = perfilInicial(p.dificuldade);
   return {
     v: 41,
@@ -571,6 +591,7 @@ export function validarPerfilRpg(v: unknown): PerfilRpg | null {
     pos: p.pos ?? null,
     inv: invValida(p.inv),
     invArm: armValida(p.invArm),
+    itensChao: chaoValida(p.itensChao),
     ts: typeof p.ts === "number" ? p.ts : 0,
   };
 }

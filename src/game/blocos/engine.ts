@@ -95,6 +95,12 @@ export class Motor {
   // v38 — multiplicador real de velocidade (Atleta da progressão; 1 = igual;
   // máx 1.18 → 6.96 b/s, abaixo do orçamento MAX_VEL=12 do servidor v37)
   escalaVel = 1;
+  // v50 — gancho de LOOT NO CHÃO (padrão Veloren item_drop): quando definido,
+  // os drops de MOB morto pelo herói NÃO entram directo na mochila — nascem
+  // como entidade no mundo (o RPG fornece o gestor). SEM o gancho (craft,
+  // cidade) o comportamento é o de sempre: inv.adicionar directo — zero
+  // mudança de comportamento nos jogos existentes.
+  aoDroparChao?: (id: number, qtd: number, x: number, y: number, z: number) => void;
   // qualidade automática (v29): se o aparelho não aguenta, baixamos
   // resolução primeiro, depois raio — sempre com aviso honesto ao jogador
   qualidadeAuto = true;
@@ -952,7 +958,12 @@ export class Motor {
       if (!mob.vivo) {
         this.mobsDerrotados++;
         this.conquista("safari");
-        for (const d of this.gestor.dropDoMob(mob.tipo, this.rnd)) this.inv.adicionar(d.id, d.qtd);
+        for (const d of this.gestor.dropDoMob(mob.tipo, this.rnd)) {
+          // v50: com o gancho do RPG o drop nasce NO CHÃO onde o mob caiu
+          // (recolha por proximidade, magnete); sem gancho, directo (sempre).
+          if (this.aoDroparChao) this.aoDroparChao(d.id, d.qtd, mob.x, mob.y + 0.6, mob.z);
+          else this.inv.adicionar(d.id, d.qtd);
+        }
       }
     }
     return mob;

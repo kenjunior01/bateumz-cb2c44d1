@@ -12,7 +12,11 @@
 
 import { Motor } from "../blocos/engine";
 import { type Mob, type TipoMob, ehPassivo } from "../blocos/mobs";
-import { B, ALTURA, I, VIDA_MAX, NOMES } from "../blocos/constants";
+import { B, ALTURA, I, VIDA_MAX, NOMES, CORES } from "../blocos/constants";
+// v50: loot como ENTIDADE (padrão Veloren item_drop) — física/magnete/TTL
+// puros e isomórficos; as malhas e a recolha (inventário real) vivem aqui.
+import { criarItemChao, passoItensChao, aplicarCapItens, ITEM_CAP, ITEM_CHAO_TTL, type ItemChao } from "../blocos/itensChao";
+import * as THREE from "three";
 import { idbDefinir, idbObter, idbRemover, espelharLS, restaurarLSdeIDB } from "../armazem";
 import { MundoRPG } from "./mundoRpg";
 import {
@@ -34,6 +38,9 @@ export interface AvisoRpg { texto: string; tipo: "nivel" | "missao" | "descobert
 /** Estado do chefe (Guardião das Ruínas — capítulo final). */
 interface BossEstado { vivo: boolean; derrotado: boolean; spawnado: boolean; }
 
+/** v50: item no chão — o dado (ItemChao) + a malha que o representa. */
+interface ItemChaoRpg { dado: ItemChao; malha: THREE.Mesh }
+
 const TIPO_KILL: Record<string, "hostil" | "zumbi" | "aranha" | "estourador" | "passivo" | "guardiao"> = {
   zumbi: "zumbi", aranha: "aranha", estourador: "estourador",
 };
@@ -53,6 +60,11 @@ export class SistemaRPG {
   private andouFrac = 0;
   private posAnterior: [number, number] | null = null;
   private prontoSaveIDB: Promise<PerfilRpg | null> | null = null;
+  // ── v50: itens no chão (contadores HONESTOS — nada desaparece sem nota) ──
+  private itensChaoRpg: ItemChaoRpg[] = [];
+  private recolhidos = 0;      // unidades recolhidas pela mochila
+  private expiradosTTL = 0;    // itens que passaram o TTL (ou caíram ao vazio)
+  private expiradosCap = 0;    // itens saídos pelo limite de 48 (o mais velho)
 
   constructor() {
     // v41 — o IDB é o armazém primário: se o localStorage foi limpo pelo
@@ -92,6 +104,11 @@ export class SistemaRPG {
     this.noiteAntes = false;
     this.noiteSobrevivendo = false;
     this.posAnterior = null;
+    // v50: nova sessão = chão vazio (as malhas antigas morrem com o mundo)
+    this.limparItensChao();
+    this.recolhidos = 0;
+    this.expiradosTTL = 0;
+    this.expiradosCap = 0;
   }
 
   /** DEPOIS de cada motor.iniciar — o gestor de mobs é NOVO a cada iniciar
@@ -223,6 +240,19 @@ export class SistemaRPG {
         m.px = x; m.py = y + 0.02; m.pz = z;
       }
     }
+
+    // ── v50: LOOT NO CHÃO ──────────────────────────────────────
+    // O gancho do MOTOR encaminha os drops de mob morto pelo herói para o
+    // chão (nascem onde o mob caiu, com o pop físico). Sem o gancho — craft
+    // e cidade — os drops continuam a entrar DIRECTO na mochila como sempre.
+    m.aoDroparChao = (id, qtd, x, y, z) => this.adicionarItemChao(id, qtd, x, y, z);
+    // itens no chão do SAVE voltam ao sítio: mundo de semente fixa, as
+    // coordenadas continuam válidas — sem isto seria perda silenciosa no
+    // CONTINUAR (o mesmo furo que a v48 fechou para a mochila).
+    if (this.perfil.itensChao?.length) {
+      for (const e of this.perfil.itensChao) this.adicionarItemChao(e.id, e.qtd, e.x, e.y, e.z);
+    }
+
     this.noiteAntes = m.noite;
     this.aviso(`BATEU RPG: Lendas — dificuldade ${this.dif.nome}. O mundo é o mesmo para todos (semente ${SEED_RPG}).`, "info", 5);
   }
@@ -312,6 +342,87 @@ export class SistemaRPG {
       }
     }
     this.aviso("Baú sem tesouro — o mundo guarda os seus segredos noutros baús.", "info", 2.5);
+  }
+
+  // ── v50: ITENS NO CHÃO — gestor (malhas + recolha) ─────────────────
+  /** Malha do item: cubo pequeno com a cor REAL do item (CORES do motor). */
+  private malhaItemChao(id: number): THREE.Mesh {
+    const c = CORES[id] ?? ["#999999", "#666666"];
+    return new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.28, 0.28),
+      new THREE.MeshLambertMaterial({ color: c[0] }),
+    );
+  }
+
+  private adicionarItemChao(id: number, qtd: number, x: number, y: number, z: number, pegaT = 0) {
+    const m = this.motor;
+    if (!m || !m.mundo) return;
+    const dado = criarItemChao(id, qtd, x, y, z, this.rnd01() * Math.PI * 2, pegaT);
+    const malha = this.malhaItemChao(id);
+    malha.position.set(dado.x, dado.y, dado.z);
+    m.mundo.grupo.add(malha);
+    this.itensChaoRpg.push({ dado, malha });
+    // cap honesto (48): o mais VELHO sai primeiro — contado, nunca escondido
+    for (const fora of aplicarCapItens(this.itensChaoRpg.map((i) => i.dado))) {
+      const idx = this.itensChaoRpg.findIndex((i) => i.dado === fora);
+      if (idx >= 0) { this.removerItemChao(idx); this.expiradosCap++; }
+    }
+  }
+
+  private removerItemChao(idx: number) {
+    const ic = this.itensChaoRpg[idx];
+    if (!ic) return;
+    if (this.motor?.mundo) this.motor.mundo.grupo.remove(ic.malha);
+    ic.malha.geometry.dispose();
+    (ic.malha.material as THREE.Material).dispose();
+    this.itensChaoRpg.splice(idx, 1);
+  }
+
+  private limparItensChao() {
+    if (this.motor?.mundo) for (const ic of this.itensChaoRpg) this.motor.mundo.grupo.remove(ic.malha);
+    for (const ic of this.itensChaoRpg) {
+      ic.malha.geometry.dispose();
+      (ic.malha.material as THREE.Material).dispose();
+    }
+    this.itensChaoRpg = [];
+  }
+
+  /** Lista REAL do chão (HUD, ganchos E2E) — distâncias ao herói incluídas. */
+  listaItensChao() {
+    const m = this.motor;
+    const px = m?.px ?? 0, pz = m?.pz ?? 0;
+    return {
+      itens: this.itensChaoRpg.map((i) => ({
+        id: i.dado.id, qtd: i.dado.qtd, x: i.dado.x, y: i.dado.y, z: i.dado.z,
+        dist: Math.round(Math.hypot(i.dado.x - px, i.dado.z - pz) * 10) / 10,
+      })),
+      total: this.itensChaoRpg.length,
+      recolhidos: this.recolhidos,
+      expiradosTTL: this.expiradosTTL,
+      expiradosCap: this.expiradosCap,
+      cap: ITEM_CAP,
+      ttl: ITEM_CHAO_TTL,
+    };
+  }
+
+  /** v50: Q / botão LARGAR — 1 unidade do slot selecionado vai para o chão
+   *  à frente do herói (convenção do motor: frente = −sin(yaw), −cos(yaw)).
+   *  O gasto passa pelo consumirSelecionado REAL do motor. */
+  largarSelecionado(): boolean {
+    const m = this.motor;
+    if (!m || m.fase !== "jogando") return false;
+    const s = m.inv.selecionado();
+    if (!s) return false;
+    const id = s.id;
+    m.inv.consumirSelecionado(1);
+    const x = m.px - Math.sin(m.yaw) * 1.1;
+    const z = m.pz - Math.cos(m.yaw) * 1.1;
+    // pegaT 1,2 s: o item largado não volta para a mochila no segundo
+    // seguinte (o magnete devolveria o Q no mesmo instante — padrão do
+    // item_drop do Minecraft/Veloren, 1,2 s declarado)
+    this.adicionarItemChao(id, 1, x, m.py + 1.2, z, 1.2);
+    this.aviso(`Largaste 1× ${NOMES[id] ?? "?"} — fica no chão (aproxima-te para recolher).`, "info", 2.5);
+    return true;
   }
 
   // ── kill → XP + missões ───────────────────────────────────────
@@ -450,6 +561,41 @@ export class SistemaRPG {
       m.vida = Math.min(VIDA_MAX, m.vida + this.perfil.skills.sabio * 0.4 * dt);
     }
 
+    // ── v50: itens no chão — física REAL + magnete + recolha pelo inventário ──
+    if (this.itensChaoRpg.length && m.mundo) {
+      const r = passoItensChao(
+        this.itensChaoRpg.map((i) => i.dado), dt,
+        (x, y, z) => m.mundo!.solido(x, y, z),
+        m.px, m.py, m.pz,
+      );
+      for (const item of r.pegos) {
+        // recolha pelo inventário REAL do motor — o que não couber FICA no
+        // chão (o item encolhe; nada desaparece por decisão silenciosa)
+        const guardado = m.inv.adicionar(item.id, item.qtd);
+        if (guardado > 0) {
+          this.recolhidos += guardado;
+          this.aviso(`+${guardado}× ${NOMES[item.id] ?? "?"} — recolhido do chão.`, "info", 2);
+          item.qtd -= guardado;
+        }
+        if (item.qtd <= 0) {
+          const idx = this.itensChaoRpg.findIndex((i) => i.dado === item);
+          if (idx >= 0) this.removerItemChao(idx);
+        } else if (item.avisoCheiaT <= 0) {
+          item.avisoCheiaT = 8;
+          this.aviso("Mochila cheia — o item fica no chão até caber.", "info", 3);
+        }
+      }
+      for (const item of r.expirados) {
+        const idx = this.itensChaoRpg.findIndex((i) => i.dado === item);
+        if (idx >= 0) { this.removerItemChao(idx); this.expiradosTTL++; }
+      }
+      // malhas seguem a física + giro/bob (visual; a posição é a do dado)
+      for (const ic of this.itensChaoRpg) {
+        ic.malha.position.set(ic.dado.x, ic.dado.y + 0.16 + Math.sin(ic.dado.idade * 3) * 0.05, ic.dado.z);
+        ic.malha.rotation.y += dt * 2.2;
+      }
+    }
+
     // save periódico honesto
     this.cdSave -= dt;
     if (this.cdSave <= 0) { this.cdSave = 8; void this.guardar(); }
@@ -480,6 +626,12 @@ export class SistemaRPG {
     // v48: a mochila guarda-se com a lenda (espólio incluído — sem perda silenciosa)
     this.perfil.inv = this.motor.inv.slots.map((s) => (s ? { id: s.id, qtd: s.qtd } : null));
     this.perfil.invArm = this.motor.inv.armadura ? { id: this.motor.inv.armadura.id, qtd: 1 } : null;
+    // v50: o chão guarda-se com a lenda — loot largado/não recolhido não
+    // evapora no CONTINUAR (coords arredondadas a cm, o validador corta lixo)
+    this.perfil.itensChao = this.itensChaoRpg.map((i) => ({
+      id: i.dado.id, qtd: i.dado.qtd,
+      x: Math.round(i.dado.x * 100) / 100, y: Math.round(i.dado.y * 100) / 100, z: Math.round(i.dado.z * 100) / 100,
+    }));
     this.perfil.ts = Date.now();
     const ls = espelharLS(CHAVE_SAVE_RPG, this.perfil);
     const idb = await idbDefinir(CHAVE_SAVE_RPG, this.perfil);
@@ -494,6 +646,11 @@ export class SistemaRPG {
     this.perfil = perfilInicial(this.perfil.dificuldade);
     this.boss = { vivo: false, derrotado: false, spawnado: false };
     this.bossMob = null;
+    // v50: novo jogo = chão vazio (contadores repostos)
+    this.limparItensChao();
+    this.recolhidos = 0;
+    this.expiradosTTL = 0;
+    this.expiradosCap = 0;
   }
 
   /** Espera o IDB e devolve o perfil carregado (para o botão CONTINUAR). */
@@ -583,6 +740,15 @@ export class SistemaRPG {
       totalRegioes: REGIOES.length,
       totalPois: POIS.length,
       totalBaus: POIS.reduce((n, q) => n + q.baus.length, 0),
+      // v50: chão honesto — o HUD mostra o que está mesmo lá (e o que saiu)
+      itensChao: {
+        total: this.itensChaoRpg.length,
+        recolhidos: this.recolhidos,
+        expiradosTTL: this.expiradosTTL,
+        expiradosCap: this.expiradosCap,
+        cap: ITEM_CAP,
+        ttl: ITEM_CHAO_TTL,
+      },
       avisos: this.avisosRpg.map((a) => ({ ...a })),
       objetivo,
     };

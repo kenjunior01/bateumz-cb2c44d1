@@ -167,6 +167,67 @@ async function parteA() {
     return !semMesa.pode && semMesa.motivo.includes("Mesa de Criação") && comMesa.pode;
   })());
 
+  // ── v50: ITENS NO CHÃO — física/magnete/TTL/cap PUROS (isomórfico) ──
+  const ic = await import(new URL("./src/game/blocos/itensChao.ts", import.meta.url).href);
+  ok("itensChao importa no Node (zero THREE, zero DOM) e cria com pop REAL", (() => {
+    const it = ic.criarItemChao(126, 2, 5, 12, 7, Math.PI / 2);
+    return it.vy > 3 && it.idade === 0 && !it.noChao && Math.abs(it.vx - 1.6) < 1e-9 && Math.abs(it.vz) < 1e-9;
+  })());
+  const chao = (x, y, z) => y < 10; // mundo falso: chão sólido até y=10
+  ok("física: o item CAI com a gravidade do motor e ATERRA no chão sólido", (() => {
+    const it = ic.criarItemChao(105, 1, 5, 13, 5, 0);
+    for (let k = 0; k < 200; k++) ic.passoItensChao([it], 0.05, chao, 100, 11, 100);
+    return it.noChao && Math.abs(it.y - 10.001) < 0.01 && it.vy === 0;
+  })());
+  ok("assente no chão, fora do magnete o item PARA (fricção — não escorrega para sempre)", (() => {
+    const it = ic.criarItemChao(105, 1, 5, 10.02, 5, 0);
+    for (let k = 0; k < 120; k++) ic.passoItensChao([it], 0.05, chao, 100, 11, 100);
+    return Math.hypot(it.vx, it.vz) < 0.01;
+  })());
+  ok("magnete: a 2,6 m (dentro de 3) o item ESCORREGA até ao herói e é RECOLHIDO a 1,7", (() => {
+    const it = ic.criarItemChao(105, 1, 5, 10.001, 5, 0);
+    let pegos = null;
+    for (let k = 0; k < 400 && !(pegos && pegos.length); k++)
+      pegos = ic.passoItensChao([it], 0.05, chao, 7.6, 10.02, 5).pegos; // 2,6 m a +x
+    return !!pegos && pegos.length === 1 && pegos[0] === it && Math.hypot(it.x - 7.6, it.z - 5) <= ic.ITEM_RAIO_PEGA + 0.15;
+  })());
+  ok("recolha em cima do item (dHoriz 0) também dispara — o herói parado sobre o loot não o perde", (() => {
+    const it = ic.criarItemChao(105, 1, 5, 10.001, 5, 0);
+    const r = ic.passoItensChao([it], 0.05, chao, 5, 10.02, 5);
+    return r.pegos.length === 1;
+  })());
+  ok("pegaT: o item LARGADO pelo próprio herói não volta para a mochila no mesmo segundo", (() => {
+    const it = ic.criarItemChao(122, 1, 5, 10.001, 5, 0, 1.2);
+    let pegouCedo = false;
+    for (let k = 0; k < 24; k++) if (ic.passoItensChao([it], 0.05, chao, 5, 10.02, 5).pegos.length) pegouCedo = true; // 1,2 s: ainda não
+    const r2 = ic.passoItensChao([it], 0.05, chao, 5, 10.02, 5); // pegaT passou → recolhe
+    return !pegouCedo && r2.pegos.length === 1;
+  })());
+  ok("TTL 120 s: item velho EXPIRA (o mundo não é um armazém) e y<−10 também", (() => {
+    const velho = ic.criarItemChao(105, 1, 5, 10.001, 5, 0);
+    velho.idade = ic.ITEM_CHAO_TTL - 0.05;
+    const r1 = ic.passoItensChao([velho], 0.06, chao, 100, 11, 100);
+    const abismo = ic.criarItemChao(105, 1, 5, -11, 5, 0);
+    const r2 = ic.passoItensChao([abismo], 0.05, chao, 100, 11, 100);
+    return r1.expirados.length === 1 && r1.expirados[0] === velho && r2.expirados.length === 1;
+  })());
+  ok("cap 48: ultrapassar expulsa o MAIS VELHO primeiro (nada fica escondido)", (() => {
+    const itens = [];
+    for (let k = 0; k < 50; k++) { const it = ic.criarItemChao(100 + k, 1, k, 10.001, k, 0); it.idade = k; itens.push(it); }
+    const fora = ic.aplicarCapItens(itens);
+    return fora.length === 2 && fora.every((f) => f.idade >= 48) &&
+      !fora.some((f) => f.idade < 48) && ic.aplicarCapItens(itens.slice(0, 48)).length === 0;
+  })());
+  ok("validador: itens no chão do save — inválidos cortados, cap 48, undefined = null (saves antigos)", (() => {
+    const bom = { id: 126, qtd: 2, x: 1.5, y: 32, z: 3.5 };
+    const v1 = core.validarPerfilRpg({ v: 41, dificuldade: "medio", xp: 1, pontos: 0, skills: { guerreiro: 0, explorador: 0, sabio: 0 }, missoes: { historiaFeitas: [] }, descobertas: { regioes: [], pois: [], baus: [] }, creditos: 0, kills: {}, mortes: 0, blocos: 0, bossDerrotado: false, pos: null, inv: null, invArm: null, itensChao: [bom, { id: -1, qtd: 1, x: 0, y: 0, z: 0 }, { id: 126, qtd: 1, x: "x", y: 0, z: 0 }], ts: 0 });
+    const v2 = core.validarPerfilRpg({ v: 41, dificuldade: "medio", xp: 1, pontos: 0, skills: { guerreiro: 0, explorador: 0, sabio: 0 }, missoes: { historiaFeitas: [] }, descobertas: { regioes: [], pois: [], baus: [] }, creditos: 0, kills: {}, mortes: 0, blocos: 0, bossDerrotado: false, pos: null, inv: null, invArm: null, ts: 0 });
+    const muitos = Array.from({ length: 60 }, (_, k) => ({ id: 126, qtd: 1, x: k, y: 32, z: k }));
+    const v3 = core.validarPerfilRpg({ v: 41, dificuldade: "medio", xp: 1, pontos: 0, skills: { guerreiro: 0, explorador: 0, sabio: 0 }, missoes: { historiaFeitas: [] }, descobertas: { regioes: [], pois: [], baus: [] }, creditos: 0, kills: {}, mortes: 0, blocos: 0, bossDerrotado: false, pos: null, inv: null, invArm: null, itensChao: muitos, ts: 0 });
+    return v1 && v1.itensChao.length === 1 && v1.itensChao[0].id === 126
+      && v2 && v2.itensChao === null && v3 && v3.itensChao.length === 48;
+  })());
+
   // ── habilidades ──
   ok("escalaVelExplorador: +8%/nível com tecto 1.18 (orçamento do motor v37)",
     core.escalaVelExplorador(0) === 1 && core.escalaVelExplorador(3) === 1.18 && core.escalaVelExplorador(5) === 1.18);
@@ -686,6 +747,141 @@ async function parteB() {
   await page.keyboard.press("Escape");
   await aguardar(async () => (await page.locator('[data-testid="rpg-forja"]').count()) === 0, 10, "forja fechou (3)");
 
+  // ── v50 · ITENS NO CHÃO (loot como ENTIDADE — padrão Veloren item_drop) ──
+  // O drop de mob nasce NO CHÃO onde o mob caiu (gancho REAL do motor —
+  // engine.atacar encaminha pelo aoDroparChao), desliza pelo magnete e entra
+  // na mochila pelo adicionar REAL. Blocos/baús continuam DIRECTO (v48).
+  await page.evaluate(() => (window).__rpg.teleportar(2.5, 33.02, 4.5));
+  await page.evaluate(() => (window).__rpg.definirHora(0.35)); // dia: aranha neutra (v32)
+  await pump(6);
+  const fioAntes = await page.evaluate(() => (window).__rpg.motor.inv.contar(126)); // FIO
+  /** Mata 1 aranha DE DIA pela via REAL do combate (auto-mira + atacar) —
+   *  referência DIRETA do Mob nascido (padrão v48). A aranha de dia é NEUTRA
+   *  (vagar — não persegue): o scaffolding MANTÉM-A a 3,7 m do herói — dentro
+   *  do alcance do golpe (4,0) e FORA do magnete (3,0) — assim o drop nasce e
+   *  FICA no chão (nenhum tick o recolhe, nem os rAF entre evaluates). */
+  const matouAranha = await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    const i = m.inv.slots.findIndex((s) => s && s.id === 112); // ESPADA_MADEIRA
+    if (i >= 0) m.inv.selecao = i;
+    const ancora = { x: m.px, z: m.pz };
+    const mob = w.spawnarMob("aranha", 3.7, 0);
+    for (let t = 0; t < 200; t++) {
+      if (!mob.vivo) return true; // morto → drop nasceu a 3,7 m; SEM tick depois
+      m.passo(0.05);
+      w.sistema.tick(0.05);
+      if (m.fase !== "jogando") m.renascer();
+      m.vida = 20; // herói de treino
+      const dx = mob.x - m.px, dz = mob.z - m.pz, d = Math.hypot(dx, dz) || 0.001;
+      if (Math.abs(Math.hypot(mob.x - ancora.x, mob.z - ancora.z) - 3.7) > 0.5) {
+        mob.x = ancora.x + ((mob.x - ancora.x) / d) * 3.7;
+        mob.z = ancora.z + ((mob.z - ancora.z) / d) * 3.7;
+      }
+      m.yaw = Math.atan2(-dx, -dz);
+      m.atacar();
+    }
+    return false;
+  });
+  ok("aranha morta de dia pela via real do combate (auto-mira + atacar)", matouAranha);
+  const dropChao = await page.evaluate(() => (window).__rpg.itensChao());
+  ok("loot nasceu NO CHÃO onde o mob caiu (item FIO no mundo — não na mochila)",
+    dropChao.itens.some((i) => i.id === 126 && i.dist <= 7) &&
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(126))) === fioAntes);
+  ok("chip do HUD mostra o chão honesto (item(s) no chão)",
+    await aguardar(async () => (await page.locator('[data-testid="rpg-chao-chip"]').count()) === 1, 15, "chip do chão"));
+  // recolha REAL: herói vai para cima do item → magnete/pega → inventário
+  await page.evaluate((lst) => {
+    const it = lst.itens.find((i) => i.id === 126);
+    (window).__rpg.teleportar(it.x, it.y + 0.5, it.z);
+  }, dropChao);
+  await pump(8);
+  const recolhido = await page.evaluate(() => ({
+    fio: (window).__rpg.motor.inv.contar(126),
+    fioPerto: (window).__rpg.itensChao().itens.filter((i) => i.id === 126 && i.dist <= 2.5).length,
+  }));
+  ok("recolha por proximidade: FIO entrou na mochila pelo adicionar REAL e saiu do chão",
+    recolhido.fio > fioAntes && recolhido.fioPerto === 0);
+  ok("aviso honesto de recolha («recolhido do chão»)",
+    (await rpg()).avisos.some((a) => a.texto.includes("recolhido do chão")));
+
+  // LARGAR pela via REAL da tecla Q: 1 couro do slot selecionado → chão.
+  // O herói afasta-se LOGO (o largado volta para quem fica parado quando o
+  // pegaT de 1,2 s expira — comportamento certo, o teste não pode competir
+  // com ele: larga e sai do raio do magnete antes do fim do atraso).
+  const couro = await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    m.inv.adicionar(122, 2); // COURO — nada neste flow o usa antes
+    const idx = m.inv.slots.findIndex((s) => s && s.id === 122);
+    m.inv.selecao = idx;
+    return m.inv.contar(122);
+  });
+  await page.keyboard.press("q");
+  await page.evaluate(() => (window).__rpg.mover(-1, 0, 1)); // afasta-se ~4,4 m logo após largar
+  await pump(30); // pegaT (1,2 s) expira com o herói FORA do magnete (3 m)
+  ok("tecla Q larga 1 do slot selecionado à frente do herói (mochila −1, chão +1)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(122))) === couro - 1 &&
+    (await page.evaluate(() => (window).__rpg.itensChao().itens.some((i) => i.id === 122 && i.qtd === 1))));
+  ok("pegaT real: 1,2 s passaram a >3 m e o item NÃO voltou à mochila (fica no chão)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(122))) === couro - 1 &&
+    (await page.evaluate(() => (window).__rpg.itensChao().itens.some((i) => i.id === 122))));
+  // a mochila recebe o largado de volta pelo CAMINHO REAL (aproximação)
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    const it = w.itensChao().itens.find((i) => i.id === 122);
+    w.teleportar(it.x, it.y + 0.5, it.z);
+  });
+  await pump(8);
+  ok("recolheu o largado ao voltar (couro de volta, chão sem ele)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(122))) === couro &&
+    !(await page.evaluate(() => (window).__rpg.itensChao().itens.some((i) => i.id === 122))));
+
+  // mochila CHEIA: o drop do mob NÃO desaparece — fica no chão (aviso honesto)
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    m.inv.limpar();
+    for (let i = 0; i < 36; i++) m.inv.adicionar(126, 64); // 36 pilhas cheias de FIO
+  });
+  await pump(2);
+  const cheiaMatar = await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    const ancora = { x: m.px, z: m.pz };
+    const mob = w.spawnarMob("aranha", 3.7, 0);
+    for (let t = 0; t < 200; t++) {
+      if (!mob.vivo) return true;
+      m.passo(0.05); w.sistema.tick(0.05);
+      if (m.fase !== "jogando") m.renascer();
+      m.vida = 20;
+      const dx = mob.x - m.px, dz = mob.z - m.pz, d = Math.hypot(dx, dz) || 0.001;
+      if (Math.abs(Math.hypot(mob.x - ancora.x, mob.z - ancora.z) - 3.7) > 0.5) {
+        mob.x = ancora.x + ((mob.x - ancora.x) / d) * 3.7;
+        mob.z = ancora.z + ((mob.z - ancora.z) / d) * 3.7;
+      }
+      m.yaw = Math.atan2(-dx, -dz);
+      m.atacar();
+    }
+    return false;
+  });
+  ok("2ª aranha morta com a mochila cheia (dano 1, sem espada — mais golpes)", cheiaMatar);
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    const it = w.itensChao().itens.find((i) => i.id === 126);
+    if (it) w.teleportar(it.x, it.y + 0.5, it.z); // anda até ao drop
+  });
+  await pump(8);
+  ok("mochila cheia: o drop FICA no chão (não desaparece) e a mochila não muda", await page.evaluate(() => {
+    const w = (window).__rpg;
+    return w.motor.inv.contar(126) === 36 * 64 && w.itensChao().itens.some((i) => i.id === 126);
+  }));
+  ok("aviso honesto «Mochila cheia — o item fica no chão»",
+    (await rpg()).avisos.some((a) => a.texto.includes("fica no chão")));
+  // limpa a mochila cheia e repõe a espada para o resto do percurso (LENDa…)
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    m.inv.limpar();
+    m.inv.adicionar(112, 1); // ESPADA_MADEIRA — o kit mínimo do duelo
+    m.inv.selecao = m.inv.slots.findIndex((s) => s && s.id === 112);
+  });
+
   // ── dificuldade muda o HP dos NOVOS inimigos (noite: sem queimar) ──
   // v48: referência DIRETA do mob nascido (spawnarMob devolve o Mob) — a 1.ª
   // versão lia o último zumbi vivo e corria com spawns naturais/explosões
@@ -785,10 +981,30 @@ async function parteB() {
   ok("renasce na Aldeia com vida cheia", c2.vida === 20 && Math.abs(c2.pos[0] - 2.5) < 30);
   ok("morte contada no perfil (+1)", (await rpg()).mortes === mortesAntes + 1);
 
-  // ── save + CONTINUAR (progresso sobrevive ao reload) ──
+  // ── v50: um item NO CHÃO sobrevive ao CONTINUAR (o chão guarda-se com a lenda) ──
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    m.inv.adicionar(122, 1); // COURO para largar
+    const idx = m.inv.slots.findIndex((s) => s && s.id === 122);
+    m.inv.selecao = idx;
+    const h = m.mundo.alturaTerreno(30, 30);
+    w.teleportar(30.5, h + 1.02, 30.5);
+  });
+  await page.evaluate(() => (window).__rpg.largar()); // a MESMA via da tecla Q / botão LARGAR 1
+  await page.evaluate(() => {
+    const w = (window).__rpg, m = w.motor;
+    const it = w.itensChao().itens.find((i) => i.id === 122);
+    const h = m.mundo.alturaTerreno(it.x - 8, it.z);
+    w.teleportar(it.x - 8, h + 1.02, it.z); // já para fora do magnete — antes do pegaT expirar
+  });
+  await pump(14); // o «pop» assenta (fricção) e o pegaT expira com o herói longe
+  const couroSalvo = await page.evaluate(() => (window).__rpg.itensChao().itens.find((i) => i.id === 122));
+  ok("loot largado fica no chão longe do herói (coords reais para o save)", !!couroSalvo);
   const nivelAntes = (await rpg()).nivel;
   await page.evaluate(() => (window).__rpg.guardar());
   await page.waitForTimeout(600);
+  ok("o save GUARDA os itens do chão (perfil.itensChao com o couro)",
+    (await page.evaluate(() => (window).__rpg.perfil().itensChao?.some((e) => e.id === 122))) === true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await sel("rpg-titulo", 30000);
   await aguardar(async () => (await page.evaluate(() => (window).__rpg?.temSave?.())) === true, 30, "temSave após reload");
@@ -810,6 +1026,10 @@ async function parteB() {
     const w = (window).__rpg, inv = w.motor.inv;
     return inv.contar(112) === 1 && inv.contar(17) === 0 && !!w.perfil().inv?.some((s) => s?.id === 112);
   }));
+  ok("CONTINUAR: o item NO CHÃO voltou ao sítio (o chão restaurou com a lenda — ±pop do restauro)", await page.evaluate((s) => {
+    const f = (window).__rpg.itensChao();
+    return f.itens.some((i) => i.id === 122 && Math.hypot(i.x - s.x, i.z - s.z) < 1.0);
+  }, couroSalvo));
 
   // ── novo jogo apaga o save ──
   await page.evaluate(() => (window).__rpg.apagarSave());

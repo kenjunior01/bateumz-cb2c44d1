@@ -642,3 +642,19 @@ Pedido: «continue» — o «Honesto (o que fica)» da v42 dizia «o mapa não m
 **Verificação**: tsc 0 · rpg-v41 79/79 · cidade 32/32 (motor partilhado intocado) · v31 38+1skip e 39/39 (2 corridas) · build OK · screenshot do mapa verificada (planície/miombo em dois verdes, serra a cinza claro no norte, baía azul da Costa dos Corais com areia, deserto natural a oeste, aldeia descoberta a amarelo-tint, «???» sobre véu escuro, ★/◆/seta/Norte).
 
 **Honesto (o que fica)**: a baía da costa é pequena no mapa (o mar do core fica a z>72 e o círculo da costa termina em z=100 — é o dado real); o mapa não mostra árvores individuais nem estruturas (porque não são funções de coluna — os POIs continuam como ◆); neve continua LIMPO honesto.
+
+## v45 — MINIMAPA do BATEU RPG no HUD (o instrumento de navegação diária; o mapa grande fica para o planeamento) (2026-11-14)
+
+Pedido: «continue» — a v42 deu o MAPA DO MUNDO e a v44 deu-lhe terreno real, mas faltava o instrumento do dia-a-dia de um RPG à Veloren: um minimapa sempre à vista, sem abrir modal.
+
+**MINIMAPA (88px, canto superior esquerdo, 2 Hz)**: canvas que consome o método QUE JÁ EXISTIA no motor partilhado (`miniMapa(22)` — herdado do BateuCraft v28 e sobrevivido à sua reforma, amostra o TOPO de 44×44 colunas dos chunks carregados, incluindo edições do jogador, + mobs vivos no raio + posição/yaw). Zero dados inventados: relva/pedra/água/tronco/baú pelas cores partilhadas, ◆ dourado nos baús dos POIs descobertos DENTRO do raio (nada revelado de graça), mobs por ponto — vermelho hostil / rosa passivo —, seta branca do jogador rotacionada por −yaw (a MESMA fórmula da bússola e do mapa grande), N a −z. Bordo do quadro = cor da região atual (via captura), reforço visual de «onde estou». Clique abre o MAPA DO MUNDO (a progressão natural: perto→longe). Desenho a 2 Hz no ciclo rAF do motor (acumulador dt — o mapa grande continua por frame enquanto aberto; o minimapa não compete).
+
+**CORES_MAPA promovida ao motor de dados**: saiu do CidadeBateu.tsx para `src/game/blocos/constants.ts` (o miniMapa é do MOTOR partilhado — CIDADE e RPG são o mesmo bloco de dados) e ganhou os 12 blocos que faltavam (carvão/ouro/diamante/rocha-mãe/mesa, ervas/flores/cacto v29, arada/trigo/TNT/baú) — antes caíam no #666 cinzento genérico. CidadeBateu agora importa; zero duplicação.
+
+**Ajuda**: linha nova nos controlos de computador (minimapa + clique → mapa + ◆ = baú descoberto perto).
+
+**Testes**: test-rpg-v41 79→**83** — minimapa visível 88px com bordo da região, 1936/1936 células reais preenchidas (nenhuma coluna vazia), mob hostil spawnado entra no raio (1→3) e clique abre o mapa grande (ESC fecha). **Furo de teste corrigido**: a 1.ª versão spawnava zumbi DE DIA para ver o ponto vermelho — 0,2 s de pump perde para a ignição do sol (flaky); agora `definirHora(0.85)` primeiro, como as outras secções de caça.
+
+**Verificação**: tsc 0 · rpg-v41 83/83 · cidade 32/32 (MiniMapa da cidade intocado, agora importando do constants) · build OK · screenshot verificada (minimapa com terreno verde/seta/N/bordo âmbar da região sobre o HUD real).
+
+**Honesto (o que fica)**: o minimapa só mostra chunks já carregados (o que o motor vê — sem espionar o mundo à frente); mobs mortos deixam de aparecer (filtro vivo); baús só quando descobertos.

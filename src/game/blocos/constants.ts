@@ -14,6 +14,18 @@ export const B = {
 // Decorações: erva/flores em cruz, cacto em cubo (v29)
 export const CRUZ: ReadonlySet<number> = new Set([B.ERVA, B.FLOR_AM, B.FLOR_VM]);
 
+// ── Cores do minimapa (bloco → cor; consumido por motor.miniMapa()) ──
+// v45: saiu do CidadeBateu para a camada de dados — motor partilhado é o
+// mesmo para CIDADE e RPG; cobre TODOS os blocos colocáveis (1..29).
+export const CORES_MAPA: Record<number, string> = {
+  1: "#4f9e2f", 2: "#7a5636", 3: "#8a8a8a", 4: "#7d7d7d", 5: "#dcc98f",
+  6: "#3a6fd8", 7: "#9a6b39", 8: "#3e8c2a", 9: "#b78b52", 10: "#4a4a4a",
+  11: "#a37c46", 12: "#d4b23a", 13: "#4fe0d4", 14: "#5a5a5a", 15: "#a07850",
+  16: "#6e6e6e", 17: "#f0c542", 18: "#bfe6f0", 19: "#c23a3a", 20: "#c89a62",
+  21: "#5cae3d", 22: "#e8d24e", 23: "#d05050", 24: "#3e7d3e",
+  25: "#8a6a42", 26: "#7aa84f", 27: "#d4b63e", 28: "#c04040", 29: "#a8823e",
+};
+
 // ── Itens (ids ≥ 100, só inventário) ─────────────────────────
 export const I = {
   GRAVETO: 100, CARVAO: 101, DIAMANTE: 102, BARRA_FERRO: 103, BARRA_OURO: 104,

@@ -306,6 +306,28 @@ async function parteB() {
   await page.keyboard.press("m");
   await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (M)");
 
+  // ── v45 · MINIMAPA do HUD (dados reais do motor a 2 Hz) ──
+  const mini = page.locator('[data-testid="rpg-minimapa"]');
+  ok("minimapa no HUD (canvas 88px, bordo da cor da região)",
+    await mini.isVisible().catch(() => false) && (await mini.locator("canvas").getAttribute("width")) === "88");
+  const miniData = await page.evaluate(() => {
+    const d = (window).__rpg.motor.miniMapa(22);
+    return { preenchidas: Array.from(d.celulas).filter((v) => v > 0).length, lado: d.lado };
+  });
+  ok(`minimapa: células reais dos chunks carregados (${miniData.preenchidas}/${miniData.lado * miniData.lado})`, miniData.preenchidas > 500);
+  const miniAntes = await page.evaluate(() => (window).__rpg.motor.miniMapa(22).mobs.length);
+  // noite: zumbi não queima ao sol (0,2s de pump não pode competir com ignição)
+  await page.evaluate(() => (window).__rpg.definirHora(0.85));
+  await page.evaluate(() => (window).__rpg.spawnarMob("zumbi", 5, 3));
+  await pump(4);
+  const miniComMob = await page.evaluate(() => (window).__rpg.motor.miniMapa(22).mobs.length);
+  ok(`minimapa: mob hostil entra no raio (${miniAntes}→${miniComMob})`, miniComMob > miniAntes);
+  await mini.click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 1, 10, "mapa do mundo abriu do minimapa");
+  ok("clique no minimapa abre o MAPA DO MUNDO", true);
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (do minimapa)");
+
   // ── combate → XP → nível → habilidade ──
   await page.evaluate(() => (window).__rpg.teleportar(2.5, 40, 4.5)); // volta à aldeia
   await pump(10);

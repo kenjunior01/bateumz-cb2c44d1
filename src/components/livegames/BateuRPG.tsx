@@ -16,7 +16,7 @@ import {
 } from "@/game/rpg/core";
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
-import { ITENS, NIVEL_MAR } from "@/game/blocos/constants";
+import { ITENS, NIVEL_MAR, CORES_MAPA } from "@/game/blocos/constants";
 import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
@@ -144,6 +144,12 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const mapaCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rpgRef = useRef<CapturaRpg | null>(null);
   const desenharMapaRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
+  // v45: minimapa do HUD (canvas 88px, redesenhado a cada 500ms com dados
+  // REAIS do motor — miniMapa() amostra os chunks carregados, mobs vivos e
+  // a posição do jogador; zero invenção, o mesmo método do motor partilhado)
+  const miniCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const miniTRef = useRef(0);
+  const desenharMiniRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
   useEffect(() => { modalRef.current = modal; }, [modal]);
   const [creditosEnviados, setCreditosEnviados] = useState(0);
 
@@ -206,6 +212,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         rpgRef.current = capturaAgora;
         setRpg(capturaAgora);
         if (modalRef.current === "mapa") desenharMapaRef.current();
+        // v45: minimapa a 2 Hz (amostra 44×44 dos chunks carregados — barato)
+        miniTRef.current += dt;
+        if (miniTRef.current >= 0.5) { miniTRef.current = 0; desenharMiniRef.current(); }
       }
     };
     raf = requestAnimationFrame(ciclo);
@@ -516,6 +525,72 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     mapaBaseInfoRef.current = { amostras, agua, rocha, floresta, ms: Math.round(performance.now() - t0) };
   }, []);
 
+  // ── v45: minimapa do HUD — dados reais do motor, 2 Hz (barato: só amostra
+  // os chunks já carregados). Blocos pela cor partilhada CORES_MAPA, baús
+  // descobertos por ◆ dourado, mobs por ponto (vermelho hostil · rosa
+  // passivo), jogador por seta branca rotacionada por −yaw (frente = −z).
+  const desenharMini = useCallback(() => {
+    const cv = miniCanvasRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    const mm = motorRef.current;
+    if (mm.fase !== "jogando") return;
+    const d = mm.miniMapa(22); // 44×44 células = 44 blocos à volta do jogador
+    ctx.fillStyle = "#08110c";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    const px = cv.width / d.lado;
+    for (let z = 0; z < d.lado; z++) for (let x = 0; x < d.lado; x++) {
+      const id = d.celulas[z * d.lado + x];
+      if (!id) continue;
+      ctx.fillStyle = CORES_MAPA[id] ?? "#666";
+      ctx.fillRect(x * px, z * px, px + 0.5, px + 0.5);
+    }
+    const cxa = (wx: number, wz: number) => ({
+      x: (wx - (d.px - 22)) * px, y: (wz - (d.pz - 22)) * px,
+    });
+    // baús dos POIs dentro do raio (descobertos — nada revelado de graça)
+    for (const p of POIS) {
+      if (!sistemaRef.current.perfil.descobertas.pois.includes(p.id)) continue;
+      const c = cxa(p.x + 0.5, p.z + 0.5);
+      if (c.x < -5 || c.x > cv.width + 5 || c.y < -5 || c.y > cv.height + 5) continue;
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = "#fbbf24";
+      ctx.fillRect(-2.6, -2.6, 5.2, 5.2);
+      ctx.restore();
+    }
+    // mobs vivos no raio
+    for (const mob of d.mobs) {
+      const c = cxa(mob.x, mob.z);
+      const passivo = mob.tipo === "porco" || mob.tipo === "vaca" || mob.tipo === "galinha";
+      ctx.fillStyle = passivo ? "#f9a8d4" : "#ef4444";
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // jogador (seta branca; mesma rotação −yaw do mapa grande/bússola)
+    ctx.save();
+    ctx.translate(cv.width / 2, cv.height / 2);
+    ctx.rotate(-d.yaw);
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -6); ctx.lineTo(4.5, 5); ctx.lineTo(0, 2.5); ctx.lineTo(-4.5, 5);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // Norte
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("N", cv.width - 8, 11);
+  }, []);
+
+  useEffect(() => { desenharMiniRef.current = desenharMini; }, [desenharMini]);
+
   const desenharMapa = useCallback(() => {
     const cv = mapaCanvasRef.current;
     if (!cv) return;
@@ -626,6 +701,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <li>J — missões</li>
           <li>K — habilidades</li>
           <li>M — mapa do mundo</li>
+          <li>Minimapa no canto (bordos da cor da região) — clique abre o mapa do mundo; ◆ dourado = baú descoberto perto de ti</li>
           <li>ESC — pausa</li>
           <li>F5 — câmara</li>
         </ul>
@@ -806,8 +882,17 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       {/* ═══ HUD ═══ */}
       {fase !== "inicio" && cap && rpg && (
         <>
-          {/* ── topo esquerda: vida, fome, posição ── */}
+          {/* ── topo esquerda: minimapa (v45), vida, fome, posição ── */}
           <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
+            <button
+              onClick={() => setModal("mapa")}
+              data-testid="rpg-minimapa"
+              title="Minimapa — clique para o mapa do mundo (M)"
+              className="rounded-lg pointer-events-auto cursor-pointer w-fit"
+              style={{ border: `2px solid ${rpg.regiao?.cor ?? "rgba(255,255,255,0.35)"}` }}
+            >
+              <canvas ref={miniCanvasRef} width={88} height={88} className="block rounded-[6px]" />
+            </button>
             <div className="flex items-center gap-3"><Coracoes vida={cap.vida} /><Fome fome={cap.fome} /></div>
             {cap.ar < 10 && (
               <div className="flex gap-[2px]">

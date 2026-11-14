@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
+import { CORES_MAPA } from "@/game/blocos/constants";
 import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
   POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, SPAWN_PRACA, type Distrito,
@@ -43,11 +44,6 @@ import { useSEO } from "@/hooks/useSEO";
 interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" }
 interface Aviso { texto: string; k: number }
 
-const CORES_MAPA: Record<number, string> = {
-  1: "#4f9e2f", 2: "#7a5636", 3: "#8a8a8a", 4: "#7d7d7d", 5: "#dcc98f",
-  6: "#3a6fd8", 7: "#9a6b39", 8: "#3e8c2a", 9: "#b78b52", 11: "#a37c46",
-  16: "#6e6e6e", 17: "#f0c542", 18: "#bfe6f0", 19: "#c23a3a", 20: "#c89a62",
-};
 
 function MiniMapa({ motor }: { motor: Motor }) {
   const cvRef = useRef<HTMLCanvasElement>(null);

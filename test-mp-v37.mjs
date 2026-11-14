@@ -3,6 +3,11 @@
 // Dois jogadores · movimento partilhado · reconciliação honesta
 // (`corrigido`) · chat da praça com rate-limit e sanitização ·
 // teclado do chat não move o jogador · bots · offline honesto.
+// v47 — N2: o servidor RE-SIMULA O TERRENO (alturaCidade, a mesma
+// função e semente do cliente): subida legal aceita, duplo-salto
+// impossível recusado com motivo honesto («parede») · painel
+// «Praça em direto» com eventos reais da sessão + atividade real
+// da plataforma (activityBus) · STATS REAIS do processo (ping→stats).
 // Uso: PW_CHROME=<chromium> node test-mp-v37.mjs (vite 8099 + servidor 8765)
 // ============================================================
 import { chromium } from "playwright";
@@ -93,6 +98,104 @@ async function main() {
   ok("Bruno vê Ana clampada (≈25, não 100)", !!posClamp && posClamp.x < 30 && posClamp.x > 15, `x=${posClamp?.x}`);
   ok("A continua ligado após correção", await A.evaluate(() => window.__cidade.mpEstado() === "ligado"));
 
+  console.log("— Cap e bots");
+  const bots = [];
+  for (let i = 0; i < 8; i++) {
+    const ws = new WebSocket(MP_URL);
+    ws.on("open", () => ws.send(JSON.stringify({ t: "ola", nome: `Bot-${i}` })));
+    bots.push(ws);
+  }
+  await A.waitForFunction(() => (window.__cidade?.mpRemotos?.().length ?? 0) >= 9, null, { timeout: 8000 }).catch(() => {});
+  const nRemA = await A.evaluate(() => window.__cidade.mpRemotos().length);
+  ok("A vê 8 bots + Bruno = 9 remotos", nRemA === 9, `n=${nRemA}`);
+
+  console.log("— v47: painel Praça em direto (eventos reais) + pico de presença");
+  await B.waitForFunction(() => (window.__cidade?.mpEventos?.() ?? []).some((e) => e.tipo === "entrou" && (e.nome ?? "").startsWith("Bot-")), null, { timeout: 8000 }).catch(() => {});
+  const evB = await B.evaluate(() => window.__cidade.mpEventos());
+  ok("B registou entradas REAIS dos bots", evB.filter((e) => e.tipo === "entrou" && (e.nome ?? "").startsWith("Bot-")).length >= 6, `n=${evB.length}`);
+  ok("painel de B mostra linha de evento real", await B.getByTestId("cd-eventos-linha").count() > 0);
+  const picoB = await B.evaluate(() => window.__cidade.mpPico());
+  ok("pico de presença REAL ≥ 9 (observado, não estimado)", picoB >= 9, `pico=${picoB}`);
+  ok("painel de B mostra o pico", await B.getByTestId("cd-eventos-pico").textContent().then((s) => /\d/.test(s ?? "")));
+
+  console.log("— v47 N2: física do terreno re-simulada pelo servidor (mesma alturaCidade)");
+  // Coordenadas REAIS calculadas pela função pura (probe-penhasco-v47.mjs,
+  // semente 20251103): no anel de fusão a (60,-16) a subida radial é 2,0 por
+  // passo de 2 blocos — legal (≤ SUBIDA_CAP 2,22) — e o passo seguinte +1,0
+  // excede o orçamento restante → recusa «parede». O caminho de 44 passos foi
+  // SIMULADO contra o handler real: tudo aceite até à base.
+  const corrAntes = await A.evaluate(() => window.__cidade.mpEventos().filter((e) => e.tipo === "corrigido").length);
+  // drive honesto de (20,6.5) até à base do degrau (60,-16): 1 bloco/125 ms = 8 b/s
+  await A.evaluate(async () => {
+    const m = window.__cidade.motor;
+    const passos = 44;
+    for (let i = 1; i <= passos; i++) {
+      const t = i / passos;
+      const x = Math.round((20 + 40 * t) * 100) / 100;
+      const z = Math.round((6.5 - 22.5 * t) * 100) / 100;
+      window.__cidade.teleportar(x, m.mundo.alturaTerreno(x, z) + 1.02, z);
+      window.__cidade.mpPasso(0.125);
+      await new Promise((r) => setTimeout(r, 125));
+    }
+  });
+  ok("drive de 44 passos legais: ZERO correções", await A.evaluate((n) => window.__cidade.mpEventos().filter((e) => e.tipo === "corrigido").length === n, corrAntes), `corr=${corrAntes}`);
+  // DOIS SALTOS NO MESMO INSTANTE — numa só tarefa JS (o rAF não corre dentro
+  // dela) e ambos por envio imediato (o gate de 100 ms do mpPasso pode calar o
+  // 1.º se o ciclo de jogo mandou pos há pouco — furo real das corridas 3/4).
+  // 1.º salto: subida radial REAL +2,0 ≤ SUBIDA_CAP 2,22 → ACEITE (o orçamento
+  // não pune subida legal); 2.º salto chega ms depois com +1,0 e orçamento
+  // ~0,2 — a física do motor não faz dois saltos em 0,1 s (1 salto = 0,66 s)
+  // → REJEITADO «parede». Envio imediato é a MESMA via real do cliente.
+  await A.evaluate(() => {
+    const m = window.__cidade.motor;
+    window.__cidade.teleportar(62, m.mundo.alturaTerreno(62, -17) + 1.02, -17);
+    window.__cidade.mpPassoImediato(62, -17); // 1.º salto: ACEITE (subida real +2,0)
+    window.__cidade.teleportar(64, m.mundo.alturaTerreno(64, -18) + 1.02, -18);
+    window.__cidade.mpPassoImediato(64, -18); // 2.º salto ms depois: REJEITADO
+  });
+  await A.waitForFunction(() => window.__cidade?.ultimaCorrecao?.()?.motivo === "parede", null, { timeout: 6000 }).catch(() => {});
+  const parede = await A.evaluate(() => window.__cidade.ultimaCorrecao());
+  ok("recusa do servidor com motivo honesto «parede»", !!parede && parede.motivo === "parede", JSON.stringify(parede));
+  ok("servidor manteve a posição válida (x≈62)", !!parede && Math.abs(parede.x - 62) < 1.5 && Math.abs(parede.z + 17) < 1.5, `x=${parede?.x} z=${parede?.z}`);
+  // EXATAMENTE 1 nova correção e é a parede → o 1.º salto (+2,0) foi ACEITE
+  // (o orçamento de subida não pune subida legal) e só o 2.º caiu
+  const eventosA = await A.evaluate((n) => ({
+    corr: window.__cidade.mpEventos().filter((e) => e.tipo === "corrigido").length,
+    motivos: window.__cidade.mpEventos().filter((e) => e.tipo === "corrigido").map((e) => e.motivo),
+  }), corrAntes);
+  ok("subida legal de 2,0 foi ACEITE e só a impossível caiu", eventosA.corr === corrAntes + 1 && eventosA.motivos[eventosA.motivos.length - 1] === "parede", JSON.stringify(eventosA));
+  ok("evento real «corrigido/parede» no registo da sessão", eventosA.motivos.includes("parede"));
+  await sleep(300);
+  const pxApos = await A.evaluate(() => window.__cidade.motor.px);
+  ok("cliente reencaixado na posição autoritativa", Math.abs(pxApos - 62) < 1.5, `px=${pxApos?.toFixed(2)}`);
+  // o painel refresca por sondagem de 1 s — esperar o DOM real, não correr à frente
+  await A.waitForFunction(() => [...document.querySelectorAll('[data-testid="cd-eventos-linha"]')]
+    .some((el) => /recusada|refused/.test(el.textContent ?? "")), null, { timeout: 4000 }).catch(() => {});
+  ok("painel Praça em direto mostra a recusa", await A.getByTestId("cd-eventos-linha").filter({ hasText: /recusada|refused/ }).count() > 0);
+
+  console.log("— v47: STATS REAIS do servidor (ping→stats)");
+  const stats = await new Promise((resolve) => {
+    const ws = new WebSocket(MP_URL);
+    // v47 — o protocolo exige «ola» primeiro (o servidor fecha 4000 sem ele)
+    ws.on("open", () => ws.send(JSON.stringify({ t: "ola", nome: "Stats-E2E" })));
+    ws.on("message", (raw) => {
+      const m = JSON.parse(String(raw));
+      if (m.t === "stats") { ws.close(); resolve(m); }
+      else if (m.t === "bemvindo") ws.send(JSON.stringify({ t: "stats", n: 1 }));
+    });
+    setTimeout(() => { try { ws.close(); } catch { /* ignore */ } resolve(null); }, 5000);
+  });
+  ok("stats recebidos do servidor", !!stats, JSON.stringify(stats));
+  ok("jogadores reais ≥ 11 (A+B+8 bots+o stats)", stats?.jogadores >= 10, `n=${stats?.jogadores}`);
+  ok("cap honesto = 64", stats?.cap === 64, `cap=${stats?.cap}`);
+  ok("tick a correr (>0)", stats?.tick > 0, `tick=${stats?.tick}`);
+  ok("CPU do processo reportada (ms ≥ 0)", typeof stats?.cpuUserMs === "number" && stats.cpuUserMs >= 0, `cpu=${stats?.cpuUserMs}`);
+  ok("RSS reportado (>0)", stats?.rssMb > 0, `rss=${stats?.rssMb}`);
+  ok("entradas contadas de verdade ≥ 11", stats?.entradas >= 11, `entradas=${stats?.entradas}`);
+  ok("correções contadas de verdade ≥ 2 (alcance + parede)", stats?.correcoes >= 2, `corr=${stats?.correcoes}`);
+
+  for (const ws of bots) try { ws.close(); } catch { /* ignore */ }
+
   console.log("— Chat da praça (UI real + rate-limit + sanitização)");
   await A.getByTestId("cd-chat-input").fill("");
   const pxAntes = await A.evaluate(() => window.__cidade.motor.px);
@@ -125,23 +228,19 @@ async function main() {
   await B.waitForFunction(() => window.__cidade?.mpFalas?.().some((f) => f.texto === "terceira ok"), null, { timeout: 6000 }).catch(() => {});
   ok("Bruno NUNCA recebeu a fala limitada", await B.evaluate(() => !window.__cidade.mpFalas().some((f) => f.texto === "segunda")));
 
-  console.log("— Cap e bots");
-  const bots = [];
-  for (let i = 0; i < 8; i++) {
-    const ws = new WebSocket(MP_URL);
-    ws.on("open", () => ws.send(JSON.stringify({ t: "ola", nome: `Bot-${i}` })));
-    bots.push(ws);
-  }
-  await A.waitForFunction(() => (window.__cidade?.mpRemotos?.().length ?? 0) >= 9, null, { timeout: 8000 }).catch(() => {});
-  const nRemA = await A.evaluate(() => window.__cidade.mpRemotos().length);
-  ok("A vê 8 bots + Bruno = 9 remotos", nRemA === 9, `n=${nRemA}`);
-  for (const ws of bots) try { ws.close(); } catch { /* ignore */ }
 
-  console.log("— Offline honesto");
+  console.log("— Offline honesto + atividade REAL da plataforma na Praça");
   await A.close(); await B.close();
   const C = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   MOCKS(C);
   escutaErros("C", C);
+  // semeia o CANAL REAL do activityBus (a mesma chave localStorage que a
+  // plataforma usa) — o teste prova a tubagem, não inventa atividade
+  await C.addInitScript(() => {
+    localStorage.setItem("bateu:activities", JSON.stringify([
+      { id: "e2e-v47-1", type: "auction", title: "Lance de teste E2E no Leilão do Imbondeiro", detail: null, href: "/leiloes", created_at: new Date().toISOString(), source: "local" },
+    ]));
+  });
   await C.goto(`${BASE}/cidade`, { waitUntil: "domcontentloaded" });
   await C.getByTestId("cd-inicio").waitFor({ state: "visible", timeout: 15000 });
   await C.getByTestId("cd-entrar").dispatchEvent("click");
@@ -151,6 +250,7 @@ async function main() {
   await C.waitForFunction(() => window.__cidade?.mpEstado?.() === "erro", null, { timeout: 9000 }).catch(() => {});
   ok("estado honesto 'erro' sem servidor", await C.evaluate(() => window.__cidade.mpEstado() === "erro"));
   ok("mpFalar devolve false em modo solo", await C.evaluate(() => window.__cidade.mpFalar("olá") === false));
+  ok("painel Praça em direto SOLO mostra atividade REAL da plataforma", await C.getByTestId("cd-eventos-plataforma").filter({ hasText: "Leilão do Imbondeiro" }).count() > 0);
 
   for (const nome of ["Ana-MZ", "Bruno-AO", "C"]) {
     const errs = pageErrors.get(nome) ?? [];

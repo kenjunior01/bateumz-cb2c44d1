@@ -11,7 +11,8 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
   Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store, Globe,
-  MessageCircle, Send, BookOpen, Compass, Footprints, Brain, Gauge,
+  MessageCircle, Send, BookOpen, Compass, Footprints, Brain, Gauge, Activity,
+  Gavel, Users, ShoppingBag, Coins, Ticket, Gamepad2, CircleDot,
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
@@ -36,13 +37,21 @@ import {
 import { fireConfetti } from "@/lib/celebrate";
 import { getArAtual, rotuloAqi, AQI_ATTRIBUTION, type ArAtual } from "@/lib/airQuality";
 import RadiosPALOP from "@/components/lives/RadiosPALOP";
-import { CidadeMP, type EstadoMP, type FalaInfo } from "@/game/cidade/multijogador"; // v36/37 — presença partilhada + chat da praça
+import { CidadeMP, type EstadoMP, type FalaInfo, type EventoPraca } from "@/game/cidade/multijogador"; // v36/37/47 — presença + chat + eventos reais
+import { useActivityFeed, type PlatformActivity } from "@/lib/activityBus"; // v47 — atividade REAL da plataforma na Praça
 import QuizPraca from "@/components/cidade/QuizPraca";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 
 interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" }
 interface Aviso { texto: string; k: number }
+
+// v47 — ícone por tipo de atividade REAL da plataforma (activityBus)
+const ICONES_ATIVIDADE: Record<string, typeof Activity> = {
+  auction: Gavel, winner: Trophy, league: Users, tournament: Users,
+  market: ShoppingBag, credit: Coins, raffle: Ticket, game: Gamepad2,
+  live: CircleDot, business: Store, contest: Trophy,
+};
 
 
 function MiniMapa({ motor }: { motor: Motor }) {
@@ -85,6 +94,66 @@ function MiniMapa({ motor }: { motor: Motor }) {
   }, [motor]);
   return <canvas ref={cvRef} width={96} height={96} data-testid="cd-minimapa"
     className="rounded-lg shadow-lg border border-white/20" />;
+}
+
+// ── v47 — PRAÇA EM DIRETO ────────────────────────────────
+// A integração que o Veloren NÃO tem (docs/REA-veloren-n3-v37.md §7.1):
+// os acontecimentos REAIS da plataforma (lances de leilão, vencedores,
+// torneios — o mesmo feed do activityBus que a homepage mostra) e os
+// acontecimentos REAIS da sessão partilhada (chegadas, saídas, correções
+// do servidor) num painel do HUD. Só mostra o que aconteceu de verdade —
+// sem atividade real o painel não aparece (nunca finge vida).
+function PracaEmDireto({ mpRef, ligado }: { mpRef: React.RefObject<CidadeMP | null>; ligado: boolean }) {
+  const { t } = useLanguage();
+  const feed = useActivityFeed(6);
+  const [eventos, setEventos] = useState<EventoPraca[]>([]);
+  const [pico, setPico] = useState(0);
+  useEffect(() => {
+    const refrescar = () => {
+      setEventos(mpRef.current?.eventosInfo() ?? []);
+      setPico(mpRef.current?.picoPresenca() ?? 0);
+    };
+    refrescar();
+    const iv = setInterval(refrescar, 1000);
+    return () => clearInterval(iv);
+  }, [mpRef, ligado]);
+
+  const temMp = ligado && eventos.length > 0;
+  if (!temMp && feed.items.length === 0) return null; // nada REAL para mostrar
+
+  return (
+    <div className="absolute bottom-3 right-3 z-20 w-56 hidden md:block" data-testid="cd-eventos">
+      <div className="rounded-2xl bg-black/60 border border-white/15 backdrop-blur p-3 text-white">
+        <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1.5 flex items-center gap-1">
+          <Activity size={11} className="text-sky-300" /> {t("cidade.mpEventos")}
+        </p>
+        <div className="space-y-1 max-h-40 overflow-hidden">
+          {temMp && eventos.slice(-3).reverse().map((ev, i) => (
+            <p key={`ev-${ev.em}-${i}`} className="text-[11px] leading-tight flex items-center gap-1" data-testid="cd-eventos-linha">
+              {ev.tipo === "entrou" && <><Globe size={10} className="text-emerald-300 shrink-0" /> <span className="text-white/85 truncate">{ev.nome} · {t("cidade.mpEvEntrou")}</span></>}
+              {ev.tipo === "saiu" && <><Globe size={10} className="text-white/40 shrink-0" /> <span className="text-white/60 truncate">{ev.nome} · {t("cidade.mpEvSaiu")}</span></>}
+              {ev.tipo === "corrigido" && <><Gauge size={10} className="text-amber-300 shrink-0" /> <span className="text-amber-200/90 truncate">{t(ev.motivo === "parede" ? "cidade.mpEvParede" : "cidade.mpEvAlcance")}</span></>}
+            </p>
+          ))}
+          {feed.items.slice(0, temMp ? 2 : 4).map((act: PlatformActivity) => {
+            const Icone = ICONES_ATIVIDADE[act.type] ?? Activity;
+            return (
+              <p key={act.id} className="text-[11px] leading-tight flex items-center gap-1 text-white/85" data-testid="cd-eventos-plataforma">
+                <Icone size={10} className="text-sky-300 shrink-0" />
+                <span className="truncate">{act.title.slice(0, 60)}</span>
+              </p>
+            );
+          })}
+        </div>
+        {temMp && (
+          <p className="text-[9px] text-white/45 mt-1.5" data-testid="cd-eventos-pico">
+            {t("cidade.mpEvPico")}: {pico}
+          </p>
+        )}
+        <p className="text-[9px] text-white/30 mt-1 leading-tight">{t("cidade.mpEvFonte")}</p>
+      </div>
+    </div>
+  );
 }
 
 export default function CidadeBateu() {
@@ -149,7 +218,7 @@ export default function CidadeBateu() {
   // v37 — chat da praça + reconciliação honesta
   const [mpFalas, setMpFalas] = useState<FalaInfo[]>([]);
   const [chatTexto, setChatTexto] = useState("");
-  const ultimaCorrecaoRef = useRef<{ x: number; z: number; em: number } | null>(null);
+  const ultimaCorrecaoRef = useRef<{ x: number; z: number; em: number; motivo?: string } | null>(null);
 
   const enviarFala = useCallback(() => {
     const texto = chatTexto.trim();
@@ -169,16 +238,18 @@ export default function CidadeBateu() {
       onAviso: (texto) => setAviso({ texto, k: Date.now() }),
       // v37 — chat da praça
       onFala: (f) => setMpFalas((p) => [...p.slice(-7), f]),
-      // v37 — reconciliação: o servidor cortou um salto ilegal → ajusta com aviso honesto
-      onCorrecao: (x, z) => {
+      // v37/47 — reconciliação: o servidor cortou um movimento ilegal → ajusta
+      // com aviso honesto E o motivo real ("alcance"=longe demais, "parede"=
+      // subida impossível re-simulada com o mesmo terreno)
+      onCorrecao: (x, z, motivo) => {
         const m = motorRef.current;
         try {
           m.px = x; m.pz = z;
           m.py = (m.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU) + 1.02;
           m.vx = m.vy = m.vz = 0;
         } catch { /* mundo ainda não pronto */ }
-        ultimaCorrecaoRef.current = { x, z, em: Date.now() };
-        setAviso({ texto: t("cidade.mpCorrigido"), k: Date.now() });
+        ultimaCorrecaoRef.current = { x, z, em: Date.now(), motivo: motivo ?? "alcance" };
+        setAviso({ texto: motivo === "parede" ? t("cidade.mpCorrigidoParede") : t("cidade.mpCorrigido"), k: Date.now() });
       },
     });
     mpRef.current = mp;
@@ -280,9 +351,14 @@ export default function CidadeBateu() {
       mpFalar: (texto: string) => mpRef.current?.falar(texto) ?? false,
       mpFalas: () => mpRef.current?.falasInfo() ?? [],
       ultimaCorrecao: () => ultimaCorrecaoRef.current,
+      // v47 — acontecimentos reais da sessão + pico de presença observado
+      mpEventos: () => mpRef.current?.eventosInfo() ?? [],
+      mpPico: () => mpRef.current?.picoPresenca() ?? 0,
       // v38 — envio MP determinístico (mesmo contrato do ciclo rAF; o raster
       // por software do sandbox corre a ~2 fps e estrangula o ritmo de envio)
       mpPasso: (dt: number) => mpRef.current?.passo(dt, motorRef.current.px, motorRef.current.pz, motorRef.current.yaw),
+      // v47 (E2E) — envio imediato sem o gate de 100 ms (dois saltos no mesmo instante)
+      mpPassoImediato: (x: number, z: number, ry?: number) => mpRef.current?.passoImediato(x, z, ry) ?? false,
       // ── v38 — progressão, exploração e ambiente (ganchos E2E) ──
       perfil: () => lerPerfil(),
       // v39 — resultado da recuperação IDB→LS (E2E)
@@ -818,6 +894,9 @@ export default function CidadeBateu() {
               </div>
             </div>
           </div>
+
+          {/* v47 — Praça em direto: atividade real da plataforma + eventos reais da sessão */}
+          <PracaEmDireto mpRef={mpRef} ligado={mpEstado === "ligado"} />
 
           {/* v37 — chat da praça (só com mundo partilhado ligado) */}
           {mpEstado === "ligado" && (

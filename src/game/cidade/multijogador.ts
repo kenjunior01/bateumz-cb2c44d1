@@ -96,11 +96,23 @@ function bolhaFala(texto: string): THREE.Sprite {
 
 export interface FalaInfo { id: number; nome: string; texto: string; em: number }
 
+// v47 — eventos REAIS da sessão partilhada (para o painel «Praça em direto»):
+// só o que aconteceu de verdade — entradas/saídas recebidas do servidor e
+// correções honestas. Nada é gerado para encher a lista.
+export interface EventoPraca {
+  tipo: "entrou" | "saiu" | "corrigido";
+  nome?: string;          // entrou/saiu: quem
+  motivo?: string;        // corrigido: "alcance" | "parede" — o motivo real do servidor
+  em: number;
+}
+
 export class CidadeMP {
   estado: EstadoMP = "off";
   private ws: WebSocket | null = null;
   private remotos = new Map<number, Remoto>();
   private falas: FalaInfo[] = [];               // histórico local (últimas 12)
+  private eventos: EventoPraca[] = [];          // v47 — acontecimentos REAIS (últimos 30)
+  private pico = 0;                             // v47 — pico REAL de presença observado
   private bolhas = new Map<number, { spr: THREE.Sprite; ate: number }>();
   private url = ""; private nome = "";
   private tentativa = 0; private queroLigado = false;
@@ -114,7 +126,7 @@ export class CidadeMP {
     onEstado: (e: EstadoMP, info?: string) => void;
     onAviso: (texto: string) => void;
     onFala?: (f: FalaInfo) => void;              // v37 — chat da praça
-    onCorrecao?: (x: number, z: number) => void; // v37 — reconciliação honesta
+    onCorrecao?: (x: number, z: number, motivo?: string) => void; // v37/47 — reconciliação honesta
   }) {}
 
   ligar(url: string, nome: string) {
@@ -152,12 +164,24 @@ export class CidadeMP {
         guarda.opts.onAviso(`🌐 ${guarda.nome} entrou na cidade partilhada`);
         return;
       }
-      if (m.t === "entrou") { guarda.criarRemoto(m.id, m.nome, 0, 0, 0); guarda.opts.onAviso(`🌐 ${m.nome} chegou à cidade`); return; }
-      if (m.t === "saiu") { guarda.removerRemoto(m.id); return; }
+      if (m.t === "entrou") {
+        guarda.criarRemoto(m.id, m.nome, 0, 0, 0);
+        guarda.registarEvento({ tipo: "entrou", nome: String(m.nome ?? "").slice(0, 24), em: Date.now() });
+        guarda.opts.onAviso(`🌐 ${m.nome} chegou à cidade`);
+        return;
+      }
+      if (m.t === "saiu") {
+        guarda.registarEvento({ tipo: "saiu", nome: guarda.remotos.get(m.id)?.nome ?? "", em: Date.now() });
+        guarda.removerRemoto(m.id);
+        return;
+      }
       if (m.t === "corrigido") {
-        // v37 — o servidor cortou um salto ilegal: ajusta a posição local com aviso
-        if (typeof m.x === "number" && typeof m.z === "number" && Number.isFinite(m.x) && Number.isFinite(m.z))
-          guarda.opts.onCorrecao?.(m.x, m.z);
+        // v37/47 — o servidor cortou um movimento ilegal: ajusta a posição
+        // local com aviso honesto + o MOTIVO real ("alcance"/"parede")
+        if (typeof m.x === "number" && typeof m.z === "number" && Number.isFinite(m.x) && Number.isFinite(m.z)) {
+          guarda.registarEvento({ tipo: "corrigido", motivo: typeof m.motivo === "string" ? m.motivo : "alcance", em: Date.now() });
+          guarda.opts.onCorrecao?.(m.x, m.z, typeof m.motivo === "string" ? m.motivo : undefined);
+        }
         return;
       }
       if (m.t === "fala") {
@@ -266,11 +290,37 @@ export class CidadeMP {
     try { this.ws.send(JSON.stringify({ t: "fala", texto: limpo })); return true; } catch { return false; }
   }
 
+  /** v47 (E2E): envia uma posição IMEDIATAMENTE, sem o gate de 100 ms do passo()
+   *  — reproduz dois movimentos no mesmo instante numa só tarefa JS (o rAF não
+   *  corre dentro dela). A física do motor não faz dois saltos em 0,1 s; o
+   *  servidor tem de recusar o segundo («parede»). Mesma via de envio real. */
+  passoImediato(meuX: number, meuZ: number, meuRy = 0): boolean {
+    if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    try {
+      this.ws.send(JSON.stringify({ t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100 }));
+      return true;
+    } catch { return false; }
+  }
+
   falasInfo(): FalaInfo[] { return [...this.falas]; }
+
+  // ── v47 — acontecimentos reais (o painel «Praça em direto» consome) ──
+  private registarEvento(e: EventoPraca) {
+    this.eventos.push(e);
+    if (this.eventos.length > 30) this.eventos.shift();
+  }
+
+  eventosInfo(): EventoPraca[] { return [...this.eventos]; }
+
+  /** Pico REAL de presença desta sessão (maior «no mundo» observado). */
+  picoPresenca(): number { return this.pico; }
 
   /** chamado a cada frame com a posição do jogador LOCAL (que continua predito no cliente) */
   passo(dt: number, meuX: number, meuZ: number, meuRy: number) {
     const agora = Date.now();
+    // v47 — pico de presença é observado, nunca estimado
+    const n = this.remotos.size + (this.estado === "ligado" ? 1 : 0);
+    if (n > this.pico) this.pico = n;
     // envio a ~10 Hz (servidor faz snapshot 10 Hz + throttle por distância)
     if (this.ws && this.ws.readyState === 1 && agora - this.ultimoPosMs > 100) {
       this.ultimoPosMs = agora;
@@ -305,6 +355,8 @@ export class CidadeMP {
     for (const id of [...this.remotos.keys()]) this.removerRemoto(id);
     for (const id of [...this.bolhas.keys()]) this.removerBolha(id);
     this.falas = [];
+    this.eventos = []; // sessão nova = lista nova (nunca mistura sessões)
+    this.pico = 0;
     this.setEstado("off");
   }
 }

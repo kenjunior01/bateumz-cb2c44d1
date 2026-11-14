@@ -1,12 +1,17 @@
 // ============================================================
-// CIDADE BATEU — NÚCLEO ISOMÓRFICO (v37)
+// CIDADE BATEU — NÚCLEO ISOMÓRFICO (v37 · v47)
 // Padrão estudado do Veloren: o crate `common` é partilhado entre
 // client e server para que as duas pontas apliquem AS MESMAS regras
 // (docs/REA-veloren-estudo-v36.md §1-2, fontes ficheiro:linha lá).
 // Este ficheiro corre IGUAL no browser (vite) e no servidor Node
 // (Node 24 importa .ts por type stripping — verificado na v37).
-// Zero imports · zero DOM · zero three.js. Fonte única da verdade.
+// Zero DOM · zero three.js. Fonte única da verdade.
+// v47 — o único import é constants.ts (DADOS puros do motor: SALTO,
+// GRAVIDADE, NIVEL_MAR) — as regras de subida derivam da física REAL
+// do motor em vez de duplicar números (uma só fonte, honesto).
 // ============================================================
+
+import { GRAVIDADE, NIVEL_MAR, SALTO } from "../blocos/constants.ts";
 
 // ── Mundo (fonte única — cidade.ts re-exporta para não partir imports) ──
 export const SEED_CIDADE = 20251103;
@@ -60,4 +65,26 @@ export function limpaFala(entrada: unknown): string | null {
   if (typeof entrada !== "string") return null;
   const limpo = entrada.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, FALA_MAX);
   return limpo.length ? limpo : null;
+}
+
+// ── v47 — N2: FÍSICA DO TERRENO (a regra que o servidor re-simula) ──
+// O que o Veloren faz no phys/ (docs/REA-veloren-n3-v37.md §6): o servidor
+// volta a simular o movimento. Aqui, com x,z (a Y nasce do terreno nas duas
+// pontas), a regra honesta e derivada da física REAL do motor partilhado:
+//   · um salto sobe no máximo v²/2g de superfície (GANHO_SALTO ≈ 1,42);
+//   · subida SUSTENTADA de verdade (subir escadas de 1 a salto por salto)
+//     custa ≈ 1 salto por arco de 0,66 s → ~1,43 b/s; a taxa dá margem
+//     honesta ×1,8 para rampas de fusão e passo irregular;
+//   · descidas são LEGAIS sempre (cair é física do motor — dano de queda);
+//   · na água (superfície < NIVEL_MAR) a subida é do nado — o orçamento
+//     vertical não se aplica (afrouxamento DECLARADO, não escondido).
+export const GANHO_SALTO = (SALTO * SALTO) / (2 * GRAVIDADE);   // ≈ 1,42 blocos
+export const SUBIDA_CAP = GANHO_SALTO + 0.8;                    // um salto completo + graça
+export const SUBIDA_TAXA = 2.6;                                 // blocos/s sustentados
+export const SUBIDA_INICIAL = SUBIDA_CAP;
+
+export function proximoOrcamentoSubida(orcamento: number, dtSegundos: number): number {
+  if (typeof orcamento !== "number" || !Number.isFinite(orcamento)) return SUBIDA_INICIAL;
+  const dt = Math.min(0.5, Math.max(0, typeof dtSegundos === "number" && Number.isFinite(dtSegundos) ? dtSegundos : 0));
+  return Math.min(SUBIDA_CAP, orcamento + SUBIDA_TAXA * dt);
 }

@@ -6,10 +6,10 @@
 // Zero THREE, zero DOM.
 // ============================================================
 
-import { ALTURA } from "../blocos/constants";
-import { Ruido } from "../blocos/noise";
-import { alturaTerrenoBase, type PerfilTerreno } from "../blocos/geracao";
-import { ALTURA_PLATEAU } from "./core";
+import { ALTURA } from "../blocos/constants.ts";
+import { Ruido } from "../blocos/noise.ts";
+import { alturaTerrenoBase, type PerfilTerreno } from "../blocos/geracao.ts";
+import { ALTURA_PLATEAU } from "./core.ts";
 
 /** Raio do plateau plano (para além disso o terreno natural regressa). */
 export const RAIO_PLATEAU = 58;

@@ -9,8 +9,8 @@
 // delegação → zero segunda fonte de verdade.
 // ============================================================
 
-import { B, CHUNK, ALTURA, NIVEL_MAR } from "./constants";
-import { Ruido } from "./noise";
+import { B, CHUNK, ALTURA, NIVEL_MAR } from "./constants.ts";
+import { Ruido } from "./noise.ts";
 
 export const idx = (x: number, y: number, z: number) => (y * CHUNK + z) * CHUNK + x;
 

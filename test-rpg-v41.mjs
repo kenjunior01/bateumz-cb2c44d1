@@ -9,6 +9,8 @@
 //   HUD RPG, spawn na Aldeia, kit inicial, combate → XP → nível,
 //   habilidades, baús de tesouro (v48: com ESPÓLIO real), descoberta
 //   de regiões, MOCHILA (36 posições · mover · peitoral · cheia honesta),
+//   FORJA (v49: criar/fundir pelas RECEITAS reais do motor — pertoDe contra
+//   os blocos reais; a Forja Perdida é o único sítio com mesa e fornalha),
 //   CHEFE (Guardião) + fim da história, morte/renascer,
 //   save/CONTINUAR. Clima real no RPG: test-v31 secção 6.
 // Uso: PW_CHROME=<chromium> node test-rpg-v41.mjs (vite 8099)
@@ -127,6 +129,42 @@ async function parteA() {
     return !!comInv && comInv.inv?.[0]?.id === 112 && comInv.invArm?.id === 123
       && corrompida !== null && corrompida.inv === null
       && semInv !== null && semInv.inv === null;
+  })());
+
+  // ── v49: FORJA — as RECEITAS REAIS do motor partilhado (isomórfico) ──
+  const invM = await import(new URL("./src/game/blocos/inventario.ts", import.meta.url).href);
+  ok("inventário do motor importado no Node (type-only para o world — zero DOM)", new invM.Inventario() instanceof invM.Inventario);
+  ok("avaliarReceitas avalia as 32 receitas com falta honesta (1× Tronco)", (() => {
+    const inv = new invM.Inventario();
+    const infos = invM.avaliarReceitas(inv, false, false);
+    const tabuas = infos.find((i) => i.receita.id === "tabuas");
+    return infos.length === ct.RECEITAS.length && !tabuas.pode && tabuas.motivo.includes("Falta: 1× Tronco");
+  })());
+  ok("criarReceita REAL consome e produz (1 tronco → 4 tábuas)", (() => {
+    const inv = new invM.Inventario();
+    inv.adicionar(ct.B.TRONCO, 1);
+    const r = ct.RECEITAS.find((x) => x.id === "tabuas");
+    return invM.criarReceita(inv, r) && inv.contar(ct.B.TRONCO) === 0 && inv.contar(ct.B.TABUAS) === 4;
+  })());
+  ok("fundição sem fornalha = recusa honesta (motivo do motor)", (() => {
+    const inv = new invM.Inventario();
+    inv.adicionar(ct.B.FERRO_M, 2); inv.adicionar(ct.I.CARVAO, 1);
+    const info = invM.avaliarReceitas(inv, false, false).find((i) => i.receita.id === "fun_fer");
+    return !info.pode && info.motivo === "Precisas de uma fornalha por perto";
+  })());
+  ok("com fornalha + ingredientes → 2 barras de ferro (2 minérios + 1 carvão, nada inventado)", (() => {
+    const inv = new invM.Inventario();
+    inv.adicionar(ct.B.FERRO_M, 2); inv.adicionar(ct.I.CARVAO, 1);
+    const info = invM.avaliarReceitas(inv, false, true).find((i) => i.receita.id === "fun_fer");
+    return info.pode && invM.criarReceita(inv, info.receita)
+      && inv.contar(ct.I.BARRA_FERRO) === 2 && inv.contar(ct.B.FERRO_M) === 0 && inv.contar(ct.I.CARVAO) === 0;
+  })());
+  ok("espada de ferro exige MESA (mesa:true) — só a Forja Perdida a tem no mundo", (() => {
+    const inv = new invM.Inventario();
+    inv.adicionar(ct.I.BARRA_FERRO, 2); inv.adicionar(ct.I.GRAVETO, 1);
+    const semMesa = invM.avaliarReceitas(inv, false, true).find((i) => i.receita.id === "esp_fer");
+    const comMesa = invM.avaliarReceitas(inv, true, true).find((i) => i.receita.id === "esp_fer");
+    return !semMesa.pode && semMesa.motivo.includes("Mesa de Criação") && comMesa.pode;
   })());
 
   // ── habilidades ──
@@ -577,6 +615,77 @@ async function parteB() {
   // repõe o kit mínimo para as secções seguintes (duelo do Guardião usa a espada)
   await page.evaluate(() => { (window).__rpg.limparInv(); (window).__rpg.dar(112, 1); });
 
+  // ── v49 · FORJA (as RECEITAS REAIS do motor partilhado, pertoDe contra o mundo) ──
+  await page.evaluate(() => (window).__rpg.definirHora(0.35)); // dia: sem estouradores a minar blocos
+  const forjaSpawn = await page.evaluate(() => (window).__rpg.forja());
+  ok("ganchos forja: 32 receitas do motor + mesa/fornalha LIDAS do mundo real",
+    forjaSpawn.receitas === 32 && forjaSpawn.mesa === false && forjaSpawn.fornalha === false);
+  await page.locator('[data-testid="rpg-btn-forja"]').click();
+  await sel("rpg-forja", 5000);
+  ok("FORJA abre do HUD com TODAS as receitas do motor (32 linhas honestas)",
+    (await page.locator('[data-testid^="rpg-craft-"]').count()) === 32);
+  ok("na Aldeia os chips dizem a verdade (MESA: NÃO · FORNALHA: NÃO)",
+    (await page.locator('[data-testid="rpg-forja-mesa"]').innerText()).includes("NÃO") &&
+    (await page.locator('[data-testid="rpg-forja-fornalha"]').innerText()).includes("NÃO"));
+  // criar em qualquer sítio (receita simples do motor): 1 tronco → 4 tábuas
+  await page.evaluate(() => (window).__rpg.dar(7, 1)); // TRONCO pelo adicionar REAL
+  await page.locator('[data-testid="rpg-craft-tabuas"]').click();
+  await aguardar(async () => (await page.locator('[data-testid="rpg-forja-msg"]').count()) === 1, 10, "msg CRIADO");
+  ok("CRIADO em qualquer sítio: 4× Tábuas entram pela mochila do motor (inv real)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(9))) === 4 &&
+    (await page.locator('[data-testid="rpg-forja-msg"]').innerText()).includes("CRIADO"));
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-forja"]').count()) === 0, 10, "forja fechou");
+  // viagem à Forja Perdida (82, 52) — o único sítio do mundo com mesa+fornalha reais
+  await page.evaluate(() => (window).__rpg.teleportar(82, 36, 52));
+  await page.evaluate(() => { (window).__rpg.motor.vida = 20; });
+  // explosões podem ter minado os blocos do POI — repõe-os EXATAMENTE como os
+  // carimba a mundoRpg (scaffolding de teste, o mesmo padrão do baú acima)
+  await page.evaluate(() => {
+    const mm = (window).__rpg.motor.mundo;
+    mm.setBloco(81, 35, 51, 16, false); // FORNALHA
+    mm.setBloco(83, 35, 51, 16, false); // FORNALHA
+    mm.setBloco(80, 35, 53, 15, false); // MESA
+  });
+  await pump(8);
+  const forjaLugar = await page.evaluate(() => (window).__rpg.forja());
+  ok("na Forja Perdida o pertoDe REAL vê a mesa e a fornalha do mundo",
+    forjaLugar.mesa === true && forjaLugar.fornalha === true);
+  await page.locator('[data-testid="rpg-btn-forja"]').click();
+  await sel("rpg-forja", 5000);
+  ok("chips mudam para AQUI junto dos blocos reais (carimbados pela mundoRpg)",
+    (await page.locator('[data-testid="rpg-forja-mesa"]').innerText()).includes("AQUI") &&
+    (await page.locator('[data-testid="rpg-forja-fornalha"]').innerText()).includes("AQUI"));
+  // fundição REAL: 2 minérios de ferro + 1 carvão → 2 barras (a mesma receita do BateuCraft)
+  await page.evaluate(() => (window).__rpg.dar(11, 2)); // FERRO_M
+  await page.evaluate(() => (window).__rpg.dar(101, 1)); // CARVAO
+  await page.locator('[data-testid="rpg-craft-fun_fer"]').click();
+  await aguardar(async () => (await page.evaluate(() => (window).__rpg.motor.inv.contar(103))) === 2, 10, "barras fundidas");
+  ok("fundição na fornalha real: 2× Barra de Ferro na mochila (materiais consumidos)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(103))) === 2 &&
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(11))) === 0);
+  // mesa:TRUE junto da mesa real: espada de ferro (2 barras + graveto)
+  await page.evaluate(() => (window).__rpg.dar(100, 1)); // GRAVETO
+  await page.locator('[data-testid="rpg-craft-esp_fer"]').click();
+  await aguardar(async () => (await page.evaluate(() => (window).__rpg.motor.inv.contar(114))) === 1, 10, "espada de ferro");
+  ok("espada de ferro criada junto da MESA real (mesa:true desbloqueada no sítio certo)",
+    (await page.evaluate(() => (window).__rpg.motor.inv.contar(114))) === 1);
+  // longe da forja as mesmas receitas voltam à recusa honesta
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-forja"]').count()) === 0, 10, "forja fechou (2)");
+  await page.evaluate(() => (window).__rpg.teleportar(2.5, 33.02, 4.5));
+  await pump(8);
+  await page.locator('[data-testid="rpg-btn-forja"]').click();
+  await sel("rpg-forja", 5000);
+  ok("de volta à Aldeia: fundição recusada com o motivo REAL do motor",
+    (await page.locator('[data-testid="rpg-craft-bloq-fun_fer"]').innerText()).includes("fornalha"));
+  ok("espada de ferro recusada sem mesa (Mesa de Criação no motivo)",
+    (await page.locator('[data-testid="rpg-craft-bloq-esp_fer"]').innerText()).includes("Mesa de Criação"));
+  ok("rodapé credencia as receitas do motor partilhado (as mesmas do BateuCraft)",
+    (await page.locator('[data-testid="rpg-forja-fonte"]').innerText()).includes("motor partilhado"));
+  await page.keyboard.press("Escape");
+  await aguardar(async () => (await page.locator('[data-testid="rpg-forja"]').count()) === 0, 10, "forja fechou (3)");
+
   // ── dificuldade muda o HP dos NOVOS inimigos (noite: sem queimar) ──
   // v48: referência DIRETA do mob nascido (spawnarMob devolve o Mob) — a 1.ª
   // versão lia o último zumbi vivo e corria com spawns naturais/explosões
@@ -603,6 +712,11 @@ async function parteB() {
   await page.evaluate(() => {
     const p = (window).__rpg.perfil();
     p.missoes.historiaFeitas = ["h1", "h2", "h3", "h4", "h5"];
+    // v49: a secção FORJA já visitou a Forja Perdida (que vive nas Cinzas) —
+    // e uma descoberta dispara o evento UMA vez só, contado pelo capítulo
+    // CORRENTE na altura (h3, que não tem esse objetivo). Retira a descoberta
+    // para o caminho REAL voltar a disparar agora que h6 é o capítulo atual.
+    p.descobertas.regioes = p.descobertas.regioes.filter((r) => r !== "cinzas");
   });
   await page.evaluate(() => (window).__rpg.definirDificuldade("medio"));
   await page.evaluate(() => (window).__rpg.teleportar(82.5, 45, 52.5)); // Terra de Cinzas

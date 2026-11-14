@@ -4,7 +4,7 @@
 // Nenhuma imagem externa: tudo desenhado em canvas.
 // ============================================================
 
-import { Aleatorio } from "./noise";
+import { Aleatorio } from "./noise.ts";
 
 export const TILE = 16;
 export const COLS_ATLAS = 8, LINHAS_ATLAS = 5;

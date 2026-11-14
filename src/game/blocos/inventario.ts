@@ -2,9 +2,12 @@
 // BATEUCRAFT — Inventário 36 posições + criação + fundição
 // ============================================================
 
-import { BLOCOS, B, I, RECEITAS, Receita, NOMES, CORES, ITENS } from "./constants";
-import { Mundo } from "./world";
-import { Aleatorio } from "./noise";
+import { BLOCOS, B, I, RECEITAS, NOMES, CORES, ITENS } from "./constants.ts";
+import type { Receita } from "./constants.ts";
+// v49: type-only — o Node importa este módulo (testes isomórficos) sem
+// arrastar o world.ts (THREE + canvas não existem lá; o tipo é apagado)
+import type { Mundo } from "./world.ts";
+import { Aleatorio } from "./noise.ts";
 
 export interface Slot { id: number; qtd: number }
 
@@ -157,5 +160,5 @@ export function dropFolhas(rnd: Aleatorio): { id: number; qtd: number } | null {
   return null;
 }
 
-export type { Receita } from "./constants";
+export type { Receita } from "./constants.ts";
 export const podeColocar = (id: number) => id > 0 && id < 100 && !!BLOCOS[id] && id !== B.AGUA;

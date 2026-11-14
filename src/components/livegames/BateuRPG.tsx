@@ -6,6 +6,9 @@
 // Substitui o BateuCraft na plataforma (v41 — pedido do utilizador).
 // v48 — MOCHILA (as 36 posições do motor: hotbar + 27, peitoral
 // equipar/despir, mover para hotbar) + espólio REAL nos baús.
+// v49 — FORJA: criar/fundir com as RECEITAS REAIS do motor partilhado
+// (avaliarReceitas/criarReceita/pertoDe — as mesmas do BateuCraft); a
+// Forja Perdida é o único sítio do mundo com MESA e FORNALHA reais.
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -17,9 +20,9 @@ import {
   NIVEL_MAX, REGIOES, POIS,
 } from "@/game/rpg/core";
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
-import { infoItem } from "@/game/blocos/inventario";
-import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK } from "@/game/blocos/constants";
-import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle, Backpack } from "lucide-react";
+import { infoItem, avaliarReceitas, criarReceita, pertoDe } from "@/game/blocos/inventario";
+import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK, B, RECEITAS } from "@/game/blocos/constants";
+import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle, Backpack, Hammer } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
 interface Props {
@@ -126,7 +129,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const [fase, setFase] = useState<"inicio" | "jogando" | "morto">("inicio");
   const [cap, setCap] = useState<ReturnType<Motor["captura"]> | null>(null);
   const [rpg, setRpg] = useState<CapturaRpg | null>(null);
-  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda" | "mochila">(null);
+  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda" | "mochila" | "forja">(null);
   const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
   const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
   const [aCarregar, setACarregar] = useState(false);
@@ -143,6 +146,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const modalRef = useRef<null | typeof modal>(null);
   const [ajudaMenu, setAjudaMenu] = useState(false);
   const [confRecomecar, setConfRecomecar] = useState(false);
+  const [forjaMsg, setForjaMsg] = useState("");
   const mapaCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rpgRef = useRef<CapturaRpg | null>(null);
   const desenharMapaRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
@@ -296,6 +300,15 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       limparInv: () => motorRef.current.inv.limpar(),
       // v48: abrir um baú pelo CAMINHO REAL (mesma função da mira/ataque)
       abrirTesouro: (x: number, y: number, z: number) => sistemaRef.current.abrirTesouro(x, y, z),
+      // v49: estado REAL da forja — pertoDe contra os blocos do mundo
+      forja: () => {
+        const mm = motorRef.current;
+        return {
+          mesa: pertoDe(mm.mundo, mm.px, mm.py, mm.pz, B.MESA),
+          fornalha: pertoDe(mm.mundo, mm.px, mm.py, mm.pz, B.FORNALHA),
+          receitas: RECEITAS.length,
+        };
+      },
       pausar: (v: boolean) => { motorRef.current.pausado = v; },
       ciclarCamara: () => { const c = motorRef.current.ciclarCamara(); setCamaraModo(c); return c; },
       // clima real (Open-Meteo)
@@ -372,6 +385,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       if (k === "k") setModal((v) => (v === "habilidades" ? null : "habilidades"));
       if (k === "m") setModal((v) => (v === "mapa" ? null : "mapa"));
       if (k === "i") setModal((v) => (v === "mochila" ? null : "mochila"));
+      if (k === "f") setModal((v) => (v === "forja" ? null : "forja"));
       if (k === "escape") {
         if (modalRef.current === "pausa") { m.pausado = false; setModal(null); }
         else if (modalRef.current) { setModal(null); m.pausado = false; }
@@ -718,6 +732,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <li>Clique dir. — comer</li>
           <li>1–9 / roda — hotbar</li>
           <li>I — mochila (36 posições; clique na mochila move para a hotbar; peitoral equipa no slot selecionado)</li>
+          <li>F — forja: criar e fundir (mesa/fornalha reais só na Forja Perdida)</li>
           <li>J — missões</li>
           <li>K — habilidades</li>
           <li>M — mapa do mundo</li>
@@ -731,7 +746,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <ul className="text-white/60 text-[11px] list-disc ml-4">
           <li>Joystick (canto inferior esquerdo) para andar; arrasta o ecrã para olhar</li>
           <li>Botões ATACAR · SALTAR · COMER; toca nos itens da hotbar</li>
-          <li>Botões MISSÕES · DIÁRIO · MAPA · MOCHILA · HAB. · pausa no topo do HUD</li>
+          <li>Botões MISSÕES · DIÁRIO · MAPA · MOCHILA · FORJA · HAB. · pausa no topo do HUD</li>
         </ul>
       </div>
       <div>
@@ -1020,6 +1035,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> HAB.</button>
               <button onClick={() => setModal("mochila")} data-testid="rpg-btn-mochila"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Backpack size={13} /> MOCHILA</button>
+              <button onClick={() => setModal("forja")} data-testid="rpg-btn-forja"
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Hammer size={13} /> FORJA</button>
               <button onClick={() => { m.pausado = true; setModal("pausa"); }} data-testid="rpg-btn-pausa"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white"><Pause size={13} /></button>
             </div>
@@ -1061,6 +1078,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> DIÁRIO DE EXPLORAÇÃO</>}
                     {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> HABILIDADES</>}
                     {modal === "mochila" && <><Backpack size={18} className="text-lime-400" /> MOCHILA</>}
+                    {modal === "forja" && <><Hammer size={18} className="text-amber-400" /> FORJA</>}
                     {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> MAPA DO MUNDO</>}
                     {modal === "ajuda" && <><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</>}
                     {modal === "pausa" && <><Pause size={18} className="text-white" /> PAUSA</>}
@@ -1247,6 +1265,55 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   );
                 })()}
 
+                {/* FORJA (v49) — as RECEITAS REAIS do motor partilhado */}
+                {modal === "forja" && (() => {
+                  // pertoDe é a MESMA verificação do motor (raio 4 blocos contra
+                  // os blocos reais do mundo — não há bandeira falsa)
+                  const mesa = pertoDe(m.mundo, m.px, m.py, m.pz, B.MESA);
+                  const fornalha = pertoDe(m.mundo, m.px, m.py, m.pz, B.FORNALHA);
+                  const infos = avaliarReceitas(m.inv, mesa, fornalha);
+                  const distForja = Math.round(Math.hypot(m.px - 82, m.pz - 52));
+                  const linha = (info: ReturnType<typeof avaliarReceitas>[number]) => (
+                    <div key={info.receita.id} className={`rounded-xl p-2 border ${info.pode ? "bg-emerald-900/25 border-emerald-500/30" : "bg-black/30 border-white/10"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-white text-[11px] font-bold">{info.receita.nome}{info.receita.desc ? <span className="text-white/45 font-normal"> — {info.receita.desc}</span> : null}</p>
+                          <p className="text-white/50 text-[10px] font-mono">
+                            {info.receita.ingredientes.map(([id, qtd]) => `${qtd}× ${infoItem(id).nome} (${m.inv.contar(id)})`).join(" · ")}
+                          </p>
+                        </div>
+                        {info.pode ? (
+                          <button onClick={() => {
+                            if (criarReceita(m.inv, info.receita)) { setForjaMsg(`CRIADO: ${info.receita.nome}`); setCap(m.captura()); }
+                            else setForjaMsg("Falhou — os ingredientes mudaram. Tenta de novo.");
+                          }} data-testid={`rpg-craft-${info.receita.id}`}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">CRIAR</button>
+                        ) : (
+                          <span className="text-rose-300/90 text-[10px] text-right shrink-0 max-w-[150px]" data-testid={`rpg-craft-bloq-${info.receita.id}`}>{info.motivo}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                  return (
+                    <div className="flex flex-col gap-2.5" data-testid="rpg-forja">
+                      <div className="flex items-center gap-2 flex-wrap" data-testid="rpg-forja-estado">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${mesa ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-mesa">MESA: {mesa ? "AQUI" : "NÃO"}</span>
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${fornalha ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-fornalha">FORNALHA: {fornalha ? "AQUI" : "NÃO"}</span>
+                        {!mesa && <span className="text-white/40 text-[10px]">Forja Perdida a ~{distForja} blocos (ver o MAPA)</span>}
+                      </div>
+                      {forjaMsg && <p className="text-amber-300 text-[11px] font-bold" data-testid="rpg-forja-msg">{forjaMsg}</p>}
+                      <p className="text-white/60 text-[10px] font-bold">CRIAÇÃO — simples em qualquer sítio; as de mesa só junto de uma Mesa de Criação</p>
+                      {infos.filter((i) => i.receita.categoria === "criacao").map(linha)}
+                      <p className="text-white/60 text-[10px] font-bold">FUNDIÇÃO — minérios e cozinhados, só junto de uma fornalha</p>
+                      {infos.filter((i) => i.receita.categoria === "fundicao").map(linha)}
+                      <p className="text-white/45 text-[10px]">Posições ocupadas: <b className="text-white">{cap.slots.filter(Boolean).length}/36</b> — o que crias entra pela mesma mochila do motor.</p>
+                      <p className="text-white/30 text-[9px]" data-testid="rpg-forja-fonte">
+                        As receitas são as do motor partilhado (constants.ts — as mesmas do BateuCraft, zero receita inventada); avaliarReceitas/criarReceita/pertoDe são as funções reais. No RPG nada se deita: a Forja Perdida é o único sítio do mundo com MESA e FORNALHA reais.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {/* MAPA DO MUNDO */}
                 {modal === "mapa" && (
                   <div className="flex flex-col gap-2" data-testid="rpg-mapa">
@@ -1292,6 +1359,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                         className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> MAPA</button>
                       <button onClick={() => setModal("mochila")} data-testid="rpg-pausa-mochila"
                         className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Backpack size={14} /> MOCHILA</button>
+                      <button onClick={() => setModal("forja")} data-testid="rpg-pausa-forja"
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Hammer size={14} /> FORJA</button>
                       <button onClick={() => setModal("ajuda")} data-testid="rpg-pausa-ajuda"
                         className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> AJUDA</button>
                     </div>

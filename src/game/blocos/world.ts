@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from "three";
-import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants";
-import { Ruido, Aleatorio } from "./noise";
-import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS, TILE } from "./textures";
-import { gerarDadosTerreno, aplicarEditsChunk, somaBytes, alturaTerrenoBase, biomaBase, type PerfilTerreno } from "./geracao";
+import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants.ts";
+import { Ruido, Aleatorio } from "./noise.ts";
+import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS, TILE } from "./textures.ts";
+import { gerarDadosTerreno, aplicarEditsChunk, somaBytes, alturaTerrenoBase, biomaBase, type PerfilTerreno } from "./geracao.ts";
 
 export interface Chunk { cx: number; cz: number; dados: Uint8Array; malha?: THREE.Mesh; malhaAgua?: THREE.Mesh; sujo: boolean }
 

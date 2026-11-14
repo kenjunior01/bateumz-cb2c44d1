@@ -16,7 +16,7 @@ import {
 } from "@/game/rpg/core";
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem } from "@/game/blocos/inventario";
-import { ITENS, NIVEL_MAR, CORES_MAPA } from "@/game/blocos/constants";
+import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK } from "@/game/blocos/constants";
 import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle } from "lucide-react";
 import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
 
@@ -262,7 +262,14 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       temSave: () => sistemaRef.current.temSave(),
       guardar: () => sistemaRef.current.guardar(),
       apagarSave: () => sistemaRef.current.apagarSave(),
-      teleportar: (x: number, y: number, z: number) => { const mm = motorRef.current; mm.px = x; mm.py = y; mm.pz = z; mm.vx = mm.vy = mm.vz = 0; },
+      teleportar: (x: number, y: number, z: number) => {
+        const mm = motorRef.current;
+        mm.px = x; mm.py = y; mm.pz = z; mm.vx = mm.vy = mm.vz = 0;
+        // v46: 3×3 de chunks em sync (dados, sem malha) — o terreno imediato
+        // existe à partida; o worker enche o resto do anel em async.
+        const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) mm.mundo.garantir(pcx + dx, pcz + dz);
+      },
       olhar: (yaw: number, pitch = 0) => { motorRef.current.yaw = yaw; motorRef.current.pitch = pitch; },
       atacar: () => { motorRef.current.atacarPedido = true; },
       atacarDirecto: () => motorRef.current.atacar(),
@@ -304,8 +311,15 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       climaDesativar: () => desativarClimaReal(),
       // v44: contagens honestas da base de terreno real do mapa
       mapaBase: () => ({ ...mapaBaseInfoRef.current }),
+      // v46: contagens honestas da geração de chunks (worker vs sync)
+      chunks: () => motorRef.current.mundo.infoGeracao(),
+      compararChunk: (cx: number, cz: number) => motorRef.current.mundo.compararComSync(cx, cz),
+      bloco: (x: number, y: number, z: number) => motorRef.current.mundo.getBloco(x, y, z),
     };
-    return () => { try { delete (window as any).__rpg; } catch { /* ignore */ } };
+    return () => {
+      try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
+      try { delete (window as any).__rpg; } catch { /* ignore */ }
+    };
   }, []);
 
   // ── clima real: aplicar / procurar ──

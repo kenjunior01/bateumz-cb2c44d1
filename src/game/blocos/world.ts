@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants";
 import { Ruido, Aleatorio } from "./noise";
 import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS, TILE } from "./textures";
+import { gerarDadosTerreno, aplicarEditsChunk, somaBytes, alturaTerrenoBase, biomaBase, type PerfilTerreno } from "./geracao";
 
 export interface Chunk { cx: number; cz: number; dados: Uint8Array; malha?: THREE.Mesh; malhaAgua?: THREE.Mesh; sujo: boolean }
 
@@ -20,6 +21,18 @@ export class Mundo {
   grupo = new THREE.Group();
   material!: THREE.MeshLambertMaterial;
   materialAgua!: THREE.MeshLambertMaterial;
+
+  // ── v46: geração de DADOS de chunk em Web Worker (padrão Veloren) ──
+  // a malha continua no main thread (THREE); os DADOS são paralelizáveis.
+  // As subclasses declaram o perfil de terreno para o worker usar AS MESMAS
+  // fórmulas puras (terrenoRpg/terrenoCidade) — zero segunda fonte.
+  perfilId = "base";
+  worker: Worker | null = null;
+  workerAtivo = false;
+  workerErro = "";
+  pendentes = new Set<string>();
+  geradosWorker = 0; geradosSync = 0; emergencias = 0; descartados = 0;
+  msUltimoWorker = 0; msWorkerTotal = 0;
 
   constructor(public semente: number) {
     this.ruido = new Ruido(semente);
@@ -36,92 +49,115 @@ export class Mundo {
   }
 
   // ── Altura do terreno (mapa de alturas determinístico) ──────
+  // v46: delega nas funções puras de geracao.ts — as MESMAS que o worker
+  // usa (as subclasses sobrepõem por delegação aos seus perfis puras).
   alturaTerreno(x: number, z: number): number {
-    const base = this.ruido.fbm2(x * 0.012, z * 0.012, 4);
-    const montanha = this.ruido.fbm2(x * 0.004 + 500, z * 0.004 + 500, 3);
-    const detalhe = this.ruido.n2(x * 0.06, z * 0.06);
-    let h = 28 + base * 22 + Math.max(0, montanha - 0.55) * 70 + detalhe * 3;
-    return Math.max(4, Math.min(ALTURA - 6, Math.floor(h)));
+    return alturaTerrenoBase(this.ruido, x, z);
   }
 
   bioma(x: number, z: number): "planicie" | "deserto" | "floresta" | "montanha" {
-    const t = this.ruido.fbm2(x * 0.005 + 900, z * 0.005 + 900, 3);
-    if (this.alturaTerreno(x, z) > 52) return "montanha";
-    if (t < 0.36) return "deserto";
-    if (t > 0.62) return "floresta";
-    return "planicie";
+    return biomaBase(this.ruido, x, z);
   }
 
-  // ── Geração de um chunk ──────────────────────────────────────
+  // ── Geração de um chunk (main thread) ────────────────────────────
+  // v46: as colunas vêm de gerarDadosTerreno (o MESMO algoritmo que o
+  // worker corre) + edições + carimbos do mundo via posGerar().
   gerarChunk(cx: number, cz: number): Chunk {
-    const dados = new Uint8Array(CHUNK * CHUNK * ALTURA);
-    for (let lx = 0; lx < CHUNK; lx++) for (let lz = 0; lz < CHUNK; lz++) {
-      const x = cx * CHUNK + lx, z = cz * CHUNK + lz;
-      const h = this.alturaTerreno(x, z);
-      const bioma = this.bioma(x, z);
-      for (let y = 0; y < ALTURA; y++) {
-        let id: number = B.AR;
-        if (y === 0 || (y === 1 && this.ruido.n3(x, y, z) < 0.5)) id = B.ROCHA_MAE;
-        else if (y < h - 3) {
-          id = B.PEDRA;
-          // cavernas 3D
-          if (y > 3 && y < h - 4) {
-            const c = this.ruido.n3(x * 0.075, y * 0.1, z * 0.075);
-            if (c > 0.74) id = B.AR;
-          }
-          // minérios por profundidade (raros — progressão difícil)
-          if (id === B.PEDRA) {
-            const r = this.ruido.n3(x * 0.9 + 40, y * 0.9 + 40, z * 0.9 + 40);
-            if (y < 48 && r > 0.988) id = B.CARVAO_M;
-            else if (y < 32 && r < 0.012) id = B.FERRO_M;
-            else if (y < 20 && r > 0.985) id = B.OURO_M;
-            else if (y < 14 && r < 0.007) id = B.DIAMANTE_M;
-          }
-        } else if (y < h) id = bioma === "deserto" ? B.AREIA : B.TERRA;
-        else if (y === h) id = bioma === "deserto" ? B.AREIA : (h < NIVEL_MAR + 1 ? B.AREIA : B.RELVA);
-        else if (y <= NIVEL_MAR) id = B.AGUA;
-        dados[idx(lx, y, lz)] = id;
-      }
-      // árvore (só em terra firme acima do mar) — hash POR COLUNA: o mesmo
-      // (x,z) dá sempre árvores iguais, seja qual for a ordem dos chunks (v29)
-      if (h > NIVEL_MAR + 1 && dados[idx(lx, h, lz)] === B.RELVA) {
-        const pArvore = bioma === "floresta" ? 0.05 : bioma === "planicie" ? 0.016 : 0;
-        if (this.ruido.hashCol(x, z, 11) < pArvore && lx > 1 && lx < CHUNK - 2 && lz > 1 && lz < CHUNK - 2) {
-          const alt = 4 + Math.floor(this.ruido.hashCol(x, z, 29) * 3);
-          for (let t = 1; t <= alt; t++) dados[idx(lx, h + t, lz)] = B.TRONCO;
-          for (let dy = alt - 2; dy <= alt + 1; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-            const dist = Math.abs(dx) + Math.abs(dz) + Math.abs(dy - alt + 0.5) * 1.4;
-            if (dist <= 3.4 && !(dx === 0 && dz === 0 && dy < alt)) {
-              const px2 = lx + dx, py = h + dy + 1, pz2 = lz + dz;
-              if (px2 >= 0 && px2 < CHUNK && pz2 >= 0 && pz2 < CHUNK && py < ALTURA && dados[idx(px2, py, pz2)] === B.AR)
-                dados[idx(px2, py, pz2)] = B.FOLHAS;
-            }
-          }
-        }
-      }
-      // ── decorações do chão (v29): erva, flores, cactos — hash por coluna ──
-      const topo = dados[idx(lx, h, lz)];
-      if (h > NIVEL_MAR + 1 && h + 1 < ALTURA && dados[idx(lx, h + 1, lz)] === B.AR) {
-        const d1 = this.ruido.hashCol(x, z, 53);
-        if (bioma === "deserto" && topo === B.AREIA) {
-          if (d1 < 0.014) {
-            const altC = 1 + Math.floor(this.ruido.hashCol(x, z, 71) * 3);
-            for (let t = 1; t <= altC && h + t < ALTURA; t++) dados[idx(lx, h + t, lz)] = B.CACTO;
-          }
-        } else if (topo === B.RELVA) {
-          if (d1 < (bioma === "planicie" ? 0.07 : 0.055)) dados[idx(lx, h + 1, lz)] = B.ERVA;
-          else if (d1 < (bioma === "planicie" ? 0.079 : 0.067)) dados[idx(lx, h + 1, lz)] = B.FLOR_AM;
-          else if (d1 < (bioma === "planicie" ? 0.088 : 0.079)) dados[idx(lx, h + 1, lz)] = B.FLOR_VM;
-        }
-      }
+    this.geradosSync++;
+    const dados = gerarDadosTerreno(this.ruido, cx, cz, this.perfil());
+    return this.finalizarChunk(cx, cz, dados);
+  }
+
+  /** Par de funções de terreno desta instância (as subclasses delegam
+   *  nas suas funções puras — o worker usa exactamente essas). */
+  perfil(): PerfilTerreno {
+    return { altura: (x, z) => this.alturaTerreno(x, z), bioma: (x, z) => this.bioma(x, z) };
+  }
+
+  /** Fase comum aos dois caminhos de geração (sync e worker): edições do
+   *  jogador + carimbos específicos do mundo. Único ponto de entrada. */
+  private finalizarChunk(cx: number, cz: number, dados: Uint8Array): Chunk {
+    aplicarEditsChunk(dados, this.edits, cx, cz);
+    const c: Chunk = { cx, cz, dados, sujo: true };
+    this.posGerar(c);
+    return c;
+  }
+
+  /** Carimbos específicos do mundo (POIs do RPG, distritos da CIDADE) —
+   *  baratos, ficam no main thread; as subclasses sobrepõem. */
+  protected posGerar(_c: Chunk) { void _c; }
+
+  // ── v46: worker de geração ──────────────────────────────────
+  ativarWorker(): boolean {
+    if (this.worker) return this.workerAtivo;
+    try {
+      const w = new Worker(new URL("./geradorTerreno.worker.ts", import.meta.url), { type: "module" });
+      w.onerror = (e) => { this.workerErro = e.message || "erro no worker"; this.workerAtivo = false; };
+      w.onmessage = (e: MessageEvent) => this.receberDoWorker(e.data);
+      w.postMessage({ tipo: "init", semente: this.semente, perfil: this.perfilId });
+      this.worker = w;
+      this.workerAtivo = true;
+    } catch (err) {
+      this.workerErro = String(err);
+      this.workerAtivo = false;
     }
-    // aplicar edições guardadas
-    for (const [k, v] of this.edits) {
-      const [ex, ey, ez] = k.split(",").map(Number);
-      if (Math.floor(ex / CHUNK) === cx && Math.floor(ez / CHUNK) === cz)
-        dados[idx(((ex % CHUNK) + CHUNK) % CHUNK, ey, ((ez % CHUNK) + CHUNK) % CHUNK)] = v;
-    }
-    return { cx, cz, dados, sujo: true };
+    return this.workerAtivo;
+  }
+
+  desativarWorker() {
+    if (this.worker) { try { this.worker.terminate(); } catch { /* ignore */ } }
+    this.worker = null;
+    this.workerAtivo = false;
+    this.pendentes.clear();
+  }
+
+  private receberDoWorker(m: { tipo?: string; cx?: number; cz?: number; dados?: ArrayBuffer; ms?: number }) {
+    if (m?.tipo !== "chunk" || typeof m.cx !== "number" || typeof m.cz !== "number" || !m.dados) return;
+    const k = this.chave(m.cx, m.cz);
+    this.pendentes.delete(k);
+    const ms = m.ms ?? 0;
+    this.msUltimoWorker = ms;
+    this.msWorkerTotal += ms;
+    if (this.chunks.has(k)) { this.descartados++; return; } // física/teleporte já garantiu sync
+    const c = this.finalizarChunk(m.cx, m.cz, new Uint8Array(m.dados));
+    this.chunks.set(k, c);
+    this.geradosWorker++;
+  }
+
+  /** Pede os dados de um chunk ao worker (sem duplicar pedidos).
+   *  A resposta entra pelo MESMO caminho do sync (edições + carimbos). */
+  pedirChunk(cx: number, cz: number): boolean {
+    if (!this.workerAtivo || !this.worker) return false;
+    const k = this.chave(cx, cz);
+    if (this.chunks.has(k) || this.pendentes.has(k)) return false;
+    this.pendentes.add(k);
+    this.worker.postMessage({ tipo: "gerar", cx, cz });
+    return true;
+  }
+
+  /** Contagens honestas da geração (E2E v46). */
+  infoGeracao() {
+    return {
+      worker: this.workerAtivo, erroWorker: this.workerErro, perfil: this.perfilId,
+      semente: this.semente, geradosWorker: this.geradosWorker, geradosSync: this.geradosSync,
+      emergencias: this.emergencias, pendentes: this.pendentes.size, descartados: this.descartados,
+      carregados: this.chunks.size, msUltimoWorker: Math.round(this.msUltimoWorker),
+      msWorkerTotal: Math.round(this.msWorkerTotal),
+    };
+  }
+
+  /** Prova de identidade byte a byte: regenera o chunk PELO CAMINHO SYNC
+   *  (ruido fresco da mesma semente + edições + carimbos) e compara a soma
+   *  de bytes com o chunk vivo (que pode ter vindo do worker). */
+  compararComSync(cx: number, cz: number): { igual: boolean; somaLive: number; somaSync: number; msSync: number } {
+    const t0 = performance.now();
+    const dados = gerarDadosTerreno(new Ruido(this.semente), cx, cz, this.perfil());
+    const c = this.finalizarChunk(cx, cz, dados);
+    const msSync = performance.now() - t0;
+    const live = this.chunks.get(this.chave(cx, cz));
+    if (!live) return { igual: false, somaLive: -1, somaSync: somaBytes(c.dados), msSync };
+    const somaLive = somaBytes(live.dados), somaSync = somaBytes(c.dados);
+    return { igual: somaLive === somaSync, somaLive, somaSync, msSync: Math.round(msSync) };
   }
 
   chave(cx: number, cz: number) { return `${cx},${cz}`; }

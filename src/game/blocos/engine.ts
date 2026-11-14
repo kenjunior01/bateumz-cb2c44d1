@@ -239,6 +239,8 @@ export class Motor {
     const semente = guardado?.semente ?? (Date.now() % 1000000);
     const mundoAnterior = this.mundo; // para limpar da cena depois
     this.mundo = this.fabricaMundo ? this.fabricaMundo(semente) : new Mundo(semente);
+    if (mundoAnterior) mundoAnterior.desativarWorker(); // v46: worker do mundo velho
+    this.mundo.ativarWorker(); // v46: geração de dados em worker (fallback honesto se falhar)
     this.gestor = new GestorMobs(this.mundo, semente);
     this.rnd = new Aleatorio(semente + 777);
 
@@ -1196,6 +1198,11 @@ export class Motor {
 
   // ── Física do jogador ───────────────────────────────────────
   private fisica(dt: number) {
+    // v46: o chunk sob o jogador tem SEMPRE de existir antes da integração —
+    // se o worker ainda não entregou (ou chegou-se por teleporte), gerar em
+    // sync. Contado honestamente em `emergencias` (__rpg.chunks()).
+    const pcx = Math.floor(this.px / CHUNK), pcz = Math.floor(this.pz / CHUNK);
+    if (!this.mundo.getChunk(pcx, pcz)) { this.mundo.garantir(pcx, pcz); this.mundo.emergencias++; }
     const naAguaAgora = this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 0.4), Math.floor(this.pz)) === B.AGUA;
     const cabecaAguaAgora = this.mundo.getBloco(Math.floor(this.px), Math.floor(this.py + 1.62), Math.floor(this.pz)) === B.AGUA;
     this.naAgua = naAguaAgora; this.cabecaAgua = cabecaAguaAgora;
@@ -1367,13 +1374,33 @@ export class Motor {
   // ── Chunks dinâmicos ────────────────────────────────────────
   private atualizarChunks() {
     const cx = Math.floor(this.px / CHUNK), cz = Math.floor(this.pz / CHUNK);
-    // garantir à volta
-    let orcamento = 2;
-    for (let r = 0; r <= this.raioRender && orcamento > 0; r++) {
-      for (let dx = -r; dx <= r && orcamento > 0; dx++) for (let dz = -r; dz <= r && orcamento > 0; dz++) {
-        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-        const c = this.mundo.garantir(cx + dx, cz + dz);
-        if (c.sujo || !c.malha) { this.mundo.construirMalha(c); orcamento--; }
+    if (this.mundo.workerAtivo) {
+      // v46: DADOS pedidos ao worker (fora do main thread); a MALHA continua
+      // aqui com orçamento — o gargalo real (THREE) não muda de casa.
+      let pedidos = 0;
+      for (let r = 0; r <= this.raioRender && pedidos < 8; r++) {
+        for (let dx = -r; dx <= r && pedidos < 8; dx++) for (let dz = -r; dz <= r && pedidos < 8; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          if (this.mundo.pedirChunk(cx + dx, cz + dz)) pedidos++;
+        }
+      }
+      let orcamentoMalha = 2;
+      for (let r = 0; r <= this.raioRender && orcamentoMalha > 0; r++) {
+        for (let dx = -r; dx <= r && orcamentoMalha > 0; dx++) for (let dz = -r; dz <= r && orcamentoMalha > 0; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const c = this.mundo.getChunk(cx + dx, cz + dz);
+          if (c && (c.sujo || !c.malha)) { this.mundo.construirMalha(c); orcamentoMalha--; }
+        }
+      }
+    } else {
+      // fallback sync (worker indisponível): comportamento anterior intacto
+      let orcamento = 2;
+      for (let r = 0; r <= this.raioRender && orcamento > 0; r++) {
+        for (let dx = -r; dx <= r && orcamento > 0; dx++) for (let dz = -r; dz <= r && orcamento > 0; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const c = this.mundo.garantir(cx + dx, cz + dz);
+          if (c.sujo || !c.malha) { this.mundo.construirMalha(c); orcamento--; }
+        }
       }
     }
     // descartar longe

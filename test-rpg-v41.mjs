@@ -328,6 +328,69 @@ async function parteB() {
   await page.keyboard.press("Escape");
   await aguardar(async () => (await page.locator('[data-testid="rpg-mapa"]').count()) === 0, 10, "mapa fechou (do minimapa)");
 
+  // ── v46 · GERAÇÃO DE CHUNKS NO WORKER (dados fora do main thread) ──
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    w.definirHora(0.35); // dia: sem enxame noturno a matar o herói durante os waits
+    // scaffolding determinístico: a qualidade automática (fps ~2 no raster
+    // do sandbox) reduziria o raio a 2 durante os waits — fixa-se a 3
+    w.motor.qualidadeAuto = false;
+    w.motor.raioRender = 3;
+  });
+  const gi0 = await page.evaluate(() => (window).__rpg.chunks());
+  ok("worker de geração ativo (perfil rpg, semente fixa 20251113, sem erro)",
+    gi0.worker === true && gi0.perfil === "rpg" && gi0.semente === 20251113 && gi0.erroWorker === "");
+  ok(`contagens honestas: geradosSync ${gi0.geradosSync} > 0 (spawn sync) · carregados ${gi0.carregados}`,
+    gi0.geradosSync > 0 && gi0.carregados > 0);
+  // teleporte para fora do anel do spawn: o worker tem de encher o anel novo
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    const h = w.motor.mundo.alturaTerreno(70, -10);
+    w.teleportar(70.5, h + 1.02, -10.5);
+  });
+  await pump(8); // 8 frames × 8 pedidos = anel pedido ao worker (alvo no r=2)
+  const chegou = await aguardar(async () => {
+    const gi = await page.evaluate(() => (window).__rpg.chunks());
+    const alvo = await page.evaluate(() => (window).__rpg.motor.mundo.getChunk(4, 1) !== undefined);
+    return gi.geradosWorker > 0 && gi.pendentes === 0 && alvo;
+  }, 30, "worker encher o anel novo (chunk (4,1) entregue)");
+  const gi1 = await page.evaluate(() => (window).__rpg.chunks());
+  ok(`worker entrega os dados: geradosWorker ${gi0.geradosWorker}→${gi1.geradosWorker} · pendentes ${gi1.pendentes}`,
+    chegou && gi1.geradosWorker > gi0.geradosWorker && gi1.pendentes === 0);
+  ok("sem queda no vazio: herói em pé sobre o terreno real (fase jogando)",
+    (await cap())?.fase === "jogando" && (await cap()).pos[1] > 4);
+  // identidade byte a byte: o chunk (4,1) — Terra de Cinzas revestida —
+  // chegou PELO WORKER (r=2, fora do 3×3 sync do teleporte); regenerado
+  // pelo caminho sync tem a MESMA soma de bytes (zero segunda fonte)
+  const cmp = await page.evaluate(() => (window).__rpg.compararChunk(4, 1));
+  ok(`chunk das Cinzas (carimbado, veio do worker) idêntico ao sync · sync ${cmp.msSync}ms`,
+    cmp.igual === true && cmp.msSync > 0);
+  const cmp2 = await page.evaluate(() => (window).__rpg.compararChunk(0, 0));
+  ok("chunk da Aldeia (POI central) também idêntico worker↔sync", cmp2.igual === true);
+  // edição sobrevive ao descarregamento e regenera PELO WORKER:
+  // coloca pedra longe → desce >6 chunks (descartar longe) → volta para
+  // um chunk do anel que NÃO inclui o edit no 3×3 sync → o worker regenera.
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    const h = w.motor.mundo.alturaTerreno(150, 150);
+    w.teleportar(150.5, h + 1.02, 150.5);
+    w.motor.mundo.setBloco(150, h + 1, 150, 3); // PEDRA (edit marcado)
+  });
+  await pump(2);
+  const h250 = await page.evaluate(() => (window).__rpg.motor.mundo.alturaTerreno(150, 250));
+  await page.evaluate((y) => (window).__rpg.teleportar(150.5, y, 250.5), h250 + 1.02);
+  await pump(8); // descartar longe remove o chunk editado (dist 6 > raio+2)
+  const h192 = await page.evaluate(() => (window).__rpg.motor.mundo.alturaTerreno(150, 192));
+  await page.evaluate((y) => (window).__rpg.teleportar(150.5, y, 192.5), h192 + 1.02); // chunk (9,12): 3×3 NÃO inclui o edit
+  await pump(8);
+  const editRegen = await aguardar(async () => {
+    const b = await page.evaluate(() => (window).__rpg.bloco(150, (window).__rpg.motor.mundo.alturaTerreno(150, 150) + 1, 150));
+    const carregado = await page.evaluate(() => (window).__rpg.motor.mundo.getChunk(9, 9) !== undefined);
+    const gi = await page.evaluate(() => (window).__rpg.chunks());
+    return carregado && gi.pendentes === 0 && b === 3;
+  }, 30, "worker regenerar o chunk editado");
+  ok("edição do jogador sobrevive ao descarregamento e regenera PELO WORKER", editRegen);
+
   // ── combate → XP → nível → habilidade ──
   await page.evaluate(() => (window).__rpg.teleportar(2.5, 40, 4.5)); // volta à aldeia
   await pump(10);

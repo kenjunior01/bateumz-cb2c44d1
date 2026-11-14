@@ -9,89 +9,36 @@
 // Estruturas carimbadas por chunk — MESMO padrão do MundoCidade.
 // ============================================================
 
-import { B, CHUNK, ALTURA, NIVEL_MAR } from "../blocos/constants";
+import { B, CHUNK, ALTURA } from "../blocos/constants";
 import { Mundo, type Chunk } from "../blocos/world";
 import { Aleatorio } from "../blocos/noise";
-import { SEED_RPG, ALTURA_ALDEIA, REGIOES, POIS } from "./core";
+import { SEED_RPG, ALTURA_ALDEIA, POIS } from "./core";
+import { pesoRegiao, alturaRpg, biomaRpg, PAD_POI } from "./terrenoRpg";
 
 const idx = (x: number, y: number, z: number) => (y * CHUNK + z) * CHUNK + x;
 
-/** Alturas fixas dos padins dos POIs (o terreno funde para estas alturas). */
-const PAD_POI: Record<string, number> = {
-  aldeia: ALTURA_ALDEIA,     // 32 — planície da aldeia (é o próprio centro)
-  torre: ALTURA_ALDEIA,      // dentro da planície plana
-  cacadores: 34,
-  ruinas: 32,
-  cova: 32,
-  baoba: 32,
-  porto: 31,                 // praia (NIVEL_MAR=30 → areia a h<31)
-  forja: 33,
-};
-
-/** Alvos de altura por região + ruído próprio (terreno com sabor). */
-const ALVO_REGIAO: Record<string, { base: number; ruga: number }> = {
-  aldeia:   { base: 32, ruga: 1.2 },
-  planalto: { base: 36, ruga: 2.5 },
-  miombo:   { base: 33, ruga: 2.2 },
-  costa:    { base: 31, ruga: 1.8 },   // z>72 desce ao mar
-  serra:    { base: 42, ruga: 7 },
-  cinzas:   { base: 35, ruga: 3 },
-};
-
 export class MundoRPG extends Mundo {
-  constructor() { super(SEED_RPG); }
-
-  /** Peso (0..1) da influência de uma região em (x, z). */
-  private pesoRegiao(x: number, z: number): { regiao: string; w: number } {
-    let melhor = "", melhorW = 0;
-    for (const r of REGIOES) {
-      const d = Math.hypot(x - r.cx, z - r.cz);
-      const w = Math.max(0, Math.min(1, (r.raio * 1.25 - d) / (r.raio * 0.7)));
-      if (w > melhorW) { melhorW = w; melhor = r.id; }
-    }
-    return { regiao: melhor, w: melhorW };
+  constructor() {
+    super(SEED_RPG);
+    this.perfilId = "rpg"; // v46: o worker do motor usa as MESMAS fórmulas puras
   }
 
-  /** Terreno do RPG: regiões com sabor, padins planos nos POIs. */
+  /** Terreno do RPG: regiões com sabor, padins planos nos POIs —
+   *  v46: delega na função pura (partilhada com o worker). */
   override alturaTerreno(x: number, z: number): number {
-    const natural = super.alturaTerreno(x, z);
-    const { regiao, w } = this.pesoRegiao(x, z);
-    let h = natural;
-    if (w > 0) {
-      const alvo = ALVO_REGIAO[regiao] ?? { base: 30, ruga: 2 };
-      let alvoH = alvo.base + this.ruido.n2(x * 0.02, z * 0.02) * alvo.ruga;
-      // costa: a sul (z>72) o mar — terrain below sea level
-      if (regiao === "costa" && z > 72) alvoH = 27 + this.ruido.n2(x * 0.02, z * 0.02) * 1.6;
-      // serra: picos com o mesmo ruído de montanha do motor base
-      if (regiao === "serra") alvoH += Math.max(0, this.ruido.fbm2(x * 0.006 + 500, z * 0.006 + 500, 3) - 0.45) * 26;
-      h = natural * (1 - w) + alvoH * w;
-    }
-    // padins planos dos POIs (o terreno funde para a altura fixa)
-    for (const p of POIS) {
-      const d = Math.hypot(x - p.x, z - p.z);
-      if (d < 14) {
-        const pw = Math.max(0, Math.min(1, (10 - d) / 5));
-        const padY = PAD_POI[p.id] ?? ALTURA_ALDEIA;
-        h = h * (1 - pw) + padY * pw;
-      }
-    }
-    return Math.max(4, Math.min(ALTURA - 6, Math.floor(h)));
+    return alturaRpg(this.ruido, x, z);
   }
 
   /** Biomas por região: miombo = floresta densa, serra = montanha. */
   override bioma(x: number, z: number): "planicie" | "deserto" | "floresta" | "montanha" {
-    const { regiao, w } = this.pesoRegiao(x, z);
-    if (w > 0.45) {
-      if (regiao === "miombo") return "floresta";
-      if (regiao === "serra") return "montanha";
-      return "planicie";
-    }
-    return super.bioma(x, z);
+    return biomaRpg(this.ruido, x, z);
   }
 
-  override gerarChunk(cx: number, cz: number): Chunk {
-    const c = super.gerarChunk(cx, cz);
-    const bx = cx * CHUNK, bz = cz * CHUNK;
+  /** v46: os carimbos (cinzas + POIs) correm no main thread sobre dados
+   *  que vieram do caminho sync OU do worker — um só ponto de entrada. */
+  protected override posGerar(c: Chunk): void {
+    super.posGerar(c);
+    const bx = c.cx * CHUNK, bz = c.cz * CHUNK;
     // Terra de Cinzas: superfície vulcânica (pedra/ardósia + brasas de carvão)
     if (bx < 120 && bz < 90 && bx > 40 && bz > 10) this.revestirCinzas(c);
     // estruturas dos POIs cujo footprint toca este chunk
@@ -100,7 +47,6 @@ export class MundoRPG extends Mundo {
       if (bx + CHUNK < p.x - 13 || bx > p.x + 13 || bz + CHUNK < p.z - 13 || bz > p.z + 13) continue;
       this.carimbarPoi(c, p.id, p.x, p.z, y);
     }
-    return c;
   }
 
   /** Superfície vulcânica: onde era relva, fica pedra/ardósia + carvão incandescente. */
@@ -108,7 +54,7 @@ export class MundoRPG extends Mundo {
     const bx = c.cx * CHUNK, bz = c.cz * CHUNK;
     for (let lx = 0; lx < CHUNK; lx++) for (let lz = 0; lz < CHUNK; lz++) {
       const x = bx + lx, z = bz + lz;
-      const { regiao, w } = this.pesoRegiao(x, z);
+      const { regiao, w } = pesoRegiao(x, z);
       if (regiao !== "cinzas" || w < 0.55) continue;
       // achar a superfície da coluna
       let topo = -1;

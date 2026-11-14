@@ -15,15 +15,15 @@ import { Mundo, type Chunk } from "../blocos/world";
 import { GestorMobs } from "../blocos/mobs";
 import { Aleatorio } from "../blocos/noise";
 import { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA } from "./core";
+import { alturaCidade, biomaCidade, RAIO_PLATEAU, RAIO_FUSAO } from "./terrenoCidade";
 
 // v37 — fonte única passou a ser core.ts (padrão `common` do Veloren:
 // cliente e servidor partilham as mesmas constantes); re-exportado aqui
 // para todos os imports existentes continuarem a funcionar.
 export { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA };
-/** Raio do plateau plano (para além disso o terreno natural regressa). */
-export const RAIO_PLATEAU = 58;
-/** Raio onde o plateau termina de fundir com o terreno natural. */
-export const RAIO_FUSAO = 72;
+// v46 — raios do plateau vivem em terrenoCidade.ts (puro, partilhado com
+// o worker); re-exportados para os imports existentes.
+export { RAIO_PLATEAU, RAIO_FUSAO };
 
 const idx = (x: number, y: number, z: number) => (y * CHUNK + z) * CHUNK + x;
 
@@ -87,36 +87,33 @@ export function portalPerto(
 
 // ── Mundo da cidade ──────────────────────────────────────────
 export class MundoCidade extends Mundo {
-  constructor() { super(SEED_CIDADE); }
+  constructor() {
+    super(SEED_CIDADE);
+    this.perfilId = "cidade"; // v46: o worker usa as MESMAS fórmulas puras
+  }
 
-  /** Plateau plano da cidade, fundindo suavemente com o terreno natural. */
+  /** Plateau plano da cidade, fundindo suavemente com o terreno natural —
+   *  v46: delega na função pura (partilhada com o worker). */
   override alturaTerreno(x: number, z: number): number {
-    const dist = Math.hypot(x, z);
-    if (dist <= RAIO_PLATEAU) return ALTURA_PLATEAU;
-    if (dist < RAIO_FUSAO) {
-      const natural = super.alturaTerreno(x, z);
-      const t = (dist - RAIO_PLATEAU) / (RAIO_FUSAO - RAIO_PLATEAU);
-      return Math.max(4, Math.min(ALTURA - 6, Math.round(ALTURA_PLATEAU + (natural - ALTURA_PLATEAU) * t)));
-    }
-    return super.alturaTerreno(x, z);
+    return alturaCidade(this.ruido, x, z);
   }
 
   /** Cidade tem sempre clima de planície (sem desertos no centro urbano). */
   override bioma(x: number, z: number): "planicie" | "deserto" | "floresta" | "montanha" {
-    if (Math.hypot(x, z) <= RAIO_FUSAO) return "planicie";
-    return super.bioma(x, z);
+    return biomaCidade(this.ruido, x, z);
   }
 
-  override gerarChunk(cx: number, cz: number): Chunk {
-    const c = super.gerarChunk(cx, cz);
-    const bx = cx * CHUNK, bz = cz * CHUNK;
-    if (bx > RAIO_FUSAO + 8 || bz > RAIO_FUSAO + 8 || bx + CHUNK < -RAIO_FUSAO - 8 || bz + CHUNK < -RAIO_FUSAO - 8) return c;
+  /** v46: carimbos da cidade no main thread sobre dados do caminho sync
+   *  OU do worker — um só ponto de entrada. */
+  protected override posGerar(c: Chunk): void {
+    super.posGerar(c);
+    const bx = c.cx * CHUNK, bz = c.cz * CHUNK;
+    if (bx > RAIO_FUSAO + 8 || bz > RAIO_FUSAO + 8 || bx + CHUNK < -RAIO_FUSAO - 8 || bz + CHUNK < -RAIO_FUSAO - 8) return;
     this.carimbarPraca(c);
     this.carimbarQuiosque(c);
     this.carimbarCasa(c);
     this.carimbarTrofeus(c);
     for (const di of DISTRITOS) this.carimbarDistrito(c, di);
-    return c;
   }
 
   // util: põe um bloco no chunk (coordenadas do mundo)

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import * as THREE from "three";
 import { Motor, CAMARA_NOMES, METEO_NOMES, type CamaraModo, type Captura } from "@/game/blocos/engine";
-import { CORES_MAPA } from "@/game/blocos/constants";
+import { CORES_MAPA, CHUNK } from "@/game/blocos/constants";
 import {
   MundoCidade, DISTRITOS, portalPerto, SEED_CIDADE, pacificarGestor, posDistrito,
   POS_CASA, POS_TROFEUS, POS_QUIOSQUE, ALTURA_PLATEAU, SPAWN_PRACA, type Distrito,
@@ -256,6 +256,9 @@ export default function CidadeBateu() {
       teleportar: (x: number, y: number, z: number) => {
         const m = motorRef.current;
         m.px = x; m.py = y; m.pz = z; m.vx = m.vy = m.vz = 0;
+        // v46: 3×3 de chunks em sync (dados) — terreno imediato garantido
+        const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) m.mundo.garantir(pcx + dx, pcz + dz);
       },
       olhar: (yaw: number, pitch: number) => { motorRef.current.yaw = yaw; motorRef.current.pitch = pitch; },
       fase: () => faseRef.current,
@@ -311,7 +314,10 @@ export default function CidadeBateu() {
       escalaVel: () => motorRef.current.escalaVel,
       missoesHoje: () => missoesDeHoje(),
     };
-    return () => { try { delete (window as any).__cidade; } catch { /* ignore */ } };
+    return () => {
+      try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
+      try { delete (window as any).__cidade; } catch { /* ignore */ }
+    };
   }, []);
 
   // ── Estado ← motor ──

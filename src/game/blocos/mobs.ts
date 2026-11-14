@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { Mundo } from "./world";
 import { Aleatorio } from "./noise";
-import { B, GRAVIDADE } from "./constants";
+import { B, GRAVIDADE, CHUNK } from "./constants";
 import { criarZumbi, criarPorco, criarEstourador, criarVaca, criarGalinha, criarAranha } from "./lego";
 
 export type TipoMob = "porco" | "vaca" | "galinha" | "zumbi" | "estourador" | "aranha";
@@ -51,6 +51,9 @@ export class GestorMobs {
 
   spawnar(tipo: TipoMob, x: number, y: number, z: number): Mob {
     const perfil = PERFIS[tipo];
+    // v46: o chunk alvo tem de existir antes de procurar chão/física —
+    // se o worker ainda não o entregou, gerar em sync (raro e honesto).
+    this.mundo.garantir(Math.floor(x / CHUNK), Math.floor(z / CHUNK));
     let g: THREE.Group;
     let bracos: THREE.Mesh[] | undefined;
     if (tipo === "zumbi") {
@@ -107,6 +110,9 @@ export class GestorMobs {
     let dano = 0, fonte = "";
     for (const mob of this.mobs) {
       if (!mob.vivo) continue;
+      // v46: chunk por carregar → mob congelado neste passo (sem gravidade
+      // para o vazio); o worker entrega os dados e ele retoma sozinho.
+      if (!this.mundo.getChunk(Math.floor(mob.x / CHUNK), Math.floor(mob.z / CHUNK))) continue;
       const dx = px - mob.x, dz = pz - mob.z, dy = py - mob.y;
       const dist = Math.hypot(dx, dz);
       mob.temporizador -= dt;

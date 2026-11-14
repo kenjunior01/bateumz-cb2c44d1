@@ -147,6 +147,32 @@ async function main() {
   const hora = (await page.getByTestId("cd-relogio").textContent().catch(() => ""))?.trim() ?? "";
   ok("relógio do mundo no formato HH:MM", /^\d{2}:\d{2}$/.test(hora));
 
+  // ── 7b. v46 — geração de chunks no WORKER (motor partilhado) ──
+  const gi = await page.evaluate(() => window.__cidade.motor.mundo.infoGeracao());
+  ok("worker de geração ativo (perfil cidade, semente fixa, sem erro)",
+    gi.worker === true && gi.perfil === "cidade" && gi.semente === 20251103 && gi.erroWorker === "");
+  await page.evaluate(() => {
+    const w = window.__cidade;
+    const h = w.motor.mundo.alturaTerreno(118.5, 110.5);
+    w.teleportar(118.5, h + 1.02, 110.5);
+    w.pump(12);
+  });
+  const workerOk = await (() => new Promise(async (res) => {
+    for (let i = 0; i < 30; i++) {
+      const g = await page.evaluate(() => window.__cidade.motor.mundo.infoGeracao());
+      if (g.geradosWorker > 0 && g.pendentes === 0) return res(g);
+      await sleep(200);
+    }
+    return res(null);
+  }))();
+  ok(`worker entrega chunks da cidade fora do plateau (geradosWorker ${workerOk?.geradosWorker ?? 0})`,
+    !!workerOk && workerOk.geradosWorker > 0 && workerOk.pendentes === 0);
+  // chunk (9,5) veio do worker (x 144-159, z 80-95 — fora do raio do
+  // plateau e fora do 3×3 sync do teleporte, r=2);
+  // regenerado em sync tem de ser IDÊNTICO byte a byte (zero segunda fonte)
+  const cmpC = await page.evaluate(() => window.__cidade.motor.mundo.compararComSync(9, 5));
+  ok("chunk natural da cidade (do worker) idêntico ao sync", cmpC.igual === true && cmpC.msSync > 0);
+
   // ── 8. Mobile: joystick + saltar ──
   console.log("— Mobile");
   await page.setViewportSize({ width: 375, height: 700 });

@@ -245,8 +245,9 @@ export class Motor {
     const semente = guardado?.semente ?? (Date.now() % 1000000);
     const mundoAnterior = this.mundo; // para limpar da cena depois
     this.mundo = this.fabricaMundo ? this.fabricaMundo(semente) : new Mundo(semente);
-    if (mundoAnterior) mundoAnterior.desativarWorker(); // v46: worker do mundo velho
+    if (mundoAnterior) { mundoAnterior.desativarWorker(); mundoAnterior.desativarMalhador(); } // v46/v51: workers do mundo velho
     this.mundo.ativarWorker(); // v46: geração de dados em worker (fallback honesto se falhar)
+    this.mundo.ativarMalhador(); // v51: malhagem em worker (fallback honesto se falhar)
     this.gestor = new GestorMobs(this.mundo, semente);
     this.rnd = new Aleatorio(semente + 777);
 
@@ -1386,8 +1387,7 @@ export class Motor {
   private atualizarChunks() {
     const cx = Math.floor(this.px / CHUNK), cz = Math.floor(this.pz / CHUNK);
     if (this.mundo.workerAtivo) {
-      // v46: DADOS pedidos ao worker (fora do main thread); a MALHA continua
-      // aqui com orçamento — o gargalo real (THREE) não muda de casa.
+      // v46: DADOS pedidos ao worker (fora do main thread)
       let pedidos = 0;
       for (let r = 0; r <= this.raioRender && pedidos < 8; r++) {
         for (let dx = -r; dx <= r && pedidos < 8; dx++) for (let dz = -r; dz <= r && pedidos < 8; dz++) {
@@ -1395,22 +1395,32 @@ export class Motor {
           if (this.mundo.pedirChunk(cx + dx, cz + dz)) pedidos++;
         }
       }
-      let orcamentoMalha = 2;
-      for (let r = 0; r <= this.raioRender && orcamentoMalha > 0; r++) {
-        for (let dx = -r; dx <= r && orcamentoMalha > 0; dx++) for (let dz = -r; dz <= r && orcamentoMalha > 0; dz++) {
+    } else {
+      // fallback sync (worker de dados indisponível): comportamento anterior intacto
+      let orcamentoDados = 2;
+      for (let r = 0; r <= this.raioRender && orcamentoDados > 0; r++) {
+        for (let dx = -r; dx <= r && orcamentoDados > 0; dx++) for (let dz = -r; dz <= r && orcamentoDados > 0; dz++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-          const c = this.mundo.getChunk(cx + dx, cz + dz);
-          if (c && (c.sujo || !c.malha)) { this.mundo.construirMalha(c); orcamentoMalha--; }
+          this.mundo.garantir(cx + dx, cz + dz);
+          orcamentoDados--;
         }
       }
-    } else {
-      // fallback sync (worker indisponível): comportamento anterior intacto
-      let orcamento = 2;
-      for (let r = 0; r <= this.raioRender && orcamento > 0; r++) {
-        for (let dx = -r; dx <= r && orcamento > 0; dx++) for (let dz = -r; dz <= r && orcamento > 0; dz++) {
-          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-          const c = this.mundo.garantir(cx + dx, cz + dz);
-          if (c.sujo || !c.malha) { this.mundo.construirMalha(c); orcamento--; }
+    }
+    // ── v51: MALHA — worker quando disponível (pedidos ao anel + upload
+    // com orçamento), sync com orçamento como fallback honesto ──
+    this.mundo.processarMalhasProntas(4);
+    let orcamentoMalha = 2;
+    let pedidasMalha = 0;
+    for (let r = 0; r <= this.raioRender; r++) {
+      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const c = this.mundo.workerAtivo ? this.mundo.getChunk(cx + dx, cz + dz) : this.mundo.garantir(cx + dx, cz + dz);
+        if (!c || !(c.sujo || !c.malha)) continue;
+        if (this.mundo.malhadorAtivo) {
+          if (pedidasMalha < 4 && this.mundo.pedirMalha(c)) pedidasMalha++;
+        } else if (orcamentoMalha > 0) {
+          this.mundo.construirMalha(c);
+          orcamentoMalha--;
         }
       }
     }

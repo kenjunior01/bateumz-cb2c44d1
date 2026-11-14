@@ -392,6 +392,7 @@ export default function CidadeBateu() {
     };
     return () => {
       try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
+      try { motorRef.current.mundo.desativarMalhador(); } catch { /* ignore */ }
       try { delete (window as any).__cidade; } catch { /* ignore */ }
     };
   }, []);

@@ -335,10 +335,14 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       // v46: contagens honestas da geração de chunks (worker vs sync)
       chunks: () => motorRef.current.mundo.infoGeracao(),
       compararChunk: (cx: number, cz: number) => motorRef.current.mundo.compararComSync(cx, cz),
+      // v51: contagens honestas da malhagem (worker vs sync) + identidade bit a bit
+      malha: () => motorRef.current.mundo.infoMalha(),
+      compararMalha: (cx: number, cz: number) => motorRef.current.mundo.compararMalhaComSync(cx, cz),
       bloco: (x: number, y: number, z: number) => motorRef.current.mundo.getBloco(x, y, z),
     };
     return () => {
       try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
+      try { motorRef.current.mundo.desativarMalhador(); } catch { /* ignore */ }
       try { delete (window as any).__rpg; } catch { /* ignore */ }
     };
   }, []);

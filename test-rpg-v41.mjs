@@ -526,6 +526,63 @@ async function parteB() {
   }, 30, "worker regenerar o chunk editado");
   ok("edição do jogador sobrevive ao descarregamento e regenera PELO WORKER", editRegen);
 
+  // ── v51 · MALHAGEM em WEB WORKER (padrão Veloren: meshing threads) ──
+  // o trabalho pesado (faces/AO/UV) saiu do main thread; o THREE SÓ faz
+  // o upload dos buffers prontos. Sync permanece para spawn/teleporte.
+  const drenou = await aguardar(async () => {
+    const m = await page.evaluate(() => (window).__rpg.malha());
+    return m.pendentes === 0 && m.prontas === 0;
+  }, 40, "worker de malha drenar a fila do anel");
+  const m0 = await page.evaluate(() => (window).__rpg.malha());
+  ok("malhador ativo (perfil rpg, sem erro) e fila drenada (pendentes 0 · prontas 0)",
+    m0.malhador === true && m0.erroMalhador === "" && m0.perfil === "rpg" && m0.pendentes === 0 && m0.prontas === 0);
+  ok(`worker malhou os chunks do anel: pedidas ${m0.pedidas} > 0 · malhadasWorker ${m0.malhadasWorker} > 0`,
+    m0.pedidas > 0 && m0.malhadasWorker > 0);
+  ok(`spawn continua sync (honesto): malhadasSync ${m0.malhadasSync} > 0`, m0.malhadasSync > 0);
+  // identidade bit a bit: (9,12) tem DADOS sync (3×3 do teleporte) mas a
+  // MALHA veio do worker; (9,9) veio do worker INTEIRO (dados v46 + malha)
+  const cmpM = await page.evaluate(() => (window).__rpg.compararMalha(9, 12));
+  ok(`malha do chunk do herói (dados sync, malha worker) idêntica ao sync (${cmpM.vertsSync} verts · sync ${cmpM.msSync}ms)`,
+    cmpM.igual === true && cmpM.vertsSync > 0 && cmpM.vertsLive === cmpM.vertsSync);
+  const cmpM2 = await page.evaluate(() => (window).__rpg.compararMalha(9, 9));
+  ok("malha do chunk regenerado pelo worker (dados+malha worker) também idêntica ao sync", cmpM2.igual === true);
+  // edição remalha PELO WORKER: quebrar o tronco/pedra do teste v46 (o
+  // chunk (9,9) está no anel do herói em (150,192)) → sujo → resposta
+  const mw0 = await page.evaluate(() => (window).__rpg.malha());
+  await page.evaluate(() => {
+    const w = (window).__rpg;
+    const h = w.motor.mundo.alturaTerreno(150, 150);
+    w.motor.mundo.setBloco(150, h + 1, 150, 0); // quebra o PEDRA do teste v46 (edit marcado)
+  });
+  const remalhou = await aguardar(async () => {
+    const m = await page.evaluate(() => (window).__rpg.malha());
+    return m.malhadasWorker > mw0.malhadasWorker && m.pendentes === 0 && m.prontas === 0;
+  }, 40, "worker remalhar o chunk editado");
+  const mwInfo = await page.evaluate(() => (window).__rpg.malha());
+  ok(`edição remalha PELO WORKER: malhadasWorker ${mw0.malhadasWorker}→${mwInfo.malhadasWorker}`, remalhou);
+  const cmpM3 = await page.evaluate(() => (window).__rpg.compararMalha(9, 9));
+  ok("malha pós-edição continua idêntica ao caminho sync (edit incluído nos dois)", cmpM3.igual === true);
+  // fallback honesto: sem malhador, o caminho SYNC constrói a malha e é
+  // a MESMA bit a bit; o malhador religa para o resto da bateria
+  const fb = await page.evaluate(() => {
+    const w = (window).__rpg, mu = w.motor.mundo;
+    mu.desativarMalhador();
+    const c = mu.getChunk(9, 12);
+    if (!c) return { erro: "chunk (9,12) ausente" };
+    mu.construirMalha(c);
+    const info = mu.infoMalha();
+    const cmp = w.compararMalha(9, 12);
+    const deNovo = mu.ativarMalhador();
+    return { info, cmp, deNovo };
+  });
+  ok(`fallback sync honesto: malhadasSync ${fb.info?.malhadasSync} > 0 · desligado durante · religado`,
+    fb.info?.malhadasSync > 0 && fb.info?.malhador === false && fb.deNovo === true);
+  ok("a malha do fallback sync é IGUAL (bit a bit) à que o worker produziu", fb.cmp?.igual === true);
+  await aguardar(async () => {
+    const m = await page.evaluate(() => (window).__rpg.malha());
+    return m.malhador === true;
+  }, 10, "malhador religado");
+
   // ── combate → XP → nível → habilidade ──
   await page.evaluate(() => (window).__rpg.teleportar(2.5, 40, 4.5)); // volta à aldeia
   await pump(10);

@@ -6,8 +6,9 @@
 import * as THREE from "three";
 import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants.ts";
 import { Ruido, Aleatorio } from "./noise.ts";
-import { criarAtlas, COLS_ATLAS, LINHAS_ATLAS, TILE } from "./textures.ts";
+import { criarAtlas } from "./textures.ts";
 import { gerarDadosTerreno, aplicarEditsChunk, somaBytes, alturaTerrenoBase, biomaBase, type PerfilTerreno } from "./geracao.ts";
+import { construirDadosMalha, malhaIgual, type DadosMalha, type VizinhosMalha } from "./malha.ts";
 
 export interface Chunk { cx: number; cz: number; dados: Uint8Array; malha?: THREE.Mesh; malhaAgua?: THREE.Mesh; sujo: boolean }
 
@@ -33,6 +34,19 @@ export class Mundo {
   pendentes = new Set<string>();
   geradosWorker = 0; geradosSync = 0; emergencias = 0; descartados = 0;
   msUltimoWorker = 0; msWorkerTotal = 0;
+
+  // ── v51: MALHAGEM em Web Worker (padrão Veloren: meshing threads) ──
+  // o trabalho pesado (faces/AO/UV) corre no worker; o main thread SÓ
+  // cria as BufferGeometry dos buffers prontos (o upload à GPU). Sync
+  // permanece para o spawn/teleporte/emergência (E2Es assumem terreno
+  // imediato — anotação v46) e como fallback honesto se o worker falhar.
+  malhador: Worker | null = null;
+  malhadorAtivo = false;
+  malhadorErro = "";
+  pendentesMalha = new Set<string>();
+  malhasProntas: { cx: number; cz: number; dm: DadosMalha; ms: number }[] = [];
+  malhasPedidas = 0; malhadosWorker = 0; malhadosSync = 0; malhasDescartadas = 0;
+  msMalhaUltimo = 0; msMalhaWorkerTotal = 0; msMalhaSyncTotal = 0;
 
   constructor(public semente: number) {
     this.ruido = new Ruido(semente);
@@ -109,6 +123,125 @@ export class Mundo {
     this.worker = null;
     this.workerAtivo = false;
     this.pendentes.clear();
+  }
+
+  // ── v51: worker de MALHAGEM ─────────────────────────────────
+  ativarMalhador(): boolean {
+    if (this.malhador) return this.malhadorAtivo;
+    try {
+      const w = new Worker(new URL("./malhador.worker.ts", import.meta.url), { type: "module" });
+      w.onerror = (e) => { this.malhadorErro = e.message || "erro no malhador"; this.malhadorAtivo = false; this.pendentesMalha.clear(); };
+      w.onmessage = (e: MessageEvent) => this.receberMalhaDoWorker(e.data);
+      w.postMessage({ tipo: "init", semente: this.semente, perfil: this.perfilId });
+      this.malhador = w;
+      this.malhadorAtivo = true;
+    } catch (err) {
+      this.malhadorErro = String(err);
+      this.malhadorAtivo = false;
+    }
+    return this.malhadorAtivo;
+  }
+
+  desativarMalhador() {
+    if (this.malhador) { try { this.malhador.terminate(); } catch { /* ignore */ } }
+    this.malhador = null;
+    this.malhadorAtivo = false;
+    this.pendentesMalha.clear();
+    this.malhasProntas = [];
+  }
+
+  /** Dados crus dos 4 vizinhos (para a malha respeitar as fronteiras
+   *  e o AO — o MESMO critério do getBloco antigo: ausente = AR). */
+  vizinhosMalha(cx: number, cz: number): VizinhosMalha {
+    const n = (dx: number, dz: number) => this.getChunk(cx + dx, cz + dz)?.dados;
+    return { xn: n(-1, 0), xp: n(1, 0), zn: n(0, -1), zp: n(0, 1) };
+  }
+
+  /** Construção PURA dos buffers (usada pelo caminho sync e pela
+   *  verificação de identidade compararMalhaComSync). */
+  dadosMalha(c: Chunk): DadosMalha {
+    return construirDadosMalha(c.cx, c.cz, c.dados, this.vizinhosMalha(c.cx, c.cz), (x, z) => this.alturaTerreno(x, z));
+  }
+
+  /** Pede a MALHA de um chunk ao worker. Os dados vão como CÓPIAS
+   *  (structured clone — o main thread mantém os seus). A resposta
+   *  entra na fila malhasProntas e o motor aplica com orçamento. */
+  pedirMalha(c: Chunk): boolean {
+    if (!this.malhadorAtivo || !this.malhador) return false;
+    const k = this.chave(c.cx, c.cz);
+    if (this.pendentesMalha.has(k)) return false;
+    this.pendentesMalha.add(k);
+    this.malhasPedidas++;
+    this.malhador.postMessage({ tipo: "malhar", cx: c.cx, cz: c.cz, dados: c.dados, vizinhos: this.vizinhosMalha(c.cx, c.cz) });
+    return true;
+  }
+
+  private receberMalhaDoWorker(m: { tipo?: string; cx?: number; cz?: number; dm?: DadosMalha; ms?: number }) {
+    if (m?.tipo !== "malha" || typeof m.cx !== "number" || typeof m.cz !== "number" || !m.dm) return;
+    const k = this.chave(m.cx, m.cz);
+    this.pendentesMalha.delete(k);
+    const ms = m.ms ?? 0;
+    this.msMalhaUltimo = ms;
+    if (!this.chunks.has(k)) { this.malhasDescartadas++; return; } // descartado longe enquanto em voo
+    this.malhasProntas.push({ cx: m.cx, cz: m.cz, dm: m.dm, ms });
+  }
+
+  /** Aplica as malhas prontas do worker com orçamento por frame —
+   *  o main thread só faz o upload (BufferGeometry) da parte barata. */
+  processarMalhasProntas(orcamento = 4) {
+    while (orcamento > 0 && this.malhasProntas.length > 0) {
+      const p = this.malhasProntas.shift()!;
+      const c = this.chunks.get(this.chave(p.cx, p.cz));
+      if (!c) { this.malhasDescartadas++; continue; }
+      this.montarMalha(c, p.dm);
+      this.malhadosWorker++;
+      this.msMalhaWorkerTotal += p.ms;
+      orcamento--;
+    }
+  }
+
+  /** Contagens honestas da malhagem (E2E v51). */
+  infoMalha() {
+    return {
+      malhador: this.malhadorAtivo, erroMalhador: this.malhadorErro, perfil: this.perfilId,
+      pedidas: this.malhasPedidas, malhadasWorker: this.malhadosWorker, malhadasSync: this.malhadosSync,
+      descartadas: this.malhasDescartadas, pendentes: this.pendentesMalha.size, prontas: this.malhasProntas.length,
+      msUltimoWorker: Math.round(this.msMalhaUltimo), msWorkerTotal: Math.round(this.msMalhaWorkerTotal),
+      msSyncTotal: Math.round(this.msMalhaSyncTotal),
+    };
+  }
+
+  /** Prova de identidade da MALHA: reconstrói os buffers PELO CAMINHO
+   *  SYNC (dados vivos + vizinhos vivos + altura do perfil) e compara
+   *  com a malha viva (que pode ter vindo do worker) — bit a bit. */
+  compararMalhaComSync(cx: number, cz: number): {
+    igual: boolean; vertsLive: number; vertsSync: number; vertsAguaLive: number; vertsAguaSync: number; msSync: number;
+  } {
+    const t0 = performance.now();
+    const live = this.chunks.get(this.chave(cx, cz));
+    if (!live || !live.malha) return { igual: false, vertsLive: -1, vertsSync: -1, vertsAguaLive: -1, vertsAguaSync: -1, msSync: 0 };
+    const dm = this.dadosMalha(live);
+    const g = live.malha.geometry, gA = live.malhaAgua?.geometry;
+    const att = (geo: THREE.BufferGeometry, nome: string) => Array.from(geo.getAttribute(nome).array as ArrayLike<number>);
+    // o índice vive em geometry.index (NÃO em attributes) — THREE mantém-no à parte
+    const idxArr = (geo: THREE.BufferGeometry | null) =>
+      geo?.index ? Array.from(geo.index.array as ArrayLike<number>) : [];
+    const iguais = malhaIgual(dm, {
+      pos: new Float32Array(att(g, "position")), nor: new Float32Array(att(g, "normal")),
+      uv: new Float32Array(att(g, "uv")), cor: new Float32Array(att(g, "color")),
+      ind: new Uint32Array(idxArr(g)),
+      posA: gA ? new Float32Array(att(gA, "position")) : new Float32Array(0),
+      norA: gA ? new Float32Array(att(gA, "normal")) : new Float32Array(0),
+      uvA: gA ? new Float32Array(att(gA, "uv")) : new Float32Array(0),
+      corA: gA ? new Float32Array(att(gA, "color")) : new Float32Array(0),
+      indA: new Uint32Array(idxArr(gA)),
+    });
+    return {
+      igual: iguais,
+      vertsLive: g.getAttribute("position").count, vertsSync: dm.pos.length / 3,
+      vertsAguaLive: gA ? gA.getAttribute("position").count : 0, vertsAguaSync: dm.posA.length / 3,
+      msSync: Math.round(performance.now() - t0),
+    };
   }
 
   private receberDoWorker(m: { tipo?: string; cx?: number; cz?: number; dados?: ArrayBuffer; ms?: number }) {
@@ -221,141 +354,38 @@ export class Mundo {
     return removidos;
   }
 
-  // ── Malhagem de chunk (faces visíveis + AO por vértice) ──────
-  private static UVs = (() => {
-    const w = COLS_ATLAS, h = LINHAS_ATLAS;
-    const uvPorTile = (t: number) => {
-      const col = t % w, lin = Math.floor(t / w);
-      const u0 = col / w, v1 = 1 - lin / h, u1 = (col + 1) / w, v0 = 1 - (lin + 1) / h;
-      return { u0, v0, u1, v1 };
-    };
-    return uvPorTile;
-  })();
-
+  // ── Malhagem de chunk (v51: buffers PUROS em malha.ts) ──────
+  // construirMalha = caminho SYNC (spawn/teleporte/emergência/fallback):
+  // calcula os buffers no próprio frame e cria as geometrias.
   construirMalha(c: Chunk) {
-    const baseX = c.cx * CHUNK, baseZ = c.cz * CHUNK;
-    const pos: number[] = [], nor: number[] = [], uv: number[] = [], cor: number[] = [], ind: number[] = [];
-    const posA: number[] = [], norA: number[] = [], uvA: number[] = [], corA: number[] = [], indA: number[] = [];
+    const t0 = performance.now();
+    const dm = this.dadosMalha(c);
+    this.montarMalha(c, dm);
+    this.malhadosSync++;
+    this.msMalhaSyncTotal += performance.now() - t0;
+  }
 
-    const face = (
-      x: number, y: number, z: number, dir: [number, number, number],
-      verts: [number, number, number][], tile: number, sombra: number, alvo: "s" | "a", tileLado?: number,
-    ) => {
-      const { u0, v0, u1, v1 } = Mundo.UVs(tile);
-      const P = alvo === "s" ? pos : posA, N = alvo === "s" ? nor : norA,
-        U = alvo === "s" ? uv : uvA, C = alvo === "s" ? cor : corA, I2 = alvo === "s" ? ind : indA;
-      const ini = P.length / 3;
-      const [dx, dy, dz] = dir;
-      // AO por vértice: amostra vizinhos diagonais
-      const aov = verts.map(([vx, vy, vz]) => {
-        // amostragem simples: dois vizinhos laterais ao vértice, no plano da face
-        let oc = 0;
-        const ex = dx !== 0 ? 0 : 1, ey = dy !== 0 ? 0 : 1, ez = dz !== 0 ? 0 : 1;
-        const bx = x + dx, by = y + dy, bz = z + dz;
-        if (ex) { if (this.solido(bx, by + (vy ? -0.5 : 0.5), bz)) oc++; if (this.solido(bx, by, bz + (vz ? -0.5 : 0.5))) oc++; }
-        if (ey) { if (this.solido(bx + (vx ? -0.5 : 0.5), by, bz)) oc++; if (this.solido(bx, by, bz + (vz ? -0.5 : 0.5))) oc++; }
-        if (ez) { if (this.solido(bx + (vx ? -0.5 : 0.5), by, bz)) oc++; if (this.solido(bx, by + (vy ? -0.5 : 0.5), bz)) oc++; }
-        return 1 - oc * 0.16;
-      });
-      for (let i = 0; i < 4; i++) {
-        const [vx, vy, vz] = verts[i];
-        P.push(x + vx, y + vy, z + vz);
-        N.push(dx, dy, dz);
-        C.push(sombra * aov[i], sombra * aov[i], sombra * aov[i]);
-      }
-      const m = 0.001;
-      if (dir[1] === 1) U.push(u0 + m, v0 + m, u1 - m, v0 + m, u1 - m, v1 - m, u0 + m, v1 - m);
-      else if (dir[1] === -1) U.push(u0 + m, v1 - m, u1 - m, v1 - m, u1 - m, v0 + m, u0 + m, v0 + m);
-      else if (dir[0] === 1) U.push(u1 - m, v1 - m, u0 + m, v1 - m, u0 + m, v0 + m, u1 - m, v0 + m);
-      else if (dir[0] === -1) U.push(u0 + m, v1 - m, u1 - m, v1 - m, u1 - m, v0 + m, u0 + m, v0 + m);
-      else if (dir[2] === 1) U.push(u0 + m, v1 - m, u1 - m, v1 - m, u1 - m, v0 + m, u0 + m, v0 + m);
-      else U.push(u1 - m, v1 - m, u0 + m, v1 - m, u0 + m, v0 + m, u1 - m, v0 + m);
-      I2.push(ini, ini + 1, ini + 2, ini, ini + 2, ini + 3);
-      void tileLado;
-    };
-
-    const FACES: { dir: [number, number, number]; verts: [number, number, number][]; sombra: number; escolher: "topo" | "baixo" | "lado" }[] = [
-      { dir: [0, 1, 0], verts: [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]], sombra: 1.0, escolher: "topo" },
-      { dir: [0, -1, 0], verts: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], sombra: 0.5, escolher: "baixo" },
-      { dir: [1, 0, 0], verts: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]], sombra: 0.8, escolher: "lado" },
-      { dir: [-1, 0, 0], verts: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]], sombra: 0.8, escolher: "lado" },
-      { dir: [0, 0, 1], verts: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], sombra: 0.65, escolher: "lado" },
-      { dir: [0, 0, -1], verts: [[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]], sombra: 0.65, escolher: "lado" },
-    ];
-
-    // blocos em CRUZ (erva, flores): 2 planos diagonais × 2 lados, sem AO (v29)
-    const emitirCruz = (x: number, y: number, z: number, tile: number, luz: number) => {
-      const { u0, v0, u1, v1 } = Mundo.UVs(tile);
-      // RECOLHA de ½ texel: sem ela, o filtro vizinho mais próximo sangra
-      // o tile contíguo do atlas nas bordas → contornos escuros em cada erva/flor
-      const m = 0.5 / (COLS_ATLAS * TILE);
-      const mv = 0.5 / (LINHAS_ATLAS * TILE);
-      const uA = u0 + m, uB = u1 - m, vA = v0 + mv, vB = v1 - mv;
-      const planos: [[number, number], [number, number]][] = [
-        [[0.09, 0.09], [0.91, 0.91]],
-        [[0.91, 0.09], [0.09, 0.91]],
-      ];
-      for (const [[ax, az], [bx, bz]] of planos) {
-        for (const inv of [false, true]) { // 2ª passagem com windding invertido = visível dos dois lados
-          const ini = pos.length / 3;
-          const vs = inv
-            ? [[bx, 0, bz], [ax, 0, az], [ax, 1, az], [bx, 1, bz]]
-            : [[ax, 0, az], [bx, 0, bz], [bx, 1, bz], [ax, 1, az]];
-          for (const [vx, vy, vz] of vs) { pos.push(x + vx, y + vy, z + vz); nor.push(0, 1, 0); cor.push(luz, luz, luz); }
-          uv.push(uA, vA, uB, vA, uB, vB, uA, vB);
-          ind.push(ini, ini + 1, ini + 2, ini, ini + 2, ini + 3);
-        }
-      }
-    };
-
-    for (let lx = 0; lx < CHUNK; lx++) for (let lz = 0; lz < CHUNK; lz++) {
-      const wx = baseX + lx, wz = baseZ + lz;
-      const superficie = this.alturaTerreno(wx, wz);
-      for (let y = 0; y < ALTURA; y++) {
-        const id = c.dados[idx(lx, y, lz)];
-        if (id === B.AR) continue;
-        const def = BLOCOS[id];
-        if (!def) continue;
-        // cruz: 2 planos diagonais com alfa (erva/flores) — nunca oclui vizinhos
-        if (def.cruz) {
-          const profC = Math.max(0, Math.min(1, (superficie - 3 - y) / 9));
-          emitirCruz(wx, y, wz, def.tiles[0], 1 - profC * 0.72);
-          continue;
-        }
-        const aguada = !!def.liquido;
-        for (const f of FACES) {
-          const nx = wx + f.dir[0], ny = y + f.dir[1], nz = wz + f.dir[2];
-          const viz = this.getBloco(nx, ny, nz);
-          const defViz = BLOCOS[viz];
-          const mostrar = viz === B.AR || (defViz && defViz.transparente && !def.transparente) ||
-            (def.transparente && viz === B.AGUA && id !== B.AGUA);
-          if (!mostrar) continue;
-          if (aguada && f.dir[1] !== 1) continue; // água: só topo
-          const tile = f.escolher === "topo" ? def.tiles[0] : f.escolher === "baixo" ? def.tiles[1] : def.tiles[2];
-          // escurecer pela profundidade (cavernas escuras)
-          const prof = Math.max(0, Math.min(1, (superficie - 3 - y) / 9));
-          const luz = aguada ? 1 : (1 - prof * 0.72);
-          face(wx, y, wz, f.dir, f.verts as [number, number, number][], tile, f.sombra * luz, aguada ? "a" : "s");
-        }
-      }
-    }
-
-    const montar = (P: number[], N: number[], U: number[], C: number[], I2: number[], mat: THREE.Material): THREE.Mesh | undefined => {
+  /** O único ponto onde THREE entra na malhagem: typed arrays prontos →
+   *  BufferGeometry + Mesh (a parte barata — upload). Os números são
+   *  EXACTAMENTE os mesmos do caminho do worker (compararMalhaComSync
+   *  prova bit a bit no E2E v51). */
+  montarMalha(c: Chunk, dm: DadosMalha) {
+    const montar = (solidos: boolean, mat: THREE.Material): THREE.Mesh | undefined => {
+      const I2 = solidos ? dm.ind : dm.indA;
       if (!I2.length) return undefined;
       const g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
-      g.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3));
-      g.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2));
-      g.setAttribute("color", new THREE.Float32BufferAttribute(C, 3));
-      g.setIndex(I2);
+      g.setAttribute("position", new THREE.BufferAttribute(solidos ? dm.pos : dm.posA, 3));
+      g.setAttribute("normal", new THREE.BufferAttribute(solidos ? dm.nor : dm.norA, 3));
+      g.setAttribute("uv", new THREE.BufferAttribute(solidos ? dm.uv : dm.uvA, 2));
+      g.setAttribute("color", new THREE.BufferAttribute(solidos ? dm.cor : dm.corA, 3));
+      g.setIndex(new THREE.BufferAttribute(I2, 1));
       const m = new THREE.Mesh(g, mat);
       m.frustumCulled = true;
       return m;
     };
-
     for (const antigo of [c.malha, c.malhaAgua]) if (antigo) { this.grupo.remove(antigo); antigo.geometry.dispose(); }
-    c.malha = montar(pos, nor, uv, cor, ind, this.material);
-    c.malhaAgua = montar(posA, norA, uvA, corA, indA, this.materialAgua);
+    c.malha = montar(true, this.material);
+    c.malhaAgua = montar(false, this.materialAgua);
     if (c.malha) this.grupo.add(c.malha);
     if (c.malhaAgua) this.grupo.add(c.malhaAgua);
     c.sujo = false;

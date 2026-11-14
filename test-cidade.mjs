@@ -173,6 +173,23 @@ async function main() {
   const cmpC = await page.evaluate(() => window.__cidade.motor.mundo.compararComSync(9, 5));
   ok("chunk natural da cidade (do worker) idêntico ao sync", cmpC.igual === true && cmpC.msSync > 0);
 
+  // ── 7c. v51 — MALHAGEM no WORKER (motor partilhado) ──
+  const malhaOk = await (() => new Promise(async (res) => {
+    for (let i = 0; i < 30; i++) {
+      const m = await page.evaluate(() => window.__cidade.motor.mundo.infoMalha());
+      if (m.malhador === true && m.malhadasWorker > 0 && m.pendentes === 0 && m.prontas === 0) return res(m);
+      await sleep(200);
+    }
+    return res(null);
+  }))();
+  ok(`malhador ativo na cidade e fila drenada (malhadasWorker ${malhaOk?.malhadasWorker ?? 0} · sync ${malhaOk?.malhadasSync ?? 0})`,
+    !!malhaOk && malhaOk.malhador === true && malhaOk.erroMalhador === "" && malhaOk.malhadasWorker > 0 && malhaOk.malhadasSync > 0);
+  // chunk (9,5): dados E malha vieram do worker; reconstruídos em sync são
+  // IDÊNTICOS bit a bit (mesma malha.ts, zero segunda fonte)
+  const cmpM = await page.evaluate(() => window.__cidade.motor.mundo.compararMalhaComSync(9, 5));
+  ok(`malha do chunk natural da cidade idêntica worker↔sync (${cmpM.vertsSync} verts)`,
+    cmpM.igual === true && cmpM.vertsSync > 0 && cmpM.vertsLive === cmpM.vertsSync);
+
   // ── 8. Mobile: joystick + saltar ──
   console.log("— Mobile");
   await page.setViewportSize({ width: 375, height: 700 });

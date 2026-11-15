@@ -25,6 +25,7 @@ import {
   VIDA_MAX, FOME_MAX, AR_MAX, DIA_SEGUNDOS, ALCANCE, RAIO_EXPLOSAO,
   RAIO_TNT, FUSIVEL_TNT, TEMPO_CRESCER, CRESCER_CHUVA, BAU_SLOTS,
   PRECISA_DE_APOIO, PESCA_ALCANCE, PESCA_ESPERA_MIN, PESCA_ESPERA_MAX, PESCA_JANELA,
+  LARGURA_JOGADOR, ALTURA_JOGADOR, CORPO_Y_INF, CORPO_Y_SUP,
   dropDe, CORES, ITENS, CONQUISTAS, I, NOMES,
 } from "./constants";
 
@@ -188,6 +189,13 @@ export class Motor {
   morteRecente = 0;
   atacarPedido = false; colocarPedido = false; comerPedido = false;
   criativoVoar = false;
+  // v52 (N4 — Cidade Bateu): gancho opcional — cada edição REAL do mundo
+  // (quebrar/colocar que mudou um voxel) é reportada ao multiplayer de
+  // presença partilhada, para o servidor re-simular a colisão sobre o
+  // mundo que o jogador vê (sem isto, quebrar uma parede legitimamente
+  // seria «corrigido» injustamente). Por omissão ninguém ouve: zero
+  // mudança nos outros jogos (padrão do aoDroparChao da v50).
+  aoEditar: ((x: number, y: number, z: number, id: number) => void) | null = null;
   // v33 (Cidade Bateu): ganchos opcionais — por omissão o motor comporta-se
   // exactamente como antes (mundo procedural + spawn natural).
   fabricaMundo: ((semente: number) => Mundo) | null = null;
@@ -617,6 +625,7 @@ export class Motor {
     this.blocosQuebrados++;
     if (this.blocosQuebrados >= 200) this.conquista("mineiro");
     this.som("quebrar");
+    this.aoEditar?.(x, y, z, B.AR); // v52 — N4: o multiplayer sabe que este voxel mudou
     this.spawnParticulas(x + 0.5, y + 0.5, z + 0.5, CORES[id]?.[0] ?? "#9a9a9a", 10);
     this.fome = Math.max(0, this.fome - 0.02);
     // ── v29: colheita de trigo (dos dois estágios) ──
@@ -688,6 +697,7 @@ export class Motor {
     if (this.modo === "sobrevivencia") this.inv.consumirSelecionado(1);
     this.mundo.setBloco(x, y, z, s.id);
     this.blocosColocados++;
+    this.aoEditar?.(x, y, z, s.id); // v52 — N4: o multiplayer sabe que este voxel mudou
     if (this.blocosColocados >= 100) this.conquista("arquiteto");
     this.som("colocar");
     if (s.id === B.BAU) { this.baus.set(`${x},${y},${z}`, new Array(BAU_SLOTS).fill(null)); } // baú novo com 18 posições vazias
@@ -936,9 +946,9 @@ export class Motor {
   }
 
   private colideComJogador(x: number, y: number, z: number): boolean {
-    const pxMin = this.px - 0.3, pxMax = this.px + 0.3;
-    const pzMin = this.pz - 0.3, pzMax = this.pz + 0.3;
-    const pyMin = this.py, pyMax = this.py + 1.8;
+    const pxMin = this.px - LARGURA_JOGADOR, pxMax = this.px + LARGURA_JOGADOR;
+    const pzMin = this.pz - LARGURA_JOGADOR, pzMax = this.pz + LARGURA_JOGADOR;
+    const pyMin = this.py, pyMax = this.py + ALTURA_JOGADOR;
     return x + 1 > pxMin && x < pxMax && z + 1 > pzMin && z < pzMax && y + 1 > pyMin && y < pyMax;
   }
 
@@ -1263,9 +1273,10 @@ export class Motor {
     }
 
     // mover eixo a eixo com colisão AABB
-    const largura = 0.3, altura = 1.8;
+    // v52: os offsets da caixa vêm de constants.ts (fonte única partilhada
+    // com a re-simulação do servidor — mesmos números, mesmos cantos)
     const colideEm = (x: number, y: number, z: number): boolean => {
-      for (const ox of [-largura, largura]) for (const oz of [-largura, largura]) for (const oy of [0.05, altura - 0.05]) {
+      for (const ox of [-LARGURA_JOGADOR, LARGURA_JOGADOR]) for (const oz of [-LARGURA_JOGADOR, LARGURA_JOGADOR]) for (const oy of [CORPO_Y_INF, CORPO_Y_SUP]) {
         if (this.mundo.solido(x + ox, y + oy, z + oz)) return true;
       }
       return false;
@@ -1287,7 +1298,7 @@ export class Motor {
         this.py = Math.floor(ny) + 1.001; this.vy = 0; this.noChao = true;
       } else { this.py = ny; this.noChao = false; this.danoQuedaVy = Math.min(this.danoQuedaVy, this.vy); }
     } else {
-      if (colideEm(this.px, ny + altura, this.pz)) this.vy = 0;
+      if (colideEm(this.px, ny + ALTURA_JOGADOR, this.pz)) this.vy = 0;
       else this.py = ny;
       this.noChao = false;
     }

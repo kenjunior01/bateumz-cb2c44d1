@@ -7,14 +7,14 @@
 // Veloren. Sem servidor, o jogo fica 100% local como antes (nunca finge MP).
 
 import * as THREE from "three";
-import { ALTURA_PLATEAU, FALA_RATE_MS, limpaFala } from "./core";
+import { ALTURA_PLATEAU, FALA_RATE_MS, EDIT_RATE_MS, limpaFala } from "./core";
 
 export type EstadoMP = "off" | "a_ligar" | "ligado" | "erro";
 
 interface Remoto {
   id: number; nome: string;
-  x: number; z: number; ry: number;         // posição interpolada (render)
-  alvoX: number; alvoZ: number; alvoRy: number; // último estado do servidor
+  x: number; y: number | null; z: number; ry: number;        // posição interpolada (render)
+  alvoX: number; alvoY: number | null; alvoZ: number; alvoRy: number; // último estado do servidor
   vistoEm: number;
   grupo: THREE.Group; etiqueta: THREE.Sprite;
 }
@@ -119,6 +119,7 @@ export class CidadeMP {
   private timerRecon: ReturnType<typeof setTimeout> | null = null;
   private ultimoPosMs = 0;
   private ultimaFalaLocal = 0;
+  private ultimoEditMs = 0;                     // v52 — o MESMO rate-limit do servidor
   private agora = () => performance.now();
 
   constructor(private opts: {
@@ -126,7 +127,7 @@ export class CidadeMP {
     onEstado: (e: EstadoMP, info?: string) => void;
     onAviso: (texto: string) => void;
     onFala?: (f: FalaInfo) => void;              // v37 — chat da praça
-    onCorrecao?: (x: number, z: number, motivo?: string) => void; // v37/47 — reconciliação honesta
+    onCorrecao?: (x: number, z: number, motivo?: string, y?: number) => void; // v37/47/52 — reconciliação honesta (v52: também no eixo y)
   }) {}
 
   ligar(url: string, nome: string) {
@@ -165,7 +166,7 @@ export class CidadeMP {
         return;
       }
       if (m.t === "entrou") {
-        guarda.criarRemoto(m.id, m.nome, 0, 0, 0);
+        guarda.criarRemoto(m.id, m.nome, 0, 0, 0, typeof m.y === "number" ? m.y : null);
         guarda.registarEvento({ tipo: "entrou", nome: String(m.nome ?? "").slice(0, 24), em: Date.now() });
         guarda.opts.onAviso(`🌐 ${m.nome} chegou à cidade`);
         return;
@@ -176,11 +177,14 @@ export class CidadeMP {
         return;
       }
       if (m.t === "corrigido") {
-        // v37/47 — o servidor cortou um movimento ilegal: ajusta a posição
-        // local com aviso honesto + o MOTIVO real ("alcance"/"parede")
+        // v37/47/52 — o servidor cortou um movimento ilegal: ajusta a posição
+        // local com aviso honesto + o MOTIVO real ("alcance"/"parede");
+        // v52 — quando o servidor conhece o y autoritativo, vem aqui para o
+        // cliente reencaixar TAMBÉM o eixo vertical (nunca fica preso no ar).
         if (typeof m.x === "number" && typeof m.z === "number" && Number.isFinite(m.x) && Number.isFinite(m.z)) {
           guarda.registarEvento({ tipo: "corrigido", motivo: typeof m.motivo === "string" ? m.motivo : "alcance", em: Date.now() });
-          guarda.opts.onCorrecao?.(m.x, m.z, typeof m.motivo === "string" ? m.motivo : undefined);
+          const yServidor = typeof m.y === "number" && Number.isFinite(m.y) ? m.y : undefined;
+          guarda.opts.onCorrecao?.(m.x, m.z, typeof m.motivo === "string" ? m.motivo : undefined, yServidor);
         }
         return;
       }
@@ -198,8 +202,8 @@ export class CidadeMP {
       if (m.t === "estado") {
         for (const j of m.jogadores ?? []) {
           const r = guarda.remotos.get(j.id);
-          if (r) { r.alvoX = j.x; r.alvoZ = j.z; r.alvoRy = j.ry; r.vistoEm = Date.now(); }
-          else guarda.criarRemoto(j.id, j.nome, j.x, j.z, j.ry);
+          if (r) { r.alvoX = j.x; r.alvoZ = j.z; r.alvoRy = j.ry; if (typeof j.y === "number") r.alvoY = j.y; r.vistoEm = Date.now(); }
+          else guarda.criarRemoto(j.id, j.nome, j.x, j.z, j.ry, typeof j.y === "number" ? j.y : null);
         }
         return;
       }
@@ -222,20 +226,27 @@ export class CidadeMP {
     this.timerRecon = setTimeout(() => { this.timerRecon = null; this.conectar(); }, espera);
   }
 
-  private criarRemoto(id: number, nome: string, x: number, z: number, ry: number) {
+  private criarRemoto(id: number, nome: string, x: number, z: number, ry: number, y: number | null = null) {
     if (this.remotos.has(id)) return;
     const grupo = avatar(CORES_AVATAR[id % CORES_AVATAR.length]);
     const etiqueta = etiquetaNome(nome);
     etiqueta.position.y = 2.35;
     grupo.add(etiqueta);
     this.remotos.set(id, {
-      id, nome: String(nome ?? "Viajante"), x, z, ry, alvoX: x, alvoZ: z, alvoRy: ry,
+      id, nome: String(nome ?? "Viajante"), x, y, z, ry, alvoX: x, alvoY: y, alvoZ: z, alvoRy: ry,
       vistoEm: Date.now(), grupo, etiqueta,
     });
     this.aplicarY(this.remotos.get(id)!);
   }
 
   private aplicarY(r: Remoto) {
+    // v52 — o y REAL do servidor quando existe (quem está no telhado aparece
+    // no telhado — fim do «remoto enterrado no terreno»); peers do protocolo
+    // antigo (sem y) continuam pela altura do terreno, como na v36.
+    if (r.alvoY !== null) {
+      r.grupo.position.set(r.x, r.alvoY, r.z);
+      return;
+    }
     let y = ALTURA_PLATEAU;
     try { y = this.opts.alturaEm(r.x, r.z); } catch { /* fallback altura da praça */ }
     r.grupo.position.set(r.x, y, r.z);
@@ -293,16 +304,35 @@ export class CidadeMP {
   /** v47 (E2E): envia uma posição IMEDIATAMENTE, sem o gate de 100 ms do passo()
    *  — reproduz dois movimentos no mesmo instante numa só tarefa JS (o rAF não
    *  corre dentro dela). A física do motor não faz dois saltos em 0,1 s; o
-   *  servidor tem de recusar o segundo («parede»). Mesma via de envio real. */
-  passoImediato(meuX: number, meuZ: number, meuRy = 0): boolean {
+   *  servidor tem de recusar o segundo («parede»). Mesma via de envio real.
+   *  v52 — protocolo novo: com `meuY` definido a msg ganha o eixo vertical
+   *  (orçamentos de salto/voo + caminho do corpo no servidor); sem y, é uma
+   *  msg do protocolo v37 (só regras do terreno) — compatibilidade honesta. */
+  passoImediato(meuX: number, meuZ: number, meuRy = 0, meuY?: number, voando = false): boolean {
     if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    const msg: Record<string, number | string | boolean> = {
+      t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100,
+    };
+    if (typeof meuY === "number" && Number.isFinite(meuY)) { msg.y = Math.round(meuY * 100) / 100; msg.voando = voando; }
     try {
-      this.ws.send(JSON.stringify({ t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100 }));
+      this.ws.send(JSON.stringify(msg));
+      this.ultimoPosMs = Date.now(); // v52 — o envio imediato também conta para o ritmo 10 Hz (o rAF não duplica uma pos atrás dela)
       return true;
     } catch { return false; }
   }
 
   falasInfo(): FalaInfo[] { return [...this.falas]; }
+
+  /** v52 — N4: reporta uma edição REAL do mundo (gancho aoEditar do motor:
+   *  quebrar → id 0; colocar → id do bloco). O MESMO rate-limit do servidor
+   *  no cliente — quando limitada devolve false (padrão do falar). */
+  reportarEdit(x: number, y: number, z: number, id: number): boolean {
+    if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    const agora = Date.now();
+    if (agora - this.ultimoEditMs < EDIT_RATE_MS) return false;
+    this.ultimoEditMs = agora;
+    try { this.ws.send(JSON.stringify({ t: "edit", x, y, z, id })); return true; } catch { return false; }
+  }
 
   // ── v47 — acontecimentos reais (o painel «Praça em direto» consome) ──
   private registarEvento(e: EventoPraca) {
@@ -315,8 +345,10 @@ export class CidadeMP {
   /** Pico REAL de presença desta sessão (maior «no mundo» observado). */
   picoPresenca(): number { return this.pico; }
 
-  /** chamado a cada frame com a posição do jogador LOCAL (que continua predito no cliente) */
-  passo(dt: number, meuX: number, meuZ: number, meuRy: number) {
+  /** chamado a cada frame com a posição do jogador LOCAL (que continua predito no cliente)
+   *  v52 — o protocolo novo envia TAMBÉM o eixo vertical (py) e o estado do
+   *  voo criativo (a tecla F) — é o que a re-simulação do servidor precisa. */
+  passo(dt: number, meuX: number, meuZ: number, meuRy: number, meuY?: number, voando = false) {
     const agora = Date.now();
     // v47 — pico de presença é observado, nunca estimado
     const n = this.remotos.size + (this.estado === "ligado" ? 1 : 0);
@@ -324,7 +356,10 @@ export class CidadeMP {
     // envio a ~10 Hz (servidor faz snapshot 10 Hz + throttle por distância)
     if (this.ws && this.ws.readyState === 1 && agora - this.ultimoPosMs > 100) {
       this.ultimoPosMs = agora;
-      try { this.ws.send(JSON.stringify({ t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100 })); } catch { /* ignora */ }
+      // v52 — protocolo novo: o eixo vertical real (py) + o estado do voo F
+      const msg: Record<string, number | string | boolean> = { t: "pos", x: Math.round(meuX * 100) / 100, z: Math.round(meuZ * 100) / 100, ry: Math.round(meuRy * 100) / 100 };
+      if (typeof meuY === "number" && Number.isFinite(meuY)) { msg.y = Math.round(meuY * 100) / 100; msg.voando = voando; }
+      try { this.ws.send(JSON.stringify(msg)); } catch { /* ignora */ }
     }
     // bolhas expiradas saem (4 s de vida honesta)
     for (const [id, b] of this.bolhas) if (agora > b.ate) this.removerBolha(id);
@@ -343,7 +378,8 @@ export class CidadeMP {
   }
 
   remotosInfo() {
-    return [...this.remotos.values()].map((r) => ({ id: r.id, nome: r.nome, x: Math.round(r.x * 10) / 10, z: Math.round(r.z * 10) / 10 }));
+    // v52 — o y real entra no hook (o E2E prova «remoto no telhado»)
+    return [...this.remotos.values()].map((r) => ({ id: r.id, nome: r.nome, x: Math.round(r.x * 10) / 10, z: Math.round(r.z * 10) / 10, y: r.alvoY !== null ? Math.round(r.alvoY * 10) / 10 : null }));
   }
 
   get nNoMundo() { return this.remotos.size + (this.estado === "ligado" ? 1 : 0); }

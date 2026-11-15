@@ -10,12 +10,15 @@
 // - Plateau plano + distritos à volta da Praça do Imbondeiro.
 // ============================================================
 
-import { B, CHUNK, ALTURA } from "../blocos/constants";
+import { CHUNK, ALTURA } from "../blocos/constants";
 import { Mundo, type Chunk } from "../blocos/world";
 import { GestorMobs } from "../blocos/mobs";
-import { Aleatorio } from "../blocos/noise";
 import { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA } from "./core";
 import { alturaCidade, biomaCidade, RAIO_PLATEAU, RAIO_FUSAO } from "./terrenoCidade";
+// v52 — N4: os carimbos (praça/quiosque/casa/troféus/distritos) e os dados
+// dos distritos vivem no módulo PURO carimbosCidade.ts — o servidor de
+// presença partilhada carimba os MESMOS voxels no Node (padrão v46/v47).
+import { carimbarCidade, type AlvoCarimbo } from "./carimbosCidade.ts";
 
 // v37 — fonte única passou a ser core.ts (padrão `common` do Veloren:
 // cliente e servidor partilham as mesmas constantes); re-exportado aqui
@@ -24,47 +27,14 @@ export { SEED_CIDADE, ALTURA_PLATEAU, SPAWN_PRACA };
 // v46 — raios do plateau vivem em terrenoCidade.ts (puro, partilhado com
 // o worker); re-exportados para os imports existentes.
 export { RAIO_PLATEAU, RAIO_FUSAO };
-
-const idx = (x: number, y: number, z: number) => (y * CHUNK + z) * CHUNK + x;
-
-// ── Distritos (portais para a plataforma) ────────────────────
-export interface Distrito {
-  id: string;
-  nome: string;
-  rota: string;        // rota real da plataforma (verificada em App.tsx)
-  cor: string;         // cor de acento (HUD / rótulos)
-  bloco: number;       // bloco das paredes
-  ang: number;         // ângulo em torno da praça (rad)
-}
-
-const R_DIS = 27; // raio dos distritos
-
-const distrito = (id: string, nome: string, rota: string, cor: string, bloco: number, graus: number): Distrito =>
-  ({ id, nome, rota, cor, bloco, ang: (graus * Math.PI) / 180 });
-
-/** Os 10 distritos — rotas verificadas contra App.tsx (zero rotas inventadas). */
-export const DISTRITOS: Distrito[] = [
-  distrito("sorteios", "Casa da Sorte", "/marketplace", "#f59e0b", B.TABUAS, 0),
-  distrito("leiloes", "Galeria do Martelo", "/leiloes", "#a78bfa", B.PEDREGULHO, 36),
-  distrito("desporto", "Estádio Imbondeiro", "/desporto", "#22c55e", B.PEDRA, 72),
-  distrito("esports", "Arena Digital", "/esports", "#22d3ee", B.PEDRA, 108),
-  distrito("jogos", "Fliperama Central", "/jogos", "#f472b6", B.TABUAS, 144),
-  distrito("lives", "Palco da Praça", "/lives", "#fb7185", B.TABUAS, 180),
-  distrito("negocios", "Feira Central", "/negocios", "#fb923c", B.AREIA, 216),
-  distrito("comunidade", "Praça do Povo", "/community", "#f87171", B.PEDREGULHO, 252),
-  distrito("gratis", "Portão dos Jogos Grátis", "/jogos-gratis", "#34d399", B.TABUAS, 288),
-  distrito("concursos", "Sala dos Concursos", "/concursos", "#facc15", B.AREIA, 324),
-];
-
-export const posDistrito = (di: Distrito): [number, number] =>
-  [Math.round(Math.cos(di.ang) * R_DIS), Math.round(Math.sin(di.ang) * R_DIS)];
-
-/** A casa do jogador — entre a Casa da Sorte e a Galeria. */
-export const POS_CASA: [number, number] = [Math.round(Math.cos(0.314) * 14), Math.round(Math.sin(0.314) * 14)];
-/** Sala de Troféus — pavilhão aberto a sul da praça. */
-export const POS_TROFEUS: [number, number] = [0, 12];
-/** Quiosque da Praça (v34) — rádio da cidade + quiz, a NE do imbondeiro. */
-export const POS_QUIOSQUE: [number, number] = [5, -5];
+// v52 — os distritos e as posições das estruturas mudaram para o módulo
+// puro (o servidor e as probes Node importam-nos sem arrastar THREE);
+// re-exportados para os imports existentes (marcos.ts, missoes.ts, UI).
+import { DISTRITOS, posDistrito, POS_CASA, POS_TROFEUS, POS_QUIOSQUE, type Distrito } from "./carimbosCidade.ts";
+export {
+  DISTRITOS, posDistrito, POS_CASA, POS_TROFEUS, POS_QUIOSQUE,
+} from "./carimbosCidade.ts";
+export type { Distrito } from "./carimbosCidade.ts";
 
 /** Portal mais próximo se estiveres a ≤ `alcance` blocos (null = nenhum). */
 export function portalPerto(
@@ -103,189 +73,36 @@ export class MundoCidade extends Mundo {
     return biomaCidade(this.ruido, x, z);
   }
 
-  /** v46: carimbos da cidade no main thread sobre dados do caminho sync
-   *  OU do worker — um só ponto de entrada. */
+  /** v52 — N4: os carimbos da cidade correm no módulo PURO
+   *  (carimbosCidade.ts) sobre um alvo que escreve neste chunk — o MESMO
+   *  caminho que o servidor usa para construir o campo de voxels da
+   *  re-simulação (fonte única; a v46 provou o padrão byte a byte para o
+   *  terreno, a v52 estende a prova aos carimbos). */
   protected override posGerar(c: Chunk): void {
     super.posGerar(c);
-    const bx = c.cx * CHUNK, bz = c.cz * CHUNK;
-    if (bx > RAIO_FUSAO + 8 || bz > RAIO_FUSAO + 8 || bx + CHUNK < -RAIO_FUSAO - 8 || bz + CHUNK < -RAIO_FUSAO - 8) return;
-    this.carimbarPraca(c);
-    this.carimbarQuiosque(c);
-    this.carimbarCasa(c);
-    this.carimbarTrofeus(c);
-    for (const di of DISTRITOS) this.carimbarDistrito(c, di);
+    const alvo: AlvoCarimbo = {
+      cx: c.cx, cz: c.cz,
+      por: (x, y, z, id) => this.por(c, x, y, z, id),
+      coluna: (x, yTopo, z, id) => this.coluna(c, x, yTopo, z, id),
+    };
+    carimbarCidade(alvo);
   }
 
-  // util: põe um bloco no chunk (coordenadas do mundo)
+  // util: põe um bloco no chunk (coordenadas do mundo) — o MESMO código que
+  // vivia aqui antes da extração v52 (mesmo guarda de y, mesmo filtro de
+  // chunk, mesmo idx); os carimbos do módulo puro usam o alvoParaDados com
+  // a MESMA matemática (prova de identidade no probe/E2E).
   private por(c: Chunk, x: number, y: number, z: number, id: number) {
     if (y < 0 || y >= ALTURA) return;
     const cx = Math.floor(x / CHUNK), cz = Math.floor(z / CHUNK);
     if (cx !== c.cx || cz !== c.cz) return;
     const lx = ((x % CHUNK) + CHUNK) % CHUNK, lz = ((z % CHUNK) + CHUNK) % CHUNK;
-    c.dados[idx(lx, y, lz)] = id;
+    c.dados[(y * CHUNK + lz) * CHUNK + lx] = id;
   }
 
   /** Preenche uma coluna a partir da superfície (evita buracos sob estruturas). */
   private coluna(c: Chunk, x: number, yTopo: number, z: number, id: number) {
     for (let y = ALTURA_PLATEAU + 1; y <= yTopo; y++) this.por(c, x, y, z, id);
-  }
-
-  // ── Praça do Imbondeiro (coração da cidade) ─────────────────
-  private carimbarPraca(c: Chunk) {
-    const rnd = new Aleatorio(SEED_CIDADE + 1);
-    const R = 8;
-    for (let x = -R; x <= R; x++) for (let z = -R; z <= R; z++) {
-      const d2 = Math.hypot(x, z);
-      if (d2 > R + 0.5) continue;
-      this.por(c, x, ALTURA_PLATEAU, z, d2 > R - 1 ? B.PEDREGULHO : B.PEDRA);
-      if (d2 > R - 1.8 && d2 <= R - 1 && rnd.chance(0.34))
-        this.por(c, x, ALTURA_PLATEAU + 1, z, rnd.chance(0.5) ? B.FLOR_AM : B.FLOR_VM);
-    }
-    // imbondeiro: tronco alto + copa larga e achatada (assinatura da cidade)
-    for (let y = ALTURA_PLATEAU + 1; y <= ALTURA_PLATEAU + 6; y++) this.por(c, 0, y, 0, B.TRONCO);
-    for (let dx = -5; dx <= 5; dx++) for (let dz = -5; dz <= 5; dz++) {
-      const d2 = Math.abs(dx) + Math.abs(dz);
-      if (d2 <= 7 && !(dx === 0 && dz === 0)) {
-        if (d2 <= 5 || rnd.chance(0.6)) this.por(c, dx, ALTURA_PLATEAU + 7, dz, B.FOLHAS);
-        if (d2 <= 3 && rnd.chance(0.7)) this.por(c, dx, ALTURA_PLATEAU + 6, dz, B.FOLHAS);
-      }
-    }
-    // 4 postes de tocha na beira da praça
-    for (const [px, pz] of [[0, -R], [0, R], [-R, 0], [R, 0]] as [number, number][]) {
-      this.por(c, px, ALTURA_PLATEAU + 1, pz, B.TRONCO);
-      this.por(c, px, ALTURA_PLATEAU + 2, pz, B.TOCHA);
-    }
-    // caminhos da praça até cada distrito (largura 2 + postes de tocha)
-    for (const di of DISTRITOS) {
-      const passos = R_DIS - R;
-      for (let s = 0; s <= passos; s++) {
-        const t = (R + s) / R_DIS;
-        const x = Math.round(Math.cos(di.ang) * R_DIS * t);
-        const z = Math.round(Math.sin(di.ang) * R_DIS * t);
-        for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]] as [number, number][])
-          this.por(c, x + ox, ALTURA_PLATEAU, z + oz, s % 4 === 0 ? B.PEDREGULHO : B.PEDRA);
-        if (s % 9 === 4) {
-          const lx = Math.round(x - Math.sin(di.ang) * 2.4), lz = Math.round(z + Math.cos(di.ang) * 2.4);
-          this.por(c, lx, ALTURA_PLATEAU + 1, lz, B.TRONCO);
-          this.por(c, lx, ALTURA_PLATEAU + 2, lz, B.TOCHA);
-        }
-      }
-    }
-  }
-
-  // ── Quiosque da Praça (v34: rádio da cidade + quiz) ───────
-  private carimbarQuiosque(c: Chunk) {
-    const [qx, qz] = POS_QUIOSQUE;
-    for (let x = qx - 1; x <= qx + 1; x++) for (let z = qz - 1; z <= qz + 1; z++) {
-      this.por(c, x, ALTURA_PLATEAU, z, B.TABUAS);       // pavimento
-      this.por(c, x, ALTURA_PLATEAU + 4, z, B.FOLHAS);   // telhado de folha
-    }
-    for (const [px, pz] of [[qx - 1, qz - 1], [qx + 1, qz - 1], [qx - 1, qz + 1], [qx + 1, qz + 1]] as [number, number][])
-      this.coluna(c, px, ALTURA_PLATEAU + 3, pz, B.TRONCO); // postes
-    this.por(c, qx, ALTURA_PLATEAU + 1, qz, B.MESA);       // balcão do quiosque
-    this.por(c, qx, ALTURA_PLATEAU + 5, qz, B.TOCHA);      // tocha no topo
-  }
-
-  // ── A Casa do Jogador (existe desde o dia 1) ────────────────
-  private carimbarCasa(c: Chunk) {
-    const [cx0, cz0] = POS_CASA;
-    const M = 3; // 7×7
-    for (let x = cx0 - M; x <= cx0 + M; x++) for (let z = cz0 - M; z <= cz0 + M; z++) {
-      const borda = x === cx0 - M || x === cx0 + M || z === cz0 - M || z === cz0 + M;
-      const canto = (x === cx0 - M || x === cx0 + M) && (z === cz0 - M || z === cz0 + M);
-      // telhado completo (v33)
-      this.por(c, x, ALTURA_PLATEAU + 5, z, B.TABUAS);
-      if (borda) {
-        this.coluna(c, x, ALTURA_PLATEAU + 4, z, canto ? B.TRONCO : B.TABUAS);
-      } else {
-        this.por(c, x, ALTURA_PLATEAU, z, B.TABUAS);
-      }
-    }
-    this.por(c, cx0, ALTURA_PLATEAU + 6, cz0, B.FOLHAS);
-    // porta virada para a praça + janelas de vidro
-    const dx = cx0 < 0 ? -1 : 1, dz = cz0 < 0 ? -1 : 1;
-    this.por(c, cx0 + dx * M, ALTURA_PLATEAU + 1, cz0, B.AR);
-    this.por(c, cx0 + dx * M, ALTURA_PLATEAU + 2, cz0, B.AR);
-    this.por(c, cx0, ALTURA_PLATEAU + 1, cz0 + dz * M, B.AR);
-    this.por(c, cx0, ALTURA_PLATEAU + 2, cz0 + dz * M, B.AR);
-    this.por(c, cx0 + dx * M, ALTURA_PLATEAU + 3, cz0, B.VIDRO);
-    this.por(c, cx0, ALTURA_PLATEAU + 3, cz0 + dz * M, B.VIDRO);
-    // interior: cama, baú, mesa, tocha
-    this.por(c, cx0 - 1, ALTURA_PLATEAU + 1, cz0 - 1, B.CAMA);
-    this.por(c, cx0 + 1, ALTURA_PLATEAU + 1, cz0 - 1, B.BAU);
-    this.por(c, cx0 + 1, ALTURA_PLATEAU + 1, cz0 + 1, B.MESA);
-    this.por(c, cx0, ALTURA_PLATEAU + 3, cz0, B.TOCHA);
-    // pad de entrada
-    for (const [ox, oz] of [[dx * (M + 1), 0], [dx * (M + 2), 0], [dx * (M + 1), 1], [dx * (M + 2), 1]] as [number, number][])
-      this.por(c, cx0 + ox, ALTURA_PLATEAU, cz0 + oz, B.PEDRA);
-  }
-
-  // ── Sala de Troféus (pavilhão aberto) ───────────────────────
-  private carimbarTrofeus(c: Chunk) {
-    const [cx0, cz0] = POS_TROFEUS;
-    for (let x = cx0 - 3; x <= cx0 + 3; x++) for (let z = cz0 - 3; z <= cz0 + 3; z++) {
-      const d2 = Math.hypot(x - cx0, z - cz0);
-      if (d2 > 3.2) continue;
-      this.por(c, x, ALTURA_PLATEAU, z, B.PEDRA);
-      if (d2 > 2.2 && (x + z) % 2 === 0) this.coluna(c, x, ALTURA_PLATEAU + 3, z, B.TRONCO);
-    }
-    for (let x = cx0 - 3; x <= cx0 + 3; x++) for (let z = cz0 - 3; z <= cz0 + 3; z++)
-      if (Math.hypot(x - cx0, z - cz0) <= 3.2) this.por(c, x, ALTURA_PLATEAU + 4, z, B.FOLHAS);
-    this.por(c, cx0, ALTURA_PLATEAU + 1, cz0, B.BAU); // o "baú dos troféus"
-    this.por(c, cx0, ALTURA_PLATEAU + 5, cz0, B.TOCHA);
-  }
-
-  // ── Edifício-portal de um distrito ──────────────────────────
-  private carimbarDistrito(c: Chunk, di: Distrito) {
-    const [bx, bz] = posDistrito(di);
-    const M = 4; // 9×9
-    const H = 5;
-    // limpa árvores naturais sobre a zona do edifício (até y+12)
-    for (let x = bx - M - 1; x <= bx + M + 1; x++) for (let z = bz - M - 1; z <= bz + M + 1; z++)
-      for (let y = ALTURA_PLATEAU + 6; y <= ALTURA_PLATEAU + 12; y++) this.por(c, x, y, z, B.AR);
-    for (let x = bx - M; x <= bx + M; x++) for (let z = bz - M; z <= bz + M; z++) {
-      const borda = Math.abs(x - bx) === M || Math.abs(z - bz) === M;
-      const canto = Math.abs(x - bx) === M && Math.abs(z - bz) === M;
-      if (borda) {
-        for (let y = 1; y <= H; y++) this.por(c, x, ALTURA_PLATEAU + y, z, canto ? B.TRONCO : di.bloco);
-        if (canto) this.por(c, x, ALTURA_PLATEAU + H + 2, z, B.FOLHAS);
-      } else {
-        this.por(c, x, ALTURA_PLATEAU, z, B.PEDRA);
-      }
-      // telhado completo 9×9 (v33: antes era só anel, parecia inacabado)
-      this.por(c, x, ALTURA_PLATEAU + H + 1, z, di.bloco);
-    }
-    // janelas de vidro
-    for (let t = -2; t <= 2; t += 2) {
-      this.por(c, bx + t, ALTURA_PLATEAU + 3, bz - M, B.VIDRO);
-      this.por(c, bx + t, ALTURA_PLATEAU + 3, bz + M, B.VIDRO);
-      this.por(c, bx - M, ALTURA_PLATEAU + 3, bz + t, B.VIDRO);
-      this.por(c, bx + M, ALTURA_PLATEAU + 3, bz + t, B.VIDRO);
-    }
-    // porta dupla virada para a praça
-    const nx = -Math.cos(di.ang), nz = -Math.sin(di.ang);
-    const px2 = Math.round(bx + nx * M), pz2 = Math.round(bz + nz * M);
-    this.por(c, px2, ALTURA_PLATEAU + 1, pz2, B.AR);
-    this.por(c, px2, ALTURA_PLATEAU + 2, pz2, B.AR);
-    this.por(c, px2 + (nz !== 0 ? 1 : 0), ALTURA_PLATEAU + 1, pz2 + (nx !== 0 ? 1 : 0), B.AR);
-    this.por(c, px2 + (nz !== 0 ? 1 : 0), ALTURA_PLATEAU + 2, pz2 + (nx !== 0 ? 1 : 0), B.AR);
-    // interior: tocha + baú decorativo
-    this.por(c, bx, ALTURA_PLATEAU + 4, bz, B.TOCHA);
-    this.por(c, bx, ALTURA_PLATEAU + 1, bz, B.BAU);
-    // pad frontal + postes de tocha
-    for (let s = 1; s <= 3; s++) {
-      const fx = Math.round(bx + nx * (M + s)), fz = Math.round(bz + nz * (M + s));
-      for (const o of [-1, 0, 1]) {
-        const ox = nz !== 0 ? o : 0, oz = nx !== 0 ? o : 0;
-        this.por(c, fx + ox, ALTURA_PLATEAU, fz + oz, s === 3 ? B.PEDREGULHO : B.PEDRA);
-      }
-    }
-    for (const o of [-1.8, 1.8]) {
-      const fx = Math.round(bx + nx * (M + 3) + (nz !== 0 ? o : 0));
-      const fz = Math.round(bz + nz * (M + 3) + (nx !== 0 ? o : 0));
-      this.por(c, fx, ALTURA_PLATEAU + 1, fz, B.TRONCO);
-      this.por(c, fx, ALTURA_PLATEAU + 2, fz, B.TOCHA);
-    }
   }
 }
 

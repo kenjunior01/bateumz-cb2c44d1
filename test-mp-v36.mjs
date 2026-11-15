@@ -9,6 +9,10 @@ import WebSocket from "ws";
 
 const BASE = process.env.BASE_URL || "http://localhost:8099";
 const MP_URL = process.env.MP_URL || "ws://localhost:8765";
+// v52 — N4: o servidor pisa os MESMOS voxels — a linha reta z=6.5 esbarra na
+// parede oeste da casa do jogador (x=10, z=1..7) e o servidor recusa (como a
+// física do cliente); o drive segue a ROTA A* do módulo partilhado.
+import { rotaAstar, yEmCampo } from "./test-rotas-cidade.mjs";
 let passed = 0, failed = 0;
 const fails = [];
 const ok = (name, cond, extra = "") => {
@@ -72,14 +76,17 @@ async function main() {
   console.log("— Movimento partilhado");
   // v37: passos de 1 bloco/120 ms = 8,3 b/s — o orçamento honesto (MAX_VEL 12)
   // rejeita os antigos saltos de 2 blocos/140 ms (14,3 b/s era velocidade ilegal)
-  await A.evaluate(async () => {
-    const m = window.__cidade.motor;
-    for (let i = 1; i <= 20; i++) {
-      window.__cidade.teleportar(i, m.mundo.alturaTerreno(i, 6.5) + 1.02, 6.5);
-      window.__cidade.mpPasso(0.12); // v38 — envio pelo relógio do teste (rAF a 2 fps no sandbox)
-      await new Promise((r) => setTimeout(r, 120));
+  const rota36 = rotaAstar(0.5, 6.5, 16.5, 0.5).map(([px, pz]) => [px, Math.round(yEmCampo(px, pz) * 100) / 100, pz]);
+  await A.evaluate(async (rota) => {
+    let pxx = 0.5, pzz = 6.5;
+    for (const [px, py, pz] of rota) {
+      window.__cidade.teleportar(px, py, pz);
+      window.__cidade.mpPassoImediato(px, pz, 0, py, false);
+      const espera = Math.max(60, Math.ceil((Math.hypot(px - pxx, pz - pzz) / 12) * 1000) + 40); // o orçamento recarrega a MAX_VEL 12 b/s
+      pxx = px; pzz = pz;
+      await new Promise((r) => setTimeout(r, espera));
     }
-  });
+  }, rota36);
   await B.waitForFunction(() => {
     const a = window.__cidade.mpRemotos().find((j) => j.nome === "Ana-MZ");
     return a && a.x > 14;

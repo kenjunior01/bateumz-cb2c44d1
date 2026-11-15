@@ -11,7 +11,7 @@
 // do motor em vez de duplicar números (uma só fonte, honesto).
 // ============================================================
 
-import { GRAVIDADE, NIVEL_MAR, SALTO } from "../blocos/constants.ts";
+import { GRAVIDADE, NIVEL_MAR, SALTO, VEL_CORRER, LARGURA_JOGADOR, ALTURA_JOGADOR, CORPO_Y_INF, CORPO_Y_SUP } from "../blocos/constants.ts";
 
 // ── Mundo (fonte única — cidade.ts re-exporta para não partir imports) ──
 export const SEED_CIDADE = 20251103;
@@ -88,3 +88,68 @@ export function proximoOrcamentoSubida(orcamento: number, dtSegundos: number): n
   const dt = Math.min(0.5, Math.max(0, typeof dtSegundos === "number" && Number.isFinite(dtSegundos) ? dtSegundos : 0));
   return Math.min(SUBIDA_CAP, orcamento + SUBIDA_TAXA * dt);
 }
+
+// ── v52 — N4: PAREDES DE EDIFÍCIOS (o servidor pisa os MESMOS voxels) ──
+// O que faltava à re-simulação da v47: ela só conhecia O TERRENO
+// (alturaCidade) — os edifícios carimbados eram invisíveis ao servidor e
+// um cliente podia atravessar as paredes da cidade partilhada. Agora o
+// servidor constrói o campo de voxels COMPLETO (gerarDadosTerreno +
+// carimbarCidade — os módulos puros que o cliente usa, provados byte a
+// byte) e valida o caminho do corpo pela MESMA caixa do motor.
+export const VOO_ESCALA_ATELETA = 1.18; // progressão v38: máx. real do Atleta (progressao.ts)
+/** Voo criativo (tecla F): vy = velBase × 1.2 com velBase ≤ VEL_CORRER×1.18
+ *  → pior subida legítima ≈ 8,36 b/s. Tecto seguinte inteiro = 9 b/s. */
+export const VOO_TAXA = Math.ceil(VEL_CORRER * VOO_ESCALA_ATELETA * 1.2);   // 9 b/s
+export const VOO_CAP = VOO_TAXA * 0.5;                                      // 4,5 (padrão ORCAMENTO_CAP)
+export const VOO_INICIAL = VOO_CAP;
+
+export function proximoOrcamentoVoo(orcamento: number, dtSegundos: number): number {
+  if (typeof orcamento !== "number" || !Number.isFinite(orcamento)) return VOO_INICIAL;
+  const dt = Math.min(0.5, Math.max(0, typeof dtSegundos === "number" && Number.isFinite(dtSegundos) ? dtSegundos : 0));
+  return Math.min(VOO_CAP, orcamento + VOO_TAXA * dt);
+}
+
+/** A CAIXA DE COLISÃO do jogador — espelho EXACTO do colideEm do motor
+ *  (engine.ts): 8 cantos com ±LARGURA_JOGADOR e CORPO_Y_INF/CORPO_Y_SUP,
+ *  mesma tabela de solidez (solidoId). O servidor passa a sua função de
+ *  voxels; as probes passam o campo puro — a MESMA regra em todas as pontas. */
+export function caixaColide(
+  solido: (x: number, y: number, z: number) => boolean,
+  x: number, y: number, z: number,
+): boolean {
+  for (const ox of [-LARGURA_JOGADOR, LARGURA_JOGADOR])
+    for (const oz of [-LARGURA_JOGADOR, LARGURA_JOGADOR])
+      for (const oy of [CORPO_Y_INF, CORPO_Y_SUP])
+        if (solido(x + ox, y + oy, z + oz)) return true;
+  return false;
+}
+
+/** Passo de amostragem do caminho: ≤ 2×LARGURA_JOGADOR (diâmetro da caixa
+ *  0,6) garante cobertura contínua — nenhum voxel é saltado entre amostras. */
+export const CAIXA_PASSO = 0.25;
+
+/** O caminho entre duas posições está LIVRE para o corpo? Amostra o
+ *  segmento (inclusive as pontas) com a caixa de colisão — a regra que o
+ *  servidor executa em cada msg `pos` com y (protocolo v52). */
+export function caminhoLivre(
+  solido: (x: number, y: number, z: number) => boolean,
+  ax: number, ay: number, az: number,
+  bx: number, by: number, bz: number,
+): boolean {
+  const d = Math.hypot(bx - ax, by - ay, bz - az);
+  const n = Math.max(1, Math.ceil(d / CAIXA_PASSO));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    if (caixaColide(solido, ax + (bx - ax) * t, ay + (by - ay) * t, az + (bz - az) * t)) return false;
+  }
+  return true;
+}
+
+// ── v52 — edições do mundo no multiplayer (a verdade da colisão) ──
+// A cidade é CRIATIVO: quebrar/colocar é legítimo. Para a re-simulação não
+// castigar quem partiu uma parede legitimamente, o cliente REPORTA cada
+// edição (gancho aoEditar do motor) e o servidor aplica-a ao seu campo
+// antes de validar o movimento — limites honestos nas duas pontas:
+export const EDIT_RATE_MS = 50;     // 20 edições/s — mineração humana real é ~4-6/s
+export const EDIT_OVERLAY_CAP = 100_000; // cap do overlay de edições no servidor
+

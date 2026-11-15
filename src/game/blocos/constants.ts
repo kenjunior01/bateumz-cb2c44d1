@@ -197,6 +197,14 @@ export const BLOCOS: Record<number, DefBloco> = {
 export const PRECISA_DE_APOIO: ReadonlySet<number> = new Set([B.ERVA, B.FLOR_AM, B.FLOR_VM, B.CACTO]);
 
 export const ehBloco = (id: number) => id > 0 && id < 100;
+// v52 — N4: a SEMÂNTICA de solidez numa só fonte. O Mundo.solido (world.ts)
+// e a re-simulação do servidor de presença partilhada (core.ts) decidem
+// «este voxel bloqueia o corpo?» pela MESMA tabela BLOCOS — zero segunda
+// fonte (AR=0 e ids desconhecidos não são sólidos, como sempre foi).
+export const solidoId = (id: number): boolean => {
+  const d = BLOCOS[id];
+  return !!d && d.solido;
+};
 export const dropDe = (id: number) => { const d = BLOCOS[id]; if (!d) return null; return d.drop === -1 ? id : d.drop; };
 
 // ── Receitas de criação (cada ingrediente: [id, qtd]) ────────
@@ -243,6 +251,15 @@ export const RECEITAS: Receita[] = [
 // ── Física / mundo ────────────────────────────────────────────
 export const CHUNK = 16, ALTURA = 80, NIVEL_MAR = 30;
 export const GRAVIDADE = 26, SALTO = 8.6, VEL_ANDAR = 4.4, VEL_CORRER = 5.9;
+// v52 — N4: corpo do jogador numa SÓ fonte. O motor colide com estes
+// números desde sempre (engine.ts: caixa 0,6×0,6×1,8 amostrada nos 8
+// cantos com os offsets ±0,3 / +0,05 / +1,75 — colideEm/colideComJogador);
+// o servidor de presença partilhada re-simula a colisão com a MESMA
+// caixa (core.ts) — zero segunda fonte, zero número inventado.
+export const LARGURA_JOGADOR = 0.3;   // meia-largura da caixa de colisão
+export const ALTURA_JOGADOR = 1.8;    // altura da caixa de colisão
+export const CORPO_Y_INF = 0.05;      // offset vertical inferior amostrado
+export const CORPO_Y_SUP = 1.75;      // offset vertical superior amostrado
 export const VIDA_MAX = 20, FOME_MAX = 20, AR_MAX = 10;
 export const DIA_SEGUNDOS = 600; // 10 min por dia (proposta do género)
 export const ALCANCE = 5;

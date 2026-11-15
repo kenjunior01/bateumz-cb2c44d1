@@ -4,7 +4,7 @@
 // ============================================================
 
 import * as THREE from "three";
-import { B, BLOCOS, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO } from "./constants.ts";
+import { B, CHUNK, ALTURA, NIVEL_MAR, RAIO_EXPLOSAO, solidoId } from "./constants.ts";
 import { Ruido, Aleatorio } from "./noise.ts";
 import { criarAtlas } from "./textures.ts";
 import { gerarDadosTerreno, aplicarEditsChunk, somaBytes, alturaTerrenoBase, biomaBase, type PerfilTerreno } from "./geracao.ts";
@@ -334,8 +334,9 @@ export class Mundo {
   }
 
   solido(x: number, y: number, z: number): boolean {
-    const d = BLOCOS[this.getBloco(Math.floor(x), Math.floor(y), Math.floor(z))];
-    return !!d && d.solido;
+    // v52 — N4: a semântica vive em solidoId (constants.ts) — a MESMA tabela
+    // que a re-simulação do servidor usa (zero segunda fonte).
+    return solidoId(this.getBloco(Math.floor(x), Math.floor(y), Math.floor(z)));
   }
 
   // ── Explosão (Estourador / TNT) — destrói blocos num raio ──

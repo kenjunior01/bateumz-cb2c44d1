@@ -218,7 +218,7 @@ export default function CidadeBateu() {
   // v37 — chat da praça + reconciliação honesta
   const [mpFalas, setMpFalas] = useState<FalaInfo[]>([]);
   const [chatTexto, setChatTexto] = useState("");
-  const ultimaCorrecaoRef = useRef<{ x: number; z: number; em: number; motivo?: string } | null>(null);
+  const ultimaCorrecaoRef = useRef<{ x: number; z: number; em: number; motivo?: string; y?: number } | null>(null);
 
   const enviarFala = useCallback(() => {
     const texto = chatTexto.trim();
@@ -238,22 +238,29 @@ export default function CidadeBateu() {
       onAviso: (texto) => setAviso({ texto, k: Date.now() }),
       // v37 — chat da praça
       onFala: (f) => setMpFalas((p) => [...p.slice(-7), f]),
-      // v37/47 — reconciliação: o servidor cortou um movimento ilegal → ajusta
+      // v37/47/52 — reconciliação: o servidor cortou um movimento ilegal → ajusta
       // com aviso honesto E o motivo real ("alcance"=longe demais, "parede"=
-      // subida impossível re-simulada com o mesmo terreno)
-      onCorrecao: (x, z, motivo) => {
+      // subida/parede impossível re-simulada); v52 — quando o servidor conhece
+      // o y autoritativo, reencaixa TAMBÉM o eixo vertical (nunca preso no ar).
+      onCorrecao: (x, z, motivo, y) => {
         const m = motorRef.current;
         try {
           m.px = x; m.pz = z;
-          m.py = (m.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU) + 1.02;
+          // v52 — o y do servidor é autoridade quando existe; sem ele (protocolo
+          // antigo, sem y), mantém-se a regra v47 (superfície do terreno + 1.02)
+          m.py = typeof y === "number" ? y : (m.mundo?.alturaTerreno(x, z) ?? ALTURA_PLATEAU) + 1.02;
           m.vx = m.vy = m.vz = 0;
         } catch { /* mundo ainda não pronto */ }
-        ultimaCorrecaoRef.current = { x, z, em: Date.now(), motivo: motivo ?? "alcance" };
+        ultimaCorrecaoRef.current = { x, z, em: Date.now(), motivo: motivo ?? "alcance", y: typeof y === "number" ? y : undefined };
         setAviso({ texto: motivo === "parede" ? t("cidade.mpCorrigidoParede") : t("cidade.mpCorrigido"), k: Date.now() });
       },
     });
     mpRef.current = mp;
-    return () => { mp.desligar(); mpRef.current = null; };
+    // v52 — N4: cada edição REAL do mundo é reportada ao multiplayer (a
+    // verdade da colisão no servidor segue o que o jogador vê). Solo (sem
+    // MP ligado) reportarEdit devolve false — zero custo, zero mudança.
+    motorRef.current.aoEditar = (x, y, z, id) => mpRef.current?.reportarEdit(x, y, z, id) ?? false;
+    return () => { mp.desligar(); motorRef.current.aoEditar = null; mpRef.current = null; };
   }, []);
 
   const missaoEstado = useRef(estadoMissao());
@@ -356,9 +363,16 @@ export default function CidadeBateu() {
       mpPico: () => mpRef.current?.picoPresenca() ?? 0,
       // v38 — envio MP determinístico (mesmo contrato do ciclo rAF; o raster
       // por software do sandbox corre a ~2 fps e estrangula o ritmo de envio)
-      mpPasso: (dt: number) => mpRef.current?.passo(dt, motorRef.current.px, motorRef.current.pz, motorRef.current.yaw),
+      // v52 — o contrato do rAF agora inclui o eixo vertical e o voo F
+      mpPasso: (dt: number) => mpRef.current?.passo(dt, motorRef.current.px, motorRef.current.pz, motorRef.current.yaw, motorRef.current.py, motorRef.current.modo === "criativo" && motorRef.current.criativoVoar),
       // v47 (E2E) — envio imediato sem o gate de 100 ms (dois saltos no mesmo instante)
-      mpPassoImediato: (x: number, z: number, ry?: number) => mpRef.current?.passoImediato(x, z, ry) ?? false,
+      // v52 — y/voando opcionais: com y é protocolo novo, sem y é protocolo v37
+      mpPassoImediato: (x: number, z: number, ry?: number, y?: number, voando?: boolean) => mpRef.current?.passoImediato(x, z, ry, y, voando) ?? false,
+      // v52 — N4: edição REAL reportada pelo caminho do jogador (mesma via do
+      // gancho aoEditar) + dados crus de um chunk do cliente para a prova de
+      // identidade byte a byte com o campo do servidor
+      mpReportarEdit: (x: number, y: number, z: number, id: number) => mpRef.current?.reportarEdit(x, y, z, id) ?? false,
+      chunkDados: (cx: number, cz: number) => motorRef.current.mundo.garantir(cx, cz).dados.slice(),
       // ── v38 — progressão, exploração e ambiente (ganchos E2E) ──
       perfil: () => lerPerfil(),
       // v39 — resultado da recuperação IDB→LS (E2E)
@@ -422,7 +436,7 @@ export default function CidadeBateu() {
       const m = motorRef.current;
       if (m.fase === "menu") return;
       m.passo(dt);
-      mpRef.current?.passo(dt, m.px, m.pz, m.yaw); // v36 — envio 10 Hz + interpolação dos remotos
+      mpRef.current?.passo(dt, m.px, m.pz, m.yaw, m.py, m.modo === "criativo" && m.criativoVoar); // v36 — envio 10 Hz + interpolação dos remotos · v52 — eixo vertical + voo F
       if (canvasRef.current) m.render(dt);
 
       // rótulos 3D → ecrã (limitado a ~8 Hz)

@@ -25,3 +25,25 @@ Stage Summary:
 - Bateu World transforma-se num RPG de mundo aberto completo: 3 câmaras, clima, montaria, NPCs com diálogo, oficina/poções, elites, críticos/esquiva — tudo com estética limpa e banda sonora 100% original
 - Plataforma com catálogo enxuto de clássicos + Bounce novo; APK/AAB v2.12 publicados e verificados
 - Suite E2E: 164/164 verdes
+
+---
+Task ID: 55
+Agent: Super Z (main)
+Task: v55 — IA VISÃO + VETORES: os snippets novos do utilizador tornam-se o OLHO (nemotron-3-nano-omni, content parts + reasoning_budget 16384) e a MEMÓRIA (nemotron-3.5-embed-8b, embeddings multimodais text_image) da plataforma
+
+Work Log:
+- Contrato: os DOIS snippets novos são a fonte única — visão via /chat/completions com content parts [text, image_url], max_tokens 65536, reasoning_budget 16384, temperature 0.6, top_p 0.95 (stream SSE e JSON); vetores via /embeddings com input «texto + data URL na MESMA string», encoding float, modality [text_image], input_type passage|query, truncate END
+- Núcleos isomórficos novos (browser E Node): nemotron-visao.ts (validarImagemFonte recusa file:/javascript:/data não-imagem com motivo; clientes stream/JSON com retry antes do 1.º byte e abort propagado) e nemotron-vetores.ts (imagemParaDataUrl = o caminho do snippet https→descarrega→base64; validarRespostaVetores com dims desiguais/não-finitos → erro; cosseno puro; LojaVetores cap 500 velho-primeiro; arredondarVetor a 6 casas para persistência)
+- Edges produção novas: nemotron-visao (JWT, rate 10/min POR ISOLATE, tubo puro SSE/JSON) e nemotron-embed (JWT, rate 20/min, JSON intacto) — ambas na MESMA forma WIRE do núcleo
+- Proxy local: rotas /api/ia/visao e /api/ia/vetores com corpo cap 8 MB (imagens base64; chat mantém 256 KB), saude v55 com as 3 rotas e a chave sempre oculta
+- UI /ia em TRÊS ABAS: Conversar (v54 intacto) · Ver (imagem por URL/ficheiro→data URL, sliders temp/tokens/orçamento, streaming com painel de pensamento, stats reais, preview com cap declarado) · Buscar (indexar rótulo+texto+imagem https, lista com tipo, busca top-5 com barras de score cosseno real, similaridade entre dois textos, persistência localStorage cap 30 com quota honesta)
+- i18n: +37 chaves ×6 idiomas (scripts/add-ia-i18n-v55.py)
+- FUROS REAIS fechados: (1) proxy/edge da visão validavam uma forma {pergunta,imagem} que o núcleo nunca manda — unificado na forma WIRE do snippet nas três camadas; (2) 413 com corpo em voo envenenava o keep-alive desde a v54 (RST ao pedido seguinte, provado em repro) — drenar + Connection: close; (3) edge do chat v54 perdia o modo pensamento em produção (lia corpo.thinking em vez de chat_template_kwargs.enable_thinking) — corrigido
+- Vetores sem intervalo mínimo no portão do cliente (cap 20/min mantém-se) — indexar em lote é o caso legítimo, decisão declarada
+- TESTES: test-ia-v55.mjs NOVO 78/78 ×2 (A núcleo 27 · B mock 16 · C proxy real 17 · D E2E Playwright 18: abas, visão em streaming vivo, erro honesto com URL ilegal, busca semântica ordenada por cosseno, similaridade 85,3%, zero erros de console, shots-v55/) · REGRESSÃO test-ia-v54 50/50 (saúde aceita v54/v55, chat intato, live v54 respondeu «BATEU V54»)
+- LIVE REAL: o omni do snippet ESTÁ VIVO — a NVIDIA descreveu a imagem EXACTA do snippet («A wooden boardwalk stretches through a vibrant green marshland…») com reasoning_content ~750 chars e usage real (prompt 469 = a imagem; total 684) · SKIP honesto: nemotron-3.5-embed-8b devolve 422 (modelo ainda não ativo no catálogo — o teste declara, nunca finge)
+- tsc 0 · build OK
+
+Stage Summary:
+- A Bateu IA agora VÊ (visão omni com orçamento de raciocínio real) e LEMBRA (busca semântica multimodal com cosseno real) — os dois snippets do utilizador integrados nas três camadas (núcleo/proxy/edge) com a chave sempre fora do browser
+- v54 continua 50/50 verde; 3 furos reais fechados (incl. um latente da v54 no keep-alive e o thinking perdido em produção)

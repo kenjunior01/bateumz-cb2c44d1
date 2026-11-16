@@ -123,7 +123,14 @@ Deno.serve(async (req) => {
     max_tokens: Math.round(clamp(corpo.max_tokens, 1, MAX_TOKENS_CAP, 1024)),
     stream: true,
     stream_options: { include_usage: true },
-    chat_template_kwargs: { enable_thinking: !!corpo.thinking },
+    // v55 — FURO da v54 fechado: o núcleo isomórfico manda o modo pensamento
+    // em chat_template_kwargs.enable_thinking (a forma WIRE do snippet); a
+    // edge só olhava para corpo.thinking e PERDIA o modo em produção.
+    chat_template_kwargs: {
+      enable_thinking: corpo?.chat_template_kwargs?.enable_thinking !== undefined
+        ? !!corpo.chat_template_kwargs.enable_thinking
+        : !!corpo.thinking,
+    },
   };
 
   let upstream: Response;

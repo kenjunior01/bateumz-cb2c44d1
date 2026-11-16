@@ -13,6 +13,10 @@
 //   · chunks SEM choices existem (o próprio snippet salta-os) — é onde
 //     vem o `usage` final (stream_options.include_usage).
 //
+// v55 — helpers partilhados (sleep/extrairMensagem/finalizarUso) EXPORTADOS
+//       para os núcleos irmãos nemotron-visao.ts e nemotron-vetores.ts
+//       (fonte única — os irmãos nunca duplicam regras do contrato).
+//
 // Principais (o honesto do REA): erros reais nunca silenciados, retry SÓ
 // antes do 1.º byte (nada de duplicar respostas a meio do stream),
 // rate-limit do cliente declarado, usage NULL quando o upstream não envia
@@ -401,7 +405,7 @@ export class ClienteNemotron {
   }
 }
 
-function extrairMensagem(texto: string): string {
+export function extrairMensagem(texto: string): string {
   if (!texto) return "";
   try {
     const obj = JSON.parse(texto);
@@ -411,7 +415,7 @@ function extrairMensagem(texto: string): string {
   return "";
 }
 
-function finalizarUso(
+export function finalizarUso(
   usage: { prompt_tokens?: number | null; completion_tokens?: number | null; total_tokens?: number | null } | null,
   msPrimeiroToken: number | null,
   msTotal: number,
@@ -432,7 +436,7 @@ function finalizarUso(
   };
 }
 
-function sleep(ms: number, sinal?: AbortSignal): Promise<void> {
+export function sleep(ms: number, sinal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(resolve, ms);
     if (sinal) {

@@ -277,8 +277,10 @@ async function main() {
   t("proxy: sobe e responde à saúde", await esperarAte(`http://127.0.0.1:${PORTA_PROXY}/api/ia/saude`, (r) => r.status === 200, 8000));
 
   const saude = await (await fetch(`http://127.0.0.1:${PORTA_PROXY}/api/ia/saude`)).json();
+  // v55: o proxy ganhou as rotas visão/vetores e a versão subiu — o contrato
+  // do chat mantém-se intato (a própria v55 re-testa tudo em test-ia-v55.mjs).
   t("saúde: chave presente mas OCULTA (zero furo)",
-    saude.chaveConfigurada === true && !JSON.stringify(saude).includes("chave-do-env-teste") && saude.versão === "v54");
+    saude.chaveConfigurada === true && !JSON.stringify(saude).includes("chave-do-env-teste") && /^v5[4-9]$/.test(saude.versão));
 
   const preflight = await fetch(`http://127.0.0.1:${PORTA_PROXY}/api/ia/chat`, { method: "OPTIONS" });
   t("preflight CORS 204", preflight.status === 204 && (preflight.headers.get("access-control-allow-origin") ?? "") === "*");

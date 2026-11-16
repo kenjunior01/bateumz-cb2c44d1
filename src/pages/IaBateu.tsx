@@ -1,5 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════
 // v54 — BATEU IA (/ia) — o assistente Nemotron da plataforma
+// v55 — TRÊS MODOS em abas: CONVERSAR (chat v54 intacto) · VER (visão
+//       omni — o snippet do OLHO: content parts + reasoning_budget) ·
+//       BUSCAR (embeddings multimodais — o snippet da MEMÓRIA: vetores
+//       text_image + cosseno + LojaVetores no browser).
 //
 // Chat REAL com a NVIDIA (nvidia/nemotron-3-ultra-550b-a55b): streaming
 // token a token, THINKING separado (reasoning_content num painel próprio),
@@ -9,8 +13,10 @@
 // (usage do servidor — nunca inventado), exportação .md.
 //
 // Onde corre: o browser NUNCA fala com a NVIDIA nem conhece a chave —
-//   · modo "edge"  (produção): supabase/functions/nemotron-chat com JWT;
-//   · modo "proxy" (dev/testes): server/ia-proxy.mjs via VITE_IA_ENDPOINT;
+//   · modo "edge"  (produção): supabase/functions/nemotron-chat (e as novas
+//     nemotron-visao / nemotron-embed) com JWT;
+//   · modo "proxy" (dev/testes): server/ia-proxy.mjs via VITE_IA_ENDPOINT
+//     (+ VITE_IA_ENDPOINT_VISAO / VITE_IA_ENDPOINT_VETORES);
 //   · modo "directo" (SÓ dev, declarado no UI): VITE_NEMOTRON_DIRECTO=1
 //     + VITE_NVIDIA_API_KEY — a chave fica no bundle (risco declarado).
 // ═══════════════════════════════════════════════════════════════════════
@@ -18,8 +24,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Bot, BrainCircuit, ChevronDown, Code2, Download, Eraser, Globe, LifeBuoy,
-  Loader2, Plus, Send, Settings2, Sparkles, Square, Trash2, Trophy, User,
+  Bot, BrainCircuit, ChevronDown, Code2, Download, Eraser, Eye, Globe, LifeBuoy,
+  Loader2, Plus, ScanSearch, Send, Settings2, Sparkles, Square, Trash2, Trophy, User,
+  Upload, X,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,10 +35,21 @@ import {
   conversaParaMarkdown, htmlDeMarkdown, novaConversa, tituloDe,
   type ConversaIa, type MsgIa, type ParametrosIa, type UsoIa,
 } from "@/lib/nemotron";
+import {
+  ClienteNemotronVisao, LIMITES_VISAO, MODELO_VISAO_PADRAO, PARAMETROS_VISAO_PADRAO,
+  validarImagemFonte,
+  type ParametrosVisao,
+} from "@/lib/nemotron-visao";
+import {
+  ClienteNemotronVetores, LIMITES_VETORES, LojaVetores, MODELO_EMBED_PADRAO,
+  arredondarVetor, cosseno, imagemParaDataUrl,
+  type ItemVetor, type ResultadoBusca, type TipoEntradaVetor,
+} from "@/lib/nemotron-vetores";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -96,11 +114,17 @@ const PERSONAS: PersonaIa[] = [
 
 const personaPorId = (id: string) => PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
 
-// ── Endpoint (browser nunca conhece a chave NVIDIA) ──────────────────────
+// ── Endpoints (browser nunca conhece a chave NVIDIA) ─────────────────────
 
 type ModoIa = "edge" | "proxy" | "directo";
 
-function resolverEndpoint(): { url: string; modo: ModoIa; chaveDirecta?: string } {
+interface EndpointIa {
+  url: string;
+  modo: ModoIa;
+  chaveDirecta?: string;
+}
+
+function resolverEndpointChat(): EndpointIa {
   const explicito = import.meta.env.VITE_IA_ENDPOINT as string | undefined;
   if (explicito) return { url: explicito, modo: "proxy" };
   const chaveDirecta = import.meta.env.VITE_NVIDIA_API_KEY as string | undefined;
@@ -111,7 +135,31 @@ function resolverEndpoint(): { url: string; modo: ModoIa; chaveDirecta?: string 
   return { url: `${base}/functions/v1/nemotron-chat`, modo: "edge" };
 }
 
-// ── Persistência local (cap honesto) ─────────────────────────────────────
+/** v55 — o OLHO: mesma estratégia, função nova. */
+function resolverEndpointVisao(): EndpointIa {
+  const explicito = import.meta.env.VITE_IA_ENDPOINT_VISAO as string | undefined;
+  if (explicito) return { url: explicito, modo: "proxy" };
+  const chaveDirecta = import.meta.env.VITE_NVIDIA_API_KEY as string | undefined;
+  if (import.meta.env.VITE_NEMOTRON_DIRECTO === "1" && chaveDirecta) {
+    return { url: "https://integrate.api.nvidia.com/v1/chat/completions", modo: "directo", chaveDirecta };
+  }
+  const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "https://ngxrdpplyghlugoowjqj.supabase.co";
+  return { url: `${base}/functions/v1/nemotron-visao`, modo: "edge" };
+}
+
+/** v55 — a MEMÓRIA: embeddings pelo edge `nemotron-embed`. */
+function resolverEndpointVetores(): EndpointIa {
+  const explicito = import.meta.env.VITE_IA_ENDPOINT_VETORES as string | undefined;
+  if (explicito) return { url: explicito, modo: "proxy" };
+  const chaveDirecta = import.meta.env.VITE_NVIDIA_API_KEY as string | undefined;
+  if (import.meta.env.VITE_NEMOTRON_DIRECTO === "1" && chaveDirecta) {
+    return { url: "https://integrate.api.nvidia.com/v1/embeddings", modo: "directo", chaveDirecta };
+  }
+  const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "https://ngxrdpplyghlugoowjqj.supabase.co";
+  return { url: `${base}/functions/v1/nemotron-embed`, modo: "edge" };
+}
+
+// ── Persistência local do chat (cap honesto) ─────────────────────────────
 
 const CHAVE_STORAGE = "bateu.ia.v54";
 const CONVERSAS_CAP = 20;
@@ -153,10 +201,13 @@ interface FluxoEmCurso {
   parado: boolean;
 }
 
+type AbaIa = "conversar" | "ver" | "buscar";
+
 const IaBateu = () => {
   const { t, lang } = useLanguage();
-  const endpointInfo = useMemo(resolverEndpoint, []);
+  const endpointInfo = useMemo(resolverEndpointChat, []);
 
+  const [aba, setAba] = useState<AbaIa>("conversar");
   const [conversas, setConversas] = useState<ConversaIa[]>(() => carregarConversas());
   const [ativaId, setAtivaId] = useState<string | null>(() => carregarConversas()[0]?.id ?? null);
   const [entrada, setEntrada] = useState("");
@@ -181,8 +232,9 @@ const IaBateu = () => {
 
   useEffect(() => guardarConversas(conversas), [conversas]);
   useEffect(() => {
+    if (aba !== "conversar") return;
     fimMensagensRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [conversas, fluxo?.conteudo, fluxo?.raciocinio]);
+  }, [aba, conversas, fluxo?.conteudo, fluxo?.raciocinio]);
 
   const ativa = conversas.find((c) => c.id === ativaId) ?? null;
 
@@ -192,7 +244,7 @@ const IaBateu = () => {
     return p.prompt + ` Responde SEMPRE em ${lingua}.`;
   }, [personaId, lang]);
 
-  // ── Enviar ─────────────────────────────────────────────────────────────
+  // ── Enviar (chat v54 — intacto) ────────────────────────────────────────
 
   const enviar = useCallback(async (textoDirecto?: string) => {
     const texto = (textoDirecto ?? entrada).trim();
@@ -390,7 +442,7 @@ const IaBateu = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
               {t(`ia.config.endpoint.${endpointInfo.modo}`)} · {hostEndpoint}
             </Badge>
-            {uso && (
+            {uso && aba === "conversar" && (
               <Badge variant="secondary" data-testid="ia-stats" className="text-[10px]">
                 {t("ia.stats.tokens")}: {uso.totalTokens ?? "—"} · {t("ia.stats.segundo")}: {uso.tokensPorSegundo ?? "—"} · {t("ia.stats.primeiro")}: {uso.msPrimeiroToken ?? "—"}ms
               </Badge>
@@ -401,13 +453,32 @@ const IaBateu = () => {
           </div>
         </div>
 
-        {erro && (
+        {/* Abas v55: Conversar · Ver · Buscar */}
+        <div className="flex gap-2 mb-4 flex-wrap" role="tablist">
+          {([["conversar", Bot], ["ver", Eye], ["buscar", ScanSearch]] as const).map(([id, Icone]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={aba === id}
+              data-testid={`ia-aba-${id}`}
+              onClick={() => setAba(id)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
+                aba === id ? "bg-primary text-primary-foreground border-primary" : "bg-card/50 hover:bg-accent"
+              }`}
+            >
+              <Icone className="h-4 w-4" /> {t(`ia.tab.${id}`)}
+            </button>
+          ))}
+        </div>
+
+        {erro && aba === "conversar" && (
           <div data-testid="ia-erro" className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive flex items-center justify-between">
             <span>{erro}</span>
             <button onClick={() => setErro(null)} aria-label="fechar"><Eraser className="h-4 w-4" /></button>
           </div>
         )}
 
+        {aba === "conversar" && (
         <div className="grid gap-4 lg:grid-cols-[240px_1fr_300px]">
           {/* ── Conversas ── */}
           <aside className="hidden lg:flex flex-col gap-2">
@@ -627,10 +698,594 @@ const IaBateu = () => {
             </div>
           </aside>
         </div>
+        )}
+
+        {aba === "ver" && <AbaVer t={t} lang={lang} pensamentoAberto={pensamentoAberto} />}
+        {aba === "buscar" && <AbaBuscar t={t} />}
       </div>
     </div>
   );
 };
+
+// ── v55 — ABA VER: o OLHO da plataforma ─────────────────────────────────
+// O snippet oficial: /chat/completions com content parts [text, image_url],
+// reasoning_budget 16384, temperature 0.6, top_p 0.95. A imagem entra por
+// URL https:// ou por ficheiro (→ data URL base64). O resultado chega em
+// streaming com o MESMO painel de pensamento do chat.
+
+function AbaVer({
+  t, lang, pensamentoAberto,
+}: {
+  t: (k: string) => string;
+  lang: string;
+  pensamentoAberto: boolean;
+}) {
+  const endpointInfo = useMemo(resolverEndpointVisao, []);
+  const [pergunta, setPergunta] = useState("");
+  const [imagem, setImagem] = useState("");
+  const [fluxo, setFluxo] = useState<FluxoEmCurso | null>(null);
+  const [resultado, setResultado] = useState<{ conteudo: string; raciocinio: string } | null>(null);
+  const [uso, setUso] = useState<UsoIa | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [parametros, setParametros] = useState<ParametrosVisao>({ ...PARAMETROS_VISAO_PADRAO });
+  const controladorRef = useRef<AbortController | null>(null);
+  const ficheiroRef = useRef<HTMLInputElement | null>(null);
+
+  const lingua = lang === "pt" || lang === "pt-BR" ? "português" : null;
+
+  const escolherFicheiro = useCallback(async (ficheiro: File | undefined) => {
+    if (!ficheiro) return;
+    if (!ficheiro.type.startsWith("image/")) {
+      toast.error(t("ia.ver.imagem.invalida"));
+      return;
+    }
+    try {
+      const dataUrl = await new Promise<string>((resolver, recusar) => {
+        const leitor = new FileReader();
+        leitor.onload = () => resolver(String(leitor.result));
+        leitor.onerror = () => recusar(new Error("file reader"));
+        leitor.readAsDataURL(ficheiro);
+      });
+      validarImagemFonte(dataUrl); // lança com o motivo real se exceder os caps
+      setImagem(dataUrl);
+      setErro(null);
+    } catch (err: any) {
+      toast.error(`${t("ia.ver.imagem.invalida")}: ${String(err?.message ?? err).slice(0, 140)}`);
+    }
+  }, [t]);
+
+  const analisar = useCallback(async () => {
+    const texto = pergunta.trim();
+    if (!texto || !imagem || fluxo) return;
+    setErro(null);
+    setResultado(null);
+    setUso(null);
+    setFluxo({ raciocinio: "", conteudo: "", inicio: Date.now(), parado: false });
+    const controlador = new AbortController();
+    controladorRef.current = controlador;
+
+    const cliente = new ClienteNemotronVisao({
+      endpoint: endpointInfo.url,
+      chave: endpointInfo.chaveDirecta,
+      cabecalhos: endpointInfo.modo === "edge" ? await cabecalhosEdge() : undefined,
+      tentativas: 2,
+    });
+
+    const perguntaFinal = lingua ? `${texto} (Responde em ${lingua}.)` : texto;
+    let conteudoFinal = "";
+    let raciocinioFinal = "";
+
+    try {
+      const r = await cliente.analisarStream(perguntaFinal, imagem, parametros, {
+        sinal: controlador.signal,
+        aoEvento: (e) => {
+          if (e.tipo === "raciocinio") {
+            raciocinioFinal += e.texto;
+            setFluxo((f) => (f ? { ...f, raciocinio: raciocinioFinal } : f));
+          } else if (e.tipo === "conteudo") {
+            conteudoFinal += e.texto;
+            setFluxo((f) => (f ? { ...f, conteudo: conteudoFinal } : f));
+          } else if (e.tipo === "uso") {
+            setUso(e.uso);
+          }
+        },
+      });
+      setResultado({ conteudo: r.conteudo, raciocinio: r.raciocinio });
+      if (r.parado) toast.info(t("ia.erro.parado"));
+    } catch (err: any) {
+      const e = err instanceof NemotronError ? err : null;
+      const detalhe = e?.estado ? ` · HTTP ${e.estado}` : "";
+      const mensagem = `${t("ia.erro.ligacao")}${detalhe}`;
+      if (conteudoFinal || raciocinioFinal) {
+        setResultado({ conteudo: conteudoFinal, raciocinio: raciocinioFinal });
+        toast.error(mensagem);
+      } else {
+        setErro(mensagem);
+        toast.error(mensagem);
+      }
+    } finally {
+      controladorRef.current = null;
+      setFluxo(null);
+    }
+  }, [pergunta, imagem, fluxo, endpointInfo, parametros, lingua, t]);
+
+  const parar = useCallback(() => controladorRef.current?.abort(), []);
+
+  const imagemInfo = useMemo(() => {
+    try { return validarImagemFonte(imagem); } catch { return null; }
+  }, [imagem]);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
+      {/* Esquerda: pergunta + imagem + parâmetros */}
+      <section className="rounded-xl border bg-card/50 p-4 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Eye className="h-5 w-5 text-primary" /> {t("ia.ver.titulo")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t("ia.ver.desc")}</p>
+          <Badge variant="outline" className="mt-2 text-[10px] font-mono">{MODELO_VISAO_PADRAO}</Badge>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">{t("ia.ver.pergunta")}</label>
+          <Textarea
+            data-testid="ia-ver-pergunta"
+            value={pergunta}
+            onChange={(e) => setPergunta(e.target.value)}
+            placeholder={t("ia.ver.pergunta.placeholder")}
+            className="mt-1 min-h-[64px] resize-none"
+            rows={2}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground">{t("ia.ver.imagem")}</label>
+          <div className="flex gap-2">
+            <Input
+              data-testid="ia-ver-url"
+              value={imagem.startsWith("data:") ? "" : imagem}
+              onChange={(e) => { setImagem(e.target.value.trim()); setErro(null); }}
+              placeholder="https://…"
+              className="flex-1 font-mono text-xs"
+              spellCheck={false}
+            />
+            <Button variant="outline" size="sm" data-testid="ia-ver-ficheiro-botao" onClick={() => ficheiroRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> {t("ia.ver.imagem.ficheiro")}
+            </Button>
+            {imagem && (
+              <Button variant="ghost" size="icon" aria-label={t("ia.ver.imagem.limpar")} onClick={() => setImagem("")}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <input
+            ref={ficheiroRef}
+            data-testid="ia-ver-ficheiro"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => { escolherFicheiro(e.target.files?.[0]); e.target.value = ""; }}
+          />
+          {imagem && imagemInfo && (
+            <div className="rounded-lg border overflow-hidden bg-muted/30">
+              <img src={imagem} alt="preview" className="max-h-56 w-full object-contain" />
+            </div>
+          )}
+          {imagemInfo && (
+            <p className="text-[10px] text-muted-foreground">
+              {t("ia.ver.imagem.info")}: {imagemInfo.tipo === "dados" ? `~${Math.round((imagemInfo.bytesAprox ?? 0) / 1024)} KB` : "URL"} · cap {Math.round(LIMITES_VISAO.IMAGEM_URL_CAP / 1024 / 1024 * 10) / 10} MB
+            </p>
+          )}
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div>
+            <div className="flex justify-between text-xs">
+              <span className="font-semibold text-muted-foreground">{t("ia.config.temperatura")}</span>
+              <span data-testid="ia-ver-temperatura-valor">{parametros.temperatura}</span>
+            </div>
+            <Slider
+              data-testid="ia-ver-temperatura"
+              value={[parametros.temperatura]}
+              min={0} max={LIMITES_VISAO.TEMPERATURA_MAX} step={0.05}
+              onValueChange={([v]) => setParametros((p) => ({ ...p, temperatura: v }))}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-xs">
+              <span className="font-semibold text-muted-foreground">{t("ia.config.maxtokens")}</span>
+              <span data-testid="ia-ver-maxtokens-valor">{parametros.maxTokens}</span>
+            </div>
+            <Slider
+              data-testid="ia-ver-maxtokens"
+              value={[parametros.maxTokens]}
+              min={256} max={LIMITES_VISAO.MAX_TOKENS_CAP} step={256}
+              onValueChange={([v]) => setParametros((p) => ({ ...p, maxTokens: v }))}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-xs">
+              <span className="font-semibold text-muted-foreground">{t("ia.ver.orcamento")}</span>
+              <span data-testid="ia-ver-orcamento-valor">{parametros.orcamentoRaciocinio || "—"}</span>
+            </div>
+            <Slider
+              data-testid="ia-ver-orcamento"
+              value={[parametros.orcamentoRaciocinio]}
+              min={0} max={LIMITES_VISAO.ORCAMENTO_RACIOCINIO_CAP} step={512}
+              onValueChange={([v]) => setParametros((p) => ({ ...p, orcamentoRaciocinio: v }))}
+              className="mt-2"
+            />
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">{t("ia.ver.orcamento.desc")}</p>
+
+        <div className="flex items-center gap-2">
+          {fluxo ? (
+            <Button variant="destructive" data-testid="ia-ver-parar" onClick={parar}>
+              <Square className="h-4 w-4 mr-2" /> {t("ia.parar")}
+            </Button>
+          ) : (
+            <Button data-testid="ia-ver-analisar" onClick={analisar} disabled={!pergunta.trim() || !imagem}>
+              <Eye className="h-4 w-4 mr-2" /> {t("ia.ver.analisar")}
+            </Button>
+          )}
+          {uso && (
+            <Badge variant="secondary" data-testid="ia-ver-stats" className="text-[10px]">
+              {t("ia.stats.tokens")}: {uso.totalTokens ?? "—"} · {t("ia.stats.primeiro")}: {uso.msPrimeiroToken ?? "—"}ms
+            </Badge>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">{t("ia.rodape.honesto")}</p>
+      </section>
+
+      {/* Direita: resultado */}
+      <section className="rounded-xl border bg-card/50 p-4 min-h-[420px] flex flex-col" data-testid="ia-ver-resultados">
+        {erro && (
+          <div data-testid="ia-ver-erro" className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {erro}
+          </div>
+        )}
+        {!resultado && !fluxo && !erro && (
+          <div className="m-auto text-center text-sm text-muted-foreground max-w-xs">
+            <div className="mx-auto mb-3 w-fit rounded-full bg-primary/10 p-4">
+              <Eye className="h-8 w-8 text-primary" />
+            </div>
+            {t("ia.ver.vazio")}
+          </div>
+        )}
+        {fluxo && (
+          <MensagemBubble
+            mensagem={{ role: "assistant", content: fluxo.conteudo, raciocinio: fluxo.raciocinio || undefined }}
+            indice={-1}
+            t={t}
+            pensamentoAberto={pensamentoAberto}
+            aFluir
+            msInicio={fluxo.inicio}
+          />
+        )}
+        {resultado && !fluxo && (
+          <MensagemBubble
+            mensagem={{ role: "assistant", content: resultado.conteudo, raciocinio: resultado.raciocinio || undefined }}
+            indice={0}
+            t={t}
+            pensamentoAberto={pensamentoAberto}
+          />
+        )}
+      </section>
+    </div>
+  );
+}
+
+// ── v55 — ABA BUSCAR: a MEMÓRIA semântica (embeddings multimodais) ──────
+// O snippet oficial: /embeddings com input `texto + data URL` na MESMA
+// string, modality text_image, input_type passage (indexar) / query
+// (procurar), truncate END. A busca é cosseno REAL sobre a LojaVetores no
+// browser (cap honesto de 30 itens, persistida com vetores a 6 casas —
+// precisão imune ao erro de arredondamento do cosseno).
+
+const CHAVE_VETORES_STORAGE = "bateu.ia.vetores.v55";
+
+function carregarLoja(loja: LojaVetores): number | null {
+  try {
+    const cru = localStorage.getItem(CHAVE_VETORES_STORAGE);
+    if (!cru) return null;
+    const obj = JSON.parse(cru);
+    if (!Array.isArray(obj?.itens)) return null;
+    for (const i of obj.itens.slice(0, LIMITES_VETORES.PERSISTENCIA_CAP)) {
+      if (i && typeof i.id === "string" && Array.isArray(i.vetor) && i.vetor.every((x: any) => Number.isFinite(Number(x)))) {
+        loja.adicionar({
+          id: String(i.id),
+          rotulo: String(i.rotulo ?? "—"),
+          texto: String(i.texto ?? ""),
+          tipo: (["texto", "imagem", "texto_imagem"].includes(i.tipo) ? i.tipo : "texto") as TipoEntradaVetor,
+          vetor: i.vetor.map(Number),
+        });
+      }
+    }
+    return loja.estatisticas().dimensao;
+  } catch {
+    return null;
+  }
+}
+
+function guardarLoja(loja: LojaVetores, dimensao: number | null): boolean {
+  try {
+    localStorage.setItem(
+      CHAVE_VETORES_STORAGE,
+      JSON.stringify({
+        dim: dimensao,
+        itens: loja.listar().map((i) => ({ ...i, vetor: arredondarVetor(i.vetor) })),
+      }),
+    );
+    return true;
+  } catch {
+    return false; // quota do localStorage — honesto, o chamador avisa
+  }
+}
+
+function AbaBuscar({ t }: { t: (k: string) => string }) {
+  const endpointInfo = useMemo(resolverEndpointVetores, []);
+  const lojaRef = useRef<LojaVetores>(new LojaVetores(LIMITES_VETORES.PERSISTENCIA_CAP));
+  const [itens, setItens] = useState<ItemVetor[]>([]);
+  const [dimensao, setDimensao] = useState<number | null>(null);
+  const [rotulo, setRotulo] = useState("");
+  const [texto, setTexto] = useState("");
+  const [imagemUrl, setImagemUrl] = useState("");
+  const [aIndexar, setAIndexar] = useState(false);
+  const [consulta, setConsulta] = useState("");
+  const [resultados, setResultados] = useState<ResultadoBusca[] | null>(null);
+  const [aBuscar, setABuscar] = useState(false);
+  const [simA, setSimA] = useState("");
+  const [simB, setSimB] = useState("");
+  const [simValor, setSimValor] = useState<number | null>(null);
+  const [aSim, setASim] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    const dim = carregarLoja(lojaRef.current);
+    if (dim) setDimensao(dim);
+    setItens(lojaRef.current.listar());
+  }, []);
+
+  const sincronizar = useCallback(() => {
+    setItens(lojaRef.current.listar());
+    setDimensao(lojaRef.current.estatisticas().dimensao);
+    const ok = guardarLoja(lojaRef.current, lojaRef.current.estatisticas().dimensao);
+    if (!ok) toast.info(t("ia.buscar.quota"));
+  }, [t]);
+
+  const criarCliente = useCallback(async () => {
+    return new ClienteNemotronVetores({
+      endpoint: endpointInfo.url,
+      chave: endpointInfo.chaveDirecta,
+      cabecalhos: endpointInfo.modo === "edge" ? await cabecalhosEdge() : undefined,
+      tentativas: 2,
+    });
+  }, [endpointInfo]);
+
+  const indexar = useCallback(async () => {
+    if (aIndexar) return;
+    const textoLimpo = texto.trim();
+    const imagemLimpa = imagemUrl.trim();
+    if (!textoLimpo && !imagemLimpa) return;
+    setErro(null);
+    setAIndexar(true);
+    try {
+      let imagem: string | undefined;
+      if (imagemLimpa) {
+        imagem = await imagemParaDataUrl(imagemLimpa); // o caminho do snippet: descarrega → base64
+      }
+      const cliente = await criarCliente();
+      const r = await cliente.vetorizar(
+        [{ texto: textoLimpo || "imagem", imagem }],
+        { inputType: "passage" }, // indexar = passage (o EXACTO do snippet)
+      );
+      const tipo: TipoEntradaVetor = textoLimpo && imagem ? "texto_imagem" : imagem ? "imagem" : "texto";
+      lojaRef.current.adicionar({
+        id: undefined,
+        rotulo: rotulo.trim() || textoLimpo.slice(0, 60) || "imagem",
+        texto: textoLimpo,
+        tipo,
+        vetor: r.vetores[0],
+      });
+      sincronizar();
+      setTexto("");
+      setImagemUrl("");
+      setRotulo("");
+      toast.success(t("ia.buscar.indexado"));
+    } catch (err: any) {
+      const e = err instanceof NemotronError ? err : null;
+      setErro(`${t("ia.erro.ligacao")}${e?.estado ? ` · HTTP ${e.estado}` : ""} — ${String(err?.message ?? err).slice(0, 160)}`);
+      toast.error(String(err?.message ?? err).slice(0, 160));
+    } finally {
+      setAIndexar(false);
+    }
+  }, [aIndexar, texto, imagemUrl, rotulo, criarCliente, sincronizar, t]);
+
+  const buscar = useCallback(async () => {
+    const q = consulta.trim();
+    if (!q || aBuscar) return;
+    if (!lojaRef.current.tamanho) {
+      setResultados([]);
+      toast.info(t("ia.buscar.sem.itens"));
+      return;
+    }
+    setErro(null);
+    setABuscar(true);
+    try {
+      const cliente = await criarCliente();
+      const r = await cliente.vetorizar([{ texto: q }], { inputType: "query" }); // procurar = query
+      setDimensao(r.dimensao);
+      setResultados(lojaRef.current.buscarVetor(r.vetores[0], { k: 5 }));
+    } catch (err: any) {
+      const e = err instanceof NemotronError ? err : null;
+      setErro(`${t("ia.erro.ligacao")}${e?.estado ? ` · HTTP ${e.estado}` : ""} — ${String(err?.message ?? err).slice(0, 160)}`);
+    } finally {
+      setABuscar(false);
+    }
+  }, [consulta, aBuscar, criarCliente, t]);
+
+  const calcularSimilaridade = useCallback(async () => {
+    const a = simA.trim(), b = simB.trim();
+    if (!a || !b || aSim) return;
+    setErro(null);
+    setASim(true);
+    try {
+      const cliente = await criarCliente();
+      // As duas entradas no MESMO pedido (mesmo input_type — comparação honesta).
+      const r = await cliente.vetorizar([{ texto: a }, { texto: b }], { inputType: "query" });
+      setDimensao(r.dimensao);
+      setSimValor(cosseno(r.vetores[0], r.vetores[1]));
+    } catch (err: any) {
+      const e = err instanceof NemotronError ? err : null;
+      setErro(`${t("ia.erro.ligacao")}${e?.estado ? ` · HTTP ${e.estado}` : ""} — ${String(err?.message ?? err).slice(0, 160)}`);
+    } finally {
+      setASim(false);
+    }
+  }, [simA, simB, aSim, criarCliente, t]);
+
+  const removerItem = useCallback((id: string) => {
+    lojaRef.current.remover(id);
+    sincronizar();
+    setResultados(null);
+  }, [sincronizar]);
+
+  const limparTudo = useCallback(() => {
+    lojaRef.current.limpar();
+    sincronizar();
+    setResultados(null);
+    setSimValor(null);
+  }, [sincronizar]);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {/* Indexar */}
+      <section className="rounded-xl border bg-card/50 p-4 space-y-3" data-testid="ia-buscar-indexar">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><ScanSearch className="h-5 w-5 text-primary" /> {t("ia.buscar.titulo")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t("ia.buscar.desc")}</p>
+          <div className="flex gap-2 mt-2 flex-wrap">
+            <Badge variant="outline" className="text-[10px] font-mono">{MODELO_EMBED_PADRAO}</Badge>
+            {dimensao && <Badge variant="secondary" data-testid="ia-buscar-dim" className="text-[10px]">{t("ia.buscar.dim")}: {dimensao}</Badge>}
+            <Badge variant="secondary" className="text-[10px]">{t("ia.buscar.itens")}: {itens.length}/{LIMITES_VETORES.PERSISTENCIA_CAP}</Badge>
+          </div>
+        </div>
+
+        <Input
+          data-testid="ia-buscar-rotulo"
+          value={rotulo}
+          onChange={(e) => setRotulo(e.target.value)}
+          placeholder={t("ia.buscar.rotulo")}
+          className="text-sm"
+        />
+        <Textarea
+          data-testid="ia-buscar-texto"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder={t("ia.buscar.texto")}
+          className="min-h-[64px] resize-none"
+          rows={2}
+        />
+        <Input
+          data-testid="ia-buscar-imagem"
+          value={imagemUrl}
+          onChange={(e) => setImagemUrl(e.target.value.trim())}
+          placeholder={t("ia.buscar.imagem")}
+          className="font-mono text-xs"
+          spellCheck={false}
+        />
+        <Button data-testid="ia-buscar-indexar-botao" onClick={indexar} disabled={aIndexar || (!texto.trim() && !imagemUrl.trim())} className="w-full">
+          {aIndexar ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+          {aIndexar ? t("ia.buscar.a.indexar") : t("ia.buscar.indexar")}
+        </Button>
+        <p className="text-[10px] text-muted-foreground">{t("ia.buscar.imagem.nota")}</p>
+
+        {!!itens.length && (
+          <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border p-2">
+            {itens.map((i) => (
+              <div key={i.id} data-testid="ia-buscar-item" className="flex items-center gap-2 text-xs rounded-md px-2 py-1 hover:bg-accent">
+                <Badge variant="outline" className="text-[9px] shrink-0">{i.tipo}</Badge>
+                <span className="truncate flex-1">{i.rotulo}</span>
+                <button data-testid="ia-buscar-item-apagar" aria-label={t("ia.apagar")} onClick={() => removerItem(i.id)}>
+                  <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {!!itens.length && (
+          <Button variant="ghost" size="sm" onClick={limparTudo} className="w-full text-muted-foreground">
+            <Eraser className="h-3.5 w-3.5 mr-2" /> {t("ia.buscar.limpar")}
+          </Button>
+        )}
+      </section>
+
+      {/* Buscar + similaridade */}
+      <section className="rounded-xl border bg-card/50 p-4 space-y-4" data-testid="ia-buscar-resultados">
+        {erro && (
+          <div data-testid="ia-buscar-erro" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {erro}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground">{t("ia.buscar.query")}</label>
+          <div className="flex gap-2">
+            <Input
+              data-testid="ia-buscar-consulta"
+              value={consulta}
+              onChange={(e) => setConsulta(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") buscar(); }}
+              placeholder={t("ia.buscar.query.placeholder")}
+              className="flex-1"
+            />
+            <Button data-testid="ia-buscar-buscar-botao" onClick={buscar} disabled={aBuscar || !consulta.trim()}>
+              {aBuscar ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {resultados !== null && (
+          <div className="space-y-2" data-testid="ia-buscar-lista">
+            {!resultados.length && <p className="text-xs text-muted-foreground">{t("ia.buscar.sem.resultados")}</p>}
+            {resultados.map((r, idx) => (
+              <div key={r.item.id} data-testid={`ia-buscar-resultado-${idx}`} className="rounded-lg border p-2 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium truncate">{r.item.rotulo}</span>
+                  <span data-testid={`ia-buscar-score-${idx}`} className="text-xs font-mono text-primary">{(r.pontuacao * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${Math.max(0, Math.min(100, r.pontuacao * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="rounded-lg border p-3 space-y-2">
+          <div className="text-xs font-semibold text-muted-foreground">{t("ia.buscar.similaridade")}</div>
+          <Input data-testid="ia-buscar-sim-a" value={simA} onChange={(e) => setSimA(e.target.value)} placeholder={t("ia.buscar.sim.a")} className="text-xs" />
+          <Input data-testid="ia-buscar-sim-b" value={simB} onChange={(e) => setSimB(e.target.value)} placeholder={t("ia.buscar.sim.b")} className="text-xs" />
+          <Button variant="outline" size="sm" data-testid="ia-buscar-sim-botao" onClick={calcularSimilaridade} disabled={aSim || !simA.trim() || !simB.trim()} className="w-full">
+            {aSim ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : null}
+            {t("ia.buscar.sim.calcular")}
+          </Button>
+          {simValor !== null && (
+            <div data-testid="ia-buscar-sim-valor" className="text-center">
+              <span className="text-2xl font-bold text-primary">{(Math.max(0, simValor) * 100).toFixed(1)}%</span>
+              <span className="text-[10px] text-muted-foreground ml-2">cosseno {simValor.toFixed(4)}</span>
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">{t("ia.rodape.honesto")}</p>
+      </section>
+    </div>
+  );
+}
 
 // ── Bolha de mensagem (com painel de pensamento) ────────────────────────
 

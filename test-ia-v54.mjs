@@ -21,7 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -132,13 +132,28 @@ const mock = http.createServer((req, res) => {
 
 const filhos = [];
 function correr(cmd, args, env) {
-  const p = spawn(cmd, args, { cwd: RAIZ, env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"] });
+  // FURO REAL (lição v49/v53 EXTENDIDA na sessão v56): matar o «npx» não
+  // mata o NETO («sh -c vite» → «node vite») — spawn DETACHED + matar TODO
+  // O GRUPO (o MESMO fix aplicado às suítes v55/v56).
+  const p = spawn(cmd, args, { cwd: RAIZ, env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"], detached: true });
   p.stdout.on("data", (d) => process.env.VERBORRAGIA && console.log(`    [${cmd}]`, String(d).trim().slice(0, 160)));
   p.stderr.on("data", (d) => process.env.VERBORRAGIA && console.log(`    [${cmd}!]`, String(d).trim().slice(0, 160)));
   filhos.push(p);
   return p;
 }
-const matarTodos = () => { for (const p of filhos) { try { p.kill("SIGKILL"); } catch {} } };
+const matarTodos = () => {
+  for (const p of filhos) {
+    try { process.kill(-p.pid, "SIGKILL"); } catch {}          // grupo inteiro (netos incluídos)
+    try { p.kill("SIGKILL"); } catch {}
+  }
+};
+
+// Pre-voo (mesma lição): nenhum servidor STALE nas portas desta suíte.
+function limparZumbis() {
+  for (const padrao of ["vite --port 8099 --strictPort", "server/ia-proxy.mjs"]) {
+    try { spawnSync("pkill", ["-f", padrao], { stdio: "ignore" }); } catch {}
+  }
+}
 
 async function esperarAte(url, testar, ms = 30000) {
   const fim = Date.now() + ms;
@@ -157,6 +172,7 @@ async function lerCorpoInteiro(r) { return await r.text(); }
 // ═══════════════════════════════════════════════════════════════════════
 async function main() {
   console.log(`\n🤖 BATEU IA v54 — ${RAIZ}\n`);
+  limparZumbis();
 
   // ── A) Núcleo isomórfico ──
   console.log("— A) Núcleo isomórfico (Node)");

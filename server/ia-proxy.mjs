@@ -4,6 +4,9 @@
 //       do olho) e /api/ia/vetores (embeddings multimodais, o snippet da
 //       memória) — e cap de corpo 8 MB nas rotas com imagem (base64 é
 //       pesado — o chat mantém os 256 KB originais).
+// v56 — RAG: sem rotas novas (reusa chat + vetores); a versão sobe para a
+//       saúde declarar a geração (o teste da v56 valida, os antigos
+//       aceitam v54–v56).
 //
 // O browser NUNCA fala directamente com a NVIDIA (nem conhece a chave).
 // Em produção as edge functions `nemotron-chat`/`nemotron-visao`/
@@ -238,7 +241,7 @@ const servidor = http.createServer(async (req, res) => {
     json(res, 200, {
       ok: true,
       serviço: "bateu-ia-proxy",
-      versão: "v55",
+      versão: "v56",
       upstream: UPSTREAM.replace(/\/\/[^/]+@/, "//***@") + CHAT_PATH,
       chaveConfigurada: !!CHAVE,
       modelosPadrao: { chat: MODELO_PADRAO, visao: MODELO_VISAO_PADRAO, vetores: MODELO_EMBED_PADRAO },

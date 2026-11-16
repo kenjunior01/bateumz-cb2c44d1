@@ -4,6 +4,12 @@
 //       omni — o snippet do OLHO: content parts + reasoning_budget) ·
 //       BUSCAR (embeddings multimodais — o snippet da MEMÓRIA: vetores
 //       text_image + cosseno + LojaVetores no browser).
+// v56 — IA LÊ A PLATAFORMA (RAG real): a MEMÓRIA enche-se com os dados
+//       REAIS da plataforma (sorteios/concursos/blog) e o CHAT lê esse
+//       índice — pergunta → vetor query → busca cosseno → contexto com
+//       fontes citadas no system. Honestidade: sem fontes acima do
+//       limiar, o chat segue SEM contexto (nunca finge que leu); se os
+//       embeddings falham, o envio É BLOQUEADO com o erro real.
 //
 // Chat REAL com a NVIDIA (nvidia/nemotron-3-ultra-550b-a55b): streaming
 // token a token, THINKING separado (reasoning_content num painel próprio),
@@ -24,7 +30,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Bot, BrainCircuit, ChevronDown, Code2, Download, Eraser, Eye, Globe, LifeBuoy,
+  BookOpen, Bot, BrainCircuit, ChevronDown, Code2, Database, Download, Eraser, Eye, Globe, LifeBuoy,
   Loader2, Plus, ScanSearch, Send, Settings2, Sparkles, Square, Trash2, Trophy, User,
   Upload, X,
 } from "lucide-react";
@@ -45,6 +51,11 @@ import {
   arredondarVetor, cosseno, imagemParaDataUrl,
   type ItemVetor, type ResultadoBusca, type TipoEntradaVetor,
 } from "@/lib/nemotron-vetores";
+import {
+  LIMITES_RAG, LojaRag, docParaPassagens, itemVetorParaDoc, montarContextoRag,
+  type PassagemRag,
+} from "@/lib/nemotron-rag";
+import { carregarDocsPlataforma } from "@/lib/ia-plataforma";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -206,6 +217,7 @@ type AbaIa = "conversar" | "ver" | "buscar";
 const IaBateu = () => {
   const { t, lang } = useLanguage();
   const endpointInfo = useMemo(resolverEndpointChat, []);
+  const endpointVetoresInfo = useMemo(resolverEndpointVetores, []);
 
   const [aba, setAba] = useState<AbaIa>("conversar");
   const [conversas, setConversas] = useState<ConversaIa[]>(() => carregarConversas());
@@ -226,6 +238,14 @@ const IaBateu = () => {
     thinking: true,
   });
 
+  // ── v56 — RAG: o índice da plataforma vive no PAI (partilhado pelas abas)
+  const lojaRagRef = useRef<LojaRag>(new LojaRag());
+  const [ragStats, setRagStats] = useState<{ passagens: number; documentos: number; porTipo: Record<string, number> }>(() => ({ passagens: 0, documentos: 0, porTipo: {} }));
+  const [ragAtivo, setRagAtivo] = useState(false);
+  const [ragFontes, setRagFontes] = useState<number | null>(null);
+  const [aIndexarPlataforma, setAIndexarPlataforma] = useState(false);
+  const [ragErro, setRagErro] = useState<string | null>(null);
+
   const controladorRef = useRef<AbortController | null>(null);
   const fimMensagensRef = useRef<HTMLDivElement | null>(null);
   const caixaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -243,6 +263,120 @@ const IaBateu = () => {
     const lingua = lang === "pt" || lang === "pt-BR" ? "português" : "a língua da mensagem do utilizador";
     return p.prompt + ` Responde SEMPRE em ${lingua}.`;
   }, [personaId, lang]);
+
+  // ── v56 — RAG: sincronizar estatísticas + indexar a plataforma ─────────
+
+  const sincronizarRag = useCallback(() => {
+    setRagStats(lojaRagRef.current.estatisticas());
+  }, []);
+
+  /** Espera honesta quando o portão de rate (20/min) fecha a meio de um
+   *  lote — a indexação é longa e legítima; aguarda o tempo real declarado
+   *  e tenta de novo UMA vez (padrão dos núcleos: nunca dispara mais). */
+  const vetorizarComEspera = useCallback(
+    async (cliente: ClienteNemotronVetores, entradas: { texto: string }[], tentou = false) => {
+      try {
+        return await cliente.vetorizar(entradas, { inputType: "passage" });
+      } catch (err: any) {
+        if (err instanceof NemotronRateLimitError && !tentou) {
+          await new Promise((r) => setTimeout(r, Math.max(250, err.esperarMs || 1000)));
+          return vetorizarComEspera(cliente, entradas, true);
+        }
+        throw err;
+      }
+    },
+    [],
+  );
+
+  const indexarPlataforma = useCallback(async () => {
+    if (aIndexarPlataforma) return;
+    setAIndexarPlataforma(true);
+    setRagErro(null);
+    try {
+      const resultado = await carregarDocsPlataforma();
+      if (!resultado.docs.length) {
+        setRagErro(
+          resultado.erros.length
+            ? `${t("ia.rag.erro")} — ${resultado.erros.slice(0, 3).join(" · ")}`
+            : t("ia.rag.vazio"),
+        );
+        return;
+      }
+      const cliente = new ClienteNemotronVetores({
+        endpoint: endpointVetoresInfo.url,
+        chave: endpointVetoresInfo.chaveDirecta,
+        cabecalhos: endpointVetoresInfo.modo === "edge" ? await cabecalhosEdge() : undefined,
+        tentativas: 2,
+      });
+      const errosEmb: string[] = [];
+      let docsIndexados = 0;
+      for (const doc of resultado.docs) {
+        let passagens: PassagemRag[];
+        try {
+          passagens = docParaPassagens(doc);
+        } catch {
+          continue; // doc sem texto — já contado nos erros da fonte
+        }
+        const vetores: number[][] = [];
+        for (let i = 0; i < passagens.length; i += LIMITES_VETORES.ENTRADAS_CAP) {
+          const lote = passagens.slice(i, i + LIMITES_VETORES.ENTRADAS_CAP);
+          try {
+            const r = await vetorizarComEspera(cliente, lote.map((p) => ({ texto: p.texto })));
+            vetores.push(...r.vetores);
+          } catch (e: any) {
+            errosEmb.push(`${doc.rotulo.slice(0, 60)}: ${String(e?.message ?? e).slice(0, 120)}`);
+            break; // doc sem vetores não entra meio-indexado
+          }
+        }
+        if (vetores.length === passagens.length) {
+          try {
+            lojaRagRef.current.substituirDoc(passagens, vetores);
+            docsIndexados++;
+          } catch (e: any) {
+            errosEmb.push(String(e?.message ?? e).slice(0, 140));
+          }
+        }
+      }
+      sincronizarRag();
+      const avisos = [...resultado.erros, ...errosEmb];
+      if (avisos.length) {
+        setRagErro(`${t("ia.rag.parcial")} — ${avisos.slice(0, 3).join(" · ")}`);
+      } else {
+        setRagErro(null);
+      }
+      if (docsIndexados > 0) toast.success(`${t("ia.rag.ok")} (${docsIndexados})`);
+    } catch (err: any) {
+      setRagErro(`${t("ia.rag.erro")} — ${String(err?.message ?? err).slice(0, 160)}`);
+    } finally {
+      setAIndexarPlataforma(false);
+    }
+  }, [aIndexarPlataforma, endpointVetoresInfo, vetorizarComEspera, sincronizarRag, t]);
+
+  const limparRag = useCallback(() => {
+    lojaRagRef.current.limpar();
+    sincronizarRag();
+    setRagErro(null);
+  }, [sincronizarRag]);
+
+  /** Itens manuais da aba Buscar entram no índice do chat (uma passagem,
+   *  o vetor REAL do texto completo — sem chunking inventado). */
+  const registrarManualRag = useCallback(
+    (item: ItemVetor) => {
+      const doc = itemVetorParaDoc(item);
+      const passagem: PassagemRag = {
+        id: `${doc.id}#p0`,
+        docId: doc.id,
+        tipo: "manual",
+        rotulo: doc.rotulo,
+        texto: doc.texto,
+      };
+      try {
+        lojaRagRef.current.substituirDoc([passagem], [item.vetor]);
+        sincronizarRag();
+      } catch {}
+    },
+    [sincronizarRag],
+  );
 
   // ── Enviar (chat v54 — intacto) ────────────────────────────────────────
 
@@ -280,6 +414,41 @@ const IaBateu = () => {
       ...conversa.mensagens.slice(-(LIMITES.MENSAGENS_CAP - 1)),
       msgUtilizador,
     ];
+
+    // ── v56 — RAG: pergunta → vetor query → fontes → contexto no system ──
+    // Honestidade declarada: com o RAG ativo, se os embeddings falham o
+    // envio É BLOQUEADO com o erro real (nunca responde "como se" tivesse
+    // lido a plataforma). Sem fontes acima do limiar, segue SEM contexto.
+    let fontesUsadas: number | null = null;
+    if (ragAtivo && lojaRagRef.current.tamanho > 0) {
+      try {
+        const clienteVet = new ClienteNemotronVetores({
+          endpoint: endpointVetoresInfo.url,
+          chave: endpointVetoresInfo.chaveDirecta,
+          cabecalhos: endpointVetoresInfo.modo === "edge" ? await cabecalhosEdge() : undefined,
+          tentativas: 2,
+        });
+        const rQuery = await clienteVet.vetorizar([{ texto: texto }], { inputType: "query" });
+        const achados = lojaRagRef.current.buscar(rQuery.vetores[0], { k: LIMITES_RAG.TOP_K });
+        const contexto = montarContextoRag(achados);
+        if (contexto) {
+          historico.splice(1, 0, { role: "system", content: contexto });
+          fontesUsadas = Math.min(LIMITES_RAG.TOP_K, achados.length);
+        } else {
+          fontesUsadas = 0;
+        }
+      } catch (err: any) {
+        const e = err instanceof NemotronError ? err : null;
+        const detalhe = e?.estado ? ` · HTTP ${e.estado}` : "";
+        const mensagem = `${t("ia.rag.erro")}${detalhe} — ${String(err?.message ?? err).slice(0, 140)}`;
+        setErro(mensagem);
+        toast.error(mensagem);
+        setAFluir(false);
+        caixaRef.current?.focus();
+        return;
+      }
+    }
+    setRagFontes(fontesUsadas);
 
     setFluxo({ raciocinio: "", conteudo: "", inicio: Date.now(), parado: false });
     const controlador = new AbortController();
@@ -367,7 +536,7 @@ const IaBateu = () => {
       setAFluir(false);
       caixaRef.current?.focus();
     }
-  }, [entrada, aFluir, ativa, personaId, parametros, systemPrompt, endpointInfo, t]);
+  }, [entrada, aFluir, ativa, personaId, parametros, systemPrompt, endpointInfo, endpointVetoresInfo, ragAtivo, t]);
 
   const parar = useCallback(() => {
     controladorRef.current?.abort();
@@ -445,6 +614,11 @@ const IaBateu = () => {
             {uso && aba === "conversar" && (
               <Badge variant="secondary" data-testid="ia-stats" className="text-[10px]">
                 {t("ia.stats.tokens")}: {uso.totalTokens ?? "—"} · {t("ia.stats.segundo")}: {uso.tokensPorSegundo ?? "—"} · {t("ia.stats.primeiro")}: {uso.msPrimeiroToken ?? "—"}ms
+              </Badge>
+            )}
+            {aba === "conversar" && ragFontes !== null && (
+              <Badge variant="outline" data-testid="ia-rag-fontes" className="text-[10px]">
+                <Database className="h-3 w-3 mr-1" /> {t("ia.rag.fontes")}: {ragFontes}
               </Badge>
             )}
             <Button variant="outline" size="sm" data-testid="ia-config-abrir" onClick={() => setConfigAberta((v) => !v)}>
@@ -688,6 +862,17 @@ const IaBateu = () => {
                 </div>
                 <Switch data-testid="ia-pensamento-visivel" checked={pensamentoAberto} onCheckedChange={setPensamentoAberto} />
               </div>
+
+              {/* v56 — RAG: o chat lê o índice da plataforma */}
+              <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <div>
+                  <div className="text-xs font-semibold">{t("ia.rag.toggle")}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {t("ia.rag.toggle.desc")} · {ragStats.passagens}
+                  </div>
+                </div>
+                <Switch data-testid="ia-rag" checked={ragAtivo} onCheckedChange={setRagAtivo} />
+              </div>
             </div>
 
             <div className="rounded-xl border p-4">
@@ -701,7 +886,17 @@ const IaBateu = () => {
         )}
 
         {aba === "ver" && <AbaVer t={t} lang={lang} pensamentoAberto={pensamentoAberto} />}
-        {aba === "buscar" && <AbaBuscar t={t} />}
+        {aba === "buscar" && (
+          <AbaBuscar
+            t={t}
+            ragStats={ragStats}
+            aIndexarPlataforma={aIndexarPlataforma}
+            ragErro={ragErro}
+            aoIndexarPlataforma={indexarPlataforma}
+            aoLimparRag={limparRag}
+            aoRegistrarManual={registrarManualRag}
+          />
+        )}
       </div>
     </div>
   );
@@ -1024,7 +1219,17 @@ function guardarLoja(loja: LojaVetores, dimensao: number | null): boolean {
   }
 }
 
-function AbaBuscar({ t }: { t: (k: string) => string }) {
+function AbaBuscar({
+  t, ragStats, aIndexarPlataforma, ragErro, aoIndexarPlataforma, aoLimparRag, aoRegistrarManual,
+}: {
+  t: (k: string) => string;
+  ragStats: { passagens: number; documentos: number; porTipo: Record<string, number> };
+  aIndexarPlataforma: boolean;
+  ragErro: string | null;
+  aoIndexarPlataforma: () => void;
+  aoLimparRag: () => void;
+  aoRegistrarManual: (item: ItemVetor) => void;
+}) {
   const endpointInfo = useMemo(resolverEndpointVetores, []);
   const lojaRef = useRef<LojaVetores>(new LojaVetores(LIMITES_VETORES.PERSISTENCIA_CAP));
   const [itens, setItens] = useState<ItemVetor[]>([]);
@@ -1082,13 +1287,15 @@ function AbaBuscar({ t }: { t: (k: string) => string }) {
         { inputType: "passage" }, // indexar = passage (o EXACTO do snippet)
       );
       const tipo: TipoEntradaVetor = textoLimpo && imagem ? "texto_imagem" : imagem ? "imagem" : "texto";
-      lojaRef.current.adicionar({
+      const itemNovo = lojaRef.current.adicionar({
         id: undefined,
         rotulo: rotulo.trim() || textoLimpo.slice(0, 60) || "imagem",
         texto: textoLimpo,
         tipo,
         vetor: r.vetores[0],
       });
+      // v56 — o item manual também entra no índice RAG do chat (vetor real).
+      aoRegistrarManual(itemNovo);
       sincronizar();
       setTexto("");
       setImagemUrl("");
@@ -1101,7 +1308,7 @@ function AbaBuscar({ t }: { t: (k: string) => string }) {
     } finally {
       setAIndexar(false);
     }
-  }, [aIndexar, texto, imagemUrl, rotulo, criarCliente, sincronizar, t]);
+  }, [aIndexar, texto, imagemUrl, rotulo, criarCliente, sincronizar, aoRegistrarManual, t]);
 
   const buscar = useCallback(async () => {
     const q = consulta.trim();
@@ -1160,6 +1367,38 @@ function AbaBuscar({ t }: { t: (k: string) => string }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      {/* v56 — Plataforma (RAG): dados REAIS no índice que o chat lê */}
+      <section className="rounded-xl border bg-card/50 p-4 space-y-3 lg:col-span-2" data-testid="ia-rag-card">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> {t("ia.rag.titulo")}</h2>
+          <Badge variant="secondary" data-testid="ia-rag-stats" className="ml-auto text-[10px]">
+            {t("ia.rag.passagens")}: {ragStats.passagens} · {t("ia.rag.docs")}: {ragStats.documentos}
+            {ragStats.porTipo?.sorteio ? ` · ${t("ia.rag.tipo.sorteio")}: ${ragStats.porTipo.sorteio}` : ""}
+            {ragStats.porTipo?.concurso ? ` · ${t("ia.rag.tipo.concurso")}: ${ragStats.porTipo.concurso}` : ""}
+            {ragStats.porTipo?.blog ? ` · ${t("ia.rag.tipo.blog")}: ${ragStats.porTipo.blog}` : ""}
+            {ragStats.porTipo?.manual ? ` · ${t("ia.rag.tipo.manual")}: ${ragStats.porTipo.manual}` : ""}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("ia.rag.desc")}</p>
+        {ragErro && (
+          <div data-testid="ia-rag-erro" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {ragErro}
+          </div>
+        )}
+        <div className="flex gap-2 flex-wrap">
+          <Button data-testid="ia-rag-botao" onClick={aoIndexarPlataforma} disabled={aIndexarPlataforma}>
+            {aIndexarPlataforma ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BookOpen className="h-4 w-4 mr-2" />}
+            {aIndexarPlataforma ? t("ia.rag.a.indexar") : t("ia.rag.indexar")}
+          </Button>
+          {!!ragStats.passagens && (
+            <Button variant="ghost" size="sm" data-testid="ia-rag-limpar" onClick={aoLimparRag} className="text-muted-foreground">
+              <Eraser className="h-3.5 w-3.5 mr-2" /> {t("ia.rag.limpar")}
+            </Button>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">{t("ia.rag.nota")}</p>
+      </section>
+
       {/* Indexar */}
       <section className="rounded-xl border bg-card/50 p-4 space-y-3" data-testid="ia-buscar-indexar">
         <div>

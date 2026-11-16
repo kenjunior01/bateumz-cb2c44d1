@@ -24,3 +24,9 @@ bateu-*.json
 homepage.png
 empresas*.png
 shot-*.mjs
+
+# v54 — segredos locais da IA (a chave NVIDIA NUNCA entra no git; em produção:
+# supabase secrets set NVIDIA_API_KEY=... — ver supabase/functions/nemotron-chat)
+.env.ia
+.env.local
+server/.env

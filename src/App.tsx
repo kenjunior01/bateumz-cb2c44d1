@@ -111,6 +111,8 @@ const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 // v39 auditoria bateu.online: suporte e protecção do jogador como páginas
 // públicas próprias (plano 0–14 dias: «publicar suporte…» + «a um toque»)
 const Suporte = lazy(() => import("./pages/Suporte.tsx"));
+// v54 — BATEU IA (NVIDIA Nemotron): chat com streaming real + thinking
+const IaBateu = lazy(() => import("./pages/IaBateu.tsx"));
 const Protecao = lazy(() => import("./pages/Protecao.tsx"));
 const RaffleHistory = lazy(() => import("./pages/RaffleHistory.tsx"));
 const MyTickets = lazy(() => import("./pages/MyTickets.tsx"));
@@ -250,6 +252,7 @@ function AnimatedRoutes() {
             <Route path="/como-funciona" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/suporte" element={<Suporte />} />
+            <Route path="/ia" element={<IaBateu />} />
             <Route path="/protecao" element={<Protecao />} />
             <Route path="/historico" element={<RaffleHistory />} />
             <Route path="/concursos" element={<SorteiosLayout />}>            <Route index element={<Contests />} />          </Route>

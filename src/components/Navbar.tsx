@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark, BrainCircuit } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -267,6 +267,8 @@ const Navbar = () => {
       items: [
         { label: t("nav.referral"), href: "/referral", icon: Users, desc: t("nav.referral.desc") },
         { label: t("nav.faq"), href: "/faq", icon: HelpCircle, desc: t("nav.faq.desc") },
+        // v54 — BATEU IA (NVIDIA Nemotron) — assistente com streaming real
+        { label: t("nav.ia"), href: "/ia", icon: BrainCircuit, desc: t("nav.ia.desc"), badge: t("nav.badge.new"), trending: true },
       ],
     },
   ];

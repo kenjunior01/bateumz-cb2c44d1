@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Clock3, CloudSun, CloudOff, Landmark, Trophy, Home, Volume2, VolumeX,
   Camera, Info, Sparkles, MapPin, Thermometer, ArrowUp, RotateCw, Radio, Store, Globe,
-  MessageCircle, Send, BookOpen, Compass, Footprints, Brain, Gauge, Activity,
+  MessageCircle, Send, BookOpen, Compass, Footprints, Brain, Gauge, Activity, Hammer,
   Gavel, Users, ShoppingBag, Coins, Ticket, Gamepad2, CircleDot,
 } from "lucide-react";
 import * as THREE from "three";
@@ -133,6 +133,7 @@ function PracaEmDireto({ mpRef, ligado }: { mpRef: React.RefObject<CidadeMP | nu
               {ev.tipo === "entrou" && <><Globe size={10} className="text-emerald-300 shrink-0" /> <span className="text-white/85 truncate">{ev.nome} · {t("cidade.mpEvEntrou")}</span></>}
               {ev.tipo === "saiu" && <><Globe size={10} className="text-white/40 shrink-0" /> <span className="text-white/60 truncate">{ev.nome} · {t("cidade.mpEvSaiu")}</span></>}
               {ev.tipo === "corrigido" && <><Gauge size={10} className="text-amber-300 shrink-0" /> <span className="text-amber-200/90 truncate">{t(ev.motivo === "parede" ? "cidade.mpEvParede" : "cidade.mpEvAlcance")}</span></>}
+              {ev.tipo === "edicao" && <><Hammer size={10} className="text-orange-300 shrink-0" /> <span className="text-orange-200/90 truncate">{ev.nome ? `${ev.nome} · ` : ""}{t("cidade.mpEvEdicao")}{(ev.qtd ?? 1) > 1 ? ` ×${ev.qtd}` : ""}</span></>}
             </p>
           ))}
           {feed.items.slice(0, temMp ? 2 : 4).map((act: PlatformActivity) => {
@@ -254,6 +255,13 @@ export default function CidadeBateu() {
         ultimaCorrecaoRef.current = { x, z, em: Date.now(), motivo: motivo ?? "alcance", y: typeof y === "number" ? y : undefined };
         setAviso({ texto: motivo === "parede" ? t("cidade.mpCorrigidoParede") : t("cidade.mpCorrigido"), k: Date.now() });
       },
+      // v53 — partilha visual (o mundo editável partilhado): a edição de OUTRO
+      // jogador chega pela difusão do servidor e entra no mundo pelo caminho
+      // remoto do motor (mesmo setBloco das edições locais, SEM eco — o
+      // aoEditar não dispara, senão a edição voltava ao servidor).
+      onEdicao: (x, y, z, id) => {
+        try { motorRef.current.aplicarEdicaoRemota(x, y, z, id); } catch { /* mundo ainda não pronto */ }
+      },
     });
     mpRef.current = mp;
     // v52 — N4: cada edição REAL do mundo é reportada ao multiplayer (a
@@ -368,10 +376,23 @@ export default function CidadeBateu() {
       // v47 (E2E) — envio imediato sem o gate de 100 ms (dois saltos no mesmo instante)
       // v52 — y/voando opcionais: com y é protocolo novo, sem y é protocolo v37
       mpPassoImediato: (x: number, z: number, ry?: number, y?: number, voando?: boolean) => mpRef.current?.passoImediato(x, z, ry, y, voando) ?? false,
+      // v53 — cala o envio do rAF (as emissões ficam conduzidas pelo relógio
+      // do teste — o MESMO contrato do mpPasso v38; o rAF do raster por
+      // software injeta y de física de passos de 0,5 s, artefacto do sandbox)
+      mpCalado: (v: boolean) => { mpCaladoRef.current = v; },
       // v52 — N4: edição REAL reportada pelo caminho do jogador (mesma via do
       // gancho aoEditar) + dados crus de um chunk do cliente para a prova de
       // identidade byte a byte com o campo do servidor
       mpReportarEdit: (x: number, y: number, z: number, id: number) => mpRef.current?.reportarEdit(x, y, z, id) ?? false,
+      // v53 — partilha visual: edições remotas recebidas + contadores honestos
+      // do motor (aplicadas/ignoradas/semChunk — o E2E prova cada caminho)
+      mpEdicoesRemotas: () => mpRef.current?.edicoesRemotasInfo() ?? [],
+      mpEdicoesAplicadas: () => ({
+        recebidas: mpRef.current?.nEdicoesRemotas() ?? 0,
+        aplicadas: motorRef.current.edicoesRemotasAplicadas,
+        ignoradas: motorRef.current.edicoesRemotasIgnoradas,
+        semChunk: motorRef.current.edicoesRemotasSemChunk,
+      }),
       chunkDados: (cx: number, cz: number) => motorRef.current.mundo.garantir(cx, cz).dados.slice(),
       // ── v38 — progressão, exploração e ambiente (ganchos E2E) ──
       perfil: () => lerPerfil(),
@@ -427,6 +448,13 @@ export default function CidadeBateu() {
   }, []);
 
   // ── Loop rAF: passo + render + rótulos flutuantes + relógio ──
+  // v53 — mpCalado (ganchos E2E): no sandbox o raster por software corre a
+  // ~2 fps e o rAF injeta envios com o y da física de passos de 0,5 s entre
+  // os envios conduzidos pelo teste — artefacto do SANDBOX, não do jogo real
+  // (60 fps, dt ≤ 16 ms, arco suave a 10 Hz). As secções de movimento do E2E
+  // declaram-se caladas: as emissões ficam 100% pelo relógio do teste (o
+  // MESMO contrato do mpPasso v38). Fora do E2E o flag é sempre false.
+  const mpCaladoRef = useRef(false);
   useEffect(() => {
     let raf = 0, anterior = performance.now();
     const ciclo = (agora: number) => {
@@ -436,7 +464,7 @@ export default function CidadeBateu() {
       const m = motorRef.current;
       if (m.fase === "menu") return;
       m.passo(dt);
-      mpRef.current?.passo(dt, m.px, m.pz, m.yaw, m.py, m.modo === "criativo" && m.criativoVoar); // v36 — envio 10 Hz + interpolação dos remotos · v52 — eixo vertical + voo F
+      if (!mpCaladoRef.current) mpRef.current?.passo(dt, m.px, m.pz, m.yaw, m.py, m.modo === "criativo" && m.criativoVoar); // v36 — envio 10 Hz + interpolação dos remotos · v52 — eixo vertical + voo F · v53 — silenciável pelo E2E (mpCalado)
       if (canvasRef.current) m.render(dt);
 
       // rótulos 3D → ecrã (limitado a ~8 Hz)

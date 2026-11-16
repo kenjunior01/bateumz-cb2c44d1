@@ -8,6 +8,9 @@
 
 import * as THREE from "three";
 import { ALTURA_PLATEAU, FALA_RATE_MS, EDIT_RATE_MS, limpaFala } from "./core";
+// v53 — a MESMA regra de validação que o servidor aplica (constants.ts —
+// uma só fonte): sanitiza TUDO que chega, mesmo vindo do servidor.
+import { validaEdit } from "../blocos/constants";
 
 export type EstadoMP = "off" | "a_ligar" | "ligado" | "erro";
 
@@ -97,14 +100,19 @@ function bolhaFala(texto: string): THREE.Sprite {
 export interface FalaInfo { id: number; nome: string; texto: string; em: number }
 
 // v47 — eventos REAIS da sessão partilhada (para o painel «Praça em direto»):
-// só o que aconteceu de verdade — entradas/saídas recebidas do servidor e
-// correções honestas. Nada é gerado para encher a lista.
+// só o que aconteceu de verdade — entradas/saídas recebidas do servidor,
+// correções honestas e edições dos outros jogadores (v53 — o mundo
+// editável partilhado). Nada é gerado para encher a lista.
 export interface EventoPraca {
-  tipo: "entrou" | "saiu" | "corrigido";
-  nome?: string;          // entrou/saiu: quem
+  tipo: "entrou" | "saiu" | "corrigido" | "edicao";
+  nome?: string;          // entrou/saiu/edicao: quem
   motivo?: string;        // corrigido: "alcance" | "parede" — o motivo real do servidor
+  qtd?: number;           // edicao: quantas edições chegaram no lote
   em: number;
 }
+
+// v53 — uma edição remota recebida (o E2E consome para provar a partilha)
+export interface EdicaoRemota { x: number; y: number; z: number; id: number; por: number; em: number }
 
 export class CidadeMP {
   estado: EstadoMP = "off";
@@ -112,6 +120,8 @@ export class CidadeMP {
   private remotos = new Map<number, Remoto>();
   private falas: FalaInfo[] = [];               // histórico local (últimas 12)
   private eventos: EventoPraca[] = [];          // v47 — acontecimentos REAIS (últimos 30)
+  private edicoesRemotas: EdicaoRemota[] = [];  // v53 — edições recebidas (últimas 50)
+  private totalEdicoesRemotas = 0;              // v53 — total recebido na sessão (honesto)
   private pico = 0;                             // v47 — pico REAL de presença observado
   private bolhas = new Map<number, { spr: THREE.Sprite; ate: number }>();
   private url = ""; private nome = "";
@@ -128,6 +138,7 @@ export class CidadeMP {
     onAviso: (texto: string) => void;
     onFala?: (f: FalaInfo) => void;              // v37 — chat da praça
     onCorrecao?: (x: number, z: number, motivo?: string, y?: number) => void; // v37/47/52 — reconciliação honesta (v52: também no eixo y)
+    onEdicao?: (x: number, y: number, z: number, id: number, por: number) => void; // v53 — partilha visual: a edição de OUTRO jogador
   }) {}
 
   ligar(url: string, nome: string) {
@@ -185,6 +196,32 @@ export class CidadeMP {
           guarda.registarEvento({ tipo: "corrigido", motivo: typeof m.motivo === "string" ? m.motivo : "alcance", em: Date.now() });
           const yServidor = typeof m.y === "number" && Number.isFinite(m.y) ? m.y : undefined;
           guarda.opts.onCorrecao?.(m.x, m.z, typeof m.motivo === "string" ? m.motivo : undefined, yServidor);
+        }
+        return;
+      }
+      if (m.t === "edicoes" && Array.isArray(m.lista)) {
+        // v53 — PARTILHA VISUAL (o mundo editável partilhado): o servidor
+        // difunde as edições aceites (difusão 10 Hz) e manda LOTES de
+        // sincronização (bemvindo + cruzamento de região). Cada item é
+        // sanitizado pela MESMA regra que o servidor aplica (validaEdit —
+        // padrão da limpaFala: sanitiza MESMO vindo da fonte) e aplicado
+        // ao motor pelo caminho remoto (sem eco — o autor já tem a sua).
+        const validas: { x: number; y: number; z: number; id: number; por: number }[] = [];
+        for (const e of m.lista.slice(0, 512)) {
+          if (!e || !validaEdit(e.x, e.y, e.z, e.id)) continue;
+          validas.push({ x: e.x, y: e.y, z: e.z, id: e.id, por: Number(e.por) || 0 });
+        }
+        if (validas.length) {
+          const nomes = new Set<string>();
+          for (const e of validas) {
+            guarda.edicoesRemotas.push({ ...e, em: Date.now() });
+            if (guarda.edicoesRemotas.length > 50) guarda.edicoesRemotas.shift();
+            guarda.totalEdicoesRemotas++;
+            guarda.opts.onEdicao?.(e.x, e.y, e.z, e.id, e.por);
+            const autor = guarda.remotos.get(e.por);
+            if (autor) nomes.add(autor.nome);
+          }
+          guarda.registarEvento({ tipo: "edicao", nome: [...nomes][0] ?? "", qtd: validas.length, em: Date.now() });
         }
         return;
       }
@@ -323,6 +360,12 @@ export class CidadeMP {
 
   falasInfo(): FalaInfo[] { return [...this.falas]; }
 
+  /** v53 — edições remotas recebidas (últimas 50) — o E2E prova a partilha. */
+  edicoesRemotasInfo(): EdicaoRemota[] { return [...this.edicoesRemotas]; }
+
+  /** v53 — total recebido na sessão (difusões + lotes de sincronização). */
+  nEdicoesRemotas(): number { return this.totalEdicoesRemotas; }
+
   /** v52 — N4: reporta uma edição REAL do mundo (gancho aoEditar do motor:
    *  quebrar → id 0; colocar → id do bloco). O MESMO rate-limit do servidor
    *  no cliente — quando limitada devolve false (padrão do falar). */
@@ -392,6 +435,8 @@ export class CidadeMP {
     for (const id of [...this.bolhas.keys()]) this.removerBolha(id);
     this.falas = [];
     this.eventos = []; // sessão nova = lista nova (nunca mistura sessões)
+    this.edicoesRemotas = [];
+    this.totalEdicoesRemotas = 0;
     this.pico = 0;
     this.setEstado("off");
   }

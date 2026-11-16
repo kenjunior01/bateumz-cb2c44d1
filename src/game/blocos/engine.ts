@@ -26,7 +26,7 @@ import {
   RAIO_TNT, FUSIVEL_TNT, TEMPO_CRESCER, CRESCER_CHUVA, BAU_SLOTS,
   PRECISA_DE_APOIO, PESCA_ALCANCE, PESCA_ESPERA_MIN, PESCA_ESPERA_MAX, PESCA_JANELA,
   LARGURA_JOGADOR, ALTURA_JOGADOR, CORPO_Y_INF, CORPO_Y_SUP,
-  dropDe, CORES, ITENS, CONQUISTAS, I, NOMES,
+  dropDe, CORES, ITENS, CONQUISTAS, I, NOMES, validaEdit,
 } from "./constants";
 
 export type Modo = "sobrevivencia" | "criativo";
@@ -196,6 +196,13 @@ export class Motor {
   // seria «corrigido» injustamente). Por omissão ninguém ouve: zero
   // mudança nos outros jogos (padrão do aoDroparChao da v50).
   aoEditar: ((x: number, y: number, z: number, id: number) => void) | null = null;
+  // v53 — PARTILHA VISUAL das edições: contadores honestos do caminho REMOTO
+  // (aplicadas = mudaram um voxel; ignoradas = já estavam nesse estado — dup/
+  // lote repetido, sem remalha; semChunk = chunk longe — a génese futura
+  // aplica pelo mundo.edits). O E2E prova cada um.
+  edicoesRemotasAplicadas = 0;
+  edicoesRemotasIgnoradas = 0;
+  edicoesRemotasSemChunk = 0;
   // v33 (Cidade Bateu): ganchos opcionais — por omissão o motor comporta-se
   // exactamente como antes (mundo procedural + spawn natural).
   fabricaMundo: ((semente: number) => Mundo) | null = null;
@@ -702,6 +709,28 @@ export class Motor {
     this.som("colocar");
     if (s.id === B.BAU) { this.baus.set(`${x},${y},${z}`, new Array(BAU_SLOTS).fill(null)); } // baú novo com 18 posições vazias
     this.emitirEstado(true);
+  }
+
+  // ── v53 — PARTILHA VISUAL: a edição de OUTRO jogador ────────────
+  // O servidor difunde as edições aceites (msg `edicoes`); este método
+  // aplica-as pelo MESMO caminho das edições locais (setBloco → sujo →
+  // remalha v51, mundo.edits → génese futura) mas SEM o gancho aoEditar
+  // (o autor já tem a edição — zero eco, zero loop) e SEM som/partículas
+  // (não é acção local). A validação usa a MESMA regra do servidor
+  // (validaEdit em constants.ts — sanitiza mesmo vindo da fonte).
+  aplicarEdicaoRemota(x: number, y: number, z: number, id: number) {
+    if (!validaEdit(x, y, z, id)) return;
+    const c = this.mundo.getChunk(Math.floor(x / CHUNK), Math.floor(z / CHUNK));
+    if (!c) {
+      // chunk longe: registra nas edições (o MESMO mapa das locais) —
+      // a génese futura aplica quando o chunk voltar ao raio.
+      this.mundo.edits.set(`${x},${y},${z}`, id);
+      this.edicoesRemotasSemChunk++;
+      return;
+    }
+    if (this.mundo.getBloco(x, y, z) === id) { this.edicoesRemotasIgnoradas++; return; } // já nesse estado (dup/lote repetido) — sem remalha
+    this.mundo.setBloco(x, y, z, id);
+    this.edicoesRemotasAplicadas++;
   }
 
   // ── v29 AGRICULTURA ─────────────────────────────────────────

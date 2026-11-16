@@ -298,3 +298,16 @@ export const CONQUISTAS: Conquista[] = [
   { id: "aracnologo", nome: "Aracnólogo", creditos: 8, desc: "Derrotaste uma Aranha." },
 ];
 export const WHATSAPP = "258848547887";
+
+// ── v53 — PARTILHA VISUAL DAS EDIÇÕES: a regra de validação numa SÓ fonte ──
+// Padrão v52 (solidoId): a semântica vive no constants.ts e é usada pelas
+// TRÊS pontas — o servidor valida cada msg `edit` (strike quando inválida),
+// o cliente sanitiza TAMBÉM as edições que chegam do servidor (padrão da
+// limpaFala v37: sanitiza MESMO vindo da fonte) e a probe do Node prova a
+// regra. Inteiros, dentro do mundo, id real (0 = quebrado).
+export const EDIT_ALCANCE = 100_000; // guarda de coordenada (a cidade vive perto da origem)
+export function validaEdit(x: number, y: number, z: number, id: number): boolean {
+  return Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(id)
+    && y >= 0 && y < ALTURA && Math.abs(x) < EDIT_ALCANCE && Math.abs(z) < EDIT_ALCANCE
+    && (id === 0 || ehBloco(id));
+}

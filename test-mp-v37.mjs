@@ -8,6 +8,11 @@
 // impossível recusado com motivo honesto («parede») · painel
 // «Praça em direto» com eventos reais da sessão + atividade real
 // da plataforma (activityBus) · STATS REAIS do processo (ping→stats).
+// v53 — N5: PARTILHA VISUAL das edições (o mundo editável partilhado — o
+// passo anotado na v52): a difusão leva o buraco da Ana ao mundo do Bruno
+// (o voxel some NA FÍSICA DO B também); o autor não recebe eco; dup é
+// ignorado sem remalha; a edit fora do raio de interesse não chega; o
+// chegante C nasce num mundo JÁ editado (lote de sincronização no bemvindo).
 // Uso: PW_CHROME=<chromium> node test-mp-v37.mjs (vite 8099 + servidor 8765)
 // ============================================================
 import { chromium } from "playwright";
@@ -47,18 +52,22 @@ const MOCKS = (page) => {
     route.fulfill({ json: { current: { european_aqi: 21, pm2_5: 5.4 } } }));
 };
 
-async function entraCidade(browser, nome) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+async function entraCidade(browser, nome, opts = {}) {
+  // v53 — a 3.ª página em simultaneous (o chegante do lote de sincronização)
+  // entra com viewport menor e timeout maior: raster por software em 2 núcleos
+  // (medido: 3 páginas × three.js esmagam a CPU e o iniciar passa de 15 s).
+  const { timeoutMs = 15000, viewport = { width: 1280, height: 800 } } = opts;
+  const page = await browser.newPage({ viewport });
   MOCKS(page);
   escutaErros(nome, page);
   await page.goto(`${BASE}/cidade`, { waitUntil: "domcontentloaded" });
-  await page.getByTestId("cd-inicio").waitFor({ state: "visible", timeout: 15000 });
+  await page.getByTestId("cd-inicio").waitFor({ state: "visible", timeout: timeoutMs });
   await page.evaluate((n) => { localStorage.setItem("bateu_cidade_nome", n); }, nome);
   // dispatchEvent: motores three.js a 60fps esmagam o hit-target do Playwright (flake conhecido v31/v36)
   await page.getByTestId("cd-entrar").dispatchEvent("click");
-  await page.waitForFunction(() => window.__cidade?.fase() === "jogando", null, { timeout: 15000 });
+  await page.waitForFunction(() => window.__cidade?.fase() === "jogando", null, { timeout: timeoutMs });
   await page.evaluate((u) => window.__cidade.mpLigar(u), MP_URL);
-  await page.waitForFunction(() => window.__cidade?.mpEstado?.() === "ligado", null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__cidade?.mpEstado?.() === "ligado", null, { timeout: timeoutMs });
   return page;
 }
 
@@ -148,6 +157,14 @@ async function main() {
   // descanso do anel onde a caixa do corpo N4 não cabe — a busca prova A/B/C
   // com a caixa livre e os cruzamentos de salto reais).
   const DEGRAU_A = [-58.02, 33.5], DEGRAU_B = [-59.76, 34.5], DEGRAU_C = [-61.49, 35.5];
+  // v53 — as secções de MOVIMENTO conduzido (drive/degrau/anel/voo) declaram-se
+  // CALADAS: o rAF do raster por software (2 fps) injeta envios com o y da
+  // física de passos de 0,5 s entre os envios do teste — artefacto do sandbox
+  // (furo real desta corrida: o servidor ficava com o y do rAF e o arco do
+  // salto raspava o riser — RECUSA parede em cascata; o MESMO drive em Node
+  // puro, sem rAF, é limpo — scripts/diag-drive-v53.mjs). As emissões ficam
+  // 100% pelo relógio do teste — o MESMO contrato do mpPasso v38.
+  await A.evaluate(() => window.__cidade.mpCalado(true));
   const corrAntes = await A.evaluate(() => window.__cidade.mpEventos().filter((e) => e.tipo === "corrigido").length);
   // drive honesto até à base do degrau (A): 1 bloco/125 ms = 8 b/s.
   // v52 — a rota é do STEPPER consciente de obstáculos (campo puro): a linha
@@ -443,6 +460,7 @@ async function main() {
   }, null, { timeout: 6000 }).catch(() => {});
   const yRemoto = await B.evaluate(() => window.__cidade.mpRemotos().find((j) => j.nome === "Ana-MZ")?.y ?? null);
   ok("Bruno vê a Ana NO TELHADO (remoto com y real — fim do «enterrado»)", !!yRemoto && yRemoto > 40, `y=${yRemoto}`);
+  await A.evaluate(() => window.__cidade.mpCalado(false)); // fim das secções conduzidas — o rAF volta a emitir (v53)
 
   // rate-limit de edições (a MESMA regra nas duas pontas): rajada SÍNCRONA de
   // 25 — determinística (o padrão das falas v37: awaits entre chamadas deixam
@@ -455,6 +473,45 @@ async function main() {
     return aceites;
   });
   ok("rajada síncrona de 25 edições: o rate-limit corta (só 1 aceite)", rajada === 1, `aceites=${rajada}/25`);
+
+  console.log("— v53: PARTILHA VISUAL das edições (o mundo editável partilhado)");
+  // A Ana abriu o buraco na parede (23,35,3)/(23,36,3) na secção
+  // edit-then-walk (v52): o servidor aplicou à VERDADE da colisão — e agora
+  // DIFUNDE ao Bruno (o passo anotado na v52: fim do «o que o A partiu, o B
+  // não vê»). O mundo do B muda pela via real: msg `edicoes` → onEdicao →
+  // Motor.aplicarEdicaoRemota (o MESMO setBloco das edições locais, sem eco).
+  await B.waitForFunction(() => (window.__cidade?.mpEdicoesRemotas?.() ?? []).some((e) => e.x === 23 && e.y === 35 && e.z === 3 && e.id === 0), null, { timeout: 6000 }).catch(() => {});
+  ok("Bruno RECEBEU a difusão do buraco que a Ana partiu", (await B.evaluate(() => window.__cidade.mpEdicoesRemotas().some((e) => e.x === 23 && e.y === 35 && e.z === 3 && e.id === 0))) === true);
+  ok("o MUNDO do Bruno mudou — o voxel partida já não está lá", await B.evaluate(() => window.__cidade.motor.mundo.getBloco(23, 35, 3)) === 0);
+  ok("a colisão LOCAL do Bruno segue o mundo partilhado (o buraco é andável para ele)", await B.evaluate(() => window.__cidade.motor.mundo.solido(23, 35, 3)) === false);
+  ok("contadores do motor: aplicações remotas contadas (≥2)", (await B.evaluate(() => window.__cidade.mpEdicoesAplicadas())).aplicadas >= 2, JSON.stringify(await B.evaluate(() => window.__cidade.mpEdicoesAplicadas())));
+  ok("o feed «Praça em direto» mostra a edição da Ana", (await B.evaluate(() => window.__cidade.mpEventos().some((e) => e.tipo === "edicao" && e.nome === "Ana-MZ"))) === true);
+  ok("B coloca um bloco (via real do reportarEdit)", await B.evaluate(() => window.__cidade.mpReportarEdit(30, 36, 3, 9)) === true);
+  await A.waitForFunction(() => (window.__cidade?.mpEdicoesRemotas?.() ?? []).some((e) => e.x === 30 && e.y === 36 && e.z === 3 && e.id === 9), null, { timeout: 6000 }).catch(() => {});
+  ok("Ana recebeu o bloco do Bruno — o voxel aparece no mundo dela", await A.evaluate(() => window.__cidade.motor.mundo.getBloco(30, 36, 3)) === 9);
+  ok("o autor NÃO recebe a própria edição (zero eco)", (await B.evaluate(() => window.__cidade.mpEdicoesRemotas().some((e) => e.x === 30 && e.y === 36 && e.z === 3))) === false);
+  // dup honesto: a Ana re-reporta o MESMO voxel — o Bruno recebe mas IGNORA
+  // (o mundo dele já está nesse estado — sem remalha; contador honesto)
+  const antesDup = await B.evaluate(() => window.__cidade.mpEdicoesAplicadas());
+  await A.evaluate(async () => { await new Promise((r) => setTimeout(r, 70)); window.__cidade.mpReportarEdit(23, 35, 3, 0); });
+  await B.waitForFunction((n) => (window.__cidade?.mpEdicoesRemotas?.() ?? []).length > n, null, antesDup.recebidas, { timeout: 6000 }).catch(() => {});
+  const depoisDup = await B.evaluate(() => window.__cidade.mpEdicoesAplicadas());
+  ok("dup: recebida mas IGNORADA (getBloco já é o id — zero remalha)", depoisDup.recebidas > antesDup.recebidas && depoisDup.ignoradas > antesDup.ignoradas && depoisDup.aplicadas === antesDup.aplicadas, JSON.stringify({ antes: antesDup, depois: depoisDup }));
+  // gestão de interesse NAS EDIÇÕES: uma edit a x=200 não chega a ninguém na praça
+  const nEdRemotas = await B.evaluate(() => window.__cidade.mpEdicoesRemotas().length);
+  await A.evaluate(async () => { await new Promise((r) => setTimeout(r, 70)); window.__cidade.mpReportarEdit(200, 40, 0, 9); });
+  await sleep(500); // > 4 ticks de difusão (10 Hz)
+  ok("a edit FORA do raio de interesse não chega ao Bruno", (await B.evaluate(() => window.__cidade.mpEdicoesRemotas().length)) === nEdRemotas, `antes=${nEdRemotas} agora=${await B.evaluate(() => window.__cidade.mpEdicoesRemotas().length)}`);
+
+  console.log("— v53: o chegante nasce num mundo JÁ editado (lote de sincronização)");
+  const CD = await entraCidade(browser, "Chegante-C", { timeoutMs: 30000, viewport: { width: 800, height: 600 } });
+  await CD.evaluate(() => window.__cidade.teleportar(0.5, 35.02, 6.5)); // 3×3 de chunks em sync (a génese aplica o lote mesmo sem chunk — mundo.edits)
+  await CD.waitForFunction(() => (window.__cidade?.mpEdicoesRemotas?.() ?? []).some((e) => e.x === 23 && e.y === 35 && e.z === 3 && e.id === 0), null, { timeout: 6000 }).catch(() => {});
+  ok("C recebeu o LOTE de sincronização com o buraco da Ana", (await CD.evaluate(() => window.__cidade.mpEdicoesRemotas().some((e) => e.x === 23 && e.y === 35 && e.z === 3 && e.id === 0))) === true);
+  ok("o mundo do C nasce COM o buraco (génese aplica as edições)", await CD.evaluate(() => window.__cidade.motor.mundo.getBloco(23, 35, 3)) === 0);
+  ok("o mundo do C nasce COM o bloco do Bruno", await CD.evaluate(() => window.__cidade.motor.mundo.getBloco(30, 36, 3)) === 9);
+  ok("C vê a Ana e o Bruno (presença intacta)", (await CD.evaluate(() => window.__cidade.mpRemotos().some((j) => j.nome === "Ana-MZ") && window.__cidade.mpRemotos().some((j) => j.nome === "Bruno-AO"))) === true);
+  await CD.close();
 
   console.log("— v47: STATS REAIS do servidor (ping→stats)");
   const stats = await new Promise((resolve) => {
@@ -478,6 +535,8 @@ async function main() {
   ok("correções contadas de verdade ≥ 2 (alcance + parede)", stats?.correcoes >= 2, `corr=${stats?.correcoes}`);
   ok("v52: edições aceites contadas de verdade (≥ 3)", stats?.editsAceites >= 3, `edits=${stats?.editsAceites} recusados=${stats?.editsRecusados}`);
   ok("v52: campo de voxels no servidor tem chunks em cache", stats?.chunks >= 1 && stats?.overlay >= 2, `chunks=${stats?.chunks} overlay=${stats?.overlay}`);
+  ok("v53: edições DIFUNDIDAS contadas de verdade (≥4)", stats?.editsDifundidos >= 4, `dif=${stats?.editsDifundidos}`);
+  ok("v53: edições SINCRONIZADAS contadas (o lote do chegante C)", stats?.editsSincronizados >= 4, `sinc=${stats?.editsSincronizados}`);
 
   for (const ws of bots) { clearInterval(ws.pingTimer); try { ws.close(); } catch { /* ignore */ } }
 
@@ -535,6 +594,10 @@ async function main() {
   await C.waitForFunction(() => window.__cidade?.mpEstado?.() === "erro", null, { timeout: 9000 }).catch(() => {});
   ok("estado honesto 'erro' sem servidor", await C.evaluate(() => window.__cidade.mpEstado() === "erro"));
   ok("mpFalar devolve false em modo solo", await C.evaluate(() => window.__cidade.mpFalar("olá") === false));
+  // v53 — o painel refresca a 1 Hz (useActivityFeed); o raster por software do
+  // sandbox atrasa a 1.ª pintura — espera HONESTA pelo feed real (o assert não
+  // muda: a atividade tem de estar lá, agora com a janela que o painel tem).
+  await C.getByTestId("cd-eventos-plataforma").filter({ hasText: "Leilão do Imbondeiro" }).first().waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
   ok("painel Praça em direto SOLO mostra atividade REAL da plataforma", await C.getByTestId("cd-eventos-plataforma").filter({ hasText: "Leilão do Imbondeiro" }).count() > 0);
 
   for (const nome of ["Ana-MZ", "Bruno-AO", "C"]) {

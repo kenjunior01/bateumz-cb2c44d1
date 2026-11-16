@@ -1,4 +1,4 @@
-// Cidade Bateu — servidor de presença partilhada (v37 — N3 · v47 — N2 · v52 — N4)
+// Cidade Bateu — servidor de presença partilhada (v37 — N3 · v47 — N2 · v52 — N4 · v53 — N5)
 // Padrões estudados do Veloren (docs/REA-veloren-estudo-v36.md, ficheiro:linha):
 //   TPS 30 (server-cli/src/main.rs:49) · cap de jogadores (settings/mod.rs:226 = 100)
 //   regiões + raio de interesse (presence.rs · region.rs:62) · throttle por distância
@@ -27,6 +27,16 @@
 // avatares remotos deixam de nascer enterrados no terreno (quem está no telhado
 // aparece no telhado). Voo criativo (tecla F) é declarado pelo cliente e tem
 // orçamento próprio derivado da velocidade real do F (VOO_TAXA no core.ts).
+// v53 — N5 (o passo anotado na v52): PARTILHA VISUAL das edições — o mundo
+// editável partilhado. A v52 aplicava as edições à VERDADE da colisão mas não
+// as DIFUNDIA: o que o jogador A partiu, o B não VIA. Agora: (1) cada edit
+// aceite entra no ÍNDICE por região (a grelha REGIAO_TAM que a presença já
+// usa) e nos PENDENTES do tick; (2) no tick de snapshot, os pendentes são
+// difundidos aos jogadores dentro do RAIO_INTERESSE — SEM devolver ao autor
+// (ele já tem a edição no seu mundo — zero eco); (3) quem chega (bemvindo),
+// quem CRUZA uma célula de região ou anda > SINC_A_CADA blocos recebe o LOTE
+// das edições à sua volta (o motor aplica-as pela génese mesmo para chunks
+// longe). Limites honestos: EDIT_SYNC_CAP no lote + contadores nos stats.
 
 import { WebSocketServer } from "ws";
 import {
@@ -40,7 +50,7 @@ import {
 import { alturaCidade, perfilCidade } from "../src/game/cidade/terrenoCidade.ts";
 import { gerarDadosTerreno } from "../src/game/blocos/geracao.ts";
 import { carimbarCidade, alvoParaDados, chunkTemCarimbos } from "../src/game/cidade/carimbosCidade.ts";
-import { solidoId, ehBloco, BLOCOS, CHUNK, ALTURA, NIVEL_MAR } from "../src/game/blocos/constants.ts";
+import { solidoId, validaEdit, CHUNK, ALTURA, NIVEL_MAR } from "../src/game/blocos/constants.ts";
 import { Ruido } from "../src/game/blocos/noise.ts";
 
 // ===== v47/v52 — o MESMO mundo que o cliente pisa (uma só fonte) =====
@@ -70,6 +80,51 @@ function dadosChunk(cx, cz) {
 }
 const editsOverlay = new Map();          // "x,y,z" -> id (0 = quebrado)
 let editsAceites = 0, editsRecusados = 0;
+// ===== v53 — PARTILHA VISUAL: índice por região + pendentes + lotes =====
+const editsIndex = new Map();            // "rx,rz" -> Map("x,y,z" -> {x,y,z,id,por})
+const editsPendentes = [];               // aceites deste tick (difusão no tick de snapshot)
+let editsDifundidos = 0;                 // edições entregues por DIFUSÃO (por receptor)
+let editsSincronizados = 0;              // edições entregues por LOTES de sincronização
+const EDIT_SYNC_CAP = 3000;              // cap honesto do lote (mineração contínua de multidões)
+function editarNaRegiao(x, z, raio) {
+  const lista = [];
+  const cx = Math.floor(x / REGIAO_TAM), cz = Math.floor(z / REGIAO_TAM);
+  const cr = Math.ceil(raio / REGIAO_TAM);
+  for (let dx = -cr; dx <= cr; dx++) for (let dz = -cr; dz <= cr; dz++) {
+    const cel = editsIndex.get(`${cx + dx},${cz + dz}`);
+    if (!cel) continue;
+    for (const e of cel.values()) {
+      if (Math.hypot(e.x - x, e.z - z) <= raio) lista.push(e);
+      if (lista.length >= EDIT_SYNC_CAP) return lista; // cap do lote (raro — declarado)
+    }
+  }
+  return lista;
+}
+/** Lote de sincronização: TODAS as edições dentro do raio de interesse da
+ *  posição actual (bemvindo · cruzamento de região · SINC_A_CADA blocos andados),
+ *  SEM as do próprio autor (ele já as tem no seu mundo — o MESMO zero eco da
+ *  difusão; o guarda getBloco do motor seria idempotente, mas a rede não paga). */
+function sincEdits(eu) {
+  const lista = editarNaRegiao(eu.x, eu.z, RAIO_INTERESSE).filter((e) => e.por !== eu.id);
+  if (!lista.length) return;
+  editsSincronizados += lista.length;
+  try { eu.ws.send(JSON.stringify({ t: "edicoes", lista, sinc: true })); } catch {}
+}
+/** Regra de disparo do lote: cruza uma célula da grelha OU andou > SINC_A_CADA
+ *  desde o último ponto de sincronização (afrouxamento DECLARADO: um jogador
+ *  parado perto do limite do raio pode precisar de um passo para receber
+ *  edições antigas; a reconciliação `corrigido` mantém o mundo honesto
+ *  entretanto — o delta-ACK completo é overkill para a presença da cidade). */
+const SINC_A_CADA = 24; // blocos (< RAIO_INTERESSE 40 — o lote cobre o raio no ponto novo)
+function cruzaRegiao(eu, x, z) {
+  const regNova = regiao(x, z);
+  const andou = Math.hypot(x - eu.ultimaSinc[0], z - eu.ultimaSinc[1]);
+  if (regNova !== eu.regiaoAtual || andou > SINC_A_CADA) {
+    eu.regiaoAtual = regNova;
+    eu.ultimaSinc = [x, z];
+    sincEdits(eu);
+  }
+}
 const solidoEm = (x, y, z) => {
   x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
   if (y < 0 || y >= ALTURA) return false;
@@ -102,7 +157,7 @@ const dentro = (ax, az, bx, bz) => (ax - bx) ** 2 + (az - bz) ** 2 <= RAIO_INTER
 const dist2 = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 const round2 = (v) => Math.round(v * 100) / 100;
 
-const jogadores = new Map(); // id -> {id, nome, x, y, z, ry, voando, ws, strikes, ultimoMs, ultimoEnvio, orcamento, orcSubida, orcVoo, ultimaFala, ultimoEdit, contador}
+const jogadores = new Map(); // id -> {id, nome, x, y, z, ry, voando, ws, strikes, ultimoMs, ultimoEnvio, orcamento, orcSubida, orcVoo, ultimaFala, ultimoEdit, contador, regiaoAtual, ultimaSinc}
 let proximoId = 1;
 let tickNo = 0;
 // v47/v52 — contadores REAIS da sessão (os stats e o teste de carga consomem-nos)
@@ -138,8 +193,9 @@ function vizinhosDe(x, z, grelha) {
 // v52 — recusa de movimento vertical/caminho: mantém a posição AUTORITATIVA
 // (x, y e z) e responde `corrigido` com o motivo honesto + o y do servidor
 // (a reconciliação honesta da v37 estendida ao eixo vertical).
-function recusar(eu, motivo) {
+function recusar(eu, motivo, alvo) {
   totalCorrecoes++;
+  if (process.env.LOG_RECUSAS) log("RECUSA", motivo, "jogador", eu.id, "de", eu.x.toFixed(2), eu.y?.toFixed(2), eu.z.toFixed(2), "para", alvo ? `${alvo.x} ${alvo.y} ${alvo.z}` : "-"); // diagnóstico honesto sob LOG_RECUSAS=1 (apanhou o furo do drive v53)
   const pacote = { t: "corrigido", motivo, x: round2(eu.x), z: round2(eu.z) };
   if (typeof eu.y === "number") pacote.y = round2(eu.y);
   try { eu.ws.send(JSON.stringify(pacote)); } catch {}
@@ -159,13 +215,17 @@ wss.on("connection", (ws, req) => {
       // v37 — spawn IGUAL ao do cliente (SPAWN_PRACA do core — fonte única)
       // v52 — o y inicial vem DO CAMPO do servidor (nunca do cliente)
       const ySpawn = superficieAndavel(SPAWN_PRACA[0], SPAWN_PRACA[1]) + 1.001;
-      eu = { id, nome: m.nome.trim().slice(0, 24), x: SPAWN_PRACA[0], y: ySpawn, z: SPAWN_PRACA[1], ry: 0, voando: false, ws, strikes: 0, ultimoMs: Date.now(), ultimoEnvio: 0, orcamento: ORCAMENTO_INICIAL, orcSubida: SUBIDA_INICIAL, orcVoo: VOO_INICIAL, ultimaFala: 0, ultimoEdit: 0, contador: 0 };
+      eu = { id, nome: m.nome.trim().slice(0, 24), x: SPAWN_PRACA[0], y: ySpawn, z: SPAWN_PRACA[1], ry: 0, voando: false, ws, strikes: 0, ultimoMs: Date.now(), ultimoEnvio: 0, orcamento: ORCAMENTO_INICIAL, orcSubida: SUBIDA_INICIAL, orcVoo: VOO_INICIAL, ultimaFala: 0, ultimoEdit: 0, contador: 0, regiaoAtual: regiao(SPAWN_PRACA[0], SPAWN_PRACA[1]), ultimaSinc: [SPAWN_PRACA[0], SPAWN_PRACA[1]] };
       jogadores.set(id, eu);
       totalEntradas++;
       const outros = [...jogadores.values()].filter((o) => o.id !== id)
         .map((o) => ({ id: o.id, nome: o.nome, x: o.x, z: o.z, ry: o.ry, y: round2(o.y) }));
       ws.send(JSON.stringify({ t: "bemvindo", id, x: eu.x, y: round2(eu.y), z: eu.z, jogadores: outros }));
       for (const o of jogadores.values()) if (o.id !== id) try { o.ws.send(JSON.stringify({ t: "entrou", id, nome: eu.nome, x: eu.x, z: eu.z, y: round2(eu.y) })); } catch {}
+      // v53 — quem CHEGA recebe o mundo editado: o lote das edições dentro do
+      // raio de interesse do spawn (a génese do cliente aplica mesmo para
+      // chunks que ainda não existem — mundo.edits).
+      sincEdits(eu);
       log("ENTROU", id, eu.nome, "(", jogadores.size, "/", MAX_JOGADORES, ")");
       return;
     }
@@ -187,7 +247,7 @@ wss.on("connection", (ws, req) => {
       eu.orcVoo = proximoOrcamentoVoo(eu.orcVoo, dt);
       const d = dist2(eu.x, eu.z, x, z);
       eu.ultimoEnvio = agora;
-      if (d > eu.orcamento) { recusar(eu, "alcance"); return; }
+      if (d > eu.orcamento) { recusar(eu, "alcance", m); return; }
       // v47 — N2: re-simulação do TERRENO (o que o Veloren faz no phys/):
       // a superfície sob os pés vem de alturaCidade — A MESMA função e
       // semente do cliente. Subida maior do que um salto com o orçamento
@@ -198,7 +258,7 @@ wss.on("connection", (ws, req) => {
       const hn = alturaEm(x, z);
       const subida = hn - hs;
       const sobreAgua = hs < NIVEL_MAR || hn < NIVEL_MAR;
-      if (!sobreAgua && subida > 0 && subida > eu.orcSubida) { recusar(eu, "parede"); return; }
+      if (!sobreAgua && subida > 0 && subida > eu.orcSubida) { recusar(eu, "parede", m); return; }
       if (!temY) {
         // protocolo v37 (sem y): só as regras do terreno — comportamento v47 EXACTO.
         // v52 — o y autoritativo é derivado DO CAMPO (nunca do cliente): quem
@@ -209,6 +269,7 @@ wss.on("connection", (ws, req) => {
         eu.y = alturaEm(x, z) + 1.001;
         eu.orcamento -= d;
         if (!sobreAgua && subida > 0) eu.orcSubida -= subida;
+        cruzaRegiao(eu, x, z); // v53 — lote de sincronização (célula nova / SINC_A_CADA)
         return;
       }
       // ===== v52 — N4: protocolo novo (com y) =====
@@ -218,7 +279,7 @@ wss.on("connection", (ws, req) => {
       const dy = m.y - eu.y;
       if (dy > 0) {
         const orcVertical = voando ? eu.orcVoo : eu.orcSubida;
-        if (dy > orcVertical) { recusar(eu, "parede"); return; }
+        if (dy > orcVertical) { recusar(eu, "parede", m); return; }
         if (voando) eu.orcVoo -= dy; else eu.orcSubida -= dy;
       }
       // 2. o CAMINHO DO CORPO: a caixa 0,6×0,6×1,8 do motor (colideEm)
@@ -228,11 +289,12 @@ wss.on("connection", (ws, req) => {
       //    também bloqueia. O voo criativo NÃO está isento: a caixa segue o
       //    y reportado (voar POR CIMA da parede é livre; voar ATRAVÉS dela
       //    é recusado, como no cliente).
-      if (!caminhoLivre(solidoEm, eu.x, eu.y, eu.z, x, m.y, z)) { recusar(eu, "parede"); return; }
+      if (!caminhoLivre(solidoEm, eu.x, eu.y, eu.z, x, m.y, z)) { recusar(eu, "parede", m); return; }
       // aceites: a posição autoritativa ganha o eixo vertical
       eu.x = x; eu.y = m.y; eu.z = z; eu.ry = ry; eu.voando = voando;
       eu.orcamento -= d;
       if (!sobreAgua && subida > 0) eu.orcSubida -= subida;
+      cruzaRegiao(eu, x, z); // v53 — lote de sincronização (célula nova / SINC_A_CADA)
     } else if (m.t === "edit") {
       // v52 — N4: a VERDADE da colisão segue as edições legítimas. A cidade é
       // criativo: quebrar/colocar faz parte do jogo. O cliente reporta cada
@@ -241,9 +303,9 @@ wss.on("connection", (ws, req) => {
       // Limites honestos: rate EDIT_RATE_MS nas duas pontas + cap do overlay.
       const { x, y, z, id } = m;
       const agora = Date.now();
-      const editValida = [x, y, z, id].every((v) => Number.isInteger(v))
-        && y >= 0 && y < ALTURA && Math.abs(x) < 100_000 && Math.abs(z) < 100_000
-        && (id === 0 || (ehBloco(id) && BLOCOS[id] !== undefined));
+      // v53 — a MESMA regra das três pontas (validaEdit em constants.ts —
+      // o cliente sanitiza também o que lhe chega; probe prova no Node).
+      const editValida = validaEdit(x, y, z, id);
       if (!editValida) {
         eu.strikes++;
         if (eu.strikes >= STRIKES_MAX) { log("KIQUE edit malformado", eu.id); ws.terminate(); }
@@ -253,6 +315,12 @@ wss.on("connection", (ws, req) => {
       if (editsOverlay.size >= EDIT_OVERLAY_CAP) { editsRecusados++; log("OVERLAY cheio — edit recusado de", eu.id); return; }
       eu.ultimoEdit = agora;
       editsOverlay.set(`${x},${y},${z}`, id);
+      // v53 — o índice por região (a MESMA grelha da presença) alimenta os
+      // lotes de sincronização; os pendentes alimentam a difusão do tick.
+      const regEdit = regiao(x, z);
+      if (!editsIndex.has(regEdit)) editsIndex.set(regEdit, new Map());
+      editsIndex.get(regEdit).set(`${x},${y},${z}`, { x, y, z, id, por: eu.id });
+      editsPendentes.push({ x, y, z, id, por: eu.id });
       editsAceites++;
     } else if (m.t === "fala") {
       // v37 — chat da praça: sanitização com core.limpaFala + rate limit honesto
@@ -278,6 +346,7 @@ wss.on("connection", (ws, req) => {
         uptimeS: Math.round(process.uptime()),
         correcoes: totalCorrecoes, entradas: totalEntradas,
         editsAceites, editsRecusados, chunks: chunksCache.size, overlay: editsOverlay.size,
+        editsDifundidos, editsSincronizados,
       })); } catch {}
     } else {
       eu.strikes++;
@@ -328,14 +397,29 @@ setInterval(() => {
     }
     if (pacote.length) try { receptor.ws.send(JSON.stringify({ t: "estado", jogadores: pacote })); } catch {}
   }
+  // v53 — DIFUSÃO das edições aceites neste tick (10 Hz): dentro do raio de
+  // interesse, SEM devolver ao autor (ele já tem a edição — zero eco). A
+  // lista de cada receptor é filtrada POR ELE (a gestão de interesse é
+  // individual, como a dos snapshots de presença).
+  if (editsPendentes.length) {
+    for (const receptor of todos) {
+      if (receptor.ws.readyState !== 1) continue;
+      const lista = editsPendentes.filter((e) => e.por !== receptor.id && dentro(receptor.x, receptor.z, e.x, e.z));
+      if (lista.length) {
+        editsDifundidos += lista.length;
+        try { receptor.ws.send(JSON.stringify({ t: "edicoes", lista })); } catch {}
+      }
+    }
+    editsPendentes.length = 0;
+  }
   if (Date.now() - ultimoLog > 60_000) {
     ultimoLog = Date.now();
     log("STATS tick", tickNo, "jogadores", jogadores.size, "chunks", chunksCache.size, "edits", editsOverlay.size);
   }
 }, Math.round(DT_TICK * 1000));
 
-log("CIDADE-SERVIDOR v52 no ar — porta", process.env.PORT || 8765,
+log("CIDADE-SERVIDOR v53 no ar — porta", process.env.PORT || 8765,
   "| TPS", TPS, "| snapshot", SNAPSHOT_HZ, "Hz | raio", RAIO_INTERESSE,
-  "| cap", MAX_JOGADORES, "| core isomórfico + fala + reconciliação + TERRENO (v47) + VOXELS COMPLETOS (v52: carimbos + edições + caixa do corpo, semente", SEED_CIDADE, ")");
+  "| cap", MAX_JOGADORES, "| core isomórfico + TERRENO (v47) + VOXELS COMPLETOS (v52) + PARTILHA VISUAL DAS EDIÇÕES (v53: difusão + lotes de sincronização, semente", SEED_CIDADE, ")");
 
 process.on("SIGINT", () => { log("A terminar honestamente…"); clearInterval(heartbeat); wss.close(() => process.exit(0)); });

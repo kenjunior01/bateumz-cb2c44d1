@@ -107,6 +107,7 @@ import LiveControlPanel from "@/components/livegames/LiveControlPanel";
 import LiveGameSettings, { DEFAULT_CONFIG, type LiveGameConfig, type CompanyBranding, DEFAULT_BRANDING } from "@/components/livegames/LiveGameSettings";
 import { DEFAULT_WHEEL_PRIZES, type WheelPrize } from "@/components/livegames/PrizeWheel";
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
+import { jogoValido } from "@/lib/jogosLive";
 import { ParticleBackground } from "@/components/effects";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -197,6 +198,10 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
 
 const genCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
+// v60: os IDS reais do catálogo — toda a fonte EXTERNA (URL, localStorage,
+// bus) passa por jogoValido() contra esta lista antes de entrar no estado
+const IDS_GAMES: GameId[] = GAME_DEFS.map((g) => g.id);
+
 const LiveHub = () => {
   const { toast: uiToast } = useToast();
   const { t } = useLanguage();
@@ -211,7 +216,9 @@ const LiveHub = () => {
       : t("livehub.game." + g.id + ".desc"),
   })), [t]);
   const [searchParams] = useSearchParams();
-  const gameFromUrl = searchParams.get("game") as GameId | null;
+  // v60: o ?game= do URL é DADO EXTERNO — validado contra o catálogo; antes
+  // era `searchParams.get("game") as GameId` (o compilador não podia verificar)
+  const gameFromUrl = jogoValido(searchParams.get("game"), IDS_GAMES);
 
   /* ⭐ REA Twitch: descoberta de consumo — lives de criadores/empresas ao vivo AGORA */
   const [livesAgora, setLivesAgora] = useState<{ id: string; title: string; slug: string; display_name?: string; company_name?: string }[]>([]);
@@ -235,11 +242,13 @@ const LiveHub = () => {
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [templateName, setTemplateName] = useState<string | null>(null);
   const [buscaJogos, setBuscaJogos] = useState("");
-  const [active, setActive] = useState<GameId>(() => {
+  const [active, setActive] = useState<GameId | null>(() => {
     try {
       const fromUrl = gameFromUrl;
-      if (fromUrl && GAMES.some(g => g.id === fromUrl)) return fromUrl;
-      return (localStorage.getItem("liveActiveGame") as GameId) || "wheel";
+      if (fromUrl) return fromUrl;
+      // v60: o valor guardado é DADO EXTERNO — validado; um valor podre já não
+      // deixa o hub com o painel vazio (caía no `as GameId` sem verificação)
+      return jogoValido(localStorage.getItem("liveActiveGame"), IDS_GAMES) ?? "wheel";
     } catch { return "wheel"; }
   });
   const [config, setConfig] = useState<LiveGameConfig>(() => {
@@ -384,7 +393,9 @@ const LiveHub = () => {
   useEffect(() => {
     try { localStorage.setItem("liveLeaderboard", JSON.stringify(leaderboard)); } catch {}
     publish({ type: "leaderboard", payload: leaderboard });
-    if (isLive) {
+    // v60: com o estado honesto GameId | null, sem jogo ativo não há ronda
+    // para anunciar (antes era escondido pelo tipo mentiroso)
+    if (isLive && active) {
       const myScore = leaderboard.filter((e) => e.game === active).reduce((a, b) => a + b.score, 0);
       publish({
         type: "roundState",
@@ -393,23 +404,31 @@ const LiveHub = () => {
     }
   }, [leaderboard, isLive, active]);
   useEffect(() => {
-    try { localStorage.setItem("liveActiveGame", active); } catch {}
+    try { localStorage.setItem("liveActiveGame", active ?? ""); } catch {}
+    // v60: sem jogo ativo (null) NADA é publicado — publicar null no bus
+    // seria inventar um estado que os consumidores não conhecem
+    if (!active) return;
     publish({ type: "activeGame", payload: active });
     if (isLive) publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: Date.now() } });
   }, [active, isLive]);
 
   // Listen for active-game changes from the dashboard tab
+  const hidratarBusRef = useRef(true);
   useEffect(() => {
     const unsub = subscribe((evt) => {
-      if (evt.type === "activeGame" && (evt.payload as GameId) !== active) {
-        setActive(evt.payload as GameId);
-      }
+      if (evt.type !== "activeGame") return;
+      // v60: o payload do bus é DADO EXTERNO — validado, sem cast
+      const jogo = jogoValido(evt.payload, IDS_GAMES);
+      if (jogo && jogo !== active) setActive(jogo);
     });
-    // Hydrate latest from bus — but URL param takes priority
-    const latest = readLatest<string>("activeGame");
-    if (latest && latest !== active && !gameFromUrl) setActive(latest as GameId);
+    // Hidratar o último valor do bus UMA vez no montar — o URL ?game= tem prioridade
+    if (hidratarBusRef.current) {
+      hidratarBusRef.current = false;
+      const latest = jogoValido(readLatest<string>("activeGame"), IDS_GAMES);
+      if (latest && latest !== active && !gameFromUrl) setActive(latest);
+    }
     return unsub;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, gameFromUrl]);
 
   // Sync active game when URL ?game= param changes (e.g. from AllGames page)
   useEffect(() => {
@@ -438,7 +457,8 @@ const LiveHub = () => {
     ]);
     // v20 PRO KIT: TODOS os jogos alimentam missões/XP/créditos universalmente
     // (MMORPG tem progressão RPG própria via platformSync)
-    if (active !== "mmorpg") reportUniversalScore(active, activeMeta?.label ?? game, score);
+    // v60: com o estado honesto GameId | null, sem jogo ativo não há score
+    if (active && active !== "mmorpg") reportUniversalScore(active, activeMeta?.label ?? game, score);
   }, [active, activeMeta]);
 
   const broadcastWinner = (name: string, meta?: string) => {
@@ -464,7 +484,9 @@ const LiveHub = () => {
     } catch {}
     publish({ type: "liveCode", payload: code });
     publish({ type: "liveStarted", payload: { code, at: now } });
-    publish({ type: "roundState", payload: { game: active, phase: "running", timeLeft: 0, at: now } });
+    // v60: null = nenhum jogo ativo (estado real desde a saída do mundo) —
+    // o bus conhece string; «» é o representante honesto de «nenhum»
+    publish({ type: "roundState", payload: { game: active ?? "", phase: "running", timeLeft: 0, at: now } });
     uiToast({ title: "Live iniciada", description: `Código gerado: ${code}` });
   };
 
@@ -496,12 +518,12 @@ const LiveHub = () => {
       startedAt: startedAt || endedAt,
       endedAt,
       durationSec: Math.max(1, Math.floor((endedAt - (startedAt || endedAt)) / 1000)),
-      activeGame: active,
+      activeGame: active ?? undefined,
       winners: winnersRef.current,
       leaderboard,
     });
     publish({ type: "liveEnded", payload: { code: liveCode, at: endedAt } });
-    publish({ type: "roundState", payload: { game: active, phase: "ended", timeLeft: 0, at: endedAt } });
+    publish({ type: "roundState", payload: { game: active ?? "", phase: "ended", timeLeft: 0, at: endedAt } });
     publish({ type: "liveCode", payload: "" });
     setIsLive(false);
     setLiveCode("");
@@ -640,8 +662,12 @@ const LiveHub = () => {
             onSearchChange={setBuscaJogos}
             searchPlaceholder={t("livehub.search")}
             categories={GAMES.filter((g) => !buscaJogos.trim() || g.label.toLowerCase().includes(buscaJogos.trim().toLowerCase())).map((g) => ({ id: g.id, label: g.label, icon: hasArt(g.id) ? <GameArtChip id={g.id} size={18} /> : g.emoji }))}
-            activeCategory={active}
-            onCategoryChange={(id) => setActive(id as GameId)}
+            activeCategory={active ?? ""}
+            onCategoryChange={(id) => {
+              // v60: o id vem de componente externo — validado, sem cast
+              const jogo = jogoValido(id, IDS_GAMES);
+              if (jogo) setActive(jogo);
+            }}
           />
         )}
 
@@ -698,7 +724,7 @@ const LiveHub = () => {
           <motion.button
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-            onClick={() => setActive("mmorpg" as GameId)}
+            onClick={() => setActive("mmorpg")}
             data-testid="livehub-destaque-bateu-world"
             className="relative w-full overflow-hidden rounded-2xl mb-4 mt-3 text-left"
             style={{ background: "linear-gradient(120deg, #4c0519 0%, #7c2d12 45%, #713f12 100%)", border: "1px solid rgba(251,113,133,0.5)", boxShadow: "0 0 36px rgba(244,63,94,0.35)" }}
@@ -1352,7 +1378,7 @@ const LiveHub = () => {
                 <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
                   <GameErrorBoundary gameName="BATEU RPG: Lendas">
-                    <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null as any); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+                    <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "aetheria" && createPortal(

@@ -130,7 +130,9 @@ export class Motor {
   private avisoNoiteDia = 0;
 
   // cena
-  renderer!: THREE.WebGLRenderer; cena = new THREE.Scene();
+  // v60: tipo HONESTO — o renderer não existe antes do iniciar() nem depois
+  // do destruir(); os usos todos guardam (o tipo mentia com definite assignment)
+  renderer: THREE.WebGLRenderer | null = null; cena = new THREE.Scene();
   camara = new THREE.PerspectiveCamera(75, 1, 0.1, 400);
   sol!: THREE.DirectionalLight; ambiente!: THREE.HemisphereLight;
   realce!: THREE.LineSegments; avatar!: AvatarLego;
@@ -1571,6 +1573,9 @@ export class Motor {
 
   // ── Render ──────────────────────────────────────────────────
   render(dtSegundos: number) {
+    // v60: sem renderer (antes do iniciar / depois do destruir) não há o que
+    // desenhar — saída honesta em vez de crash de referência nula
+    if (!this.renderer) return;
     // altura do olho (agachar baixa a câmara com suavidade)
     const alvoOlho = this.entrada.agachado && !this.primeiraPessoa ? 1.32 : 1.62;
     this.alturaOlhoAtual += (alvoOlho - this.alturaOlhoAtual) * Math.min(1, dtSegundos * 10);
@@ -1814,5 +1819,30 @@ export class Motor {
     this.renderer.setSize(w, h, false);
     this.camara.aspect = w / Math.max(1, h);
     this.camara.updateProjectionMatrix();
+  }
+
+  // ── v60: libertação REAL de recursos (unmount das páginas 3D) ──
+  // Sem isto, cada sair/reentrar no mundo deixava para trás um CONTEXTO WebGL
+  // vivo (o navegador acumula até os matar a todos — «Too many active WebGL
+  // contexts», o mais velho perde-se). Aqui: workers param, geometrias e
+  // materiais da cena são libertados, o renderer é disposto e o contexto
+  // PERDIDO de forma explícita (forceContextLoss). Seguro chamar 2× ou antes
+  // do iniciar() — no-op honesto, nunca lança.
+  destruir() {
+    try { this.mundo?.desativarWorker(); } catch { /* worker já inativo */ }
+    try { this.mundo?.desativarMalhador(); } catch { /* malhador já inativo */ }
+    if (!this.renderer) return;
+    try {
+      this.cena.traverse((obj) => {
+        const comGeometria = obj as THREE.Mesh;
+        if (comGeometria.geometry) comGeometria.geometry.dispose();
+        const mat = (comGeometria as unknown as { material?: THREE.Material | THREE.Material[] }).material;
+        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+        else if (mat) mat.dispose();
+      });
+    } catch { /* cena já libertada */ }
+    try { this.renderer.dispose(); } catch { /* já perdido */ }
+    try { this.renderer.forceContextLoss(); } catch { /* já perdido */ }
+    this.renderer = null;
   }
 }

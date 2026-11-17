@@ -5,6 +5,12 @@ import {
 } from "lucide-react";
 import "./AetheriaGame.css";
 
+// ── v60: ganchos E2E com TIPO HONESTO (contrato da suíte/probe) ──
+type GanchosAetheriaE2E = { teclas: () => Record<string, boolean>; voando: () => boolean };
+declare global {
+  interface Window { __aetheria?: GanchosAetheriaE2E }
+}
+
 interface Props {
   onScore?: (name: string, score: number) => void;
   onExit?: () => void;
@@ -125,7 +131,10 @@ function buildWorld(canvas: HTMLCanvasElement, color: string) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // v60 FURO REAL (consola): «THREE.WebGLShadowMap: PCFSoftShadowMap has been
+  // removed» — a constante já não existe no three atual e caía no fallback
+  // silencioso a cada montagem; o atual é PCFShadowMap
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -304,10 +313,30 @@ export default function AetheriaGame({ onScore, onExit }: Props) {
     }
   }, [classId, totalXp, coins, kills, questAccepted, questComplete]);
 
+  // v60: alternância de voo DETERMINÍSTICA — antes o updater de estado tinha
+  // efeito secundário (flyingRef mutado DENTRO de setFlying), o padrão que o
+  // StrictMode desencoraja; agora o ref manda e o estado segue o ref.
+  // DECLARADO ANTES do efeito do mundo: o array de deps avalia durante o
+  // render — referir alternarVoo abaixo da definição era TDZ real
+  // (probe v60 apanhou: «Cannot access 'alternarVoo' before initialization»).
+  const alternarVoo = useCallback(() => {
+    const proximo = !flyingRef.current;
+    flyingRef.current = proximo;
+    setFlying(proximo);
+  }, []);
+
   useEffect(() => {
     if (phase !== "world" || !canvasRef.current) return;
     const engine = buildWorld(canvasRef.current, selectedClass.color);
     engineRef.current = engine;
+    // v60: ganchos E2E honestos — teclas reais + estado de voo (o jogo não era verificável)
+    window.__aetheria = { teclas: () => ({ ...keysRef.current }), voando: () => flyingRef.current };
+    // v60 FURO REAL (repro): teclas presas no blur — Alt-Tab com W preso
+    // ANDAVA SOZINHO para sempre (keyup nunca chega)
+    const largarTudo = () => { keysRef.current = {}; };
+    const aoVisibilidade = () => { if (document.hidden) largarTudo(); };
+    window.addEventListener("blur", largarTudo);
+    document.addEventListener("visibilitychange", aoVisibilidade);
     let animationFrame = 0;
     let previousTime = performance.now();
     const direction = new THREE.Vector3();
@@ -359,10 +388,7 @@ export default function AetheriaGame({ onScore, onExit }: Props) {
       const key = event.key.toLowerCase();
       if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
       keysRef.current[key] = true;
-      if (key === "f") setFlying((active) => {
-        flyingRef.current = !active;
-        return !active;
-      });
+      if (key === "f") alternarVoo();
       if (key === "1") attackRef.current();
       if (key === "2") restoreManaRef.current();
       if (key === "i") setInventoryOpen((open) => !open);
@@ -385,10 +411,13 @@ export default function AetheriaGame({ onScore, onExit }: Props) {
       });
       engine.renderer.dispose();
       engineRef.current = null;
+      window.removeEventListener("blur", largarTudo);
+      document.removeEventListener("visibilitychange", aoVisibilidade);
+      delete window.__aetheria;
     };
-    // The scene is recreated when the player enters the world; controls read state through callbacks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, selectedClass.color]);
+    // O efeito re-corre só na entrada/saída do mundo ou troca de classe;
+    // alternarVoo é estável (useCallback []) — deps completos, sem disable.
+  }, [phase, selectedClass.color, alternarVoo]);
 
   const attack = useCallback(() => {
     if (phase !== "world" || performance.now() - lastAttackRef.current < 650) return;
@@ -429,13 +458,6 @@ export default function AetheriaGame({ onScore, onExit }: Props) {
     setHealth((value) => Math.min(100, value + 28));
     setNotice("Luz restauradora · recuperaste saúde.");
   }, [mana]);
-
-  const toggleFlight = () => {
-    setFlying((active) => {
-      flyingRef.current = !active;
-      return !active;
-    });
-  };
 
   const acceptQuest = () => {
     setQuestAccepted(true);
@@ -538,7 +560,7 @@ export default function AetheriaGame({ onScore, onExit }: Props) {
         <div className="aetheria-hotbar">
           <button type="button" onClick={attack} aria-label="Ataque básico"><span className="aetheria-key">1</span><Sword size={19} /><small>Ataque</small></button>
           <button type="button" onClick={restoreMana} aria-label="Luz restauradora"><span className="aetheria-key">2</span><Heart size={19} /><small>Restaurar</small></button>
-          <button type="button" onClick={toggleFlight} aria-label="Alternar voo" className={flying ? "is-active" : ""}><span className="aetheria-key">F</span><Wind size={19} /><small>{flying ? "Planar" : "Voar"}</small></button>
+          <button type="button" onClick={alternarVoo} aria-label="Alternar voo" className={flying ? "is-active" : ""}><span className="aetheria-key">F</span><Wind size={19} /><small>{flying ? "Planar" : "Voar"}</small></button>
           <button type="button" onClick={() => setInventoryOpen((open) => !open)} aria-label="Abrir mochila"><span className="aetheria-key">I</span><Backpack size={19} /><small>Mochila</small></button>
         </div>
 

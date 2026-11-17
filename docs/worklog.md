@@ -133,3 +133,20 @@ Stage Summary:
 - O passo anotado desde a v57/v58 está fechado: «quem está a falar com a Bateu IA» é estado PARTILHADO do servidor de presença — a praça vê a conversa acontecer no rótulo do holograma e no Praça em direto, sem nunca expor o conteúdo
 - Broadcast com pureza provada: só o CONJUNTO de ids paga difusão (heartbeat puro não), expiração honesta de 3 vias (npcfim, queda de ligação, timeout) e contadores reais nos stats
 - 4 furos reais fechados com repro (incluindo um alarme falso de corrupção com lição metodológica); 52/52 ×2 na suíte nova e todas as regressões verdes (37 + 62 + 54 + 54 + 70 + 37)
+
+## v60 — 3D WORLD SÓLIDO (item 1 do roadmap «Bateu corrections»)
+
+- PROBE com repro no vivo (scripts/probe-world-v60.mjs) antes do fix: teclas presas no blur («frente com W: 1 · APÓS blur: 1» — anda sozinho para sempre; RPG e Aetheria) · «PCFSoftShadowMap has been removed» do three a cada montagem do Aetheria · Motor sem destruir() — cada sair/reentrar acumula CONTEXTO WebGL vivo · dados externos sem validação (?game=, localStorage liveActiveGame, bus activeGame — tudo com cast as GameId) · setActive(null as any) · gastarPonto(r as any) · (window as any).__rpg sem contrato · Aetheria sem ganchos E2E (inverificável) · efeito dos créditos com eslint-disable
+- jogosLive.ts NOVO (puro): jogoValido<T>(bruto, ids) — a ÚNICA porta dos dados externos do jogo ativo; LiveHub valida URL/localStorage/bus contra IDS_GAMES; podre → null → "wheel"
+- LiveHub.tsx: active honesto (GameId | null) — setActive(null) sem cast · bus não publica «jogo ativo» com null · startLive/história usam ""/undefined para «nenhum» · onCategoryChange validado · deps completos com hidratação única por ref (eslint-disable saiu)
+- engine.ts: renderer THREE.WebGLRenderer | null (o tipo MENTIA com definite assignment) · render() com guarda · destruir() NOVO — workers off + dispose geometrias/materiais + renderer.dispose() + forceContextLoss() — seguro 2× e antes do iniciar (provado em Node por bundle esbuild)
+- BateuRPG.tsx: ganchos E2E TIPADOS (GanchosRpgE2E ~40 membros + declare global Window.__rpg) · gastarPonto(r: RamoRpg) · teclas largam no blur/visibilitychange · unmount chama motor.destruir() · deps honestos nos créditos
+- AetheriaGame.tsx: PCFSoftShadowMap → PCFShadowMap · teclas no blur/visibilitychange · alternarVoo determinístico (ref manda, estado segue — updater sem efeito secundário) · ganchos window.__aetheria tipados · deps completos sem disable
+- FURO introduzido + apanhado pela própria probe antes de commit: array de deps avalia DURANTE o render — alternarVoo referido antes da inicialização → TDZ real — fix: declarar o useCallback ANTES do efeito (lição: callback em deps tem de estar ACIMA do efeito que o usa)
+- TESTES: test-world-v60.mjs NOVO 28/28 ×2, 0 skips (A núcleo Node: jogoValido ×7 + Motor destruir/render no-ops por bundle esbuild · B E2E real: mundo entra, blur limpa frente 0, hidden limpa, mapa com terreno real 48400 amostras, pausa/retomar, sair/reentrar ×2 com ZERO warns THREE/WebGL, Aetheria teclas+voo determinístico, ZERO pageerror/console-error, shots-v60/)
+- REGRESSÃO: test-rpg-v41 157/0 · test-progressao-v38 39/0 · test-cidade 37/0 · ia-v54 37/0+1skip · ia-v55 62/0+2skips · ia-v56 54/0+1skip (full) · ia-v57 54/0 · ia-v58 76/0+0 (migração aplicada — secção C real desbloqueada) · ia-v59 52/0 · tsc 0 · build OK
+
+Stage Summary:
+- O item 1 do roadmap do utilizador está fechado SEM desativar um único check: 5 furos de execução (teclas presas ×2 jogos, shadow map deprecado, contextos WebGL acumulados, dados externos sem validação) e 3 silenciamentos de tipo (null as any, r as any, window as any) corrigidos com repro provado pela probe
+- A migração v58 aplicada pelo utilizador desbloqueou a secção C real da suíte v58 (70→76 verdes, 0 skips)
+- Próximo item do roadmap: «Make 3D World playable without registration; keep account-only rewards protected»

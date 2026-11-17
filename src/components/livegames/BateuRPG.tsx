@@ -17,7 +17,7 @@ import { SistemaRPG, type CapturaRpg } from "@/game/rpg/sistemaRpg";
 import {
   ORDEM_DIFICULDADE, DIFICULDADES_RPG, type DificuldadeRpg,
   RAMOS_RPG, NOMES_RAMO, EFEITO_RAMO, NIVEL_MAX_RAMO_RPG,
-  NIVEL_MAX, REGIOES, POIS,
+  NIVEL_MAX, REGIOES, POIS, type RamoRpg,
 } from "@/game/rpg/core";
 import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem, avaliarReceitas, criarReceita, pertoDe } from "@/game/blocos/inventario";
@@ -114,6 +114,63 @@ const COR_AVISO: Record<string, string> = {
 };
 
 const METEO_ICONE = { limpo: CloudSun, chuva: CloudRain, tempestade: CloudLightning } as const;
+
+// ── v60: ganchos E2E com TIPO HONESTO (antes: (window as any).__rpg) ──
+// O harness de testes/probes consome window.__rpg — a forma é contrato
+// declarado aqui, verificado pelo compilador em cada membro.
+type GanchosRpgE2E = {
+  motor: Motor;
+  sistema: SistemaRPG;
+  captura: () => ReturnType<Motor["captura"]>;
+  capturaRpg: () => CapturaRpg;
+  perfil: () => SistemaRPG["perfil"];
+  pump: (n: number, dt?: number) => void;
+  iniciar: (carregar?: boolean) => void;
+  novoJogo: (dif: DificuldadeRpg) => ReturnType<SistemaRPG["novoJogo"]>;
+  definirDificuldade: (d: DificuldadeRpg) => ReturnType<SistemaRPG["definirDificuldade"]>;
+  gastarPonto: (r: RamoRpg) => ReturnType<SistemaRPG["gastarPonto"]>;
+  temSave: () => ReturnType<SistemaRPG["temSave"]>;
+  guardar: () => ReturnType<SistemaRPG["guardar"]>;
+  apagarSave: () => ReturnType<SistemaRPG["apagarSave"]>;
+  teleportar: (x: number, y: number, z: number) => void;
+  olhar: (yaw: number, pitch?: number) => void;
+  atacar: () => void;
+  atacarDirecto: () => ReturnType<Motor["atacar"]>;
+  comer: () => void;
+  pular: (v: boolean) => void;
+  mover: (frente: number, lado?: number, seg?: number) => void;
+  spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha" | "aranha", dx?: number, dz?: number) => ReturnType<Motor["gestor"]["spawnar"]>;
+  definirVida: (v: number) => void;
+  definirHora: (f: number) => void;
+  definirMeteo: (mt: "limpo" | "chuva" | "tempestade", seg?: number) => ReturnType<Motor["definirMeteo"]>;
+  meteo: () => Motor["meteo"];
+  selecionar: (i: number) => void;
+  dar: (id: number, qtd?: number) => ReturnType<Motor["inv"]["adicionar"]>;
+  limparInv: () => void;
+  abrirTesouro: (x: number, y: number, z: number) => ReturnType<SistemaRPG["abrirTesouro"]>;
+  forja: () => { mesa: boolean; fornalha: boolean; receitas: number };
+  itensChao: () => ReturnType<SistemaRPG["listaItensChao"]>;
+  largar: () => ReturnType<SistemaRPG["largarSelecionado"]>;
+  pausar: (v: boolean) => void;
+  ciclarCamara: () => CamaraModo;
+  climaEstado: () => {
+    ativa: boolean;
+    cidade: string | null;
+    clima: { temperatura: ClimaAtual["temperatura"]; codigoWmo: ClimaAtual["codigoWmo"]; meteoJogo: ReturnType<typeof wmoParaMeteo> } | null;
+    erro: string;
+  };
+  climaAtivar: (nome: string) => Promise<CidadeEncontrada>;
+  climaDesativar: () => void;
+  mapaBase: () => { amostras: number; agua: number; rocha: number; floresta: number; ms: number };
+  chunks: () => ReturnType<Motor["mundo"]["infoGeracao"]>;
+  compararChunk: (cx: number, cz: number) => ReturnType<Motor["mundo"]["compararComSync"]>;
+  malha: () => ReturnType<Motor["mundo"]["infoMalha"]>;
+  compararMalha: (cx: number, cz: number) => ReturnType<Motor["mundo"]["compararMalhaComSync"]>;
+  bloco: (x: number, y: number, z: number) => ReturnType<Motor["mundo"]["getBloco"]>;
+};
+declare global {
+  interface Window { __rpg?: GanchosRpgE2E }
+}
 
 function relogio(horaFrac: number): string {
   const h = Math.floor(horaFrac * 24);
@@ -228,13 +285,15 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   }, []);
 
   // créditos → leaderboard da plataforma (quando crescem)
+  // v60: deps HONESTOS (antes: [rpg?.creditos] + eslint-disable) — a guarda
+  // creditosEnviados evita repetição; o corpo é uma comparação trivial
   useEffect(() => {
     if (!rpg || !onScore) return;
     if (rpg.creditos > creditosEnviados) {
       setCreditosEnviados(rpg.creditos);
       onScore(rpg.creditos);
     }
-  }, [rpg?.creditos]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rpg, onScore, creditosEnviados]);
 
   // ── Redimensionar ──
   useEffect(() => {
@@ -246,7 +305,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
 
   // ── Ganchos E2E determinísticos ──
   useEffect(() => {
-    (window as any).__rpg = {
+    // v60: objeto TIPADO (GanchosRpgE2E) — o compilador verifica membro a
+    // membro contra o Motor/SistemaRPG reais; antes era (window as any).__rpg
+    const ganchos: GanchosRpgE2E = {
       motor: motorRef.current,
       sistema: sistemaRef.current,
       captura: () => motorRef.current.captura(),
@@ -264,7 +325,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       },
       novoJogo: (dif: DificuldadeRpg) => sistemaRef.current.novoJogo(dif),
       definirDificuldade: (d: DificuldadeRpg) => sistemaRef.current.definirDificuldade(d),
-      gastarPonto: (r: string) => sistemaRef.current.gastarPonto(r as any),
+      gastarPonto: (r: RamoRpg) => sistemaRef.current.gastarPonto(r),
       temSave: () => sistemaRef.current.temSave(),
       guardar: () => sistemaRef.current.guardar(),
       apagarSave: () => sistemaRef.current.apagarSave(),
@@ -340,10 +401,13 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       compararMalha: (cx: number, cz: number) => motorRef.current.mundo.compararMalhaComSync(cx, cz),
       bloco: (x: number, y: number, z: number) => motorRef.current.mundo.getBloco(x, y, z),
     };
+    window.__rpg = ganchos;
     return () => {
-      try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
-      try { motorRef.current.mundo.desativarMalhador(); } catch { /* ignore */ }
-      try { delete (window as any).__rpg; } catch { /* ignore */ }
+      // v60: o Motor liberta TUDO no unmount (workers + geometrias + materiais
+      // + CONTEXTO WebGL perdido explicitamente) — reentrar no mundo deixa de
+      // acumular contextos vivos no navegador
+      try { motorRef.current.destruir(); } catch { /* ignore */ }
+      try { delete window.__rpg; } catch { /* ignore */ }
     };
   }, []);
 
@@ -384,6 +448,16 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       m.entrada.correr = !!teclas["shift"];
       m.entrada.zoom = !!teclas["z"];
     };
+    // v60 FURO REAL (repro na probe): segurar W e perder o foco da janela
+    // (Alt-Tab, troca de aba, devtools) nunca manda keyup — o jogador ANDAVA
+    // SOZINHO para sempre. blur/visibilidade escondida largam TODAS as teclas.
+    const largarTudo = () => {
+      for (const k of Object.keys(teclas)) teclas[k] = false;
+      sincronizar();
+    };
+    const aoVisibilidade = () => { if (document.hidden) largarTudo(); };
+    window.addEventListener("blur", largarTudo);
+    document.addEventListener("visibilitychange", aoVisibilidade);
     const baixo = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       teclas[k] = true;
@@ -433,6 +507,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     window.addEventListener("mouseup", cimaRato);
     window.addEventListener("wheel", roda, { passive: true });
     window.addEventListener("contextmenu", menuC);
+    window.addEventListener("blur", largarTudo);
+    document.addEventListener("visibilitychange", aoVisibilidade);
     return () => {
       window.removeEventListener("keydown", baixo);
       window.removeEventListener("keyup", cima);
@@ -441,6 +517,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       window.removeEventListener("mouseup", cimaRato);
       window.removeEventListener("wheel", roda);
       window.removeEventListener("contextmenu", menuC);
+      window.removeEventListener("blur", largarTudo);
+      document.removeEventListener("visibilitychange", aoVisibilidade);
     };
   }, []);
 

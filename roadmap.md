@@ -1,6 +1,6 @@
 # Bateu corrections
 
-- [ ] Fix underlying 3D World execution/type errors without disabling checks.
+- [x] Fix underlying 3D World execution/type errors without disabling checks. (v60 — docs/REA-world-fixes-v60.md: teclas presas no blur, PCFSoftShadowMap removido do three, Motor.destruir() para o contexto WebGL, dados externos validados via jogosLive.ts, ganchos E2E tipados, ZERO casts/eslint-disable novos; test-world-v60.mjs 28/28 ×2, regressão 157+39+37+37+62+54+54+76+52, tsc 0, build OK)
 - [ ] Make 3D World playable without registration; keep account-only rewards protected.
 - [ ] Translate 3D World visible text into English.
 - [ ] Fix fullscreen entry, exit, resizing and mobile use.

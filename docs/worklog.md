@@ -150,3 +150,18 @@ Stage Summary:
 - O item 1 do roadmap do utilizador está fechado SEM desativar um único check: 5 furos de execução (teclas presas ×2 jogos, shadow map deprecado, contextos WebGL acumulados, dados externos sem validação) e 3 silenciamentos de tipo (null as any, r as any, window as any) corrigidos com repro provado pela probe
 - A migração v58 aplicada pelo utilizador desbloqueou a secção C real da suíte v58 (70→76 verdes, 0 skips)
 - Próximo item do roadmap: «Make 3D World playable without registration; keep account-only rewards protected»
+
+## v61 — MUNDO 3D SEM REGISTO (item 2 do roadmap «Bateu corrections»)
+
+- Auditoria descobriu que o mundo JÁ é jogável sem registo por desenho (zero gates de login no caminho; save do RPG do aparelho v41; créditos/XP/leaderboard/kit todos localStorage) — o faltante era a PROVA e o UI honesto: o banner do hub MENTIA («para guardar as tuas pontuações»)
+- Núcleo isomórfico mundoConvidado.ts NOVO (puro): modoDoUtilizador (podre→convidado) · deveReportarUniversal (kit extraído do LiveHub; mmorpg fora) · TABELAS_CONTA_APENAS (spin_wheel_games/ia_historico/engagement_points/rpg_characters) · eEscritaRest/eContaApenas · FUNCOES_CONTA_APENAS (as 10 edge functions com JWT de 26 auditadas; paypal-config/track-visit PÚBLICAS) · funcaoContaApenas por caminho
+- LiveHub: banner honesto emerald (convidado é UM MODO) com i18n +4 chaves ×6 (add-mundo-i18n-v61.py) + data-testid; recordScore usa o núcleo; ZERO mudanças no Motor/jogos/auth/edge functions
+- FUROS fechados: (1) contrato de edge functions era impreciso (paypal-config pública disparava para convidados — auditoria às 26 e perímetro preciso); (2) flake PRÉ-EXISTENTE no B5 do test-world-v60 provado por stash-bisect (clique do pausa perde-se após retomar+andar no raster ~2 fps — probe probe-pausa-v60.mjs; fix honesto no harness, asserção estrita); (3) tsc do root era NO-OP (files:[]) — o gate REAL (tsconfig.app.json) apanhou genérico inseguro do v60 no jogoValido (fix com cast provado pela pertença); loop corre agora tsc -b E tsc app; (4) vite setsid morre ao fim do Bash call — suíte E2E no MESMO shell
+- TESTES: test-mundo-convidado-v61.mjs NOVO 65/65 ×2, 0 skips (A núcleo ×40 · B E2E ×25 com LEDGER classificado pelo NÚCLEO: banner honesto, RPG save no aparelho + leaderboard local + kit sem mmorpg, CONTINUAR após reload, Aetheria limpa, /wallet e /my-points → /login, perímetro ZERO em todo o passeio, ZERO pageerror) · shots-v61/
+- REGRESSÃO: rpg 157/0 · progressao 39/0 · cidade 37/0 · world-v60 28/0 · ia v54 37/0+1s · v55 62/0+2s · v56 54/0+1s · v57 54/0 · v58 76/0 · v59 52/0 · tsc -b 0 · tsc app 0 · build OK
+
+Stage Summary:
+- O item 2 do roadmap está fechado: o mundo é jogável sem registo PROVADO ponta a ponta (65/65 ×2) e as recompensas de conta ficam protegidas (ZERO escritas rest, ZERO tabelas conta-apenas, ZERO funções JWT no ledger do convidado inteiro; wallet/pontos continuam atrás do login)
+- A mentira do banner foi substituída por honestidade ×6 idiomas e o contrato convidado/conta vive num núcleo puro que o hub consome e as suítes provam
+- O gate de tipos do loop tornou-se REAL (tsc -b + tsconfig.app.json) e apanhou/corrigiu um genérico inseguro do v60
+- Próximo item do roadmap: «Translate 3D World visible text into English»

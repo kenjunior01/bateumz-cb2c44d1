@@ -9,6 +9,10 @@ type Dict = Record<string, string>;
 // Per-key fallback (see `t()` resolver below). Add localized keys as they are produced.
 const translations: Partial<Record<Lang, Dict>> = {
   en: {
+    "live.convidado.titulo": "Playing as a Guest — your progress is yours, on this device",
+    "live.convidado.corpo": "The 3D World (BATEU RPG and Aetheria) saves progress on this device, no sign-up needed. An account is only required for platform rewards: points, wallet and raffles.",
+    "live.convidado.criar": "Create account",
+    "live.convidado.entrar": "Sign in",
     "cidade.mpEvNpc": "is talking with the Bateu IA",
     "cidade.mpEvNpcFim": "stopped chatting with the Bateu IA",
     "ia.sinc.on": "History on the server",
@@ -1295,6 +1299,10 @@ const translations: Partial<Record<Lang, Dict>> = {
 
   },
   pt: {
+    "live.convidado.titulo": "A jogar como Convidado — o progresso é teu, neste aparelho",
+    "live.convidado.corpo": "O Mundo 3D (BATEU RPG e Aetheria) guarda o progresso neste aparelho, sem registo. A conta só é precisa para as recompensas da plataforma: pontos, carteira e sorteios.",
+    "live.convidado.criar": "Criar conta",
+    "live.convidado.entrar": "Entrar",
     "cidade.mpEvNpc": "está a falar com a Bateu IA",
     "cidade.mpEvNpcFim": "parou a conversa com a Bateu IA",
     "ia.sinc.on": "Histórico no servidor",
@@ -2521,6 +2529,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participar Agora",
   },
   "pt-BR": {
+    "live.convidado.titulo": "Jogando como Convidado — o progresso é seu, neste aparelho",
+    "live.convidado.corpo": "O Mundo 3D (BATEU RPG e Aetheria) salva o progresso neste aparelho, sem cadastro. A conta só é necessária para as recompensas da plataforma: pontos, carteira e sorteios.",
+    "live.convidado.criar": "Criar conta",
+    "live.convidado.entrar": "Entrar",
     "cidade.mpEvNpc": "está conversando com a Bateu IA",
     "cidade.mpEvNpcFim": "parou a conversa com a Bateu IA",
     "ia.sinc.on": "Histórico no servidor",
@@ -3673,6 +3685,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "tournament.formRules": "Regras",
   },
   es: {
+    "live.convidado.titulo": "Juegas como Invitado — el progreso es tuyo, en este aparato",
+    "live.convidado.corpo": "El Mundo 3D (BATEU RPG y Aetheria) guarda el progreso en este aparato, sin registro. La cuenta solo es necesaria para las recompensas de la plataforma: puntos, billetera y sorteos.",
+    "live.convidado.criar": "Crear cuenta",
+    "live.convidado.entrar": "Entrar",
     "cidade.mpEvNpc": "está hablando con la Bateu IA",
     "cidade.mpEvNpcFim": "dejó de hablar con la Bateu IA",
     "ia.sinc.on": "Historial en el servidor",
@@ -4599,6 +4615,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Unete Ahora",
   },
   fr: {
+    "live.convidado.titulo": "Vous jouez en tant qu'Invité — votre progression reste sur cet appareil",
+    "live.convidado.corpo": "Le Monde 3D (BATEU RPG et Aetheria) enregistre la progression sur cet appareil, sans inscription. Un compte n'est requis que pour les récompenses de la plateforme : points, portefeuille et tirages.",
+    "live.convidado.criar": "Créer un compte",
+    "live.convidado.entrar": "Se connecter",
     "cidade.mpEvNpc": "parle avec la Bateu IA",
     "cidade.mpEvNpcFim": "a arrêté la conversation avec la Bateu IA",
     "ia.sinc.on": "Historique sur le serveur",
@@ -5492,6 +5512,10 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participer",
   },
   hi: {
+    "live.convidado.titulo": "अतिथि के रूप में खेल रहे हैं — आपकी प्रगति इस डिवाइस पर है",
+    "live.convidado.corpo": "3D वर्ल्ड (BATEU RPG और Aetheria) प्रगति इस डिवाइस पर सहेजता है, पंजीकरण की ज़रूरत नहीं। खाता केवल प्लेटफ़ॉर्म पुरस्कारों के लिए चाहिए: पॉइंट, वॉलेट और लॉटरी।",
+    "live.convidado.criar": "खाता बनाएं",
+    "live.convidado.entrar": "लॉग इन करें",
     "cidade.mpEvNpc": "Bateu AI से बात कर रहा है",
     "cidade.mpEvNpcFim": "Bateu AI से बात करना बंद की",
     "ia.sinc.on": "सर्वर पर इतिहास",

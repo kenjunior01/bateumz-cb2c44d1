@@ -148,17 +148,46 @@ async function main() {
       ok("RETOMAR fecha e o mundo segue jogando", await page.evaluate(() => !document.querySelector('[data-testid="rpg-modal"]') && window.__rpg?.motor?.fase === "jogando"));
 
       console.log("— B5) sair/reentrar ×2: o unmount destrói o Motor (zero contextos acumulados)");
+      // v61 FIX de flake honesto (repro scripts/probe-pausa-v60.mjs): no raster
+      // ~2 fps do sandbox o CLIQUE do botão pausa perde-se DEPOIS de retomar +
+      // andar (o HUD existe, fase jogando, o handler nunca chega) — o MESMO
+      // padrão da lição v57 (clique forçado + fallback). A suíte volta a
+      // TENTAR até o modal abrir (poll 4×400ms, 4 tentativas) e até o hub
+      // voltar depois do sair — a ASSERÇÃO continua estrita (ciclo completo ×2).
+      const abrirPausa = async () => {
+        for (let tent = 1; tent <= 4; tent++) {
+          await clicar('[data-testid="rpg-btn-pausa"]');
+          for (let i = 0; i < 10; i++) {
+            await sleep(400);
+            if (await page.evaluate(() => !!document.querySelector('[data-testid="rpg-retomar"]'))) return true;
+          }
+        }
+        return false;
+      };
+      const sairParaHub = async () => {
+        for (let tent = 1; tent <= 3; tent++) {
+          await clicar('[data-testid="rpg-sair"]');
+          await sleep(1500);
+          if (await page.$('[data-testid="livehub-destaque-bateu-world"]')) return true;
+        }
+        return false;
+      };
+      const entrarJogando = async () => {
+        for (let tent = 1; tent <= 3; tent++) {
+          await clicar('[data-testid="rpg-jogar"]');
+          await page.waitForFunction(() => window.__rpg?.motor?.fase === "jogando", null, { timeout: 12000 }).catch(() => {});
+          if (await page.evaluate(() => window.__rpg?.motor?.fase === "jogando")) return true;
+        }
+        return false;
+      };
       let ciclosOk = 0;
       for (let ciclo = 1; ciclo <= 2; ciclo++) {
-        const abriu = await clicar('[data-testid="rpg-btn-pausa"]');
-        await sleep(600);
-        const saiu = abriu && await clicar('[data-testid="rpg-sair"]');
-        await sleep(1700);
+        const abriu = await abrirPausa();
+        const saiu = abriu && await sairParaHub();
         const banner = await page.$('[data-testid="livehub-destaque-bateu-world"]');
         const reentrou = !!banner && await clicar('[data-testid="livehub-destaque-bateu-world"]');
         await sleep(1100);
-        const jogou = await clicar('[data-testid="rpg-jogar"]');
-        await page.waitForFunction(() => window.__rpg?.motor?.fase === "jogando", null, { timeout: 20000 }).catch(() => {});
+        const jogou = reentrou && await entrarJogando();
         const fase = await page.evaluate(() => window.__rpg?.motor?.fase ?? "?");
         if (saiu && reentrou && jogou && fase === "jogando") ciclosOk++;
         else console.log(`    ciclo ${ciclo}: saiu=${saiu} reentrou=${reentrou} jogou=${jogou} fase=${fase}`);

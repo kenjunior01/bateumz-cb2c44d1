@@ -16,5 +16,8 @@
  */
 export function jogoValido<T extends string>(bruto: unknown, ids: readonly T[]): T | null {
   if (typeof bruto !== "string") return null;
-  return (ids as readonly string[]).includes(bruto) ? bruto : null;
+  // v61: o único cast da casa — includes() abaixo PROVA a pertença; sem ele o
+  // tsconfig.app.json (o gate REAL, não o no-op do root) recusa string → T.
+  const alvo = bruto as T;
+  return (ids as readonly string[]).includes(alvo) ? alvo : null;
 }

@@ -108,6 +108,8 @@ import LiveGameSettings, { DEFAULT_CONFIG, type LiveGameConfig, type CompanyBran
 import { DEFAULT_WHEEL_PRIZES, type WheelPrize } from "@/components/livegames/PrizeWheel";
 import { publish, subscribe, readLatest } from "@/lib/liveBus";
 import { jogoValido } from "@/lib/jogosLive";
+// v61: o contrato «convidado vs conta» do Mundo 3D — o MESMO módulo puro que as suítes provam
+import { modoDoUtilizador, deveReportarUniversal } from "@/lib/mundoConvidado";
 import { ParticleBackground } from "@/components/effects";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -239,6 +241,8 @@ const LiveHub = () => {
 
   const templateId = searchParams.get("template");
   const { user, role } = useAuth();
+  // v61: o modo honesto no mundo — convidado é UM MODO, não um erro (padrão v58)
+  const modoMundo = modoDoUtilizador(user);
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [templateName, setTemplateName] = useState<string | null>(null);
   const [buscaJogos, setBuscaJogos] = useState("");
@@ -456,9 +460,11 @@ const LiveHub = () => {
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
     ]);
     // v20 PRO KIT: TODOS os jogos alimentam missões/XP/créditos universalmente
-    // (MMORPG tem progressão RPG própria via platformSync)
+    // (MMORPG tem progressão RPG PRÓPRIA no aparelho — PerfilRpg)
     // v60: com o estado honesto GameId | null, sem jogo ativo não há score
-    if (active && active !== "mmorpg") reportUniversalScore(active, activeMeta?.label ?? game, score);
+    // v61: a regra vive no núcleo mundoConvidado (testável em Node) — o kit é
+    // TUDO do aparelho, nunca recompensa de conta
+    if (deveReportarUniversal(active)) reportUniversalScore(active, activeMeta?.label ?? game, score);
   }, [active, activeMeta]);
 
   const broadcastWinner = (name: string, meta?: string) => {
@@ -643,10 +649,14 @@ const LiveHub = () => {
         </div>
       </section>
 
-      {!user && (
+      {modoMundo === "convidado" && (
         <div className="container mx-auto px-3 sm:px-4 pt-3">
-          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
-            🔒 <strong>Entra na tua conta</strong> para guardar as tuas pontuações e aceder a todas as funcionalidades. <Link to="/register" className="underline font-bold">Criar conta</Link> ou <Link to="/login" className="underline font-bold">Entrar</Link>
+          {/* v61: HONESTO — o convidado é um MODO do mundo, não uma carência:
+             o progresso do Mundo 3D guarda-se NO APARELHO (IndexedDB + localStorage,
+             v41); a conta só é precisa para as recompensas da plataforma (pontos,
+             carteira, jogos do gestor), que ficam FORA do perímetro do convidado */}
+          <div data-testid="livehub-convidado" className="rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/5 px-4 py-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+            🧭 <strong>{t("live.convidado.titulo")}</strong> {t("live.convidado.corpo")} <Link to="/register" className="underline font-bold">{t("live.convidado.criar")}</Link> · <Link to="/login" className="underline font-bold">{t("live.convidado.entrar")}</Link>
           </div>
         </div>
       )}

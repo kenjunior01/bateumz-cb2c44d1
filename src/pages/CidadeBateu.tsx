@@ -36,6 +36,9 @@ import {
 } from "@/lib/openMeteo";
 import { fireConfetti } from "@/lib/celebrate";
 import { getArAtual, rotuloAqi, AQI_ATTRIBUTION, type ArAtual } from "@/lib/airQuality";
+// v57 — NPC IA NA PRAÇA: núcleo puro (posição/proximidade/persona) + painel
+import { POS_NPC_IA, NPC_IA_Y, npcIaPerto, type ContextoNpc } from "@/game/cidade/npcIa";
+import NpcIa from "@/components/cidade/NpcIa";
 import RadiosPALOP from "@/components/lives/RadiosPALOP";
 import { CidadeMP, type EstadoMP, type FalaInfo, type EventoPraca } from "@/game/cidade/multijogador"; // v36/37/47 — presença + chat + eventos reais
 import { useActivityFeed, type PlatformActivity } from "@/lib/activityBus"; // v47 — atividade REAL da plataforma na Praça
@@ -43,7 +46,7 @@ import QuizPraca from "@/components/cidade/QuizPraca";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 
-interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" }
+interface Rotulo { id: string; nome: string; cor: string; x: number; y: number; visivel: boolean; perto: boolean; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" | "npcia" }
 interface Aviso { texto: string; k: number }
 
 // v47 — ícone por tipo de atividade REAL da plataforma (activityBus)
@@ -174,7 +177,7 @@ export default function CidadeBateu() {
   const [portal, setPortal] = useState<{ nome: string; rota: string; tipo: "distrito" | "casa" | "trofeus" | "quiosque" } | null>(null);
   const [relogio, setRelogio] = useState("--:--");
   const [noite, setNoite] = useState(false);
-  const [modal, setModal] = useState<"trofeus" | "quiosque" | "diario" | null>(null);
+  const [modal, setModal] = useState<"trofeus" | "quiosque" | "diario" | "npcia" | null>(null);
   const [tabQuiosque, setTabQuiosque] = useState<"radio" | "quiz">("radio");
   // v38 — Diário: 3 separadores (Progresso · Exploração · Dificuldade)
   const [tabDiario, setTabDiario] = useState<"progresso" | "exploracao" | "dificuldade">("progresso");
@@ -188,6 +191,64 @@ export default function CidadeBateu() {
   const climaRef = useRef(climaReal);
   useEffect(() => { climaRef.current = climaReal; }, [climaReal]);
   const [creditos, setCreditos] = useState(creditosCidade());
+
+  // ── v57 — NPC IA NA PRAÇA (o passo anotado desde a v54) ──
+  // O holograma é um grupo THREE gerido pela PÁGINA (o Motor não muda —
+  // zero risco de regressão nos outros jogos): esfera + olhos + anel + luz
+  // violeta flutuando ao lado do imbondeiro, virado ao jogador.
+  const npcGrupoRef = useRef<THREE.Group | null>(null);
+  const npcAnelRef = useRef<THREE.Mesh | null>(null);
+  const npcNucleoRef = useRef<THREE.Mesh | null>(null);
+  const [npcPerto, setNpcPerto] = useState(false);
+  const npcPertoRef = useRef(false);      // para a tecla E (sem re-render)
+  const npcPainelAbertoRef = useRef(false); // para o hook E2E
+  useEffect(() => { npcPainelAbertoRef.current = modal === "npcia"; }, [modal]);
+
+  useEffect(() => {
+    if (fase !== "jogando") return;
+    const m = motorRef.current;
+    if (!npcGrupoRef.current) {
+      const g = new THREE.Group();
+      const nucleo = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 20, 14),
+        new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x7c3aed, emissiveIntensity: 0.6, roughness: 0.35, metalness: 0.15 }),
+      );
+      const olhoGeo = new THREE.SphereGeometry(0.065, 10, 8);
+      const olhoMat = new THREE.MeshStandardMaterial({ color: 0xf5f3ff, emissive: 0xe9d5ff, emissiveIntensity: 0.7 });
+      const olhoE = new THREE.Mesh(olhoGeo, olhoMat); olhoE.position.set(-0.14, 0.1, 0.33);
+      const olhoD = new THREE.Mesh(olhoGeo, olhoMat); olhoD.position.set(0.14, 0.1, 0.33);
+      const anel = new THREE.Mesh(
+        new THREE.TorusGeometry(0.62, 0.045, 10, 36),
+        new THREE.MeshStandardMaterial({ color: 0xc4b5fd, emissive: 0xa78bfa, emissiveIntensity: 0.5, roughness: 0.4 }),
+      );
+      anel.rotation.x = Math.PI / 2.35;
+      const luz = new THREE.PointLight(0xa78bfa, 0.75, 7);
+      g.add(nucleo, olhoE, olhoD, anel, luz);
+      g.position.set(POS_NPC_IA[0] + 0.5, NPC_IA_Y + 1.35, POS_NPC_IA[1] + 0.5);
+      m.cena.add(g);
+      npcGrupoRef.current = g;
+      npcAnelRef.current = anel;
+      npcNucleoRef.current = nucleo;
+    } else {
+      npcGrupoRef.current.visible = true;
+    }
+  }, [fase]);
+
+  // teardown honesto: geometrias/materiais saem da GPU quando a página sai
+  useEffect(() => () => {
+    const g = npcGrupoRef.current;
+    if (g) {
+      try { motorRef.current.cena.remove(g); } catch { /* cena ausente */ }
+      g.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mat = (mesh as unknown as { material?: THREE.Material | THREE.Material[] }).material;
+        if (Array.isArray(mat)) mat.forEach((mm) => mm.dispose());
+        else mat?.dispose();
+      });
+      npcGrupoRef.current = null;
+    }
+  }, []);
 
   // ── v38 — progressão (perfil local honesto), exploração e ambiente ──
   const [perfilV, setPerfilV] = useState(0); // força re-render quando o perfil muda
@@ -424,6 +485,14 @@ export default function CidadeBateu() {
       ambiente: () => ambienteRef.current?.estado() ?? { ativo: false, noite: false, chuva: 0 },
       escalaVel: () => motorRef.current.escalaVel,
       missoesHoje: () => missoesDeHoje(),
+      // v57 — NPC IA na Praça (ganchos E2E honestos)
+      npcIa: () => ({
+        noCena: !!npcGrupoRef.current && motorRef.current.cena.children.includes(npcGrupoRef.current),
+        dentro: !!npcIaPerto(motorRef.current.px, motorRef.current.pz),
+        dist: npcIaPerto(motorRef.current.px, motorRef.current.pz)?.dist ?? null,
+        painelAberto: npcPainelAbertoRef.current,
+      }),
+      npcAbrir: () => setModal("npcia"),
     };
     return () => {
       try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
@@ -466,6 +535,19 @@ export default function CidadeBateu() {
       m.passo(dt);
       if (!mpCaladoRef.current) mpRef.current?.passo(dt, m.px, m.pz, m.yaw, m.py, m.modo === "criativo" && m.criativoVoar); // v36 — envio 10 Hz + interpolação dos remotos · v52 — eixo vertical + voo F · v53 — silenciável pelo E2E (mpCalado)
       if (canvasRef.current) m.render(dt);
+
+      // v57 — NPC IA: flutuar + virar-se ao jogador + pulso do núcleo
+      const gNpc = npcGrupoRef.current;
+      if (gNpc) {
+        const tt = agora / 1000;
+        gNpc.position.y = NPC_IA_Y + 1.35 + Math.sin(tt * 1.6) * 0.14;
+        gNpc.rotation.y = Math.atan2(m.px - gNpc.position.x, m.pz - gNpc.position.z);
+        if (npcAnelRef.current) npcAnelRef.current.rotation.z = tt * 0.9;
+        if (npcNucleoRef.current) {
+          const matNucleo = npcNucleoRef.current.material as THREE.MeshStandardMaterial;
+          matNucleo.emissiveIntensity = 0.5 + Math.sin(tt * 2.2) * 0.18;
+        }
+      }
 
       // rótulos 3D → ecrã (limitado a ~8 Hz)
       if (agora - ultRotT.current > 120) {
@@ -512,6 +594,20 @@ export default function CidadeBateu() {
             visivel: v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15,
             perto: prox?.tipo === "quiosque",
           });
+          // v57 — rótulo do NPC IA + proximidade honesta (estado só muda quando muda)
+          const npcCercaInfo = npcIaPerto(m.px, m.pz);
+          v.set(POS_NPC_IA[0] + 0.5, NPC_IA_Y + 2.2, POS_NPC_IA[1] + 0.5).project(m.camara);
+          novos.push({
+            id: "__npcia__", nome: t("cidade.npc.nome"), cor: "#a78bfa", rota: "", tipo: "npcia",
+            x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h,
+            visivel: v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15,
+            perto: !!npcCercaInfo,
+          });
+          const npcPertoAgora = !!npcCercaInfo;
+          if (npcPertoRef.current !== npcPertoAgora) {
+            npcPertoRef.current = npcPertoAgora;
+            setNpcPerto(npcPertoAgora);
+          }
           setRotulos(novos);
 
           // prompt de portal
@@ -611,6 +707,26 @@ export default function CidadeBateu() {
     if (portal.tipo === "distrito" && portal.rota) entrarPortal(portal.rota);
   }, [portal, entrarPortal]);
 
+  // v57 — factos MEDIDOS da cidade para o system do NPC (recollhidos
+  // frescos antes de cada envio; o que não há é omitido — zero «null»)
+  const npcContextoDados = useCallback((): ContextoNpc => {
+    const m = motorRef.current;
+    const prox = portalPerto(m.px, m.pz, 10);
+    const distrito = prox
+      ? prox.tipo === "distrito" ? prox.distrito?.nome ?? null
+        : prox.tipo === "casa" ? t("cidade.casa")
+          : prox.tipo === "trofeus" ? t("cidade.trofeus")
+            : t("cidade.quiosque")
+      : null;
+    const c = climaRef.current;
+    const clima = c.ativa && c.clima
+      ? `${Math.round(c.clima.temperatura)}°C em ${c.clima.cidade?.nome ?? "—"}`
+      : null;
+    let jogador: string | null = null;
+    try { jogador = localStorage.getItem("bateu_cidade_nome"); } catch { /* solo */ }
+    return { distrito, noite: m.noite, clima, jogador };
+  }, [t]);
+
   // ── Teclado (desktop) ──
   useEffect(() => {
     if (fase !== "jogando") return;
@@ -631,7 +747,8 @@ export default function CidadeBateu() {
       const k = e.key.toLowerCase();
       teclas[k] = true;
       if (k === "f5") { e.preventDefault(); setCamaraModo(m.ciclarCamara()); }
-      if (k === "e") abrirPortalAtual();
+      // v57 — perto do NPC IA a tecla E abre a conversa (senão, o portal)
+      if (k === "e") { if (npcPertoRef.current) setModal("npcia"); else abrirPortalAtual(); }
       if (k === "f" && m.modo === "criativo") m.criativoVoar = !m.criativoVoar;
       sincronizar();
     };
@@ -859,6 +976,7 @@ export default function CidadeBateu() {
                   {r.tipo === "casa" && <Home size={10} className="inline mr-1 -mt-0.5" />}
                   {r.tipo === "trofeus" && <Trophy size={10} className="inline mr-1 -mt-0.5" />}
                   {r.tipo === "quiosque" && <Store size={10} className="inline mr-1 -mt-0.5" />}
+                  {r.tipo === "npcia" && <Brain size={10} className="inline mr-1 -mt-0.5" />}
                   {r.nome}
                 </div>
                 {r.perto && portal?.nome === r.nome && portal.tipo === "distrito" && (
@@ -880,6 +998,18 @@ export default function CidadeBateu() {
                 {portal.tipo === "trofeus" && <><Trophy size={14} className="inline mr-1 -mt-0.5" />{t("cidade.abrirTrofeus")}</>}
                 {portal.tipo === "quiosque" && <><Radio size={14} className="inline mr-1 -mt-0.5" />{t("cidade.quiosqueAbrir")}</>}
                 {portal.tipo === "casa" && <><Home size={14} className="inline mr-1 -mt-0.5" />{portal.nome}</>}
+              </button>
+            </div>
+          )}
+
+          {/* v57 — prompt do NPC IA (praça; tecla E quando perto) */}
+          {fase === "jogando" && npcPerto && modal === null && (
+            <div className="absolute bottom-44 left-1/2 -translate-x-1/2 z-20">
+              <button onClick={() => setModal("npcia")} data-testid="cd-npc-prompt"
+                className="px-5 py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl active:scale-95 border border-violet-300/40">
+                <Brain size={14} className="inline mr-1 -mt-0.5" />
+                {t("cidade.npc.falar")}
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-black/30 text-[10px] align-middle">E</span>
               </button>
             </div>
           )}
@@ -1215,6 +1345,13 @@ export default function CidadeBateu() {
             )}
             <p className="text-[10px] text-white/40">{t("cidade.honesto")} · {t("cidade.semente")}: {SEED_CIDADE}</p>
           </div>
+        </div>
+      )}
+
+      {/* ═══ v57 — MODAL: BATEU IA NA PRAÇA (chat real pela via proxy/edge) ═══ */}
+      {modal === "npcia" && (
+        <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+          <NpcIa onFechar={() => setModal(null)} contextoDados={npcContextoDados} />
         </div>
       )}
     </div>,

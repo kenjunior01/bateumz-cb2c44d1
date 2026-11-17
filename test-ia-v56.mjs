@@ -384,9 +384,9 @@ async function main() {
   correr("node", ["server/ia-proxy.mjs"], proxyEnv);
   t("proxy: sobe e responde à saúde", await esperarAte(`http://127.0.0.1:${PORTA_PROXY}/api/ia/saude`, (r) => r.status === 200, 8000));
   const saude = await (await fetch(`http://127.0.0.1:${PORTA_PROXY}/api/ia/saude`)).json();
-  t("saúde: v56 com as TRÊS rotas e chave OCULTA (zero furo)",
+  t("saúde: v56+ com as TRÊS rotas e chave OCULTA (zero furo)",
     saude.chaveConfigurada === true && !JSON.stringify(saude).includes("chave-do-env-teste")
-    && saude.versão === "v56"
+    && /^v5[6-9]$/.test(saude.versão) // v57+ não quebra esta suíte (padrão v54→v55→v56)
     && JSON.stringify(saude.rotas ?? []).includes("/api/ia/chat")
     && JSON.stringify(saude.rotas ?? []).includes("/api/ia/visao")
     && JSON.stringify(saude.rotas ?? []).includes("/api/ia/vetores"));

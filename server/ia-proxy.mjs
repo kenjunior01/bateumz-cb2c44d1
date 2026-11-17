@@ -7,6 +7,9 @@
 // v56 — RAG: sem rotas novas (reusa chat + vetores); a versão sobe para a
 //       saúde declarar a geração (o teste da v56 valida, os antigos
 //       aceitam v54–v56).
+// v57 — NPC NA PRAÇA: sem rotas novas também (o NPC fala com o chat v54
+//       pela MESMA rota /api/ia/chat); a versão sobe para a saúde
+//       declarar a geração (o teste v57 valida, os antigos aceitam v54+).
 //
 // O browser NUNCA fala directamente com a NVIDIA (nem conhece a chave).
 // Em produção as edge functions `nemotron-chat`/`nemotron-visao`/
@@ -241,7 +244,7 @@ const servidor = http.createServer(async (req, res) => {
     json(res, 200, {
       ok: true,
       serviço: "bateu-ia-proxy",
-      versão: "v56",
+      versão: "v57",
       upstream: UPSTREAM.replace(/\/\/[^/]+@/, "//***@") + CHAT_PATH,
       chaveConfigurada: !!CHAVE,
       modelosPadrao: { chat: MODELO_PADRAO, visao: MODELO_VISAO_PADRAO, vetores: MODELO_EMBED_PADRAO },
@@ -310,7 +313,7 @@ const servidor = http.createServer(async (req, res) => {
 });
 
 servidor.listen(PORTA, () => {
-  log(`IA-PROXY v55 no ar — porta ${PORTA} — upstream ${UPSTREAM} — chave ${CHAVE ? "CONFIGURADA (oculta)" : "AUSENTE"}`);
+  log(`IA-PROXY v57 no ar — porta ${PORTA} — upstream ${UPSTREAM} — chave ${CHAVE ? "CONFIGURADA (oculta)" : "AUSENTE"}`);
   log(`  POST http://localhost:${PORTA}${CHAT_ENDPOINT}   (chat v54)`);
   log(`  POST http://localhost:${PORTA}${VISAO_ENDPOINT}  (visão v55)`);
   log(`  POST http://localhost:${PORTA}${VETORES_ENDPOINT} (vetores v55)`);

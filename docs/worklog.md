@@ -70,3 +70,24 @@ Stage Summary:
 - A Bateu IA agora LÊ a plataforma: o chat com RAG ativo responde apoiado nos sorteios/concursos/blog REAIS com fontes citadas [1][2] — e sem fontes diz honestamente que não encontrou, sem inventar
 - Os dados entram por mapeadores puros que nunca vazam prize_value nem deixam «null» no índice; a indexação respeita os caps do snippet e o portão de rate com espera honesta
 - 3 furos reais fechados (doc-perdido-do-índice, contabilidade do cap, zumbi do vite nas três suítes — com repro e prova); v54 50/50 e v55 78/78 continuam verdes
+---
+Task ID: 57
+Agent: Super Z (main)
+Task: v57 — NPC IA NA PRAÇA: a BATEU IA vive na Cidade Bateu (o passo anotado desde a v54) — holograma na Praça do Imbondeiro, chat REAL pela via proxy/edge com factos MEDIDOS da cidade no system
+
+Work Log:
+- Estado à entrada: main limpo no 44f76bd (v56); os três snippets NVIDIA eram contrato cumprido (v54 fala · v55 olho+memória · v56 leitura); a v57 dá CORPO à IA na cidade — o passo anotado duas vezes no worklog
+- Núcleo isomórfico NOVO src/game/cidade/npcIa.ts (browser E Node): POS_NPC_IA=(3,3) FACTO MEDIDO (pavimento da praça, coluna vazia, tronco ao lado — provado com carimbarCidade puro no teste A, o MESMO módulo da física do servidor v52) · NPC_RAIO_FALAR 6 (spawn a ≈4,3, nasce DENTRO) · LIMITES_NPC (12 msgs · 500/4000 chars · max_tokens 1024 · portão 10/min + 1,2 s) · contextoCidade ([CIDADE BATEU — FACTOS MEDIDOS AGORA], só o medido, omitidos os ausentes, zero «null», rodapé anti-invenção) · promptSistemaNpc (regras honestas v54 + formato de HUD + língua do utilizador) · validarHistoricoNpc
+- FONTE ÚNICA NOVA src/lib/iaEndpoint.ts: resolverEndpointChat + cabecalhosEdge extraídos do IaBateu.tsx (v54) — /ia e NPC partilham A MESMA regra; /ia refactor sem mudança de comportamento
+- UI NOVA src/components/cidade/NpcIa.tsx: streaming + STOP (abort REAL, nota «Parado por ti» NA parcial) + thinking opcional + 4 sugestões + usage real + erros honestos + histórico localStorage bateu.cidade.npc.v57 cap 12
+- Cidade: holograma THREE gerido pela PÁGINA (o Motor NÃO muda): esfera+olhos+anel+luz violeta com flutuação/pulso/virar-se ao jogador e dispose honesto; rótulo __npcia__; prompt «Falar · E»; tecla E com prioridade do NPC; ganchos E2E npcIa()/npcAbrir()
+- Onde corre: sem ROTAS novas — o NPC usa /api/ia/chat; proxy saúde v57 (v54 aceita v54+, v55 aceita v55+, v56 actualizada para v56+); browser NUNCA conhece a chave
+- i18n: +19 chaves ×6 (scripts/add-ia-i18n-v57.py — cidade.npc.*)
+- FUROS REAIS fechados: (1) clima.cidade?.name → nome (CidadeEncontrada) — o clima nunca chegava ao system; (2) nota do STOP perdida quando havia parcial (padrão v54 corrigido); (3) assertion com messages.length===2 mas o NPC envia 3; (4) clique no STOP com o raster a ~2 fps («not stable») — repro+diagnóstico no probe scripts/probe-npc-stop-v57.mjs (botão activo/não coberto/caixa estável = problema do rAF do ambiente), fix no teste com clique forçado + fallback DOM e a honestidade na asserção (a nota exige abort REAL); (5) RAIZ de probes em scripts/ = dirname(.., "..")
+- TESTES: test-ia-v57.mjs NOVO 54/54 ×2 corridas, 0 skips (A núcleo 21 · B mock 7 com a ordem persona→contexto→user PROVADA no upstream · C proxy 7 · D E2E /cidade 16 com o clima REAL «26°C em Maputo» provado no upstream e shots-v57/npc-praca.png · E LIVE ×2: a BATEU IA REAL respondeu na persona com o facto medido — «Olá! A Praça do Imbondeiro tem 26°C agora mesmo, segundo o Open-Meteo de Maputo.»)
+- REGRESSÃO: test-ia-v54 50/50 (live «BATEU V54») · test-ia-v55 78/78 + 1 skip honesto (422 do embed mantém-se) · test-ia-v56 54/54 + 1 skip · test-cidade 37/37 · tsc 0 · build OK (painel NPC no bundle)
+
+Stage Summary:
+- A IA da plataforma tem agora CORPO no mundo-âncora: quem entra na cidade nasce a ver o prompt «Falar com a Bateu IA» e conversa com o Nemotron real, com a persona presa aos factos medidos (distrito, noite/dia, clima real, jogador) — nunca inventa
+- Zero rotas novas e zero mudanças no Motor: o holograma é da página, o chat reusa a via proxy/edge, a chave nunca sai do servidor
+- 5 furos reais fechados com repro; 54/54 ×2 na suíte nova e todas as regressões verdes (50 + 78 + 54 + 37)

@@ -35,7 +35,6 @@ import {
   Upload, X,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
 import {
   ClienteNemotron, LIMITES, MODELOS_CONHECIDOS, NemotronError, NemotronRateLimitError,
   conversaParaMarkdown, htmlDeMarkdown, novaConversa, tituloDe,
@@ -56,6 +55,10 @@ import {
   type PassagemRag,
 } from "@/lib/nemotron-rag";
 import { carregarDocsPlataforma } from "@/lib/ia-plataforma";
+// v57 — a resolução do endpoint do CHAT e os cabeçalhos da edge são FONTE
+// ÚNICA em src/lib/iaEndpoint.ts (o NPC IA da Cidade partilha A MESMA regra;
+// visão/vetores continuam aqui porque só a página /ia os usa).
+import { cabecalhosEdge, resolverEndpointChat, type EndpointIa, type ModoIa } from "@/lib/iaEndpoint";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -126,25 +129,8 @@ const PERSONAS: PersonaIa[] = [
 const personaPorId = (id: string) => PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
 
 // ── Endpoints (browser nunca conhece a chave NVIDIA) ─────────────────────
-
-type ModoIa = "edge" | "proxy" | "directo";
-
-interface EndpointIa {
-  url: string;
-  modo: ModoIa;
-  chaveDirecta?: string;
-}
-
-function resolverEndpointChat(): EndpointIa {
-  const explicito = import.meta.env.VITE_IA_ENDPOINT as string | undefined;
-  if (explicito) return { url: explicito, modo: "proxy" };
-  const chaveDirecta = import.meta.env.VITE_NVIDIA_API_KEY as string | undefined;
-  if (import.meta.env.VITE_NEMOTRON_DIRECTO === "1" && chaveDirecta) {
-    return { url: "https://integrate.api.nvidia.com/v1/chat/completions", modo: "directo", chaveDirecta };
-  }
-  const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "https://ngxrdpplyghlugoowjqj.supabase.co";
-  return { url: `${base}/functions/v1/nemotron-chat`, modo: "edge" };
-}
+// v57: resolverEndpointChat + cabecalhosEdge vivem em src/lib/iaEndpoint.ts
+// (fonte única partilhada com o NPC IA da Cidade Bateu).
 
 /** v55 — o OLHO: mesma estratégia, função nova. */
 function resolverEndpointVisao(): EndpointIa {
@@ -1612,15 +1598,6 @@ function MensagemBubble({
   );
 }
 
-// ── Cabeçalhos da edge function (JWT do utilizador — a chave NVIDIA fica no Deno) ──
-
-async function cabecalhosEdge(): Promise<Record<string, string>> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (token) return { Authorization: `Bearer ${token}`, apikey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || "" };
-  } catch {}
-  return { apikey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || "" };
-}
+// v57 — cabecalhosEdge mudou para src/lib/iaEndpoint.ts (fonte única com o NPC).
 
 export default IaBateu;

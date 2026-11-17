@@ -30,3 +30,4 @@ shot-*.mjs
 .env.ia
 .env.local
 server/.env
+.bundle-*.mjs

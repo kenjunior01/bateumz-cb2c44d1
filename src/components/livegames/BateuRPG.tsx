@@ -23,7 +23,9 @@ import { estimarEspaco, mbLegivel } from "@/game/armazem";
 import { infoItem, avaliarReceitas, criarReceita, pertoDe } from "@/game/blocos/inventario";
 import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK, B, RECEITAS } from "@/game/blocos/constants";
 import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle, Backpack, Hammer } from "lucide-react";
-import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
+import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoDescricaoEn, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { linguaValida, nomeDificuldade, descDificuldade, nomeRegiao, descRegiao, nomePoi, descPoi, tituloMissaoPorId, textoObjetivoPorId, textoObjetivoPorTexto, tituloDiaria, nomeRamo, efeitosRamo, causaMorte, nomeItem, nomePorTexto, rotuloMapa } from "@/game/rpg/nomes";
 
 interface Props {
   onScore?: (score: number) => void;
@@ -183,6 +185,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   const sistemaRef = useRef<SistemaRPG>(new SistemaRPG());
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const { lang, t } = useLanguage();
+  const lingua = linguaValida(lang);
   const [fase, setFase] = useState<"inicio" | "jogando" | "morto">("inicio");
   const [cap, setCap] = useState<ReturnType<Motor["captura"]> | null>(null);
   const [rpg, setRpg] = useState<CapturaRpg | null>(null);
@@ -522,6 +526,14 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     };
   }, []);
 
+  // v62 — a língua da plataforma manda no texto do mundo (PT canónico no
+  // motor): sincroniza o sistema e refresca a captura (diárias regeneram
+  // os textos com a língua corrente).
+  useEffect(() => {
+    sistemaRef.current.lingua = lingua;
+    setRpg(sistemaRef.current.captura());
+  }, [lingua]);
+
   const capturarRato = useCallback(() => {
     if (ehToque) return;
     const c = canvasRef.current;
@@ -714,6 +726,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
   useEffect(() => { desenharMiniRef.current = desenharMini; }, [desenharMini]);
 
   const desenharMapa = useCallback(() => {
+    const RL = rotuloMapa(lingua);
     const cv = mapaCanvasRef.current;
     if (!cv) return;
     const ctx = cv.getContext("2d");
@@ -740,8 +753,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = "bold 13px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Terras Selvagens", px(-98), pz(-6));
-    ctx.fillText("Terras Selvagens", px(96), pz(-84));
+    ctx.fillText(RL.selvagens, px(-98), pz(-6));
+    ctx.fillText(RL.selvagens, px(96), pz(-84));
     // regiões (v44: terreno real por baixo — descoberta leva um tint suave da
     // cor da região; não descoberta leva um véu escuro, só «???» + Nv)
     for (const r of REGIOES) {
@@ -755,10 +768,10 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       ctx.stroke();
       ctx.fillStyle = descoberta ? "#ffffff" : "rgba(255,255,255,0.4)";
       ctx.font = "bold 15px sans-serif";
-      ctx.fillText(descoberta ? r.nome : "???", px(r.cx), pz(r.cz) - 4);
+      ctx.fillText(descoberta ? nomeRegiao(r, lingua) : "???", px(r.cx), pz(r.cz) - 4);
       ctx.font = "bold 11px sans-serif";
       ctx.fillStyle = descoberta ? r.cor : "rgba(255,255,255,0.3)";
-      ctx.fillText(`Nv ${r.nivel}`, px(r.cx), pz(r.cz) + 12);
+      ctx.fillText(RL.nv(r.nivel), px(r.cx), pz(r.cz) + 12);
     }
     // POIs (◆ baús)
     for (const p of POIS) {
@@ -772,7 +785,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       if (descoberto) {
         ctx.fillStyle = "rgba(255,255,255,0.8)";
         ctx.font = "bold 10px sans-serif";
-        ctx.fillText(p.nome, px(p.x), pz(p.z) - 9);
+        ctx.fillText(nomePoi(p, lingua), px(p.x), pz(p.z) - 9);
       }
     }
     // objetivo atual (★)
@@ -798,63 +811,63 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     // Norte
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "bold 14px sans-serif";
-    ctx.fillText("N", T - 20, 22);
-  }, []);
+    ctx.fillText(RL.norte, T - 20, 22);
+  }, [lingua]);
   useEffect(() => { desenharMapaRef.current = desenharMapa; }, [desenharMapa]);
 
   // ── Como jogar — usado no modal (a jogar) e no menu inicial ──
   const renderAjuda = () => (
     <div className="flex flex-col gap-3">
       <div>
-        <p className="text-white/80 text-xs font-bold mb-1 flex items-center gap-1"><Trophy size={13} /> O OBJETIVO DA LENDA</p>
-        <p className="text-white/60 text-[11px] leading-relaxed">Explora 6 regiões (Nv 1–5) e 8 locais, abre os 9 baús de tesouro, vive 6 capítulos de história e derrota o GUARDIÃO nas Ruínas de Kivulivuli. Cada baú rende créditos para a plataforma; cada caçada, noite sobrevivida e capítulo rende XP até ao nível 30.</p>
+        <p className="text-white/80 text-xs font-bold mb-1 flex items-center gap-1"><Trophy size={13} /> {t("rpg.ajuda.objetivo.titulo")}</p>
+        <p className="text-white/60 text-[11px] leading-relaxed">{t("rpg.ajuda.objetivo.corpo")}</p>
       </div>
       <div>
-        <p className="text-white/80 text-xs font-bold mb-1">CONTROLOS — COMPUTADOR</p>
+        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.pc.titulo")}</p>
         <ul className="text-white/60 text-[11px] grid grid-cols-2 gap-x-2 gap-y-0.5">
-          <li>WASD — mover</li>
-          <li>Espaço — saltar</li>
-          <li>Shift — correr</li>
-          <li>Z — zoom</li>
-          <li>Rato — olhar</li>
-          <li>Clique esq. — minerar/atacar</li>
-          <li>Clique dir. — comer</li>
-          <li>1–9 / roda — hotbar</li>
-          <li>I — mochila (36 posições; clique na mochila move para a hotbar; peitoral equipa no slot selecionado)</li>
-          <li>Q — largar 1 do item selecionado (fica no chão; recolhe ao aproximar-te)</li>
-          <li>F — forja: criar e fundir (mesa/fornalha reais só na Forja Perdida)</li>
-          <li>J — missões</li>
-          <li>K — habilidades</li>
-          <li>M — mapa do mundo</li>
-          <li>Minimapa no canto (bordos da cor da região) — clique abre o mapa do mundo; ◆ dourado = baú descoberto perto de ti</li>
-          <li>ESC — pausa</li>
-          <li>F5 — câmara</li>
+          <li>{t("rpg.ajuda.wasd")}</li>
+          <li>{t("rpg.ajuda.espaco")}</li>
+          <li>{t("rpg.ajuda.shift")}</li>
+          <li>{t("rpg.ajuda.zoom")}</li>
+          <li>{t("rpg.ajuda.rato")}</li>
+          <li>{t("rpg.ajuda.cliqueEsq")}</li>
+          <li>{t("rpg.ajuda.cliqueDir")}</li>
+          <li>{t("rpg.ajuda.hotbarTecla")}</li>
+          <li>{t("rpg.ajuda.mochilaTecla")}</li>
+          <li>{t("rpg.ajuda.q")}</li>
+          <li>{t("rpg.ajuda.f")}</li>
+          <li>{t("rpg.ajuda.j")}</li>
+          <li>{t("rpg.ajuda.k")}</li>
+          <li>{t("rpg.ajuda.m")}</li>
+          <li>{t("rpg.ajuda.minimapaTecla")}</li>
+          <li>{t("rpg.ajuda.esc")}</li>
+          <li>{t("rpg.ajuda.f5")}</li>
         </ul>
       </div>
       <div>
-        <p className="text-white/80 text-xs font-bold mb-1">CONTROLOS — TELEMÓVEL</p>
+        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.telemovel.titulo")}</p>
         <ul className="text-white/60 text-[11px] list-disc ml-4">
-          <li>Joystick (canto inferior esquerdo) para andar; arrasta o ecrã para olhar</li>
-          <li>Botões ATACAR · SALTAR · COMER; toca nos itens da hotbar</li>
-          <li>Botões MISSÕES · DIÁRIO · MAPA · MOCHILA · FORJA · HAB. · pausa no topo do HUD</li>
+          <li>{t("rpg.ajuda.joystick")}</li>
+          <li>{t("rpg.ajuda.botoes")}</li>
+          <li>{t("rpg.ajuda.botoesHud")}</li>
         </ul>
       </div>
       <div>
-        <p className="text-white/80 text-xs font-bold mb-1">COMO SE PROGRESSA</p>
+        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.progressa.titulo")}</p>
         <ul className="text-white/60 text-[11px] list-disc ml-4">
-          <li>XP vem de caçadas, noites sobrevividas, baús, capítulos e diárias (3 por dia, iguais para todos)</li>
-          <li>Os inimigos derrotados deixam o loot NO CHÃO onde caíram — aproxima-te e ele desliza até ti (magnete a 3 blocos); o que não couber na mochila FICA onde está, nada desaparece por decisão silenciosa</li>
-          <li>Itens no chão duram 120 s e o mundo guarda até 48 (o mais velho sai primeiro — as saídas são contadas no chip do HUD); o chão guarda-se com a lenda no save</li>
-          <li>Os baús dos locais entregam também ESPÓLIO real — comida, tochas, barras e peitorais; a mesma mesa para todos, determinística como a semente</li>
+          <li>{t("rpg.ajuda.progressa.xp")}</li>
+          <li>{t("rpg.ajuda.progressa.loot")}</li>
+          <li>{t("rpg.ajuda.progressa.chao")}</li>
+          <li>{t("rpg.ajuda.progressa.baus")}</li>
           <li>Cada nível dá 1 ponto: GUERREIRO (+dano) · EXPLORADOR (+velocidade) · SÁBIO (+XP e cura fora de combate)</li>
           <li>A dificuldade (escolhida no menu) muda a vida e o dano dos inimigos e o valor das recompensas</li>
           <li>O progresso guarda-se sozinho a cada 8 s neste aparelho (IndexedDB + localStorage)</li>
-          <li>Morrer não apaga a lenda: renasces na Aldeia com XP, missões e descobertas</li>
+          <li>{t("rpg.ajuda.progressa.morte")}</li>
         </ul>
       </div>
       <div className="border-t border-white/10 pt-2">
         <p className="text-white/50 text-[10px] leading-relaxed" data-testid="rpg-ajuda-fontes">
-          Fontes: clima real por {OPENMETEO_ATTRIBUTION} · arquitetura de mundo aberto estudada de Veloren (GPLv3) — só a forma do skillset e a separação mundo/estado inspiraram o código, que é próprio · motor voxel partilhado com a CIDADE BATEU.
+          {t("rpg.ajuda.fontes", { attr: OPENMETEO_ATTRIBUTION })}
         </p>
       </div>
     </div>
@@ -880,14 +893,14 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <div className="absolute inset-0 overflow-y-auto bg-gradient-to-b from-[#0c1710] via-[#12251a] to-[#0a120d] flex flex-col items-center justify-center py-8 px-4">
           <div className="w-full max-w-md flex flex-col items-center gap-4">
             <div className="text-center">
-              <h1 className="font-display text-3xl font-black text-amber-300 tracking-wide" data-testid="rpg-titulo">BATEU RPG: LENDAS</h1>
-              <p className="text-white/60 text-sm mt-1">Explora 6 regiões, derrota as criaturas da noite e escreve a tua lenda.</p>
-              <p className="text-white/35 text-[11px] mt-1">Mundo voxel único (semente fixa) · progresso guardado neste aparelho</p>
+              <h1 className="font-display text-3xl font-black text-amber-300 tracking-wide" data-testid="rpg-titulo">{t("rpg.titulo")}</h1>
+              <p className="text-white/60 text-sm mt-1">{t("rpg.menu.subtitulo")}</p>
+              <p className="text-white/35 text-[11px] mt-1">{t("rpg.menu.semente")}</p>
             </div>
 
             {/* dificuldade */}
             <div className="w-full bg-black/40 rounded-2xl p-3 border border-white/10">
-              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><ShieldAlert size={13} /> DIFICULDADE (afeta inimigos e recompensas)</p>
+              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><ShieldAlert size={13} /> {t("rpg.dificuldade.titulo")}</p>
               <div className="grid grid-cols-3 gap-2">
                 {ORDEM_DIFICULDADE.map((d) => {
                   const regras = DIFICULDADES_RPG[d];
@@ -895,68 +908,68 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   return (
                     <button key={d} onClick={() => setDifMenu(d)} data-testid={`rpg-dif-${d}`}
                       className={`p-2 rounded-xl text-left transition border ${ativo ? "border-amber-400 bg-amber-400/15" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                      <p className={`text-[11px] font-black ${ativo ? "text-amber-300" : "text-white/70"}`}>{regras.nome}</p>
-                      <p className="text-[9px] text-white/50 leading-tight mt-0.5">Inimigos ×{regras.multHpMob} · XP ×{regras.multXP}</p>
+                      <p className={`text-[11px] font-black ${ativo ? "text-amber-300" : "text-white/70"}`}>{nomeDificuldade(d, lingua)}</p>
+                      <p className="text-[9px] text-white/50 leading-tight mt-0.5">{t("rpg.dificuldade.regras", { hp: String(regras.multHpMob), xp: String(regras.multXP) })}</p>
                     </button>
                   );
                 })}
               </div>
-              <p className="text-white/45 text-[10px] mt-2" data-testid="rpg-dif-desc">{DIFICULDADES_RPG[difMenu].desc}</p>
+              <p className="text-white/45 text-[10px] mt-2" data-testid="rpg-dif-desc">{descDificuldade(difMenu, lingua)}</p>
             </div>
 
             {/* jogar */}
             <div className="w-full flex flex-col gap-2">
               <button onClick={() => iniciar(false)} data-testid="rpg-jogar"
                 className="w-full py-3.5 rounded-xl font-black text-white bg-gradient-to-r from-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 active:scale-95 transition flex items-center justify-center gap-2">
-                <Play size={18} /> NOVA LENDA
+                <Play size={18} /> {t("rpg.jogar")}
               </button>
               {savePronto && temSave && (
                 <button onClick={() => iniciar(true)} data-testid="rpg-continuar"
                   className="w-full py-3 rounded-xl font-bold text-white bg-emerald-700/80 hover:bg-emerald-600 active:scale-95 transition flex items-center justify-center gap-2">
-                  <ChevronUp size={17} className="rotate-90" /> CONTINUAR A LENDA
+                  <ChevronUp size={17} className="rotate-90" /> {t("rpg.continuar")}
                 </button>
               )}
             </div>
             <button onClick={() => setAjudaMenu(true)} data-testid="rpg-como-jogar"
               className="w-full py-2 rounded-xl font-bold text-white/80 bg-white/10 hover:bg-white/15 transition text-xs flex items-center justify-center gap-1">
-              <HelpCircle size={14} /> COMO JOGAR
+              <HelpCircle size={14} /> {t("rpg.comoJogar")}
             </button>
             {savePronto && temSave && (
               confRecomecar ? (
                 <div className="w-full flex gap-2" data-testid="rpg-recomecar-confirm">
                   <button onClick={() => { void s.apagarSave().then(() => { setTemSave(false); setConfRecomecar(false); }); }}
-                    className="flex-1 py-2 rounded-xl font-black text-white bg-rose-700 hover:bg-rose-600 transition text-[11px]">APAGAR E RECOMEÇAR</button>
+                    className="flex-1 py-2 rounded-xl font-black text-white bg-rose-700 hover:bg-rose-600 transition text-[11px]">{t("rpg.recomecarApagar")}</button>
                   <button onClick={() => setConfRecomecar(false)}
-                    className="flex-1 py-2 rounded-xl font-bold text-white/70 bg-white/10 hover:bg-white/15 transition text-[11px]">manter o save</button>
+                    className="flex-1 py-2 rounded-xl font-bold text-white/70 bg-white/10 hover:bg-white/15 transition text-[11px]">{t("rpg.recomecarManter")}</button>
                 </div>
               ) : (
                 <button onClick={() => setConfRecomecar(true)} data-testid="rpg-recomecar"
-                  className="text-white/35 underline text-[11px]">recomeçar do zero (apaga o save)</button>
+                  className="text-white/35 underline text-[11px]">{t("rpg.recomecar")}</button>
               )
             )}
 
             {/* clima real */}
             <div className="w-full bg-black/40 rounded-2xl p-3 border border-white/10">
-              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><Sun size={13} /> CLIMA REAL (opcional)</p>
+              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><Sun size={13} /> {t("rpg.clima.titulo")}</p>
               {climaReal.ativa && climaReal.cidade ? (
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-white text-xs font-bold truncate" data-testid="rpg-clima-cidade">{climaReal.cidade.nome}</p>
                     <p className="text-white/55 text-[10px]" data-testid="rpg-clima-info">
                       {climaReal.clima
-                        ? `${wmoDescricaoPt(climaReal.clima.codigoWmo)}${climaReal.clima.temperatura !== null ? ` · ${climaReal.clima.temperatura}°C` : ""}${wmoEhNeve(climaReal.clima.codigoWmo) ? " · neve" : ""}`
-                        : "a obter o clima…"}
+                        ? `${(lingua === "en" ? wmoDescricaoEn : wmoDescricaoPt)(climaReal.clima.codigoWmo)}${climaReal.clima.temperatura !== null ? ` · ${climaReal.clima.temperatura}°C` : ""}${wmoEhNeve(climaReal.clima.codigoWmo) ? ` · ${t("rpg.clima.neve")}` : ""}`
+                        : t("rpg.clima.aObter")}
                     </p>
                   </div>
-                  <button onClick={desativarClimaReal} className="text-white/50 underline text-[11px] shrink-0" data-testid="rpg-clima-desativar">desativar</button>
+                  <button onClick={desativarClimaReal} className="text-white/50 underline text-[11px] shrink-0" data-testid="rpg-clima-desativar">{t("rpg.clima.desativar")}</button>
                 </div>
               ) : (
                 <div className="flex gap-2">
                   <input value={buscaCidade} onChange={(e) => setBuscaCidade(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") procurar(); }}
-                    placeholder="A tua cidade (ex.: Maputo)" data-testid="rpg-clima-input"
+                    placeholder={t("rpg.clima.cidadePlaceholder")} data-testid="rpg-clima-input"
                     className="flex-1 bg-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none placeholder:text-white/30" />
                   <button onClick={procurar} disabled={buscando} data-testid="rpg-clima-ativar"
-                    className="px-3 py-2 rounded-lg bg-sky-700/80 text-white text-xs font-bold disabled:opacity-50">{buscando ? "…" : "aplicar"}</button>
+                    className="px-3 py-2 rounded-lg bg-sky-700/80 text-white text-xs font-bold disabled:opacity-50">{buscando ? "…" : t("rpg.clima.aplicar")}</button>
                 </div>
               )}
               {climaReal.erro && <p className="text-rose-300 text-[10px] mt-1" data-testid="rpg-clima-erro">{climaReal.erro}</p>}
@@ -965,21 +978,21 @@ export default function BateuRPG({ onScore, onExit }: Props) {
 
             <div className="grid grid-cols-2 gap-2 w-full">
               <button onClick={() => { setSomMudo(m.alternarSom()); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700/80 hover:bg-slate-600 text-xs">
-                {somMudo ? "SOM: DESLIGADO" : "SOM: LIGADO"}
+                {somMudo ? t("rpg.som.off") : t("rpg.som.on")}
               </button>
               <button onClick={() => { const c = m.ciclarCamara(); setCamaraModo(c); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700/80 hover:bg-slate-600 text-xs flex items-center justify-center gap-1">
-                <Camera size={14} /> {camaraModo === "primeira" ? "1ª PESSOA" : camaraModo === "terceira" ? "3ª PESSOA" : "OMBRO"}
+                <Camera size={14} /> {camaraModo === "primeira" ? t("rpg.camara.primeira") : camaraModo === "terceira" ? t("rpg.camara.terceira") : t("rpg.camara.ombro")}
               </button>
             </div>
             <p className="text-white/25 text-[9px] text-center leading-relaxed max-w-xs" data-testid="rpg-atribuicao">
-              v42 · clima real por Open-Meteo.com · arquitetura aberta estudada de Veloren (GPLv3 — só a forma, código próprio) · motor voxel partilhado com a CIDADE BATEU
+              {t("rpg.menu.atribuicao")}
             </p>
-            <button onClick={sair} className="text-white/60 underline text-sm">Voltar à plataforma</button>
-            <p className="text-white/35 text-[11px] text-center max-w-xs">Joga sem registo · o progresso (XP, missões, descobertas) fica neste aparelho — sobrevive a limpezas do localStorage via IndexedDB</p>
+            <button onClick={sair} className="text-white/60 underline text-sm">{t("rpg.voltarPlataforma")}</button>
+            <p className="text-white/35 text-[11px] text-center max-w-xs">{t("rpg.menu.semRegisto")}</p>
             <p className="text-white/30 text-[10px] text-center" data-testid="rpg-espaco">
               {espacoEst === "pendente" ? "" : espacoEst
-                ? `Armazenamento: ${mbLegivel(espacoEst.uso)} MB usados de ${mbLegivel(espacoEst.quota)} MB`
-                : "Armazenamento: quota não revelada pelo navegador"}
+                ? t("rpg.armazenamento.uso", { uso: mbLegivel(espacoEst.uso), quota: mbLegivel(espacoEst.quota) })
+                : t("rpg.armazenamento.semQuota")}
             </p>
           </div>
         </div>
@@ -1003,7 +1016,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <div className="flex gap-1">{["#f59e0b", "#22c55e", "#a78bfa", "#fb923c"].map((c, i) => (
             <div key={i} className="w-5 h-5 rounded-[3px] border border-black/50 animate-bounce" style={{ background: c, animationDelay: `${i * 0.12}s` }} />
           ))}</div>
-          <p className="text-white font-bold">A forjar a lenda…</p>
+          <p className="text-white font-bold">{t("rpg.carregar")}</p>
         </div>
       )}
 
@@ -1015,7 +1028,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
             <button
               onClick={() => setModal("mapa")}
               data-testid="rpg-minimapa"
-              title="Minimapa — clique para o mapa do mundo (M)"
+              title={t("rpg.minimapa.titulo")}
               className="rounded-lg pointer-events-auto cursor-pointer w-fit"
               style={{ border: `2px solid ${rpg.regiao?.cor ?? "rgba(255,255,255,0.35)"}` }}
             >
@@ -1047,17 +1060,17 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
             {rpg.regiao && (
               <div className="bg-black/45 rounded-lg px-2 py-1 border-l-2" style={{ borderColor: rpg.regiao.cor }} data-testid="rpg-regiao">
-                <p className="text-white text-[11px] font-bold leading-none">{rpg.regiao.nome}</p>
-                <p className="text-white/50 text-[9px] mt-0.5">nível recomendado {rpg.regiao.nivel}</p>
+                <p className="text-white text-[11px] font-bold leading-none">{nomeRegiao(rpg.regiao, lingua)}</p>
+                <p className="text-white/50 text-[9px] mt-0.5">{t("rpg.nivel.recomendado", { n: String(rpg.regiao.nivel) })}</p>
               </div>
             )}
             <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-1.5">
               {cap.noite ? <Moon size={11} className="text-indigo-300" /> : <MeteoIcone size={11} className="text-amber-200" />}
-              <span className="text-white text-[11px] font-bold">Dia {cap.dia} · {relogio(cap.horaFrac)}</span>
+              <span className="text-white text-[11px] font-bold">{t("rpg.dia", { d: String(cap.dia), h: relogio(cap.horaFrac) })}</span>
             </div>
             <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-1" data-testid="rpg-creditos">
               <Trophy size={11} className="text-amber-300" />
-              <span className="text-white text-[11px] font-bold">{rpg.creditos} créditos</span>
+              <span className="text-white text-[11px] font-bold">{t("rpg.creditos.hud", { n: String(rpg.creditos) })}</span>
             </div>
             {/* bússola do objetivo */}
             {rpg.objetivo && !Number.isNaN(rpg.objetivo.x) && (
@@ -1069,7 +1082,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     <ChevronUp size={16} className="text-emerald-300" strokeWidth={3} />
                   </div>
                 </div>
-                <span className="text-white/80 text-[9px] max-w-[110px] truncate">{rpg.objetivo.texto}</span>
+                <span className="text-white/80 text-[9px] max-w-[110px] truncate">{textoObjetivoPorTexto(rpg.objetivo.texto, lingua)}</span>
               </div>
             )}
           </div>
@@ -1077,11 +1090,11 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           {/* ── tracker da missão atual (baixo esquerda) ── */}
           {rpg.capitulo && !rpg.historiaFeita && (
             <div className="absolute bottom-2 left-2 bg-black/50 rounded-xl px-3 py-2 max-w-[240px] pointer-events-none" data-testid="rpg-missao-tracker">
-              <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">CAPÍTULO {rpg.capitulo.id.replace("h", "")}</p>
-              <p className="text-white text-xs font-bold">{rpg.capitulo.titulo}</p>
+              <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">{t("rpg.capitulo.hud", { n: rpg.capitulo.id.replace("h", "") })}</p>
+              <p className="text-white text-xs font-bold">{tituloMissaoPorId(rpg.capitulo.id, lingua)}</p>
               {rpg.capitulo.objetivos.map((o, i) => (
                 <p key={i} className={`text-[10px] mt-0.5 ${o.prog >= o.qtd ? "text-emerald-300 line-through" : "text-white/70"}`}>
-                  {o.prog >= o.qtd ? "✓" : "○"} {o.texto} ({o.prog}/{o.qtd})
+                  {o.prog >= o.qtd ? "✓" : "○"} {textoObjetivoPorId(rpg.capitulo.id, i, lingua)} ({o.prog}/{o.qtd})
                 </p>
               ))}
             </div>
@@ -1090,7 +1103,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           {/* ── boss bar ── */}
           {rpg.boss.vivo && rpg.boss.hp !== undefined && (
             <div className="absolute top-14 left-1/2 -translate-x-1/2 w-72 pointer-events-none" data-testid="rpg-bossbar">
-              <p className="text-center text-rose-300 text-xs font-black tracking-widest">GUARDIÃO DAS RUÍNAS</p>
+              <p className="text-center text-rose-300 text-xs font-black tracking-widest">{t("rpg.boss.barra")}</p>
               <div className="h-3 rounded-full bg-black/70 border border-rose-900 overflow-hidden mt-0.5">
                 <div className="h-full bg-gradient-to-r from-rose-700 to-red-500" style={{ width: `${Math.max(0, (rpg.boss.hp / Math.max(1, rpg.boss.hpMax ?? 1)) * 100)}%` }} />
               </div>
@@ -1111,8 +1124,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
             {/* v50: o que está MESMO no chão (contagens honestas do sistema) */}
             {rpg.itensChao.total > 0 && (
               <div data-testid="rpg-chao-chip" className="px-2 py-1 rounded-lg bg-black/55 border border-amber-500/30 text-white/90 text-[10px] font-bold">
-                {rpg.itensChao.total} item{rpg.itensChao.total > 1 ? "s" : ""} no chão
-                {rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap > 0 ? ` · ${rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap} saíram` : ""}
+                {t("rpg.chao.itens", { n: String(rpg.itensChao.total), s: rpg.itensChao.total > 1 ? "s" : "" })}
+                {rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap > 0 ? t("rpg.chao.sairam", { n: String(rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap) }) : ""}
               </div>
             )}
             <div className="flex gap-1 bg-black/45 rounded-lg p-1.5" data-testid="rpg-hotbar">
@@ -1125,17 +1138,17 @@ export default function BateuRPG({ onScore, onExit }: Props) {
             </div>
             <div className="flex flex-wrap gap-1.5">
               <button onClick={() => setModal("missoes")} data-testid="rpg-btn-missoes"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><BookOpen size={13} /> MISSÕES</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><BookOpen size={13} /> {t("rpg.btn.missoes")}</button>
               <button onClick={() => setModal("diario")} data-testid="rpg-btn-diario"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><MapIcon size={13} /> DIÁRIO</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><MapIcon size={13} /> {t("rpg.btn.diario")}</button>
               <button onClick={() => setModal("mapa")} data-testid="rpg-btn-mapa"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Compass size={13} /> MAPA</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Compass size={13} /> {t("rpg.btn.mapa")}</button>
               <button onClick={() => setModal("habilidades")} data-testid="rpg-btn-habilidades"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> HAB.</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> {t("rpg.btn.habilidades")}</button>
               <button onClick={() => setModal("mochila")} data-testid="rpg-btn-mochila"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Backpack size={13} /> MOCHILA</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Backpack size={13} /> {t("rpg.btn.mochila")}</button>
               <button onClick={() => setModal("forja")} data-testid="rpg-btn-forja"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Hammer size={13} /> FORJA</button>
+                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Hammer size={13} /> {t("rpg.btn.forja")}</button>
               <button onClick={() => { m.pausado = true; setModal("pausa"); }} data-testid="rpg-btn-pausa"
                 className="px-2.5 py-2 rounded-lg bg-black/55 text-white"><Pause size={13} /></button>
             </div>
@@ -1144,7 +1157,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           {/* ── nome do item visado ── */}
           {cap.mirando && (
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/60 rounded-lg px-3 py-1 pointer-events-none">
-              <p className="text-white/90 text-xs font-bold">{cap.mirando.nome}</p>
+              <p className="text-white/90 text-xs font-bold">{nomeItem(cap.mirando.id, lingua)}</p>
             </div>
           )}
 
@@ -1158,11 +1171,11 @@ export default function BateuRPG({ onScore, onExit }: Props) {
               </div>
               <div className="absolute bottom-24 right-4 flex flex-col gap-2 items-center">
                 <button onTouchStart={() => { m.atacarPedido = true; }} data-testid="rpg-btn-atacar"
-                  className="w-16 h-16 rounded-full bg-rose-600/80 border-2 border-white/30 text-white font-black text-xs flex items-center justify-center">ATACAR</button>
+                  className="w-16 h-16 rounded-full bg-rose-600/80 border-2 border-white/30 text-white font-black text-xs flex items-center justify-center">{t("rpg.btn.atacar")}</button>
                 <button onTouchStart={() => { m.entrada.salto = true; }} onTouchEnd={() => { m.entrada.salto = false; }}
-                  className="w-14 h-14 rounded-full bg-sky-600/70 border-2 border-white/30 text-white font-black text-[10px]">SALTAR</button>
+                  className="w-14 h-14 rounded-full bg-sky-600/70 border-2 border-white/30 text-white font-black text-[10px]">{t("rpg.btn.saltar")}</button>
                 <button onTouchStart={() => { m.comerPedido = true; }} data-testid="rpg-btn-comer"
-                  className="w-12 h-12 rounded-full bg-amber-600/70 border-2 border-white/30 text-white font-black text-[10px]">COMER</button>
+                  className="w-12 h-12 rounded-full bg-amber-600/70 border-2 border-white/30 text-white font-black text-[10px]">{t("rpg.btn.comer")}</button>
               </div>
             </>
           )}
@@ -1174,13 +1187,13 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-white font-black text-lg flex items-center gap-2">
                     {modal === "missoes" && <><BookOpen size={18} className="text-fuchsia-400" /> MISSÕES</>}
-                    {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> DIÁRIO DE EXPLORAÇÃO</>}
-                    {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> HABILIDADES</>}
+                    {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> {t("rpg.modal.diario")}</>}
+                    {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> {t("rpg.modal.habilidades")}</>}
                     {modal === "mochila" && <><Backpack size={18} className="text-lime-400" /> MOCHILA</>}
                     {modal === "forja" && <><Hammer size={18} className="text-amber-400" /> FORJA</>}
-                    {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> MAPA DO MUNDO</>}
+                    {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> {t("rpg.modal.mapa")}</>}
                     {modal === "ajuda" && <><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</>}
-                    {modal === "pausa" && <><Pause size={18} className="text-white" /> PAUSA</>}
+                    {modal === "pausa" && <><Pause size={18} className="text-white" /> {t("rpg.modal.pausa")}</>}
                   </h2>
                   <button onClick={() => { setModal(null); m.pausado = false; }} data-testid="rpg-fechar-modal" className="text-white/60 hover:text-white"><X size={20} /></button>
                 </div>
@@ -1190,12 +1203,12 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   <div className="flex flex-col gap-3">
                     {rpg.capitulo && (
                       <div className="bg-fuchsia-900/30 rounded-xl p-3 border border-fuchsia-500/30" data-testid="rpg-capitulo">
-                        <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">HISTÓRIA · CAPÍTULO {rpg.capitulo.id.replace("h", "")} DE {HISTORIA_TOTAL}</p>
-                        <p className="text-white font-black">{rpg.capitulo.titulo}</p>
+                        <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">{t("rpg.missoes.historia", { n: rpg.capitulo.id.replace("h", ""), total: String(HISTORIA_TOTAL) })}</p>
+                        <p className="text-white font-black">{tituloMissaoPorId(rpg.capitulo.id, lingua)}</p>
                         {rpg.capitulo.objetivos.map((o, i) => (
                           <div key={i} className="mt-1.5">
                             <div className="flex justify-between text-[11px]">
-                              <span className={o.prog >= o.qtd ? "text-emerald-300 line-through" : "text-white/80"}>{o.texto}</span>
+                              <span className={o.prog >= o.qtd ? "text-emerald-300 line-through" : "text-white/80"}>{textoObjetivoPorId(rpg.capitulo.id, i, lingua)}</span>
                               <span className="text-white/50 font-mono">{o.prog}/{o.qtd}</span>
                             </div>
                             <div className="h-1 rounded-full bg-black/50 mt-0.5 overflow-hidden">
@@ -1203,24 +1216,24 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                             </div>
                           </div>
                         ))}
-                        <p className="text-white/45 text-[10px] mt-2">Recompensa: +{HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.xp ?? "—"} XP · +{HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.creditos ?? "—"} créditos</p>
+                        <p className="text-white/45 text-[10px] mt-2">{t("rpg.missoes.recompensa", { xp: String(HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.xp ?? "—"), cred: String(HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.creditos ?? "—") })}</p>
                       </div>
                     )}
                     {rpg.historiaFeita && (
                       <div className="bg-amber-900/30 rounded-xl p-3 border border-amber-500/40">
-                        <p className="text-amber-300 font-black text-sm">A lenda está escrita.</p>
-                        <p className="text-white/60 text-[11px] mt-0.5">Os 6 capítulos da história estão concluídos. As Terras Selvagens continuam tuas — caça, explora, vive.</p>
+                        <p className="text-amber-300 font-black text-sm">{t("rpg.missoes.feita.titulo")}</p>
+                        <p className="text-white/60 text-[11px] mt-0.5">{t("rpg.missoes.feita.corpo")}</p>
                       </div>
                     )}
-                    <p className="text-white/70 text-[11px] font-bold flex items-center gap-1"><Sun size={12} /> DIÁRIAS DE HOJE (renovam à meia-noite)</p>
+                    <p className="text-white/70 text-[11px] font-bold flex items-center gap-1"><Sun size={12} /> {t("rpg.missoes.diariasHoje")}</p>
                     {rpg.diarias.map((d) => (
                       <div key={d.id} className={`rounded-xl p-2.5 border ${d.feita ? "bg-emerald-900/25 border-emerald-500/30" : "bg-black/30 border-white/10"}`} data-testid={`rpg-diaria-${d.id.split(":")[2]}`}>
                         <div className="flex justify-between items-center">
-                          <p className={`text-xs font-bold ${d.feita ? "text-emerald-300 line-through" : "text-white"}`}>{d.titulo}</p>
+                          <p className={`text-xs font-bold ${d.feita ? "text-emerald-300 line-through" : "text-white"}`}>{tituloDiaria(d.titulo, lingua)}</p>
                           <span className="text-white/45 text-[10px] font-mono">{d.feita ? "✓" : `${d.prog}/${d.qtd}`}</span>
                         </div>
                         <p className="text-white/60 text-[10px]">{d.texto}</p>
-                        <p className="text-white/40 text-[9px] mt-0.5">+{d.xp} XP · +{d.creditos} créditos</p>
+                        <p className="text-white/40 text-[9px] mt-0.5">+{d.xp} XP · +{d.creditos} {t("rpg.creditos.hud", { n: "" }).trim()}</p>
                       </div>
                     ))}
                   </div>
@@ -1229,34 +1242,34 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 {/* DIÁRIO */}
                 {modal === "diario" && (
                   <div className="flex flex-col gap-3">
-                    <p className="text-white/70 text-[11px]">Regiões: <b className="text-white" data-testid="rpg-regioes-cont">{rpg.descobertas.regioes}/{rpg.totalRegioes}</b> · Locais: <b className="text-white">{rpg.descobertas.pois}/{rpg.totalPois}</b> · Baús: <b className="text-white">{rpg.descobertas.baus}/{rpg.totalBaus}</b></p>
+                    <p className="text-white/70 text-[11px]">{t("rpg.diario.regioes")} <b className="text-white" data-testid="rpg-regioes-cont">{rpg.descobertas.regioes}/{rpg.totalRegioes}</b> {t("rpg.diario.locais")} <b className="text-white">{rpg.descobertas.pois}/{rpg.totalPois}</b> {t("rpg.diario.baus")} <b className="text-white">{rpg.descobertas.baus}/{rpg.totalBaus}</b></p>
                     {REGIOES.map((r) => {
                       const descoberta = s.perfil.descobertas.regioes.includes(r.id);
                       return (
                         <div key={r.id} className={`rounded-xl p-2.5 border ${descoberta ? "bg-black/30 border-white/10" : "bg-black/50 border-white/5"}`} data-testid={`rpg-regiao-${r.id}`}>
                           <div className="flex justify-between items-center">
-                            <p className={`text-xs font-black ${descoberta ? "text-white" : "text-white/35"}`}>{descoberta ? r.nome : "???"}</p>
+                            <p className={`text-xs font-black ${descoberta ? "text-white" : "text-white/35"}`}>{descoberta ? nomeRegiao(r, lingua) : "???"}</p>
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${r.cor}33`, color: descoberta ? r.cor : "#666" }}>Nv {r.nivel}</span>
                           </div>
-                          {descoberta && <p className="text-white/55 text-[10px] mt-0.5">{r.desc}</p>}
+                          {descoberta && <p className="text-white/55 text-[10px] mt-0.5">{descRegiao(r, lingua)}</p>}
                         </div>
                       );
                     })}
-                    <p className="text-white/70 text-[11px] font-bold mt-1">LOCAIS</p>
+                    <p className="text-white/70 text-[11px] font-bold mt-1">{t("rpg.diario.locaisTitulo")}</p>
                     {POIS.map((p) => {
                       const descoberto = s.perfil.descobertas.pois.includes(p.id);
                       return (
                         <div key={p.id} className="rounded-xl p-2 border border-white/5 bg-black/20" data-testid={`rpg-poi-${p.id}`}>
                           <div className="flex justify-between items-center">
-                            <p className={`text-[11px] font-bold ${descoberto ? "text-white" : "text-white/35"}`}>{descoberto ? p.nome : "???"}</p>
+                            <p className={`text-[11px] font-bold ${descoberto ? "text-white" : "text-white/35"}`}>{descoberto ? nomePoi(p, lingua) : "???"}</p>
                             <span className="text-white/35 text-[9px] font-mono">{descoberto ? `${p.x}, ${p.z}` : "—"}</span>
                           </div>
-                          {descoberto && <p className="text-white/50 text-[10px] mt-0.5">{p.desc}</p>}
+                          {descoberto && <p className="text-white/50 text-[10px] mt-0.5">{descPoi(p, lingua)}</p>}
                         </div>
                       );
                     })}
                     <div className="grid grid-cols-4 gap-2 text-center mt-1">
-                      {[["Hostis", rpg.kills.hostil], ["Mortes", rpg.mortes], ["Blocos", rpg.blocos], ["Nível", rpg.nivel]].map(([k, v]) => (
+                      {[[t("rpg.diario.hostis"), rpg.kills.hostil], [t("rpg.diario.mortes"), rpg.mortes], [t("rpg.diario.blocos"), rpg.blocos], [t("rpg.diario.nivel"), rpg.nivel]].map(([k, v]) => (
                         <div key={String(k)} className="bg-black/30 rounded-lg py-2">
                           <p className="text-white font-black text-sm">{String(v)}</p>
                           <p className="text-white/45 text-[9px]">{String(k)}</p>
@@ -1270,7 +1283,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 {modal === "habilidades" && (
                   <div className="flex flex-col gap-3">
                     <p className="text-white/70 text-[11px]" data-testid="rpg-pontos-modal">
-                      Pontos disponíveis: <b className="text-violet-300 font-black">{rpg.pontos}</b> · cada nível ganho dá 1 ponto (máx. {NIVEL_MAX} níveis)
+                      {t("rpg.hab.pontos", { n: String(rpg.pontos), max: String(NIVEL_MAX) })}
                     </p>
                     {RAMOS_RPG.map((r) => {
                       const nivel = rpg.skills[r];
@@ -1278,15 +1291,15 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                       return (
                         <div key={r} className="bg-black/30 rounded-xl p-3 border border-white/10" data-testid={`rpg-ramo-${r}`}>
                           <div className="flex items-center justify-between">
-                            <p className="text-white font-black text-sm">{NOMES_RAMO[r]} <span className="text-white/50 font-bold">· nível {nivel}/{NIVEL_MAX_RAMO_RPG}</span></p>
+                            <p className="text-white font-black text-sm">{nomeRamo(r, lingua)} <span className="text-white/50 font-bold">{t("rpg.hab.nivel", { n: String(nivel), max: String(NIVEL_MAX_RAMO_RPG) })}</span></p>
                             <button onClick={() => { if (s.gastarPonto(r)) setRpg(s.captura()); }} data-testid={`rpg-aprender-${r}`}
                               disabled={rpg.pontos < 1 || max}
                               className={`px-3 py-1.5 rounded-lg text-[10px] font-black ${max ? "bg-white/10 text-white/40" : rpg.pontos >= 1 ? "bg-violet-600 text-white hover:bg-violet-500" : "bg-white/10 text-white/40"}`}>
-                              {max ? "MÁXIMO" : "APRENDER (1 pt)"}
+                              {max ? t("rpg.hab.maximo") : t("rpg.hab.aprender")}
                             </button>
                           </div>
                           <ul className="mt-1.5 flex flex-col gap-0.5">
-                            {EFEITO_RAMO[r].map((e, i) => (
+                            {efeitosRamo(r, lingua).map((e, i) => (
                               <li key={i} className="text-[10px] text-white/60 flex items-center gap-1">
                                 <span className={`w-1.5 h-1.5 rounded-full ${i < nivel ? "bg-emerald-400" : "bg-white/20"}`} /> {e}
                               </li>
@@ -1295,7 +1308,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                         </div>
                       );
                     })}
-                    <p className="text-white/35 text-[10px]">Curva de XP com a forma logística estudada do skillset do Veloren (v38) — fórmula própria, zero código GPL.</p>
+                    <p className="text-white/35 text-[10px]">{t("rpg.hab.velorenNota")}</p>
                   </div>
                 )}
 
@@ -1311,16 +1324,16 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                         {armEq ? (
                           <>
                             <p className="text-white text-[11px] font-bold" data-testid="rpg-armadura-nome">
-                              Equipado: {armEq.nome} <span className="text-emerald-300">(−{Math.round(armEq.reducao * 100)}% do dano recebido)</span>
+                              {t("rpg.mochila.equipado", { nome: nomeItem(armEq.id, lingua), pct: String(Math.round(armEq.reducao * 100)) })}
                             </p>
                             <button onClick={() => { m.inv.despirArmadura(); setCap(m.captura()); }} data-testid="rpg-despir"
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">DESPIN</button>
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">{t("rpg.mochila.despir")}</button>
                           </>
                         ) : (
-                          <p className="text-white/50 text-[11px]">Sem peitoral equipado — seleciona um peitoral na mochila para equipar.</p>
+                          <p className="text-white/50 text-[11px]">{t("rpg.mochila.semArmadura")}</p>
                         )}
                       </div>
-                      <p className="text-white/60 text-[10px] font-bold">HOTBAR (1–9) — clique seleciona</p>
+                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.mochila.hotbarTitulo")}</p>
                       <div className="grid grid-cols-9 gap-1">
                         {cap.slots.slice(0, 9).map((slot, i) => (
                           <button key={i} onClick={() => { m.inv.selecao = i; setCap(m.captura()); }} data-testid={`rpg-mslot-${i}`}
@@ -1329,7 +1342,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                           </button>
                         ))}
                       </div>
-                      <p className="text-white/60 text-[10px] font-bold">MOCHILA (27) — clique move o item para a hotbar</p>
+                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.mochila.mochilaTitulo")}</p>
                       <div className="grid grid-cols-9 gap-1">
                         {cap.slots.slice(9).map((slot, i) => (
                           <button key={i} onClick={() => { m.inv.moverParaHotbar(i + 9); setCap(m.captura()); }} data-testid={`rpg-mslot-${i + 9}`}
@@ -1342,26 +1355,26 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                         {selSlot ? (
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-white text-[11px] font-bold">{infoItem(selSlot.id).nome} <span className="text-white/40">×{selSlot.qtd}</span></p>
+                              <p className="text-white text-[11px] font-bold">{nomeItem(selSlot.id, lingua)} <span className="text-white/40">×{selSlot.qtd}</span></p>
                               <p className="text-white/50 text-[10px]">
-                                {defSel?.dano ? `dano ${defSel.dano}` : defSel?.comida ? `comida +${defSel.comida}` : defSel?.armadura ? `absorve ${Math.round(defSel.armadura * 100)}% do dano` : "material/bloco — colocar ou minerar"}
+                                {defSel?.dano ? t("rpg.mochila.dano", { n: String(defSel.dano) }) : defSel?.comida ? t("rpg.mochila.comida", { n: String(defSel.comida) }) : defSel?.armadura ? t("rpg.mochila.armadura", { pct: String(Math.round(defSel.armadura * 100)) }) : t("rpg.mochila.material")}
                               </p>
                             </div>
                             {defSel?.armadura && (
                               <button onClick={() => { m.inv.equiparArmadura(); setCap(m.captura()); }} data-testid="rpg-equipar"
-                                className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">EQUIPAR</button>
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">{t("rpg.mochila.equipar")}</button>
                             )}
                             {/* v50: largar 1 do slot selecionado — a MESMA via da tecla Q */}
                             <button onClick={() => { sistemaRef.current.largarSelecionado(); setCap(m.captura()); setRpg(sistemaRef.current.captura()); }} data-testid="rpg-largar"
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">LARGAR 1</button>
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">{t("rpg.mochila.largar")}</button>
                           </div>
                         ) : (
-                          <p className="text-white/40 text-[10px]">Slot selecionado vazio — escolhe na hotbar ou na mochila.</p>
+                          <p className="text-white/40 text-[10px]">{t("rpg.mochila.vazio")}</p>
                         )}
                       </div>
-                      <p className="text-white/45 text-[10px]">Posições ocupadas: <b className="text-white">{ocupadas}/36</b> · comida come-se da hotbar (clique direito / botão COMER).</p>
+                      <p className="text-white/45 text-[10px]">{t("rpg.mochila.ocupadas", { n: String(ocupadas) })}</p>
                       <p className="text-white/30 text-[9px]" data-testid="rpg-mochila-fonte">
-                        A mochila é a do motor partilhado (36 posições — CIDADE BATEU e RPG são o mesmo inventário de dados). Os baús dos locais entregam espólio real — a mesma mesa para todos os jogadores, determinística como a semente do mundo.
+                        {t("rpg.mochila.fonte")}
                       </p>
                     </div>
                   );
@@ -1379,17 +1392,17 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                     <div key={info.receita.id} className={`rounded-xl p-2 border ${info.pode ? "bg-emerald-900/25 border-emerald-500/30" : "bg-black/30 border-white/10"}`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-white text-[11px] font-bold">{info.receita.nome}{info.receita.desc ? <span className="text-white/45 font-normal"> — {info.receita.desc}</span> : null}</p>
+                          <p className="text-white text-[11px] font-bold">{nomePorTexto(info.receita.nome, lingua)}{info.receita.desc ? <span className="text-white/45 font-normal"> — {info.receita.desc}</span> : null}</p>
                           <p className="text-white/50 text-[10px] font-mono">
-                            {info.receita.ingredientes.map(([id, qtd]) => `${qtd}× ${infoItem(id).nome} (${m.inv.contar(id)})`).join(" · ")}
+                            {info.receita.ingredientes.map(([id, qtd]) => `${qtd}× ${nomeItem(id, lingua)} (${m.inv.contar(id)})`).join(" · ")}
                           </p>
                         </div>
                         {info.pode ? (
                           <button onClick={() => {
-                            if (criarReceita(m.inv, info.receita)) { setForjaMsg(`CRIADO: ${info.receita.nome}`); setCap(m.captura()); }
-                            else setForjaMsg("Falhou — os ingredientes mudaram. Tenta de novo.");
+                            if (criarReceita(m.inv, info.receita)) { setForjaMsg(t("rpg.forja.criado", { nome: nomePorTexto(info.receita.nome, lingua) })); setCap(m.captura()); }
+                            else setForjaMsg(t("rpg.forja.falhou"));
                           }} data-testid={`rpg-craft-${info.receita.id}`}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">CRIAR</button>
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">{t("rpg.forja.criar")}</button>
                         ) : (
                           <span className="text-rose-300/90 text-[10px] text-right shrink-0 max-w-[150px]" data-testid={`rpg-craft-bloq-${info.receita.id}`}>{info.motivo}</span>
                         )}
@@ -1399,18 +1412,18 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                   return (
                     <div className="flex flex-col gap-2.5" data-testid="rpg-forja">
                       <div className="flex items-center gap-2 flex-wrap" data-testid="rpg-forja-estado">
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${mesa ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-mesa">MESA: {mesa ? "AQUI" : "NÃO"}</span>
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${fornalha ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-fornalha">FORNALHA: {fornalha ? "AQUI" : "NÃO"}</span>
-                        {!mesa && <span className="text-white/40 text-[10px]">Forja Perdida a ~{distForja} blocos (ver o MAPA)</span>}
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${mesa ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-mesa">{t("rpg.forja.mesa", { v: mesa ? t("rpg.forja.aqui") : t("rpg.forja.nao") })}</span>
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${fornalha ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-fornalha">{t("rpg.forja.fornalha", { v: fornalha ? t("rpg.forja.aqui") : t("rpg.forja.nao") })}</span>
+                        {!mesa && <span className="text-white/40 text-[10px]">{t("rpg.forja.distancia", { n: String(distForja) })}</span>}
                       </div>
                       {forjaMsg && <p className="text-amber-300 text-[11px] font-bold" data-testid="rpg-forja-msg">{forjaMsg}</p>}
-                      <p className="text-white/60 text-[10px] font-bold">CRIAÇÃO — simples em qualquer sítio; as de mesa só junto de uma Mesa de Criação</p>
+                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.forja.criacao")}</p>
                       {infos.filter((i) => i.receita.categoria === "criacao").map(linha)}
-                      <p className="text-white/60 text-[10px] font-bold">FUNDIÇÃO — minérios e cozinhados, só junto de uma fornalha</p>
+                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.forja.fundicao")}</p>
                       {infos.filter((i) => i.receita.categoria === "fundicao").map(linha)}
-                      <p className="text-white/45 text-[10px]">Posições ocupadas: <b className="text-white">{cap.slots.filter(Boolean).length}/36</b> — o que crias entra pela mesma mochila do motor.</p>
+                      <p className="text-white/45 text-[10px]">{t("rpg.forja.ocupadas", { n: String(cap.slots.filter(Boolean).length) })}</p>
                       <p className="text-white/30 text-[9px]" data-testid="rpg-forja-fonte">
-                        As receitas são as do motor partilhado (constants.ts — as mesmas do BateuCraft, zero receita inventada); avaliarReceitas/criarReceita/pertoDe são as funções reais. No RPG nada se deita: a Forja Perdida é o único sítio do mundo com MESA e FORNALHA reais.
+                        {t("rpg.forja.fonte")}
                       </p>
                     </div>
                   );
@@ -1426,16 +1439,16 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                         return (
                           <div key={r.id} className="flex items-center gap-1.5 text-[10px]" data-testid={`rpg-mapa-regiao-${r.id}`}>
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: descoberta ? r.cor : "rgba(255,255,255,0.2)" }} />
-                            <span className={descoberta ? "text-white/80" : "text-white/35"}>{descoberta ? r.nome : "???"}</span>
+                            <span className={descoberta ? "text-white/80" : "text-white/35"}>{descoberta ? nomeRegiao(r, lingua) : "???"}</span>
                           </div>
                         );
                       })}
                     </div>
                     <p className="text-white/45 text-[10px]">
-                      ★ objetivo atual · ◆ locais com baú · seta branca = tu. Descobertas: {rpg.descobertas.regioes}/{rpg.totalRegioes} regiões · {rpg.descobertas.pois}/{rpg.totalPois} locais · {rpg.descobertas.baus}/{rpg.totalBaus} baús
+                      {t("rpg.mapa.legenda", { r: String(rpg.descobertas.regioes), rt: String(rpg.totalRegioes), p: String(rpg.descobertas.pois), pt: String(rpg.totalPois), b: String(rpg.descobertas.baus), bt: String(rpg.totalBaus) })}
                     </p>
                     <p className="text-white/30 text-[9px]" data-testid="rpg-mapa-fonte">
-                      Terreno real amostrado do mundo (semente fixa — água, costa, serra e miombo são os mesmos dados que geram os blocos) · regiões não descobertas ficam cobertas até lá chegares.
+                      {t("rpg.mapa.fonte")}
                     </p>
                   </div>
                 )}
@@ -1447,38 +1460,38 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 {modal === "pausa" && (
                   <div className="flex flex-col gap-2.5">
                     <button onClick={() => { setModal(null); m.pausado = false; capturarRato(); }} data-testid="rpg-retomar"
-                      className="w-full py-3 rounded-xl font-black text-white bg-emerald-700 hover:bg-emerald-600">RETOMAR</button>
+                      className="w-full py-3 rounded-xl font-black text-white bg-emerald-700 hover:bg-emerald-600">{t("rpg.pausa.retomar")}</button>
                     <div className="bg-black/30 rounded-xl p-2.5 text-[10px] text-white/60 grid grid-cols-2 gap-y-0.5" data-testid="rpg-pausa-info">
-                      <span>Dificuldade: <b className="text-white" data-testid="rpg-pausa-dif">{rpg.dificuldade.nome}</b></span>
-                      <span>Nível: <b className="text-white">{rpg.nivel}/{NIVEL_MAX}</b></span>
-                      <span>Créditos: <b className="text-white">{rpg.creditos}</b></span>
-                      <span>Mortes: <b className="text-white">{rpg.mortes}</b></span>
-                      <span>Descobertas: <b className="text-white">{rpg.descobertas.regioes}/{rpg.totalRegioes} · {rpg.descobertas.pois}/{rpg.totalPois}</b></span>
-                      <span>História: <b className="text-white">{rpg.historiaFeita ? "completa" : `capítulo ${rpg.capitulo?.id.replace("h", "")}/6`}</b></span>
+                      <span>{t("rpg.pausa.dificuldade")} <b className="text-white" data-testid="rpg-pausa-dif">{nomeDificuldade(rpg.dificuldade.id, lingua)}</b></span>
+                      <span>{t("rpg.pausa.nivel")} <b className="text-white">{rpg.nivel}/{NIVEL_MAX}</b></span>
+                      <span>{t("rpg.pausa.creditos")} <b className="text-white">{rpg.creditos}</b></span>
+                      <span>{t("rpg.pausa.mortes")} <b className="text-white">{rpg.mortes}</b></span>
+                      <span>{t("rpg.pausa.descobertas")} <b className="text-white">{rpg.descobertas.regioes}/{rpg.totalRegioes} · {rpg.descobertas.pois}/{rpg.totalPois}</b></span>
+                      <span>{t("rpg.pausa.historia")} <b className="text-white">{rpg.historiaFeita ? t("rpg.pausa.historia.completa") : t("rpg.pausa.historia.capitulo", { n: rpg.capitulo?.id.replace("h", "") ?? "" })}</b></span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <button onClick={() => setModal("mapa")} data-testid="rpg-pausa-mapa"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> MAPA</button>
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> {t("rpg.btn.mapa")}</button>
                       <button onClick={() => setModal("mochila")} data-testid="rpg-pausa-mochila"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Backpack size={14} /> MOCHILA</button>
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Backpack size={14} /> {t("rpg.btn.mochila")}</button>
                       <button onClick={() => setModal("forja")} data-testid="rpg-pausa-forja"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Hammer size={14} /> FORJA</button>
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Hammer size={14} /> {t("rpg.btn.forja")}</button>
                       <button onClick={() => setModal("ajuda")} data-testid="rpg-pausa-ajuda"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> AJUDA</button>
+                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> {t("rpg.comoJogar")}</button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={() => { setSomMudo(m.alternarSom()); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs">
-                        {somMudo ? "SOM: DESLIGADO" : "SOM: LIGADO"}
+                        {somMudo ? t("rpg.som.off") : t("rpg.som.on")}
                       </button>
                       <button onClick={() => { const c = m.ciclarCamara(); setCamaraModo(c); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1">
-                        <Camera size={14} /> CÂMARA
+                        <Camera size={14} /> {t("rpg.camara.titulo")}
                       </button>
                     </div>
                     <button onClick={() => { void s.guardar(); setModal("pausa"); }} data-testid="rpg-guardar"
-                      className="w-full py-2.5 rounded-xl font-bold text-white bg-sky-800 hover:bg-sky-700 text-xs">GUARDAR AGORA</button>
+                      className="w-full py-2.5 rounded-xl font-bold text-white bg-sky-800 hover:bg-sky-700 text-xs">{t("rpg.pausa.guardar")}</button>
                     <button onClick={sair} data-testid="rpg-sair"
-                      className="w-full py-2.5 rounded-xl font-bold text-white bg-rose-800/80 hover:bg-rose-700 text-xs">SAIR PARA A PLATAFORMA</button>
-                    <p className="text-white/40 text-[10px] text-center">O progresso guarda-se automaticamente a cada 8 segundos.</p>
+                      className="w-full py-2.5 rounded-xl font-bold text-white bg-rose-800/80 hover:bg-rose-700 text-xs">{t("rpg.pausa.sair")}</button>
+                    <p className="text-white/40 text-[10px] text-center">{t("rpg.pausa.autoSave")}</p>
                   </div>
                 )}
               </div>
@@ -1491,16 +1504,16 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       {fase === "morto" && cap && (
         <div className="absolute inset-0 bg-red-950/80 flex flex-col items-center justify-center gap-4 p-4" data-testid="rpg-morte">
           <Skull size={44} className="text-rose-400" />
-          <h2 className="text-rose-200 font-display text-3xl font-black">A lenda pausou-se…</h2>
+          <h2 className="text-rose-200 font-display text-3xl font-black">{t("rpg.morte.titulo")}</h2>
           <p className="text-white/70 text-sm text-center max-w-sm">
-            {cap.causaMorte || "O mundo da lenda é duro"} · {rpg?.mortes ?? 0}ª morte<br />
-            <span className="text-white/45 text-[11px]">O XP, as missões e as descobertas ficam — renasces na Aldeia Inicial.</span>
+            {cap.causaMorte ? causaMorte(cap.causaMorte, lingua) : t("rpg.morte.causaDefault")} · {t("rpg.morte.morte", { n: String((rpg?.mortes ?? 0) + 1) })}<br />
+            <span className="text-white/45 text-[11px]">{t("rpg.morte.nota")}</span>
           </p>
           <button onClick={renascer} data-testid="rpg-renascer"
             className="px-6 py-3 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 to-lime-500 hover:from-emerald-500 active:scale-95 transition flex items-center gap-2">
-            <Swords size={17} /> RENASCER NA ALDEIA
+            <Swords size={17} /> {t("rpg.morte.renascer")}
           </button>
-          <button onClick={sair} className="text-white/60 underline text-sm">Sair da lenda</button>
+          <button onClick={sair} className="text-white/60 underline text-sm">{t("rpg.morte.sair")}</button>
         </div>
       )}
     </div>

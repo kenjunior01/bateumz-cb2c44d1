@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,6 +18,11 @@ interface AuthContextType {
   role: string | null;
   adminCountries: string[];
   loading: boolean;
+  /** v62 (roadmap item 10): o arranque FALHOU (rede/Supabase inacessível
+   *  ou teto de espera atingido) — o UI mostra estado de recuperação com
+   *  retry navegável em vez de um spinner infinito. */
+  bootErro: boolean;
+  tentarNovamente: () => void;
   signUp: (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => Promise<{ error: any; session: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -28,12 +33,15 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const bootRetryRef = useRef<(() => void) | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [adminCountries, setAdminCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // v62 — P0: cap de espera + estado de recuperação honesto
+  const [bootErro, setBootErro] = useState(false);
 
   const ensureProfile = async (userId: string, user: User) => {
     const { data: profileData } = await supabase
@@ -163,7 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setLoading(true);
-      await fetchProfile(nextSession.user.id, nextSession.user);
+      // v62: cap na leitura do perfil — se a rede estiver presa, o shell
+      // segue SEM perfil (o retry/pull do estado de boot cobre o resto);
+      // a leitura continua em segundo plano e entra quando chegar.
+      const perfilComTeto = Promise.race([
+        fetchProfile(nextSession.user.id, nextSession.user),
+        new Promise((r) => setTimeout(r, 6000)),
+      ]);
+      await perfilComTeto;
       if (active) setLoading(false);
       const oauthNext = localStorage.getItem("bateu_oauth_next");
       if (oauthNext && oauthNext.startsWith("/") && !oauthNext.startsWith("//")) {
@@ -181,16 +196,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      await finishUserLoad(initialSession);
-      bootstrapped = true;
-    });
+    const iniciarBoot = () => {
+      setBootErro(false);
+      setLoading(true);
+      // v62: teto ABSOLUTO do arranque (6 s) — a app nunca fica presa no
+      // boot: se o Supabase não responde, o estado de recuperação entra
+      // (ProtectedRoute mostra retry + continuar como convidado).
+      const teto = setTimeout(() => {
+        if (active && !bootstrapped) {
+          setBootErro(true);
+          setLoading(false);
+        }
+      }, 6000);
+      supabase.auth.getSession()
+        .then(async ({ data: { session: initialSession } }) => {
+          if (active && !bootstrapped) {
+            await finishUserLoad(initialSession);
+            bootstrapped = true;
+          }
+        })
+        .catch(() => {
+          if (active && !bootstrapped) {
+            setBootErro(true);
+            setLoading(false);
+          }
+        })
+        .finally(() => clearTimeout(teto));
+    };
+
+    iniciarBoot();
+    // v62: o retry do boot é exposto ao UI (tentarNovamente)
+    bootRetryRef.current = () => { if (active && !bootstrapped) iniciarBoot(); };
 
     return () => {
       active = false;
+      bootRetryRef.current = null;
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const tentarNovamente = useCallback(() => {
+    bootRetryRef.current?.();
   }, []);
 
   const signUp = async (email: string, password: string, meta?: { display_name?: string; role?: string; company_name?: string }) => {
@@ -223,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, role, adminCountries, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, role, adminCountries, loading, bootErro, tentarNovamente, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

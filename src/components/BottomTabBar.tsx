@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, ShoppingBag, Ticket, User, Play, Swords } from "lucide-react";
+import { Home, ShoppingBag, User, Play, Swords } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -12,14 +12,16 @@ type TabDef = {
   requiresAuth?: boolean;
 };
 
-/* Barra inferior mobile — fusão do melhor das duas versões de exemplo:
-   5 separadores com o WORLD 3D elevado ao centro (tile arredondado com
-   gradiente roxo + brilho, ícone Play e rótulo "WORLD"). */
+/* Barra inferior mobile — v62 (roadmap item 7): QUATRO destinos de
+   navegação + a ação central WORLD 3D elevada (tile arredondado com
+   gradiente roxo + brilho, ícone Play e rótulo "WORLD"). Os sorteios
+   deixam de ser destino próprio da barra: a homepage é a descoberta de
+   loja/sorteios/histórias (item 6) — o /concursos continua pelo menu e
+   pelas secções da homepage. */
 const TABS: TabDef[] = [
   { icon: Home, labelKey: "tab.home", href: "/" },
   { icon: ShoppingBag, labelKey: "tab.shop", href: "/marketplace" },
   { icon: Swords, labelKey: "tab.arena", href: "/arena" },
-  { icon: Ticket, labelKey: "tab.raffles", href: "/concursos" },
   { icon: User, labelKey: "tab.profile", href: "/profile", requiresAuth: false },
 ];
 

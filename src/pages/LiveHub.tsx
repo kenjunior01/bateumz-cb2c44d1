@@ -119,7 +119,7 @@ import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MissionsBar, reportUniversalScore } from "@/components/games/kit/MissionsBar";
-import GameFullscreenWrapper from "@/components/livegames/GameFullscreenWrapper";
+import GameFullscreenWrapper, { ToggleEcraInteiro } from "@/components/livegames/GameFullscreenWrapper";
 import EngagementBar from "@/components/engagement/EngagementBar";
 import LevelProgressWidget from "@/components/engagement/LevelProgressWidget";
 import { useSEO } from "@/hooks/useSEO";
@@ -212,9 +212,10 @@ const LiveHub = () => {
   const navigate = useNavigate();
   const GAMES = useMemo(() => GAME_DEFS.map(g => ({
     ...g,
-    label: g.id === "aetheria" ? "Aetheria: Ilhas do Vento" : t("livehub.game." + g.id),
+    // v62: o rótulo do Aetheria segue o i18n (o EN do Mundo 3D — item 3)
+    label: g.id === "aetheria" ? t("livehub.game.aetheria") : t("livehub.game." + g.id),
     desc: g.id === "aetheria"
-      ? "Explora ilhas suspensas, enfrenta criaturas e completa missões num RPG de fantasia 3D."
+      ? t("livehub.game.aetheria.desc")
       : t("livehub.game." + g.id + ".desc"),
   })), [t]);
   const [searchParams] = useSearchParams();
@@ -1387,6 +1388,10 @@ const LiveHub = () => {
                    fica espremido no fluxo da página (bug "fica num quadrado") */
                 <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
+                  {/* v62 (item 4): ecrã inteiro PARA os mundos imersivos — o botão
+                      vive DENTRO do portal (a HUD do jogo não tem um próprio;
+                      antes de hoje o mundo ficava sem caminho para fullscreen) */}
+                  <ToggleEcraInteiro />
                   <GameErrorBoundary gameName="BATEU RPG: Lendas">
                     <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
@@ -1394,6 +1399,8 @@ const LiveHub = () => {
               {active === "aetheria" && createPortal(
                 <motion.div key="aetheria" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
+                  {/* v62 (item 4): ecrã inteiro para o Aetheria também */}
+                  <ToggleEcraInteiro />
                   <GameErrorBoundary gameName="Aetheria: Ilhas do Vento">
                     <AetheriaGame
                       onScore={recordScore("Aetheria: Ilhas do Vento")}

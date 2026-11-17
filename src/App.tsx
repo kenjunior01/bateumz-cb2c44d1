@@ -68,6 +68,7 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
 const Register = lazy(() => import("./pages/Register.tsx"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent.tsx"));
+const OAuthDevFallback = lazy(() => import("./pages/OAuthDevFallback.tsx"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Marketplace = lazy(() => import("./pages/Marketplace.tsx"));
@@ -236,6 +237,8 @@ function AnimatedRoutes() {
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+            {/* v62 (item 5): o arranque do OAuth gerido é só produção — em dev, fallback honesto em vez de 404 seco */}
+            <Route path="/~oauth/initiate" element={<OAuthDevFallback />} />
             <Route path="/register" element={<Register />} />
 
             <Route path="/forgot-password" element={<ForgotPassword />} />

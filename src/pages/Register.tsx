@@ -1,5 +1,7 @@
 import { lovable } from "@/integrations/lovable/index";
-import { useState } from "react";
+import { consumirRetornoOAuth, comTimeoutOAuth } from "@/lib/oauthReturn";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy, Mail, Lock, User, Building2, ArrowLeft, Gift, Phone, MapPin,
@@ -59,6 +61,16 @@ const stepVariants = {
 export default function Register() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  /* v62 (item 5): ?next= da URL — o mesmo contrato do Login (só caminhos
+     internos, sem open-redirect). */
+  const nextPath = (() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("next");
+      if (p && p.startsWith("/") && !p.startsWith("//")) return p;
+    } catch {}
+    return null;
+  })();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [accountType, setAccountType] = useState<"user" | "business">("user");
@@ -167,29 +179,46 @@ export default function Register() {
     }
   };
 
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-        const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin });
-    const error = result.error;
-    if (result.redirected) return;
-    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
-    if (error) {
-      setError(`Could not connect with Google. ${(error as any)?.message ? "(" + (error as any).message + ") " : ""}Please try again — allow pop-ups for this site.`); console.error("[oauth]", error);
-      setGoogleLoading(false);
+  /* v62 (item 5): um SÓ handler para os dois provedores — cap de 15 s,
+     mensagens pela língua do utilizador e reset honesto do loading. */
+  const iniciarOAuth = async (provedor: "google" | "apple") => {
+    const rotulo = provedor === "apple" ? "Apple" : "Google";
+    const definirLoading = provedor === "apple" ? setAppleLoading : setGoogleLoading;
+    definirLoading(true);
+    const nextTarget = nextPath ?? "";
+    if (nextTarget) localStorage.setItem('bateu_oauth_next', nextTarget);
+    const r = await comTimeoutOAuth(lovable.auth.signInWithOAuth(provedor, { redirect_uri: window.location.origin }));
+    if (r.porTimeout) {
+      setError(t("auth.oauth.timeout", { provedor: rotulo }));
+      console.error("[oauth]", "timeout");
+      definirLoading(false);
+      return;
     }
-  };
-
-  const handleAppleSignUp = async () => {
-    setAppleLoading(true);
-        const result = await lovable.auth.signInWithOAuth('apple', { redirect_uri: window.location.origin });
-    const error = result.error;
-    if (result.redirected) return;
-    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
-    if (error) {
-      setError(`Could not connect with Apple. ${(error as any)?.message ? "(" + (error as any).message + ") " : ""}Please try again — allow pop-ups for this site.`); console.error("[oauth]", error);
-      setAppleLoading(false);
+    if (r.erro) {
+      setError(t("auth.oauth.erro", { provedor: rotulo, detalhe: r.erro.message ? ` (${r.erro.message})` : "" }));
+      console.error("[oauth]", r.erro);
+      definirLoading(false);
+      return;
     }
+    const result = r.valor!;
+    if (result.redirected) return;
+    const error = result.error;
+    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
+    setError(t("auth.oauth.erro", { provedor: rotulo, detalhe: (error as any)?.message ? ` (${(error as any).message})` : "" }));
+    console.error("[oauth]", error);
+    definirLoading(false);
   };
+  /* v62 (item 5): retorno do provedor com erro mostrado UMA vez na chegada. */
+  useEffect(() => {
+    const retorno = consumirRetornoOAuth();
+    if (!retorno) return;
+    const provedor = retorno.provedor === "apple" ? "Apple" : retorno.provedor === "google" ? "Google" : "OAuth";
+    if (retorno.erro === "access_denied" || retorno.erro === "user_cancelled_login") {
+      setError(t("auth.oauth.cancelado", { provedor }));
+    } else {
+      setError(t("auth.oauth.erro", { provedor, detalhe: retorno.descricao ? ` (${retorno.descricao})` : "" }));
+    }
+  }, [t]);
 
   const mascotForStep = step === 0 ? mascotHappy : step === 1 ? mascotExcited : step === 2 ? mascotHappy : mascotWinner;
   const mascotMessage = step === 0
@@ -362,7 +391,7 @@ export default function Register() {
                     <p className="text-xs text-muted-foreground mt-0.5">Use your Google or Apple account</p>
                   </div>
                   <Button variant="outline" className="w-full h-10 gap-3 border-border hover:bg-secondary rounded-xl"
-                    onClick={handleGoogleSignUp} disabled={googleLoading}>
+                    onClick={() => iniciarOAuth("google")} disabled={googleLoading}>
                     <svg className="h-4 w-4" viewBox="0 0 24 24">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
                       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -374,7 +403,7 @@ export default function Register() {
                   <Button
                     variant="outline"
                     className="w-full h-10 gap-3 rounded-xl bg-black text-white border-black hover:bg-neutral-800 dark:bg-card dark:text-foreground dark:border-border dark:hover:bg-secondary"
-                    onClick={handleAppleSignUp} disabled={appleLoading}>
+                    onClick={() => iniciarOAuth("apple")} disabled={appleLoading}>
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                     </svg>

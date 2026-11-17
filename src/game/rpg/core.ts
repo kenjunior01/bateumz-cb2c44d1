@@ -327,6 +327,13 @@ function aleatorio(seed: number): () => number {
   };
 }
 
+/** Língua de EXIBIÇÃO dos textos gerados (v62 — roadmap item 3). O PT
+ *  continua canónico (omissão = "pt", os testes do núcleo ficam intactos);
+ *  "en" devolve as mesmas missões com texto inglês — mesmo alvo, mesma qtd,
+ *  mesmas recompensas. A tradução dos TÍTULOS vive em nomes.ts (tituloDiaria)
+ *  para não duplicar catálogo aqui. */
+export type LinguaTextos = "pt" | "en";
+
 const MODELOS_DIARIA: { titulo: string; tipo: ObjetivoTipo; alvo: string; baseQtd: number; xp: number; cred: number }[] = [
   { titulo: "Caçada da manhã", tipo: "matar", alvo: "hostil", baseQtd: 4, xp: 45, cred: 8 },
   { titulo: "Colecionador de tesouros", tipo: "abrirBaus", alvo: "1", baseQtd: 1, xp: 40, cred: 6 },
@@ -345,7 +352,7 @@ export function diaLocal(data: Date = new Date()): string {
 }
 
 /** 3 diárias determinísticas para o dia (mesmo dia → mesmas missões, em todo o mundo). */
-export function missoesDiarias(dia: string, dif: RegrasDificuldadeRpg): MissaoDia[] {
+export function missoesDiarias(dia: string, dif: RegrasDificuldadeRpg, lingua: LinguaTextos = "pt"): MissaoDia[] {
   let h = 0;
   for (let i = 0; i < dia.length; i++) h = (Math.imul(h, 31) + dia.charCodeAt(i)) | 0;
   const rnd = aleatorio(h ^ 0x5eed);
@@ -360,7 +367,7 @@ export function missoesDiarias(dia: string, dif: RegrasDificuldadeRpg): MissaoDi
     return {
       id: `d:${dia}:${i}`,
       titulo: m.titulo,
-      objetivo: { tipo: m.tipo, alvo: m.alvo, qtd, texto: textoObjetivo(m.tipo, m.alvo, qtd) },
+      objetivo: { tipo: m.tipo, alvo: m.alvo, qtd, texto: textoObjetivo(m.tipo, m.alvo, qtd, lingua) },
       xp: Math.round(m.xp * dif.multXP),
       creditos: Math.round(m.cred * dif.multCred),
     };
@@ -371,14 +378,15 @@ function ordemDificuldade(id: DificuldadeRpg): number {
   return id === "medio" ? 0 : id === "dificil" ? 1 : 2;
 }
 
-function textoObjetivo(tipo: ObjetivoTipo, alvo: string, qtd: number): string {
+function textoObjetivo(tipo: ObjetivoTipo, alvo: string, qtd: number, lingua: LinguaTextos = "pt"): string {
+  const en = lingua === "en";
   switch (tipo) {
-    case "matar": return alvo === "zumbi" ? `Derrota ${qtd} zumbis` : alvo === "aranha" ? `Derrota ${qtd} aranhas` : alvo === "estourador" ? `Derrota ${qtd} estouradores` : `Derrota ${qtd} inimigos hostis`;
-    case "abrirBaus": return `Abre ${qtd} baú${qtd > 1 ? "s" : ""} de tesouro`;
-    case "andar": return `Caminha ${qtd} blocos`;
-    case "sobreviverNoite": return "Sobrevive a uma noite inteira";
-    case "descobrirRegiao": return "Descobre uma região nova";
-    case "chegarPoi": return `Chega ao destino: ${alvo}`;
+    case "matar": return alvo === "zumbi" ? (en ? `Defeat ${qtd} zombies` : `Derrota ${qtd} zumbis`) : alvo === "aranha" ? (en ? `Defeat ${qtd} spiders` : `Derrota ${qtd} aranhas`) : alvo === "estourador" ? (en ? `Defeat ${qtd} boomers` : `Derrota ${qtd} estouradores`) : (en ? `Defeat ${qtd} hostile enemies` : `Derrota ${qtd} inimigos hostis`);
+    case "abrirBaus": return en ? `Open ${qtd} treasure chest${qtd > 1 ? "s" : ""}` : `Abre ${qtd} baú${qtd > 1 ? "s" : ""} de tesouro`;
+    case "andar": return en ? `Walk ${qtd} blocks` : `Caminha ${qtd} blocos`;
+    case "sobreviverNoite": return en ? "Survive a full night" : "Sobrevive a uma noite inteira";
+    case "descobrirRegiao": return en ? "Discover a new region" : "Descobre uma região nova";
+    case "chegarPoi": return en ? `Reach the destination: ${alvo}` : `Chega ao destino: ${alvo}`;
   }
 }
 

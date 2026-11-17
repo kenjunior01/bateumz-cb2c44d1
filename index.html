@@ -87,6 +87,35 @@
     }
     </script>
 
+    <!-- v62 (item 5): captura do RETORNO OAUTH ANTES de qualquer script
+         externo — o gtag também faz history.replaceState para limpar
+         parâmetros e, em corrida com o bundle, podia apagar o erro que o
+         Google/Apple devolveram (?error=… / #error=…). Inline corre no
+         parse do HTML: determinístico. A forma é consumida pelo
+         src/lib/oauthReturn.ts (RETORNO_OAUTH_INICIAL). -->
+    <script>
+      (function () {
+        try {
+          function ler(params) {
+            var erro = params.get("error");
+            if (!erro) return null;
+            var provedorBruto = (params.get("provider") || "").toLowerCase();
+            return {
+              provedor: provedorBruto.indexOf("apple") >= 0 ? "apple" : provedorBruto.indexOf("google") >= 0 ? "google" : null,
+              erro: erro,
+              descricao: params.get("error_description") || ""
+            };
+          }
+          var r = null;
+          try { r = ler(new URLSearchParams(location.search)); } catch (e) {}
+          if (!r && location.hash.length > 1) {
+            try { r = ler(new URLSearchParams(location.hash.slice(1))); } catch (e) {}
+          }
+          window.__oauthRetorno = r;
+        } catch (e) { window.__oauthRetorno = null; }
+      })();
+    </script>
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16685971551"></script>
     <script>

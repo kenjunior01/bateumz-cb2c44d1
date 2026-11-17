@@ -85,7 +85,9 @@ export function describeSignUpError(raw?: string): FriendlyAuthError {
     return {
       kind: "email_exists",
       message: "An account with this email already exists. Try signing in instead, or use another email.",
-      action: "signup",
+      // v62 (item 5): a conta EXISTE — mandar o utilizador «criar conta» era
+      // o caminho errado; o correto é entrar (ou recuperar a palavra-passe).
+      action: "reset_password",
     };
   }
   if (m.includes("invalid email")) {

@@ -5,15 +5,22 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const securityBadges = [
   { icon: Lock, labelKey: "footer.ssl", descKey: "trust.subtitle" },
-  { icon: Shield, labelKey: "footer.blockchain", descKey: "menu.transparency" },
-  { icon: CheckCircle2, labelKey: "footer.rng", descKey: "hero.badge.verification" },
+  { icon: Shield, labelKey: "footer.prova", descKey: "menu.transparency" },
+  { icon: CheckCircle2, labelKey: "footer.apuramento", descKey: "hero.badge.verification" },
 ];
+/* v62: os rótulos acima passaram a ser verificáveis — «Ligação segura
+   (HTTPS)» · «Prova de sorteio (SHA-256)» · «Apuramento server-side» —
+   ver item 11 do roadmap; zero certificações/claims inventados. */
 
+/* v62 (roadmap item 11): só métodos de pagamento que EXISTEM de facto na
+   plataforma — PayPal (edge functions paypal-create-order/capture-order) e
+   os métodos locais com confirmação manual (M-Pesa, e-Mola — Termos §4).
+   Visa/Mastercard/Amex eram logos decorativos sem integração: inventados
+   = fora. */
 const paymentLogos = [
   { name: "PayPal", color: "bg-[#003087]/10 text-[#003087]" },
-  { name: "Visa", color: "bg-indigo-500/10 text-indigo-600" },
-  { name: "Mastercard", color: "bg-orange-500/10 text-orange-600" },
-  { name: "Amex", color: "bg-sky-500/10 text-sky-600" },
+  { name: "M-Pesa", color: "bg-red-500/10 text-red-600" },
+  { name: "e-Mola", color: "bg-emerald-500/10 text-emerald-600" },
 ];
 
 const HOW_STEPS = [

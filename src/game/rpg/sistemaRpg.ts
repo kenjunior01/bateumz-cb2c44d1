@@ -12,13 +12,14 @@
 
 import { Motor } from "../blocos/engine";
 import { type Mob, type TipoMob, ehPassivo } from "../blocos/mobs";
-import { B, ALTURA, I, VIDA_MAX, NOMES, CORES } from "../blocos/constants";
+import { B, ALTURA, I, VIDA_MAX, CORES } from "../blocos/constants";
 // v50: loot como ENTIDADE (padrão Veloren item_drop) — física/magnete/TTL
 // puros e isomórficos; as malhas e a recolha (inventário real) vivem aqui.
 import { criarItemChao, passoItensChao, aplicarCapItens, ITEM_CAP, ITEM_CHAO_TTL, type ItemChao } from "../blocos/itensChao";
 import * as THREE from "three";
 import { idbDefinir, idbObter, idbRemover, espelharLS, restaurarLSdeIDB } from "../armazem";
 import { MundoRPG } from "./mundoRpg";
+import { nomeItem, tituloDiaria, tituloMissao, nomeRegiao, nomePoi, nomeRamo, nomeDificuldade, type LinguaRpg } from "./nomes.ts";
 import {
   SEED_RPG, SPAWN_ALDEIA, ALTURA_ALDEIA,
   DIFICULDADES_RPG, ORDEM_DIFICULDADE, type RegrasDificuldadeRpg, type DificuldadeRpg,
@@ -46,6 +47,10 @@ const TIPO_KILL: Record<string, "hostil" | "zumbi" | "aranha" | "estourador" | "
 };
 
 export class SistemaRPG {
+  /** Língua de EXIBIÇÃO dos avisos e textos gerados (v62 — roadmap item 3).
+   *  PT por omissão: o motor canónico e os 157 testes do núcleo ficam
+   *  intactos; o UI do mundo passa "en" quando a língua da plataforma é EN. */
+  lingua: LinguaRpg = "pt";
   perfil: PerfilRpg = perfilInicial("medio");
   private motor: Motor | null = null;
   private avisosRpg: AvisoRpg[] = [];
@@ -229,7 +234,7 @@ export class SistemaRPG {
           this.boss.spawnado = false;
           this.bossMob = null;
         }
-        this.aviso(`Renasceste na Aldeia Inicial (${this.perfil.mortes}ª morte) — o progresso RPG fica.`, "info", 4);
+        this.aviso(this.txt(`Renasceste na Aldeia Inicial (${this.perfil.mortes}ª morte) — o progresso RPG fica.`, `You respawned at the Starting Village (death #${this.perfil.mortes}) — RPG progress stays.`), "info", 4);
       };
     }
 
@@ -254,7 +259,7 @@ export class SistemaRPG {
     }
 
     this.noiteAntes = m.noite;
-    this.aviso(`BATEU RPG: Lendas — dificuldade ${this.dif.nome}. O mundo é o mesmo para todos (semente ${SEED_RPG}).`, "info", 5);
+    this.aviso(this.txt(`BATEU RPG: Lendas — dificuldade ${this.dif.nome}. O mundo é o mesmo para todos (semente ${SEED_RPG}).`, `BATEU RPG: Legends — difficulty ${nomeDificuldade(this.dif.id, this.lingua)}. The world is the same for everyone (seed ${SEED_RPG}).`), "info", 5);
   }
 
   // ── spawns auxiliares ─────────────────────────────────────────
@@ -311,7 +316,7 @@ export class SistemaRPG {
       for (const b of p.baus) {
         if (b.x === x && b.y === y && b.z === z) {
           if (this.perfil.descobertas.baus.includes(b.chave)) {
-            this.aviso("Este baú já está vazio — o tesouro foi levado.", "info", 2.5);
+            this.aviso(this.txt("Este baú já está vazio — o tesouro foi levado.", "This chest is already empty — the treasure was taken."), "info", 2.5);
             return;
           }
           this.perfil.descobertas.baus.push(b.chave);
@@ -329,19 +334,19 @@ export class SistemaRPG {
             const partes: string[] = [];
             for (const e of esp) {
               const guardado = this.motor.inv.adicionar(e.id, e.qtd);
-              if (guardado > 0) partes.push(`${guardado}× ${NOMES[e.id] ?? "?"}`);
+              if (guardado > 0) partes.push(`${guardado}× ${nomeItem(e.id, this.lingua)}`);
               if (guardado < e.qtd) perdidos += e.qtd - guardado;
             }
-            espolioTxt = partes.length ? ` · espólio: ${partes.join(", ")}` : "";
-            if (perdidos > 0) this.aviso(`Mochila cheia — ${perdidos} item(ns) do espólio não couberam (perdidos: o baú abriu).`, "info", 4);
+            espolioTxt = partes.length ? (this.lingua === "en" ? ` · loot: ${partes.join(", ")}` : ` · espólio: ${partes.join(", ")}`) : "";
+            if (perdidos > 0) this.aviso(this.txt(`Mochila cheia — ${perdidos} item(ns) do espólio não couberam (perdidos: o baú abriu).`, `Backpack full — ${perdidos} loot item(s) didn't fit (lost: the chest opened).`), "info", 4);
           }
-          this.aviso(`Baú de tesouro aberto: +${xp} XP, +${cred} créditos${espolioTxt}.`, "descoberta", 3.5);
+          this.aviso(this.txt(`Baú de tesouro aberto: +${xp} XP, +${cred} créditos${espolioTxt}.`, `Treasure chest opened: +${xp} XP, +${cred} credits${espolioTxt}.`), "descoberta", 3.5);
           this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "abrirBaus", qtd: 1, dia: diaLocal(), dif: this.dif }));
           return;
         }
       }
     }
-    this.aviso("Baú sem tesouro — o mundo guarda os seus segredos noutros baús.", "info", 2.5);
+    this.aviso(this.txt("Baú sem tesouro — o mundo guarda os seus segredos noutros baús.", "Chest without treasure — the world keeps its secrets in other chests."), "info", 2.5);
   }
 
   // ── v50: ITENS NO CHÃO — gestor (malhas + recolha) ─────────────────
@@ -421,7 +426,7 @@ export class SistemaRPG {
     // seguinte (o magnete devolveria o Q no mesmo instante — padrão do
     // item_drop do Minecraft/Veloren, 1,2 s declarado)
     this.adicionarItemChao(id, 1, x, m.py + 1.2, z, 1.2);
-    this.aviso(`Largaste 1× ${NOMES[id] ?? "?"} — fica no chão (aproxima-te para recolher).`, "info", 2.5);
+    this.aviso(this.txt(`Largaste 1× ${nomeItem(id, this.lingua)} — fica no chão (aproxima-te para recolher).`, `Dropped 1× ${nomeItem(id, this.lingua)} — it stays on the ground (walk close to pick it up).`), "info", 2.5);
     return true;
   }
 
@@ -441,7 +446,7 @@ export class SistemaRPG {
       this.perfil.kills.hostil++;
       const xp = Math.round(150 * this.dif.multXP * (1 + this.perfil.skills.sabio * 0.05));
       this.ganharXP(xp, false);
-      this.aviso(`O GUARDIÃO caiu! +${xp} XP — as Ruínas dormem em paz.`, "boss", 5);
+      this.aviso(this.txt(`O GUARDIÃO caiu! +${xp} XP — as Ruínas dormem em paz.`, `The GUARDIAN fell! +${xp} XP — the Ruins sleep in peace.`), "boss", 5);
       this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "matar", alvo: "guardiao", dia: diaLocal(), dif: this.dif }));
       return;
     }
@@ -469,7 +474,7 @@ export class SistemaRPG {
     const depois = nivelDe(this.perfil.xp);
     if (depois > antes) {
       this.perfil.pontos += depois - antes;
-      this.aviso(`NÍVEL ${depois}! +${depois - antes} ponto${depois - antes > 1 ? "s" : ""} de habilidade.`, "nivel", 4);
+      this.aviso(this.txt(`NÍVEL ${depois}! +${depois - antes} ponto${depois - antes > 1 ? "s" : ""} de habilidade.`, `LEVEL ${depois}! +${depois - antes} skill point${depois - antes > 1 ? "s" : ""}.`), "nivel", 4);
     } else if (comAviso) {
       this.aviso(`+${qtd} XP`, "info", 1.6);
     }
@@ -479,13 +484,19 @@ export class SistemaRPG {
     for (const r of recompensas) {
       this.ganharXP(r.xp, false);
       this.perfil.creditos += r.creditos;
-      this.aviso(`${r.diaria ? "Diária" : "Capítulo"} concluída — ${r.titulo}: +${r.xp} XP, +${r.creditos} créditos.`, "missao", 4.5);
+      const tituloLingua = r.diaria ? tituloDiaria(r.titulo, this.lingua) : (HISTORIA.find((h) => h.id === r.id) ? tituloMissao(HISTORIA.find((h) => h.id === r.id)!, this.lingua) : r.titulo);
+      this.aviso(this.txt(`${r.diaria ? "Diária" : "Capítulo"} concluída — ${tituloLingua}: +${r.xp} XP, +${r.creditos} créditos.`, `${r.diaria ? "Daily" : "Chapter"} complete — ${tituloLingua}: +${r.xp} XP, +${r.creditos} credits.`), "missao", 4.5);
     }
   }
 
   private aviso(texto: string, tipo: AvisoRpg["tipo"], t: number) {
     this.avisosRpg.push({ texto, tipo, t });
     if (this.avisosRpg.length > 6) this.avisosRpg.splice(0, this.avisosRpg.length - 6);
+  }
+
+  /** Texto de aviso na língua de exibição (v62): PT canónico, EN traduzido. */
+  private txt(pt: string, en: string): string {
+    return this.lingua === "en" ? en : pt;
   }
 
   // ── tick (chamado pelo loop do componente, a cada passo) ──────
@@ -503,7 +514,7 @@ export class SistemaRPG {
       this.perfil.descobertas.regioes.push(regiao.id);
       const xp = Math.round(25 * this.dif.multXP);
       this.ganharXP(xp, false);
-      this.aviso(`Região descoberta — ${regiao.nome}! +${xp} XP`, "descoberta", 4);
+      this.aviso(this.txt(`Região descoberta — ${nomeRegiao(regiao, this.lingua)}! +${xp} XP`, `Region discovered — ${nomeRegiao(regiao, this.lingua)}! +${xp} XP`), "descoberta", 4);
       this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "descobrirRegiao", alvo: regiao.id, dia: diaLocal(), dif: this.dif }));
     }
 
@@ -513,7 +524,7 @@ export class SistemaRPG {
       this.perfil.descobertas.pois.push(poi.id);
       const xp = Math.round(40 * this.dif.multXP);
       this.ganharXP(xp, false);
-      this.aviso(`Local descoberto — ${poi.nome}! +${xp} XP`, "descoberta", 4);
+      this.aviso(this.txt(`Local descoberto — ${nomePoi(poi, this.lingua)}! +${xp} XP`, `Place discovered — ${nomePoi(poi, this.lingua)}! +${xp} XP`), "descoberta", 4);
       this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "chegarPoi", alvo: poi.id, dia: diaLocal(), dif: this.dif }));
     }
 
@@ -535,7 +546,7 @@ export class SistemaRPG {
     if (!m.noite && this.noiteAntes && this.noiteSobrevivendo) {
       this.noiteSobrevivendo = false;
       this.processarRecompensas(aplicarEvento(this.perfil.missoes, { tipo: "sobreviverNoite", dia: diaLocal(), dif: this.dif }));
-      this.aviso("Sobreviveste à noite. O imbondeiro conta a tua história.", "info", 3.5);
+      this.aviso(this.txt("Sobreviveste à noite. O imbondeiro conta a tua história.", "You survived the night. The baobab tells your story."), "info", 3.5);
     }
     this.noiteAntes = m.noite;
 
@@ -551,7 +562,7 @@ export class SistemaRPG {
           if (m.mundo.solido(ruinas.x, yy, ruinas.z)) { y = yy + 1; break; }
         }
         m.gestor.spawnar("zumbi", ruinas.x + 0.5, y + 0.05, ruinas.z + 0.5);
-        this.aviso("O GUARDIÃO das Ruínas acordou!", "boss", 4);
+        this.aviso(this.txt("O GUARDIÃO das Ruínas acordou!", "The Guardian of the Ruins has awakened!"), "boss", 4);
       }
     }
 
@@ -574,7 +585,7 @@ export class SistemaRPG {
         const guardado = m.inv.adicionar(item.id, item.qtd);
         if (guardado > 0) {
           this.recolhidos += guardado;
-          this.aviso(`+${guardado}× ${NOMES[item.id] ?? "?"} — recolhido do chão.`, "info", 2);
+          this.aviso(this.txt(`+${guardado}× ${nomeItem(item.id, this.lingua)} — recolhido do chão.`, `+${guardado}× ${nomeItem(item.id, this.lingua)} — picked up from the ground.`), "info", 2);
           item.qtd -= guardado;
         }
         if (item.qtd <= 0) {
@@ -582,7 +593,7 @@ export class SistemaRPG {
           if (idx >= 0) this.removerItemChao(idx);
         } else if (item.avisoCheiaT <= 0) {
           item.avisoCheiaT = 8;
-          this.aviso("Mochila cheia — o item fica no chão até caber.", "info", 3);
+          this.aviso(this.txt("Mochila cheia — o item fica no chão até caber.", "Backpack full — the item stays on the ground until it fits."), "info", 3);
         }
       }
       for (const item of r.expirados) {
@@ -607,7 +618,7 @@ export class SistemaRPG {
     this.perfil.pontos -= 1;
     this.perfil.skills[ramo] += 1;
     if (this.motor && ramo === "explorador") this.motor.escalaVel = escalaVelExplorador(this.perfil.skills.explorador);
-    this.aviso(`${ramo === "guerreiro" ? "Guerreiro" : ramo === "explorador" ? "Explorador" : "Sábio"} nível ${this.perfil.skills[ramo]}.`, "nivel", 3);
+    this.aviso(this.txt(`${nomeRamo(ramo, this.lingua)} nível ${this.perfil.skills[ramo]}.`, `${nomeRamo(ramo, this.lingua)} level ${this.perfil.skills[ramo]}.`), "nivel", 3);
     void this.guardar();
     return true;
   }
@@ -636,7 +647,7 @@ export class SistemaRPG {
     const ls = espelharLS(CHAVE_SAVE_RPG, this.perfil);
     const idb = await idbDefinir(CHAVE_SAVE_RPG, this.perfil);
     const ok = idb.ok || ls.ok;
-    if (!ok) this.aviso("Save falhou (sem espaço?): o progresso corre risco.", "info", 4);
+    if (!ok) this.aviso(this.txt("Save falhou (sem espaço?): o progresso corre risco.", "Save failed (out of space?): progress is at risk."), "info", 4);
     return { ok, onde: idb.ok && ls.ok ? "idb+ls" : idb.ok ? "idb" : ls.ok ? "ls" : "nenhum" };
   }
 
@@ -682,7 +693,7 @@ export class SistemaRPG {
     const prog = progressoNivel(p.xp);
     const cap = capituloAtual(p.missoes);
     const dia = diaLocal();
-    const diarias = missoesDiarias(dia, this.dif);
+    const diarias = missoesDiarias(dia, this.dif, this.lingua);
     const feitasDia = p.missoes.diarias.dia === dia ? p.missoes.diarias.feitas : [];
 
     // objetivo de bússola: primeiro objetivo inacabado do capítulo

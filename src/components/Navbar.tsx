@@ -47,8 +47,12 @@ const Navbar = () => {
   const [liveCount, setLiveCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  // v62 (item 8): altura REAL do banner de anúncio (o 38 fixo subestimava o
+  // bar — o navbar ficava parcialmente SOB ele e os itens perdiam cliques)
+  const [alturaAnuncio, setAlturaAnuncio] = useState(38);
   const lastY = useRef(0);
   const navRef = useRef<HTMLDivElement>(null);
+  const anuncioRef = useRef<HTMLDivElement>(null);
   const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
   const { sfx } = useSoundEffects();
@@ -287,6 +291,21 @@ const Navbar = () => {
   ];
 
   // Show/hide navbar on specific routes (overlay, dashboard, admin)
+  // v62: mede a posição REAL do fundo do banner (o bar vive no FLUXO da
+  // página — com o TrustBar acima ele começa a ~41px, não a 0 — e o spring
+  // de entrada anima a altura; o observer acompanha). O nav fixed desce até
+  // o BOTTOM do bar: o valor medido não é a altura, é o limite inferior —
+  // é isso que impede a sobreposição que interceptava cliques/hover.
+  useEffect(() => {
+    const el = anuncioRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const mede = () => setAlturaAnuncio(Math.max(38, Math.round(el.getBoundingClientRect().bottom)));
+    mede();
+    const ro = new ResizeObserver(mede);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [currentAnnouncement, announcementDismissed]);
+
   const hideNavbar = location.pathname.startsWith("/overlay/");
   if (hideNavbar) return null;
 
@@ -295,6 +314,7 @@ const Navbar = () => {
       <AnimatePresence>
         {currentAnnouncement && !announcementDismissed && (
           <motion.div
+            ref={anuncioRef}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -352,8 +372,14 @@ const Navbar = () => {
         className="navbar-shell fixed left-0 right-0 z-50 hidden lg:block transition-[top] duration-300"
         /* v26 fix: top-0 e top-[38px] no mesmo className empatavam (ordem
            arbitrária do Tailwind) e o navbar ficava SOB o banner de anúncio.
-           Inline style decide sem ambiguidade. */
-        style={{ top: currentAnnouncement && !announcementDismissed ? 38 : 0 }}
+           Inline style decide sem ambiguidade.
+           v62 fix (item 8 — legibilidade do design público): o 38 era FIXO e
+           o banner real cresce além disso (emoji text-xl + py-2) — o bar
+           SOBREPUNHA os itens do navbar e INTERCEPTAVA os cliques/hover
+           (repro: page.hover em nav-direct-desporto → «subtree intercepts
+           pointer events»). A altura do bar é MEDIDA (ResizeObserver) e o
+           navbar desce o valor real. */
+        style={{ top: currentAnnouncement && !announcementDismissed ? alturaAnuncio : 0 }}
       >
         <div className="navbar-spotlight" aria-hidden="true" />
 

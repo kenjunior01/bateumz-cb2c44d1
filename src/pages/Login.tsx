@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { playPopSound } from "@/lib/sounds";
 import { describeSignInError, type FriendlyAuthError } from "@/lib/authErrors";
+import { consumirRetornoOAuth, comTimeoutOAuth } from "@/lib/oauthReturn";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import mascotHappy from "@/assets/mascot-happy.png";
 import mascotExcited from "@/assets/mascot-excited.png";
@@ -31,6 +33,7 @@ function FloatingEmoji({ emoji, delay, x, y }: { emoji: string; delay: number; x
 
 export default function Login() {
   const { signIn } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const nextPath = (() => {
     try {
@@ -50,6 +53,20 @@ export default function Login() {
   const [mascotMood, setMascotMood] = useState<"happy" | "excited" | "thinking" | "winner">("happy");
   const [success, setSuccess] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  /* v62 (item 5): o retorno do provedor com erro (?error=… / #error=…)
+     chega à homepage/login calado — mostra-se com resiliência a remounts
+     (espelho em sessionStorage, ver consumirRetornoOAuth) e limpa-se o URL. */
+  useEffect(() => {
+    const retorno = consumirRetornoOAuth();
+    if (!retorno) return;
+    const provedor = retorno.provedor === "apple" ? "Apple" : retorno.provedor === "google" ? "Google" : "OAuth";
+    if (retorno.erro === "access_denied" || retorno.erro === "user_cancelled_login") {
+      setError(t("auth.oauth.cancelado", { provedor }));
+    } else {
+      setError(t("auth.oauth.erro", { provedor, detalhe: retorno.descricao ? ` (${retorno.descricao})` : "" }));
+    }
+  }, [t]);
 
   const mascotImages = { happy: mascotHappy, excited: mascotExcited, thinking: mascotThinking, winner: mascotWinner };
 
@@ -118,34 +135,37 @@ export default function Login() {
   };
 
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
+  /* v62 (item 5): um SÓ handler para os dois provedores — cap de 15 s
+     (o popup/redirect pode morrer calado em webviews e o «A ligar...»
+     ficava preso para sempre), mensagens pela língua do utilizador e
+     reset honesto do estado de loading em TODOS os caminhos. */
+  const iniciarOAuth = async (provedor: "google" | "apple") => {
+    const rotulo = provedor === "apple" ? "Apple" : "Google";
+    const definirLoading = provedor === "apple" ? setAppleLoading : setGoogleLoading;
+    definirLoading(true);
     playPopSound();
     const nextTarget = nextPath ?? "";
     if (nextTarget) localStorage.setItem('bateu_oauth_next', nextTarget);
-    const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin });
-    const error = result.error;
-    if (result.redirected) return;
-    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
-    if (error) {
-      setError(`Could not connect with Google. ${(error as any)?.message ? "(" + (error as any).message + ") " : ""}Please try again — allow pop-ups for this site.`); console.error("[oauth]", error);
-      setGoogleLoading(false);
+    const r = await comTimeoutOAuth(lovable.auth.signInWithOAuth(provedor, { redirect_uri: window.location.origin }));
+    if (r.porTimeout) {
+      setError(t("auth.oauth.timeout", { provedor: rotulo }));
+      console.error("[oauth]", "timeout");
+      definirLoading(false);
+      return;
     }
-  };
-
-  const handleAppleLogin = async () => {
-    setAppleLoading(true);
-    playPopSound();
-    const nextTarget = nextPath ?? '/dashboard';
-    if (nextTarget) localStorage.setItem('bateu_oauth_next', nextTarget);
-    const result = await lovable.auth.signInWithOAuth('apple', { redirect_uri: window.location.origin });
-    const error = result.error;
-    if (result.redirected) return;
-    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
-    if (error) {
-      setError(`Could not connect with Apple. ${(error as any)?.message ? "(" + (error as any).message + ") " : ""}Please try again — allow pop-ups for this site.`); console.error("[oauth]", error);
-      setAppleLoading(false);
+    if (r.erro) {
+      setError(t("auth.oauth.erro", { provedor: rotulo, detalhe: r.erro.message ? ` (${r.erro.message})` : "" }));
+      console.error("[oauth]", r.erro);
+      definirLoading(false);
+      return;
     }
+    const result = r.valor!;
+    if (result.redirected) return; // o provedor assumiu a navegação
+    const error = result.error;
+    if (!error) { const n = localStorage.getItem('bateu_oauth_next'); localStorage.removeItem('bateu_oauth_next'); window.location.href = n || '/'; return; }
+    setError(t("auth.oauth.erro", { provedor: rotulo, detalhe: (error as any)?.message ? ` (${(error as any).message})` : "" }));
+    console.error("[oauth]", error);
+    definirLoading(false);
   };
 
   if (success) {
@@ -301,7 +321,7 @@ Entra na tua conta e continua a ganhar
             <Button
               variant="outline"
               className="w-full h-11 gap-3 border-border hover:bg-secondary rounded-xl"
-              onClick={handleGoogleLogin}
+              onClick={() => iniciarOAuth("google")}
               disabled={googleLoading}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -315,7 +335,7 @@ Entra na tua conta e continua a ganhar
             <Button
               variant="outline"
               className="w-full h-11 gap-3 rounded-xl bg-black text-white border-black hover:bg-neutral-800 dark:bg-card dark:text-foreground dark:border-border dark:hover:bg-secondary"
-              onClick={handleAppleLogin}
+              onClick={() => iniciarOAuth("apple")}
               disabled={appleLoading}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">

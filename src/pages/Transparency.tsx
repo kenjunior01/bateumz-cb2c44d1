@@ -18,7 +18,10 @@ const fadeInUp = {
 };
 
 const Transparency = () => {
-  useSEO({ title: 'Transparência e Verificação', description: 'Saiba como a Bateu garante transparência total. Sorteios verificáveis, resultados auditáveis e sistema provably fair.', canonicalPath: '/transparencia' });
+  // v62 (roadmap item 11): a descrição anterior enunciava «sistema provably
+  // fair» — uma certificação que a plataforma não tem. O que é REAL e
+  // verificável: compromisso SHA-256 antes do sorteio + prova no browser.
+  useSEO({ title: 'Transparência e Verificação', description: 'Saiba como a Bateu garante sorteios verificáveis: compromisso SHA-256 publicado antes de cada sorteio e prova que pode verificar no seu browser.', canonicalPath: '/transparencia' });
   const { lang } = useLanguage();
   const content = transparencyContent[resolveLegalLang(lang)];
   const [searchParams] = useSearchParams();

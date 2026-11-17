@@ -136,6 +136,17 @@ console.log("■ 6. Sem regressões de navegação");
   const page = await ctx.newPage();
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-testid='home-cta-jogar-central']", { timeout: 10000 });
+  // v62: a homepage nova monta a CTA cedo — o hover no navbar precisa do
+  // assentamento do layout (o elemento ficava «not stable» durante o boot);
+  // espera honesta de estabilidade, a asserção de navegação fica intacta
+  await page.waitForSelector("[data-testid='nav-direct-desporto']", { timeout: 10000 });
+  await page.waitForFunction(() => {
+    const el = document.querySelector("[data-testid='nav-direct-desporto']");
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && window.scrollY === 0;
+  }, null, { timeout: 10000 });
+  await page.waitForTimeout(1800);
   await page.hover("[data-testid='nav-direct-desporto']");
   await page.waitForTimeout(900);
   const t1 = Date.now();

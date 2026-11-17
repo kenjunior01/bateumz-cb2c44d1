@@ -18,7 +18,7 @@ const fadeInUp = {
   }),
 };
 
-const securityItems = ["footer.ssl", "footer.blockchain", "footer.rng"] as const;
+const securityItems = ["footer.ssl", "footer.prova", "footer.apuramento"] as const;
 const securityIcons = [Lock, Shield, CheckCircle2] as const;
 
 const Footer = () => {

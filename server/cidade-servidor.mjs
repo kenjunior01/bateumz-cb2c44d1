@@ -37,6 +37,18 @@
 // quem CRUZA uma célula de região ou anda > SINC_A_CADA blocos recebe o LOTE
 // das edições à sua volta (o motor aplica-as pela génese mesmo para chunks
 // longe). Limites honestos: EDIT_SYNC_CAP no lote + contadores nos stats.
+// v59 — PRESENÇA DO NPC NO SERVIDOR MP (o passo anotado desde a v57/v58):
+// quem está a FALAR com a Bateu IA (holograma da Praça, POS_NPC_IA de
+// npcIa.ts — a MESMA âncora isomórfica do cliente) passa a ser estado
+// PARTILHADO: msg `npcfala` (claim + heartbeat a 5 s) / `npcfim` (fim),
+// broadcast `npc` a TODOS quando o conjunto muda (heartbeat puro não paga
+// broadcast), bemvindo ganha npc.conversas (o chegante nasce a ver),
+// expiração honesta a NPC_CONVERSA_TIMEOUT_MS sem sinal (aba fechada
+// também sai) e contadores nos stats. O CONTEÚDO da conversa continua
+// PRIVADO (só id+nome viajam — o chat segue pela via proxy/edge, este
+// servidor nunca o vê); a conversa NÃO é exclusiva (dois podem falar ao
+// mesmo tempo — a lista reflete a realidade). Regras no npcMp.ts (núcleo
+// isomórfico — o MESMO módulo que o cliente sanitiza com).
 
 import { WebSocketServer } from "ws";
 import {
@@ -47,6 +59,12 @@ import {
   caminhoLivre,
   EDIT_RATE_MS, EDIT_OVERLAY_CAP,
 } from "../src/game/cidade/core.ts";
+// v59 — as REGRAS da presença do NPC vêm do núcleo isomórfico (o cliente
+// valida os pacotes com as MESMAS funções — padrão `common` do Veloren).
+import {
+  NPC_FALA_GATE_MS, NPC_CONVERSA_TIMEOUT_MS,
+  juntarConversa, sairConversa, limparConversasExpiradas, pacoteConversas,
+} from "../src/game/cidade/npcMp.ts";
 import { alturaCidade, perfilCidade } from "../src/game/cidade/terrenoCidade.ts";
 import { gerarDadosTerreno } from "../src/game/blocos/geracao.ts";
 import { carimbarCidade, alvoParaDados, chunkTemCarimbos } from "../src/game/cidade/carimbosCidade.ts";
@@ -144,6 +162,21 @@ function superficieAndavel(x, z) {
   return 0;
 }
 
+// ===== v59 — presença do NPC (estado do servidor, regras do núcleo) =====
+// override honesto para testes (documentado no log de boot; mínimo 1 s)
+const NPC_TIMEOUT_MS = Math.max(1000, Number(process.env.NPC_CONVERSA_TIMEOUT_MS) || NPC_CONVERSA_TIMEOUT_MS);
+let npcConversas = [];                 // ConversaNpc[] (núcleo npcMp.ts)
+let npcAvisos = 0;                     // claims aceites (npcfala que entraram)
+let npcRecusados = 0;                  // npcfala cortados pelo gate NPC_FALA_GATE_MS
+let npcExpirados = 0;                  // conversas limpas por falta de heartbeat
+/** Broadcast `npc` a TODOS (estado partilhado converge em todos os
+ *  clientes — o autor também recebe e o display exclui o próprio nome;
+ *  pacote minúsculo, só quando o CONJUNTO de ids muda). */
+function difundirNpc() {
+  const pacote = JSON.stringify({ t: "npc", conversas: pacoteConversas(npcConversas, Date.now(), NPC_TIMEOUT_MS) });
+  for (const o of jogadores.values()) if (o.ws.readyState === 1) try { o.ws.send(pacote); } catch {}
+}
+
 // ===== constantes de transporte (topologia própria, não simulação) =====
 const DT_TICK = 1 / TPS;
 const SNAPSHOT_EVERY = Math.max(1, Math.round(TPS / SNAPSHOT_HZ));
@@ -215,12 +248,13 @@ wss.on("connection", (ws, req) => {
       // v37 — spawn IGUAL ao do cliente (SPAWN_PRACA do core — fonte única)
       // v52 — o y inicial vem DO CAMPO do servidor (nunca do cliente)
       const ySpawn = superficieAndavel(SPAWN_PRACA[0], SPAWN_PRACA[1]) + 1.001;
-      eu = { id, nome: m.nome.trim().slice(0, 24), x: SPAWN_PRACA[0], y: ySpawn, z: SPAWN_PRACA[1], ry: 0, voando: false, ws, strikes: 0, ultimoMs: Date.now(), ultimoEnvio: 0, orcamento: ORCAMENTO_INICIAL, orcSubida: SUBIDA_INICIAL, orcVoo: VOO_INICIAL, ultimaFala: 0, ultimoEdit: 0, contador: 0, regiaoAtual: regiao(SPAWN_PRACA[0], SPAWN_PRACA[1]), ultimaSinc: [SPAWN_PRACA[0], SPAWN_PRACA[1]] };
+      eu = { id, nome: m.nome.trim().slice(0, 24), x: SPAWN_PRACA[0], y: ySpawn, z: SPAWN_PRACA[1], ry: 0, voando: false, ws, strikes: 0, ultimoMs: Date.now(), ultimoEnvio: 0, orcamento: ORCAMENTO_INICIAL, orcSubida: SUBIDA_INICIAL, orcVoo: VOO_INICIAL, ultimaFala: 0, ultimoEdit: 0, ultimoNpcFala: 0, contador: 0, regiaoAtual: regiao(SPAWN_PRACA[0], SPAWN_PRACA[1]), ultimaSinc: [SPAWN_PRACA[0], SPAWN_PRACA[1]] };
       jogadores.set(id, eu);
       totalEntradas++;
       const outros = [...jogadores.values()].filter((o) => o.id !== id)
         .map((o) => ({ id: o.id, nome: o.nome, x: o.x, z: o.z, ry: o.ry, y: round2(o.y) }));
-      ws.send(JSON.stringify({ t: "bemvindo", id, x: eu.x, y: round2(eu.y), z: eu.z, jogadores: outros }));
+      // v59 — o chegante nasce a ver quem já conversa com a Bateu IA
+      ws.send(JSON.stringify({ t: "bemvindo", id, x: eu.x, y: round2(eu.y), z: eu.z, jogadores: outros, npc: { conversas: pacoteConversas(npcConversas, Date.now(), NPC_TIMEOUT_MS) } }));
       for (const o of jogadores.values()) if (o.id !== id) try { o.ws.send(JSON.stringify({ t: "entrou", id, nome: eu.nome, x: eu.x, z: eu.z, y: round2(eu.y) })); } catch {}
       // v53 — quem CHEGA recebe o mundo editado: o lote das edições dentro do
       // raio de interesse do spawn (a génese do cliente aplica mesmo para
@@ -331,6 +365,24 @@ wss.on("connection", (ws, req) => {
       eu.ultimaFala = agora;
       const pacote = JSON.stringify({ t: "fala", id: eu.id, nome: eu.nome, texto });
       for (const o of jogadores.values()) if (o.ws.readyState === 1) try { o.ws.send(pacote); } catch {}
+    } else if (m.t === "npcfala") {
+      // v59 — claim/heartbeat: «estou a falar com a Bateu IA». Sem texto
+      // (presença só), gate NPC_FALA_GATE_MS (corta SPAM, nunca o
+      // heartbeat normal), broadcast SÓ quando o conjunto muda — o
+      // heartbeat puro (sinal refrescado) não paga difusão.
+      const agora = Date.now();
+      if (agora - eu.ultimoNpcFala < NPC_FALA_GATE_MS) { npcRecusados++; return; }
+      eu.ultimoNpcFala = agora;
+      const r = juntarConversa(npcConversas, eu.id, eu.nome, agora);
+      npcConversas = r.lista;
+      npcAvisos++;
+      if (r.mudou) difundirNpc();
+    } else if (m.t === "npcfim") {
+      // v59 — «parei de falar»: só sai se estava na lista; broadcast só se
+      // mudou (npcfim sem claim anterior é um no-op honesto).
+      const r = sairConversa(npcConversas, eu.id);
+      npcConversas = r.lista;
+      if (r.mudou) difundirNpc();
     } else if (m.t === "ping") {
       try { ws.send(JSON.stringify({ t: "pong", n: m.n })); } catch {}
     } else if (m.t === "stats") {
@@ -347,6 +399,7 @@ wss.on("connection", (ws, req) => {
         correcoes: totalCorrecoes, entradas: totalEntradas,
         editsAceites, editsRecusados, chunks: chunksCache.size, overlay: editsOverlay.size,
         editsDifundidos, editsSincronizados,
+        npcConversas: npcConversas.length, npcAvisos, npcRecusados, npcExpirados,
       })); } catch {}
     } else {
       eu.strikes++;
@@ -356,12 +409,31 @@ wss.on("connection", (ws, req) => {
   ws.on("close", () => {
     if (eu) {
       jogadores.delete(eu.id);
+      // v59 — quem cai da ligação também sai da conversa do NPC (a aba
+      // fechada sem adeus não deixa a presença presa para sempre)
+      const r = sairConversa(npcConversas, eu.id);
+      npcConversas = r.lista;
+      if (r.mudou) difundirNpc();
       for (const o of jogadores.values()) try { o.ws.send(JSON.stringify({ t: "saiu", id: eu.id })); } catch {}
       log("SAIU", eu.id, eu.nome, "(", jogadores.size, "/", MAX_JOGADORES, ")");
     }
   });
   ws.on("error", () => { try { ws.terminate(); } catch {} });
 });
+
+// v59 — expiração da conversa do NPC: interval de 3 s (≪ timeout — o
+// mundo fica a saber até 3 s depois da última vez; o heartbeat do cliente
+// é de 5 s e o timeout de 15 s, logo 3 sinais perdidos expiram aqui)
+setInterval(() => {
+  if (!npcConversas.length) return;
+  const antes = npcConversas.length;
+  npcConversas = limparConversasExpiradas(npcConversas, Date.now(), NPC_TIMEOUT_MS).lista;
+  const sairam = antes - npcConversas.length;
+  if (sairam > 0) {
+    npcExpirados += sairam;
+    difundirNpc();
+  }
+}, 3000).unref?.();
 
 // ===== tick principal (padrão server-cli/main.rs: loop com dt fixo) =====
 const heartbeat = setInterval(() => {
@@ -418,8 +490,9 @@ setInterval(() => {
   }
 }, Math.round(DT_TICK * 1000));
 
-log("CIDADE-SERVIDOR v53 no ar — porta", process.env.PORT || 8765,
+log("CIDADE-SERVIDOR v59 no ar — porta", process.env.PORT || 8765,
   "| TPS", TPS, "| snapshot", SNAPSHOT_HZ, "Hz | raio", RAIO_INTERESSE,
-  "| cap", MAX_JOGADORES, "| core isomórfico + TERRENO (v47) + VOXELS COMPLETOS (v52) + PARTILHA VISUAL DAS EDIÇÕES (v53: difusão + lotes de sincronização, semente", SEED_CIDADE, ")");
+  "| cap", MAX_JOGADORES, "| core isomórfico + TERRENO (v47) + VOXELS COMPLETOS (v52) + PARTILHA VISUAL DAS EDIÇÕES (v53: difusão + lotes de sincronização, semente", SEED_CIDADE, ")",
+  "| NPC NO MP (v59: presença da conversa da Bateu IA partilhada — conteúdo privado, timeout", NPC_TIMEOUT_MS, "ms, gate", NPC_FALA_GATE_MS, "ms, cap", 8, ")");
 
 process.on("SIGINT", () => { log("A terminar honestamente…"); clearInterval(heartbeat); wss.close(() => process.exit(0)); });

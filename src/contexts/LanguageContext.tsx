@@ -9,6 +9,8 @@ type Dict = Record<string, string>;
 // Per-key fallback (see `t()` resolver below). Add localized keys as they are produced.
 const translations: Partial<Record<Lang, Dict>> = {
   en: {
+    "cidade.mpEvNpc": "is talking with the Bateu IA",
+    "cidade.mpEvNpcFim": "stopped chatting with the Bateu IA",
     "ia.sinc.on": "History on the server",
     "ia.sinc.convidado": "This device only — sign in to sync",
     "ia.sinc.erro": "Server not responding — history here only",
@@ -1293,6 +1295,8 @@ const translations: Partial<Record<Lang, Dict>> = {
 
   },
   pt: {
+    "cidade.mpEvNpc": "está a falar com a Bateu IA",
+    "cidade.mpEvNpcFim": "parou a conversa com a Bateu IA",
     "ia.sinc.on": "Histórico no servidor",
     "ia.sinc.convidado": "Só neste dispositivo — entra para sincronizar",
     "ia.sinc.erro": "Servidor não respondeu — histórico só aqui",
@@ -2517,6 +2521,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participar Agora",
   },
   "pt-BR": {
+    "cidade.mpEvNpc": "está conversando com a Bateu IA",
+    "cidade.mpEvNpcFim": "parou a conversa com a Bateu IA",
     "ia.sinc.on": "Histórico no servidor",
     "ia.sinc.convidado": "Só neste dispositivo — entre para sincronizar",
     "ia.sinc.erro": "Servidor não respondeu — histórico só aqui",
@@ -3667,6 +3673,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "tournament.formRules": "Regras",
   },
   es: {
+    "cidade.mpEvNpc": "está hablando con la Bateu IA",
+    "cidade.mpEvNpcFim": "dejó de hablar con la Bateu IA",
     "ia.sinc.on": "Historial en el servidor",
     "ia.sinc.convidado": "Solo en este dispositivo — inicia sesión para sincronizar",
     "ia.sinc.erro": "El servidor no responde — historial solo aquí",
@@ -4591,6 +4599,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Unete Ahora",
   },
   fr: {
+    "cidade.mpEvNpc": "parle avec la Bateu IA",
+    "cidade.mpEvNpcFim": "a arrêté la conversation avec la Bateu IA",
     "ia.sinc.on": "Historique sur le serveur",
     "ia.sinc.convidado": "Sur cet appareil seulement — connecte-toi pour synchroniser",
     "ia.sinc.erro": "Le serveur ne répond pas — historique ici seulement",
@@ -5482,6 +5492,8 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participer",
   },
   hi: {
+    "cidade.mpEvNpc": "Bateu AI से बात कर रहा है",
+    "cidade.mpEvNpcFim": "Bateu AI से बात करना बंद की",
     "ia.sinc.on": "सर्वर पर इतिहास",
     "ia.sinc.convidado": "सिर्फ़ इस डिवाइस पर — सिंक के लिए साइन इन करें",
     "ia.sinc.erro": "सर्वर जवाब नहीं दे रहा — इतिहास सिर्फ़ यहीं",

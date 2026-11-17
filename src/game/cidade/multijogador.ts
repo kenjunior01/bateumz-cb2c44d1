@@ -11,6 +11,13 @@ import { ALTURA_PLATEAU, FALA_RATE_MS, EDIT_RATE_MS, limpaFala } from "./core";
 // v53 — a MESMA regra de validação que o servidor aplica (constants.ts —
 // uma só fonte): sanitiza TUDO que chega, mesmo vindo do servidor.
 import { validaEdit } from "../blocos/constants";
+// v59 — presença do NPC no MP: as MESMAS regras que o servidor executa
+// (núcleo isomórfico npcMp.ts) sanitizam os pacotes `npc` que chegam.
+import {
+  NPC_FALA_GATE_MS, NPC_CONVERSA_TIMEOUT_MS,
+  type ConversaNpc, type ConversaNpcFio,
+  validarPacoteNpc, limparConversasExpiradas,
+} from "./npcMp";
 
 export type EstadoMP = "off" | "a_ligar" | "ligado" | "erro";
 
@@ -101,13 +108,15 @@ export interface FalaInfo { id: number; nome: string; texto: string; em: number 
 
 // v47 — eventos REAIS da sessão partilhada (para o painel «Praça em direto»):
 // só o que aconteceu de verdade — entradas/saídas recebidas do servidor,
-// correções honestas e edições dos outros jogadores (v53 — o mundo
-// editável partilhado). Nada é gerado para encher a lista.
+// correções honestas, edições dos outros jogadores (v53) e conversas com
+// o NPC da Praça (v59 — presença, NUNCA conteúdo: o que se falou fica
+// entre o jogador e a Bateu IA).
 export interface EventoPraca {
-  tipo: "entrou" | "saiu" | "corrigido" | "edicao";
-  nome?: string;          // entrou/saiu/edicao: quem
+  tipo: "entrou" | "saiu" | "corrigido" | "edicao" | "npc";
+  nome?: string;          // entrou/saiu/edicao/npc: quem
   motivo?: string;        // corrigido: "alcance" | "parede" — o motivo real do servidor
   qtd?: number;           // edicao: quantas edições chegaram no lote
+  npcFim?: boolean;       // v59 — npc: true = a conversa acabou (a fonte é o pacote do servidor)
   em: number;
 }
 
@@ -130,6 +139,9 @@ export class CidadeMP {
   private ultimoPosMs = 0;
   private ultimaFalaLocal = 0;
   private ultimoEditMs = 0;                     // v52 — o MESMO rate-limit do servidor
+  private ultimoNpcFalaMs = 0;                  // v59 — o MESMO gate do servidor (npcFala)
+  private npcLista: ConversaNpc[] = [];         // v59 — quem conversa com a Bateu IA (estado do servidor)
+  private meuId = 0;                            // v59 — o id MP DESTE jogador (bemvindo) — o display exclui o próprio
   private agora = () => performance.now();
 
   constructor(private opts: {
@@ -139,6 +151,7 @@ export class CidadeMP {
     onFala?: (f: FalaInfo) => void;              // v37 — chat da praça
     onCorrecao?: (x: number, z: number, motivo?: string, y?: number) => void; // v37/47/52 — reconciliação honesta (v52: também no eixo y)
     onEdicao?: (x: number, y: number, z: number, id: number, por: number) => void; // v53 — partilha visual: a edição de OUTRO jogador
+    onNpc?: (conversas: ConversaNpcFio[]) => void; // v59 — presença do NPC mudou (quem fala com a Bateu IA)
   }) {}
 
   ligar(url: string, nome: string) {
@@ -172,6 +185,11 @@ export class CidadeMP {
       if (m.t === "bemvindo") {
         guarda.tentativa = 0;
         guarda.setEstado("ligado");
+        guarda.meuId = Number(m.id) || 0; // v59 — o próprio id (display exclui o próprio nome)
+        // v59 — o chegante nasce a ver quem já conversa com a Bateu IA
+        // (MESMA sanitização dos pacotes seguintes — validaPacoteNpc)
+        guarda.npcLista = validarPacoteNpc(m.npc, Date.now());
+        if (guarda.npcLista.length) guarda.opts.onNpc?.(guarda.npcLista.map((c) => ({ id: c.id, nome: c.nome })));
         for (const j of m.jogadores ?? []) guarda.criarRemoto(j.id, j.nome, j.x, j.z, j.ry);
         guarda.opts.onAviso(`🌐 ${guarda.nome} entrou na cidade partilhada`);
         return;
@@ -223,6 +241,20 @@ export class CidadeMP {
           }
           guarda.registarEvento({ tipo: "edicao", nome: [...nomes][0] ?? "", qtd: validas.length, em: Date.now() });
         }
+        return;
+      }
+      if (m.t === "npc") {
+        // v59 — PRESENÇA DO NPC: quem está a conversar com a Bateu IA mudou.
+        // Sanitização pela MESMA regra do servidor (validarPacoteNpc) —
+        // padrão da validaEdit: sanitiza MESMO vindo da fonte. Eventos REAIS
+        // por dif (nomes que entraram/saíram da lista) — nunca gerados.
+        const antes = new Map(guarda.npcLista.map((c) => [c.id, c.nome]));
+        const vivos = validarPacoteNpc(m, Date.now());
+        guarda.npcLista = vivos;
+        const agora_ = new Map(vivos.map((c) => [c.id, c.nome]));
+        for (const [id, nome] of agora_) if (!antes.has(id)) guarda.registarEvento({ tipo: "npc", nome, em: Date.now() });
+        for (const [id, nome] of antes) if (!agora_.has(id)) guarda.registarEvento({ tipo: "npc", nome, npcFim: true, em: Date.now() });
+        guarda.opts.onNpc?.(vivos.map((c) => ({ id: c.id, nome: c.nome })));
         return;
       }
       if (m.t === "fala") {
@@ -377,6 +409,34 @@ export class CidadeMP {
     try { this.ws.send(JSON.stringify({ t: "edit", x, y, z, id })); return true; } catch { return false; }
   }
 
+  // ── v59 — presença do NPC (o MESMO gate que o servidor executa) ──────
+  /** claim/heartbeat «estou a falar com a Bateu IA» — false = limitado ou
+   *  offline (honesto: sem MP o NPC continua a funcionar como na v57, só
+   *  não aparece à praça). Gate NPC_FALA_GATE_MS local — o SPAM não viaja. */
+  npcFala(): boolean {
+    if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    const agora = Date.now();
+    if (agora - this.ultimoNpcFalaMs < NPC_FALA_GATE_MS) return false;
+    this.ultimoNpcFalaMs = agora;
+    try { this.ws.send(JSON.stringify({ t: "npcfala" })); return true; } catch { return false; }
+  }
+
+  /** fim da conversa — sem gate (barato, raro); false se offline. */
+  npcFim(): boolean {
+    if (!this.ws || this.ws.readyState !== 1 || this.estado !== "ligado") return false;
+    try { this.ws.send(JSON.stringify({ t: "npcfim" })); return true; } catch { return false; }
+  }
+
+  /** v59 — quem conversa com a Bateu IA AGORA (expiração aplicada na leitura
+   *  — o estado do servidor pode ter ficado stale entre broadcasts). */
+  npcConversasInfo(): ConversaNpcFio[] {
+    const vivas = limparConversasExpiradas(this.npcLista, Date.now(), NPC_CONVERSA_TIMEOUT_MS).lista;
+    return vivas.map((c) => ({ id: c.id, nome: c.nome }));
+  }
+
+  /** v59 — o id MP deste jogador (0 = sem sessão) — o display exclui o próprio. */
+  get idNoMundo(): number { return this.meuId; }
+
   // ── v47 — acontecimentos reais (o painel «Praça em direto» consome) ──
   private registarEvento(e: EventoPraca) {
     this.eventos.push(e);
@@ -437,6 +497,9 @@ export class CidadeMP {
     this.eventos = []; // sessão nova = lista nova (nunca mistura sessões)
     this.edicoesRemotas = [];
     this.totalEdicoesRemotas = 0;
+    this.npcLista = []; // v59 — sessão nova = presença nova (o servidor limpa ao cair)
+    this.meuId = 0;
+    this.ultimoNpcFalaMs = 0;
     this.pico = 0;
     this.setEstado("off");
   }

@@ -137,6 +137,7 @@ function PracaEmDireto({ mpRef, ligado }: { mpRef: React.RefObject<CidadeMP | nu
               {ev.tipo === "saiu" && <><Globe size={10} className="text-white/40 shrink-0" /> <span className="text-white/60 truncate">{ev.nome} · {t("cidade.mpEvSaiu")}</span></>}
               {ev.tipo === "corrigido" && <><Gauge size={10} className="text-amber-300 shrink-0" /> <span className="text-amber-200/90 truncate">{t(ev.motivo === "parede" ? "cidade.mpEvParede" : "cidade.mpEvAlcance")}</span></>}
               {ev.tipo === "edicao" && <><Hammer size={10} className="text-orange-300 shrink-0" /> <span className="text-orange-200/90 truncate">{ev.nome ? `${ev.nome} · ` : ""}{t("cidade.mpEvEdicao")}{(ev.qtd ?? 1) > 1 ? ` ×${ev.qtd}` : ""}</span></>}
+              {ev.tipo === "npc" && <><Sparkles size={10} className="text-violet-300 shrink-0" /> <span className="text-violet-200/90 truncate">{ev.nome ? `${ev.nome} · ` : ""}{t(ev.npcFim ? "cidade.mpEvNpcFim" : "cidade.mpEvNpc")}</span></>}
             </p>
           ))}
           {feed.items.slice(0, temMp ? 2 : 4).map((act: PlatformActivity) => {
@@ -203,6 +204,22 @@ export default function CidadeBateu() {
   const npcPertoRef = useRef(false);      // para a tecla E (sem re-render)
   const npcPainelAbertoRef = useRef(false); // para o hook E2E
   useEffect(() => { npcPainelAbertoRef.current = modal === "npcia"; }, [modal]);
+  // ── v59 — presença do NPC no MP: quem está a falar com a Bateu IA AGORA
+  // (nomes dos OUTROS — o próprio sai; fonte = pacotes `npc` do servidor,
+  // nunca gerados). Sem MP, lista vazia e o holograma segue como na v57.
+  const [npcMpNomes, setNpcMpNomes] = useState<string[]>([]);
+  const npcMpNomesRef = useRef<string[]>([]); // para o rAF/rótulo (sem re-render)
+  useEffect(() => { npcMpNomesRef.current = npcMpNomes; }, [npcMpNomes]);
+  // v59 — abrir o painel do NPC ANUNCIA «a conversar» ao mundo partilhado e
+  // sinaliza a cada 5 s (timeout do servidor 15 s = 3 sinais perdidos);
+  // fechar desanuncia. Sem MP é no-op honesto (npcFala devolve false —
+  // o NPC funciona como na v57, só não aparece à praça).
+  useEffect(() => {
+    if (modal !== "npcia") return;
+    mpRef.current?.npcFala();
+    const iv = setInterval(() => { mpRef.current?.npcFala(); }, 5000);
+    return () => { clearInterval(iv); mpRef.current?.npcFim(); };
+  }, [modal]);
 
   useEffect(() => {
     if (fase !== "jogando") return;
@@ -322,6 +339,12 @@ export default function CidadeBateu() {
       // aoEditar não dispara, senão a edição voltava ao servidor).
       onEdicao: (x, y, z, id) => {
         try { motorRef.current.aplicarEdicaoRemota(x, y, z, id); } catch { /* mundo ainda não pronto */ }
+      },
+      // v59 — presença do NPC: o servidor avisou que quem fala com a Bateu IA
+      // mudou → guarda os nomes dos OUTROS (o próprio não se anuncia a si).
+      onNpc: (conversas) => {
+        const eu = mpRef.current?.idNoMundo ?? 0;
+        setNpcMpNomes(conversas.filter((c) => c.id !== eu).map((c) => c.nome));
       },
     });
     mpRef.current = mp;
@@ -493,6 +516,15 @@ export default function CidadeBateu() {
         painelAberto: npcPainelAbertoRef.current,
       }),
       npcAbrir: () => setModal("npcia"),
+      // v59 — presença do NPC no MP (ganchos E2E honestos: o que o servidor
+      // difundiu + o próprio id — zero inventado)
+      npcMp: () => ({
+        conversas: mpRef.current?.npcConversasInfo() ?? [],
+        meuId: mpRef.current?.idNoMundo ?? 0,
+        outros: npcMpNomesRef.current,
+      }),
+      npcMpSinal: () => Boolean(mpRef.current?.npcFala()),
+      npcMpFim: () => Boolean(mpRef.current?.npcFim()),
     };
     return () => {
       try { motorRef.current.mundo.desativarWorker(); } catch { /* ignore */ }
@@ -537,15 +569,18 @@ export default function CidadeBateu() {
       if (canvasRef.current) m.render(dt);
 
       // v57 — NPC IA: flutuar + virar-se ao jogador + pulso do núcleo
+      // v59 — conversa ativa na praça (qualquer jogador): o núcleo pulsa
+      // mais forte e o anel acelera — vida visível de longe, sem conteúdo
+      const conversaNpcAtiva = npcMpNomesRef.current.length > 0;
       const gNpc = npcGrupoRef.current;
       if (gNpc) {
         const tt = agora / 1000;
         gNpc.position.y = NPC_IA_Y + 1.35 + Math.sin(tt * 1.6) * 0.14;
         gNpc.rotation.y = Math.atan2(m.px - gNpc.position.x, m.pz - gNpc.position.z);
-        if (npcAnelRef.current) npcAnelRef.current.rotation.z = tt * 0.9;
+        if (npcAnelRef.current) npcAnelRef.current.rotation.z = tt * (conversaNpcAtiva ? 1.8 : 0.9);
         if (npcNucleoRef.current) {
           const matNucleo = npcNucleoRef.current.material as THREE.MeshStandardMaterial;
-          matNucleo.emissiveIntensity = 0.5 + Math.sin(tt * 2.2) * 0.18;
+          matNucleo.emissiveIntensity = 0.5 + Math.sin(tt * (conversaNpcAtiva ? 4.4 : 2.2)) * 0.18 + (conversaNpcAtiva ? 0.22 : 0);
         }
       }
 
@@ -595,10 +630,16 @@ export default function CidadeBateu() {
             perto: prox?.tipo === "quiosque",
           });
           // v57 — rótulo do NPC IA + proximidade honesta (estado só muda quando muda)
+          // v59 — com conversa partilhada ativa, o rótulo mostra QUEM fala
+          // (nomes dos outros, cap honesto 2 + «+N» — o resto fica no painel)
+          const nomesNpc = npcMpNomesRef.current;
+          const sufixoNpc = nomesNpc.length
+            ? ` · ${nomesNpc.slice(0, 2).join(", ")}${nomesNpc.length > 2 ? ` +${nomesNpc.length - 2}` : ""}`
+            : "";
           const npcCercaInfo = npcIaPerto(m.px, m.pz);
           v.set(POS_NPC_IA[0] + 0.5, NPC_IA_Y + 2.2, POS_NPC_IA[1] + 0.5).project(m.camara);
           novos.push({
-            id: "__npcia__", nome: t("cidade.npc.nome"), cor: "#a78bfa", rota: "", tipo: "npcia",
+            id: "__npcia__", nome: `${t("cidade.npc.nome")}${sufixoNpc}`.slice(0, 40), cor: "#a78bfa", rota: "", tipo: "npcia",
             x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h,
             visivel: v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15,
             perto: !!npcCercaInfo,

@@ -59,6 +59,13 @@ import { carregarDocsPlataforma } from "@/lib/ia-plataforma";
 // ÚNICA em src/lib/iaEndpoint.ts (o NPC IA da Cidade partilha A MESMA regra;
 // visão/vetores continuam aqui porque só a página /ia os usa).
 import { cabecalhosEdge, resolverEndpointChat, type EndpointIa, type ModoIa } from "@/lib/iaEndpoint";
+// v58 — histórico da IA NO SERVIDOR (o passo anotado desde a v54): o chat
+// segue o utilizador ENTRE DISPOSITIVOS via ia_historico (RLS, JWT).
+import {
+  LIMITES_HISTORICO, capSessoes, carimbarMensagens, chaveDe, mesclarMensagens,
+  criarGestorHistoricoIa, type EstadoSincUI, type GestorHistoricoIa,
+  type MsgHistoricoIa,
+} from "@/lib/iaHistorico";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -236,6 +243,70 @@ const IaBateu = () => {
   const fimMensagensRef = useRef<HTMLDivElement | null>(null);
   const caixaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // ── v58 — histórico da IA NO SERVIDOR (sincronização entre dispositivos) ─
+  // pull no montar (importa conversas de outros dispositivos, mergia por
+  // CHAVE determinística) + push depois de cada troca. CONVIDADO nunca
+  // toca na rede; migração pendente e erro são estados HONESTOS distintos.
+  const gestorRef = useRef<GestorHistoricoIa | null>(null);
+  const [sincEstado, setSincEstado] = useState<EstadoSincUI>("aSincronizar");
+  const [sincMotivo, setSincMotivo] = useState<string | null>(null);
+
+  const paraMsgIa = (m: MsgHistoricoIa): MsgIa => ({
+    role: m.papel === "utilizador" ? "user" : "assistant",
+    content: m.conteudo,
+    raciocinio: m.raciocinio,
+    chave: m.chave,
+    criadoEm: m.criadoEm,
+    tokens: m.tokens ?? undefined,
+  });
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      gestorRef.current = criarGestorHistoricoIa();
+      const r = await gestorRef.current.carregar("ia");
+      if (!vivo) return;
+      if (r.modo === "convidado") { setSincEstado("convidado"); return; }
+      if (r.modo === "migracao") { setSincEstado("migracao"); return; }
+      if (r.modo === "erro") { setSincEstado("erro"); setSincMotivo(r.motivo ?? null); return; }
+      // importar/mergear as sessões do servidor (cap honesto de sessões)
+      setConversas((lista) => {
+        const porId = new Map(lista.map((c) => [c.id, { ...c }]));
+        for (const s of capSessoes(r.sessoes, LIMITES_HISTORICO.SESSOES_CAP)) {
+          const existente = porId.get(s.sessao);
+          if (existente) {
+            const local = carimbarMensagens(existente.mensagens, s.sessao, existente.criadaEm);
+            const merge = mesclarMensagens(local.mensagens, s.mensagens, LIMITES.MENSAGENS_CAP);
+            porId.set(s.sessao, {
+              ...existente,
+              mensagens: merge.mensagens.map(paraMsgIa),
+              actualizadaEm: Math.max(existente.actualizadaEm, s.mensagens.length ? s.mensagens[s.mensagens.length - 1].criadoEm : 0),
+            });
+          } else {
+            // conversa que só existia noutro dispositivo — importada
+            porId.set(s.sessao, {
+              id: s.sessao,
+              titulo: "",
+              criadaEm: s.mensagens[0]?.criadoEm ?? Date.now(),
+              actualizadaEm: s.mensagens.length ? s.mensagens[s.mensagens.length - 1].criadoEm : Date.now(),
+              personaId: s.persona ?? "assistente",
+              mensagens: s.mensagens.map(paraMsgIa),
+            });
+          }
+        }
+        return Array.from(porId.values())
+          .sort((a, b) => b.actualizadaEm - a.actualizadaEm)
+          .slice(0, LIMITES_HISTORICO.SESSOES_CAP);
+      });
+      setSincEstado("sincronizado");
+    })().catch((e) => {
+      if (!vivo) return;
+      setSincEstado("erro");
+      setSincMotivo(String(e?.message ?? e).slice(0, 160));
+    });
+    return () => { vivo = false; };
+  }, []);
+
   useEffect(() => guardarConversas(conversas), [conversas]);
   useEffect(() => {
     if (aba !== "conversar") return;
@@ -366,6 +437,20 @@ const IaBateu = () => {
 
   // ── Enviar (chat v54 — intacto) ────────────────────────────────────────
 
+  /** v58 — push de uma troca (pergunta + resposta/parcial) para o histórico
+   *  do servidor; as mensagens já nascem carimbadas (chave/criadoEm), o
+   *  carimbo só valida e mantém. CONVIDADO/migração = sem pedido nenhum. */
+  const empurrarTroca = useCallback(
+    (conversaId: string, persona: string, msgs: MsgIa[]) => {
+      const troca = carimbarMensagens(msgs, conversaId, 0).mensagens;
+      void gestorRef.current?.empurrar("ia", conversaId, troca, persona).then((r) => {
+        if (r.modo === "erro") { setSincEstado("erro"); setSincMotivo(r.motivo ?? null); }
+        else if (r.modo === "migracao") setSincEstado("migracao");
+      }).catch(() => {});
+    },
+    [],
+  );
+
   const enviar = useCallback(async (textoDirecto?: string) => {
     const texto = (textoDirecto ?? entrada).trim();
     if (!texto || aFluir) return;
@@ -384,7 +469,16 @@ const IaBateu = () => {
     }
     const conversaId = conversa.id;
 
-    const msgUtilizador: MsgIa = { role: "user", content: texto.slice(0, LIMITES.CONTEUDO_CARACTERES_CAP) };
+    // v58 — mensagem carimbada NASCE com a meta do histórico sincronizado
+    // (chave determinística + criadoEm real; a meta NUNCA vai ao modelo —
+    // validarMensagens corta o fio para {role, content})
+    const conteudoUtilizador = texto.slice(0, LIMITES.CONTEUDO_CARACTERES_CAP);
+    const msgUtilizador: MsgIa = {
+      role: "user",
+      content: conteudoUtilizador,
+      chave: chaveDe(conversaId, agora, "utilizador", conteudoUtilizador),
+      criadoEm: agora,
+    };
     setConversas((lista) =>
       lista.map((c) =>
         c.id === conversaId
@@ -475,10 +569,15 @@ const IaBateu = () => {
       parado = resultado.parado;
 
       const notaParado = parado && conteudoFinal ? ` — ${t("ia.erro.parado")}` : "";
+      const conteudoAssistente = conteudoFinal + notaParado;
+      const agoraResp = Date.now();
       const msgAssistente: MsgIa = {
         role: "assistant",
-        content: conteudoFinal + notaParado,
+        content: conteudoAssistente,
         raciocinio: raciocinioFinal || undefined,
+        chave: chaveDe(conversaId, agoraResp, "assistente", conteudoAssistente),
+        criadoEm: agoraResp,
+        tokens: resultado.uso?.totalTokens ?? undefined,
       };
       setConversas((lista) =>
         lista.map((c) =>
@@ -487,6 +586,9 @@ const IaBateu = () => {
             : c,
         ),
       );
+      // v58 — push da troca completa (pergunta+resposta) para o servidor
+      // (fogo e esquecer — o erro é HONESTO no badge, nunca bloqueia o chat)
+      empurrarTroca(conversaId, personaId, [msgUtilizador, msgAssistente]);
       if (parado) toast.info(t("ia.erro.parado"));
     } catch (err: any) {
       const e = err instanceof NemotronError ? err : null;
@@ -502,10 +604,14 @@ const IaBateu = () => {
         setErro(mensagem + (e?.message && e.estado ? "" : ""));
         toast.error(mensagem);
         if (conteudoFinal || raciocinioFinal) {
+          const conteudoParcial = conteudoFinal + (conteudoFinal ? "\n\n" : "") + `⚠️ ${mensagem}`;
+          const agoraParcial = Date.now();
           const msgParcial: MsgIa = {
             role: "assistant",
-            content: conteudoFinal + (conteudoFinal ? "\n\n" : "") + `⚠️ ${mensagem}`,
+            content: conteudoParcial,
             raciocinio: raciocinioFinal || undefined,
+            chave: chaveDe(conversaId, agoraParcial, "assistente", conteudoParcial),
+            criadoEm: agoraParcial,
           };
           setConversas((lista) =>
             lista.map((c) =>
@@ -514,6 +620,8 @@ const IaBateu = () => {
                 : c,
             ),
           );
+          // v58 — a parcial também fica no histórico sincronizado
+          empurrarTroca(conversaId, personaId, [msgUtilizador, msgParcial]);
         }
       }
     } finally {
@@ -546,6 +654,12 @@ const IaBateu = () => {
         if (id === ativaId) setAtivaId(nova[0]?.id ?? null);
         return nova;
       });
+      // v58 — honesto: apagar é apagar NO SERVIDOR também (quando há sessão;
+      // convidado/migração = o gestor declara e nada sai daqui)
+      void gestorRef.current?.apagarSessao("ia", id).then((r) => {
+        if (r.modo === "erro") { setSincEstado("erro"); setSincMotivo(r.motivo ?? null); }
+        else if (r.modo === "migracao") setSincEstado("migracao");
+      }).catch(() => {});
     },
     [ativaId],
   );
@@ -593,6 +707,33 @@ const IaBateu = () => {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {/* v58 — estado HONESTO do histórico no servidor (sincronização
+                entre dispositivos — o passo anotado desde a v54) */}
+            <Badge
+              variant="outline"
+              data-testid="ia-sinc-estado"
+              title={sincMotivo || undefined}
+              className={`gap-1 text-[10px] ${
+                sincEstado === "sincronizado" ? "text-violet-500 border-violet-400/40"
+                  : sincEstado === "migracao" ? "text-amber-500 border-amber-400/40"
+                  : sincEstado === "erro" ? "text-destructive border-destructive/40"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  sincEstado === "sincronizado" ? "bg-violet-500"
+                    : sincEstado === "migracao" ? "bg-amber-500"
+                    : sincEstado === "erro" ? "bg-destructive"
+                    : "bg-muted-foreground/50"
+                }`}
+              />
+              {sincEstado === "sincronizado" ? t("ia.sinc.on")
+                : sincEstado === "migracao" ? t("ia.sinc.migracao")
+                : sincEstado === "erro" ? t("ia.sinc.erro")
+                : sincEstado === "aSincronizar" ? t("ia.sinc.aSincronizar")
+                : t("ia.sinc.convidado")}
+            </Badge>
             <Badge variant="outline" data-testid="ia-endpoint-chip" className="gap-1 text-[10px]">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
               {t(`ia.config.endpoint.${endpointInfo.modo}`)} · {hostEndpoint}

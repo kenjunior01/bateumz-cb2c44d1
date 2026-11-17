@@ -30,6 +30,11 @@ import {
   LIMITES_NPC, NPC_IA_NOME, contextoCidade, promptSistemaNpc, validarHistoricoNpc,
   type ContextoNpc, type MsgNpc,
 } from "@/game/cidade/npcIa";
+import {
+  SESSAO_NPC, carimbarMensagens, mesclarMensagens,
+  criarGestorHistoricoIa, type EstadoSincUI, type GestorHistoricoIa,
+  type MsgHistoricoIa,
+} from "@/lib/iaHistorico";
 
 interface FluxoNpc {
   raciocinio: string;
@@ -62,6 +67,42 @@ export default function NpcIa({
   const clienteRef = useRef<ClienteNemotron | null>(null);
   const fimRef = useRef<HTMLDivElement | null>(null);
   const caixaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // ── v58 — histórico no SERVIDOR (o passo anotado desde a v54) ──
+  // pull no montar + push depois de cada troca; CONVIDADO nunca toca na
+  // rede (o estado é honesto: sem sessão = só neste dispositivo).
+  const gestorRef = useRef<GestorHistoricoIa | null>(null);
+  const [sinc, setSinc] = useState<{ estado: EstadoSincUI; motivo?: string }>({
+    estado: "aSincronizar",
+  });
+
+  const sincronizarIniciar = useCallback(async () => {
+    gestorRef.current = criarGestorHistoricoIa();
+    const r = await gestorRef.current.carregar("npc");
+    if (r.modo === "convidado") { setSinc({ estado: "convidado" }); return; }
+    if (r.modo === "migracao") { setSinc({ estado: "migracao" }); return; }
+    if (r.modo === "erro") { setSinc({ estado: "erro", motivo: r.motivo }); return; }
+    // merge: o SERVIDOR é a fonte de verdade; o local é carimbado UMA vez
+    // (o `mensagens` da closure é o estado do MONTAR = histórico local)
+    const doServidor = r.sessoes.find((s) => s.sessao === SESSAO_NPC)?.mensagens ?? [];
+    const local = carimbarMensagens(mensagens, SESSAO_NPC, 0);
+    const merge = mesclarMensagens(local.mensagens, doServidor, LIMITES_NPC.MENSAGENS_CAP);
+    if (merge.deServidor > 0) {
+      setMensagens(merge.mensagens.map((m: MsgHistoricoIa): MsgNpc => ({
+        role: m.papel === "utilizador" ? "user" : "assistant",
+        content: m.conteudo,
+        chave: m.chave,
+        criadoEm: m.criadoEm,
+      })));
+    }
+    setSinc({ estado: "sincronizado" });
+  }, []);
+
+  useEffect(() => {
+    let vivo = true;
+    sincronizarIniciar().catch(() => vivo && setSinc({ estado: "erro", motivo: "" }));
+    return () => { vivo = false; };
+  }, [sincronizarIniciar]);
 
   // Cliente com o MESMO endpoint do resto da plataforma (fonte única v57)
   // e portão PRÓPRIO do NPC (10/min, intervalo 1,2 s — caps do núcleo).
@@ -144,6 +185,21 @@ export default function NpcIa({
       };
       setMensagens((m) => [...m, resposta]);
       if (r.uso) setUso(r.uso);
+      // v58 — push da troca (pergunta+resposta) para o histórico sincronizado
+      // (fogo e esquecer, erro HONESTO no chip; nunca bloqueia o chat)
+      const agoraMs = Date.now();
+      const troca = carimbarMensagens(
+        [
+          { role: "user", content: texto, criadoEm: agoraMs - 1 },
+          { role: "assistant", content: resposta.content, criadoEm: agoraMs, tokens: r.uso?.totalTokens ?? null },
+        ],
+        SESSAO_NPC,
+        0,
+      ).mensagens;
+      void gestorRef.current?.empurrar("npc", SESSAO_NPC, troca, null).then((r2) => {
+        if (r2.modo === "erro") setSinc({ estado: "erro", motivo: r2.motivo });
+        else if (r2.modo === "migracao") setSinc({ estado: "migracao" });
+      }).catch(() => {});
     } catch (e: any) {
       if (e instanceof NemotronRateLimitError) {
         setErro(`${t("cidade.npc.rate")} (${Math.ceil((e.esperarMs || 1000) / 1000)}s)`);
@@ -156,7 +212,22 @@ export default function NpcIa({
       // abort a meio entra aqui via AbortError: guarda a parcial
       setFluxo((f) => {
         if (f && f.conteudo) {
-          setMensagens((m) => [...m, { role: "assistant", content: (f.conteudo + "\n\n" + t("cidade.npc.parado")).slice(0, LIMITES_NPC.RESPOSTA_CAP) }]);
+          const parcial = (f.conteudo + "\n\n" + t("cidade.npc.parado")).slice(0, LIMITES_NPC.RESPOSTA_CAP);
+          setMensagens((m) => [...m, { role: "assistant", content: parcial }]);
+          // v58 — a parcial TAMBÉM vai para o histórico sincronizado
+          const agoraMs = Date.now();
+          const troca = carimbarMensagens(
+            [
+              { role: "user", content: texto, criadoEm: agoraMs - 1 },
+              { role: "assistant", content: parcial, criadoEm: agoraMs },
+            ],
+            SESSAO_NPC,
+            0,
+          ).mensagens;
+          void gestorRef.current?.empurrar("npc", SESSAO_NPC, troca, null).then((r2) => {
+            if (r2.modo === "erro") setSinc({ estado: "erro", motivo: r2.motivo });
+            else if (r2.modo === "migracao") setSinc({ estado: "migracao" });
+          }).catch(() => {});
         }
         return null;
       });
@@ -177,6 +248,13 @@ export default function NpcIa({
     setErro(null);
     setUso(null);
     try { localStorage.removeItem(LIMITES_NPC.CHAVE_STORAGE); } catch {}
+    // v58 — honesto: se o histórico estava sincronizado, apaga TAMBÉM no
+    // servidor (convidado/migração = só local; o gestor declara o modo)
+    void gestorRef.current?.apagarTudo("npc").then((r2) => {
+      if (r2.modo === "erro") setSinc({ estado: "erro", motivo: r2.motivo });
+      else if (r2.modo === "migracao") setSinc({ estado: "migracao" });
+      else if (r2.modo === "ok") setSinc((s) => (s.estado === "erro" || s.estado === "migracao" ? s : { estado: s.estado === "convidado" ? "convidado" : "sincronizado" }));
+    }).catch(() => {});
   }, [aFluir]);
 
   const sugestoes = useMemo(
@@ -350,6 +428,23 @@ export default function NpcIa({
             />
             {t("cidade.npc.pensamento")}
           </label>
+          {/* v58 — estado HONESTO do histórico no servidor (chip curto) */}
+          <span
+            data-testid="cd-npc-sinc"
+            title={sinc.motivo || undefined}
+            className={`text-[9px] leading-tight shrink-0 ${
+              sinc.estado === "sincronizado" ? "text-violet-300/80"
+                : sinc.estado === "migracao" ? "text-amber-300/80"
+                : sinc.estado === "erro" ? "text-rose-300/80"
+                : "text-white/40"
+            }`}
+          >
+            {sinc.estado === "sincronizado" ? t("ia.sinc.on")
+              : sinc.estado === "migracao" ? t("ia.sinc.migracao")
+              : sinc.estado === "erro" ? t("ia.sinc.erro")
+              : sinc.estado === "aSincronizar" ? t("ia.sinc.aSincronizar")
+              : t("ia.sinc.convidado")}
+          </span>
           <p className="text-[9px] text-white/35 leading-tight text-right flex-1" data-testid="cd-npc-nota">
             {t("cidade.npc.nota")}
           </p>

@@ -91,3 +91,25 @@ Stage Summary:
 - A IA da plataforma tem agora CORPO no mundo-âncora: quem entra na cidade nasce a ver o prompt «Falar com a Bateu IA» e conversa com o Nemotron real, com a persona presa aos factos medidos (distrito, noite/dia, clima real, jogador) — nunca inventa
 - Zero rotas novas e zero mudanças no Motor: o holograma é da página, o chat reusa a via proxy/edge, a chave nunca sai do servidor
 - 5 furos reais fechados com repro; 54/54 ×2 na suíte nova e todas as regressões verdes (50 + 78 + 54 + 37)
+
+---
+Task ID: 58
+Agent: Super Z (main)
+Task: v58 — HISTÓRICO DA IA NO SERVIDOR: o chat da IA (/ia e o NPC da Praça) segue o utilizador ENTRE DISPOSITIVOS (o segundo passo anotado desde a v54; o primeiro — o NPC — foi a v57)
+
+Work Log:
+- Estado à entrada: main limpo no ec304cc (v57); o «o que fica» da v57 anotava: persistência do histórico no servidor + sincronização entre dispositivos · NPC client-side (MP) · RAG do NPC bloqueado pelo 422 do embed
+- MIGRAÇÃO supabase/migrations/20261117_ia_historico.sql NOVA: ia_historico com RLS (SELECT/INSERT/DELETE próprios — SEM UPDATE: histórico imutável), UNIQUE(user_id, chave) para push idempotente, CHECKs de caps (conteúdo 8000, papel, superfície ia/npc), janela deslizante server-side (trigger: 60 por sessão) — aplicar pelo Dashboard → SQL Editor (padrão do repo)
+- NÚCLEO ISOMÓRFICO src/lib/iaHistorico.ts (browser E Node NO MESMO módulo): chave DETERMINÍSTICA sessao:criadoEm:papel:hashFnv1a (dois dispositivos derivam as MESMAS chaves → merge deduplica, re-push não duplica), carimbarMensagens (pré-v58 ganha timestamp sintético baseEm+i — SÓ ordena), mesclarMensagens (o SERVIDOR ganha; ordem; cap), linhaParaMensagem/mensagemParaLinha (linha podre → NULL contado), agruparPorSessao + capSessoes (20) + o GESTOR PostgREST criarGestorHistoricoIa (pull/push upsert {onConflict:"user_id,chave", ignoreDuplicates}/apagarSessao/apagarTudo — cliente+obterSessao INJETÁVEIS, supabase real POR PREGUIÇA para o Node importar o módulo)
+- META NOS TIPOS: MsgIa (nemotron.ts) + MsgNpc (npcIa.ts) ganham chave?/criadoEm?/tokens? — FIO SEGURO: validarMensagens corta para {role, content}, a meta NUNCA chega ao modelo (provado no teste A e no E2E)
+- A persona (system) NUNCA é guardada — só o personaId viaja na linha da pergunta (conversa importada noutro dispositivo reconstrói-se)
+- UI: /ia pull no montar + push por troca (pergunta+resposta e TAMBÉM a parcial do abort) + apagar conversa → apagar no servidor + badge ia-sinc-estado; NPC com janela única "praca" + chip cd-npc-sinc + limpar → apagarTudo; ESTADOS HONESTOS: convidado (ZERO pedidos) · migracao (PGRST205 declarado) · erro (motivo real) · sincronizado · aSincronizar
+- i18n +5 chaves ia.sinc.* ×6 (scripts/add-ia-i18n-v58.py); proxy saúde v58 (sem rotas novas); test-ia-v57 relaxada para v5[7-9] (padrão da casa)
+- FUROS REAIS fechados: (1) insert().onConflict().ignoreDuplicates() NÃO existe no postgrest-js v2 → upsert(rows, {onConflict, ignoreDuplicates}); (2) import estático do supabase partia o Node (import.meta.env + alias) → lazy import no módulo puro; (3) chave por ÍNDICE colapsava perguntas IGUAIS → chave por criadoEm; (4) carimbarMensagens descartava o pré-v58 → timestamp sintético ANTES de validar; (5) on_conflict URL-encoded (%2C) → decodeURIComponent na asserção; (6) .env com aspas → strip no parser do teste; (7) saúde fixa em "v57" na suíte antiga → v5[7-9]
+- TESTES: test-ia-v58.mjs NOVO 70 verdes ×2 corridas, 1 skip honesto (A núcleo 41 · B PostgREST mockado 18 com o fio REAL provado — on_conflict+Prefer+filtros — e CONVIDADO com ZERO pedidos · C Supabase real skippável: migração ainda não aplicada → SKIP com o SQL apontado · D E2E 10: /ia + /cidade com badge/chip honestos, chat regresso, meta NUNCA no corpo capturado, CONVIDADO com ZERO pedidos a rest/v1/ia_historico MEDIDO por contador de rotas, zero erros de console, shots-v58/)
+- REGRESSÃO: test-ia-v54 37/0+1skip · test-ia-v55 62/0+2skips · test-ia-v56 54/0+1skip · test-ia-v57 54/0 (live NVIDIA + E2E da praça intatos) · test-cidade 37/37 · tsc 0 · build OK
+
+Stage Summary:
+- O passo anotado desde a v54 está fechado: o histórico da IA vive no servidor com RLS e segue o utilizador entre dispositivos — push idempotente por chave determinística, merge com o servidor como fonte de verdade, imutável e com janela deslizante server-side
+- Honestidade de ponta a ponta: convidado nunca toca na rede, migração pendente é DECLARADA (nunca fingida), erros com o motivo real, linha podre não mata a sincronização, e a meta de sincronização nunca chega ao modelo
+- 7 furos reais fechados com repro; 70/70 ×2 na suíte nova e todas as regressões verdes (37 + 62 + 54 + 54 + 37)

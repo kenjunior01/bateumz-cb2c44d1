@@ -9,6 +9,11 @@ type Dict = Record<string, string>;
 // Per-key fallback (see `t()` resolver below). Add localized keys as they are produced.
 const translations: Partial<Record<Lang, Dict>> = {
   en: {
+    "ia.sinc.on": "History on the server",
+    "ia.sinc.convidado": "This device only — sign in to sync",
+    "ia.sinc.erro": "Server not responding — history here only",
+    "ia.sinc.migracao": "Sync pending migration",
+    "ia.sinc.aSincronizar": "Syncing history…",
     "cidade.npc.nome": "Bateu IA",
     "cidade.npc.cargo": "Platform AI · Nemotron",
     "cidade.npc.falar": "Talk to Bateu IA",
@@ -1288,6 +1293,11 @@ const translations: Partial<Record<Lang, Dict>> = {
 
   },
   pt: {
+    "ia.sinc.on": "Histórico no servidor",
+    "ia.sinc.convidado": "Só neste dispositivo — entra para sincronizar",
+    "ia.sinc.erro": "Servidor não respondeu — histórico só aqui",
+    "ia.sinc.migracao": "Sincronização pendente da migração",
+    "ia.sinc.aSincronizar": "A sincronizar histórico…",
     "cidade.npc.nome": "Bateu IA",
     "cidade.npc.cargo": "IA da plataforma · Nemotron",
     "cidade.npc.falar": "Falar com a Bateu IA",
@@ -2507,6 +2517,11 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participar Agora",
   },
   "pt-BR": {
+    "ia.sinc.on": "Histórico no servidor",
+    "ia.sinc.convidado": "Só neste dispositivo — entre para sincronizar",
+    "ia.sinc.erro": "Servidor não respondeu — histórico só aqui",
+    "ia.sinc.migracao": "Sincronização pendente da migração",
+    "ia.sinc.aSincronizar": "Sincronizando histórico…",
     "cidade.npc.nome": "Bateu IA",
     "cidade.npc.cargo": "IA da plataforma · Nemotron",
     "cidade.npc.falar": "Falar com a Bateu IA",
@@ -3652,6 +3667,11 @@ const translations: Partial<Record<Lang, Dict>> = {
     "tournament.formRules": "Regras",
   },
   es: {
+    "ia.sinc.on": "Historial en el servidor",
+    "ia.sinc.convidado": "Solo en este dispositivo — inicia sesión para sincronizar",
+    "ia.sinc.erro": "El servidor no responde — historial solo aquí",
+    "ia.sinc.migracao": "Sincronización pendiente de migración",
+    "ia.sinc.aSincronizar": "Sincronizando historial…",
     "cidade.npc.nome": "Bateu IA",
     "cidade.npc.cargo": "IA de la plataforma · Nemotron",
     "cidade.npc.falar": "Hablar con Bateu IA",
@@ -4571,6 +4591,11 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Unete Ahora",
   },
   fr: {
+    "ia.sinc.on": "Historique sur le serveur",
+    "ia.sinc.convidado": "Sur cet appareil seulement — connecte-toi pour synchroniser",
+    "ia.sinc.erro": "Le serveur ne répond pas — historique ici seulement",
+    "ia.sinc.migracao": "Synchronisation en attente de migration",
+    "ia.sinc.aSincronizar": "Synchronisation de l'historique…",
     "cidade.npc.nome": "Bateu IA",
     "cidade.npc.cargo": "IA de la plateforme · Nemotron",
     "cidade.npc.falar": "Parler à Bateu IA",
@@ -5457,6 +5482,11 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.cta": "Participer",
   },
   hi: {
+    "ia.sinc.on": "सर्वर पर इतिहास",
+    "ia.sinc.convidado": "सिर्फ़ इस डिवाइस पर — सिंक के लिए साइन इन करें",
+    "ia.sinc.erro": "सर्वर जवाब नहीं दे रहा — इतिहास सिर्फ़ यहीं",
+    "ia.sinc.migracao": "सिंक माइग्रेशन का इंतज़ार कर रहा है",
+    "ia.sinc.aSincronizar": "इतिहास सिंक हो रहा है…",
     "cidade.npc.nome": "बटू AI",
     "cidade.npc.cargo": "प्लेटफ़ॉर्म AI · Nemotron",
     "cidade.npc.falar": "बटू AI से बात करें",

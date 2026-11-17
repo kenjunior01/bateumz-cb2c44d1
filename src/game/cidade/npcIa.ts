@@ -156,24 +156,39 @@ export function promptSistemaNpc(ctx: ContextoNpc): string {
 export interface MsgNpc {
   role: "user" | "assistant";
   content: string;
+  // ── v58: meta de sincronização do histórico no servidor (iaHistorico.ts) ──
+  // NUNCA chega ao modelo: o cliente valida o fio com validarMensagens,
+  // que corta para {role, content}.
+  chave?: string;    // chave determinística do histórico sincronizado
+  criadoEm?: number; // ms desde epoch — ordena o merge entre dispositivos
 }
 
 /** Valida/limpa o histórico persistido do NPC: só user|assistant, corta ao
  *  cap (o MAIS RECENTE fica), corta tamanhos (user ≤ ENTRADA_CAP,
  *  assistant ≤ RESPOSTA_CAP), descarta o inválido em silêncio HONESTO —
- *  o histórico é cache local, dados podres não matam a conversa. */
+ *  o histórico é cache local, dados podres não matam a conversa.
+ *  v58: a meta de sincronização (chave/criadoEm) passa VALIDADA — a chave
+ *  é carimbada UMA vez e persistida; nunca recalculada depois. */
 export function validarHistoricoNpc(entrada: unknown): MsgNpc[] {
   if (!Array.isArray(entrada)) return [];
   const bruto = entrada
     .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-LIMITES_NPC.MENSAGENS_CAP)
-    .map((m: any) => ({
-      role: m.role as "user" | "assistant",
-      content:
-        m.role === "user"
-          ? String(m.content).slice(0, LIMITES_NPC.ENTRADA_CAP)
-          : String(m.content).slice(0, LIMITES_NPC.RESPOSTA_CAP),
-    }))
+    .map((m: any) => {
+      const limpa: MsgNpc = {
+        role: m.role as "user" | "assistant",
+        content:
+          m.role === "user"
+            ? String(m.content).slice(0, LIMITES_NPC.ENTRADA_CAP)
+            : String(m.content).slice(0, LIMITES_NPC.RESPOSTA_CAP),
+      };
+      // v58: meta de sincronização passa VALIDADA (chave carimbada uma vez;
+      // criadoEm só aceita ms plausíveis — dados podres viram «sem meta»)
+      if (typeof m.chave === "string" && m.chave && m.chave.length <= 140) limpa.chave = m.chave;
+      const criado = Number(m.criadoEm);
+      if (Number.isFinite(criado) && criado > 0) limpa.criadoEm = Math.floor(criado);
+      return limpa;
+    })
     .filter((m) => m.content.trim().length > 0);
   return bruto;
 }

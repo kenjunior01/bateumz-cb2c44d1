@@ -71,6 +71,11 @@ export interface MsgIa {
   role: Papel;
   content: string;
   raciocinio?: string; // reasoning_content acumulado do assistente (memória do pensamento)
+  // ── v58: meta de sincronização do histórico no servidor (iaHistorico.ts) ──
+  // NUNCA chega ao modelo: validarMensagens (o fio) corta para {role, content}.
+  chave?: string;   // chave determinística do histórico sincronizado
+  criadoEm?: number; // ms desde epoch — ordena o merge entre dispositivos
+  tokens?: number;  // usage REAL do upstream (quando o servidor o envia)
 }
 
 export interface ParametrosIa {

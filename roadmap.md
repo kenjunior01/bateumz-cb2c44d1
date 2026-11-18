@@ -26,3 +26,11 @@
 - [x] Regras LoL: fonte como zona segura para os dois lados, cadência de básico por ataquePS, cast com cd/mana autoritativos, um cast = um alvo, recompensa por abate escala com a vítima — docs/REA-arena-v64.md §2.
 - [x] Cliente: alvo-herói com prioridade de clique + pursuit + auto-attack, habilidades/projéteis detetam heróis, kill feed, overlay «Abatido por X», nota PvP no menu — docs/REA-arena-v64.md §3.
 - [x] Prova: test-pvp-v64.mjs 53/53 ×2 (núcleo + servidor real com anti-batota provado + E2E com 2 browsers a lutar até à morte) · test-arena-rpg-v63 77/0 · test-web-v262 11/0 · tsc 0 · build OK — docs/REA-arena-v64.md §5.
+
+## v65 — BATEU KART: Circuito das Lendas (2026-11-18)
+
+- [x] Kart racer estilo Mario Kart com CORRIDAS LONGAS (3 pistas de 1,5-2 km × 3-5 voltas, 12 corredores) — docs/REA-kart-v65.md §1-2.
+- [x] Garagem: moedas melhoram o CARRO (motor/turbo/pneus/blindagem) e as ARMAS (casca/casca-alvo/míssil/óleo/raio) — 4 karts desbloqueáveis × 5 melhorias × 5 níveis — docs/REA-kart-v65.md §2.
+- [x] Núcleo isomórfico puro pronto para servidor futuro + itens ponderados por posição, drift com mini-turbo, rampas, moedas, off-road — docs/REA-kart-v65.md §2.
+- [x] Plataforma: LiveHub (?game=kart, portal imersivo, ecrã inteiro), catálogo com categoria «Corridas», i18n kart.* ×64 pt+en, progresso do aparelho — docs/REA-kart-v65.md §2.
+- [x] Prova: test-kart-v65.mjs 65/65 ×2 (núcleo + E2E com chegada real e persistência) · regressão arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-kart-v65.md §5.

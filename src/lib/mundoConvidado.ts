@@ -49,7 +49,7 @@ export function modoDoUtilizador(user: unknown): ModoMundo {
 }
 
 /** Jogos com progressão PRÓPRIA no aparelho — não alimentam o kit universal. */
-export const JOGOS_SEM_KIT = ["mmorpg"] as const;
+export const JOGOS_SEM_KIT = ["mmorpg", "kart"] as const;
 
 /**
  * O fim de partida deste jogo alimenta as missões/XP do kit universal?

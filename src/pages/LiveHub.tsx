@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Suspense, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed, Flag } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
@@ -85,6 +85,7 @@ const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
 const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
 const BateuRPG = lazy(() => import("@/components/livegames/BateuRPG"));
 const AetheriaGame = lazy(() => import("@/components/livegames/AetheriaGame"));
+const BateuKart = lazy(() => import("@/components/livegames/BateuKart"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
 const DjikotaGame = lazy(() => import("@/components/livegames/DjikotaGame"));
@@ -154,7 +155,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "kart" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
 
 interface SavedWheelGame {
   id: string;
@@ -177,6 +178,7 @@ interface SavedWheelGame {
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "aetheria", icon: Globe, emoji: "🪽", grad: "from-sky-500 via-indigo-500 to-violet-600" },
   { id: "mmorpg", icon: Globe, emoji: "⚔️", grad: "from-rose-600 via-amber-500 to-yellow-400" },
+  { id: "kart", icon: Flag, emoji: "🏎️", grad: "from-orange-500 via-red-500 to-rose-600" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
@@ -452,7 +454,7 @@ const LiveHub = () => {
   }, [active]);
 
   const activeMeta = useMemo(() => GAMES.find((g) => g.id === active), [GAMES, active]);
-  const isImmersiveWorld = active === "mmorpg" || active === "aetheria";
+  const isImmersiveWorld = active === "mmorpg" || active === "aetheria" || active === "kart";
 
   const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
@@ -1394,6 +1396,14 @@ const LiveHub = () => {
                   <ToggleEcraInteiro />
                   <GameErrorBoundary gameName="BATEU RPG: Lendas">
                     <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
+                  </GameErrorBoundary>
+                </motion.div>, document.body)}
+              {active === "kart" && createPortal(
+                <motion.div key="kart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[80] bg-black">
+                  <ToggleEcraInteiro />
+                  <GameErrorBoundary gameName="BATEU KART: Circuito das Lendas">
+                    <BateuKart onScore={(moedas: number) => recordScore("BATEU KART")("BATEU KART", moedas)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "aetheria" && createPortal(

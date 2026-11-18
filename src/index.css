@@ -5884,3 +5884,10 @@ select:focus-visible {
 .chesspuzzle-shake {
   animation: chesspuzzle-shake var(--dur-base, 240ms) var(--ease-exit, ease-out) 2;
 }
+
+/* v65 — fade do flash de dano/stun (a Arena usa desde a v63 e os keyframes
+   nunca existiram; o kart usa o mesmo para o stun) */
+@keyframes arena-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}

@@ -17,7 +17,8 @@
     "apk": "npm run apk:sync && npx cap open android",
     "apk:ci": "npm run apk:sync && cd android && ./gradlew assembleDebug",
     "apk:release": "npm run apk:sync && cd android && ./gradlew assembleRelease",
-    "verify:sync": "node scripts/verify-db-sync.mjs"
+    "verify:sync": "node scripts/verify-db-sync.mjs",
+    "server:arena": "node server/arena-servidor.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

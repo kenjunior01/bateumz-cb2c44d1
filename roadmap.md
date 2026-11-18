@@ -11,3 +11,10 @@
 - [x] Verify guest gameplay and available registration flows end to end. (v62 — docs/REA-corrections-v62.md)
 - [x] Add audit P0 loading recovery: render app shell promptly, cap blocking startup waits, and provide navigable retry/fallback states. (v62 — docs/REA-corrections-v62.md)
 - [x] Surface only verifiable trust and responsible-play information; do not invent licensing, operators, support contacts, payment terms, odds, or audit claims. (v62 — docs/REA-corrections-v62.md)
+
+## v63 — Pivó do mundo 3D a pedido do utilizador (2026-11-18)
+
+- [x] Apagar tudo o que é estilo «Minecraft» (motor voxel dos blocos, RPG voxel, cidade voxel, servidor da cidade, i18n obsoleta, rotas/links) — docs/REA-arena-v63.md §1, arquivado/voxel/.
+- [x] Reconstruir o RPG como MMO de arena em vista de topo estilo League of Legends (campeões QWER, click-to-move, fonte/camps/Barão/Dragão) — docs/REA-arena-v63.md §2.
+- [x] Multi-jogador real estilo hordes.io (servidor autoritativo 30 TPS, raio de interesse, cap 150, chat global, honesto online×solo) — docs/REA-arena-v63.md §2.4.
+- [x] Prova: test-arena-rpg-v63.mjs 77/77 ×2 (núcleo + servidor real + E2E com 2 browsers no mesmo mundo) · test-web-v262 11/0 · tsc 0 · build OK.

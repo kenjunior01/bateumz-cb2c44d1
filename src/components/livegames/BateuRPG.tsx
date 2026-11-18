@@ -1,1532 +1,649 @@
 // ============================================================
-// BATEU RPG: LENDAS — Interface do jogo (100% português)
-// Menu (dificuldade Médio→Difícil→Lenda) · HUD RPG (vida, XP,
-// nível, missão, bússola, boss) · Missões / Diário / Habilidades ·
-// controlos móveis · morte e renascimento · clima REAL (Open-Meteo)
-// Substitui o BateuCraft na plataforma (v41 — pedido do utilizador).
-// v48 — MOCHILA (as 36 posições do motor: hotbar + 27, peitoral
-// equipar/despir, mover para hotbar) + espólio REAL nos baús.
-// v49 — FORJA: criar/fundir com as RECEITAS REAIS do motor partilhado
-// (avaliarReceitas/criarReceita/pertoDe — as mesmas do BateuCraft); a
-// Forja Perdida é o único sítio do mundo com MESA e FORNALHA reais.
+// BATEU RPG: LENDAS DA ARENA — Interface (100% português)
+// ────────────────────────────────────────────────────────────
+// v63 — RECONSTRUÇÃO COMPLETA a pedido do utilizador: o RPG voxel
+// estilo «Minecraft» foi APAGADO e substituído por um MMO de arena
+// em VISTA DE TOPO estilo League of Legends com multi-jogador REAL
+// estilo hordes.io (servidor autoritativo em server/arena-servidor.mjs).
+//
+// Menu: seleção de campeão (4 heróis, papéis LoL) + nome.
+// Jogo: HUD estilo LoL — vida/mana, barra QWER com cooldowns,
+// minimapa, chat da arena, loja na fonte, morte/respawn, estado
+// HONESTO do servidor (online × solo — nunca finge multi).
+// Móvel: joystick + botões de habilidade.
 // ============================================================
-
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Motor, type CamaraModo } from "@/game/blocos/engine";
-import { SistemaRPG, type CapturaRpg } from "@/game/rpg/sistemaRpg";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { Coins, Crosshair, Heart, Map as MapIcon, Pause, Play, Shield, Skull, Sparkles, Store, Swords, Users, Zap, X, ChevronUp } from "lucide-react";
+import { MotorArena, type EstadoHud, type AvisosMotor } from "@/game/arena/motor.ts";
+import { RedeArena, type EstadoMp } from "@/game/arena/mp.ts";
 import {
-  ORDEM_DIFICULDADE, DIFICULDADES_RPG, type DificuldadeRpg,
-  RAMOS_RPG, NOMES_RAMO, EFEITO_RAMO, NIVEL_MAX_RAMO_RPG,
-  NIVEL_MAX, REGIOES, POIS, type RamoRpg,
-} from "@/game/rpg/core";
-import { estimarEspaco, mbLegivel } from "@/game/armazem";
-import { infoItem, avaliarReceitas, criarReceita, pertoDe } from "@/game/blocos/inventario";
-import { ITENS, NIVEL_MAR, CORES_MAPA, CHUNK, B, RECEITAS } from "@/game/blocos/constants";
-import { X, Play, Swords, Sun, Moon, Camera, Pause, Trophy, Compass, Map as MapIcon, BookOpen, Sparkles, ShieldAlert, CloudRain, CloudLightning, CloudSun, Skull, ChevronUp, HelpCircle, Backpack, Hammer } from "lucide-react";
-import { procurarCidade, getClimaAtual, wmoDescricaoPt, wmoDescricaoEn, wmoParaMeteo, wmoEhNeve, OPENMETEO_ATTRIBUTION, type CidadeEncontrada, type ClimaAtual } from "@/lib/openMeteo";
+  CAMPEOES, IDs_CAMPEOES, IDS_ITENS, ITENS,
+  type CampeaoId, type SlotHabilidade,
+} from "@/game/arena/core.ts";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { linguaValida, nomeDificuldade, descDificuldade, nomeRegiao, descRegiao, nomePoi, descPoi, tituloMissaoPorId, textoObjetivoPorId, textoObjetivoPorTexto, tituloDiaria, nomeRamo, efeitosRamo, causaMorte, nomeItem, nomePorTexto, rotuloMapa } from "@/game/rpg/nomes";
 
 interface Props {
   onScore?: (score: number) => void;
   onExit?: () => void;
 }
 
+// ── Save do aparelho (honesto:IndexedDB não é preciso — payload pequeno) ──
+const LS_SAVE = "bateu_arena_save";
+interface SaveArena { nome: string; campeao: CampeaoId; xpTotal: number; essencia: number; itens: Record<string, number>; abates: number; ts: number }
+function lerSave(): SaveArena | null {
+  try {
+    const raw = localStorage.getItem(LS_SAVE);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as SaveArena;
+    if (!IDs_CAMPEOES.includes(p.campeao)) return null;
+    return { ...p, xpTotal: Math.max(0, p.xpTotal | 0), essencia: Math.max(0, p.essencia | 0), abates: Math.max(0, p.abates | 0), itens: p.itens && typeof p.itens === "object" ? p.itens : {} };
+  } catch { return null; }
+}
+function guardarSave(s: SaveArena): void {
+  try { localStorage.setItem(LS_SAVE, JSON.stringify({ ...s, ts: Date.now() })); } catch { /* honesto: sem espaço */ }
+}
+
 const ehToque = typeof window !== "undefined" && ("ontouchstart" in window || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
 
-// ── Clima REAL (Open-Meteo) — herdado do padrão v31 ────────────
-interface ClimaRealEstado {
-  ativa: boolean;
-  cidade: CidadeEncontrada | null;
-  clima: ClimaAtual | null;
-  erro: string;
-}
-const LS_CLIMA_REAL = "bateumz.climaReal";
-
-function carregarClimaReal(): ClimaRealEstado {
-  try {
-    const raw = localStorage.getItem(LS_CLIMA_REAL);
-    if (raw) {
-      const p = JSON.parse(raw) as { ativa?: boolean; cidade?: CidadeEncontrada };
-      if (p?.ativa && p?.cidade?.nome && typeof p.cidade.latitude === "number") {
-        return { ativa: true, cidade: p.cidade, clima: null, erro: "" };
-      }
-    }
-  } catch { /* localStorage indisponível */ }
-  return { ativa: false, cidade: null, clima: null, erro: "" };
-}
-
-// ── HUD: corações e fome (herdados do motor partilhado) ────────
-function Coracoes({ vida }: { vida: number }) {
-  return (
-    <div className="flex gap-[2px]" data-testid="rpg-vida">
-      {Array.from({ length: 10 }).map((_, i) => {
-        const cheio = vida >= (i + 1) * 2, meio = !cheio && vida >= i * 2 + 1;
-        return (
-          <svg key={i} width="16" height="16" viewBox="0 0 16 16" className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-            <path d="M8 14 C4 11 1.5 8.5 1.5 5.8 C1.5 3.6 3.2 2 5.2 2 C6.4 2 7.5 2.7 8 3.6 C8.5 2.7 9.6 2 10.8 2 C12.8 2 14.5 3.6 14.5 5.8 C14.5 8.5 12 11 8 14Z"
-              fill={cheio ? "#e02a2a" : meio ? "url(#rpgMeioV)" : "#3a3a3a"} stroke="#1a1a1a" strokeWidth="1" />
-            {meio && (<defs><linearGradient id="rpgMeioV"><stop offset="50%" stopColor="#e02a2a" /><stop offset="50%" stopColor="#3a3a3a" /></linearGradient></defs>)}
-          </svg>
-        );
-      })}
-    </div>
-  );
-}
-function Fome({ fome }: { fome: number }) {
-  return (
-    <div className="flex gap-[2px]" data-testid="rpg-fome">
-      {Array.from({ length: 10 }).map((_, i) => {
-        const cheio = fome >= (i + 1) * 2, meio = !cheio && fome >= i * 2 + 1;
-        return (
-          <svg key={i} width="15" height="15" viewBox="0 0 16 16" className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" style={{ transform: "scaleX(-1)" }}>
-            <path d="M8 14 C4 11 1.5 8.5 1.5 5.8 C1.5 3.6 3.2 2 5.2 2 C6.4 2 7.5 2.7 8 3.6 C8.5 2.7 9.6 2 10.8 2 C12.8 2 14.5 3.6 14.5 5.8 C14.5 8.5 12 11 8 14Z"
-              fill={cheio ? "#c88a3a" : meio ? "url(#rpgMeioF)" : "#3a3a3a"} stroke="#1a1a1a" strokeWidth="1" />
-            {meio && (<defs><linearGradient id="rpgMeioF"><stop offset="50%" stopColor="#c88a3a" /><stop offset="50%" stopColor="#3a3a3a" /></linearGradient></defs>)}
-          </svg>
-        );
-      })}
-    </div>
-  );
-}
-
-function IconeItem({ id, qtd, tamanho = 34 }: { id: number; qtd?: number; tamanho?: number }) {
-  const info = infoItem(id);
-  return (
-    <div className="relative" style={{ width: tamanho, height: tamanho }}>
-      <div className="w-full h-full rounded-[4px] border border-black/60 flex items-center justify-center"
-        style={{ background: `linear-gradient(135deg, ${info.cor1}, ${info.cor2})` }}>
-        <span className="text-[9px] font-black text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-          {info.nome.slice(0, 2).toUpperCase()}
-        </span>
-      </div>
-      {qtd !== undefined && qtd > 1 && (
-        <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white bg-black/70 rounded px-1">{qtd}</span>
-      )}
-    </div>
-  );
-}
-
-const COR_AVISO: Record<string, string> = {
-  nivel: "from-amber-500/90 to-yellow-400/90",
-  missao: "from-violet-600/90 to-fuchsia-500/90",
-  descoberta: "from-emerald-600/90 to-teal-400/90",
-  boss: "from-rose-700/90 to-red-500/90",
-  info: "from-slate-700/90 to-slate-500/90",
-};
-
-const METEO_ICONE = { limpo: CloudSun, chuva: CloudRain, tempestade: CloudLightning } as const;
-
-// ── v60: ganchos E2E com TIPO HONESTO (antes: (window as any).__rpg) ──
-// O harness de testes/probes consome window.__rpg — a forma é contrato
-// declarado aqui, verificado pelo compilador em cada membro.
-type GanchosRpgE2E = {
-  motor: Motor;
-  sistema: SistemaRPG;
-  captura: () => ReturnType<Motor["captura"]>;
-  capturaRpg: () => CapturaRpg;
-  perfil: () => SistemaRPG["perfil"];
-  pump: (n: number, dt?: number) => void;
-  iniciar: (carregar?: boolean) => void;
-  novoJogo: (dif: DificuldadeRpg) => ReturnType<SistemaRPG["novoJogo"]>;
-  definirDificuldade: (d: DificuldadeRpg) => ReturnType<SistemaRPG["definirDificuldade"]>;
-  gastarPonto: (r: RamoRpg) => ReturnType<SistemaRPG["gastarPonto"]>;
-  temSave: () => ReturnType<SistemaRPG["temSave"]>;
-  guardar: () => ReturnType<SistemaRPG["guardar"]>;
-  apagarSave: () => ReturnType<SistemaRPG["apagarSave"]>;
-  teleportar: (x: number, y: number, z: number) => void;
-  olhar: (yaw: number, pitch?: number) => void;
-  atacar: () => void;
-  atacarDirecto: () => ReturnType<Motor["atacar"]>;
-  comer: () => void;
-  pular: (v: boolean) => void;
-  mover: (frente: number, lado?: number, seg?: number) => void;
-  spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha" | "aranha", dx?: number, dz?: number) => ReturnType<Motor["gestor"]["spawnar"]>;
-  definirVida: (v: number) => void;
-  definirHora: (f: number) => void;
-  definirMeteo: (mt: "limpo" | "chuva" | "tempestade", seg?: number) => ReturnType<Motor["definirMeteo"]>;
-  meteo: () => Motor["meteo"];
-  selecionar: (i: number) => void;
-  dar: (id: number, qtd?: number) => ReturnType<Motor["inv"]["adicionar"]>;
-  limparInv: () => void;
-  abrirTesouro: (x: number, y: number, z: number) => ReturnType<SistemaRPG["abrirTesouro"]>;
-  forja: () => { mesa: boolean; fornalha: boolean; receitas: number };
-  itensChao: () => ReturnType<SistemaRPG["listaItensChao"]>;
-  largar: () => ReturnType<SistemaRPG["largarSelecionado"]>;
-  pausar: (v: boolean) => void;
-  ciclarCamara: () => CamaraModo;
-  climaEstado: () => {
-    ativa: boolean;
-    cidade: string | null;
-    clima: { temperatura: ClimaAtual["temperatura"]; codigoWmo: ClimaAtual["codigoWmo"]; meteoJogo: ReturnType<typeof wmoParaMeteo> } | null;
-    erro: string;
-  };
-  climaAtivar: (nome: string) => Promise<CidadeEncontrada>;
-  climaDesativar: () => void;
-  mapaBase: () => { amostras: number; agua: number; rocha: number; floresta: number; ms: number };
-  chunks: () => ReturnType<Motor["mundo"]["infoGeracao"]>;
-  compararChunk: (cx: number, cz: number) => ReturnType<Motor["mundo"]["compararComSync"]>;
-  malha: () => ReturnType<Motor["mundo"]["infoMalha"]>;
-  compararMalha: (cx: number, cz: number) => ReturnType<Motor["mundo"]["compararMalhaComSync"]>;
-  bloco: (x: number, y: number, z: number) => ReturnType<Motor["mundo"]["getBloco"]>;
-};
+// ── Contrato E2E tipado (padrão v60 — o compilador prova) ─────
+type GanchosArena = ReturnType<MotorArena["ganchos"]>;
 declare global {
-  interface Window { __rpg?: GanchosRpgE2E }
+  interface Window { __arena?: GanchosArena }
 }
 
-function relogio(horaFrac: number): string {
-  const h = Math.floor(horaFrac * 24);
-  const m = Math.floor((horaFrac * 24 - h) * 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
+interface MsgChat { nome: string; texto: string; meu?: boolean }
+interface Toast { id: number; texto: string; tipo: "nivel" | "matou" | "erro" | "cura" | "corrigido" }
 
+const SLOTS: SlotHabilidade[] = ["Q", "W", "E", "R"];
+
+// ═══════════════════════════════════════════════════════════════
 export default function BateuRPG({ onScore, onExit }: Props) {
-  const motorRef = useRef<Motor>(new Motor());
-  const sistemaRef = useRef<SistemaRPG>(new SistemaRPG());
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const { lang, t } = useLanguage();
-  const lingua = linguaValida(lang);
-  const [fase, setFase] = useState<"inicio" | "jogando" | "morto">("inicio");
-  const [cap, setCap] = useState<ReturnType<Motor["captura"]> | null>(null);
-  const [rpg, setRpg] = useState<CapturaRpg | null>(null);
-  const [modal, setModal] = useState<null | "missoes" | "diario" | "habilidades" | "pausa" | "mapa" | "ajuda" | "mochila" | "forja">(null);
-  const [camaraModo, setCamaraModo] = useState<CamaraModo>(motorRef.current.camaraModo);
-  const [somMudo, setSomMudo] = useState(motorRef.current.mudo);
-  const [aCarregar, setACarregar] = useState(false);
-  const [difMenu, setDifMenu] = useState<DificuldadeRpg>("medio");
-  const [savePronto, setSavePronto] = useState(false);
-  const [temSave, setTemSave] = useState(false);
-  const [espacoEst, setEspacoEst] = useState<{ uso: number; quota: number } | "pendente" | null>(null);
+  const { t } = useLanguage();
+  const [fase, setFase] = useState<"menu" | "jogando">("menu");
+  const [save, setSave] = useState<SaveArena | null>(() => lerSave());
+  const [campeao, setCampeao] = useState<CampeaoId>(() => lerSave()?.campeao ?? "kaimu");
+  const [nome, setNome] = useState<string>(() => lerSave()?.nome ?? "");
+  const [hud, setHud] = useState<EstadoHud | null>(null);
+  const [mpEstado, setMpEstado] = useState<EstadoMp | null>(null);
+  const [chat, setChat] = useState<MsgChat[]>([]);
+  const [chatAberto, setChatAberto] = useState(false);
+  const [chatTexto, setChatTexto] = useState("");
+  const [lojaAberta, setLojaAberta] = useState(false);
+  const [pausa, setPausa] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [flashDano, setFlashDano] = useState(0);
-  const [climaReal, setClimaReal] = useState<ClimaRealEstado>(() => carregarClimaReal());
-  const climaRef = useRef(climaReal);
-  useEffect(() => { climaRef.current = climaReal; }, [climaReal]);
-  const [buscaCidade, setBuscaCidade] = useState("");
-  const [buscando, setBuscando] = useState(false);
-  const modalRef = useRef<null | typeof modal>(null);
-  const [ajudaMenu, setAjudaMenu] = useState(false);
-  const [confRecomecar, setConfRecomecar] = useState(false);
-  const [forjaMsg, setForjaMsg] = useState("");
-  const mapaCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rpgRef = useRef<CapturaRpg | null>(null);
-  const desenharMapaRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
-  // v45: minimapa do HUD (canvas 88px, redesenhado a cada 500ms com dados
-  // REAIS do motor — miniMapa() amostra os chunks carregados, mobs vivos e
-  // a posição do jogador; zero invenção, o mesmo método do motor partilhado)
-  const miniCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const miniTRef = useRef(0);
-  const desenharMiniRef = useRef<() => void>(() => { /* ligado no primeiro render */ });
-  useEffect(() => { modalRef.current = modal; }, [modal]);
-  const [creditosEnviados, setCreditosEnviados] = useState(0);
+  const [nivelToast, setNivelToast] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const miniRef = useRef<HTMLCanvasElement | null>(null);
+  const motorRef = useRef<MotorArena | null>(null);
+  const redeRef = useRef<RedeArena | null>(null);
+  const chatFimRef = useRef<HTMLDivElement | null>(null);
+  const toastSeq = useRef(1);
+  const rafMini = useRef(0);
+  const chatAbertoRef = useRef(false);
+  chatAbertoRef.current = chatAberto;
 
-  // ── carregar save (IDB) para o menu ──
-  useEffect(() => {
-    let vivo = true;
-    sistemaRef.current.quandoSavePronto().then((p) => {
-      if (!vivo) return;
-      setSavePronto(true);
-      setTemSave(
-        p.xp > 0 || p.missoes.concluidasTotal > 0 || p.descobertas.regioes.length > 0 || p.descobertas.pois.length > 0,
-      );
-      setDifMenu(p.dificuldade);
-    });
-    estimarEspaco().then((e) => { if (vivo) setEspacoEst(e); });
-    return () => { vivo = false; };
+  const pushToast = useCallback((texto: string, tipo: Toast["tipo"]) => {
+    const id = toastSeq.current++;
+    setToasts((at) => [...at.slice(-3), { id, texto, tipo }]);
+    window.setTimeout(() => setToasts((at) => at.filter((x) => x.id !== id)), 2600);
   }, []);
 
-  // ── aplicar clima real guardado ao começar ──
+  // ── ciclo de vida do jogo ─────────────────────────────────────
   useEffect(() => {
-    if (fase !== "jogando") return;
-    const c = climaRef.current.clima;
-    if (climaRef.current.ativa && c) motorRef.current.definirMeteo(wmoParaMeteo(c.codigoWmo), 660);
+    if (fase !== "jogando" || !canvasRef.current) return;
+    const s = lerSave();
+    const nomeHeroi = s?.nome || `Herói-${100 + Math.floor(Math.random() * 900)}`;
+    const idCanvas = canvasRef.current;
+
+    // rede: tenta SEMPRE ligar ao servidor da arena (honesto se falhar → solo)
+    const rede = new RedeArena();
+    redeRef.current = rede;
+    const mp: RedeArena | null = rede;
+
+    const motor = new MotorArena({
+      canvas: idCanvas,
+      nome: nomeHeroi,
+      campeao,
+      nivelInicial: s?.xpTotal ? Math.max(1, nivelAproximada(s.xpTotal)) : 1,
+      xpInicial: s?.xpTotal ?? 0,
+      essenciaInicial: s?.essencia ?? 0,
+      itens: s?.itens ?? {},
+      abatesInicial: s?.abates ?? 0,
+      rede: mp,
+      aoHud: (e) => setHud(e),
+      aoAviso: (a: AvisosMotor) => {
+        if (a.danoRecebido > 0) setFlashDano(Date.now());
+        if (a.subiuNivel) {
+          setNivelToast(Date.now());
+          pushToast(t("arena.subiuNivel", { n: String(motorRef.current?.estadoHud().nivel ?? "") }), "nivel");
+        }
+        if (a.matou) pushToast(t("arena.matou", { mob: t(`arena.mob.${a.matou}`) }), "matou");
+        if (a.cura > 0) pushToast(`+${Math.round(a.cura)}`, "cura");
+        if (a.erroHabilidade === "mana") pushToast(t("arena.erro.mana"), "erro");
+        if (a.erroHabilidade === "cd") pushToast(t("arena.erro.cd"), "erro");
+      },
+      aoGolpeMob: (id, dano, x, z) => rede.reportarGolpe(id, dano, x, z),
+      aoMorte: () => { /* o motor já avisa a rede */ },
+      aoReviver: () => { /* o motor já renasce com a posição real */ },
+    });
+    motorRef.current = motor;
+    window.__arena = motor.ganchos();
+
+    // escutas da rede → motor + chat
+    rede.definirEscutas({
+      aoSnapshot: (j, m) => motor.aplicarSnapshot(j, m),
+      aoFere: (dano, x, z) => motor.receberFere(dano, x, z),
+      aoGolpeMob: (alvoId, dano, x, z) => motor.receberGolpeMob(alvoId, dano, x, z),
+      aoMobMorte: (id, tipo, assassino, xp, essencia) => motor.receberMobMorte(id, tipo, assassino, xp, essencia),
+      aoFala: (nomeMsg, texto) => setChat((at) => [...at.slice(-40), { nome: nomeMsg, texto }]),
+      aoMudancaEstado: (e) => setMpEstado(e),
+      aoCorrigido: (motivo) => pushToast(t("arena.corrigido", { motivo }), "corrigido"),
+    });
+    rede.ligar(RedeArena.urlPadrao(), {
+      nome: nomeHeroi, campeao,
+      nivel: motor.paraSave().nivel,
+      xpTotal: s?.xpTotal ?? 0,
+      essencia: s?.essencia ?? 0,
+      itens: s?.itens ?? {},
+      abates: s?.abates ?? 0,
+    });
+    setChat((at) => [...at, { nome: "Arena", texto: RedeArena.urlPadrao() }]);
+
+    // minimapa no próprio rAF
+    const desenharMini = () => {
+      const mini = miniRef.current;
+      if (mini && motorRef.current && !motorRef.current.estaDestruido()) {
+        const ctx = mini.getContext("2d");
+        if (ctx) motorRef.current.desenharMinimapa(ctx, mini.width);
+      }
+      rafMini.current = requestAnimationFrame(desenharMini);
+    };
+    rafMini.current = requestAnimationFrame(desenharMini);
+
+    // teclas globais da UI (B loja · Enter chat · Esc pausa)
+    const aoTecla = (ev: KeyboardEvent) => {
+      if (chatAbertoRef.current) return;
+      const k = ev.key.toLowerCase();
+      if (k === "b") { setLojaAberta((v) => !v); ev.preventDefault(); }
+      if (k === "enter") { setChatAberto(true); ev.preventDefault(); }
+      if (k === "escape") { setPausa((v) => !v); }
+    };
+    window.addEventListener("keydown", aoTecla);
+
+    // autosave honesto a cada 10 s
+    const autosave = window.setInterval(() => {
+      const st = motorRef.current?.paraSave();
+      if (st) guardarSave({ nome: nomeHeroi, campeao, xpTotal: st.xpTotal, essencia: st.essencia, itens: st.itens, abates: st.abates, ts: Date.now() });
+    }, 10_000);
+
+    return () => {
+      window.removeEventListener("keydown", aoTecla);
+      cancelAnimationFrame(rafMini.current);
+      const st = motorRef.current?.paraSave();
+      if (st) guardarSave({ nome: nomeHeroi, campeao, xpTotal: st.xpTotal, essencia: st.essencia, itens: st.itens, abates: st.abates, ts: Date.now() });
+      const creditos = st?.abates ?? 0;
+      rede.sair();
+      motorRef.current?.destruir();
+      motorRef.current = null;
+      window.__arena = undefined;
+      if (onScore) onScore(creditos);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase]);
 
-  // ── estado ← motor + sistema ──
-  const vidaAnterior = useRef<number | null>(null);
-  useEffect(() => {
-    const m = motorRef.current;
-    const s = sistemaRef.current;
-    // mundo/spawn RPG ANTES de qualquer iniciar (fabricaMundo + spawnFixo)
-    s.preparar(m);
-    m.onEstado = (c) => {
-      // antes do iniciar o motor ainda está em "menu" — emissões prematuras
-      // (ex.: clima real aplicado no menu) NUNCA podem ligar a UI de jogo
-      if (m.fase === "menu") return;
-      setCap(c);
-      setFase(c.fase === "morto" ? "morto" : "jogando");
-      if (vidaAnterior.current !== null && c.vida < vidaAnterior.current - 0.01) setFlashDano((k) => k + 1);
-      vidaAnterior.current = c.vida;
-    };
-    setSavePronto(true);
-  }, []);
+  useEffect(() => { chatFimRef.current?.scrollIntoView({ block: "end" }); }, [chat]);
 
-  // ── Loop rAF ──
-  useEffect(() => {
-    let raf = 0, anterior = performance.now();
-    const ciclo = (agora: number) => {
-      raf = requestAnimationFrame(ciclo);
-      const dt = Math.min(0.1, (agora - anterior) / 1000);
-      anterior = agora;
-      const m = motorRef.current;
-      if (m.fase !== "menu") {
-        m.passo(dt);
-        sistemaRef.current.tick(dt);
-        if (canvasRef.current) m.render(dt);
-        // HUD a ~12 Hz (o motor emite o resto)
-        const capturaAgora = sistemaRef.current.captura();
-        rpgRef.current = capturaAgora;
-        setRpg(capturaAgora);
-        if (modalRef.current === "mapa") desenharMapaRef.current();
-        // v45: minimapa a 2 Hz (amostra 44×44 dos chunks carregados — barato)
-        miniTRef.current += dt;
-        if (miniTRef.current >= 0.5) { miniTRef.current = 0; desenharMiniRef.current(); }
-      }
-    };
-    raf = requestAnimationFrame(ciclo);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  const sair = useCallback(() => {
+    setFase("menu");
+    setHud(null);
+    setChat([]);
+    setLojaAberta(false);
+    setPausa(false);
+    if (onExit) onExit();
+  }, [onExit]);
 
-  // créditos → leaderboard da plataforma (quando crescem)
-  // v60: deps HONESTOS (antes: [rpg?.creditos] + eslint-disable) — a guarda
-  // creditosEnviados evita repetição; o corpo é uma comparação trivial
-  useEffect(() => {
-    if (!rpg || !onScore) return;
-    if (rpg.creditos > creditosEnviados) {
-      setCreditosEnviados(rpg.creditos);
-      onScore(rpg.creditos);
+  const enviarFala = useCallback(() => {
+    const texto = chatTexto.trim();
+    setChatTexto("");
+    if (!texto) { setChatAberto(false); return; }
+    const meu = lerSave()?.nome || "Herói";
+    const enviado = redeRef.current?.falar(texto) ?? false;
+    setChat((at) => [...at.slice(-40), { nome: meu, texto, meu: true }]);
+    if (!enviado && mpEstado?.estado !== "online") {
+      pushToast(t("arena.modoSolo"), "corrigido");
     }
-  }, [rpg, onScore, creditosEnviados]);
+    setChatAberto(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatTexto, mpEstado]);
 
-  // ── Redimensionar ──
-  useEffect(() => {
-    const ao = () => motorRef.current.redimensionar();
-    window.addEventListener("resize", ao);
-    const t = setInterval(ao, 800);
-    return () => { window.removeEventListener("resize", ao); clearInterval(t); };
-  }, []);
+  // ═══════════════════════ MENU ═══════════════════════
+  if (fase === "menu") {
+    const s = save;
+    return (
+      <div className="fixed inset-0 z-[80] bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 overflow-y-auto" data-testid="arena-menu">
+        <div className="min-h-full flex flex-col items-center justify-center px-4 py-8">
+          <button onClick={sair} className="self-start flex items-center gap-2 text-slate-300 hover:text-white mb-4" data-testid="arena-menu-voltar">
+            <X className="w-5 h-5" /> {t("arena.sair")}
+          </button>
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-center bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-300 bg-clip-text text-transparent drop-shadow">
+            {t("arena.titulo")}
+          </h1>
+          <p className="mt-3 max-w-2xl text-center text-slate-300 text-sm sm:text-base">{t("arena.menu.sub")}</p>
+          <p className="mt-1 max-w-2xl text-center text-[11px] text-slate-400">{t("arena.menu.mundo")}</p>
 
-  // ── Ganchos E2E determinísticos ──
-  useEffect(() => {
-    // v60: objeto TIPADO (GanchosRpgE2E) — o compilador verifica membro a
-    // membro contra o Motor/SistemaRPG reais; antes era (window as any).__rpg
-    const ganchos: GanchosRpgE2E = {
-      motor: motorRef.current,
-      sistema: sistemaRef.current,
-      captura: () => motorRef.current.captura(),
-      capturaRpg: () => sistemaRef.current.captura(),
-      perfil: () => sistemaRef.current.perfil,
-      pump: (n: number, dt = 0.05) => { for (let i = 0; i < n; i++) { motorRef.current.passo(dt); sistemaRef.current.tick(dt); } },
-      iniciar: (carregar = false) => {
-        if (canvasRef.current) {
-          sistemaRef.current.preparar(motorRef.current);
-          motorRef.current.iniciar(canvasRef.current, "sobrevivencia", false);
-          sistemaRef.current.ligarAposIniciar();
-          setFase("jogando");
-        }
-        void carregar;
-      },
-      novoJogo: (dif: DificuldadeRpg) => sistemaRef.current.novoJogo(dif),
-      definirDificuldade: (d: DificuldadeRpg) => sistemaRef.current.definirDificuldade(d),
-      gastarPonto: (r: RamoRpg) => sistemaRef.current.gastarPonto(r),
-      temSave: () => sistemaRef.current.temSave(),
-      guardar: () => sistemaRef.current.guardar(),
-      apagarSave: () => sistemaRef.current.apagarSave(),
-      teleportar: (x: number, y: number, z: number) => {
-        const mm = motorRef.current;
-        mm.px = x; mm.py = y; mm.pz = z; mm.vx = mm.vy = mm.vz = 0;
-        // v46: 3×3 de chunks em sync (dados, sem malha) — o terreno imediato
-        // existe à partida; o worker enche o resto do anel em async.
-        const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
-        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) mm.mundo.garantir(pcx + dx, pcz + dz);
-      },
-      olhar: (yaw: number, pitch = 0) => { motorRef.current.yaw = yaw; motorRef.current.pitch = pitch; },
-      atacar: () => { motorRef.current.atacarPedido = true; },
-      atacarDirecto: () => motorRef.current.atacar(),
-      comer: () => { motorRef.current.comerPedido = true; },
-      pular: (v: boolean) => { motorRef.current.entrada.salto = v; },
-      mover: (frente: number, lado = 0, seg = 1) => {
-        const mm = motorRef.current;
-        mm.entrada.frente = frente; mm.entrada.lado = lado;
-        for (let i = 0; i < Math.round(seg * 20); i++) { mm.passo(0.05); sistemaRef.current.tick(0.05); }
-        mm.entrada.frente = 0; mm.entrada.lado = 0;
-      },
-      spawnarMob: (tipo: "porco" | "zumbi" | "estourador" | "vaca" | "galinha" | "aranha", dx = 3, dz = 0) => {
-        const mm = motorRef.current;
-        return mm.gestor.spawnar(tipo, mm.px + dx, mm.py + 1.5, mm.pz + dz);
-      },
-      definirVida: (v: number) => { motorRef.current.vida = v; },
-      definirHora: (f: number) => { const mm = motorRef.current; mm.tempo = mm.dia * 600 - 600 + f * 600; },
-      definirMeteo: (mt: "limpo" | "chuva" | "tempestade", seg?: number) => motorRef.current.definirMeteo(mt, seg),
-      meteo: () => motorRef.current.meteo,
-      selecionar: (i: number) => { motorRef.current.inv.selecao = i; },
-      dar: (id: number, qtd = 1) => motorRef.current.inv.adicionar(id, qtd),
-      limparInv: () => motorRef.current.inv.limpar(),
-      // v48: abrir um baú pelo CAMINHO REAL (mesma função da mira/ataque)
-      abrirTesouro: (x: number, y: number, z: number) => sistemaRef.current.abrirTesouro(x, y, z),
-      // v49: estado REAL da forja — pertoDe contra os blocos do mundo
-      forja: () => {
-        const mm = motorRef.current;
-        return {
-          mesa: pertoDe(mm.mundo, mm.px, mm.py, mm.pz, B.MESA),
-          fornalha: pertoDe(mm.mundo, mm.px, mm.py, mm.pz, B.FORNALHA),
-          receitas: RECEITAS.length,
-        };
-      },
-      // v50: itens NO CHÃO (lista real + contadores honestos) e largar pela
-      // MESMA função da tecla Q / botão da mochila
-      itensChao: () => sistemaRef.current.listaItensChao(),
-      largar: () => sistemaRef.current.largarSelecionado(),
-      pausar: (v: boolean) => { motorRef.current.pausado = v; },
-      ciclarCamara: () => { const c = motorRef.current.ciclarCamara(); setCamaraModo(c); return c; },
-      // clima real (Open-Meteo)
-      climaEstado: () => {
-        const c = climaRef.current;
-        return {
-          ativa: c.ativa,
-          cidade: c.cidade?.nome ?? null,
-          clima: c.clima ? { temperatura: c.clima.temperatura, codigoWmo: c.clima.codigoWmo, meteoJogo: wmoParaMeteo(c.clima.codigoWmo) } : null,
-          erro: c.erro,
-        };
-      },
-      climaAtivar: (nome: string) => procurarCidade(nome).then((rs) => {
-        if (rs[0]) { ativarClimaReal(rs[0]); return rs[0]; }
-        throw new Error("Cidade não encontrada");
-      }),
-      climaDesativar: () => desativarClimaReal(),
-      // v44: contagens honestas da base de terreno real do mapa
-      mapaBase: () => ({ ...mapaBaseInfoRef.current }),
-      // v46: contagens honestas da geração de chunks (worker vs sync)
-      chunks: () => motorRef.current.mundo.infoGeracao(),
-      compararChunk: (cx: number, cz: number) => motorRef.current.mundo.compararComSync(cx, cz),
-      // v51: contagens honestas da malhagem (worker vs sync) + identidade bit a bit
-      malha: () => motorRef.current.mundo.infoMalha(),
-      compararMalha: (cx: number, cz: number) => motorRef.current.mundo.compararMalhaComSync(cx, cz),
-      bloco: (x: number, y: number, z: number) => motorRef.current.mundo.getBloco(x, y, z),
-    };
-    window.__rpg = ganchos;
-    return () => {
-      // v60: o Motor liberta TUDO no unmount (workers + geometrias + materiais
-      // + CONTEXTO WebGL perdido explicitamente) — reentrar no mundo deixa de
-      // acumular contextos vivos no navegador
-      try { motorRef.current.destruir(); } catch { /* ignore */ }
-      try { delete window.__rpg; } catch { /* ignore */ }
-    };
-  }, []);
-
-  // ── clima real: aplicar / procurar ──
-  const ativarClimaReal = (cidade: CidadeEncontrada) => {
-    const estado: ClimaRealEstado = { ativa: true, cidade, clima: null, erro: "" };
-    setClimaReal(estado);
-    try { localStorage.setItem(LS_CLIMA_REAL, JSON.stringify({ ativa: true, cidade })); } catch { /* ignore */ }
-    getClimaAtual(cidade).then((clima) => {
-      setClimaReal((v) => ({ ...v, clima }));
-      if (motorRef.current.fase === "jogando") motorRef.current.definirMeteo(wmoParaMeteo(clima.codigoWmo), 660);
-    }).catch(() => setClimaReal((v) => ({ ...v, erro: "Não foi possível obter o clima do Open-Meteo agora. O jogo segue o ciclo simulado — honesto." })));
-  };
-  const desativarClimaReal = () => {
-    setClimaReal({ ativa: false, cidade: null, clima: null, erro: "" });
-    try { localStorage.removeItem(LS_CLIMA_REAL); } catch { /* ignore */ }
-    if (motorRef.current.fase === "jogando") motorRef.current.definirMeteo("limpo");
-  };
-  const procurar = () => {
-    const nome = buscaCidade.trim();
-    if (!nome || buscando) return;
-    setBuscando(true);
-    procurarCidade(nome).then((rs) => {
-      setBuscando(false);
-      if (rs[0]) { ativarClimaReal(rs[0]); setBuscaCidade(""); }
-      else setClimaReal((v) => ({ ...v, erro: `Não encontrei “${nome}”. Experimenta: Maputo, Luanda, Praia.` }));
-    }).catch(() => { setBuscando(false); setClimaReal((v) => ({ ...v, erro: "A busca falhou (rede?). O clima do jogo continua honesto — limpo por omissão." })); });
-  };
-
-  // ── Teclado / rato (desktop) ──
-  useEffect(() => {
-    const m = motorRef.current;
-    const teclas: Record<string, boolean> = {};
-    const sincronizar = () => {
-      m.entrada.frente = (teclas["w"] ? 1 : 0) - (teclas["s"] ? 1 : 0);
-      m.entrada.lado = (teclas["d"] ? 1 : 0) - (teclas["a"] ? 1 : 0);
-      m.entrada.salto = !!teclas[" "];
-      m.entrada.correr = !!teclas["shift"];
-      m.entrada.zoom = !!teclas["z"];
-    };
-    // v60 FURO REAL (repro na probe): segurar W e perder o foco da janela
-    // (Alt-Tab, troca de aba, devtools) nunca manda keyup — o jogador ANDAVA
-    // SOZINHO para sempre. blur/visibilidade escondida largam TODAS as teclas.
-    const largarTudo = () => {
-      for (const k of Object.keys(teclas)) teclas[k] = false;
-      sincronizar();
-    };
-    const aoVisibilidade = () => { if (document.hidden) largarTudo(); };
-    window.addEventListener("blur", largarTudo);
-    document.addEventListener("visibilitychange", aoVisibilidade);
-    const baixo = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      teclas[k] = true;
-      if (m.fase === "menu") return;
-      if (k >= "1" && k <= "9") m.inv.selecao = parseInt(k) - 1;
-      if (k === "j") setModal((v) => (v === "missoes" ? null : "missoes"));
-      if (k === "k") setModal((v) => (v === "habilidades" ? null : "habilidades"));
-      if (k === "m") setModal((v) => (v === "mapa" ? null : "mapa"));
-      if (k === "i") setModal((v) => (v === "mochila" ? null : "mochila"));
-      if (k === "f") setModal((v) => (v === "forja" ? null : "forja"));
-      // v50: Q larga 1 unidade do slot selecionado (fica no chão, recolha
-      // por proximidade — padrão Veloren/Minecraft, via REAL do sistema)
-      if (k === "q") sistemaRef.current.largarSelecionado();
-      if (k === "escape") {
-        if (modalRef.current === "pausa") { m.pausado = false; setModal(null); }
-        else if (modalRef.current) { setModal(null); m.pausado = false; }
-        else if (m.fase === "jogando") { m.pausado = true; setModal("pausa"); }
-      }
-      if (k === "f5") { e.preventDefault(); setCamaraModo(m.ciclarCamara()); }
-      sincronizar();
-    };
-    const cima = (e: KeyboardEvent) => { teclas[e.key.toLowerCase()] = false; sincronizar(); };
-    const mover = (e: MouseEvent) => {
-      if (document.pointerLockElement === canvasRef.current) {
-        m.entrada.olharX -= e.movementX * 0.0026;
-        m.entrada.olharY -= e.movementY * 0.0026;
-      }
-    };
-    const baixoRato = (e: MouseEvent) => {
-      if (m.fase !== "jogando" || modalRef.current) return;
-      if (e.button === 0) { m.entrada.minerando = true; m.atacarPedido = true; }
-      if (e.button === 2) {
-        const s = m.inv.selecionado();
-        if (s && ITENS[s.id]?.comida) m.comerPedido = true;
-      }
-    };
-    const cimaRato = (e: MouseEvent) => { if (e.button === 0) m.entrada.minerando = false; };
-    const roda = (e: WheelEvent) => {
-      if (m.fase !== "jogando") return;
-      m.inv.selecao = (m.inv.selecao + (e.deltaY > 0 ? 1 : 8)) % 9;
-    };
-    const menuC = (e: Event) => e.preventDefault();
-    window.addEventListener("keydown", baixo);
-    window.addEventListener("keyup", cima);
-    window.addEventListener("mousemove", mover);
-    window.addEventListener("mousedown", baixoRato);
-    window.addEventListener("mouseup", cimaRato);
-    window.addEventListener("wheel", roda, { passive: true });
-    window.addEventListener("contextmenu", menuC);
-    window.addEventListener("blur", largarTudo);
-    document.addEventListener("visibilitychange", aoVisibilidade);
-    return () => {
-      window.removeEventListener("keydown", baixo);
-      window.removeEventListener("keyup", cima);
-      window.removeEventListener("mousemove", mover);
-      window.removeEventListener("mousedown", baixoRato);
-      window.removeEventListener("mouseup", cimaRato);
-      window.removeEventListener("wheel", roda);
-      window.removeEventListener("contextmenu", menuC);
-      window.removeEventListener("blur", largarTudo);
-      document.removeEventListener("visibilitychange", aoVisibilidade);
-    };
-  }, []);
-
-  // v62 — a língua da plataforma manda no texto do mundo (PT canónico no
-  // motor): sincroniza o sistema e refresca a captura (diárias regeneram
-  // os textos com a língua corrente).
-  useEffect(() => {
-    sistemaRef.current.lingua = lingua;
-    setRpg(sistemaRef.current.captura());
-  }, [lingua]);
-
-  const capturarRato = useCallback(() => {
-    if (ehToque) return;
-    const c = canvasRef.current;
-    if (!c || document.pointerLockElement === c) return;
-    try { (c.requestPointerLock() as unknown as Promise<void> | undefined)?.catch?.(() => { /* negado */ }); } catch { /* sem pointer lock */ }
-  }, []);
-  useEffect(() => {
-    if (modal && document.pointerLockElement) { try { document.exitPointerLock(); } catch { /* ignore */ } }
-  }, [modal]);
-  useEffect(() => {
-    if (fase === "morto" && document.pointerLockElement) { try { document.exitPointerLock(); } catch { /* ignore */ } }
-  }, [fase]);
-
-  // ── Toque: olhar + joystick ──
-  const toqueUltimo = useRef<{ x: number; y: number } | null>(null);
-  const aoTocarTela = useCallback((e: React.TouchEvent) => {
-    const m = motorRef.current;
-    const t = e.touches[0];
-    if (!t) return;
-    if (toqueUltimo.current) {
-      const dx = t.clientX - toqueUltimo.current.x, dy = t.clientY - toqueUltimo.current.y;
-      if (Math.abs(dx) + Math.abs(dy) > 0) {
-        m.entrada.olharX -= dx * 0.005;
-        m.entrada.olharY -= dy * 0.005;
-      }
-    }
-    toqueUltimo.current = { x: t.clientX, y: t.clientY };
-  }, []);
-  const aoLargarTela = useCallback(() => { toqueUltimo.current = null; }, []);
-
-  const joystickRef = useRef<HTMLDivElement>(null);
-  const [joy, setJoy] = useState<{ x: number; y: number } | null>(null);
-  const aoMoverJoy = (e: React.TouchEvent) => {
-    const alvo = joystickRef.current;
-    if (!alvo) return;
-    const rect = alvo.getBoundingClientRect();
-    const t = e.touches[0];
-    if (!t) return;
-    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-    let dx = (t.clientX - cx) / (rect.width / 2), dy = (t.clientY - cy) / (rect.height / 2);
-    const d = Math.hypot(dx, dy);
-    if (d > 1) { dx /= d; dy /= d; }
-    setJoy({ x: dx, y: dy });
-    const m = motorRef.current;
-    m.entrada.frente = -dy;
-    m.entrada.lado = dx;
-    m.entrada.correr = d > 0.92;
-  };
-  const aoLargarJoy = () => {
-    setJoy(null);
-    const m = motorRef.current;
-    m.entrada.frente = 0; m.entrada.lado = 0; m.entrada.correr = false;
-  };
-
-  // ── iniciar / sair ──
-  const iniciar = async (carregar: boolean) => {
-    setACarregar(true);
-    if (!carregar) await sistemaRef.current.novoJogo(difMenu);
-    setTimeout(() => {
-      if (canvasRef.current) {
-        sistemaRef.current.preparar(motorRef.current);
-        motorRef.current.iniciar(canvasRef.current, "sobrevivencia", false);
-        sistemaRef.current.ligarAposIniciar();
-        setFase("jogando");
-      }
-      setACarregar(false);
-    }, 60);
-  };
-  const renascer = () => {
-    motorRef.current.renascer();
-    setFase("jogando");
-  };
-  const sair = () => {
-    void sistemaRef.current.guardar().then(() => onScore?.(sistemaRef.current.perfil.creditos));
-    onExit?.();
-  };
-
-  const m = motorRef.current;
-  const s = sistemaRef.current;
-  const MeteoIcone = cap ? (METEO_ICONE[cap.meteo] ?? CloudSun) : CloudSun;
-
-  // ── Mapa do mundo (canvas) — redesenhado a cada frame enquanto aberto ──
-  // v44: base de TERRENO REAL amostrada do mundo (alturaTerreno+bioma do
-  // MundoRPG — os mesmos dados que geram os chunks, semente SEED_RPG) pintada
-  // UMA vez num canvas fora do ecrã e copiada com drawImage a cada frame.
-  // Nada inventado: água onde o terreno fica sob o NIVEL_MAR, areia na faixa
-  // da costa, rocha/picos da serra por altura real, floresta do miombo e
-  // planície pelo bioma real. Contagens honestas expostas no __rpg.mapaBase.
-  const mapaBaseRef = useRef<HTMLCanvasElement | null>(null);
-  const mapaBaseInfoRef = useRef<{ amostras: number; agua: number; rocha: number; floresta: number; ms: number }>(
-    { amostras: 0, agua: 0, rocha: 0, floresta: 0, ms: 0 });
-  const renderMapaBase = useCallback(() => {
-    const t0 = performance.now();
-    const T = 660, EXT = 132, PASSO = 3; // 3px ≈ 1,2 blocos de mundo
-    const cv = document.createElement("canvas");
-    cv.width = T; cv.height = T;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
-    const mundo = motorRef.current.mundo;
-    let amostras = 0, agua = 0, rocha = 0, floresta = 0;
-    for (let sy = 0; sy < T; sy += PASSO) {
-      for (let sx = 0; sx < T; sx += PASSO) {
-        const x = (sx / T) * (2 * EXT) - EXT;
-        const z = (sy / T) * (2 * EXT) - EXT;
-        const h = mundo.alturaTerreno(x, z);
-        const b = mundo.bioma(x, z);
-        amostras++;
-        let cor: string;
-        if (h < NIVEL_MAR - 6) { cor = "#16336e"; agua++; }
-        else if (h < NIVEL_MAR - 1) { cor = "#1e4a94"; agua++; }
-        else if (h <= NIVEL_MAR + 1) cor = "#d3c088";               // areia da costa
-        else if (h > 66) { cor = "#c9d2dc"; rocha++; }              // picos da serra
-        else if (h > 52) { cor = "#8b93a1"; rocha++; }              // rocha alta da serra
-        else if (b === "montanha") { cor = "#7d8590"; rocha++; }
-        else if (b === "floresta") { cor = h % 2 ? "#2b5e33" : "#275431"; floresta++; }
-        else if (b === "deserto") cor = "#c0a96b";
-        else cor = h % 2 ? "#3f7a36" : "#397031";                   // planície
-        ctx.fillStyle = cor;
-        ctx.fillRect(sx, sy, PASSO, PASSO);
-      }
-    }
-    mapaBaseRef.current = cv;
-    mapaBaseInfoRef.current = { amostras, agua, rocha, floresta, ms: Math.round(performance.now() - t0) };
-  }, []);
-
-  // ── v45: minimapa do HUD — dados reais do motor, 2 Hz (barato: só amostra
-  // os chunks já carregados). Blocos pela cor partilhada CORES_MAPA, baús
-  // descobertos por ◆ dourado, mobs por ponto (vermelho hostil · rosa
-  // passivo), jogador por seta branca rotacionada por −yaw (frente = −z).
-  const desenharMini = useCallback(() => {
-    const cv = miniCanvasRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
-    const mm = motorRef.current;
-    if (mm.fase !== "jogando") return;
-    const d = mm.miniMapa(22); // 44×44 células = 44 blocos à volta do jogador
-    ctx.fillStyle = "#08110c";
-    ctx.fillRect(0, 0, cv.width, cv.height);
-    const px = cv.width / d.lado;
-    for (let z = 0; z < d.lado; z++) for (let x = 0; x < d.lado; x++) {
-      const id = d.celulas[z * d.lado + x];
-      if (!id) continue;
-      ctx.fillStyle = CORES_MAPA[id] ?? "#666";
-      ctx.fillRect(x * px, z * px, px + 0.5, px + 0.5);
-    }
-    const cxa = (wx: number, wz: number) => ({
-      x: (wx - (d.px - 22)) * px, y: (wz - (d.pz - 22)) * px,
-    });
-    // baús dos POIs dentro do raio (descobertos — nada revelado de graça)
-    for (const p of POIS) {
-      if (!sistemaRef.current.perfil.descobertas.pois.includes(p.id)) continue;
-      const c = cxa(p.x + 0.5, p.z + 0.5);
-      if (c.x < -5 || c.x > cv.width + 5 || c.y < -5 || c.y > cv.height + 5) continue;
-      ctx.save();
-      ctx.translate(c.x, c.y);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = "#fbbf24";
-      ctx.fillRect(-2.6, -2.6, 5.2, 5.2);
-      ctx.restore();
-    }
-    // mobs vivos no raio
-    for (const mob of d.mobs) {
-      const c = cxa(mob.x, mob.z);
-      const passivo = mob.tipo === "porco" || mob.tipo === "vaca" || mob.tipo === "galinha";
-      ctx.fillStyle = passivo ? "#f9a8d4" : "#ef4444";
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // jogador (seta branca; mesma rotação −yaw do mapa grande/bússola)
-    ctx.save();
-    ctx.translate(cv.width / 2, cv.height / 2);
-    ctx.rotate(-d.yaw);
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, -6); ctx.lineTo(4.5, 5); ctx.lineTo(0, 2.5); ctx.lineTo(-4.5, 5);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.restore();
-    // Norte
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.font = "bold 9px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("N", cv.width - 8, 11);
-  }, []);
-
-  useEffect(() => { desenharMiniRef.current = desenharMini; }, [desenharMini]);
-
-  const desenharMapa = useCallback(() => {
-    const RL = rotuloMapa(lingua);
-    const cv = mapaCanvasRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
-    const T = 660;
-    if (cv.width !== T) { cv.width = T; cv.height = T; }
-    const EXT = 132; // mundo de −132 a +132 (cobre todas as regiões)
-    const px = (x: number) => ((x + EXT) / (2 * EXT)) * T;
-    const pz = (z: number) => ((z + EXT) / (2 * EXT)) * T;
-    // v44: base de terreno real (amostrada uma vez, cacheada fora do ecrã)
-    if (!mapaBaseRef.current) renderMapaBase();
-    if (mapaBaseRef.current) ctx.drawImage(mapaBaseRef.current, 0, 0);
-    else { ctx.fillStyle = "#0a140d"; ctx.fillRect(0, 0, T, T); }
-    // grelha suave
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
-    ctx.lineWidth = 1;
-    for (let g = -120; g <= 120; g += 30) {
-      ctx.beginPath(); ctx.moveTo(px(g), 0); ctx.lineTo(px(g), T); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, pz(g)); ctx.lineTo(T, pz(g)); ctx.stroke();
-    }
-    const s = sistemaRef.current;
-    const desc = s.perfil.descobertas;
-    // Terras Selvagens (fora das regiões)
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "bold 13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(RL.selvagens, px(-98), pz(-6));
-    ctx.fillText(RL.selvagens, px(96), pz(-84));
-    // regiões (v44: terreno real por baixo — descoberta leva um tint suave da
-    // cor da região; não descoberta leva um véu escuro, só «???» + Nv)
-    for (const r of REGIOES) {
-      const descoberta = desc.regioes.includes(r.id);
-      ctx.beginPath();
-      ctx.arc(px(r.cx), pz(r.cz), (r.raio / (2 * EXT)) * T, 0, Math.PI * 2);
-      ctx.fillStyle = descoberta ? r.cor + "26" : "rgba(4,8,6,0.62)";
-      ctx.fill();
-      ctx.strokeStyle = descoberta ? r.cor : "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = descoberta ? "#ffffff" : "rgba(255,255,255,0.4)";
-      ctx.font = "bold 15px sans-serif";
-      ctx.fillText(descoberta ? nomeRegiao(r, lingua) : "???", px(r.cx), pz(r.cz) - 4);
-      ctx.font = "bold 11px sans-serif";
-      ctx.fillStyle = descoberta ? r.cor : "rgba(255,255,255,0.3)";
-      ctx.fillText(RL.nv(r.nivel), px(r.cx), pz(r.cz) + 12);
-    }
-    // POIs (◆ baús)
-    for (const p of POIS) {
-      const descoberto = desc.pois.includes(p.id);
-      ctx.save();
-      ctx.translate(px(p.x), pz(p.z));
-      ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = descoberto ? "#fbbf24" : "rgba(255,255,255,0.25)";
-      ctx.fillRect(-5, -5, 10, 10);
-      ctx.restore();
-      if (descoberto) {
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.font = "bold 10px sans-serif";
-        ctx.fillText(nomePoi(p, lingua), px(p.x), pz(p.z) - 9);
-      }
-    }
-    // objetivo atual (★)
-    const obj = rpgRef.current?.objetivo;
-    if (obj && Number.isFinite(obj.x)) {
-      ctx.fillStyle = "#f472b6";
-      ctx.font = "bold 20px sans-serif";
-      ctx.fillText("★", px(obj.x), pz(obj.z) + 7);
-    }
-    // jogador (seta branca; frente = −z a yaw 0 → rotação −yaw)
-    const m = motorRef.current;
-    ctx.save();
-    ctx.translate(px(m.px), pz(m.pz));
-    ctx.rotate(-m.yaw);
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, -10); ctx.lineTo(7, 8); ctx.lineTo(0, 4); ctx.lineTo(-7, 8);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.restore();
-    // Norte
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = "bold 14px sans-serif";
-    ctx.fillText(RL.norte, T - 20, 22);
-  }, [lingua]);
-  useEffect(() => { desenharMapaRef.current = desenharMapa; }, [desenharMapa]);
-
-  // ── Como jogar — usado no modal (a jogar) e no menu inicial ──
-  const renderAjuda = () => (
-    <div className="flex flex-col gap-3">
-      <div>
-        <p className="text-white/80 text-xs font-bold mb-1 flex items-center gap-1"><Trophy size={13} /> {t("rpg.ajuda.objetivo.titulo")}</p>
-        <p className="text-white/60 text-[11px] leading-relaxed">{t("rpg.ajuda.objetivo.corpo")}</p>
-      </div>
-      <div>
-        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.pc.titulo")}</p>
-        <ul className="text-white/60 text-[11px] grid grid-cols-2 gap-x-2 gap-y-0.5">
-          <li>{t("rpg.ajuda.wasd")}</li>
-          <li>{t("rpg.ajuda.espaco")}</li>
-          <li>{t("rpg.ajuda.shift")}</li>
-          <li>{t("rpg.ajuda.zoom")}</li>
-          <li>{t("rpg.ajuda.rato")}</li>
-          <li>{t("rpg.ajuda.cliqueEsq")}</li>
-          <li>{t("rpg.ajuda.cliqueDir")}</li>
-          <li>{t("rpg.ajuda.hotbarTecla")}</li>
-          <li>{t("rpg.ajuda.mochilaTecla")}</li>
-          <li>{t("rpg.ajuda.q")}</li>
-          <li>{t("rpg.ajuda.f")}</li>
-          <li>{t("rpg.ajuda.j")}</li>
-          <li>{t("rpg.ajuda.k")}</li>
-          <li>{t("rpg.ajuda.m")}</li>
-          <li>{t("rpg.ajuda.minimapaTecla")}</li>
-          <li>{t("rpg.ajuda.esc")}</li>
-          <li>{t("rpg.ajuda.f5")}</li>
-        </ul>
-      </div>
-      <div>
-        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.telemovel.titulo")}</p>
-        <ul className="text-white/60 text-[11px] list-disc ml-4">
-          <li>{t("rpg.ajuda.joystick")}</li>
-          <li>{t("rpg.ajuda.botoes")}</li>
-          <li>{t("rpg.ajuda.botoesHud")}</li>
-        </ul>
-      </div>
-      <div>
-        <p className="text-white/80 text-xs font-bold mb-1">{t("rpg.ajuda.progressa.titulo")}</p>
-        <ul className="text-white/60 text-[11px] list-disc ml-4">
-          <li>{t("rpg.ajuda.progressa.xp")}</li>
-          <li>{t("rpg.ajuda.progressa.loot")}</li>
-          <li>{t("rpg.ajuda.progressa.chao")}</li>
-          <li>{t("rpg.ajuda.progressa.baus")}</li>
-          <li>Cada nível dá 1 ponto: GUERREIRO (+dano) · EXPLORADOR (+velocidade) · SÁBIO (+XP e cura fora de combate)</li>
-          <li>A dificuldade (escolhida no menu) muda a vida e o dano dos inimigos e o valor das recompensas</li>
-          <li>O progresso guarda-se sozinho a cada 8 s neste aparelho (IndexedDB + localStorage)</li>
-          <li>{t("rpg.ajuda.progressa.morte")}</li>
-        </ul>
-      </div>
-      <div className="border-t border-white/10 pt-2">
-        <p className="text-white/50 text-[10px] leading-relaxed" data-testid="rpg-ajuda-fontes">
-          {t("rpg.ajuda.fontes", { attr: OPENMETEO_ATTRIBUTION })}
-        </p>
-      </div>
-    </div>
-  );
-
-  // ══════════════════════ RENDER ══════════════════════
-  return (
-    <div className="fixed inset-0 z-50 bg-[#101c14] select-none" data-testid="rpg-root">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
-        onClick={capturarRato}
-        onTouchStart={aoTocarTela}
-        onTouchEnd={aoLargarTela}
-        onTouchMove={aoTocarTela}
-      />
-      {flashDano > 0 && (
-        <div key={flashDano} className="absolute inset-0 pointer-events-none bg-red-600/25 animate-pulse" style={{ animationDuration: "0.4s" }} />
-      )}
-
-      {/* ═══ MENU ═══ */}
-      {fase === "inicio" && !aCarregar && (
-        <div className="absolute inset-0 overflow-y-auto bg-gradient-to-b from-[#0c1710] via-[#12251a] to-[#0a120d] flex flex-col items-center justify-center py-8 px-4">
-          <div className="w-full max-w-md flex flex-col items-center gap-4">
-            <div className="text-center">
-              <h1 className="font-display text-3xl font-black text-amber-300 tracking-wide" data-testid="rpg-titulo">{t("rpg.titulo")}</h1>
-              <p className="text-white/60 text-sm mt-1">{t("rpg.menu.subtitulo")}</p>
-              <p className="text-white/35 text-[11px] mt-1">{t("rpg.menu.semente")}</p>
-            </div>
-
-            {/* dificuldade */}
-            <div className="w-full bg-black/40 rounded-2xl p-3 border border-white/10">
-              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><ShieldAlert size={13} /> {t("rpg.dificuldade.titulo")}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {ORDEM_DIFICULDADE.map((d) => {
-                  const regras = DIFICULDADES_RPG[d];
-                  const ativo = difMenu === d;
-                  return (
-                    <button key={d} onClick={() => setDifMenu(d)} data-testid={`rpg-dif-${d}`}
-                      className={`p-2 rounded-xl text-left transition border ${ativo ? "border-amber-400 bg-amber-400/15" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                      <p className={`text-[11px] font-black ${ativo ? "text-amber-300" : "text-white/70"}`}>{nomeDificuldade(d, lingua)}</p>
-                      <p className="text-[9px] text-white/50 leading-tight mt-0.5">{t("rpg.dificuldade.regras", { hp: String(regras.multHpMob), xp: String(regras.multXP) })}</p>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-white/45 text-[10px] mt-2" data-testid="rpg-dif-desc">{descDificuldade(difMenu, lingua)}</p>
-            </div>
-
-            {/* jogar */}
-            <div className="w-full flex flex-col gap-2">
-              <button onClick={() => iniciar(false)} data-testid="rpg-jogar"
-                className="w-full py-3.5 rounded-xl font-black text-white bg-gradient-to-r from-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 active:scale-95 transition flex items-center justify-center gap-2">
-                <Play size={18} /> {t("rpg.jogar")}
-              </button>
-              {savePronto && temSave && (
-                <button onClick={() => iniciar(true)} data-testid="rpg-continuar"
-                  className="w-full py-3 rounded-xl font-bold text-white bg-emerald-700/80 hover:bg-emerald-600 active:scale-95 transition flex items-center justify-center gap-2">
-                  <ChevronUp size={17} className="rotate-90" /> {t("rpg.continuar")}
-                </button>
-              )}
-            </div>
-            <button onClick={() => setAjudaMenu(true)} data-testid="rpg-como-jogar"
-              className="w-full py-2 rounded-xl font-bold text-white/80 bg-white/10 hover:bg-white/15 transition text-xs flex items-center justify-center gap-1">
-              <HelpCircle size={14} /> {t("rpg.comoJogar")}
-            </button>
-            {savePronto && temSave && (
-              confRecomecar ? (
-                <div className="w-full flex gap-2" data-testid="rpg-recomecar-confirm">
-                  <button onClick={() => { void s.apagarSave().then(() => { setTemSave(false); setConfRecomecar(false); }); }}
-                    className="flex-1 py-2 rounded-xl font-black text-white bg-rose-700 hover:bg-rose-600 transition text-[11px]">{t("rpg.recomecarApagar")}</button>
-                  <button onClick={() => setConfRecomecar(false)}
-                    className="flex-1 py-2 rounded-xl font-bold text-white/70 bg-white/10 hover:bg-white/15 transition text-[11px]">{t("rpg.recomecarManter")}</button>
-                </div>
-              ) : (
-                <button onClick={() => setConfRecomecar(true)} data-testid="rpg-recomecar"
-                  className="text-white/35 underline text-[11px]">{t("rpg.recomecar")}</button>
-              )
-            )}
-
-            {/* clima real */}
-            <div className="w-full bg-black/40 rounded-2xl p-3 border border-white/10">
-              <p className="text-white/80 text-xs font-bold mb-2 flex items-center gap-1"><Sun size={13} /> {t("rpg.clima.titulo")}</p>
-              {climaReal.ativa && climaReal.cidade ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-white text-xs font-bold truncate" data-testid="rpg-clima-cidade">{climaReal.cidade.nome}</p>
-                    <p className="text-white/55 text-[10px]" data-testid="rpg-clima-info">
-                      {climaReal.clima
-                        ? `${(lingua === "en" ? wmoDescricaoEn : wmoDescricaoPt)(climaReal.clima.codigoWmo)}${climaReal.clima.temperatura !== null ? ` · ${climaReal.clima.temperatura}°C` : ""}${wmoEhNeve(climaReal.clima.codigoWmo) ? ` · ${t("rpg.clima.neve")}` : ""}`
-                        : t("rpg.clima.aObter")}
-                    </p>
+          <h2 className="mt-6 text-lg font-bold text-amber-200">{t("arena.escolher")}</h2>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full max-w-5xl">
+            {IDs_CAMPEOES.map((id) => {
+              const c = CAMPEOES[id];
+              const sel = campeao === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setCampeao(id)}
+                  className={`text-left rounded-2xl border-2 p-4 transition-all ${sel ? "border-amber-400 bg-amber-400/10 scale-[1.02]" : "border-white/10 bg-white/5 hover:border-white/25"}`}
+                  data-testid={`arena-campeao-${id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: c.cor }}>
+                      <Swords className="w-5 h-5 text-white" />
+                    </span>
+                    <div>
+                      <div className="font-black text-white">{c.nome}</div>
+                      <div className="text-[11px] text-slate-300">{t(`arena.papel.${c.papel}`)}</div>
+                    </div>
                   </div>
-                  <button onClick={desativarClimaReal} className="text-white/50 underline text-[11px] shrink-0" data-testid="rpg-clima-desativar">{t("rpg.clima.desativar")}</button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input value={buscaCidade} onChange={(e) => setBuscaCidade(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") procurar(); }}
-                    placeholder={t("rpg.clima.cidadePlaceholder")} data-testid="rpg-clima-input"
-                    className="flex-1 bg-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none placeholder:text-white/30" />
-                  <button onClick={procurar} disabled={buscando} data-testid="rpg-clima-ativar"
-                    className="px-3 py-2 rounded-lg bg-sky-700/80 text-white text-xs font-bold disabled:opacity-50">{buscando ? "…" : t("rpg.clima.aplicar")}</button>
-                </div>
-              )}
-              {climaReal.erro && <p className="text-rose-300 text-[10px] mt-1" data-testid="rpg-clima-erro">{climaReal.erro}</p>}
-              <p className="text-white/30 text-[9px] mt-1">{OPENMETEO_ATTRIBUTION}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <button onClick={() => { setSomMudo(m.alternarSom()); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700/80 hover:bg-slate-600 text-xs">
-                {somMudo ? t("rpg.som.off") : t("rpg.som.on")}
-              </button>
-              <button onClick={() => { const c = m.ciclarCamara(); setCamaraModo(c); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700/80 hover:bg-slate-600 text-xs flex items-center justify-center gap-1">
-                <Camera size={14} /> {camaraModo === "primeira" ? t("rpg.camara.primeira") : camaraModo === "terceira" ? t("rpg.camara.terceira") : t("rpg.camara.ombro")}
-              </button>
-            </div>
-            <p className="text-white/25 text-[9px] text-center leading-relaxed max-w-xs" data-testid="rpg-atribuicao">
-              {t("rpg.menu.atribuicao")}
-            </p>
-            <button onClick={sair} className="text-white/60 underline text-sm">{t("rpg.voltarPlataforma")}</button>
-            <p className="text-white/35 text-[11px] text-center max-w-xs">{t("rpg.menu.semRegisto")}</p>
-            <p className="text-white/30 text-[10px] text-center" data-testid="rpg-espaco">
-              {espacoEst === "pendente" ? "" : espacoEst
-                ? t("rpg.armazenamento.uso", { uso: mbLegivel(espacoEst.uso), quota: mbLegivel(espacoEst.quota) })
-                : t("rpg.armazenamento.semQuota")}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ AJUDA no menu inicial ═══ */}
-      {fase === "inicio" && ajudaMenu && (
-        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4" onClick={() => setAjudaMenu(false)}>
-          <div className="bg-[#15221a] rounded-2xl border border-white/15 max-w-lg w-full max-h-[85vh] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()} data-testid="rpg-ajuda-menu">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-white font-black text-lg flex items-center gap-2"><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</h2>
-              <button onClick={() => setAjudaMenu(false)} data-testid="rpg-fechar-ajuda-menu" className="text-white/60 hover:text-white"><X size={20} /></button>
-            </div>
-            {renderAjuda()}
-          </div>
-        </div>
-      )}
-
-      {aCarregar && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#101c14]" data-testid="rpg-carregar">
-          <div className="flex gap-1">{["#f59e0b", "#22c55e", "#a78bfa", "#fb923c"].map((c, i) => (
-            <div key={i} className="w-5 h-5 rounded-[3px] border border-black/50 animate-bounce" style={{ background: c, animationDelay: `${i * 0.12}s` }} />
-          ))}</div>
-          <p className="text-white font-bold">{t("rpg.carregar")}</p>
-        </div>
-      )}
-
-      {/* ═══ HUD ═══ */}
-      {fase !== "inicio" && cap && rpg && (
-        <>
-          {/* ── topo esquerda: minimapa (v45), vida, fome, posição ── */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
-            <button
-              onClick={() => setModal("mapa")}
-              data-testid="rpg-minimapa"
-              title={t("rpg.minimapa.titulo")}
-              className="rounded-lg pointer-events-auto cursor-pointer w-fit"
-              style={{ border: `2px solid ${rpg.regiao?.cor ?? "rgba(255,255,255,0.35)"}` }}
-            >
-              <canvas ref={miniCanvasRef} width={88} height={88} className="block rounded-[6px]" />
-            </button>
-            <div className="flex items-center gap-3"><Coracoes vida={cap.vida} /><Fome fome={cap.fome} /></div>
-            {cap.ar < 10 && (
-              <div className="flex gap-[2px]">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="w-2.5 h-2.5 rounded-full border border-black/60" style={{ background: cap.ar > i ? "#5ab0f0" : "rgba(0,0,0,0.5)" }} />
-                ))}
-              </div>
-            )}
-            <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-2">
-              <span className="text-amber-300 font-black text-xs" data-testid="rpg-nivel">Nv {rpg.nivel}</span>
-              <div className="w-24 h-2 rounded-full bg-black/60 overflow-hidden" data-testid="rpg-xpbar">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-lime-400" style={{ width: `${rpg.xpFalta > 0 ? Math.min(100, (rpg.xpAtual / (rpg.xpAtual + rpg.xpFalta)) * 100) : 100}%` }} />
-              </div>
-              {rpg.pontos > 0 && (
-                <span className="bg-violet-500 text-white text-[9px] font-black rounded-full px-1.5 py-0.5 animate-pulse" data-testid="rpg-pontos">{rpg.pontos} pts</span>
-              )}
-            </div>
-            <div className="text-[10px] text-white/85 font-mono bg-black/35 rounded px-1.5 py-0.5 w-fit">
-              {cap.pos.map((v) => v.toFixed(0)).join(", ")} · {cap.fps} fps
-            </div>
-          </div>
-
-          {/* ── topo direita: região, relógio, clima, créditos ── */}
-          <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
-            {rpg.regiao && (
-              <div className="bg-black/45 rounded-lg px-2 py-1 border-l-2" style={{ borderColor: rpg.regiao.cor }} data-testid="rpg-regiao">
-                <p className="text-white text-[11px] font-bold leading-none">{nomeRegiao(rpg.regiao, lingua)}</p>
-                <p className="text-white/50 text-[9px] mt-0.5">{t("rpg.nivel.recomendado", { n: String(rpg.regiao.nivel) })}</p>
-              </div>
-            )}
-            <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-1.5">
-              {cap.noite ? <Moon size={11} className="text-indigo-300" /> : <MeteoIcone size={11} className="text-amber-200" />}
-              <span className="text-white text-[11px] font-bold">{t("rpg.dia", { d: String(cap.dia), h: relogio(cap.horaFrac) })}</span>
-            </div>
-            <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-1" data-testid="rpg-creditos">
-              <Trophy size={11} className="text-amber-300" />
-              <span className="text-white text-[11px] font-bold">{t("rpg.creditos.hud", { n: String(rpg.creditos) })}</span>
-            </div>
-            {/* bússola do objetivo */}
-            {rpg.objetivo && !Number.isNaN(rpg.objetivo.x) && (
-              <div className="bg-black/45 rounded-lg px-2 py-1 flex items-center gap-2" data-testid="rpg-bussola">
-                <Compass size={12} className="text-emerald-300" />
-                <div className="w-6 h-6 relative">
-                  <div className="absolute inset-0 flex items-center justify-center"
-                    style={{ transform: `rotate(${((Math.atan2(-(rpg.objetivo.x - cap.pos[0]), -(rpg.objetivo.z - cap.pos[1]))) - m.yaw) * 180 / Math.PI}deg)` }}>
-                    <ChevronUp size={16} className="text-emerald-300" strokeWidth={3} />
+                  <p className="mt-2 text-xs text-slate-300 italic">“{t(`arena.hist.${id}`)}”</p>
+                  <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-300">
+                    <span>{Math.round(c.hp + c.hpPorNivel * 9)} HP</span>
+                    <span>{Math.round(c.mp + c.mpPorNivel * 9)} MP</span>
+                    <span>{c.velocidade} vel</span>
+                    <span>{c.alcanceAtaque <= 3 ? "melee" : `${c.alcanceAtaque} alc`}</span>
                   </div>
-                </div>
-                <span className="text-white/80 text-[9px] max-w-[110px] truncate">{textoObjetivoPorTexto(rpg.objetivo.texto, lingua)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* ── tracker da missão atual (baixo esquerda) ── */}
-          {rpg.capitulo && !rpg.historiaFeita && (
-            <div className="absolute bottom-2 left-2 bg-black/50 rounded-xl px-3 py-2 max-w-[240px] pointer-events-none" data-testid="rpg-missao-tracker">
-              <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">{t("rpg.capitulo.hud", { n: rpg.capitulo.id.replace("h", "") })}</p>
-              <p className="text-white text-xs font-bold">{tituloMissaoPorId(rpg.capitulo.id, lingua)}</p>
-              {rpg.capitulo.objetivos.map((o, i) => (
-                <p key={i} className={`text-[10px] mt-0.5 ${o.prog >= o.qtd ? "text-emerald-300 line-through" : "text-white/70"}`}>
-                  {o.prog >= o.qtd ? "✓" : "○"} {textoObjetivoPorId(rpg.capitulo.id, i, lingua)} ({o.prog}/{o.qtd})
-                </p>
-              ))}
-            </div>
-          )}
-
-          {/* ── boss bar ── */}
-          {rpg.boss.vivo && rpg.boss.hp !== undefined && (
-            <div className="absolute top-14 left-1/2 -translate-x-1/2 w-72 pointer-events-none" data-testid="rpg-bossbar">
-              <p className="text-center text-rose-300 text-xs font-black tracking-widest">{t("rpg.boss.barra")}</p>
-              <div className="h-3 rounded-full bg-black/70 border border-rose-900 overflow-hidden mt-0.5">
-                <div className="h-full bg-gradient-to-r from-rose-700 to-red-500" style={{ width: `${Math.max(0, (rpg.boss.hp / Math.max(1, rpg.boss.hpMax ?? 1)) * 100)}%` }} />
-              </div>
-            </div>
-          )}
-
-          {/* ── avisos RPG (centro topo) ── */}
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none">
-            {rpg.avisos.slice(-4).map((a, i) => (
-              <div key={`${i}-${a.texto}`} className={`px-3 py-1.5 rounded-xl bg-gradient-to-r ${COR_AVISO[a.tipo] ?? COR_AVISO.info} text-white text-xs font-bold shadow-lg max-w-[320px] text-center`}>
-                {a.texto}
-              </div>
-            ))}
-          </div>
-
-          {/* ── hotbar + botões ── */}
-          <div className="absolute bottom-2 right-2 flex flex-col items-end gap-2">
-            {/* v50: o que está MESMO no chão (contagens honestas do sistema) */}
-            {rpg.itensChao.total > 0 && (
-              <div data-testid="rpg-chao-chip" className="px-2 py-1 rounded-lg bg-black/55 border border-amber-500/30 text-white/90 text-[10px] font-bold">
-                {t("rpg.chao.itens", { n: String(rpg.itensChao.total), s: rpg.itensChao.total > 1 ? "s" : "" })}
-                {rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap > 0 ? t("rpg.chao.sairam", { n: String(rpg.itensChao.expiradosTTL + rpg.itensChao.expiradosCap) }) : ""}
-              </div>
-            )}
-            <div className="flex gap-1 bg-black/45 rounded-lg p-1.5" data-testid="rpg-hotbar">
-              {cap.slots.slice(0, 9).map((slot, i) => (
-                <button key={i} onClick={() => { m.inv.selecao = i; }} data-testid={`rpg-slot-${i}`}
-                  className={`w-9 h-9 rounded-[4px] border-2 flex items-center justify-center ${cap.selecao === i ? "border-white bg-white/20" : "border-white/20 bg-black/30"}`}>
-                  {slot && <IconeItem id={slot.id} qtd={slot.qtd} tamanho={30} />}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setModal("missoes")} data-testid="rpg-btn-missoes"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><BookOpen size={13} /> {t("rpg.btn.missoes")}</button>
-              <button onClick={() => setModal("diario")} data-testid="rpg-btn-diario"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><MapIcon size={13} /> {t("rpg.btn.diario")}</button>
-              <button onClick={() => setModal("mapa")} data-testid="rpg-btn-mapa"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Compass size={13} /> {t("rpg.btn.mapa")}</button>
-              <button onClick={() => setModal("habilidades")} data-testid="rpg-btn-habilidades"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Sparkles size={13} /> {t("rpg.btn.habilidades")}</button>
-              <button onClick={() => setModal("mochila")} data-testid="rpg-btn-mochila"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Backpack size={13} /> {t("rpg.btn.mochila")}</button>
-              <button onClick={() => setModal("forja")} data-testid="rpg-btn-forja"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white text-[10px] font-bold flex items-center gap-1"><Hammer size={13} /> {t("rpg.btn.forja")}</button>
-              <button onClick={() => { m.pausado = true; setModal("pausa"); }} data-testid="rpg-btn-pausa"
-                className="px-2.5 py-2 rounded-lg bg-black/55 text-white"><Pause size={13} /></button>
-            </div>
-          </div>
-
-          {/* ── nome do item visado ── */}
-          {cap.mirando && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/60 rounded-lg px-3 py-1 pointer-events-none">
-              <p className="text-white/90 text-xs font-bold">{nomeItem(cap.mirando.id, lingua)}</p>
-            </div>
-          )}
-
-          {/* ── controles móveis ── */}
-          {ehToque && (
-            <>
-              <div ref={joystickRef} onTouchStart={aoMoverJoy} onTouchMove={aoMoverJoy} onTouchEnd={aoLargarJoy} data-testid="rpg-joystick"
-                className="absolute bottom-20 left-4 w-32 h-32 rounded-full bg-black/30 border border-white/20 pointer-events-auto">
-                <div className="absolute w-12 h-12 rounded-full bg-white/30 border border-white/40 pointer-events-none"
-                  style={{ left: `calc(50% + ${(joy?.x ?? 0) * 32}px - 24px)`, top: `calc(50% + ${(joy?.y ?? 0) * 32}px - 24px)` }} />
-              </div>
-              <div className="absolute bottom-24 right-4 flex flex-col gap-2 items-center">
-                <button onTouchStart={() => { m.atacarPedido = true; }} data-testid="rpg-btn-atacar"
-                  className="w-16 h-16 rounded-full bg-rose-600/80 border-2 border-white/30 text-white font-black text-xs flex items-center justify-center">{t("rpg.btn.atacar")}</button>
-                <button onTouchStart={() => { m.entrada.salto = true; }} onTouchEnd={() => { m.entrada.salto = false; }}
-                  className="w-14 h-14 rounded-full bg-sky-600/70 border-2 border-white/30 text-white font-black text-[10px]">{t("rpg.btn.saltar")}</button>
-                <button onTouchStart={() => { m.comerPedido = true; }} data-testid="rpg-btn-comer"
-                  className="w-12 h-12 rounded-full bg-amber-600/70 border-2 border-white/30 text-white font-black text-[10px]">{t("rpg.btn.comer")}</button>
-              </div>
-            </>
-          )}
-
-          {/* ═══ MODAIS ═══ */}
-          {modal && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4" onClick={() => { if (modal !== "pausa") { setModal(null); m.pausado = false; } }}>
-              <div className="bg-[#15221a] rounded-2xl border border-white/15 max-w-lg w-full max-h-[80vh] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()} data-testid="rpg-modal">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-white font-black text-lg flex items-center gap-2">
-                    {modal === "missoes" && <><BookOpen size={18} className="text-fuchsia-400" /> MISSÕES</>}
-                    {modal === "diario" && <><MapIcon size={18} className="text-emerald-400" /> {t("rpg.modal.diario")}</>}
-                    {modal === "habilidades" && <><Sparkles size={18} className="text-violet-400" /> {t("rpg.modal.habilidades")}</>}
-                    {modal === "mochila" && <><Backpack size={18} className="text-lime-400" /> MOCHILA</>}
-                    {modal === "forja" && <><Hammer size={18} className="text-amber-400" /> FORJA</>}
-                    {modal === "mapa" && <><MapIcon size={18} className="text-amber-300" /> {t("rpg.modal.mapa")}</>}
-                    {modal === "ajuda" && <><HelpCircle size={18} className="text-sky-300" /> COMO JOGAR</>}
-                    {modal === "pausa" && <><Pause size={18} className="text-white" /> {t("rpg.modal.pausa")}</>}
-                  </h2>
-                  <button onClick={() => { setModal(null); m.pausado = false; }} data-testid="rpg-fechar-modal" className="text-white/60 hover:text-white"><X size={20} /></button>
-                </div>
-
-                {/* MISSÕES */}
-                {modal === "missoes" && (
-                  <div className="flex flex-col gap-3">
-                    {rpg.capitulo && (
-                      <div className="bg-fuchsia-900/30 rounded-xl p-3 border border-fuchsia-500/30" data-testid="rpg-capitulo">
-                        <p className="text-fuchsia-300 text-[9px] font-black tracking-wider">{t("rpg.missoes.historia", { n: rpg.capitulo.id.replace("h", ""), total: String(HISTORIA_TOTAL) })}</p>
-                        <p className="text-white font-black">{tituloMissaoPorId(rpg.capitulo.id, lingua)}</p>
-                        {rpg.capitulo.objetivos.map((o, i) => (
-                          <div key={i} className="mt-1.5">
-                            <div className="flex justify-between text-[11px]">
-                              <span className={o.prog >= o.qtd ? "text-emerald-300 line-through" : "text-white/80"}>{textoObjetivoPorId(rpg.capitulo.id, i, lingua)}</span>
-                              <span className="text-white/50 font-mono">{o.prog}/{o.qtd}</span>
-                            </div>
-                            <div className="h-1 rounded-full bg-black/50 mt-0.5 overflow-hidden">
-                              <div className="h-full bg-fuchsia-400" style={{ width: `${(o.prog / o.qtd) * 100}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                        <p className="text-white/45 text-[10px] mt-2">{t("rpg.missoes.recompensa", { xp: String(HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.xp ?? "—"), cred: String(HISTORIA_RECOMPENSAS[rpg.capitulo.id]?.creditos ?? "—") })}</p>
-                      </div>
-                    )}
-                    {rpg.historiaFeita && (
-                      <div className="bg-amber-900/30 rounded-xl p-3 border border-amber-500/40">
-                        <p className="text-amber-300 font-black text-sm">{t("rpg.missoes.feita.titulo")}</p>
-                        <p className="text-white/60 text-[11px] mt-0.5">{t("rpg.missoes.feita.corpo")}</p>
-                      </div>
-                    )}
-                    <p className="text-white/70 text-[11px] font-bold flex items-center gap-1"><Sun size={12} /> {t("rpg.missoes.diariasHoje")}</p>
-                    {rpg.diarias.map((d) => (
-                      <div key={d.id} className={`rounded-xl p-2.5 border ${d.feita ? "bg-emerald-900/25 border-emerald-500/30" : "bg-black/30 border-white/10"}`} data-testid={`rpg-diaria-${d.id.split(":")[2]}`}>
-                        <div className="flex justify-between items-center">
-                          <p className={`text-xs font-bold ${d.feita ? "text-emerald-300 line-through" : "text-white"}`}>{tituloDiaria(d.titulo, lingua)}</p>
-                          <span className="text-white/45 text-[10px] font-mono">{d.feita ? "✓" : `${d.prog}/${d.qtd}`}</span>
-                        </div>
-                        <p className="text-white/60 text-[10px]">{d.texto}</p>
-                        <p className="text-white/40 text-[9px] mt-0.5">+{d.xp} XP · +{d.creditos} {t("rpg.creditos.hud", { n: "" }).trim()}</p>
+                  <div className="mt-2 space-y-1">
+                    {SLOTS.map((sl) => (
+                      <div key={sl} className="flex items-center gap-1.5 text-[10px] text-slate-200">
+                        <span className="w-4 h-4 rounded bg-slate-800 border border-slate-600 grid place-items-center font-bold text-amber-300">{sl}</span>
+                        <span className="truncate">{t(`arena.hab.${id}.${sl}`)}</span>
                       </div>
                     ))}
                   </div>
-                )}
+                </button>
+              );
+            })}
+          </div>
 
-                {/* DIÁRIO */}
-                {modal === "diario" && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-white/70 text-[11px]">{t("rpg.diario.regioes")} <b className="text-white" data-testid="rpg-regioes-cont">{rpg.descobertas.regioes}/{rpg.totalRegioes}</b> {t("rpg.diario.locais")} <b className="text-white">{rpg.descobertas.pois}/{rpg.totalPois}</b> {t("rpg.diario.baus")} <b className="text-white">{rpg.descobertas.baus}/{rpg.totalBaus}</b></p>
-                    {REGIOES.map((r) => {
-                      const descoberta = s.perfil.descobertas.regioes.includes(r.id);
-                      return (
-                        <div key={r.id} className={`rounded-xl p-2.5 border ${descoberta ? "bg-black/30 border-white/10" : "bg-black/50 border-white/5"}`} data-testid={`rpg-regiao-${r.id}`}>
-                          <div className="flex justify-between items-center">
-                            <p className={`text-xs font-black ${descoberta ? "text-white" : "text-white/35"}`}>{descoberta ? nomeRegiao(r, lingua) : "???"}</p>
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${r.cor}33`, color: descoberta ? r.cor : "#666" }}>Nv {r.nivel}</span>
-                          </div>
-                          {descoberta && <p className="text-white/55 text-[10px] mt-0.5">{descRegiao(r, lingua)}</p>}
-                        </div>
-                      );
-                    })}
-                    <p className="text-white/70 text-[11px] font-bold mt-1">{t("rpg.diario.locaisTitulo")}</p>
-                    {POIS.map((p) => {
-                      const descoberto = s.perfil.descobertas.pois.includes(p.id);
-                      return (
-                        <div key={p.id} className="rounded-xl p-2 border border-white/5 bg-black/20" data-testid={`rpg-poi-${p.id}`}>
-                          <div className="flex justify-between items-center">
-                            <p className={`text-[11px] font-bold ${descoberto ? "text-white" : "text-white/35"}`}>{descoberto ? nomePoi(p, lingua) : "???"}</p>
-                            <span className="text-white/35 text-[9px] font-mono">{descoberto ? `${p.x}, ${p.z}` : "—"}</span>
-                          </div>
-                          {descoberto && <p className="text-white/50 text-[10px] mt-0.5">{descPoi(p, lingua)}</p>}
-                        </div>
-                      );
-                    })}
-                    <div className="grid grid-cols-4 gap-2 text-center mt-1">
-                      {[[t("rpg.diario.hostis"), rpg.kills.hostil], [t("rpg.diario.mortes"), rpg.mortes], [t("rpg.diario.blocos"), rpg.blocos], [t("rpg.diario.nivel"), rpg.nivel]].map(([k, v]) => (
-                        <div key={String(k)} className="bg-black/30 rounded-lg py-2">
-                          <p className="text-white font-black text-sm">{String(v)}</p>
-                          <p className="text-white/45 text-[9px]">{String(k)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 w-full max-w-xl">
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value.slice(0, 16))}
+              placeholder={t("arena.nome")}
+              className="flex-1 w-full rounded-xl bg-slate-900/80 border border-white/15 px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-amber-400"
+              data-testid="arena-nome"
+            />
+            <button
+              onClick={() => {
+                const s2: SaveArena = {
+                  nome: nome.trim() || `Herói-${100 + Math.floor(Math.random() * 900)}`,
+                  campeao,
+                  xpTotal: s?.xpTotal ?? 0,
+                  essencia: s?.essencia ?? 0,
+                  itens: s?.itens ?? {},
+                  abates: s?.abates ?? 0,
+                  ts: Date.now(),
+                };
+                guardarSave(s2);
+                setSave(s2);
+                setFase("jogando");
+              }}
+              className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 py-3 font-black text-white hover:brightness-110 active:scale-95"
+              data-testid="arena-entrar"
+            >
+              <span className="inline-flex items-center gap-2"><Play className="w-5 h-5" /> {t("arena.entrar")}</span>
+            </button>
+          </div>
 
-                {/* HABILIDADES */}
-                {modal === "habilidades" && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-white/70 text-[11px]" data-testid="rpg-pontos-modal">
-                      {t("rpg.hab.pontos", { n: String(rpg.pontos), max: String(NIVEL_MAX) })}
-                    </p>
-                    {RAMOS_RPG.map((r) => {
-                      const nivel = rpg.skills[r];
-                      const max = nivel >= NIVEL_MAX_RAMO_RPG;
-                      return (
-                        <div key={r} className="bg-black/30 rounded-xl p-3 border border-white/10" data-testid={`rpg-ramo-${r}`}>
-                          <div className="flex items-center justify-between">
-                            <p className="text-white font-black text-sm">{nomeRamo(r, lingua)} <span className="text-white/50 font-bold">{t("rpg.hab.nivel", { n: String(nivel), max: String(NIVEL_MAX_RAMO_RPG) })}</span></p>
-                            <button onClick={() => { if (s.gastarPonto(r)) setRpg(s.captura()); }} data-testid={`rpg-aprender-${r}`}
-                              disabled={rpg.pontos < 1 || max}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black ${max ? "bg-white/10 text-white/40" : rpg.pontos >= 1 ? "bg-violet-600 text-white hover:bg-violet-500" : "bg-white/10 text-white/40"}`}>
-                              {max ? t("rpg.hab.maximo") : t("rpg.hab.aprender")}
-                            </button>
-                          </div>
-                          <ul className="mt-1.5 flex flex-col gap-0.5">
-                            {efeitosRamo(r, lingua).map((e, i) => (
-                              <li key={i} className="text-[10px] text-white/60 flex items-center gap-1">
-                                <span className={`w-1.5 h-1.5 rounded-full ${i < nivel ? "bg-emerald-400" : "bg-white/20"}`} /> {e}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      );
-                    })}
-                    <p className="text-white/35 text-[10px]">{t("rpg.hab.velorenNota")}</p>
-                  </div>
-                )}
-
-                {/* MOCHILA (v48) — as 36 posições do motor partilhado */}
-                {modal === "mochila" && (() => {
-                  const armEq = cap.armadura;
-                  const selSlot = cap.slots[cap.selecao] ?? null;
-                  const defSel = selSlot ? ITENS[selSlot.id] : undefined;
-                  const ocupadas = cap.slots.filter(Boolean).length;
-                  return (
-                    <div className="flex flex-col gap-2.5" data-testid="rpg-mochila">
-                      <div className="bg-black/30 rounded-xl p-2.5 border border-white/10 flex items-center justify-between gap-2" data-testid="rpg-mochila-armadura">
-                        {armEq ? (
-                          <>
-                            <p className="text-white text-[11px] font-bold" data-testid="rpg-armadura-nome">
-                              {t("rpg.mochila.equipado", { nome: nomeItem(armEq.id, lingua), pct: String(Math.round(armEq.reducao * 100)) })}
-                            </p>
-                            <button onClick={() => { m.inv.despirArmadura(); setCap(m.captura()); }} data-testid="rpg-despir"
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">{t("rpg.mochila.despir")}</button>
-                          </>
-                        ) : (
-                          <p className="text-white/50 text-[11px]">{t("rpg.mochila.semArmadura")}</p>
-                        )}
-                      </div>
-                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.mochila.hotbarTitulo")}</p>
-                      <div className="grid grid-cols-9 gap-1">
-                        {cap.slots.slice(0, 9).map((slot, i) => (
-                          <button key={i} onClick={() => { m.inv.selecao = i; setCap(m.captura()); }} data-testid={`rpg-mslot-${i}`}
-                            className={`aspect-square rounded-[4px] border-2 flex items-center justify-center ${cap.selecao === i ? "border-white bg-white/15" : "border-white/20 bg-black/30"}`}>
-                            {slot && <IconeItem id={slot.id} qtd={slot.qtd} tamanho={24} />}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.mochila.mochilaTitulo")}</p>
-                      <div className="grid grid-cols-9 gap-1">
-                        {cap.slots.slice(9).map((slot, i) => (
-                          <button key={i} onClick={() => { m.inv.moverParaHotbar(i + 9); setCap(m.captura()); }} data-testid={`rpg-mslot-${i + 9}`}
-                            className="aspect-square rounded-[4px] border-2 border-white/20 bg-black/30 flex items-center justify-center">
-                            {slot && <IconeItem id={slot.id} qtd={slot.qtd} tamanho={24} />}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="bg-black/30 rounded-xl p-2.5 border border-white/10 min-h-[46px]" data-testid="rpg-mochila-selecionado">
-                        {selSlot ? (
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-white text-[11px] font-bold">{nomeItem(selSlot.id, lingua)} <span className="text-white/40">×{selSlot.qtd}</span></p>
-                              <p className="text-white/50 text-[10px]">
-                                {defSel?.dano ? t("rpg.mochila.dano", { n: String(defSel.dano) }) : defSel?.comida ? t("rpg.mochila.comida", { n: String(defSel.comida) }) : defSel?.armadura ? t("rpg.mochila.armadura", { pct: String(Math.round(defSel.armadura * 100)) }) : t("rpg.mochila.material")}
-                              </p>
-                            </div>
-                            {defSel?.armadura && (
-                              <button onClick={() => { m.inv.equiparArmadura(); setCap(m.captura()); }} data-testid="rpg-equipar"
-                                className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">{t("rpg.mochila.equipar")}</button>
-                            )}
-                            {/* v50: largar 1 do slot selecionado — a MESMA via da tecla Q */}
-                            <button onClick={() => { sistemaRef.current.largarSelecionado(); setCap(m.captura()); setRpg(sistemaRef.current.captura()); }} data-testid="rpg-largar"
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold shrink-0">{t("rpg.mochila.largar")}</button>
-                          </div>
-                        ) : (
-                          <p className="text-white/40 text-[10px]">{t("rpg.mochila.vazio")}</p>
-                        )}
-                      </div>
-                      <p className="text-white/45 text-[10px]">{t("rpg.mochila.ocupadas", { n: String(ocupadas) })}</p>
-                      <p className="text-white/30 text-[9px]" data-testid="rpg-mochila-fonte">
-                        {t("rpg.mochila.fonte")}
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* FORJA (v49) — as RECEITAS REAIS do motor partilhado */}
-                {modal === "forja" && (() => {
-                  // pertoDe é a MESMA verificação do motor (raio 4 blocos contra
-                  // os blocos reais do mundo — não há bandeira falsa)
-                  const mesa = pertoDe(m.mundo, m.px, m.py, m.pz, B.MESA);
-                  const fornalha = pertoDe(m.mundo, m.px, m.py, m.pz, B.FORNALHA);
-                  const infos = avaliarReceitas(m.inv, mesa, fornalha);
-                  const distForja = Math.round(Math.hypot(m.px - 82, m.pz - 52));
-                  const linha = (info: ReturnType<typeof avaliarReceitas>[number]) => (
-                    <div key={info.receita.id} className={`rounded-xl p-2 border ${info.pode ? "bg-emerald-900/25 border-emerald-500/30" : "bg-black/30 border-white/10"}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-white text-[11px] font-bold">{nomePorTexto(info.receita.nome, lingua)}{info.receita.desc ? <span className="text-white/45 font-normal"> — {info.receita.desc}</span> : null}</p>
-                          <p className="text-white/50 text-[10px] font-mono">
-                            {info.receita.ingredientes.map(([id, qtd]) => `${qtd}× ${nomeItem(id, lingua)} (${m.inv.contar(id)})`).join(" · ")}
-                          </p>
-                        </div>
-                        {info.pode ? (
-                          <button onClick={() => {
-                            if (criarReceita(m.inv, info.receita)) { setForjaMsg(t("rpg.forja.criado", { nome: nomePorTexto(info.receita.nome, lingua) })); setCap(m.captura()); }
-                            else setForjaMsg(t("rpg.forja.falhou"));
-                          }} data-testid={`rpg-craft-${info.receita.id}`}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black shrink-0">{t("rpg.forja.criar")}</button>
-                        ) : (
-                          <span className="text-rose-300/90 text-[10px] text-right shrink-0 max-w-[150px]" data-testid={`rpg-craft-bloq-${info.receita.id}`}>{info.motivo}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                  return (
-                    <div className="flex flex-col gap-2.5" data-testid="rpg-forja">
-                      <div className="flex items-center gap-2 flex-wrap" data-testid="rpg-forja-estado">
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${mesa ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-mesa">{t("rpg.forja.mesa", { v: mesa ? t("rpg.forja.aqui") : t("rpg.forja.nao") })}</span>
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${fornalha ? "bg-emerald-800/70 text-emerald-200" : "bg-black/40 text-white/40"}`} data-testid="rpg-forja-fornalha">{t("rpg.forja.fornalha", { v: fornalha ? t("rpg.forja.aqui") : t("rpg.forja.nao") })}</span>
-                        {!mesa && <span className="text-white/40 text-[10px]">{t("rpg.forja.distancia", { n: String(distForja) })}</span>}
-                      </div>
-                      {forjaMsg && <p className="text-amber-300 text-[11px] font-bold" data-testid="rpg-forja-msg">{forjaMsg}</p>}
-                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.forja.criacao")}</p>
-                      {infos.filter((i) => i.receita.categoria === "criacao").map(linha)}
-                      <p className="text-white/60 text-[10px] font-bold">{t("rpg.forja.fundicao")}</p>
-                      {infos.filter((i) => i.receita.categoria === "fundicao").map(linha)}
-                      <p className="text-white/45 text-[10px]">{t("rpg.forja.ocupadas", { n: String(cap.slots.filter(Boolean).length) })}</p>
-                      <p className="text-white/30 text-[9px]" data-testid="rpg-forja-fonte">
-                        {t("rpg.forja.fonte")}
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* MAPA DO MUNDO */}
-                {modal === "mapa" && (
-                  <div className="flex flex-col gap-2" data-testid="rpg-mapa">
-                    <canvas ref={mapaCanvasRef} className="w-full rounded-xl border border-white/10" data-testid="rpg-mapa-canvas" />
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {REGIOES.map((r) => {
-                        const descoberta = sistemaRef.current.perfil.descobertas.regioes.includes(r.id);
-                        return (
-                          <div key={r.id} className="flex items-center gap-1.5 text-[10px]" data-testid={`rpg-mapa-regiao-${r.id}`}>
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: descoberta ? r.cor : "rgba(255,255,255,0.2)" }} />
-                            <span className={descoberta ? "text-white/80" : "text-white/35"}>{descoberta ? nomeRegiao(r, lingua) : "???"}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-white/45 text-[10px]">
-                      {t("rpg.mapa.legenda", { r: String(rpg.descobertas.regioes), rt: String(rpg.totalRegioes), p: String(rpg.descobertas.pois), pt: String(rpg.totalPois), b: String(rpg.descobertas.baus), bt: String(rpg.totalBaus) })}
-                    </p>
-                    <p className="text-white/30 text-[9px]" data-testid="rpg-mapa-fonte">
-                      {t("rpg.mapa.fonte")}
-                    </p>
-                  </div>
-                )}
-
-                {/* AJUDA */}
-                {modal === "ajuda" && renderAjuda()}
-
-                {/* PAUSA */}
-                {modal === "pausa" && (
-                  <div className="flex flex-col gap-2.5">
-                    <button onClick={() => { setModal(null); m.pausado = false; capturarRato(); }} data-testid="rpg-retomar"
-                      className="w-full py-3 rounded-xl font-black text-white bg-emerald-700 hover:bg-emerald-600">{t("rpg.pausa.retomar")}</button>
-                    <div className="bg-black/30 rounded-xl p-2.5 text-[10px] text-white/60 grid grid-cols-2 gap-y-0.5" data-testid="rpg-pausa-info">
-                      <span>{t("rpg.pausa.dificuldade")} <b className="text-white" data-testid="rpg-pausa-dif">{nomeDificuldade(rpg.dificuldade.id, lingua)}</b></span>
-                      <span>{t("rpg.pausa.nivel")} <b className="text-white">{rpg.nivel}/{NIVEL_MAX}</b></span>
-                      <span>{t("rpg.pausa.creditos")} <b className="text-white">{rpg.creditos}</b></span>
-                      <span>{t("rpg.pausa.mortes")} <b className="text-white">{rpg.mortes}</b></span>
-                      <span>{t("rpg.pausa.descobertas")} <b className="text-white">{rpg.descobertas.regioes}/{rpg.totalRegioes} · {rpg.descobertas.pois}/{rpg.totalPois}</b></span>
-                      <span>{t("rpg.pausa.historia")} <b className="text-white">{rpg.historiaFeita ? t("rpg.pausa.historia.completa") : t("rpg.pausa.historia.capitulo", { n: rpg.capitulo?.id.replace("h", "") ?? "" })}</b></span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button onClick={() => setModal("mapa")} data-testid="rpg-pausa-mapa"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><MapIcon size={14} /> {t("rpg.btn.mapa")}</button>
-                      <button onClick={() => setModal("mochila")} data-testid="rpg-pausa-mochila"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Backpack size={14} /> {t("rpg.btn.mochila")}</button>
-                      <button onClick={() => setModal("forja")} data-testid="rpg-pausa-forja"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><Hammer size={14} /> {t("rpg.btn.forja")}</button>
-                      <button onClick={() => setModal("ajuda")} data-testid="rpg-pausa-ajuda"
-                        className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1"><HelpCircle size={14} /> {t("rpg.comoJogar")}</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => { setSomMudo(m.alternarSom()); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs">
-                        {somMudo ? t("rpg.som.off") : t("rpg.som.on")}
-                      </button>
-                      <button onClick={() => { const c = m.ciclarCamara(); setCamaraModo(c); }} className="py-2.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 text-xs flex items-center justify-center gap-1">
-                        <Camera size={14} /> {t("rpg.camara.titulo")}
-                      </button>
-                    </div>
-                    <button onClick={() => { void s.guardar(); setModal("pausa"); }} data-testid="rpg-guardar"
-                      className="w-full py-2.5 rounded-xl font-bold text-white bg-sky-800 hover:bg-sky-700 text-xs">{t("rpg.pausa.guardar")}</button>
-                    <button onClick={sair} data-testid="rpg-sair"
-                      className="w-full py-2.5 rounded-xl font-bold text-white bg-rose-800/80 hover:bg-rose-700 text-xs">{t("rpg.pausa.sair")}</button>
-                    <p className="text-white/40 text-[10px] text-center">{t("rpg.pausa.autoSave")}</p>
-                  </div>
-                )}
-              </div>
+          {s && (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300" data-testid="arena-save">
+              <span className="inline-flex items-center gap-1"><ChevronUp className="w-3.5 h-3.5 text-amber-300" /> {t("arena.nivel")} {nivelAproximada(s.xpTotal)}</span>
+              <span className="inline-flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-amber-300" /> {s.essencia} {t("arena.essencia")}</span>
+              <span className="inline-flex items-center gap-1"><Skull className="w-3.5 h-3.5 text-rose-300" /> {s.abates} {t("arena.abates")}</span>
             </div>
           )}
-        </>
+          <p className="mt-4 text-[11px] text-slate-500 max-w-lg text-center">{t("arena.menu.nota")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════ JOGO ═══════════════════════
+  const def = CAMPEOES[campeao];
+  const mpOn = mpEstado?.estado === "online";
+  return (
+    <div className="fixed inset-0 z-[80] bg-slate-950 select-none" data-testid="arena-jogo">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full touch-none" data-testid="arena-canvas" />
+
+      {/* flash de dano */}
+      {flashDano > 0 && <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: "inset 0 0 120px 30px rgba(220,38,38,0.45)", animation: "arena-fade 0.5s forwards" }} />}
+
+      {/* ── HUD topo-esquerda: nível/XP/essência/abates ── */}
+      {hud && (
+        <div className="absolute top-2 left-2 flex items-center gap-2" data-testid="arena-hud">
+          <div className="relative w-12 h-12 rounded-full bg-slate-900/85 border-2 border-amber-400 grid place-items-center">
+            <span className="text-lg font-black text-amber-300">{hud.nivel}</span>
+            <svg className="absolute -bottom-0.5 -right-0.5 w-5 h-5" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15" fill="none" stroke="#1e293b" strokeWidth="5" />
+              <circle
+                cx="18" cy="18" r="15" fill="none" stroke="#fbbf24" strokeWidth="5"
+                strokeDasharray={`${(hud.xpNoNivel / Math.max(1, hud.xpParaSubirNivel)) * 94} 94`} transform="rotate(-90 18 18)"
+              />
+            </svg>
+          </div>
+          <div className="rounded-xl bg-slate-900/80 border border-white/10 px-3 py-1.5 text-xs text-white">
+            <div className="font-bold">{hud.nome}</div>
+            <div className="flex items-center gap-3 text-[11px] text-slate-300">
+              <span className="inline-flex items-center gap-1"><Coins className="w-3 h-3 text-amber-300" /> {hud.essencia}</span>
+              <span className="inline-flex items-center gap-1"><Skull className="w-3 h-3 text-rose-300" /> {hud.abates}</span>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* ═══ MORTE ═══ */}
-      {fase === "morto" && cap && (
-        <div className="absolute inset-0 bg-red-950/80 flex flex-col items-center justify-center gap-4 p-4" data-testid="rpg-morte">
-          <Skull size={44} className="text-rose-400" />
-          <h2 className="text-rose-200 font-display text-3xl font-black">{t("rpg.morte.titulo")}</h2>
-          <p className="text-white/70 text-sm text-center max-w-sm">
-            {cap.causaMorte ? causaMorte(cap.causaMorte, lingua) : t("rpg.morte.causaDefault")} · {t("rpg.morte.morte", { n: String((rpg?.mortes ?? 0) + 1) })}<br />
-            <span className="text-white/45 text-[11px]">{t("rpg.morte.nota")}</span>
-          </p>
-          <button onClick={renascer} data-testid="rpg-renascer"
-            className="px-6 py-3 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 to-lime-500 hover:from-emerald-500 active:scale-95 transition flex items-center gap-2">
-            <Swords size={17} /> {t("rpg.morte.renascer")}
+      {/* ── HUD topo-direita: estado do servidor HONESTO ── */}
+      <div className="absolute top-2 right-2 flex flex-col items-end gap-1" data-testid="arena-hud-status">
+        <div className={`rounded-full px-3 py-1 text-[11px] font-bold border ${mpOn ? "bg-emerald-900/80 border-emerald-500/50 text-emerald-200" : mpEstado?.estado === "a_ligar" ? "bg-sky-900/80 border-sky-500/50 text-sky-200" : "bg-slate-900/80 border-white/20 text-slate-300"}`}>
+          <span className="inline-flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            {mpOn ? t("arena.online", { n: String(mpEstado?.jogadores ?? 1) }) : mpEstado?.estado === "a_ligar" ? t("arena.aLigar") : t("arena.modoSolo")}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+          {mpOn && <span className="inline-flex items-center gap-1"><Zap className="w-3 h-3" /> {t("arena.ping", { ms: String(mpEstado?.latencia ?? 0) })}</span>}
+          <span>{hud?.fps ?? 0} fps</span>
+          <button onClick={() => setPausa(true)} className="rounded bg-slate-900/80 border border-white/15 p-1 hover:bg-slate-800" data-testid="arena-pausa-btn" aria-label="pausa">
+            <Pause className="w-3.5 h-3.5 text-slate-200" />
           </button>
-          <button onClick={sair} className="text-white/60 underline text-sm">{t("rpg.morte.sair")}</button>
+          <button onClick={sair} className="rounded bg-slate-900/80 border border-white/15 p-1 hover:bg-slate-800" data-testid="arena-sair-btn" aria-label={t("arena.sair")}>
+            <X className="w-3.5 h-3.5 text-slate-200" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── fonte: regeneração visível ── */}
+      {hud?.emFonte && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-sky-900/80 border border-sky-400/40 px-3 py-1 text-[11px] text-sky-200 inline-flex items-center gap-1">
+          <Sparkles className="w-3 h-3" /> {t("arena.fonte")}
+        </div>
+      )}
+
+      {/* ── toasts ── */}
+      <div className="absolute top-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none">
+        {toasts.map((tt) => (
+          <div key={tt.id} className={`rounded-full px-3 py-1 text-xs font-bold border ${tt.tipo === "nivel" ? "bg-amber-500/90 border-amber-300 text-white" : tt.tipo === "matou" ? "bg-emerald-600/90 border-emerald-300 text-white" : tt.tipo === "erro" ? "bg-rose-900/85 border-rose-400/60 text-rose-100" : "bg-slate-900/85 border-white/20 text-slate-200"}`}>
+            {tt.texto}
+          </div>
+        ))}
+      </div>
+
+      {/* ── barra QWER estilo LoL (fundo-centro) ── */}
+      {hud && !ehToque && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5" data-testid="arena-barra">
+          <div className="flex gap-1.5">
+            {SLOTS.map((sl) => {
+              const h = def.habilidades[sl];
+              const cd = hud.cds[sl];
+              const pronto = cd <= 0 && hud.mp >= h.mana;
+              return (
+                <button
+                  key={sl}
+                  onClick={() => motorRef.current?.usarHabilidade(sl)}
+                  className={`relative w-12 h-12 rounded-lg border-2 overflow-hidden ${pronto ? "border-amber-400 bg-slate-900/85" : "border-slate-600 bg-slate-900/85"}`}
+                  data-testid={`arena-hab-${sl.toLowerCase()}`}
+                  title={t(`arena.hab.${campeao}.${sl}`)}
+                >
+                  <span className={`absolute inset-0 grid place-items-center text-lg font-black ${pronto ? "text-amber-300" : "text-slate-500"}`}>{sl}</span>
+                  {cd > 0 && (
+                    <>
+                      <span className="absolute inset-0 bg-black/60" style={{ clipPath: `inset(0 0 ${(cd / Math.max(0.01, h.cd)) * 100}% 0)` }} />
+                      <span className="absolute inset-0 grid place-items-center text-white text-sm font-bold">{cd.toFixed(cd < 3 ? 1 : 0)}</span>
+                    </>
+                  )}
+                  <span className="absolute bottom-0 right-0.5 text-[9px] text-sky-300 font-bold">{h.mana}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* vida / mana */}
+          <div className="w-64 space-y-1" data-testid="arena-barras">
+            <div className="h-4 rounded-full bg-slate-900/85 border border-white/15 overflow-hidden relative">
+              <div className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${(hud.hp / Math.max(1, hud.hpMax)) * 100}%` }} />
+              {hud.escudo > 0 && <div className="absolute inset-y-0 left-0 bg-slate-200/70" style={{ width: `${Math.min(100, (hud.escudo / Math.max(1, hud.hpMax)) * 100)}%` }} />}
+              <span className="absolute inset-0 grid place-items-center text-[10px] font-bold text-white drop-shadow">{hud.hp} / {hud.hpMax}</span>
+            </div>
+            <div className="h-3 rounded-full bg-slate-900/85 border border-white/15 overflow-hidden relative">
+              <div className="h-full bg-gradient-to-r from-sky-600 to-sky-400" style={{ width: `${(hud.mp / Math.max(1, hud.mpMax)) * 100}%` }} />
+              <span className="absolute inset-0 grid place-items-center text-[9px] font-bold text-white drop-shadow">{hud.mp} / {hud.mpMax}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── minimapa (fundo-direita, estilo LoL) ── */}
+      <div className="absolute bottom-3 right-3 rounded-lg overflow-hidden border-2 border-amber-500/70 bg-slate-950/90" data-testid="arena-minimapa">
+        <canvas ref={miniRef} width={168} height={168} className="block" />
+        <div className="absolute top-0.5 left-1 text-[9px] font-bold text-amber-300/90 tracking-wide inline-flex items-center gap-1"><MapIcon className="w-2.5 h-2.5" />{t("arena.minimapa")}</div>
+      </div>
+
+      {/* ── botão loja (desktop, junto ao minimapa) ── */}
+      {!ehToque && (
+        <button
+          onClick={() => setLojaAberta((v) => !v)}
+          className={`absolute bottom-[190px] right-3 rounded-lg border px-3 py-2 text-xs font-bold inline-flex items-center gap-1.5 ${hud?.emFonte ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-white/15 bg-slate-900/85 text-slate-300"}`}
+          data-testid="arena-loja-btn"
+        >
+          <Store className="w-4 h-4" /> {t("arena.loja")} <span className="text-[9px] opacity-70">B</span>
+        </button>
+      )}
+
+      {/* ── chat (fundo-esquerda) ── */}
+      <div className="absolute bottom-3 left-3 w-64 flex flex-col gap-1" data-testid="arena-chat">
+        <div className="max-h-28 overflow-y-auto rounded-lg bg-slate-950/70 border border-white/10 px-2 py-1.5 text-[11px] space-y-0.5">
+          {chat.length === 0 && <div className="text-slate-500 italic">{t("arena.chat.dica")}</div>}
+          {chat.map((m, i) => (
+            <div key={i} className={m.meu ? "text-amber-200" : m.nome === "Arena" ? "text-sky-300" : "text-slate-200"}>
+              <b>{m.nome}:</b> {m.texto}
+            </div>
+          ))}
+          <div ref={chatFimRef} />
+        </div>
+        {chatAberto ? (
+          <form onSubmit={(e) => { e.preventDefault(); enviarFala(); }}>
+            <input
+              autoFocus
+              value={chatTexto}
+              onChange={(e) => setChatTexto(e.target.value.slice(0, 120))}
+              onBlur={() => setChatAberto(false)}
+              placeholder={t("arena.chat.placeholder")}
+              className="w-full rounded-lg bg-slate-900/90 border border-white/20 px-2 py-1.5 text-[11px] text-white outline-none focus:border-amber-400"
+              data-testid="arena-chat-input"
+            />
+          </form>
+        ) : (
+          <button onClick={() => setChatAberto(true)} className="self-start rounded-lg bg-slate-900/80 border border-white/15 px-2 py-1 text-[10px] text-slate-400 hover:text-white">
+            {t("arena.chat.dica")}
+          </button>
+        )}
+      </div>
+
+      {/* ── morte / respawn ── */}
+      {hud?.morto && (
+        <div className="absolute inset-0 bg-rose-950/70 backdrop-blur-sm grid place-items-center pointer-events-none" data-testid="arena-morte">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 text-4xl font-black text-rose-200"><Skull className="w-10 h-10" /> {t("arena.morte")}</div>
+            <div className="mt-2 text-white/80">{t("arena.renascerEm", { s: String(Math.ceil(hud.respawnFalta)) })}</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── loja ── */}
+      {lojaAberta && (
+        <div className="absolute inset-0 bg-slate-950/80 grid place-items-center p-4" data-testid="arena-loja">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-500/40 bg-slate-900 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-amber-300 inline-flex items-center gap-2"><Store className="w-5 h-5" /> {t("arena.loja.titulo")}</h3>
+              <button onClick={() => setLojaAberta(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            {!hud?.emFonte && <p className="mt-2 text-xs text-rose-300">{t("arena.loja.perto")}</p>}
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {IDS_ITENS.map((id) => {
+                const it = ITENS[id];
+                const custo = motorRef.current?.custoVisivel(id) ?? it.custo;
+                const ja = motorRef.current?.itensCount(id) ?? 0;
+                const maxAtingido = ja >= it.max;
+                const semEss = (hud?.essencia ?? 0) < custo;
+                return (
+                  <div key={id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">{t(`arena.item.${id}`)}</span>
+                      <span className="text-[10px] text-slate-400">{ja}/{it.max}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">{t(`arena.itemd.${id}`)}</p>
+                    <button
+                      onClick={() => {
+                        const ok = motorRef.current?.comprar(id) ?? false;
+                        if (!ok && !maxAtingido && !semEss) pushToast(t("arena.loja.perto"), "erro");
+                        if (!ok && maxAtingido) pushToast(t("arena.loja.max"), "erro");
+                        if (!ok && semEss && hud?.emFonte) pushToast(t("arena.loja.semEssencia"), "erro");
+                      }}
+                      disabled={!hud?.emFonte || maxAtingido || semEss}
+                      className={`mt-2 w-full rounded-lg px-3 py-1.5 text-xs font-bold inline-flex items-center justify-center gap-1 ${hud?.emFonte && !maxAtingido && !semEss ? "bg-amber-500 text-white hover:brightness-110" : "bg-slate-800 text-slate-500 cursor-not-allowed"}`}
+                      data-testid={`arena-loja-${id}`}
+                    >
+                      <Coins className="w-3.5 h-3.5" /> {custo} {maxAtingido ? `· ${t("arena.loja.max")}` : ""}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── pausa / controlos ── */}
+      {pausa && (
+        <div className="absolute inset-0 bg-slate-950/85 grid place-items-center p-4" data-testid="arena-pausa">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-slate-900 p-5">
+            <h3 className="text-xl font-black text-amber-300">{t("arena.pausa.titulo")}</h3>
+            <div className="mt-3 space-y-1.5 text-sm text-slate-200">
+              <p><b className="text-white">{t("arena.controlos.titulo")}</b></p>
+              <p className="inline-flex items-center gap-2"><Crosshair className="w-4 h-4 text-slate-400" /> {t("arena.controlos.mover")}</p>
+              <p className="inline-flex items-center gap-2"><Zap className="w-4 h-4 text-slate-400" /> {t("arena.controlos.habilidades")}</p>
+              <p className="inline-flex items-center gap-2"><Swords className="w-4 h-4 text-slate-400" /> {t("arena.controlos.atacar")}</p>
+              <p className="inline-flex items-center gap-2"><Heart className="w-4 h-4 text-slate-400" /> {t("arena.controlos.zoom")}</p>
+              <p className="inline-flex items-center gap-2"><Shield className="w-4 h-4 text-slate-400" /> {t("arena.controlos.loja")}</p>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              <button onClick={() => setPausa(false)} className="rounded-xl bg-amber-500 px-4 py-2 font-bold text-white hover:brightness-110" data-testid="arena-pausa-continuar">{t("arena.pausa.continuar")}</button>
+              <button onClick={sair} className="rounded-xl border border-white/20 px-4 py-2 text-slate-300 hover:bg-white/5">{t("arena.pausa.sair")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── controlos móveis ── */}
+      {ehToque && hud && <ControlosMovel motorRef={motorRef} campeao={campeao} />}
+      {ehToque && hud && (
+        <div className="absolute bottom-[168px] left-3 w-32 space-y-1" data-testid="arena-barras-mobile">
+          <div className="h-3.5 rounded-full bg-slate-900/85 border border-white/15 overflow-hidden relative">
+            <div className="h-full bg-emerald-500" style={{ width: `${(hud.hp / Math.max(1, hud.hpMax)) * 100}%` }} />
+          </div>
+          <div className="h-2.5 rounded-full bg-slate-900/85 border border-white/15 overflow-hidden relative">
+            <div className="h-full bg-sky-500" style={{ width: `${(hud.mp / Math.max(1, hud.mpMax)) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* nível a subir — destaque grande */}
+      {nivelToast > 0 && Date.now() - nivelToast < 2000 && (
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 text-4xl font-black text-amber-300 drop-shadow-lg pointer-events-none" style={{ animation: "arena-pop 0.6s" }}>
+          {t("arena.subiuNivel", { n: String(hud?.nivel ?? "") })}
         </div>
       )}
     </div>
   );
 }
 
-// recompensas da história (só para mostrar no painel — a verdade vive no core.ts)
-const HISTORIA_TOTAL = 6;
-const HISTORIA_RECOMPENSAS: Record<string, { xp: number; creditos: number }> = {
-  h1: { xp: 60, creditos: 10 },
-  h2: { xp: 110, creditos: 15 },
-  h3: { xp: 160, creditos: 20 },
-  h4: { xp: 200, creditos: 25 },
-  h5: { xp: 260, creditos: 30 },
-  h6: { xp: 420, creditos: 60 },
-};
+// ── Joystick + botões de habilidade para toque ──────────────────
+function ControlosMovel({ motorRef, campeao }: { motorRef: RefObject<MotorArena | null>; campeao: CampeaoId }) {
+  const { t } = useLanguage();
+  const [centro, setCentro] = useState<{ x: number; y: number } | null>(null);
+  const [ponto, setPonto] = useState<{ x: number; y: number } | null>(null);
+  const zonaRef = useRef<HTMLDivElement | null>(null);
+
+  const aoBaixo = (e: React.PointerEvent) => {
+    const r = zonaRef.current!.getBoundingClientRect();
+    setCentro({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setPonto({ x: e.clientX - r.left, y: e.clientY - r.top });
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const aoMover = (e: React.PointerEvent) => {
+    if (!centro) return;
+    const r = zonaRef.current!.getBoundingClientRect();
+    const px = e.clientX - r.left, py = e.clientY - r.top;
+    setPonto({ x: px, y: py });
+    const dx = px - centro.x, dy = py - centro.y;
+    const d = Math.hypot(dx, dy);
+    const fator = d > 48 ? 48 / d : 1;
+    motorRef.current?.setJoystick((dx * fator) / 48, (dy * fator) / 48);
+  };
+  const aoLargar = () => { setCentro(null); setPonto(null); motorRef.current?.setJoystick(0, 0); };
+
+  const def = CAMPEOES[campeao];
+  return (
+    <>
+      <div
+        ref={zonaRef}
+        onPointerDown={aoBaixo}
+        onPointerMove={aoMover}
+        onPointerUp={aoLargar}
+        onPointerCancel={aoLargar}
+        className="absolute bottom-4 left-4 w-40 h-40 rounded-full bg-slate-900/35 border border-white/15 touch-none"
+        data-testid="arena-joystick"
+      >
+        {centro && ponto && (
+          <>
+            <span className="absolute w-12 h-12 rounded-full bg-white/25 border border-white/40" style={{ left: centro.x - 24, top: centro.y - 24 }} />
+            <span className="absolute w-8 h-8 rounded-full bg-white/60" style={{ left: ponto.x - 16, top: ponto.y - 16 }} />
+          </>
+        )}
+        {!centro && <span className="absolute inset-0 grid place-items-center text-[10px] text-slate-300">↑←↓→</span>}
+      </div>
+      <div className="absolute bottom-4 right-4 grid grid-cols-2 gap-2 touch-none" data-testid="arena-botoes-mobile">
+        {SLOTS.map((sl) => {
+          const h = def.habilidades[sl];
+          return (
+            <button
+              key={sl}
+              onPointerDown={(e) => { e.preventDefault(); motorRef.current?.usarHabilidade(sl); }}
+              className="w-14 h-14 rounded-full border-2 border-amber-400/80 bg-slate-900/80 text-amber-300 font-black text-lg active:scale-90"
+            >
+              {sl}
+              <span className="block text-[8px] text-sky-300 font-bold">{h.mana}</span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// nível aproximado para o menu (a regra real é xpParaSubir)
+function nivelAproximada(xpTotal: number): number {
+  let nivel = 1, resto = xpTotal;
+  while (nivel < 18) {
+    const precisa = 90 + (nivel - 1) * 48;
+    if (resto < precisa) break;
+    resto -= precisa; nivel++;
+  }
+  return nivel;
+}

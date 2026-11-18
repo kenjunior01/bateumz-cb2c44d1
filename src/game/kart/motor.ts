@@ -22,6 +22,7 @@ import {
   FaseCorrida, Pista, rng32,
 } from "./core.ts";
 import type { SnapKart, CorredorInicio } from "./mp.ts";
+import type { SomKart } from "../som.ts";
 
 // ── HUD que o React desenha ────────────────────────────────────
 export interface EstadoHudKart {
@@ -71,6 +72,8 @@ interface OptsMotor {
   idJogador?: number;                    // slot do MEU corredor (solo = 6)
   corredoresRede?: CorredorInicio[];     // descritores vindos do servidor (nomes/karts/cores reais)
   aoPulsarItemRede?: () => void;         // em rede o uso de item vai por MENSAGEM, não por física local
+  // ── v67 SOM (adaptador fino — o motor nunca importa o Web Audio) ──
+  som?: SomKart;
 }
 
 const COR_FAISCA_1 = 0x66ccff; // tier azul
@@ -131,6 +134,10 @@ export class MotorKart {
   private ultimoHud = 0;
   private derivaFase: 0 | 1 | 2 = 0;
   private ultRaio = 0;
+  // ── v67 SOM ──
+  private somBeep = 4;               // último beep da contagem (4 = ainda não tocou)
+  private somFase: FaseCorrida | null = null; // fase anterior (transição contagem→corrida = «JÁ»)
+  private somTerminei = false;       // fanfarra de chegada 1×
   private disposaveis: { dispose(): void }[] = [];
   private meshesKart = new Map<number, { grupo: THREE.Group; chama: THREE.Mesh; faiscas: THREE.Mesh; escudo: THREE.Mesh }>();
   private meshesProjetil = new Map<number, THREE.Mesh>();
@@ -526,7 +533,11 @@ export class MotorKart {
   }
   pausar(v: boolean): void {
     this.pausadoRef = v;
-    if (v) this.largarTudo();
+    if (v) {
+      this.largarTudo();
+      this.opts.som?.motor(0, false); // motor silencia na pausa
+      this.opts.som?.derrapagem(0);
+    }
   }
   estaPausado(): boolean { return this.pausadoRef; }
 
@@ -620,11 +631,35 @@ export class MotorKart {
         if (this.corrida.fase !== antes || this.corredorJogador().item !== itemAntes) this.empurrarHud();
       }
     }
+    this.atualizarSom();
     this.sincronizarVisual(agora);
     this.seguirCamara(dt);
     if (this.renderer) this.renderer.render(this.cena, this.camara);
     if (agora - this.ultimoHud > 110) this.empurrarHud();
   };
+
+  /** v67: alimenta os loops de áudio (motor/derrapagem) + beeps da contagem + fanfarra. Serve para solo E rede —
+   *  lê APENAS o estado do espelho (em rede o estado vem das snapshots a 10 Hz). */
+  private atualizarSom(): void {
+    const som = this.opts.som;
+    if (!som) return;
+    const j = this.corredorJogador();
+    // pausa silencia os loops (e impede que este método re-alimente o pitch)
+    if (this.pausadoRef) { som.motor(0, false); som.derrapagem(0); return; }
+    // motor + derrapagem (por frame — o pitch do motor precisa de suavidade)
+    const velMax = Math.max(1, j.stats?.velMax ?? 38);
+    som.motor(Math.min(1, Math.max(0, j.vel / velMax)), this.entrada.acelerar);
+    som.derrapagem(j.derrapando ? Math.min(1, 0.35 + j.vel / velMax * 0.65) : 0);
+    // contagem 3·2·1·JÁ — cruza INTEIROS descendentes (funciona a 10 Hz em rede)
+    if (this.corrida.fase === "contagem") {
+      const cont = Math.ceil(this.corrida.tempoContagem);
+      if (cont < this.somBeep && cont >= 1) { this.somBeep = cont; som.beep(cont); }
+    }
+    if (this.somFase === "contagem" && this.corrida.fase === "corrida") { som.beep(0); this.somBeep = 4; }
+    this.somFase = this.corrida.fase;
+    // fanfarra da CHEGADA (1×)
+    if (!this.somTerminei && j.terminou) { this.somTerminei = true; som.chegada(); }
+  }
 
   /** v66: interpola o mirror em direção à ÚLTIMA snapshot (10 Hz → 60 fps suave). */
   private interpolarRede(dt: number): void {
@@ -686,6 +721,7 @@ export class MotorKart {
     for (const ev of this.corrida.eventos) {
       algum = true;
       const e = ev as EventoCorrida;
+      this.opts.som?.evento(e as unknown as { t: string; id?: number; item?: string; fase?: number; por?: number; alvo?: number }, this.idJogador); // v67
       if (e.t === "golpe" && e.alvo === this.idJogador) { avisos.golpeRecebido = e.tipo; }
       else if (e.t === "raio") { avisos.golpeRecebido = "raio"; this.ultRaio = performance.now(); }
       else if (e.t === "item" && e.id === this.idJogador) { avisos.itemNovo = e.item; }
@@ -983,6 +1019,8 @@ export class MotorKart {
     window.removeEventListener("blur", this.largarTudo);
     document.removeEventListener("visibilitychange", this.largarTudo);
     this.largarTudo();
+    this.opts.som?.motor(0, false); // v67: silencia os loops ao morrer/limpar
+    this.opts.som?.derrapagem(0);
     this.cena.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();

@@ -13,9 +13,10 @@
 // Móvel: joystick + botões de habilidade.
 // ============================================================
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { Coins, Crosshair, Heart, Map as MapIcon, Pause, Play, Shield, Skull, Sparkles, Store, Swords, Users, Zap, X, ChevronUp } from "lucide-react";
+import { Coins, Crosshair, Heart, Map as MapIcon, Pause, Play, Shield, Skull, Sparkles, Store, Swords, Users, Volume2, VolumeX, Zap, X, ChevronUp } from "lucide-react";
 import { MotorArena, type EstadoHud, type AvisosMotor } from "@/game/arena/motor.ts";
 import { RedeArena, type EstadoMp } from "@/game/arena/mp.ts";
+import { somGlobal } from "@/game/som.ts";
 import {
   CAMPEOES, IDs_CAMPEOES, IDS_ITENS, ITENS,
   type CampeaoId, type SlotHabilidade,
@@ -54,6 +55,9 @@ declare global {
 interface MsgChat { nome: string; texto: string; meu?: boolean; sistema?: boolean }
 interface Toast { id: number; texto: string; tipo: "nivel" | "matou" | "erro" | "cura" | "corrigido" }
 
+// v67 SOM: efeitos da arena disparam dos AVISOS do motor + escutas da rede — ver MotorSom
+const SOM_ARENA_MUSICA = "arena" as const;
+
 const SLOTS: SlotHabilidade[] = ["Q", "W", "E", "R"];
 
 // ═══════════════════════════════════════════════════════════════
@@ -89,6 +93,34 @@ export default function BateuRPG({ onScore, onExit }: Props) {
     window.setTimeout(() => setToasts((at) => at.filter((x) => x.id !== id)), 2600);
   }, []);
 
+  // ── v67 SOM ──
+  const [mudo, setMudo] = useState(() => somGlobal().estaMudo());
+  const alternarSom = useCallback(() => {
+    const som = somGlobal();
+    som.despertar();
+    som.definirMudo(!som.estaMudo());
+    setMudo(som.estaMudo());
+    som.tocar("ui");
+  }, []);
+  // despertar no 1.º gesto (política de autoplay) + gancho honesto p/ testes + música do JOGO
+  useEffect(() => {
+    const som = somGlobal();
+    window.__som = som;
+    const gesto = () => som.despertar();
+    window.addEventListener("pointerdown", gesto);
+    window.addEventListener("keydown", gesto);
+    return () => {
+      window.removeEventListener("pointerdown", gesto);
+      window.removeEventListener("keydown", gesto);
+      som.musica(null);
+      som.pararLoops();
+      window.__som = undefined;
+    };
+  }, []);
+  useEffect(() => {
+    if (fase === "jogando") somGlobal().musica(SOM_ARENA_MUSICA);
+  }, [fase]);
+
   // ── ciclo de vida do jogo ─────────────────────────────────────
   useEffect(() => {
     if (fase !== "jogando" || !canvasRef.current) return;
@@ -113,17 +145,18 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       rede: mp,
       aoHud: (e) => setHud(e),
       aoAviso: (a: AvisosMotor) => {
-        if (a.danoRecebido > 0) setFlashDano(Date.now());
+        if (a.danoRecebido > 0) { setFlashDano(Date.now()); somGlobal().tocar("arenaGolpe"); } // v67
         if (a.subiuNivel) {
           setNivelToast(Date.now());
+          somGlobal().tocar("arenaNivel"); // v67
           pushToast(t("arena.subiuNivel", { n: String(motorRef.current?.estadoHud().nivel ?? "") }), "nivel");
         }
-        if (a.matou) pushToast(t("arena.matou", { mob: t(`arena.mob.${a.matou}`) }), "matou");
-        if (a.cura > 0) pushToast(`+${Math.round(a.cura)}`, "cura");
-        if (a.erroHabilidade === "mana") pushToast(t("arena.erro.mana"), "erro");
-        if (a.erroHabilidade === "cd") pushToast(t("arena.erro.cd"), "erro");
+        if (a.matou) { somGlobal().tocar("arenaAbate"); pushToast(t("arena.matou", { mob: t(`arena.mob.${a.matou}`) }), "matou"); } // v67
+        if (a.cura > 0) { somGlobal().tocar("arenaCura"); pushToast(`+${Math.round(a.cura)}`, "cura"); } // v67
+        if (a.erroHabilidade === "mana") { somGlobal().tocar("erro"); pushToast(t("arena.erro.mana"), "erro"); } // v67
+        if (a.erroHabilidade === "cd") { somGlobal().tocar("erro"); pushToast(t("arena.erro.cd"), "erro"); } // v67
       },
-      aoGolpeMob: (id, dano, x, z) => rede.reportarGolpe(id, dano, x, z),
+      aoGolpeMob: (id, dano, x, z) => { somGlobal().tocar("arenaAcerto"); rede.reportarGolpe(id, dano, x, z); }, // v67: o MEU golpe acertou
       aoMorte: () => { /* o motor já avisa a rede */ },
       aoReviver: () => { /* o motor já renasce com a posição real */ },
     });
@@ -136,21 +169,29 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       aoFere: (dano, x, z) => motor.receberFere(dano, x, z),
       aoGolpeMob: (alvoId, dano, x, z) => motor.receberGolpeMob(alvoId, dano, x, z),
       aoMobMorte: (id, tipo, assassino, xp, essencia) => motor.receberMobMorte(id, tipo, assassino, xp, essencia),
-      aoFala: (nomeMsg, texto) => setChat((at) => [...at.slice(-40), { nome: nomeMsg, texto }]),
+      aoFala: (nomeMsg, texto) => {
+        setChat((at) => [...at.slice(-40), { nome: nomeMsg, texto }]);
+        if (nomeMsg !== nomeHeroi) somGlobal().tocar("arenaChat"); // v67: mensagem dos OUTROS
+      },
       aoMudancaEstado: (e) => setMpEstado(e),
       aoCorrigido: (motivo) => pushToast(t("arena.corrigido", { motivo }), "corrigido"),
       // ── v64 PvP ──
       aoEu: (eu) => motor.receberEu(eu),
       aoMorteHeroi: (id, vitima, nomeAssassino) => {
         motor.receberMorteHeroi(id, vitima, nomeAssassino);
+        if (vitima === nomeHeroi) somGlobal().tocar("arenaMorte"); // v67: EU morri
         setChat((at) => [...at.slice(-40), {
           nome: "Arena",
           texto: nomeAssassino ? t("arena.pvp.abateu", { a: nomeAssassino, v: vitima }) : t("arena.pvp.mobsAbateu", { v: vitima }),
           sistema: true,
         }]);
       },
-      aoRenasceuHeroi: (id, x, z) => motor.receberRenasceuHeroi(id, x, z),
+      aoRenasceuHeroi: (id, x, z) => {
+        motor.receberRenasceuHeroi(id, x, z);
+        if (id === rede.meuId()) somGlobal().tocar("arenaRespawn"); // v67: EU renasci
+      },
       aoAbatePvp: (vitima, essencia, _xp, _abates) => {
+        somGlobal().tocar("arenaAbate"); // v67
         pushToast(t("arena.pvp.abateste", { v: vitima, e: String(essencia) }), "matou");
       },
       aoGolpeHeroi: (alvoId, dano, x, z, de) => motor.receberGolpeHeroi(alvoId, dano, x, z, de),
@@ -309,6 +350,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
                 };
                 guardarSave(s2);
                 setSave(s2);
+                somGlobal().despertar(); // v67: o «entrar» é o gesto que nasce o AudioContext
                 setFase("jogando");
               }}
               className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 py-3 font-black text-white hover:brightness-110 active:scale-95"
@@ -327,6 +369,13 @@ export default function BateuRPG({ onScore, onExit }: Props) {
           )}
           <p className="mt-4 text-[11px] text-slate-500 max-w-lg text-center">{t("arena.menu.nota")}</p>
           <p className="mt-1 text-[11px] text-fuchsia-300/80 max-w-lg text-center" data-testid="arena-pvp-nota">{t("arena.pvp.nota")}</p>
+          {/* v67 SOM: botão honesto — o estado vive no aparelho */}
+          <div className="mt-3 flex justify-center">
+            <button onClick={alternarSom} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10" data-testid="arena-som">
+              {mudo ? <VolumeX className="w-4 h-4 text-slate-400" /> : <Volume2 className="w-4 h-4 text-emerald-300" />}
+              {t(mudo ? "som.ligar" : "som.desligar")}
+            </button>
+          </div>
         </div>
       </div>
     );

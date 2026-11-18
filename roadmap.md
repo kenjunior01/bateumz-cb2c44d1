@@ -42,3 +42,11 @@
 - [x] Núcleo multi isomórfico: passoCorpo extraído do passoCorrida (solo intato — 35 testes verdes), novaCorridaOnline, passoCorridaMulti (fim quando todos os humanos chegam + fimSala), validaOlaKart no core — docs/REA-kart-online-v66.md §2.
 - [x] Cliente: RedeKart (backoff, estados honestos), motor com mirror + interpolação 10→60 fps (a entrada vai para o servidor), UI «CORRER ONLINE» com lobby/badge, payout DO APARELHO — docs/REA-kart-online-v66.md §4.
 - [x] Prova: test-kart-online-v66.mjs 61/61 ×2 (núcleo + servidor real + E2E com 2 browsers na MESMA sala) · regressão kart solo 65/0 · arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-kart-online-v66.md §5.
+
+## v67 — SOM E MÚSICA + furos reais de física (2026-11-19)
+
+- [x] Motor de som 100% sintetizado (src/game/som.ts, ZERO assets): 30 efeitos + loops (motor/derrapagem do kart com pitch pela velocidade) + música procedural (menu/corrida/arena), mudo persistido no aparelho, política de autoplay respeitada — docs/REA-som-v67.md §2.
+- [x] Kart com som completo: contagem 3-2-1-JÁ, motor/derrapagem por frame (solo E rede), caixa/moeda/itens/hits/mini-turbo/rampa/fanfarra de chegada, botão SOM no menu e na pausa — docs/REA-som-v67.md §3.
+- [x] Arena com som: dano/nível/abate/cura/erro/chat/morte/respawn + música ambiente, botão SOM no menu — docs/REA-som-v67.md §4.
+- [x] Furos reais fechados com repro: entrada online ONE-SHOT aliaseia com o tick (FIX LATCH), colisão kart-kart drenava por step de contacto contínuo e congelava pilhas nos cotovelos (FIX: só perde na aproximação), variante caixa morta, addInitScript no reload, pausa re-alimentava o pitch — docs/REA-som-v67.md §5.
+- [x] Prova: test-som-v67.mjs 59/59 ×2 · kart online 61/0 ×2 · kart solo 65/0 ×2 · arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-som-v67.md §6.

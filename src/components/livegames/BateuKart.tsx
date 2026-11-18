@@ -16,10 +16,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, CarFront, Check, ChevronUp, Coins, Flag, Gauge,
-  Lock, Pause, Play, Timer, Trophy, Wifi, Wrench, X, Zap,
+  Lock, Pause, Play, Timer, Trophy, Volume2, VolumeX, Wifi, Wrench, X, Zap,
 } from "lucide-react";
 import { MotorKart, type EstadoHudKart, type AvisosKart, type GanchosKart } from "@/game/kart/motor.ts";
 import { RedeKart, type EstadoMpKart } from "@/game/kart/mp.ts";
+import { adaptadorSomKart, somGlobal, type MotorSom } from "@/game/som.ts";
 import {
   IDS_KARTS, IDS_MELHORIAS, PISTAS, KARTS, custoMelhoria, kartDesbloqueado,
   nivelDeXp, pistaPorId, recompensaCorrida, statsDe, validarSaveKart,
@@ -55,7 +56,7 @@ function guardarSave(s: SaveKart): void {
 const ehToque = typeof window !== "undefined" && ("ontouchstart" in window || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
 
 declare global {
-  interface Window { __kart?: GanchosKart }
+  interface Window { __kart?: GanchosKart; __som?: MotorSom }
 }
 
 interface Toast { id: number; texto: string; tipo: "item" | "golpe" | "info" | "turbo" }
@@ -92,6 +93,8 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const [lobbyInfo, setLobbyInfo] = useState<{ espera: number; presentes: number; teto: number } | null>(null);
   const [avisoRede, setAvisoRede] = useState<string | null>(null);
   const [nomePiloto] = useState(() => `Piloto-${Math.floor(1000 + Math.random() * 9000)}`);
+  // ── v67 SOM ──
+  const [mudo, setMudo] = useState(() => somGlobal().estaMudo());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const miniRef = useRef<HTMLCanvasElement | null>(null);
   const motorRef = useRef<MotorKart | null>(null);
@@ -120,6 +123,35 @@ export default function BateuKart({ onScore, onExit }: Props) {
   useEffect(() => {
     motorRef.current?.pausar(pausa);
   }, [pausa]);
+
+  // ── v67 SOM: despertar no 1.º gesto (política de autoplay) + gancho honesto p/ testes ──
+  useEffect(() => {
+    const som = somGlobal();
+    window.__som = som;
+    const gesto = () => som.despertar();
+    window.addEventListener("pointerdown", gesto);
+    window.addEventListener("keydown", gesto);
+    return () => {
+      window.removeEventListener("pointerdown", gesto);
+      window.removeEventListener("keydown", gesto);
+      som.musica(null);
+      som.pararLoops();
+      window.__som = undefined;
+    };
+  }, []);
+
+  // ── v67 SOM: música segue a fase (menu = tema do menu · corrida = tema de corrida) ──
+  useEffect(() => {
+    somGlobal().musica(fase === "corrida" ? "corrida" : "menu");
+  }, [fase]);
+
+  const alternarSom = useCallback(() => {
+    const som = somGlobal();
+    som.despertar();
+    som.definirMudo(!som.estaMudo());
+    setMudo(som.estaMudo());
+    som.tocar("ui");
+  }, []);
 
   // ── v66: cliente da sala de corridas (uma instância por componente) ──
   useEffect(() => {
@@ -178,6 +210,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
       nomeJogador: inicioRede ? nomePiloto : "Tu",
       recordeAnterior,
       leve,
+      som: adaptadorSomKart(somGlobal()), // v67
       aoHud: (e) => {
         // v66 ONLINE: o payout é DO APARELHO — calculado localmente 1× quando a sala fecha
         if (e.fase === "fim" && !e.payout && modoRedeRef.current && !fimRedeRef.current) {
@@ -340,6 +373,14 @@ export default function BateuKart({ onScore, onExit }: Props) {
           </h1>
           <p className="mt-3 max-w-2xl text-center text-slate-300 text-sm sm:text-base">{t("kart.menu.sub")}</p>
           <p className="mt-1 text-center text-[11px] text-slate-400" data-testid="kart-menu-nota">{t("kart.menu.nota")}</p>
+
+          {/* v67 SOM: botão honesto — o estado vive no aparelho */}
+          <div className="mt-2 flex justify-center">
+            <button onClick={alternarSom} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10" data-testid="kart-som">
+              {mudo ? <VolumeX className="w-4 h-4 text-slate-400" /> : <Volume2 className="w-4 h-4 text-emerald-300" />}
+              {t(mudo ? "som.ligar" : "som.desligar")}
+            </button>
+          </div>
 
           {/* progressão */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-200 rounded-2xl border border-white/10 bg-white/5 px-5 py-3" data-testid="kart-save-info">
@@ -641,6 +682,9 @@ export default function BateuKart({ onScore, onExit }: Props) {
           <div className="rounded-3xl border border-white/15 bg-slate-900/95 p-6 w-72 text-center">
             <h2 className="text-xl font-black text-white mb-4">{t("kart.pausa.titulo")}</h2>
             <button onClick={() => setPausa(false)} className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white mb-2 hover:brightness-110" data-testid="kart-retomar">{t("kart.pausa.retomar")}</button>
+            <button onClick={alternarSom} className="w-full rounded-xl bg-slate-800 border border-white/10 px-4 py-3 font-bold text-slate-100 mb-2 hover:brightness-110" data-testid="kart-som-pausa">
+              {mudo ? <span className="inline-flex items-center gap-2 justify-center"><VolumeX className="w-4 h-4" /> {t("som.ligar")}</span> : <span className="inline-flex items-center gap-2 justify-center"><Volume2 className="w-4 h-4" /> {t("som.desligar")}</span>}
+            </button>
             <button onClick={() => { motorRef.current?.pausar(false); sair(); }} className="w-full rounded-xl bg-slate-700 px-4 py-3 font-bold text-white hover:brightness-110" data-testid="kart-sair-pausa">{t("kart.pausa.sair")}</button>
           </div>
         </div>

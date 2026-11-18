@@ -112,17 +112,26 @@ setInterval(() => {
   }
   if (sala !== "corrida" || !corrida) return;
 
-  // entradas por corredor (a ÚLTIMA de cada socket; uso de item pendente até processável)
+  // entradas por corredor — LATCH (v67): a ÚLTIMA intenção de movimento PERSISTE até
+  // chegar outra. Consumir one-shot aliaseia com o tick de 33 ms (cliente a ~30 Hz:
+  // em fases más do beat só 1/3 dos ticks tem acelerador — o kart rasteja; com jitter
+  // de rede real, morre a meio da corrida). Latch = o cliente honesto não perde nada
+  // e o batoteiro não ganha nada (mantém a MESMA intenção que já mandava).
+  // O uso de item continua EDGE: pendente até processável, nunca se repete.
   const entradas = {};
   for (const j of jogadores.values()) {
     if (j.corredorId === undefined) continue;
-    entradas[j.corredorId] = j.ent ?? entradaParada();
-    j.ent = null;
+    if (j.ent) {
+      j.entMov = { acelerar: j.ent.acelerar, travar: j.ent.travar, virar: j.ent.virar, derrapar: j.ent.derrapar };
+      j.ent = null;
+    }
+    const mov = j.entMov ?? entradaParada();
     if (j.entUso) {
       const c = corrida.corredores.find((x) => x.id === j.corredorId);
       // o uso fica PENDENTE durante um stun (o piloto não pode usar a girar)
-      if (c && c.stun <= 0 && !c.terminou) { entradas[j.corredorId].usarItem = true; j.entUso = false; }
+      if (c && c.stun <= 0 && !c.terminou) { entradas[j.corredorId] = { ...mov, usarItem: true }; j.entUso = false; continue; }
     }
+    entradas[j.corredorId] = { ...mov, usarItem: false };
   }
   passoCorridaMulti(corrida, entradas, TICK_MS / 1000);
   if (corrida.eventos.length) { eventosPendentes.push(...corrida.eventos); corrida.eventos.length = 0; }
@@ -227,12 +236,12 @@ wss.on("connection", (ws) => {
 
     if (t === "ent") {
       // INTENÇÃO, não posição: nada aqui é fisicamente confiável — o servidor simula
+      if (m.u) jogador.entUso = true; // uso por ent (vestigial) unifica com o EDGE "uso"
       jogador.ent = {
         acelerar: !!m.a,
         travar: !!m.t2,
         virar: Math.max(-1, Math.min(1, Number(m.v) || 0)),
         derrapar: !!m.d,
-        usarItem: !!m.u, // pulsação: consumida no próximo passo
       };
       jogador.ultEntMs = Date.now();
       return;

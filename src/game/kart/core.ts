@@ -776,7 +776,11 @@ function passoCorpo(e: EstadoCorrida, entradas: Record<number, EntradaKart>, dtC
     passoKart(e, c, ent, stats, dtC);
   }
 
-  // colisões kart-kart
+  // colisões kart-kart — o CHOQUE perde velocidade, o CONTACTO CONTÍNUO não (v67):
+  // drenar ×0,92 por STEP de sobreposição congelava pilhas de karts nos cotovelos
+  // (ambos a 4 u/s com acelerar preso — o bot de trás empurra, o de cima prende).
+  // Agora só perde quem se APROXIMA (fecho > 0): batida continua a custar, rastejar
+  // lado a lado / pilha temporária mantém o motor a funcionar e a pilha desfaz-se.
   for (let i = 0; i < e.corredores.length; i++) {
     for (let j = i + 1; j < e.corredores.length; j++) {
       const a = e.corredores[i], b = e.corredores[j];
@@ -787,7 +791,10 @@ function passoCorpo(e: EstadoCorrida, entradas: Record<number, EntradaKart>, dtC
       const nx = dx / d, nz = dz / d;
       a.x -= nx * sobre; a.z -= nz * sobre;
       b.x += nx * sobre; b.z += nz * sobre;
-      a.vel *= 0.92; b.vel *= 0.92;
+      const vax = Math.sin(a.dirAng) * a.vel, vaz = Math.cos(a.dirAng) * a.vel;
+      const vbx = Math.sin(b.dirAng) * b.vel, vbz = Math.cos(b.dirAng) * b.vel;
+      const fecho = (vax - vbx) * nx + (vaz - vbz) * nz; // >0 = um avança contra o outro (aproximação)
+      if (fecho > 0.5) { a.vel *= 0.92; b.vel *= 0.92; }
     }
   }
 

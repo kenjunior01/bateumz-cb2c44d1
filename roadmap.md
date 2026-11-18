@@ -18,3 +18,11 @@
 - [x] Reconstruir o RPG como MMO de arena em vista de topo estilo League of Legends (campeões QWER, click-to-move, fonte/camps/Barão/Dragão) — docs/REA-arena-v63.md §2.
 - [x] Multi-jogador real estilo hordes.io (servidor autoritativo 30 TPS, raio de interesse, cap 150, chat global, honesto online×solo) — docs/REA-arena-v63.md §2.4.
 - [x] Prova: test-arena-rpg-v63.mjs 77/77 ×2 (núcleo + servidor real + E2E com 2 browsers no mesmo mundo) · test-web-v262 11/0 · tsc 0 · build OK.
+
+## v64 — PvP da arena (2026-11-18)
+
+- [x] Dano PvP AUTORITATIVO: o cliente só declara alvo+slot — o valor é do servidor (danoAtaqueBasico/danoHabilidade × reduzArmadura), campo `dano` do pacote é ignorado — docs/REA-arena-v64.md §1-2.
+- [x] Vida/mana/escudo/progresso AUTORITATIVOS no servidor: pos sem progresso, regeneração no tick, morte e renascimento declarados pelo servidor, recompensas de abate/mob pelo servidor — docs/REA-arena-v64.md §1.
+- [x] Regras LoL: fonte como zona segura para os dois lados, cadência de básico por ataquePS, cast com cd/mana autoritativos, um cast = um alvo, recompensa por abate escala com a vítima — docs/REA-arena-v64.md §2.
+- [x] Cliente: alvo-herói com prioridade de clique + pursuit + auto-attack, habilidades/projéteis detetam heróis, kill feed, overlay «Abatido por X», nota PvP no menu — docs/REA-arena-v64.md §3.
+- [x] Prova: test-pvp-v64.mjs 53/53 ×2 (núcleo + servidor real com anti-batota provado + E2E com 2 browsers a lutar até à morte) · test-arena-rpg-v63 77/0 · test-web-v262 11/0 · tsc 0 · build OK — docs/REA-arena-v64.md §5.

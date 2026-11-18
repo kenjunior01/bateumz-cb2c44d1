@@ -12,7 +12,8 @@
 // ============================================================
 import {
   validaOla, validaGolpe, limpaFala, falaPermitida, FALA_INTERVALO_MS,
-  type CampeaoId, type EstadoHeroi, type MobEstado, type AnimHeroi,
+  validaGolpePvp, validaCast, type SlotOuBasico,
+  type CampeaoId, type EstadoHeroi, type MobEstado, type AnimHeroi, type SlotHabilidade,
 } from "./core.ts";
 
 export type EstadoLigacao = "a_ligar" | "online" | "solo" | "fechado";
@@ -23,6 +24,14 @@ export interface EstadoMp {
   latencia: number;      // ms do ping real
   url: string;
   corrigidos: number;
+}
+
+/** Estado AUTORITATIVO do próprio herói (servidor v64 — o cliente reconcilia). */
+export interface EuRede {
+  hp: number; hpMax: number; mp: number; mpMax: number;
+  morto: boolean; escudo: number;
+  essencia: number; abates: number;
+  nivel: number; xpNoNivel: number; xpParaSubir: number;
 }
 
 export interface OlaRede {
@@ -43,6 +52,12 @@ export interface EscutasRede {
   aoFala: (nome: string, texto: string) => void;
   aoMudancaEstado: (e: EstadoMp) => void;
   aoCorrigido: (motivo: string) => void;
+  // v64 PvP — estado autoritativo e eventos de heróis
+  aoEu: (eu: EuRede) => void;
+  aoMorteHeroi: (id: number, vitima: string, nomeAssassino: string) => void;
+  aoRenasceuHeroi: (id: number, x: number, z: number) => void;
+  aoAbatePvp: (vitima: string, essencia: number, xp: number, abates: number) => void;
+  aoGolpeHeroi: (alvoId: number, dano: number, x: number, z: number, de: number) => void;
 }
 
 const HZ_POS = 100;           // publicar posição a cada 100 ms (10 Hz)
@@ -64,6 +79,7 @@ export class RedeArena {
   private timerPing: number | null = null;
   private ultimoPosMs = 0;
   private ultimoGolpeMs = 0;
+  private ultimoPvpMs = 0;
   private ultimoFalaMs = 0;
   private ultimaPos: { x: number; z: number; ry: number; anim: AnimHeroi; hp: number; hpMax: number; mp: number; mpMax: number; nivel: number; abates: number; essencia: number; itens: Record<string, number>; campeao: CampeaoId } | null = null;
   private fechadoPeloUtilizador = false;
@@ -134,10 +150,12 @@ export class RedeArena {
       this.id = typeof m.id === "number" ? m.id : -1;
       this.jogadores = typeof m.jogadores === "number" ? m.jogadores : 1;
       this.escutas?.aoSnapshot(this.heroisDe(m.jogadoresLista), this.mobsDe(m.mobsLista));
+      if (m.eu && typeof m.eu === "object") this.escutas?.aoEu(this.euDe(m.eu));
       this.setEstado("online");
     } else if (t === "snap") {
       this.escutas?.aoSnapshot(this.heroisDe(m.j), this.mobsDe(m.m));
       this.jogadores = Array.isArray(m.j) ? m.j.length + 1 : this.jogadores;
+      if (m.eu && typeof m.eu === "object") this.escutas?.aoEu(this.euDe(m.eu));
       this.setEstado("online");
     } else if (t === "fere") {
       const dano = typeof m.dano === "number" ? m.dano : 0;
@@ -153,6 +171,28 @@ export class RedeArena {
       const assassino = typeof m.assassino === "number" ? m.assassino : -1;
       if (id >= 0) {
         this.escutas?.aoMobMorte(id, String(m.tipo ?? ""), assassino, Number(m.xp) || 0, Number(m.essencia) || 0);
+      }
+    } else if (t === "morteheroi") {
+      const id = typeof m.id === "number" ? m.id : -1;
+      if (id >= 0) {
+        this.escutas?.aoMorteHeroi(id, String(m.vitima ?? ""), String(m.nomeAssassino ?? ""));
+      }
+    } else if (t === "renasceu") {
+      const id = typeof m.id === "number" ? m.id : -1;
+      const x = typeof m.x === "number" ? m.x : 0;
+      const z = typeof m.z === "number" ? m.z : 0;
+      if (id >= 0) this.escutas?.aoRenasceuHeroi(id, x, z);
+    } else if (t === "abate-pvp") {
+      const vitima = String(m.vitima ?? "");
+      if (vitima) {
+        this.escutas?.aoAbatePvp(vitima, Math.max(0, Number(m.essencia) || 0), Math.max(0, Number(m.xp) || 0), Math.max(0, Math.floor(Number(m.abates) || 0)));
+      }
+    } else if (t === "golpeheroi") {
+      const alvoId = typeof m.alvoId === "number" ? m.alvoId : -1;
+      const dano = typeof m.dano === "number" ? m.dano : 0;
+      const de = typeof m.de === "number" ? m.de : -1;
+      if (alvoId >= 0 && dano > 0) {
+        this.escutas?.aoGolpeHeroi(alvoId, dano, Number(m.x) || 0, Number(m.z) || 0, de);
       }
     } else if (t === "fala") {
       const nome = String(m.nome ?? "");
@@ -189,6 +229,23 @@ export class RedeArena {
       });
     }
     return out;
+  }
+
+  /** Estado próprio autoritativo — campos podres nunca derrubam o cliente. */
+  private euDe(bruto: unknown): EuRede {
+    const o = (bruto && typeof bruto === "object" ? bruto : {}) as Record<string, unknown>;
+    const num = (v: unknown, min: number, max: number) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
+    };
+    return {
+      hp: num(o.hp, 0, 1e6), hpMax: Math.max(1, num(o.hpMax, 1, 1e6)),
+      mp: num(o.mp, 0, 1e6), mpMax: Math.max(1, num(o.mpMax, 1, 1e6)),
+      morto: o.morto === true, escudo: num(o.escudo, 0, 1e6),
+      essencia: num(o.essencia, 0, 1e7), abates: Math.floor(num(o.abates, 0, 1e6)),
+      nivel: Math.max(1, Math.min(18, Math.floor(num(o.nivel, 1, 18)))),
+      xpNoNivel: num(o.xpNoNivel, 0, 1e6), xpParaSubir: Math.max(1, num(o.xpParaSubir, 1, 1e6)),
+    };
   }
 
   private mobsDe(bruto: unknown): MobEstado[] {
@@ -252,6 +309,26 @@ export class RedeArena {
     const g = validaGolpe({ id, dano, x, z });
     if (g && this.ws?.readyState === WebSocket.OPEN && this.estadoLigacao === "online") {
       this.ws.send(JSON.stringify({ t: "golpe", ...g }));
+    }
+  }
+
+  // ── v64 PvP ──────────────────────────────────────────────────
+  /** Cast de habilidade (cd/mana/efeitos próprios validados pelo servidor). */
+  castar(slot: SlotHabilidade): void {
+    const c = validaCast({ slot });
+    if (c && this.ws?.readyState === WebSocket.OPEN && this.estadoLigacao === "online") {
+      this.ws.send(JSON.stringify({ t: "cast", slot: c.slot }));
+    }
+  }
+
+  /** «Ferí o herói Y com a habilidade X» — SEM dano: o valor é do servidor. */
+  golpearHeroi(alvoId: number, hab: SlotOuBasico): void {
+    const agora = Date.now();
+    if (agora - this.ultimoPvpMs < HZ_GOLPE) return;
+    this.ultimoPvpMs = agora;
+    const c = validaGolpePvp({ alvoId, hab });
+    if (c && this.ws?.readyState === WebSocket.OPEN && this.estadoLigacao === "online") {
+      this.ws.send(JSON.stringify({ t: "golpepvp", alvoId: c.alvoId, hab: c.hab }));
     }
   }
 

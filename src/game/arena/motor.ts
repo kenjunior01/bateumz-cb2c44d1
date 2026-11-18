@@ -20,10 +20,10 @@
 import * as THREE from "three";
 import {
   CAMPEOES, MOBS, CAMPS, type CampeaoId, type SlotHabilidade,
-  type MobEstado, type AnimHeroi, type EstadoHeroi,
+  type MobEstado, type AnimHeroi, type EstadoHeroi, type SlotOuBasico,
   NIVEL_MAX, POS_BASE, RAIO_FONTE, REGEN_FONTE_HP, REGEN_FONTE_MP, TEMPO_RESPAWN,
   RAIO_INTERESSE,
-  statsDe, danoHabilidade, curaHabilidade, nivelDeXp, xpParaSubir,
+  statsDe, danoHabilidade, curaHabilidade, nivelDeXp, xpParaSubir, xpTotalAteNivel,
   reduzArmadura, dist, dist2, dentroMundo, recolherPos, posReviver,
   custoItem, compraValida, dpsTeto, type StatsCampeao,
 } from "./core.ts";
@@ -34,7 +34,7 @@ import {
 import {
   criarMobs, passoMobs, aplicarDanoMob, eventosVazios, type MobSim,
 } from "./simulacao.ts";
-import type { RedeArena, EstadoMp } from "./mp.ts";
+import type { RedeArena, EstadoMp, EuRede } from "./mp.ts";
 
 // ── Contrato com a UI (React) ──────────────────────────────────
 export interface EstadoHud {
@@ -49,6 +49,8 @@ export interface EstadoHud {
   emFonte: boolean; pressa: boolean;
   fps: number;
   alvoTipo: string;
+  alvoHeroiNome: string;
+  mortePor: string;      // v64 PvP: nome do assassino ("" = monstros)
 }
 
 export interface AvisosMotor {
@@ -291,8 +293,9 @@ const GEO_ANEL = new THREE.RingGeometry(0.62, 0.78, 28);
 const GEO_PROJETIL = new THREE.SphereGeometry(0.18, 10, 8);
 
 interface MobVisual { grupo: THREE.Group; barra: BarraEntidade; ultimoHp: number; }
-interface HeroiVisual { grupo: THREE.Group; barra: BarraEntidade; alvoX: number; alvoZ: number; alvoRy: number; }
-interface Projetil { malha: THREE.Mesh; vx: number; vz: number; vida: number; dano: number; habilidades: boolean; }
+interface HeroiVisual { id: number; grupo: THREE.Group; barra: BarraEntidade; alvoX: number; alvoZ: number; alvoRy: number;
+  nome: string; campeao: CampeaoId; nivel: number; hp: number; hpMax: number; morto: boolean; }
+interface Projetil { malha: THREE.Mesh; vx: number; vz: number; vida: number; dano: number; habilidades: boolean; slot: SlotOuBasico; }
 interface Particula { sprite: THREE.Sprite; ctx: CanvasRenderingContext2D; tex: THREE.CanvasTexture; vida: number; vidaMax: number; vx: number; vy: number; vz: number; }
 interface FxAnel { malha: THREE.Mesh; vida: number; vidaMax: number; }
 
@@ -320,6 +323,9 @@ export class MotorArena {
   private morto = false; private respawnAte = 0;
   private pressaAte = 0;
   private alvoMobId = -1;
+  private alvoHeroiId = -1;      // v64 PvP: alvo é um herói INIMIGO
+  private mortePor = "";         // nome do assassino ("" = monstros)
+  private euUltima: EuRede | null = null;
 
   // movimento
   private px = 0; private pz = 0; private ry = 0;
@@ -590,9 +596,12 @@ export class MotorArena {
     if (this.morto) return;
     if (ev.button !== 0 && ev.button !== 2) return;
     this.calcularCursor(ev);
+    // v64 PvP: HERÓI primeiro (prioridade de target estilo LoL), depois mobs
+    const heroi = this.heroiMaisPertoDoCursor(2.9);
+    if (heroi) { this.alvoHeroiId = heroi.id; this.alvoMobId = -1; this.alvoMoverX = null; this.alvoMoverZ = null; return; }
     const mob = this.mobMaisPertoDoCursor(3.2);
-    if (mob) { this.alvoMobId = mob.id; this.alvoMoverX = null; this.alvoMoverZ = null; return; }
-    this.alvoMobId = -1;
+    if (mob) { this.alvoMobId = mob.id; this.alvoHeroiId = -1; this.alvoMoverX = null; this.alvoMoverZ = null; return; }
+    this.alvoMobId = -1; this.alvoHeroiId = -1;
     this.alvoMoverX = this.cursorMundo.x;
     this.alvoMoverZ = this.cursorMundo.z;
   };
@@ -608,7 +617,7 @@ export class MotorArena {
     if (k === "q" || k === "e" || k === "r") { ev.preventDefault(); this.usarHabilidade(k.toUpperCase() as SlotHabilidade); }
     // W do teclado move; a habilidade W usa o botão/botão móvel + tecla F (padrão acessível)
     if (k === "f") { ev.preventDefault(); this.usarHabilidade("W"); }
-    if (k === "s" || k === " ") { this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; }
+    if (k === "s" || k === " ") { this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; this.alvoHeroiId = -1; }
   };
   private aoTeclaAcima = (ev: KeyboardEvent) => { this.teclas[ev.key.toLowerCase()] = false; };
   private aoPerderFoco = () => { this.teclas = {}; this.joyX = 0; this.joyZ = 0; };
@@ -670,11 +679,32 @@ export class MotorArena {
     return this.listaMobs().filter((m) => dist2(this.px, this.pz, m.x, m.z) < r2).length;
   }
 
+  // ═══════════ v64 PvP: heróis inimigos como alvos ═══════════
+  private listaHerois(): HeroiVisual[] {
+    return Array.from(this.remotos.values());
+  }
+  private heroiMaisPertoDoCursor(margem: number): HeroiVisual | null {
+    let melhor: HeroiVisual | null = null;
+    let melhorD = margem;
+    for (const h of this.listaHerois()) {
+      if (h.morto) continue;
+      const d = dist(this.cursorMundo.x, this.cursorMundo.z, h.alvoX, h.alvoZ);
+      if (d - 1.2 < melhorD) { melhorD = Math.max(0, d - 1.2); melhor = h; }
+    }
+    return melhor;
+  }
+  private obterHeroiAlvo(): HeroiVisual | null {
+    if (this.alvoHeroiId < 0) return null;
+    const h = this.remotos.get(this.alvoHeroiId);
+    if (!h || h.morto) return null;
+    return h;
+  }
+
   // ═══════════════════════ API PÚBLICA (UI) ═══════════════════════
   setJoystick(x: number, z: number): void {
     this.joyX = Math.max(-1, Math.min(1, x));
     this.joyZ = Math.max(-1, Math.min(1, z));
-    if (this.joyX !== 0 || this.joyZ !== 0) { this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; }
+    if (this.joyX !== 0 || this.joyZ !== 0) { this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; this.alvoHeroiId = -1; }
   }
 
   /** Cast com ponto-alvo explícito (desktop: cursor; mobile: auto). */
@@ -706,6 +736,8 @@ export class MotorArena {
     this.mp -= def.mana;
     this.cds[slot] = def.cd;
     this.ry = Math.atan2(tx - this.px, tz - this.pz) || this.ry;
+    // v64 PvP: o servidor tem de SABER do cast (cd/mana/escudo/cura autoritativos)
+    this.opts.rede?.castar(slot);
     this.executarHabilidade(slot, def, tx, tz);
     return true;
   }
@@ -761,23 +793,23 @@ export class MotorArena {
     if (def.dano > 0) {
       const danoBruto = danoHabilidade(def, nivel, poder);
       if (def.velocidadeProjetil) {
-        this.dispararProjetil(tx, tz, danoBruto, def.velocidadeProjetil, true);
+        this.dispararProjetil(tx, tz, danoBruto, def.velocidadeProjetil, true, slot);
       } else if (def.area && def.area > 0) {
         if (slot === "R" && this.opts.campeao === "vex") {
           const porPulso = Math.max(1, Math.round(danoBruto / 4));
           for (let i = 0; i < 4; i++) {
             window.setTimeout(() => {
               if (this.destruido || this.morto) return;
-              this.danificarEmArea(tx, tz, def.area ?? 3, porPulso);
+              this.danificarEmArea(tx, tz, def.area ?? 3, porPulso, slot);
               this.fxAnel(tx, tz, def.area ?? 3, new THREE.Color(0x9adf6a));
             }, i * 500);
           }
         } else {
-          this.danificarEmArea(tx, tz, def.area, danoBruto);
+          this.danificarEmArea(tx, tz, def.area, danoBruto, slot);
           this.fxAnel(tx, tz, def.area, slot === "R" ? new THREE.Color(0xffb14a) : corHeroi);
         }
       } else if (slot === "Q" && this.opts.campeao === "kaimu") {
-        this.danificarEmFrente(danoBruto, def.area ?? 4.6);
+        this.danificarEmFrente(danoBruto, def.area ?? 4.6, slot);
         this.fxAnel(this.px, this.pz, 2.2, new THREE.Color(0xffa25a));
       }
       this.balancoArma = 1;
@@ -824,6 +856,8 @@ export class MotorArena {
       pressa: performance.now() / 1000 < this.pressaAte,
       fps: Math.round(this.fps),
       alvoTipo: this.alvoMobId >= 0 ? (this.obterMob(this.alvoMobId)?.tipo ?? "") : "",
+      alvoHeroiNome: this.alvoHeroiId >= 0 ? (this.remotos.get(this.alvoHeroiId)?.nome ?? "") : "",
+      mortePor: this.mortePor,
     };
   }
 
@@ -891,10 +925,12 @@ export class MotorArena {
         const barra = canvasSprite(192, 44);
         barra.sprite.scale.set(3.0, 0.69, 1);
         this.scene!.add(grupo, barra.sprite);
-        hv = { grupo, barra, alvoX: j.x, alvoZ: j.z, alvoRy: j.ry };
+        hv = { id: j.id, grupo, barra, alvoX: j.x, alvoZ: j.z, alvoRy: j.ry, nome: j.nome, campeao: j.campeao, nivel: j.nivel, hp: j.hp, hpMax: j.hpMax, morto: j.morto };
         this.remotos.set(j.id, hv);
       }
       hv.alvoX = j.x; hv.alvoZ = j.z; hv.alvoRy = j.ry;
+      hv.nome = j.nome; hv.campeao = j.campeao; hv.nivel = j.nivel;
+      hv.hp = j.hp; hv.hpMax = j.hpMax; hv.morto = j.morto;
       hv.grupo.visible = !j.morto;
       hv.barra.sprite.visible = !j.morto;
       desenharBarraVida(hv.barra.ctx, hv.barra.tex, j.hpMax > 0 ? j.hp / j.hpMax : 0, "#4ade80", j.nome);
@@ -953,6 +989,61 @@ export class MotorArena {
   }
   private idRede(): number { return this.opts.rede?.meuId() ?? -1; }
 
+  // ═══════ v64 PvP: estado autoritativo do servidor ═══════
+  /** `eu` da snapshot — a vida/mana/escudo/progresso REAIS reconciliam a previsão. */
+  receberEu(eu: EuRede): void {
+    if (this.destruido) return;
+    this.euUltima = eu;
+    this.hp = eu.hp; this.hpMax = eu.hpMax;
+    this.mp = eu.mp; this.mpMax = eu.mpMax;
+    this.escudo = eu.escudo;
+    this.essencia = eu.essencia;
+    this.abates = eu.abates;
+    if (this.bubbleEscudo) this.bubbleEscudo.visible = this.escudo > 0;
+    const nivelAntes = this.nivel;
+    this.nivel = eu.nivel;
+    this.xpTotal = xpTotalAteNivel(eu.nivel) + eu.xpNoNivel;
+    if (eu.nivel !== nivelAntes) this.stats = statsDe(this.opts.campeao, this.nivel, this.itens);
+    if (eu.morto && !this.morto) this.morrer("");          // servidor declarou a morte
+    if (!eu.morto && this.morto && !this.solo) {
+      // renascimento chegou pelo fio de estado (o renasceu com posição vem a seguir)
+      this.morto = false;
+      this.anim = "parado";
+      this.opts.aoReviver();
+    }
+  }
+
+  /** Evento: um herói MORREU no mundo (kill feed + a minha própria morte). */
+  receberMorteHeroi(id: number, _vitima: string, nomeAssassino: string): void {
+    if (this.destruido) return;
+    if (id === this.idRede()) {
+      if (!this.morto) this.morrer(nomeAssassino);
+      else this.mortePor = nomeAssassino;
+    }
+  }
+
+  /** Evento: um herói RENASCEU na fonte (posição autoritativa). */
+  receberRenasceuHeroi(id: number, x: number, z: number): void {
+    if (this.destruido) return;
+    if (id !== this.idRede()) return;
+    this.morto = false;
+    this.mortePor = "";
+    this.respawnAte = 0;
+    this.px = x; this.pz = z;
+    this.hpMax = this.stats.hpMax; this.hp = this.hpMax;
+    this.mpMax = this.stats.mpMax; this.mp = this.mpMax;
+    this.anim = "parado";
+    this.fxAnel(this.px, this.pz, 2.4, new THREE.Color(0x7fd4ff));
+    this.opts.aoReviver();
+  }
+
+  /** Evento: um OUTRO herói foi ferido (número autoritativo do servidor). */
+  receberGolpeHeroi(alvoId: number, dano: number, x: number, z: number, de: number): void {
+    if (this.destruido) return;
+    if (de === this.idRede()) return;   // o meu golpe já mostrou o número previsto
+    this.numeroFlutuante(x, 2.3, z, dano, "#ffb0a0");
+  }
+
   // ═══════════════════════ SIMULAÇÃO LOCAL ═══════════════════════
   private passoLocal(dt: number, agoraS: number): void {
     (["Q", "W", "E", "R"] as SlotHabilidade[]).forEach((s) => { this.cds[s] = Math.max(0, this.cds[s] - dt); });
@@ -962,7 +1053,8 @@ export class MotorArena {
     }
 
     if (this.morto) {
-      if (agoraS >= this.respawnAte) this.reviver();
+      // v64: ONLINE espera pelo servidor (renasceu autoritativo); SOLO revive localmente
+      if (this.solo && agoraS >= this.respawnAte) this.reviver();
       return;
     }
 
@@ -976,8 +1068,24 @@ export class MotorArena {
     if (vx !== 0 || vz !== 0) {
       const d = Math.hypot(vx, vz);
       vx /= d; vz /= d;
-      this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1;
+      this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; this.alvoHeroiId = -1;
       this.anim = "andar";
+    } else if (this.alvoHeroiId >= 0) {
+      // v64 PvP: perseguir e atacar o herói-alvo (estilo LoL: persegue até ao alcance)
+      const heroi = this.obterHeroiAlvo();
+      if (!heroi) { this.alvoHeroiId = -1; this.anim = "parado"; }
+      else {
+        const dAlvo = dist(this.px, this.pz, heroi.alvoX, heroi.alvoZ);
+        const range = this.stats.alcanceAtaque + 0.4;
+        if (dAlvo > range * 0.92) {
+          vx = (heroi.alvoX - this.px) / dAlvo; vz = (heroi.alvoZ - this.pz) / dAlvo;
+          this.anim = "andar";
+        } else {
+          this.ry = Math.atan2(heroi.alvoX - this.px, heroi.alvoZ - this.pz);
+          this.ataqueBasico(agoraS);
+          this.anim = "atacar";
+        }
+      }
     } else if (this.alvoMobId >= 0) {
       const mob = this.obterMob(this.alvoMobId);
       if (!mob) { this.alvoMobId = -1; this.anim = "parado"; }
@@ -1062,30 +1170,52 @@ export class MotorArena {
     this.balancoArma = 1;
     const dano = this.stats.ataque;
     const def = CAMPEOES[this.opts.campeao];
+    // v64 PvP: alvo-herói tem PRIORIDADE sobre mobs (target explícito)
+    const heroi = this.obterHeroiAlvo();
+    if (heroi) {
+      if (def.alcanceAtaque <= 3.2) this.danificarHeroi(heroi.id, dano, "");
+      else this.dispararProjetil(heroi.alvoX, heroi.alvoZ, dano, 30, false, "");
+      return;
+    }
     let alvo: MobSim | MobEstado | null = this.alvoMobId >= 0 ? this.obterMob(this.alvoMobId) : null;
     if (!alvo) alvo = this.mobMaisPerto(this.stats.alcanceAtaque + 0.3);
     if (!alvo) return;
     if (def.alcanceAtaque <= 3.2) this.danificarMob(alvo.id, dano, alvo.x, alvo.z);
-    else this.dispararProjetil(alvo.x, alvo.z, dano, 30, false);
+    else this.dispararProjetil(alvo.x, alvo.z, dano, 30, false, "");
   }
 
-  private danificarNoCaminho(x1: number, z1: number, x2: number, z2: number, danoBruto: number): void {
+  private danificarNoCaminho(x1: number, z1: number, x2: number, z2: number, danoBruto: number, slot: SlotOuBasico = ""): void {
     for (const m of this.listaMobs()) {
       if (distParaSegmento(m.x, m.z, x1, z1, x2, z2) < 1.6) this.danificarMob(m.id, danoBruto, m.x, m.z);
     }
+    for (const h of this.listaHerois()) {
+      if (h.morto) continue;
+      if (distParaSegmento(h.alvoX, h.alvoZ, x1, z1, x2, z2) < 1.6) this.danificarHeroi(h.id, danoBruto, slot);
+    }
   }
-  private danificarEmArea(cx: number, cz: number, raio: number, danoBruto: number): void {
+  private danificarEmArea(cx: number, cz: number, raio: number, danoBruto: number, slot: SlotOuBasico = ""): void {
     for (const m of this.listaMobs()) {
       if (dist2(cx, cz, m.x, m.z) <= raio * raio) this.danificarMob(m.id, danoBruto, m.x, m.z);
     }
+    for (const h of this.listaHerois()) {
+      if (h.morto) continue;
+      if (dist2(cx, cz, h.alvoX, h.alvoZ) <= raio * raio) this.danificarHeroi(h.id, danoBruto, slot);
+    }
   }
-  private danificarEmFrente(danoBruto: number, alcance: number): void {
+  private danificarEmFrente(danoBruto: number, alcance: number, slot: SlotOuBasico = ""): void {
     const fx = Math.sin(this.ry), fz = Math.cos(this.ry);
     for (const m of this.listaMobs()) {
       const dx = m.x - this.px, dz = m.z - this.pz;
       const d = Math.hypot(dx, dz);
       if (d > alcance) continue;
       if ((dx / (d || 1)) * fx + (dz / (d || 1)) * fz > 0.45) this.danificarMob(m.id, danoBruto, m.x, m.z);
+    }
+    for (const h of this.listaHerois()) {
+      if (h.morto) continue;
+      const dx = h.alvoX - this.px, dz = h.alvoZ - this.pz;
+      const d = Math.hypot(dx, dz);
+      if (d > alcance) continue;
+      if ((dx / (d || 1)) * fx + (dz / (d || 1)) * fz > 0.45) this.danificarHeroi(h.id, danoBruto, slot);
     }
   }
 
@@ -1113,6 +1243,19 @@ export class MotorArena {
       this.fxParticula(x, 1.0, z, "#ff8a5c");
       this.opts.aoGolpeMob(id, dano, this.px, this.pz);
     }
+  }
+
+  /** v64 PvP: dano a um herói INIMIGO — o cliente SÓ declara alvo+slot;
+   *  o VALOR é computado pelo servidor (o número local é uma previsão). */
+  private danificarHeroi(id: number, danoBruto: number, slot: SlotOuBasico): void {
+    if (this.solo) return;   // sem servidor não há heróis
+    const h = this.remotos.get(id);
+    if (!h || h.morto) return;
+    const armadura = CAMPEOES[h.campeao].armadura + 2 * (Math.max(1, h.nivel) - 1);
+    const previsto = Math.max(1, Math.round(reduzArmadura(danoBruto, armadura)));
+    this.numeroFlutuante(h.alvoX, 2.3, h.alvoZ, previsto, "#ffd0a0");
+    this.fxParticula(h.alvoX, 1.1, h.alvoZ, "#ff8a5c");
+    this.opts.rede?.golpearHeroi(id, slot);
   }
 
   private tetoGolpe(): number {
@@ -1152,13 +1295,14 @@ export class MotorArena {
     void x; void z;
   }
 
-  private morrer(): void {
+  private morrer(nomeAssassino = ""): void {
     this.morto = true;
     this.hp = 0;
+    this.mortePor = nomeAssassino;
     this.opts.rede?.morrer();
     this.escudo = 0;
     if (this.bubbleEscudo) this.bubbleEscudo.visible = false;
-    this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1;
+    this.alvoMoverX = null; this.alvoMoverZ = null; this.alvoMobId = -1; this.alvoHeroiId = -1;
     this.respawnAte = performance.now() / 1000 + TEMPO_RESPAWN;
     this.anim = "morte";
     this.opts.aoMorte();
@@ -1188,7 +1332,7 @@ export class MotorArena {
     this.mobsVisual.set(m.id, { grupo, barra, ultimoHp: -1 });
   }
 
-  private dispararProjetil(tx: number, tz: number, dano: number, vel: number, habilidades: boolean): void {
+  private dispararProjetil(tx: number, tz: number, dano: number, vel: number, habilidades: boolean, slot: SlotOuBasico = ""): void {
     const dx = tx - this.px, dz = tz - this.pz;
     const d = Math.hypot(dx, dz) || 1;
     const mat = new THREE.MeshBasicMaterial({ color: habilidades ? new THREE.Color(CAMPEOES[this.opts.campeao].cor).offsetHSL(0, 0, 0.15) : new THREE.Color(0xfff1b8) });
@@ -1196,7 +1340,7 @@ export class MotorArena {
     const malhaP = new THREE.Mesh(GEO_PROJETIL, mat);
     malhaP.position.set(this.px, 1.15, this.pz);
     this.scene!.add(malhaP);
-    this.projeteis.push({ malha: malhaP, vx: (dx / d) * vel, vz: (dz / d) * vel, vida: 2.2, dano, habilidades });
+    this.projeteis.push({ malha: malhaP, vx: (dx / d) * vel, vz: (dz / d) * vel, vida: 2.2, dano, habilidades, slot });
   }
 
   private numeroFlutuante(x: number, y: number, z: number, valor: number, cor: string): void {
@@ -1348,6 +1492,16 @@ export class MotorArena {
           break;
         }
       }
+      if (!bateu && !this.solo) {
+        for (const h of this.listaHerois()) {
+          if (h.morto) continue;
+          if (dist2(p.malha.position.x, p.malha.position.z, h.alvoX, h.alvoZ) < 1.0) {
+            this.danificarHeroi(h.id, p.dano, p.slot);
+            bateu = true;
+            break;
+          }
+        }
+      }
       if (bateu || p.vida <= 0 || !dentroMundo(p.malha.position.x, p.malha.position.z)) {
         this.scene!.remove(p.malha);
         (p.malha.material as THREE.Material).dispose();
@@ -1440,7 +1594,26 @@ export class MotorArena {
       essencia: () => this.essencia,
       jogadoresRemotos: () => this.remotos.size,
       mpEstado: () => this.mpEstado()?.estado ?? "solo",
-      andarPara: (x: number, z: number) => { this.alvoMoverX = x; this.alvoMoverZ = z; this.alvoMobId = -1; },
+      // v64 PvP
+      alvoHeroi: () => this.alvoHeroiId,
+      targetHeroi: (id: number) => { this.alvoHeroiId = id; this.alvoMobId = -1; this.alvoMoverX = null; this.alvoMoverZ = null; },
+      heroiMaisPerto: () => {
+        let melhorId = -1, melhor: HeroiVisual | null = null;
+        let melhorD = 40;
+        for (const [id, h] of this.remotos) {
+          if (h.morto) continue;
+          const d = dist(this.px, this.pz, h.alvoX, h.alvoZ);
+          if (d < melhorD) { melhorD = d; melhor = h; melhorId = id; }
+        }
+        return melhor ? { id: melhorId, nome: melhor.nome, dist: Math.round(melhorD * 10) / 10, hp: Math.round(melhor.hp), hpMax: Math.round(melhor.hpMax) } : null;
+      },
+      mortePor: () => this.mortePor,
+      eu: () => this.euUltima,
+      golpearHeroiDirecto: (id: number) => {
+        const h = this.remotos.get(id);
+        if (h && !h.morto) this.danificarHeroi(id, this.stats.ataque, "");
+      },
+      andarPara: (x: number, z: number) => { this.alvoMoverX = x; this.alvoMoverZ = z; this.alvoMobId = -1; this.alvoHeroiId = -1; },
       disparar: (slot: SlotHabilidade) => this.usarHabilidade(slot),
       mobMaisPerto: () => {
         const m = this.mobMaisPerto(35);

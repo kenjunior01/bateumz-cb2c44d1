@@ -51,7 +51,7 @@ declare global {
   interface Window { __arena?: GanchosArena }
 }
 
-interface MsgChat { nome: string; texto: string; meu?: boolean }
+interface MsgChat { nome: string; texto: string; meu?: boolean; sistema?: boolean }
 interface Toast { id: number; texto: string; tipo: "nivel" | "matou" | "erro" | "cura" | "corrigido" }
 
 const SLOTS: SlotHabilidade[] = ["Q", "W", "E", "R"];
@@ -139,6 +139,21 @@ export default function BateuRPG({ onScore, onExit }: Props) {
       aoFala: (nomeMsg, texto) => setChat((at) => [...at.slice(-40), { nome: nomeMsg, texto }]),
       aoMudancaEstado: (e) => setMpEstado(e),
       aoCorrigido: (motivo) => pushToast(t("arena.corrigido", { motivo }), "corrigido"),
+      // ── v64 PvP ──
+      aoEu: (eu) => motor.receberEu(eu),
+      aoMorteHeroi: (id, vitima, nomeAssassino) => {
+        motor.receberMorteHeroi(id, vitima, nomeAssassino);
+        setChat((at) => [...at.slice(-40), {
+          nome: "Arena",
+          texto: nomeAssassino ? t("arena.pvp.abateu", { a: nomeAssassino, v: vitima }) : t("arena.pvp.mobsAbateu", { v: vitima }),
+          sistema: true,
+        }]);
+      },
+      aoRenasceuHeroi: (id, x, z) => motor.receberRenasceuHeroi(id, x, z),
+      aoAbatePvp: (vitima, essencia, _xp, _abates) => {
+        pushToast(t("arena.pvp.abateste", { v: vitima, e: String(essencia) }), "matou");
+      },
+      aoGolpeHeroi: (alvoId, dano, x, z, de) => motor.receberGolpeHeroi(alvoId, dano, x, z, de),
     });
     rede.ligar(RedeArena.urlPadrao(), {
       nome: nomeHeroi, campeao,
@@ -311,6 +326,7 @@ export default function BateuRPG({ onScore, onExit }: Props) {
             </div>
           )}
           <p className="mt-4 text-[11px] text-slate-500 max-w-lg text-center">{t("arena.menu.nota")}</p>
+          <p className="mt-1 text-[11px] text-fuchsia-300/80 max-w-lg text-center" data-testid="arena-pvp-nota">{t("arena.pvp.nota")}</p>
         </div>
       </div>
     );
@@ -450,8 +466,8 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <div className="max-h-28 overflow-y-auto rounded-lg bg-slate-950/70 border border-white/10 px-2 py-1.5 text-[11px] space-y-0.5">
           {chat.length === 0 && <div className="text-slate-500 italic">{t("arena.chat.dica")}</div>}
           {chat.map((m, i) => (
-            <div key={i} className={m.meu ? "text-amber-200" : m.nome === "Arena" ? "text-sky-300" : "text-slate-200"}>
-              <b>{m.nome}:</b> {m.texto}
+            <div key={i} className={m.sistema ? "text-fuchsia-300 font-semibold" : m.meu ? "text-amber-200" : m.nome === "Arena" ? "text-sky-300" : "text-slate-200"}>
+              {m.sistema ? <span data-testid="arena-killfeed">{m.texto}</span> : <><b>{m.nome}:</b> {m.texto}</>}
             </div>
           ))}
           <div ref={chatFimRef} />
@@ -480,6 +496,9 @@ export default function BateuRPG({ onScore, onExit }: Props) {
         <div className="absolute inset-0 bg-rose-950/70 backdrop-blur-sm grid place-items-center pointer-events-none" data-testid="arena-morte">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 text-4xl font-black text-rose-200"><Skull className="w-10 h-10" /> {t("arena.morte")}</div>
+            {hud.mortePor ? (
+              <div className="mt-1 text-rose-200/90 text-sm" data-testid="arena-morte-por">{t("arena.pvp.mortePor", { a: hud.mortePor })}</div>
+            ) : null}
             <div className="mt-2 text-white/80">{t("arena.renascerEm", { s: String(Math.ceil(hud.respawnFalta)) })}</div>
           </div>
         </div>

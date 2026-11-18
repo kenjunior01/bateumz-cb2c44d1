@@ -226,6 +226,12 @@ export function nivelDeXp(xpAcumulado: number): { nivel: number; xpNoNivel: numb
   while (nivel < NIVEL_MAX && resto >= xpParaSubir(nivel)) { resto -= xpParaSubir(nivel); nivel++; subiu++; }
   return { nivel, xpNoNivel: resto, subiu };
 }
+/** XP acumulado ATÉ ENTRAR no nível `n` (inverso exato de nivelDeXp) — o servidor
+ *  envia nível+xpNoNivel e o cliente reconstrói o xpTotal sem divergir. */
+export function xpTotalAteNivel(n: number): number {
+  const k = Math.max(1, Math.min(NIVEL_MAX, Math.floor(n))) - 1;
+  return 90 * k + 24 * k * (k - 1);
+}
 
 // ── Mobs ───────────────────────────────────────────────────────
 export type TipoMob = "lobo" | "raptor" | "golem" | "espectro" | "raposa" | "dragao" | "barao";
@@ -347,6 +353,66 @@ export function validaGolpe(m: unknown): GolpeClaim | null {
   const z = typeof o.z === "number" && Number.isFinite(o.z) ? o.z : NaN;
   if (id < 0 || dano <= 0 || !Number.isFinite(x) || !Number.isFinite(z)) return null;
   return { id, dano, x, z };
+}
+
+// ── PvP (v64): todos contra todos FORA da fonte — dano autoritativo ──
+// O cliente SÓ declara «feri o herói Y com a habilidade X» (alvoId+slot);
+// o VALOR do dano é computado pelo servidor a partir das MESMAS definições
+// (statsDe/danoHabilidade/reduzArmadura) — um campo `dano` no pacote é
+// IGNORADO. Nada de HP reportado pelo cliente em PvP.
+export type SlotOuBasico = SlotHabilidade | "";   // "" = ataque básico
+
+export const RAIO_ZONA_SEGURA = RAIO_FONTE + 2;   // fonte + plataforma (regra LoL)
+export const TOL_REDE_S = 0.4;                    // tolerância de rede nos gates de cadência (s)
+export const JANELA_CAST_MS = 2500;               // claim com hab é válido ≤2,5 s após o cast
+export const ESSENCIA_ABATE_BASE = 55;
+export const ESSENCIA_ABATE_POR_NIVEL = 9;
+export const XP_ABATE_BASE = 45;
+export const XP_ABATE_POR_NIVEL = 8;
+
+export interface GolpePvpClaim { alvoId: number; hab: SlotOuBasico }
+export function validaGolpePvp(m: unknown): GolpePvpClaim | null {
+  if (typeof m !== "object" || m === null) return null;
+  const o = m as Record<string, unknown>;
+  const alvoId = typeof o.alvoId === "number" && Number.isInteger(o.alvoId) && o.alvoId >= 0 ? o.alvoId : -1;
+  const habBruto = o.hab;
+  let hab: SlotOuBasico | null = null;
+  if (habBruto === "" || habBruto === undefined || habBruto === null) hab = "";
+  else if (habBruto === "Q" || habBruto === "W" || habBruto === "E" || habBruto === "R") hab = habBruto;
+  if (alvoId < 0 || hab === null) return null;
+  return { alvoId, hab };
+}
+
+export interface CastClaim { slot: SlotHabilidade }
+export function validaCast(m: unknown): CastClaim | null {
+  if (typeof m !== "object" || m === null) return null;
+  const o = m as Record<string, unknown>;
+  if (o.slot !== "Q" && o.slot !== "W" && o.slot !== "E" && o.slot !== "R") return null;
+  return { slot: o.slot };
+}
+
+/** Dano do ATAQUE BÁSICO — computado pelo servidor (nunca aceite do cliente). */
+export function danoAtaqueBasico(id: CampeaoId, nivel: number, itens: Record<string, number>): number {
+  return Math.round(statsDe(id, nivel, itens).ataque);
+}
+
+/** Recompensa por ABATE de herói (escala com o nível da VÍTIMA — padrão LoL). */
+export function recursosAbate(nivelVitima: number): { essencia: number; xp: number } {
+  const n = Math.max(1, Math.min(NIVEL_MAX, Math.floor(nivelVitima)));
+  return {
+    essencia: ESSENCIA_ABATE_BASE + ESSENCIA_ABATE_POR_NIVEL * (n - 1),
+    xp: XP_ABATE_BASE + XP_ABATE_POR_NIVEL * (n - 1),
+  };
+}
+
+/** A fonte é ZONA SEGURA: nem atacar de dentro, nem atacar quem está dentro. */
+export function zonaSegura(x: number, z: number): boolean {
+  return dist(x, z, POS_BASE.x, POS_BASE.z) <= RAIO_ZONA_SEGURA;
+}
+
+/** Gate de cadência com tolerância de rede — a MESMA regra no cliente e no servidor. */
+export function cadenciaPermitida(ultimoMs: number, agoraMs: number, intervaloS: number): boolean {
+  return agoraMs - ultimoMs >= intervaloS * 1000 - TOL_REDE_S * 1000;
 }
 
 // ── Fala com rate-limit compartilhado ──────────────────────────

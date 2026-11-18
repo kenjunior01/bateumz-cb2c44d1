@@ -345,14 +345,29 @@ async function main() {
   ok("A vê o herói de B (multi real)", await pgA.evaluate(() => window.__arena.jogadoresRemotos()) >= 1);
 
   // B sai da zona segura da fonte
-  await pgB.evaluate(() => { const p = { x: -53, z: 53 }; window.__arena.andarPara(p.x, p.z); });
+  // Ponto de encontro (-40,40): fica a ≥17 u de TODOS os camps — o antigo
+  // (-53,53) caía a 1,4 u do camp «espectros-rio» (-52,52, aggro 9 + alcance
+  // 8): em máquinas lentas os espectros matavam B ANTES do abate PvP e o
+  // teste tinha uma CAUSA ALTERNATIVA de morte (flaky determinístico de
+  // timing, não um furo do jogo).
+  await pgB.evaluate(() => window.__arena.andarPara(-40, 40));
   let bFora = false;
   for (let i = 0; i < 20 && !bFora; i++) {
     await dormir(3000);
     const e = await pgB.evaluate(() => window.__arena.estado()).catch(() => null);
-    if (e && Math.hypot(e.x - (-53), e.z - 53) < 4) bFora = true;
+    if (e && Math.hypot(e.x - (-40), e.z - 40) < 4) bFora = true;
   }
   ok("B saiu da zona segura (andarPara honesto)", bFora);
+
+  // A aproxima-se de B por movimento REAL antes de fixar o alvo — o pursuit
+  // puro atravessava o mapa inteiro a 4-6 fps (SwiftShader) e o abate nem
+  // sempre chegava dentro da janela de tempo do teste
+  await pgA.evaluate(() => window.__arena.andarPara(-39, 39));
+  for (let i = 0; i < 15; i++) {
+    const e = await pgA.evaluate(() => window.__arena.estado()).catch(() => null);
+    if (e && Math.hypot(e.x - (-39), e.z - 39) < 5) break;
+    await dormir(2000);
+  }
 
   // A mira o herói de B e ATACA (pursuit + auto-attack estilo LoL)
   const alvoId = await pgA.evaluate(() => window.__arena.heroiMaisPerto()?.id ?? -1);
@@ -360,21 +375,33 @@ async function main() {
   await pgA.evaluate((id) => window.__arena.targetHeroi(id), alvoId);
   ok("targetHeroi fixa o alvo", await pgA.evaluate((id) => window.__arena.alvoHeroi() === id, alvoId));
 
-  // o hp de B CAI (dano do servidor chega por fere + eu)
+  // o hp de B CAI (dano do servidor chega por fere + eu) — golpes diretos
+  // em cadência honesta (> 1/0,85 s = 1,18 s; o servidor recusa o resto)
   let hpCaiu = false;
   for (let i = 0; i < 22 && !hpCaiu; i++) {
-    await dormir(4000);
+    await pgA.evaluate((id) => window.__arena.golpearHeroiDirecto(id), alvoId).catch(() => {});
+    await dormir(2000);
     const e = await pgB.evaluate(() => ({ hp: window.__arena.estado().hp, hpMax: window.__arena.estado().hpMax, morto: window.__arena.estado().morto })).catch(() => null);
     if (e && (e.hp < e.hpMax - 20 || e.morto)) hpCaiu = true;
   }
   ok("PvP REAL: o hp de B cai com os golpes de A (dano do servidor)", hpCaiu);
 
   // combate até ao abate (overlay de morte com o nome do assassino)
+  // FURO do teste fechado (flaky de timing): o loop antigo aceitava QUALQUER
+  // morte de B (`e.morto`). Agora EXIGE mortePor === "Kaimu-PvP" (causa PvP)
+  // e, enquanto B estiver vivo, re-posiciona os dois fora da zona segura e
+  // continua a golpear em cadência — o renascimento autoritativo devolve B à
+  // fonte (zona segura, onde A nunca o pode ferir) e o teste recomeça o
+  // combate quando B sai. 4 golpes × 140 = 560 ≥ 520 hp do Vex nv1.
   let abateu = false;
-  for (let i = 0; i < 30 && !abateu; i++) {
-    await dormir(4000);
+  for (let i = 0; i < 40 && !abateu; i++) {
+    await dormir(1800);
     const e = await pgB.evaluate(() => ({ morto: window.__arena.estado().morto, por: window.__arena.mortePor() })).catch(() => null);
-    if (e?.morto) abateu = true;
+    if (e?.morto && e.por === "Kaimu-PvP") abateu = true;
+    else if (e && !e.morto) {
+      await pgB.evaluate(() => window.__arena.andarPara(-40, 40)).catch(() => {});
+      await pgA.evaluate((id) => window.__arena.golpearHeroiDirecto(id), alvoId).catch(() => {});
+    }
   }
   ok("ABATE no browser: B morre pelo PvP do servidor", abateu);
   const mortePor = await pgB.locator('[data-testid="arena-morte-por"]').innerText().catch(() => "");

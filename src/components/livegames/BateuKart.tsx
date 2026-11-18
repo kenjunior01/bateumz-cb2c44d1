@@ -16,12 +16,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, CarFront, Check, ChevronUp, Coins, Flag, Gauge,
-  Lock, Pause, Play, Timer, Trophy, Wrench, X, Zap,
+  Lock, Pause, Play, Timer, Trophy, Wifi, Wrench, X, Zap,
 } from "lucide-react";
 import { MotorKart, type EstadoHudKart, type AvisosKart, type GanchosKart } from "@/game/kart/motor.ts";
+import { RedeKart, type EstadoMpKart } from "@/game/kart/mp.ts";
 import {
   IDS_KARTS, IDS_MELHORIAS, PISTAS, KARTS, custoMelhoria, kartDesbloqueado,
-  nivelDeXp, pistaPorId, statsDe, validarSaveKart,
+  nivelDeXp, pistaPorId, recompensaCorrida, statsDe, validarSaveKart,
   type KartId, type MelhoriaId, type SaveKart,
 } from "@/game/kart/core.ts";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,6 +30,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 interface Props {
   onScore?: (score: number) => void;
   onExit?: () => void;
+}
+
+interface InicioRede {
+  meuId: number;
+  pistaId: string;
+  voltas: number;
+  corredores: { id: number; nome: string; kart: string; cor: number; eJogador: boolean }[];
 }
 
 // ── Save do aparelho (honesto: o progresso é do dispositivo) ──
@@ -78,9 +86,22 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const [pausa, setPausa] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [corridaKey, setCorridaKey] = useState(0);
+  // ── v66 ONLINE ──
+  const [modoRede, setModoRede] = useState(false);            // corrida online EM CURSO
+  const [redeEstado, setRedeEstado] = useState<EstadoMpKart | null>(null);
+  const [lobbyInfo, setLobbyInfo] = useState<{ espera: number; presentes: number; teto: number } | null>(null);
+  const [avisoRede, setAvisoRede] = useState<string | null>(null);
+  const [nomePiloto] = useState(() => `Piloto-${Math.floor(1000 + Math.random() * 9000)}`);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const miniRef = useRef<HTMLCanvasElement | null>(null);
   const motorRef = useRef<MotorKart | null>(null);
+  const redeRef = useRef<RedeKart | null>(null);
+  const inicioRedeRef = useRef<InicioRede | null>(null);
+  const motorIdRef = useRef(6);                               // MEU slot (solo = 6)
+  const pistaRecRef = useRef<string>(pistaSel);               // pista da corrida EM CURSO (a rede decide)
+  const fimRedeRef = useRef(false);                           // payout local injetado 1×
+  const modoRedeRef = useRef(false);
+  modoRedeRef.current = modoRede;
   const rafMini = useRef(0);
   const toastSeq = useRef(1);
   const salvoRef = useRef(false);
@@ -100,25 +121,75 @@ export default function BateuKart({ onScore, onExit }: Props) {
     motorRef.current?.pausar(pausa);
   }, [pausa]);
 
+  // ── v66: cliente da sala de corridas (uma instância por componente) ──
+  useEffect(() => {
+    const rede = new RedeKart();
+    redeRef.current = rede;
+    rede.definirEscutas({
+      aoEstado: (e) => {
+        setRedeEstado({ ...e });
+        if (e.estado === "solo") setAvisoRede(t("kart.mp.semServidor"));
+      },
+      aoLobby: (info) => setLobbyInfo({ ...info }),
+      aoInicio: (info) => {
+        inicioRedeRef.current = info;
+        motorIdRef.current = info.meuId;
+        pistaRecRef.current = info.pistaId;
+        fimRedeRef.current = false;
+        setModoRede(true);
+        setAvisoRede(null);
+        setHud(null);
+        setPausa(false);
+        setCorridaKey((k) => k + 1);
+        setFase("corrida");
+      },
+      aoSnap: (s) => motorRef.current?.aplicarSnap(s),
+      aoFim: () => { /* a fase fim chega pela própria snapshot — nada aqui */ },
+      aoSaiuCorredor: (id, nome) => {
+        if (motorRef.current && id !== motorRef.current.idMeu()) pushToast(t("kart.mp.saiuCorredor", { nome }), "info");
+      },
+      aoCorrigido: (motivo) => {
+        if (motivo === "sala-cheia-espera") pushToast(t("kart.mp.espectando"), "info");
+        else pushToast(t("kart.mp.corrigido", { motivo }), "golpe");
+      },
+    });
+    return () => { rede.fechar(); redeRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── ciclo de vida da corrida ──────────────────────────────────
   useEffect(() => {
     if (fase !== "corrida" || !canvasRef.current) return;
     salvoRef.current = false;
-    const def = pistaPorId(pistaSel);
+    const inicioRede = modoRedeRef.current ? inicioRedeRef.current : null;
+    const pistaId = inicioRede ? inicioRede.pistaId : pistaSel;
+    pistaRecRef.current = pistaId;
+    const def = pistaPorId(pistaId);
     if (!def) return;
     const leve = new URLSearchParams(window.location.search).has("kart-leve") || ehToque;
-    const recordeAnterior = lerSave().recordes[pistaSel] ?? Infinity;
+    const recordeAnterior = lerSave().recordes[pistaId] ?? Infinity;
 
     const motor = new MotorKart({
       canvas: canvasRef.current,
-      pistaId: pistaSel,
-      voltas: voltasSel,
+      pistaId,
+      voltas: inicioRede ? inicioRede.voltas : voltasSel,
       kartJogador: kartSel,
       melhorias: melhoriasDe(lerSave(), kartSel),
-      nomeJogador: "Tu",
+      nomeJogador: inicioRede ? nomePiloto : "Tu",
       recordeAnterior,
       leve,
-      aoHud: (e) => setHud(e),
+      aoHud: (e) => {
+        // v66 ONLINE: o payout é DO APARELHO — calculado localmente 1× quando a sala fecha
+        if (e.fase === "fim" && !e.payout && modoRedeRef.current && !fimRedeRef.current) {
+          fimRedeRef.current = true;
+          const meuTempo = e.resultados.find((r) => r.id === motorIdRef.current)?.tempo ?? 0;
+          const rec = recompensaCorrida(e.posicao, e.moedas, e.voltas);
+          const recorde = meuTempo > 0 && meuTempo < recordeAnterior;
+          setHud({ ...e, payout: { moedas: rec.moedas, xp: rec.xp, recorde } });
+          return;
+        }
+        setHud(e);
+      },
       aoAviso: (a: AvisosKart) => {
         if (a.itemNovo) pushToast(`${ICONES_ITEM[a.itemNovo] ?? ""} ${t(`kart.item.${a.itemNovo}`)}`, "item");
         if (a.golpeRecebido) pushToast(t("kart.golpeRecebido", { item: a.golpeRecebido === "raio" ? "⚡" : t(`kart.item.${a.golpeRecebido}`) }), "golpe");
@@ -126,8 +197,15 @@ export default function BateuKart({ onScore, onExit }: Props) {
         if (a.derivaTurbo) pushToast(a.derivaTurbo === 2 ? t("kart.turboLaranja") : t("kart.turboAzul"), "turbo");
         if (a.rampa) pushToast(t("kart.rampa"), "turbo");
       },
+      // v66 ONLINE: o uso de item vai por MENSAGEM própria (o servidor é quem usa)
+      ...(inicioRede ? {
+        idJogador: inicioRede.meuId,
+        corredoresRede: inicioRede.corredores as never,
+        aoPulsarItemRede: () => redeRef.current?.mandarUso(),
+      } : {}),
     });
     motorRef.current = motor;
+    if (inicioRede) redeRef.current?.definirFonteEntrada(() => motor.obterEntrada());
     window.__kart = motor.ganchos();
 
     // minimapa no próprio rAF
@@ -150,6 +228,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
     return () => {
       window.removeEventListener("keydown", aoTecla);
       cancelAnimationFrame(rafMini.current);
+      if (inicioRede) redeRef.current?.definirFonteEntrada(null);
       motorRef.current?.destruir();
       motorRef.current = null;
       window.__kart = undefined;
@@ -163,14 +242,15 @@ export default function BateuKart({ onScore, onExit }: Props) {
     salvoRef.current = true;
     setSave((atual) => {
       const s = validarSaveKart(atual);
-      const tempoFim = hud.resultados.find((r) => r.id === 6)?.tempo ?? 0;
+      const tempoFim = hud.resultados.find((r) => r.id === motorIdRef.current)?.tempo ?? 0;
+      const pistaId = pistaRecRef.current;
       const novo: SaveKart = {
         ...s,
         moedas: s.moedas + hud.payout!.moedas,
         xp: s.xp + hud.payout!.xp,
         corridas: s.corridas + 1,
         vitorias: s.vitorias + (hud.posicao === 1 ? 1 : 0),
-        recordes: tempoFim > 0 ? { ...s.recordes, [pistaSel]: Math.min(s.recordes[pistaSel] ?? Infinity, tempoFim) } : s.recordes,
+        recordes: tempoFim > 0 ? { ...s.recordes, [pistaId]: Math.min(s.recordes[pistaId] ?? Infinity, tempoFim) } : s.recordes,
         ts: Date.now(),
       };
       guardarSave(novo);
@@ -185,13 +265,33 @@ export default function BateuKart({ onScore, onExit }: Props) {
     setHud(null);
     setPausa(false);
     setGaragemAberta(false);
+    setModoRede(false);
     if (onExit) onExit();
   }, [onExit]);
 
   const correrOutraVez = useCallback(() => {
     setHud(null);
     setPausa(false);
+    // v66 ONLINE: o fim devolve ao MENU — a sala manda a próxima corrida sozinha
+    if (modoRedeRef.current) { setFase("menu"); return; }
     setCorridaKey((k) => k + 1);
+  }, []);
+
+  // ── v66 ONLINE: entrar/sair da sala ──
+  const entrarRede = useCallback(() => {
+    setAvisoRede(null);
+    redeRef.current?.ligar(RedeKart.urlPadrao(), {
+      nome: nomePiloto,
+      kart: kartSel,
+      melhorias: melhoriasDe(lerSave(), kartSel),
+    });
+  }, [kartSel, nomePiloto]);
+
+  const sairRede = useCallback(() => {
+    redeRef.current?.fechar();
+    setRedeEstado(null);
+    setLobbyInfo(null);
+    setAvisoRede(null);
   }, []);
 
   const comprarMelhoria = useCallback((mel: MelhoriaId) => {
@@ -320,6 +420,41 @@ export default function BateuKart({ onScore, onExit }: Props) {
             <span className="inline-flex items-center gap-2"><Play className="w-6 h-6" /> {t("kart.correr")}</span>
           </button>
           <p className="mt-2 text-[11px] text-slate-500">{t("kart.controles")}</p>
+
+          {/* ── v66: SALA ONLINE (honesto: sem servidor, nada finge) ── */}
+          <div className="mt-6 w-full max-w-xl rounded-2xl border-2 border-sky-500/40 bg-sky-500/5 p-4" data-testid="kart-online-painel">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl grid place-items-center bg-sky-600"><Wifi className="w-5 h-5 text-white" /></span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-white">{t("kart.mp.titulo")}</div>
+                <div className="text-[11px] text-slate-300">{t("kart.mp.sub")}</div>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <button
+                onClick={entrarRede}
+                disabled={redeEstado?.estado === "a_ligar"}
+                className="rounded-xl bg-sky-600 px-4 py-2.5 font-black text-sm text-white hover:brightness-110 disabled:opacity-60"
+                data-testid="kart-entrar-online"
+              >
+                {redeEstado?.estado === "a_ligar" ? t("kart.mp.ligando") : t("kart.mp.titulo")}
+              </button>
+              {redeEstado && (redeEstado.estado === "lobby" || redeEstado.estado === "corrida") && (
+                <button onClick={sairRede} className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700" data-testid="kart-sair-online">
+                  {t("kart.mp.sair")}
+                </button>
+              )}
+              {redeEstado?.estado === "lobby" && (
+                <span className="text-xs font-bold text-sky-200" data-testid="kart-online-lobby">
+                  {t("kart.mp.lobby", { s: String(lobbyInfo?.espera ?? 0), n: String(lobbyInfo?.presentes ?? 1) })}
+                </span>
+              )}
+              {redeEstado?.estado === "corrida" && !modoRede && (
+                <span className="text-xs font-bold text-emerald-300">{t("kart.mp.ligado")}</span>
+              )}
+            </div>
+            {avisoRede && <div className="mt-2 text-[11px] text-amber-300" data-testid="kart-online-aviso">{avisoRede}</div>}
+          </div>
         </div>
 
         {/* ── GARAGEM ── */}
@@ -410,9 +545,17 @@ export default function BateuKart({ onScore, onExit }: Props) {
 
   // ═══════════════════════ CORRIDA ═══════════════════════
   const contagemTxt = hud?.fase === "contagem" ? hud.contagem : hud?.fase === "corrida" && hud.tempo < 1.0 ? 0 : null;
+  const humanosNaCorrida = modoRede && inicioRedeRef.current ? inicioRedeRef.current.corredores.filter((c) => c.eJogador).length : 0;
   return (
     <div className="fixed inset-0 z-[80] bg-slate-950 select-none" data-testid="kart-jogo">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full touch-none" data-testid="kart-canvas" />
+
+      {/* v66: badge ONLINE (abaixo do botão de pausa para não colidir) */}
+      {modoRede && humanosNaCorrida > 0 && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 rounded-xl bg-sky-600/90 border border-sky-300/50 px-3 py-1 text-[11px] font-black text-white" data-testid="kart-online-badge">
+          {t("kart.mp.badge", { n: String(humanosNaCorrida) })}
+        </div>
+      )}
 
       {/* ── HUD topo-esquerda: posição/volta/tempo/moedas ── */}
       {hud && (
@@ -556,7 +699,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
               <table className="w-full text-xs">
                 <tbody>
                   {hud.resultados.map((r) => (
-                    <tr key={r.id} className={`${r.id === 6 ? "bg-amber-400/15 text-amber-200 font-bold" : "text-slate-300"} border-b border-white/5`}>
+                    <tr key={r.id} className={`${r.id === motorIdRef.current ? "bg-amber-400/15 text-amber-200 font-bold" : "text-slate-300"} border-b border-white/5`}>
                       <td className="px-3 py-1.5 w-10">{ORDEM(r.posicao)}</td>
                       <td className="px-2 py-1.5">{r.nome}</td>
                       <td className="px-3 py-1.5 text-right text-slate-400">{r.tempo > 0 ? `${Math.floor(r.tempo / 60)}:${String(Math.floor(r.tempo % 60)).padStart(2, "0")}` : "—"}</td>

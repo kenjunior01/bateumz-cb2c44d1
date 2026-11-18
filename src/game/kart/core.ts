@@ -440,7 +440,8 @@ export type EventoCorrida =
   | { t: "volta"; id: number; volta: number }
   | { t: "contrario" }
   | { t: "chegada"; id: number; posicao: number; tempo: number }
-  | { t: "fim"; posicao: number; moedas: number; xp: number; tempo: number; recorde: boolean };
+  | { t: "fim"; posicao: number; moedas: number; xp: number; tempo: number; recorde: boolean }
+  | { t: "fimSala" }; // v66 ONLINE: a sala fechou (todos os humanos chegaram) — cada cliente calcula o SEU payout local
 
 export interface EntradaKart { acelerar: boolean; travar: boolean; virar: number; derrapar: boolean; usarItem: boolean }
 export const entradaParada = (): EntradaKart => ({ acelerar: false, travar: false, virar: 0, derrapar: false, usarItem: false });
@@ -759,22 +760,15 @@ function passoKart(e: EstadoCorrida, c: Corredor, ent: EntradaKart, stats: Stats
   }
 }
 
-// ── Passo da corrida (no solo corre no rAF; num futuro servidor, a 30 TPS) ──
-export function passoCorrida(e: EstadoCorrida, entradaJogador: EntradaKart, dt: number): void {
-  const dtC = Math.min(dt, 0.25); // catch-up honesto (lição v63)
-  if (e.fase === "contagem") {
-    e.tempoContagem -= dtC;
-    if (e.tempoContagem <= 0) { e.fase = "corrida"; e.tempoContagem = 0; }
-    return;
-  }
-  if (e.fase === "fim") return;
-  e.tempo += dtC;
+// ── Passo da corrida (no solo corre no rAF; o servidor online corre passoCorridaMulti a 30 TPS) ──
+/** Corpo comum da física/itens/progresso — entradas POR CORREDOR (solo = só o slot do jogador). */
+function passoCorpo(e: EstadoCorrida, entradas: Record<number, EntradaKart>, dtC: number): void {
   const pista = e.pista;
 
   for (const c of e.corredores) {
     let ent: EntradaKart;
     if (c.terminou) ent = entradaParada();
-    else if (c.eJogador) ent = entradaJogador;
+    else if (c.eJogador) ent = entradas[c.id] ?? entradaParada();
     else ent = iaDecidir(e, c, dtC);
     const rb = c.eJogador ? 1 : c.iaRubber;
     if (!c.eJogador && rb > 1) c.boost = Math.max(c.boost, 0.3); // fôlego dos de trás
@@ -879,6 +873,19 @@ export function passoCorrida(e: EstadoCorrida, entradaJogador: EntradaKart, dt: 
   // posições
   const ordem = posicoesDe(e);
   ordem.forEach((c, idx) => { c.posicao = idx + 1; });
+}
+
+/** SOLO: a corrida termina quando o jogador (slot 6) cruza a linha — com payout. */
+export function passoCorrida(e: EstadoCorrida, entradaJogador: EntradaKart, dt: number): void {
+  const dtC = Math.min(dt, 0.25); // catch-up honesto (lição v63)
+  if (e.fase === "contagem") {
+    e.tempoContagem -= dtC;
+    if (e.tempoContagem <= 0) { e.fase = "corrida"; e.tempoContagem = 0; }
+    return;
+  }
+  if (e.fase === "fim") return;
+  e.tempo += dtC;
+  passoCorpo(e, { [IDX_JOGADOR]: entradaJogador }, dtC);
 
   // o jogador terminou → a corrida TERMINA para ele (padrão Mario Kart)
   const jogador = e.corredores[IDX_JOGADOR];
@@ -889,6 +896,115 @@ export function passoCorrida(e: EstadoCorrida, entradaJogador: EntradaKart, dt: 
     e.payout = { moedas: rec.moedas, xp: rec.xp, recorde };
     e.resultados = posicoesDe(e).map((c, idx) => ({ id: c.id, nome: c.nome, posicao: idx + 1, tempo: c.terminou ? c.tempoFim : 0 }));
     e.eventos.push({ t: "fim", posicao: jogador.posicao, moedas: rec.moedas, xp: rec.xp, tempo: jogador.tempoFim, recorde });
+  }
+}
+
+// ══ v66 — ONLINE: sala partilhada (vários humanos + bots na MESMA grelha) ══
+
+/** Olá validado que o cliente manda ao servidor (padrão validaOla da arena). */
+export interface OlaKart { nome: string; kart: KartId; melhorias: Partial<Record<MelhoriaId, number>> }
+
+export function validaOlaKart(bruto: unknown): OlaKart | null {
+  if (typeof bruto !== "object" || bruto === null) return null;
+  const o = bruto as Record<string, unknown>;
+  const nome = typeof o.nome === "string"
+    ? o.nome.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()
+    : "";
+  if (nome.length < 1 || nome.length > 16) return null;
+  const kart = IDS_KARTS.find((k) => k === o.kart);
+  if (!kart) return null;
+  const melhorias: Partial<Record<MelhoriaId, number>> = {};
+  const mBruto = typeof o.melhorias === "object" && o.melhorias !== null ? o.melhorias as Record<string, unknown> : {};
+  for (const m of IDS_MELHORIAS) {
+    const v = mBruto[m];
+    if (typeof v === "number" && Number.isFinite(v)) melhorias[m] = Math.max(0, Math.min(NIVEL_MAX_MELHORIA, Math.floor(v)));
+  }
+  return { nome, kart, melhorias };
+}
+
+/** Slots de grelha dos HUMANOS (o 1.º fica no slot 6 — igual ao solo; os restantes nos pares alternados). */
+export const SLOTS_REDE = [6, 8, 10, 0, 2, 4, 1, 3, 5, 7, 9, 11];
+
+/** Nova corrida da SALA: humanos nos primeiros slots de SLOTS_REDE, bots preenchem o resto. */
+export function novaCorridaOnline(opts: {
+  pista: Pista;
+  voltas?: number;
+  jogadores: OlaKart[];
+  semente?: number;
+}): EstadoCorrida {
+  const rng = rng32(opts.semente ?? ((Math.random() * 2 ** 31) | 0));
+  const voltas = clamp(Math.round(opts.voltas ?? VOLTAS_OMISSAO), VOLTAS_MIN, VOLTAS_MAX);
+  const pista = opts.pista;
+  const L = pista.comprimento;
+  const humanos = opts.jogadores.slice(0, MAX_CORREDORES);
+  const corredores: Corredor[] = [];
+  for (let slot = 0; slot < MAX_CORREDORES; slot++) {
+    const h = slot < humanos.length ? humanos[slot] : null;
+    const id = SLOTS_REDE[slot];
+    const kart: KartId = h ? h.kart : IDS_KARTS[id % IDS_KARTS.length];
+    const linha = Math.floor(id / 2);
+    const lateral = (id % 2 === 0 ? -1 : 1) * 2.3;
+    const s = L - (8 + linha * 5); // ATRÁS da linha
+    const p = posicaoNaPista(pista, s, lateral);
+    const stats = h ? statsDe(h.kart, h.melhorias) : statsDe(kart, {});
+    const ref = amostraPerto(pista, p.x, p.z, p.i);
+    corredores.push({
+      id,
+      nome: h ? h.nome : NOMES_BOTS[slot % NOMES_BOTS.length],
+      kart, cor: h ? KARTS[kart].cor : CORES_BOTS[(slot + 10) % CORES_BOTS.length],
+      eJogador: !!h,
+      x: p.x, z: p.z, ang: p.ang, dirAng: p.ang, vel: 0,
+      lateralPerto: ref.lateral,
+      derrapando: false, derivaDir: 0, derivaCarga: 0,
+      boost: 0, stun: 0, escudo: 0, foraPista: false, contrario: 0, ultContrario: -9,
+      iAmostra: p.i, sTotal: s - L, dsAnt: ref.ds,
+      volta: 0, terminou: false, tempoFim: 0, posicao: id + 1, moedas: 0,
+      item: null, itens3: 0, caixaCooldown: 0,
+      stats,
+      iaRubber: 1,
+      iaOffset: h ? 0 : (rng() - 0.5) * pista.def.largura * 1.1,
+      iaSkill: h ? 1 : 0.82 + rng() * 0.13,
+      iaItemTimer: 2 + rng() * 4,
+      iaFrenagem: 0.6 + rng() * 0.5,
+    });
+  }
+  return {
+    fase: "contagem",
+    tempoContagem: 3.9,
+    tempo: 0,
+    voltas,
+    pista,
+    corredores,
+    projeteis: [],
+    perigos: [],
+    caixas: pista.caixas.map((c) => ({ x: c.x, z: c.z, viva: true, respawn: 0 })),
+    moedas: pista.moedas.map((c) => ({ x: c.x, z: c.z, viva: true })),
+    eventos: [],
+    rng,
+    seqId: 1,
+    recordeAnterior: Infinity, // recorde é DO APARELHO de cada cliente (payout local)
+    resultados: [],
+    payout: null,
+  };
+}
+
+/** MULTI (servidor 30 TPS): entradas POR CORREDOR — a sala fecha quando TODOS os humanos chegam (sem payout: cada cliente calcula o seu localmente). */
+export function passoCorridaMulti(e: EstadoCorrida, entradas: Record<number, EntradaKart>, dt: number): void {
+  const dtC = Math.min(dt, 0.25);
+  if (e.fase === "contagem") {
+    e.tempoContagem -= dtC;
+    if (e.tempoContagem <= 0) { e.fase = "corrida"; e.tempoContagem = 0; }
+    return;
+  }
+  if (e.fase === "fim") return;
+  e.tempo += dtC;
+  passoCorpo(e, entradas, dtC);
+
+  const humanos = e.corredores.filter((c) => c.eJogador);
+  if (humanos.length > 0 && humanos.every((c) => c.terminou)) {
+    e.fase = "fim";
+    e.resultados = posicoesDe(e).map((c, idx) => ({ id: c.id, nome: c.nome, posicao: idx + 1, tempo: c.terminou ? c.tempoFim : 0 }));
+    e.eventos.push({ t: "fimSala" });
   }
 }
 

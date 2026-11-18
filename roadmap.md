@@ -34,3 +34,11 @@
 - [x] Núcleo isomórfico puro pronto para servidor futuro + itens ponderados por posição, drift com mini-turbo, rampas, moedas, off-road — docs/REA-kart-v65.md §2.
 - [x] Plataforma: LiveHub (?game=kart, portal imersivo, ecrã inteiro), catálogo com categoria «Corridas», i18n kart.* ×64 pt+en, progresso do aparelho — docs/REA-kart-v65.md §2.
 - [x] Prova: test-kart-v65.mjs 65/65 ×2 (núcleo + E2E com chegada real e persistência) · regressão arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-kart-v65.md §5.
+
+## v66 — BATEU KART ONLINE: sala de corridas partilhada (2026-11-19)
+
+- [x] Servidor autoritativo de corridas (server/kart-servidor.mjs, npm run server:kart): o cliente manda APENAS intenção (ent ~30 Hz + uso EDGE) — o SERVIDOR simula com o MESMO núcleo do solo a 30 TPS; anti-batota por design (ninguém manda posição) — docs/REA-kart-online-v66.md §2.
+- [x] Sala com rondas automáticas: lobby (countdown só com gente) → corrida (humanos nos slots de rede 6,8,10… + bots) → resultados → lobby; quem entra a MEIO espera e entra na próxima; quem desliga vira piloto-IA; teto de tempo honesto — docs/REA-kart-online-v66.md §2-3.
+- [x] Núcleo multi isomórfico: passoCorpo extraído do passoCorrida (solo intato — 35 testes verdes), novaCorridaOnline, passoCorridaMulti (fim quando todos os humanos chegam + fimSala), validaOlaKart no core — docs/REA-kart-online-v66.md §2.
+- [x] Cliente: RedeKart (backoff, estados honestos), motor com mirror + interpolação 10→60 fps (a entrada vai para o servidor), UI «CORRER ONLINE» com lobby/badge, payout DO APARELHO — docs/REA-kart-online-v66.md §4.
+- [x] Prova: test-kart-online-v66.mjs 61/61 ×2 (núcleo + servidor real + E2E com 2 browsers na MESMA sala) · regressão kart solo 65/0 · arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-kart-online-v66.md §5.

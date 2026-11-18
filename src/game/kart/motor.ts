@@ -18,9 +18,10 @@
 import * as THREE from "three";
 import {
   EstadoCorrida, EntradaKart, EventoCorrida, ItemKartId, MelhoriaId, KartId, PistaDef,
-  construirPista, novaCorrida, passoCorrida, posicoesDe, pistaPorId,
+  construirPista, novaCorrida, passoCorrida, posicoesDe, pistaPorId, statsDe,
   FaseCorrida, Pista, rng32,
 } from "./core.ts";
+import type { SnapKart, CorredorInicio } from "./mp.ts";
 
 // ── HUD que o React desenha ────────────────────────────────────
 export interface EstadoHudKart {
@@ -66,6 +67,10 @@ interface OptsMotor {
   leve: boolean;
   aoHud: (e: EstadoHudKart) => void;
   aoAviso: (a: AvisosKart) => void;
+  // ── v66 ONLINE ──
+  idJogador?: number;                    // slot do MEU corredor (solo = 6)
+  corredoresRede?: CorredorInicio[];     // descritores vindos do servidor (nomes/karts/cores reais)
+  aoPulsarItemRede?: () => void;         // em rede o uso de item vai por MENSAGEM, não por física local
 }
 
 const COR_FAISCA_1 = 0x66ccff; // tier azul
@@ -116,6 +121,11 @@ export class MotorKart {
   private pausadoRef = false;
   private auto = false;
   private destruido = false;
+  private rede = false;                 // v66: true = o SERVIDOR simula; este motor só interpola e renderiza
+  private idJogador = 6;
+  private alvosRede = new Map<number, { x: number; z: number; ang: number; da: number }>();
+  private alvosProjetilRede = new Map<number, { x: number; z: number; ang: number }>();
+  private alvosOleoRede = new Map<number, { x: number; z: number }>();
   private entrada: EntradaKart = { acelerar: false, travar: false, virar: 0, derrapar: false, usarItem: false };
   private teclas = new Set<string>();
   private ultimoHud = 0;
@@ -137,6 +147,7 @@ export class MotorKart {
     const def = pistaPorId(opts.pistaId);
     if (!def) throw new Error(`pista desconhecida: ${opts.pistaId}`);
     this.pista = construirPista(def);
+    this.idJogador = typeof opts.idJogador === "number" && opts.idJogador >= 0 ? opts.idJogador : 6;
     this.corrida = novaCorrida({
       pista: this.pista,
       voltas: opts.voltas,
@@ -145,6 +156,22 @@ export class MotorKart {
       nomeJogador: opts.nomeJogador,
       recordeAnterior: opts.recordeAnterior,
     });
+    // v66 ONLINE: o servidor mandou os descritores REAIS (nomes/karts/cores) —
+    // reescrevem o mirror ANTES das meshes existirem (construirCorredores lê daqui)
+    if (opts.corredoresRede?.length) {
+      this.rede = true;
+      for (const r of opts.corredoresRede) {
+        const c = this.corrida.corredores.find((x) => x.id === r.id);
+        if (!c) continue;
+        c.nome = r.nome;
+        c.kart = r.kart;
+        c.cor = r.cor;
+        c.eJogador = r.eJogador;
+        c.stats = r.id === this.idJogador ? statsDe(opts.kartJogador, opts.melhorias) : statsDe(r.kart, {});
+      }
+      const meu = this.corrida.corredores.find((x) => x.id === this.idJogador);
+      if (meu) meu.nome = opts.nomeJogador || meu.nome;
+    }
 
     this.cena.background = new THREE.Color(def.corCeu);
     this.cena.fog = new THREE.Fog(def.corNevoa, opts.leve ? 130 : 170, opts.leve ? 420 : 560);
@@ -503,6 +530,60 @@ export class MotorKart {
   }
   estaPausado(): boolean { return this.pausadoRef; }
 
+  // ── v66 ONLINE ─────────────────────────────────────────────────
+  estaRede(): boolean { return this.rede; }
+  idMeu(): number { return this.idJogador; }
+  /** Entrada ATUAL do jogador (o cliente de rede publica isto a ~30 Hz). */
+  obterEntrada(): EntradaKart { return this.entrada; }
+
+  /** Aplica a snapshot AUTORITATIVA da sala ao mirror visual (o servidor é quem simula). */
+  aplicarSnap(s: SnapKart): void {
+    if (this.destruido || !this.rede) return;
+    for (const r of s.j) {
+      const c = this.corrida.corredores.find((x) => x.id === r.id);
+      if (!c) continue;
+      c.boost = r.bo || 0;
+      c.stun = r.st || 0;
+      c.escudo = r.esc || 0;
+      c.foraPista = r.fp === 1;
+      c.derrapando = r.dr === 1;
+      c.derivaCarga = r.dc || 0;
+      c.volta = r.vo || 0;
+      c.posicao = r.po || 0;
+      c.moedas = r.mo || 0;
+      c.iAmostra = r.ia || c.iAmostra;
+      c.item = (r.it ?? null) as ItemKartId | null;
+      c.itens3 = r.i3 || 0;
+      c.terminou = r.fin === 1;
+      if (r.fin === 1 && r.tf > 0) c.tempoFim = r.tf;
+      c.eJogador = r.ej === 1;
+      c.vel = r.vel || 0;
+      this.alvosRede.set(r.id, { x: r.x, z: r.z, ang: r.ang, da: r.da || r.ang });
+    }
+    s.cx?.forEach((v, i) => { const c = this.corrida.caixas[i]; if (c) c.viva = v === 1; });
+    s.mn?.forEach((v, i) => { const c = this.corrida.moedas[i]; if (c) c.viva = v === 1; });
+    // projéteis/perigos: reconstruídos pelo ID (as meshes seguem automaticamente)
+    const proj: typeof this.corrida.projeteis = [];
+    this.alvosProjetilRede.clear();
+    for (const r of (s as unknown as { pj?: { i: number; tp: "casca" | "cascaAlvo" | "missil"; x: number; z: number; ang: number; do: number }[] }).pj ?? []) {
+      proj.push({ id: r.i, tipo: r.tp, x: r.x, z: r.z, ang: r.ang, vel: 0, dono: r.do, alvo: -1, vida: 1, iAmostra: 0 });
+      this.alvosProjetilRede.set(r.i, { x: r.x, z: r.z, ang: r.ang });
+    }
+    this.corrida.projeteis = proj;
+    const per: typeof this.corrida.perigos = [];
+    this.alvosOleoRede.clear();
+    for (const r of (s as unknown as { og?: { i: number; x: number; z: number; do: number }[] }).og ?? []) {
+      per.push({ id: r.i, tipo: "oleo", x: r.x, z: r.z, dono: r.do, vida: 1, idade: 1 });
+      this.alvosOleoRede.set(r.i, { x: r.x, z: r.z });
+    }
+    this.corrida.perigos = per;
+    this.corrida.fase = s.fase;
+    this.corrida.tempo = s.tempo ?? this.corrida.tempo;
+    this.corrida.tempoContagem = s.cont ?? 0;
+    if (s.ev?.length) for (const ev of s.ev) this.corrida.eventos.push(ev);
+    if (s.res?.length) this.corrida.resultados = s.res;
+  }
+
   // ── ciclo ──────────────────────────────────────────────────────
   private passo = (): void => {
     if (this.destruido) return;
@@ -511,17 +592,33 @@ export class MotorKart {
     const dt = Math.min((agora - this.ultimoT) / 1000, 0.25); // catch-up honesto (v63)
     this.ultimoT = agora;
     if (!this.pausadoRef) {
-      if (this.auto) {
-        const usarPendente = this.entrada.usarItem; // a pulsação do item SOBREVIVE ao auto
-        this.entrada = this.entradaAuto();
-        if (usarPendente) this.entrada.usarItem = true;
+      if (this.rede) {
+        // v66 ONLINE: a ENTRADA (inclusive o auto) vai para o SERVIDOR; o motor só interpola
+        if (this.auto) {
+          const usarPendente = this.entrada.usarItem;
+          this.entrada = this.entradaAuto();
+          if (usarPendente) this.entrada.usarItem = true;
+        }
+        if (this.entrada.usarItem) {
+          this.entrada.usarItem = false;
+          this.opts.aoPulsarItemRede?.();
+        }
+        this.interpolarRede(dt);
+        this.drenarEventos();
+        this.empurrarHud();
+      } else {
+        if (this.auto) {
+          const usarPendente = this.entrada.usarItem; // a pulsação do item SOBREVIVE ao auto
+          this.entrada = this.entradaAuto();
+          if (usarPendente) this.entrada.usarItem = true;
+        }
+        const antes = this.corrida.fase;
+        const itemAntes = this.corredorJogador().item;
+        passoCorrida(this.corrida, this.entrada, dt);
+        this.entrada.usarItem = false; // pulsação consumida
+        this.drenarEventos();
+        if (this.corrida.fase !== antes || this.corredorJogador().item !== itemAntes) this.empurrarHud();
       }
-      const antes = this.corrida.fase;
-      const itemAntes = this.corredorJogador().item;
-      passoCorrida(this.corrida, this.entrada, dt);
-      this.entrada.usarItem = false; // pulsação consumida
-      this.drenarEventos();
-      if (this.corrida.fase !== antes || this.corredorJogador().item !== itemAntes) this.empurrarHud();
     }
     this.sincronizarVisual(agora);
     this.seguirCamara(dt);
@@ -529,7 +626,41 @@ export class MotorKart {
     if (agora - this.ultimoHud > 110) this.empurrarHud();
   };
 
-  private corredorJogador() { return this.corrida.corredores[6]; }
+  /** v66: interpola o mirror em direção à ÚLTIMA snapshot (10 Hz → 60 fps suave). */
+  private interpolarRede(dt: number): void {
+    const k = 1 - Math.exp(-Math.max(dt, 0.001) * 12);
+    for (const c of this.corrida.corredores) {
+      const al = this.alvosRede.get(c.id);
+      if (!al) continue;
+      c.x += (al.x - c.x) * k;
+      c.z += (al.z - c.z) * k;
+      let da = al.ang - c.ang;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
+      c.ang += da * k;
+      let dd = al.da - c.dirAng;
+      dd = Math.atan2(Math.sin(dd), Math.cos(dd));
+      c.dirAng += dd * k;
+    }
+    for (const p of this.corrida.projeteis) {
+      const al = this.alvosProjetilRede.get(p.id);
+      if (!al) continue;
+      p.x += (al.x - p.x) * k;
+      p.z += (al.z - p.z) * k;
+      let da = al.ang - p.ang;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
+      p.ang += da * k;
+    }
+    for (const h of this.corrida.perigos) {
+      const al = this.alvosOleoRede.get(h.id);
+      if (!al) continue;
+      h.x += (al.x - h.x) * k;
+      h.z += (al.z - h.z) * k;
+    }
+  }
+
+  private corredorJogador() {
+    return this.corrida.corredores.find((c) => c.id === this.idJogador) ?? this.corrida.corredores[6];
+  }
 
   /** Condução assistida (telemóvel/testes): persegue o ponto da pista à frente. */
   private entradaAuto(): EntradaKart {
@@ -555,15 +686,15 @@ export class MotorKart {
     for (const ev of this.corrida.eventos) {
       algum = true;
       const e = ev as EventoCorrida;
-      if (e.t === "golpe" && e.alvo === 6) { avisos.golpeRecebido = e.tipo; }
+      if (e.t === "golpe" && e.alvo === this.idJogador) { avisos.golpeRecebido = e.tipo; }
       else if (e.t === "raio") { avisos.golpeRecebido = "raio"; this.ultRaio = performance.now(); }
-      else if (e.t === "item" && e.id === 6) { avisos.itemNovo = e.item; }
-      else if (e.t === "volta" && e.id === 6) { avisos.voltaNova = e.volta; }
-      else if (e.t === "moeda" && e.id === 6) { avisos.moeda = true; }
-      else if (e.t === "deriva" && e.id === 6) {
+      else if (e.t === "item" && e.id === this.idJogador) { avisos.itemNovo = e.item; }
+      else if (e.t === "volta" && e.id === this.idJogador) { avisos.voltaNova = e.volta; }
+      else if (e.t === "moeda" && e.id === this.idJogador) { avisos.moeda = true; }
+      else if (e.t === "deriva" && e.id === this.idJogador) {
         avisos.derivaTurbo = e.fase;
         this.derivaFase = 0;
-      } else if (e.t === "rampa" && e.id === 6) { avisos.rampa = true; }
+      } else if (e.t === "rampa" && e.id === this.idJogador) { avisos.rampa = true; }
     }
     this.corrida.eventos.length = 0;
     if (algum && Object.keys(avisos).length) this.opts.aoAviso(avisos);
@@ -779,8 +910,19 @@ export class MotorKart {
           caixasVivas: self.corrida.caixas.filter((c) => c.viva).length,
         };
       },
-      /** Posições dos 12 (para provas de ordenação). */
+      /** Posição dos 12 (para provas de ordenação). */
       classificacao: () => posicoesDe(self.corrida).map((c) => ({ id: c.id, nome: c.nome, posicao: c.posicao, eJogador: c.eJogador, terminou: c.terminou, tempo: c.tempoFim })),
+      // ── v66 ONLINE ──
+      meuId: () => self.idMeu(),
+      estaRede: () => self.estaRede(),
+      /** Humanos REMOTOS (eJogador ≠ eu) — prova de multi real. */
+      remotosRede: () => self.corrida.corredores.filter((c) => c.eJogador && c.id !== self.idJogador).map((c) => ({ id: c.id, nome: c.nome })),
+      /** Estado de um corredor por id (prova de movimento do REMOTO nas snapshots). */
+      posCorredor: (id: number) => {
+        const c = self.corrida.corredores.find((x) => x.id === id);
+        if (!c) return null;
+        return { id: c.id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, posicao: c.posicao, vel: Math.round(c.vel * 10) / 10, terminou: c.terminou, eJogador: c.eJogador, item: c.item };
+      },
       /** Input externo (telemóvel/E2E). */
       entrada: (p: Partial<Omit<EntradaKart, "usarItem">>) => self.setEntrada(p),
       usarItem: () => self.pulsarItem(),

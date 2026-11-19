@@ -19,6 +19,10 @@ import {
   Lock, Pause, Play, Timer, Trophy, Volume2, VolumeX, Wifi, Wrench, X, Zap,
 } from "lucide-react";
 import { MotorKart, type EstadoHudKart, type AvisosKart, type GanchosKart } from "@/game/kart/motor.ts";
+import {
+  listarDesafios, lerEstado, progDe, metaAlvo, podeClamar, clamar, registarResultado, desafioPorId,
+  type ResultadoKart,
+} from "@/lib/desafios.ts";
 import { RedeKart, type EstadoMpKart } from "@/game/kart/mp.ts";
 import { adaptadorSomKart, somGlobal, type MotorSom } from "@/game/som.ts";
 import {
@@ -97,6 +101,9 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const [nomePiloto] = useState(() => `Piloto-${Math.floor(1000 + Math.random() * 9000)}`);
   // ── v67 SOM ──
   const [mudo, setMudo] = useState(() => somGlobal().estaMudo());
+  // ── v70 DESAFIOS DE EMPRESAS: tick para re-render + contadores da corrida EM CURSO ──
+  const [desafioTick, setDesafioTick] = useState(0);
+  const miniTurbosRef = useRef(0);
   // ── v69 GRÁFICOS: qualidade persistida no aparelho (alta = bloom/ACES/sombras/partículas) ──
   const [qualidade, setQualidade] = useState<"alta" | "leve">(() => {
     try {
@@ -254,7 +261,10 @@ export default function BateuKart({ onScore, onExit }: Props) {
         if (a.itemNovo) pushToast(`${ICONES_ITEM[a.itemNovo] ?? ""} ${t(`kart.item.${a.itemNovo}`)}`, "item");
         if (a.golpeRecebido) pushToast(t("kart.golpeRecebido", { item: a.golpeRecebido === "raio" ? "⚡" : t(`kart.item.${a.golpeRecebido}`) }), "golpe");
         if (a.voltaNova && modoJogoRef.current !== "batalha") pushToast(t("kart.voltaNova", { n: String(a.voltaNova) }), "info");
-        if (a.derivaTurbo) pushToast(a.derivaTurbo === 2 ? t("kart.turboLaranja") : t("kart.turboAzul"), "turbo");
+        if (a.derivaTurbo) {
+          pushToast(a.derivaTurbo === 2 ? t("kart.turboLaranja") : t("kart.turboAzul"), "turbo");
+          if (a.derivaTurbo === 2) miniTurbosRef.current++; // v70: contador honesto para desafios
+        }
         if (a.rampa) pushToast(t("kart.rampa"), "turbo");
         // v68 BATALHA
         if (a.balaoPerdido) pushToast(t("batalha.balaoPerdido"), "golpe");
@@ -327,6 +337,26 @@ export default function BateuKart({ onScore, onExit }: Props) {
     if (onScore) onScore(hud.payout.moedas);
     // v69: PÓDIO — fanfarra triunfal para 1.º/2.º/3.º (corrida E batalha)
     if (hud.posicao <= 3) somGlobal().tocar("podio");
+    // ── v70 DESAFIOS DE EMPRESAS: alimenta TODOS os desafios com o resultado real ──
+    const res: ResultadoKart = {
+      modo: modoRedeRef.current ? "online" : modoJogoRef.current,
+      pista: pistaRecRef.current,
+      posicao: hud.posicao,
+      total: hud.total,
+      moedas: hud.moedas,
+      caixas: motorRef.current?.ganchos().graficos().caixasAbertas ?? 0,
+      miniTurbos: miniTurbosRef.current,
+      baloes: hud.batalha?.golpes ?? 0,
+      venceu: hud.posicao === 1,
+    };
+    miniTurbosRef.current = 0;
+    const concluidos = registarResultado(res);
+    for (const id of concluidos) {
+      const d = desafioPorId(id);
+      if (d) pushToast(`🏆 ${d.empresa.nome}: ${d.titulo} — ${t("desafios.concluido")}`, "item");
+      somGlobal().tocar("recorde");
+    }
+    setDesafioTick((k) => k + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hud?.fase, fase]);
 
@@ -546,6 +576,66 @@ export default function BateuKart({ onScore, onExit }: Props) {
               )}
             </div>
             {avisoRede && <div className="mt-2 text-[11px] text-amber-300" data-testid="kart-online-aviso">{avisoRede}</div>}
+          </div>
+
+          {/* ── v70: DESAFIOS DE EMPRESAS (prémios patrocinados — o mecanismo vive no aparelho) ── */}
+          <div className="mt-6 w-full max-w-xl rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-4" data-testid="kart-desafios-painel">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl grid place-items-center bg-amber-600"><Trophy className="w-5 h-5 text-white" /></span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-white">{t("desafios.titulo")}</div>
+                <div className="text-[11px] text-slate-300">{t("desafios.sub")}</div>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-col gap-2" data-testid="kart-desafios-lista" key={desafioTick}>
+              {listarDesafios(nivel).map((d) => {
+                const alvo = metaAlvo(d);
+                const prog = progDe(d.id);
+                const clamarAgora = podeClamar(d.id);
+                const st = lerEstado().porId[d.id];
+                return (
+                  <div key={d.id} className="rounded-xl border border-white/10 bg-slate-900/70 p-3" data-testid={`kart-desafio-${d.id}`}>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-9 h-9 rounded-lg grid place-items-center text-[11px] font-black text-white shrink-0" style={{ background: d.empresa.cor }}>{d.empresa.iniciais}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-black text-white truncate">{d.titulo}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{d.empresa.nome} · <span className="text-yellow-300 font-bold">+{d.premioMoedas} 🪙</span></div>
+                      </div>
+                      {clamarAgora ? (
+                        <button
+                          onClick={() => {
+                            const premio = clamar(d.id);
+                            if (premio) {
+                              setSave((atual) => {
+                                const s = validarSaveKart(atual);
+                                const novo: SaveKart = { ...s, moedas: s.moedas + premio.moedas, xp: s.xp + premio.xp, ts: Date.now() };
+                                guardarSave(novo);
+                                return novo;
+                              });
+                              somGlobal().tocar("podio");
+                              pushToast(`🎉 ${d.empresa.nome}: +${premio.moedas} 🪙`, "item");
+                              setDesafioTick((k) => k + 1);
+                            }
+                          }}
+                          className="shrink-0 rounded-lg bg-gradient-to-r from-emerald-500 to-lime-500 px-3 py-2 text-[11px] font-black text-white hover:brightness-110"
+                          data-testid={`kart-desafio-clamar-${d.id}`}
+                        >{t("desafios.clamar")}</button>
+                      ) : st?.reclamado ? (
+                        <span className="shrink-0 rounded-lg bg-slate-800 px-2.5 py-2 text-[10px] font-bold text-emerald-300">{t("desafios.reclamado")}</span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] font-bold text-slate-300">{Math.min(prog, alvo)}/{alvo}</span>
+                      )}
+                    </div>
+                    {!st?.reclamado && (
+                      <div className="mt-2 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all" style={{ width: `${Math.min(100, (prog / alvo) * 100)}%` }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500" data-testid="kart-desafios-nota">{t("desafios.nota")}</p>
           </div>
         </div>
 

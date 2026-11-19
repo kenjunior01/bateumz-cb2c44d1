@@ -7,6 +7,7 @@ import { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import PainelDesafios from "@/components/livegames/PainelDesafios";
 import GlowPulse from "@/components/ui/GlowPulse";
 import ShimmerText from "@/components/ui/ShimmerText";
 import NeonBorder from "@/components/ui/NeonBorder";
@@ -750,6 +751,11 @@ const LiveHub = () => {
           </motion.button>
         )}
 
+        {/* ⭐ v70 — DESAFIOS DE EMPRESAS: prémios patrocinados (o mecanismo real vive no aparelho) */}
+        {!isImmersiveWorld && (
+          <PainelDesafios onJogar={() => setActive("kart")} />
+        )}
+
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 mt-4">
           {GAMES.map((g) => {
             const isActive = active === g.id;
@@ -793,7 +799,7 @@ const LiveHub = () => {
                 <MissionsBar gameId={active} gameName={activeMeta?.label ?? "Jogo"} />
               </div>
             )}
-            {/* v13: MMORPG tem HUD própria — chrome do wrapper escondido
+            {/* v13+: o BATEU KART tem HUD própria — chrome do wrapper escondido
                 (evita 2 botões de ecrã inteiro e sobreposição no modo foto) */}
             <GameFullscreenWrapper gameName={activeMeta?.label ?? ""} hideChrome={isImmersiveWorld}>
             <AnimatePresence mode="wait">

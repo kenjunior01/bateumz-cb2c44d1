@@ -17,7 +17,7 @@ interface Props {
    v62 — ECRÃ INTEIRO HONESTO (roadmap item 4): entrada, saída, resize e
    mobile.
    · ENTRADA: botão sempre presente (mesmo nos mundos imersivos, antes
-     escondido por hideChrome — o RPG/Aetheria ficavam sem caminho para
+     escondido por hideChrome — mundos fullscreen antigos ficavam sem caminho para
      o ecrã inteiro).
    · SAÍDA: ESC nativo + fullscreenchange sincroniza o estado; no modo
      pseudo (iOS/Sem API), ESC próprio + o mesmo botão sai.
@@ -182,7 +182,7 @@ export default GameFullscreenWrapper;
 
 /* ═══════════════════════════════════════════════════════════════════════
    v62 — ToggleEcraInteiro: o botão DENTRO do portal imersivo.
-   Os mundos (RPG/Aetheria) chegam ao body por createPortal (fixed z-[80])
+   Os mundos fullscreen chegam ao body por createPortal (fixed z-[80])
    — fora do wrapper e da sua stacking context, por isso o botão de ecrã
    inteiro tem de viver NO portal. Pede ecrã inteiro para o ANCESTRAL
    posicionado (o próprio portal); ESC nativo e fullscreenchange mantêm o

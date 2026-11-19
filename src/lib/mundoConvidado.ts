@@ -25,8 +25,6 @@ export const ROTULO_CONVIDADO = "Convidado";
  *  · ia_historico      — histórico da IA (v58, RLS + JWT)
  *  · engagement_points — pontos de engajamento (leaderboard /pontos,
  *                        concedidos só pela edge function com JWT)
- *  · rpg_characters    — personagens RPG no servidor (futuro; a
- *                        progressão atual vive no aparelho)
  * NOTA: `lives` e `profiles` NÃO são conta-apenas — são leituras
  * públicas de conteúdo (o hub mostra «ao vivo agora» a qualquer um).
  */
@@ -34,7 +32,6 @@ export const TABELAS_CONTA_APENAS = [
   "spin_wheel_games",
   "ia_historico",
   "engagement_points",
-  "rpg_characters",
 ] as const;
 
 /**

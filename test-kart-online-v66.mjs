@@ -489,8 +489,23 @@ async function main() {
   ok("B ANDA na mesma corrida (2 pilotos a lutar de verdade)", velB > 5);
 
   // caixa → item → uso com efeito REAL (via rede)
+  // v70: piloto de CAÇA determinística — aponta à caixa viva mais próxima (gancho alvoCaixa)
+  // e conduz de VERDADE até lá (o servidor valida tudo; o alinhamento de faixa deixa de
+  // ser lotaria sob carga — mesma lição v65.1, agora no pickup do browser)
   let itemA = null;
+  await pgA.evaluate(() => window.__kart.dirigirAuto(false));
   for (let i = 0; i < 90 && !itemA; i++) {
+    await pgA.evaluate(() => {
+      const alvo = window.__kart.alvoCaixa();
+      const e = window.__kart.estado();
+      if (alvo) {
+        const dif = Math.atan2(alvo.x - e.x, alvo.z - e.z) - e.ang;
+        const difN = Math.atan2(Math.sin(dif), Math.cos(dif));
+        window.__kart.entrada({ acelerar: true, travar: false, virar: Math.max(-1, Math.min(1, difN * 2.5)), derrapar: false });
+      } else {
+        window.__kart.entrada({ acelerar: true, travar: false, virar: 0, derrapar: false });
+      }
+    });
     await dormir(1000);
     itemA = await pgA.evaluate(() => window.__kart.estado().item);
   }

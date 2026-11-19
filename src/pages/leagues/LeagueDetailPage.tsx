@@ -513,11 +513,6 @@ export default function LeagueDetailPage() {
                           <p className="text-white text-sm font-medium truncate">
                             {p.display_name || p.profile?.display_name || `Jogador ${i + 1}`}
                           </p>
-                          {p.rpg_class && (
-                            <p className="text-[10px] text-purple-300/70 flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> {p.rpg_class} Nv.{p.rpg_level}
-                            </p>
-                          )}
                           <div className="flex gap-3 mt-1 text-[10px] text-white/40">
                             <span className="text-emerald-400/70">{p.wins}V</span>
                             <span className="text-amber-400/70">{p.draws}E</span>
@@ -712,9 +707,6 @@ export default function LeagueDetailPage() {
                         <tr className="border-b border-white/10">
                           <th className="text-left p-3 text-white/40 font-medium">#</th>
                           <th className="text-left p-3 text-white/40 font-medium">Jogador</th>
-                          {league.format === "rpg_championship" && (
-                            <th className="text-left p-3 text-white/40 font-medium">Classe</th>
-                          )}
                           <th className="text-center p-3 text-white/40 font-medium">V</th>
                           <th className="text-center p-3 text-white/40 font-medium">E</th>
                           <th className="text-center p-3 text-white/40 font-medium">D</th>
@@ -747,9 +739,6 @@ export default function LeagueDetailPage() {
                             <td className="p-3 text-white/80 font-medium">
                               {p.display_name || p.profile?.display_name || `Jogador ${i + 1}`}
                             </td>
-                            {league.format === "rpg_championship" && (
-                              <td className="p-3 text-purple-300/60">{p.rpg_class || "--"}</td>
-                            )}
                             <td className="p-3 text-center text-emerald-400/70">{p.wins}</td>
                             <td className="p-3 text-center text-amber-400/70">{p.draws}</td>
                             <td className="p-3 text-center text-red-400/70">{p.losses}</td>

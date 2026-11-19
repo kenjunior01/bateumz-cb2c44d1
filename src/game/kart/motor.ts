@@ -1475,6 +1475,18 @@ export class MotorKart {
       }),
       /** v69: provoca um TREMOR honesto de teste (o E2E prova o shake sem precisar de golpes). */
       tremorForcar: (v: number) => { self.tremor = Math.max(0, Math.min(1.2, v)); },
+      /** v70: caixa «?» VIVA mais próxima (≤400 u) — steering determinístico de teste/assistência;
+       *  o kart conduz de verdade até lá (o servidor continua a validar tudo). */
+      alvoCaixa: () => {
+        const j = self.corredorJogador();
+        let melhor: { x: number; z: number; d: number } | null = null;
+        for (const cx of self.corrida.caixas) {
+          if (!cx.viva) continue;
+          const d = Math.hypot(cx.x - j.x, cx.z - j.z);
+          if (d < 400 && (!melhor || d < melhor.d)) melhor = { x: cx.x, z: cx.z, d: Math.round(d * 10) / 10 };
+        }
+        return melhor;
+      },
       /** v68 BATALHA: estado completo da batalha (balões/golpes/eliminados/teto). */
       batalha: () => self.batalha ? {
         baloes: [...self.batalha.baloes],

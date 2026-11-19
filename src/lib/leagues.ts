@@ -8,14 +8,13 @@ export type LeagueFormat =
   | "single_elimination"
   | "double_elimination"
   | "swiss"
-  | "battle_royale"
-  | "rpg_championship";
+  | "battle_royale";
 
 export type LeagueStatus = "draft" | "registration" | "active" | "paused" | "completed";
 export type MatchStatus = "scheduled" | "in_progress" | "completed" | "cancelled" | "bye";
 export type GameCategory =
   | "strategy" | "arcade" | "puzzle" | "reflex" | "quiz"
-  | "luck" | "social" | "words" | "cards" | "rpg" | "battle_royale" | "typing" | "action";
+  | "luck" | "social" | "words" | "cards" | "battle_royale" | "typing" | "action";
 
 export interface League {
   id: string;
@@ -46,7 +45,6 @@ export interface League {
   currency: string;
   prize_distribution: number[];
   prize_description?: string;
-  rpg_config: Record<string, any>;
   battle_royale_config: Record<string, any>;
   primary_color: string;
   secondary_color: string;
@@ -74,11 +72,6 @@ export interface LeagueParticipant {
   points: number;
   score_for: number;
   score_against: number;
-  rpg_class?: string;
-  rpg_level: number;
-  rpg_xp: number;
-  rpg_kills: number;
-  rpg_deaths: number;
   br_wins: number;
   br_avg_placement: number;
   br_total_kills: number;
@@ -165,7 +158,6 @@ export interface CreateLeagueData {
   secondary_color?: string;
   is_public?: boolean;
   requires_approval?: boolean;
-  rpg_config?: Record<string, any>;
   battle_royale_config?: Record<string, any>;
 }
 
@@ -176,7 +168,6 @@ export const FORMAT_LABELS: Record<LeagueFormat, string> = {
   double_elimination: "Eliminacao Dupla",
   swiss: "Sistema Suico",
   battle_royale: "Battle Royale",
-  rpg_championship: "Campeonato RPG",
 };
 
 export const FORMAT_DESCRIPTIONS: Record<LeagueFormat, string> = {
@@ -185,7 +176,6 @@ export const FORMAT_DESCRIPTIONS: Record<LeagueFormat, string> = {
   double_elimination: "Dois brackets. Perde no winners, vai para losers. So elimina na segunda derrota.",
   swiss: "Emparceiramento por pontos. Todos jogam o mesmo numero de rondas.",
   battle_royale: "Todos ao mesmo tempo. Ultimo a sobreviver vence a ronda.",
-  rpg_championship: "Bracket com classes RPG. Escolha sua classe e lute!",
 };
 
 export const GAME_CATEGORY_LABELS: Record<GameCategory, string> = {
@@ -198,7 +188,6 @@ export const GAME_CATEGORY_LABELS: Record<GameCategory, string> = {
   social: "Social",
   words: "Palavras",
   cards: "Cartas",
-  rpg: "RPG",
   battle_royale: "Battle Royale",
   typing: "Digitacao",
   action: "Acao",
@@ -287,7 +276,6 @@ export async function getFeaturedLeagues(): Promise<League[]> {
 export async function joinLeague(leagueId: string, userId: string, data?: {
   display_name?: string;
   team_name?: string;
-  rpg_class?: string;
 }): Promise<void> {
   const { error } = await sb.from("league_participants").insert({
     league_id: leagueId,

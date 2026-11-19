@@ -40,7 +40,6 @@ const FORMAT_ICONS: Record<string, React.ReactNode> = {
   single_elimination: <Swords className="h-3.5 w-3.5" />,
   double_elimination: <Swords className="h-3.5 w-3.5" />,
   battle_royale: <Gamepad2 className="h-3.5 w-3.5" />,
-  rpg_championship: <ScrollText className="h-3.5 w-3.5" />,
   round_robin: <Users className="h-3.5 w-3.5" />,
   swiss: <Zap className="h-3.5 w-3.5" />,
 };
@@ -293,7 +292,6 @@ export default function LeaguesListPage() {
   const formatTabs = [
     { key: "all", label: "Todos" },
     { key: "single_elimination", label: "Eliminacao" },
-    { key: "rpg_championship", label: "RPG" },
     { key: "battle_royale", label: "Battle Royale" },
     { key: "round_robin", label: "Round Robin" },
     { key: "swiss", label: "Suico" },

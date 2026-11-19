@@ -66,3 +66,11 @@
 - [x] Sensação de velocidade: asfalto com tracejado/linhas (UV na fita), água da praia com caustics animadas, lava HDR pulsante, riscos de velocidade (>50% vel máx), rolagem bancária em deriva e TREMOR de impacto — docs/REA-graficos-v69.md §3.
 - [x] Música POR PISTA (praia 126 tropical com onda do mar · deserto 142 frígio · vulcão 152 menor · batalha 160 diminuto — timbres por tema) + fanfarra de PÓDIO (31.º efeito da tabela) para 1.º/2.º/3.º — docs/REA-graficos-v69.md §4.
 - [x] Prova: test-gfx-v69.mjs 26/26 ×2 (núcleo do pool + E2E ALTA com fumo/riscos/tremor/confetti reais + E2E LEVE intato) · regressão kart solo 65/0 · online 61/0 ×2 (com fix do piloto de pickup) · batalha 30/0 · som 58/0 · web 11/0 · tsc 0 · build OK — docs/REA-graficos-v69.md §7.
+
+## v70 — Desafios de Empresas: prémios patrocinados (2026-11-19)
+
+- [x] Núcleo isomórfico desafios.ts: empresas fictícias do lançamento (8), metas ×7 alimentadas por dados reais do jogo (pódio/corridas/vitórias/moedas-corrida/caixas/balões/online), estado no aparelho, CLAMAR 1× com congelamento e tetos honestos — docs/REA-desafios-v70.md §2.
+- [x] BATEU KART: o fim de cada corrida/batalha/online alimenta os desafios com o resultado REAL (caixas, mini-turbos, balões, posição) e o menu ganha a secção com cartões de marca, prémio e CLAMAR — docs/REA-desafios-v70.md §3.
+- [x] Plataforma: PainelDesafios no LiveHub com a SALA DE PATROCÍNIOS (formulário completo de criação de desafio por empresas) e o MESMO estado do aparelho — docs/REA-desafios-v70.md §4.
+- [x] FURO REAL fechado: modal `fixed` sob ancestral com transform (framer-motion) ficava fora do ecrã (1.º clique morria) → createPortal(document.body); LIMPEZA RPG final nas Ligas (formato rpg_championship, género, colunas de classe e payloads fora) — docs/REA-desafios-v70.md §4-5.
+- [x] Prova: test-desafios-v70.mjs 36/36 ×2 (núcleo 27 + E2E 9 com corrida real a alimentar progresso e claim a pagar moedas) · regressão kart solo 65/0 · online 61/0 ×2 (alvoCaixa) · batalha 30/0 · gfx 26/0 · som 58/0 · web 11/0 · tsc 0 · build OK — docs/REA-desafios-v70.md §6.

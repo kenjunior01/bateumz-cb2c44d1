@@ -153,7 +153,7 @@ export const PLATFORM_PLANS: PlatformPlan[] = [
     price: 0,
     tagline: "Para pessoas usarem a plataforma para os seus fins",
     features: [
-      "Jogos e RPG 3D",
+      "Corridas 3D",
       "Stories, feed e lives",
       "Participar em sorteios e concursos",
       "Criar eventos gratuitos",

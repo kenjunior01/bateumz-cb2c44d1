@@ -43,7 +43,7 @@ import {
 const sb: any = supabase;
 
 const GAME_TYPES = [
-  "Galo PRO", "Ligar 4", "Xadrez", "RPG Arena", "Battle Royale",
+  "Galo PRO", "Ligar 4", "Xadrez", "Battle Royale",
   "Damas", "Batalha Naval", "Domino", "Uno", "Jogo da Velha PRO",
   "Pedra Papel Tesoura", "Trivia Quiz", "Palavras Cruzadas", "Forca",
   "Memoria", "Velocidade de Reacao", "Digitacao", "Snake",
@@ -55,7 +55,6 @@ const FORMAT_OPTIONS: { value: LeagueFormat; label: string; desc: string }[] = [
   { value: "round_robin", label: "Todos contra Todos", desc: "Cada jogador enfrenta todos. Classificacao por pontos." },
   { value: "swiss", label: "Sistema Suico", desc: "Emparceiramento por pontos. Mesmo numero de rondas." },
   { value: "battle_royale", label: "Battle Royale", desc: "Todos ao mesmo tempo. Ultimo a sobreviver vence." },
-  { value: "rpg_championship", label: "Campeonato RPG", desc: "Bracket com classes RPG. Escolha sua classe e lute!" },
 ];
 
 const MAX_PARTICIPANTS = [4, 8, 16, 32, 64];
@@ -87,10 +86,6 @@ interface CreateForm {
   secondary_color: string;
   is_public: boolean;
   requires_approval: boolean;
-  // RPG
-  rpg_toggle_classes: boolean;
-  rpg_max_level: string;
-  rpg_banned_abilities: string;
   // BR
   br_map_size: string;
   br_shrink_speed: string;
@@ -113,9 +108,6 @@ const emptyForm: CreateForm = {
   secondary_color: "#2563eb",
   is_public: true,
   requires_approval: false,
-  rpg_toggle_classes: true,
-  rpg_max_level: "30",
-  rpg_banned_abilities: "",
   br_map_size: "Medio",
   br_shrink_speed: "Normal",
   br_max_bots: "20",
@@ -161,16 +153,6 @@ export default function DashboardLeagues() {
     }
     setSubmitting(true);
     try {
-      const rpgConfig: Record<string, any> = {};
-      if (form.format === "rpg_championship") {
-        rpgConfig.toggle_classes = form.rpg_toggle_classes;
-        rpgConfig.max_level = Number(form.rpg_max_level) || 30;
-        rpgConfig.banned_abilities = form.rpg_banned_abilities
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      }
-
       const brConfig: Record<string, any> = {};
       if (form.format === "battle_royale") {
         brConfig.map_size = form.br_map_size;
@@ -194,7 +176,6 @@ export default function DashboardLeagues() {
         secondary_color: form.secondary_color,
         is_public: form.is_public,
         requires_approval: form.requires_approval,
-        rpg_config: rpgConfig,
         battle_royale_config: brConfig,
         creator_id: user.id,
       });
@@ -450,53 +431,6 @@ export default function DashboardLeagues() {
                 </div>
               </div>
 
-              <AnimatePresence>
-                {form.format === "rpg_championship" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <Separator className="bg-white/10 mb-4" />
-                    <h3 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
-                      <ScrollText className="h-4 w-4" /> Configuracao RPG
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                        <Label className="text-white/70 text-sm">Ativar classes</Label>
-                        <button
-                          type="button"
-                          onClick={() => updateField("rpg_toggle_classes", !form.rpg_toggle_classes)}
-                          className={`relative w-10 h-5 rounded-full transition-colors ${form.rpg_toggle_classes ? "bg-purple-600" : "bg-white/20"}`}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${form.rpg_toggle_classes ? "translate-x-5" : ""}`}
-                          />
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-white/70 text-sm">Nivel Maximo</Label>
-                        <Input
-                          type="number"
-                          value={form.rpg_max_level}
-                          onChange={(e) => updateField("rpg_max_level", e.target.value)}
-                          className="bg-white/5 border-white/10 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      <Label className="text-white/70 text-sm">Habilidades Banidas (separadas por virgula)</Label>
-                      <Input
-                        placeholder="Ex: Teleporte, Invisibilidade"
-                        value={form.rpg_banned_abilities}
-                        onChange={(e) => updateField("rpg_banned_abilities", e.target.value)}
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               <AnimatePresence>
                 {form.format === "battle_royale" && (

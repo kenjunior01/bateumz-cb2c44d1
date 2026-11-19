@@ -74,3 +74,9 @@
 - [x] Plataforma: PainelDesafios no LiveHub com a SALA DE PATROCÍNIOS (formulário completo de criação de desafio por empresas) e o MESMO estado do aparelho — docs/REA-desafios-v70.md §4.
 - [x] FURO REAL fechado: modal `fixed` sob ancestral com transform (framer-motion) ficava fora do ecrã (1.º clique morria) → createPortal(document.body); LIMPEZA RPG final nas Ligas (formato rpg_championship, género, colunas de classe e payloads fora) — docs/REA-desafios-v70.md §4-5.
 - [x] Prova: test-desafios-v70.mjs 36/36 ×2 (núcleo 27 + E2E 9 com corrida real a alimentar progresso e claim a pagar moedas) · regressão kart solo 65/0 · online 61/0 ×2 (alvoCaixa) · batalha 30/0 · gfx 26/0 · som 58/0 · web 11/0 · tsc 0 · build OK — docs/REA-desafios-v70.md §6.
+
+## v71 — Painéis de Marcas no Circuito (2026-11-19)
+
+- [x] Painéis de publicidade 3D das marcas DESAFIO no circuito: textura-canvas com cor/iniciais/nome/tagline/prémio, 8 do catálogo v70 + 4 custom da Sala de Patrocínios, nos caminhos ALTA e LEVE, com sombra dinâmica no ALTA — docs/REA-paineis-v71.md §1-2.
+- [x] Gancho honesto graficos().paineisMarcas + limpeza em destruir() — docs/REA-paineis-v71.md §1.
+- [x] Prova: test-gfx-v69 28/0 ×2 (+2 asserções ALTA+LEVE) · regressão desafios-v70 36/0 · kart-v65 65/0 · batalha-v68 30/0 · som-v67 58/0 · online-v66 61/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-paineis-v71.md §3.

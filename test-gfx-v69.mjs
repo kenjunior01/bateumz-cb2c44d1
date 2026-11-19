@@ -131,6 +131,9 @@ async function main() {
   const gAlta = await pgA.evaluate(() => window.__kart.graficos());
   ok("motor em ALTA: bloom + sombras + cúpula de céu + tema praia",
     gAlta.qualidade === "alta" && gAlta.bloom === true && gAlta.sombras === true && gAlta.ceuDomo === true && gAlta.tema === "praia");
+  // v71: os PAINÉIS DE MARCAS (catálogo v70) anunciam os desafios no circuito
+  ok("8 painéis de MARCAS no circuito (catálogo v70 vivo no mundo 3D) [ALTA]",
+    gAlta.paineisMarcas === 8);
 
   // música segue a PISTA (v69)
   ok("música em ALTA usa o tema da PISTA (praia)",
@@ -198,6 +201,9 @@ async function main() {
   const gLeve = await pgC.evaluate(() => window.__kart.graficos());
   ok("motor em LEVE: bloom/sombras/céu/partículas OFF honestos (caminho v65)",
     gLeve.qualidade === "leve" && gLeve.bloom === false && gLeve.sombras === false && gLeve.ceuDomo === false && gLeve.particulasVivas === 0);
+  // v71: os painéis de marcas existem TAMBÉM em LEVE (conteúdo da plataforma, não efeito gráfico)
+  ok("8 painéis de MARCAS no circuito também em LEVE (conteúdo da plataforma)",
+    gLeve.paineisMarcas === 8);
 
   await pgC.waitForFunction(() => window.__kart.estado().fase === "corrida", null, { timeout: 30_000 });
   await pgC.evaluate(() => window.__kart.dirigirAuto(true));

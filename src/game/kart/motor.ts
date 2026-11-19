@@ -28,6 +28,7 @@ import {
 } from "./core.ts";
 import { novaBatalha, passoBatalha, rankingBatalha, DURACAO_BATALHA_S, type EstadoBatalha } from "./batalha.ts";
 import { Particulas } from "./particulas.ts";
+import { CATALOGO_DESAFIOS, lerCustom, type DesafioEmpresa } from "../../lib/desafios.ts"; // v71: as MARCAS anunciam os desafios NO CIRCUITO
 import type { SnapKart, CorredorInicio } from "./mp.ts";
 import type { SomKart } from "../som.ts";
 
@@ -222,6 +223,46 @@ function texturaNuvem(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(c);
 }
 
+// v71 — PAINEL DE MARCA (publicidade dos DESAFIOS no circuito): quadro
+// canvas 256×128 com a cor da empresa, logótipo de iniciais, nome,
+// tagline e o prémio do desafio — a plataforma VIVA na pista.
+function texturaPainelMarca(d: DesafioEmpresa): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = d.empresa.cor;
+  ctx.fillRect(0, 0, 256, 128);
+  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.fillRect(0, 86, 256, 42);
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, 250, 122);
+  // logótipo gerado (iniciais da marca)
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.beginPath(); ctx.arc(40, 42, 26, 0, 6.28); ctx.fill();
+  ctx.fillStyle = d.empresa.cor;
+  ctx.font = "bold 24px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(d.empresa.iniciais.slice(0, 3), 40, 43);
+  ctx.textBaseline = "alphabetic";
+  // nome + tagline
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 24px sans-serif";
+  ctx.fillText(d.empresa.nome.slice(0, 15).toUpperCase(), 148, 36);
+  ctx.font = "600 13px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.fillText(d.empresa.tagline.slice(0, 30), 148, 58);
+  ctx.fillText(d.titulo.slice(0, 32), 128, 76);
+  // faixa do prémio
+  ctx.fillStyle = "#ffd23f";
+  ctx.font = "bold 19px sans-serif";
+  ctx.fillText(`DESAFIO +${d.premioMoedas} moedas`, 128, 114);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function texturaXadrez(): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = 64; c.height = 16;
@@ -305,6 +346,8 @@ export class MotorKart {
   private nuvens = new THREE.Group();
   private texAgua: THREE.CanvasTexture | null = null;
   private matAgua: THREE.MeshPhongMaterial | null = null;
+  // v71: painéis de MARCAS ao longo do circuito (catálogo + os 4 custom mais recentes da Sala)
+  private paineisMarcas: THREE.Mesh[] = [];
   private matLava: THREE.MeshBasicMaterial | null = null;
   private tremor = 0;            // impulso de shake de câmara (decai exponencial)
   private rollSuave = 0;         // rolagem bancária em deriva (suavizada)
@@ -659,6 +702,52 @@ export class MotorKart {
           this.nuvens.add(sp);
         }
         this.cena.add(this.nuvens);
+      }
+    }
+
+    // v71: as MARCAS anunciam os desafios NO CIRCUITO (nos DOIS caminhos —
+    // é conteúdo da plataforma, não um efeito de qualidade gráfica)
+    this.construirPaineisMarcas(def);
+  }
+
+  // ── v71: painéis de publicidade das marcas (catálogo + Sala de Patrocínios) ──
+  private construirPaineisMarcas(def: PistaDef): void {
+    // catálogo do lançamento + os 4 desafios CUSTOM mais recentes da Sala de Patrocínios (teto honesto)
+    const marcas: DesafioEmpresa[] = [...CATALOGO_DESAFIOS, ...lerCustom().slice(-4)];
+    const m = this.pista.amostras.length;
+    const passo = Math.max(40, Math.floor(m / marcas.length));
+    const geoQuadro = new THREE.BoxGeometry(7, 3.5, 0.3);
+    const geoPoste = new THREE.CylinderGeometry(0.18, 0.22, 3.2, 8);
+    const matPoste = new THREE.MeshLambertMaterial({ color: 0x2c3440 });
+    const matTraseira = new THREE.MeshLambertMaterial({ color: 0x1f242c });
+    this.registar(geoQuadro, matPoste);
+    this.registar(geoPoste, matTraseira);
+    const alta = this.qualidade === "alta";
+    for (let k = 0; k < marcas.length; k++) {
+      const d = marcas[k];
+      const i = (k * passo) % m;
+      const a = this.pista.amostras[i];
+      const lado = k % 2 === 0 ? -1 : 1;
+      const lat = lado * (def.largura + 4.6);
+      const px = a.x + a.nx * lat, pz = a.z + a.nz * lat;
+      const tex = texturaPainelMarca(d);
+      this.disposaveisTextura.push(tex);
+      const matFrente = new THREE.MeshBasicMaterial({ map: tex });
+      this.registar(null, matFrente);
+      // BoxGeometry: material por face [+x, −x, +y, −y, +z, −z] — o TEXTO na frente (+z)
+      const quadro = new THREE.Mesh(geoQuadro, [matTraseira, matTraseira, matTraseira, matTraseira, matFrente, matTraseira]);
+      quadro.position.set(px, 4.2, pz);
+      quadro.rotation.y = Math.atan2(-lado * a.nx, -lado * a.nz); // a face do texto olha para a pista
+      quadro.castShadow = alta;   // v71: as marcas também lançam sombra no caminho ALTA
+      quadro.receiveShadow = alta;
+      this.cena.add(quadro);
+      this.paineisMarcas.push(quadro);
+      for (const off of [-2.6, 2.6]) {
+        const poste = new THREE.Mesh(geoPoste, matPoste);
+        const nx = Math.cos(quadro.rotation.y), nz = -Math.sin(quadro.rotation.y);
+        poste.position.set(px + nx * off, 1.6, pz + nz * off);
+        poste.castShadow = alta;
+        this.cena.add(poste);
       }
     }
   }
@@ -1470,6 +1559,7 @@ export class MotorKart {
         tremorAtivo: self.tremor > 0.02,
         confete: self.confeteFeito,
         caixasAbertas: self.caixasEu,
+        paineisMarcas: self.paineisMarcas.length, // v71: publicidade das marcas NO circuito
         fov: Math.round(self.camara.fov * 10) / 10,
         tema: self.pista.def.tema,
       }),
@@ -1587,6 +1677,7 @@ export class MotorKart {
     this.ceuDomo = null;
     this.uniformesCeu = null;
     this.nuvens.clear();
+    this.paineisMarcas = []; // v71
     this.texAgua = null;
     this.matAgua = null;
     this.matLava = null;

@@ -72,7 +72,8 @@ async function main() {
 
   let tabelaOk = true;
   for (const id of mod.IDS_SOM) { try { inst1.tocar(id); } catch { tabelaOk = false; } }
-  ok(`tabela FECHADA completa: TODOS os ${mod.IDS_SOM.length} efeitos sintetizam sem crash (Node no-op)`, tabelaOk && mod.IDS_SOM.length === 30);
+  ok(`tabela FECHADA completa: TODOS os ${mod.IDS_SOM.length} efeitos sintetizam sem crash (Node no-op)`, tabelaOk && mod.IDS_SOM.length === 31);
+  ok("v69: PÓDIO existe na tabela e sintetiza (fanfarra triunfal)", inst1.ultimos.includes("podio") && mod.IDS_SOM.includes("podio"));
   ok("ultimos é um anel com teto (24)", inst1.ultimos.length <= 24 && inst1.ultimos.length >= 20);
 
   ok("mudo: default FALSE e alternável SEM contexto", inst1.estaMudo() === false && (inst1.definirMudo(true), inst1.estaMudo() === true));
@@ -82,6 +83,12 @@ async function main() {
 
   ok("musica() em Node: tipo registado, sem crash", (inst1.musica("menu"), inst1.musicaActual() === "menu"));
   ok("música muda de tema e desliga a null", (inst1.musica("corrida"), inst1.musicaActual() === "corrida") && (inst1.musica(null), inst1.musicaActual() === null));
+  // v69: os 4 NOVOS temas por pista registam honestamente em Node (o sequenciador é no-op sem ctx)
+  ok("v69: tema PRAIA registado", (inst1.musica("praia"), inst1.musicaActual() === "praia"));
+  ok("v69: tema DESERTO registado", (inst1.musica("deserto"), inst1.musicaActual() === "deserto"));
+  ok("v69: tema VULCÃO registado", (inst1.musica("vulcao"), inst1.musicaActual() === "vulcao"));
+  ok("v69: tema BATALHA registado", (inst1.musica("batalha"), inst1.musicaActual() === "batalha"));
+  inst1.musica(null);
   ok("loops em Node: motorKart/derrapagem/pararLoops sem crash",
     (inst1.motorKart(0.5, true), inst1.derrapagem(0.4), inst1.pararLoops(), true));
   ok("instrumentação dos loops REGISTA mesmo sem contexto",
@@ -212,8 +219,8 @@ async function main() {
 
   await pg.locator('[data-testid="kart-entrar"]').click();
   await pg.waitForSelector('[data-testid="kart-canvas"]', { timeout: 30_000 });
-  ok("corrida começa e a MÚSICA segue a fase (tema de corrida)",
-    await pg.evaluate(() => window.__som.musicaActual() === "corrida"));
+  ok("corrida começa e a MÚSICA segue a fase E A PISTA (v69: tema da pista default = praia)",
+    await pg.evaluate(() => window.__som.musicaActual() === "praia"));
 
   // contagem 3-2-1-JÁ
   let temContagem = false, temJa = false;

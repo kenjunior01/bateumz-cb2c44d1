@@ -75,12 +75,24 @@ async function esperarWS(url, ms = 20000) {
 }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Piloto de teste (igual à IA dos bots): segue a pista pelo iAmostra da snapshot OU do estado local. */
-function pilotoTeste(pista, c) {
+/** Piloto de teste (igual à IA dos bots): segue a pista pelo iAmostra da snapshot OU do estado local.
+ *  `cacar=true` (só no pickup do E2E): aponta à caixa mais próxima à frente (<40 amostras ≈ 100 u)
+ *  — recolha determinística SEM desviar a meta dos testes de chegada, que continuam ao centro. */
+function pilotoTeste(pista, c, cacar = false) {
   const m = pista.amostras.length;
   const ia = Number.isFinite(c.ia) ? c.ia : (c.iAmostra ?? 0);
   const vel = Number.isFinite(c.vel) ? c.vel : (c.vel ?? 0);
-  const alvo = pista.amostras[((ia + Math.floor(12 + vel * 0.35)) % m + m) % m];
+  let alvo = pista.amostras[((ia + Math.floor(12 + vel * 0.35)) % m + m) % m];
+  if (cacar) {
+    // v69: recolha determinística (antes seguia o centro e a caixa dependia do alinhamento
+    // da faixa — causa alternativa de flaky sob carga; lição v65.1, agora no pickup)
+    let melhorD = Infinity;
+    for (const cx of pista.caixas) {
+      if (!cx) continue;
+      const dRel = ((cx.i - ia) % m + m) % m; // amostras À FRENTE
+      if (dRel > 0 && dRel < 40 && dRel < melhorD) { melhorD = dRel; alvo = { x: cx.x, z: cx.z }; }
+    }
+  }
   const dif = Math.atan2(alvo.x - c.x, alvo.z - c.z) - c.ang;
   const difN = Math.atan2(Math.sin(dif), Math.cos(dif));
   return {
@@ -341,12 +353,12 @@ async function main() {
   let temItem = null, usoVisto = false, projeteisVistos = 0, usosMandados = 0, ultUsoMs = 0;
   const pistaLocal = core.construirPista(core.pistaPorId("deserto"));
   const t0Item = Date.now();
-  while (Date.now() - t0Item < 45000 && !usoVisto) {
+  while (Date.now() - t0Item < 75000 && !usoVisto) {
     const s = A.snaps().at(-1);
     if (s && s.fase === "corrida") {
       const c = s.j.find((x) => x.id === 6);
       if (c) {
-        A.ent(pilotoTeste(pistaLocal, c));
+        A.ent(pilotoTeste(pistaLocal, c, true)); // cacar: caça determinística de caixa
         if (c.it && !temItem) temItem = c.it;
         if (temItem && Date.now() - ultUsoMs > 350) { A.uso(); usosMandados++; ultUsoMs = Date.now(); } // cliques do piloto
         if (temItem && !c.it) usoVisto = true;

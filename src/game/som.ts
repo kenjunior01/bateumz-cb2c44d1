@@ -40,6 +40,7 @@ export type SomId =
   | "contagem"    // beep 3/2/1
   | "ja"          // «JÁ!» da largada
   | "chegada"     // EU terminei (fanfarra)
+  | "podio"       // v69: pódio (1.º/2.º/3.º lugar) — fanfarra triunfal
   | "recorde"     // recorde da pista
   | "arenaGolpe"  // EU recebi dano (arena)
   | "arenaAcerto" // o MEU golpe acertou um mob/herói
@@ -56,7 +57,7 @@ export const IDS_SOM: SomId[] = [
   "ui", "moeda", "item",
   "casca", "cascaAlvo", "missil", "oleo", "raio", "escudo", "cogumelo",
   "turbo1", "turbo2", "rampa", "golpe", "acerto", "contrario",
-  "contagem", "ja", "chegada", "recorde",
+  "contagem", "ja", "chegada", "podio", "recorde",
   "arenaGolpe", "arenaAcerto", "arenaCast", "arenaMorte", "arenaAbate",
   "arenaNivel", "arenaCura", "arenaRespawn", "arenaChat", "erro",
 ];
@@ -72,7 +73,7 @@ export interface SomKart {
   chegada(): void;
 }
 
-type TipoMusica = "menu" | "corrida" | "arena" | null;
+type TipoMusica = "menu" | "corrida" | "praia" | "deserto" | "vulcao" | "batalha" | "arena" | null;
 
 // ── padrões musicais (midi; 0 = pausa) ────────────────────────
 const NOTA = {
@@ -86,6 +87,30 @@ const NOTA = {
     bpm: 148,
     baixo: [36, 36, 0, 36, 36, 0, 33, 0, 29, 29, 0, 29, 31, 0, 31, 31],
     guia: [72, 0, 76, 79, 0, 81, 79, 76, 72, 0, 74, 76, 0, 79, 76, 74],
+    bateria: 4,
+  },
+  praia: {
+    bpm: 126, // v69: tropical maior — relaxado e salgado
+    baixo: [36, 0, 43, 0, 36, 0, 40, 0, 38, 0, 45, 0, 38, 0, 40, 0],
+    guia: [79, 0, 83, 84, 0, 79, 0, 76, 77, 0, 81, 0, 84, 0, 79, 0],
+    bateria: 4,
+  },
+  deserto: {
+    bpm: 142, // v69: frígio (D) — seco e agressivo
+    baixo: [38, 0, 38, 38, 0, 39, 0, 38, 34, 0, 34, 34, 36, 0, 37, 0],
+    guia: [74, 0, 77, 0, 75, 0, 74, 0, 70, 0, 72, 0, 73, 0, 74, 0],
+    bateria: 4,
+  },
+  vulcao: {
+    bpm: 152, // v69: menor (A) — escuro e martelado
+    baixo: [33, 33, 0, 33, 0, 33, 31, 0, 29, 29, 0, 29, 31, 0, 32, 0],
+    guia: [69, 0, 72, 76, 0, 72, 69, 0, 65, 0, 68, 72, 0, 76, 75, 72],
+    bateria: 2,
+  },
+  batalha: {
+    bpm: 160, // v69: tensão diminuta — o Coliseu pulsa
+    baixo: [36, 0, 36, 39, 0, 36, 38, 0, 36, 0, 36, 39, 0, 36, 38, 40],
+    guia: [72, 0, 75, 78, 0, 75, 72, 0, 74, 0, 77, 80, 0, 77, 74, 0],
     bateria: 4,
   },
   arena: {
@@ -300,6 +325,11 @@ export class MotorSom {
         this.tom(t0 + 0.44, 1047, "triangle", 0.5, 0.26 * vol);
         this.tom(t0 + 0.44, 1319, "sine", 0.5, 0.14 * vol);
         break;
+      case "podio": // v69: fanfarra TRIUNFAL (acorde final aberto + brilho)
+        [392, 523, 659, 784].forEach((f, i) => this.tom(t0 + i * 0.13, f, "triangle", 0.16, 0.28 * vol));
+        [523, 659, 784, 1047].forEach((f) => { this.tom(t0 + 0.55, f, "triangle", 0.85, 0.2 * vol); this.tom(t0 + 0.55, f * 2, "sine", 0.7, 0.08 * vol); });
+        this.ruido(t0 + 0.52, 0.4, 0.14 * vol, "highpass", 5200);
+        break;
       case "recorde":
         [784, 988, 1175, 1568, 2093].forEach((f, i) => this.tom(t0 + i * 0.07, f, "sine", 0.12, 0.22 * vol));
         break;
@@ -406,16 +436,31 @@ export class MotorSom {
   private tocarPasso(tipo: Exclude<TipoMusica, null>, passo: number, t: number, dur: number): void {
     const def = NOTA[tipo];
     const b = def.baixo[passo];
-    if (b > 0) this.tom(t, freqMidi(b), tipo === "arena" ? "triangle" : "triangle", dur * (tipo === "arena" ? 14 : 1.7), tipo === "arena" ? 0.16 : 0.2, undefined, this.ganhoMusica!);
+    // v69: timbres por tema — deserto/vulcão AGRESSIVOS (serra), praia macia, batalha tensa
+    const ondaBaixo: OscillatorType = tipo === "deserto" || tipo === "vulcao" ? "sawtooth"
+      : tipo === "batalha" ? "square" : "triangle";
+    const ondaGuia: OscillatorType = tipo === "praia" ? "sine"
+      : tipo === "batalha" || tipo === "vulcao" ? "sawtooth" : "square";
+    const volBaixo = tipo === "arena" ? 0.16 : (tipo === "deserto" || tipo === "vulcao") ? 0.17 : 0.2;
+    if (b > 0) this.tom(t, freqMidi(b), ondaBaixo, dur * (tipo === "arena" ? 14 : 1.7), volBaixo, undefined, this.ganhoMusica!);
     const g = def.guia[passo];
-    if (g > 0) this.tom(t, freqMidi(g), tipo === "arena" ? "sine" : "square", dur * (tipo === "arena" ? 6 : 1.4), tipo === "arena" ? 0.1 : 0.1, undefined, this.ganhoMusica!);
+    if (g > 0) this.tom(t, freqMidi(g), ondaGuia, dur * (tipo === "arena" ? 6 : 1.4), tipo === "arena" ? 0.1 : 0.1, undefined, this.ganhoMusica!);
     if (def.bateria > 0 && passo % def.bateria === 0) {
-      // kick sintético (serra grave com queda)
-      this.tom(t, 110, "sine", 0.1, 0.24, 42, this.ganhoMusica!);
+      // kick sintético (serra grave com queda) — vulcão/batalha mais GRAVES
+      const kickF = tipo === "vulcao" || tipo === "batalha" ? 88 : 110;
+      this.tom(t, kickF, "sine", 0.1, 0.24, 42, this.ganhoMusica!);
     }
-    if (tipo === "corrida" && (passo % 2 === 1)) {
+    if ((tipo === "corrida" || tipo === "batalha") && (passo % 2 === 1)) {
       // chapéu curto nos contratempos
       this.ruido(t, 0.03, 0.1, "highpass", 6000, undefined, undefined, this.ganhoMusica!);
+    }
+    if (tipo === "praia" && passo % 8 === 6) {
+      // onda do mar (ruído filtrado suave — o tema tropical RESPIRA)
+      this.ruido(t, 0.28, 0.05, "bandpass", 900, 500, 0.7, this.ganhoMusica!);
+    }
+    if (tipo === "vulcao" && passo % 8 === 4) {
+      // rumble profundo (o chão TREME)
+      this.tom(t, 55, "sine", 0.3, 0.14, 40, this.ganhoMusica!);
     }
   }
 

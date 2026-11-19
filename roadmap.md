@@ -58,3 +58,11 @@
 - [x] Motor + UI: balões 3D por kart, wreck cinzento, HUD de batalha, resultados com coluna de balões, botão 🎈 no menu, toasts de eliminação, i18n batalha.* pt+en — docs/REA-batalha-v68.md §3.
 - [x] Furos reais fechados com repro: clamp das voltas (999→5), janela de eventos do core (residuais nunca processados), teto do bónus de balões no payout — docs/REA-batalha-v68.md §4.
 - [x] Prova: test-kart-batalha-v68.mjs 30/30 ×2 (núcleo com batalha completa determinística de valores exatos + E2E no Coliseu) · regressão kart solo 65/0 · kart online 61/0 · som 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-batalha-v68.md §5.
+
+## v69 — Gráficos de próxima geração + música por pista (2026-11-19)
+
+- [x] Motor visual com DOIS caminhos honestos: ALTA (composer Bloom+ACES+vinheta, sombras dinâmicas que seguem o jogador, cúpula de céu shader por tema, Phong/HDR) e LEVE (o caminho v65 intacto — `?kart-leve=1` força, botão GFX no menu persiste `bateu_gfx`) — docs/REA-graficos-v69.md §2-3.
+- [x] Sistema de PARTÍCULAS de pool fixo (particulas.ts NOVO): fumo de derrapagem, chamas HDR de turbo, poeira off-road por tema, faíscas de golpe, mini-turbo azul/laranja, bursts de caixa/rampa, CONFETTI na chegada e brasas no vulcão — docs/REA-graficos-v69.md §3.
+- [x] Sensação de velocidade: asfalto com tracejado/linhas (UV na fita), água da praia com caustics animadas, lava HDR pulsante, riscos de velocidade (>50% vel máx), rolagem bancária em deriva e TREMOR de impacto — docs/REA-graficos-v69.md §3.
+- [x] Música POR PISTA (praia 126 tropical com onda do mar · deserto 142 frígio · vulcão 152 menor · batalha 160 diminuto — timbres por tema) + fanfarra de PÓDIO (31.º efeito da tabela) para 1.º/2.º/3.º — docs/REA-graficos-v69.md §4.
+- [x] Prova: test-gfx-v69.mjs 26/26 ×2 (núcleo do pool + E2E ALTA com fumo/riscos/tremor/confetti reais + E2E LEVE intato) · regressão kart solo 65/0 · online 61/0 ×2 (com fix do piloto de pickup) · batalha 30/0 · som 58/0 · web 11/0 · tsc 0 · build OK — docs/REA-graficos-v69.md §7.

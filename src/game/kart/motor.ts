@@ -16,12 +16,18 @@
 // (canvas fixed 100%).
 // ============================================================
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import {
   EstadoCorrida, EntradaKart, EventoCorrida, ItemKartId, MelhoriaId, KartId, PistaDef,
   construirPista, novaCorrida, passoCorrida, posicoesDe, pistaPorId, statsDe,
   FaseCorrida, Pista, rng32,
 } from "./core.ts";
 import { novaBatalha, passoBatalha, rankingBatalha, DURACAO_BATALHA_S, type EstadoBatalha } from "./batalha.ts";
+import { Particulas } from "./particulas.ts";
 import type { SnapKart, CorredorInicio } from "./mp.ts";
 import type { SomKart } from "../som.ts";
 
@@ -94,6 +100,128 @@ interface OptsMotor {
 const COR_FAISCA_1 = 0x66ccff; // tier azul
 const COR_FAISCA_2 = 0xffb347; // tier laranja
 
+// ── v69: céus por tema (cúpula com sol HDR que alimenta o bloom) ──
+const CEUS: Record<string, { topo: number; horizonte: number; sol: number; brilhoSol: number; dirSol: [number, number, number] }> = {
+  praia:   { topo: 0x2f7fd0, horizonte: 0xffe3b0, sol: 0xfff3c0, brilhoSol: 2.4, dirSol: [0.42, 0.58, 0.3] },
+  deserto: { topo: 0x2e6fb0, horizonte: 0xffdf9e, sol: 0xffffff, brilhoSol: 2.8, dirSol: [0.5, 0.5, -0.35] },
+  vulcao:  { topo: 0x1c0e1e, horizonte: 0xe0451f, sol: 0xff7a50, brilhoSol: 1.7, dirSol: [-0.3, 0.7, 0.2] },
+  coliseu: { topo: 0x180e26, horizonte: 0xb33a5a, sol: 0xffb35c, brilhoSol: 1.9, dirSol: [0.35, 0.6, -0.25] },
+};
+
+// ── v69: shader da cúpula de céu (gradiente + disco solar HDR) ──
+const SHADER_CEU = {
+  vertexShader: `
+    varying vec3 vDir;
+    void main() {
+      vDir = normalize(position);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vDir;
+    uniform vec3 cTopo;
+    uniform vec3 cHor;
+    uniform vec3 cSol;
+    uniform vec3 dSol;
+    uniform float brilhoSol;
+    void main() {
+      float h = clamp(vDir.y, 0.0, 1.0);
+      vec3 cor = mix(cHor, cTopo, pow(h, 0.55));
+      float s = max(dot(normalize(vDir), normalize(dSol)), 0.0);
+      cor += cSol * brilhoSol * (pow(s, 420.0) * 1.4 + pow(s, 8.0) * 0.18);
+      gl_FragColor = vec4(cor, 1.0);
+    }
+  `,
+};
+
+// ── v69: vinheta cinematográfica (pass de pós-processamento) ──
+const SHADER_VINHETA = {
+  uniforms: { tDiffuse: { value: null as THREE.Texture | null }, forca: { value: 0.34 } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec2 vUv;
+    uniform sampler2D tDiffuse;
+    uniform float forca;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      float d = distance(vUv, vec2(0.5, 0.5));
+      c.rgb *= 1.0 - forca * smoothstep(0.42, 0.95, d);
+      gl_FragColor = c;
+    }
+  `,
+};
+
+function texturaAsfalto(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 128; c.height = 128;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#d9d9d9"; // tint da pista multiplica (def.corEstrada domina)
+  ctx.fillRect(0, 0, 128, 128);
+  // grão de asfalto
+  for (let k = 0; k < 420; k++) {
+    const g = 200 + Math.floor(Math.random() * 56);
+    ctx.fillStyle = `rgb(${g},${g},${g})`;
+    ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+  }
+  // tracejado central amarelo (estilo Mario Kart)
+  ctx.fillStyle = "#ffdf4f";
+  for (let y = 0; y < 128; y += 32) ctx.fillRect(60, y, 8, 18);
+  // linhas de bordo brancas
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillRect(2, 0, 5, 128);
+  ctx.fillRect(121, 0, 5, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.ClampToEdgeWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+function texturaAgua(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 256, 256);
+  // caustics: arcos claros entrecruzados (o tint azul do material domina)
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 2.4;
+  for (let k = 0; k < 26; k++) {
+    const cx = Math.random() * 256, cy = Math.random() * 256, r = 12 + Math.random() * 30;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.random() * 6.28, Math.random() * 6.28 + 2.2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(210,235,255,0.5)";
+  for (let k = 0; k < 60; k++) ctx.fillRect(Math.random() * 256, Math.random() * 256, 3, 1.6);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(14, 14);
+  return t;
+}
+
+function texturaNuvem(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext("2d")!;
+  ctx.clearRect(0, 0, 256, 128);
+  for (let k = 0; k < 26; k++) {
+    const x = 30 + Math.random() * 196, y = 50 + Math.random() * 44, r = 12 + Math.random() * 26;
+    const g = ctx.createRadialGradient(x, y, 2, x, y, r);
+    g.addColorStop(0, "rgba(255,255,255,0.9)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); ctx.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+
 function texturaXadrez(): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = 64; c.height = 16;
@@ -155,7 +283,7 @@ export class MotorKart {
   private somFase: FaseCorrida | null = null; // fase anterior (transição contagem→corrida = «JÁ»)
   private somTerminei = false;       // fanfarra de chegada 1×
   private disposaveis: { dispose(): void }[] = [];
-  private meshesKart = new Map<number, { grupo: THREE.Group; chama: THREE.Mesh; faiscas: THREE.Mesh; escudo: THREE.Mesh; baloes: THREE.Group; corpoMat: THREE.MeshLambertMaterial }>();
+  private meshesKart = new Map<number, { grupo: THREE.Group; chama: THREE.Mesh; faiscas: THREE.Mesh; escudo: THREE.Mesh; baloes: THREE.Group; corpoMat: THREE.MeshLambertMaterial | THREE.MeshPhongMaterial }>();
   private meshesProjetil = new Map<number, THREE.Mesh>();
   private meshesOleo = new Map<number, THREE.Mesh>();
   private meshesCaixa: THREE.Mesh[] = [];
@@ -164,6 +292,24 @@ export class MotorKart {
   private disposaveisGeometria: THREE.BufferGeometry[] = [];
   private disposaveisMaterial: THREE.Material[] = [];
   private disposaveisTextura: THREE.Texture[] = [];
+  // ── v69 GRÁFICOS (alta/leve — leve mantém o caminho antigo) ──
+  private qualidade: "alta" | "leve" = "alta";
+  private composer: EffectComposer | null = null;
+  private passVinheta: ShaderPass | null = null;
+  private luzDir: THREE.DirectionalLight | null = null;
+  private part: Particulas | null = null;
+  private riscos: THREE.LineSegments | null = null;
+  private matRiscos: THREE.LineBasicMaterial | null = null;
+  private ceuDomo: THREE.Mesh | null = null;
+  private uniformesCeu: { cTopo: THREE.IUniform; cHor: THREE.IUniform; cSol: THREE.IUniform; dSol: THREE.IUniform; brilhoSol: THREE.IUniform } | null = null;
+  private nuvens = new THREE.Group();
+  private texAgua: THREE.CanvasTexture | null = null;
+  private matAgua: THREE.MeshPhongMaterial | null = null;
+  private matLava: THREE.MeshBasicMaterial | null = null;
+  private tremor = 0;            // impulso de shake de câmara (decai exponencial)
+  private rollSuave = 0;         // rolagem bancária em deriva (suavizada)
+  private confeteFeito = false;  // chuva de confetti 1× na chegada do jogador
+  private caixasEu = 0;          // v70: caixas «?» que o JOGADOR abriu nesta corrida
 
   constructor(opts: OptsMotor) {
     this.opts = opts;
@@ -207,6 +353,10 @@ export class MotorKart {
       const meu = this.corrida.corredores.find((x) => x.id === this.idJogador);
       if (meu) meu.nome = opts.nomeJogador || meu.nome;
     }
+    // ── v69: QUALIDADE — «leve» mantém o caminho da v65 intocado (SwiftShader/APK/E2E);
+    // «alta» liga pós-processamento (ACES+bloom+vinheta), sombras e partículas plenas.
+    this.qualidade = opts.leve ? "leve" : "alta";
+    const alta = this.qualidade === "alta";
 
     this.cena.background = new THREE.Color(def.corCeu);
     this.cena.fog = new THREE.Fog(def.corNevoa, opts.leve ? 130 : 170, opts.leve ? 420 : 560);
@@ -217,15 +367,53 @@ export class MotorKart {
       powerPreference: "high-performance",
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.leve ? 1.25 : 2));
+    // v69: tono ACES + espaço de cor honesto (só em alta — leve mantém o visual v65)
+    if (alta) {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
     this.renderer = renderer;
 
-    const luzHemi = new THREE.HemisphereLight(0xffffff, def.corChao, 1.05);
-    const luzDir = new THREE.DirectionalLight(0xffffff, 0.85);
+    const luzHemi = new THREE.HemisphereLight(0xffffff, def.corChao, alta ? 0.85 : 1.05);
+    const luzDir = new THREE.DirectionalLight(0xfff2dd, alta ? 1.25 : 0.85);
     luzDir.position.set(120, 220, 80);
+    if (alta) {
+      // v69: sombras dinâmicas dos karts — a caixa da sombra SEGUE o jogador
+      luzDir.castShadow = true;
+      luzDir.shadow.mapSize.set(1024, 1024);
+      luzDir.shadow.camera.left = -70; luzDir.shadow.camera.right = 70;
+      luzDir.shadow.camera.top = 70; luzDir.shadow.camera.bottom = -70;
+      luzDir.shadow.camera.near = 40; luzDir.shadow.camera.far = 460;
+      luzDir.shadow.bias = -0.0012;
+      this.cena.add(luzDir.target);
+      this.luzDir = luzDir;
+    }
     this.cena.add(luzHemi, luzDir);
 
     this.construirMundo(def, opts.leve);
     this.construirCorredores();
+
+    // v69: partículas (pool menor no modo leve) + riscos de velocidade como filhos da câmara
+    if (alta) {
+      this.part = new Particulas(460);
+      this.cena.add(this.part.pontos);
+      this.construirRiscos();
+    }
+
+    // v69 ALTA: composer = RenderPass → Bloom (HDR) → Vinheta → OutputPass (ACES)
+    if (alta && renderer) {
+      const comp = new EffectComposer(renderer);
+      comp.addPass(new RenderPass(this.cena, this.camara));
+      comp.addPass(new UnrealBloomPass(new THREE.Vector2(1024, 576), 0.55, 0.85, 0.8));
+      this.passVinheta = new ShaderPass(SHADER_VINHETA);
+      comp.addPass(this.passVinheta);
+      comp.addPass(new OutputPass());
+      this.composer = comp;
+    }
+    // a câmara entra na cena para os filhos (riscos) renderizarem
+    this.cena.add(this.camara);
 
     this.redimensionar();
     window.addEventListener("resize", this.redimensionar);
@@ -242,20 +430,41 @@ export class MotorKart {
   private construirMundo(def: PistaDef, leve: boolean): void {
     const pista = this.pista;
     const m = pista.amostras.length;
+    const alta = this.qualidade === "alta";
 
-    // chão gigante
+    // chão gigante — v69: na praia é MAR (Phong + caustics animadas), resto Phong subtil
     const geoChao = new THREE.CircleGeometry(1400, 48);
     geoChao.rotateX(-Math.PI / 2);
-    const matChao = new THREE.MeshLambertMaterial({ color: def.corChao });
+    let matChao: THREE.Material;
+    if (def.tema === "praia" && alta) {
+      this.texAgua = texturaAgua();
+      this.disposaveisTextura.push(this.texAgua);
+      this.matAgua = new THREE.MeshPhongMaterial({ color: def.corChao, map: this.texAgua, shininess: 110, specular: 0xbfe3ff });
+      matChao = this.matAgua;
+    } else if (alta) {
+      matChao = new THREE.MeshPhongMaterial({ color: def.corChao, shininess: def.tema === "deserto" ? 14 : 6, specular: 0x2f2f2f });
+    } else {
+      matChao = new THREE.MeshLambertMaterial({ color: def.corChao });
+    }
     const chao = new THREE.Mesh(geoChao, matChao);
     chao.position.y = -0.06;
+    chao.receiveShadow = alta;
     this.cena.add(chao);
     this.registar(geoChao, matChao);
 
-    // estrada (fita por amostras)
-    const geoEstrada = this.fita(-def.largura, def.largura, 0.02);
-    const matEstrada = new THREE.MeshLambertMaterial({ color: def.corEstrada, side: THREE.DoubleSide });
-    this.cena.add(new THREE.Mesh(geoEstrada, matEstrada));
+    // estrada (fita por amostras) — v69: asfalto com tracejado/linhas (uv ao longo)
+    const geoEstrada = this.fita(-def.largura, def.largura, 0.02, alta);
+    let matEstrada: THREE.MeshLambertMaterial;
+    if (alta) {
+      const texAsf = texturaAsfalto();
+      this.disposaveisTextura.push(texAsf);
+      matEstrada = new THREE.MeshLambertMaterial({ color: def.corEstrada, map: texAsf, side: THREE.DoubleSide });
+    } else {
+      matEstrada = new THREE.MeshLambertMaterial({ color: def.corEstrada, side: THREE.DoubleSide });
+    }
+    const estrada = new THREE.Mesh(geoEstrada, matEstrada);
+    estrada.receiveShadow = alta;
+    this.cena.add(estrada);
     this.registar(geoEstrada, matEstrada);
 
     // bordas alternadas (vermelho/branco) dos dois lados
@@ -312,7 +521,9 @@ export class MotorKart {
 
     // caixas de item
     const geoCaixa = new THREE.BoxGeometry(1.7, 1.7, 1.7);
-    const matCaixa = new THREE.MeshLambertMaterial({ color: 0xff9e2c, transparent: true, opacity: 0.82 });
+    const matCaixa = alta
+      ? new THREE.MeshPhongMaterial({ color: 0xff9e2c, emissive: new THREE.Color(0.62, 0.3, 0.03), transparent: true, opacity: 0.84, shininess: 55, specular: 0xfff0c0 })
+      : new THREE.MeshLambertMaterial({ color: 0xff9e2c, transparent: true, opacity: 0.82 });
     for (let i = 0; i < pista.caixas.length; i++) {
       const cx = pista.caixas[i];
       const mesh = new THREE.Mesh(geoCaixa, matCaixa);
@@ -323,10 +534,12 @@ export class MotorKart {
     }
     this.registar(geoCaixa, matCaixa);
 
-    // moedas
+    // moedas — v69: emissivo HDR para o bloom as acender (leve mantém a v65)
     const geoMoeda = new THREE.CylinderGeometry(0.85, 0.85, 0.16, 14);
     geoMoeda.rotateX(Math.PI / 2);
-    const matMoeda = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x7a5a00 });
+    const matMoeda = alta
+      ? new THREE.MeshPhongMaterial({ color: 0xffd23f, emissive: new THREE.Color(1.05, 0.78, 0.12), shininess: 120, specular: 0xffffff })
+      : new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x7a5a00 });
     for (let i = 0; i < pista.moedas.length; i++) {
       const mo = pista.moedas[i];
       const mesh = new THREE.Mesh(geoMoeda, matMoeda);
@@ -350,12 +563,15 @@ export class MotorKart {
     const matRocha = new THREE.MeshLambertMaterial({ color: def.tema === "vulcao" ? 0x2f2628 : 0x8f8377 });
     const geoLava = new THREE.CircleGeometry(3.4, 12);
     geoLava.rotateX(-Math.PI / 2);
-    const matLava = new THREE.MeshBasicMaterial({ color: 0xff5a1f });
+    // v69: lava HDR (>1 por canal) — o bloom faz o magma ARDER; pulsa por frame
+    this.matLava = alta
+      ? new THREE.MeshBasicMaterial({ color: new THREE.Color(1.9, 0.52, 0.14) })
+      : new THREE.MeshBasicMaterial({ color: 0xff5a1f });
     this.registar(geoTronco, matTronco);
     this.registar(geoPalma, matPalma);
     this.registar(geoCacto, matCacto);
     this.registar(geoRocha, matRocha);
-    this.registar(geoLava, matLava);
+    this.registar(geoLava, this.matLava);
     for (let k = 0; k < decorMax; k++) {
       const a = pista.amostras[Math.floor(rng() * m)];
       const lado = rng() < 0.5 ? -1 : 1;
@@ -386,7 +602,7 @@ export class MotorKart {
         rocha.scale.setScalar(0.8 + rng() * 1.6);
         this.cena.add(rocha);
         if (rng() < 0.25) {
-          const lava = new THREE.Mesh(geoLava, matLava);
+          const lava = new THREE.Mesh(geoLava, this.matLava);
           lava.position.set(x + (rng() - 0.5) * 6, 0.02, z + (rng() - 0.5) * 6);
           this.cena.add(lava);
         }
@@ -404,18 +620,87 @@ export class MotorKart {
       colina.scale.set(1 + (k % 3) * 0.4, 0.8 + (k % 4) * 0.25, 1);
       this.cena.add(colina);
     }
+
+    // ── v69: cúpula de céu (gradiente + sol HDR) + nuvens-sprite ──
+    if (alta) {
+      const ceu = CEUS[def.tema] ?? CEUS.praia;
+      const geoCeu = new THREE.SphereGeometry(1150, 24, 14);
+      this.uniformesCeu = {
+        cTopo: { value: new THREE.Color(ceu.topo) },
+        cHor: { value: new THREE.Color(ceu.horizonte) },
+        cSol: { value: new THREE.Color(ceu.sol) },
+        dSol: { value: new THREE.Vector3(ceu.dirSol[0], ceu.dirSol[1], ceu.dirSol[2]).normalize() },
+        brilhoSol: { value: ceu.brilhoSol },
+      };
+      const matCeu = new THREE.ShaderMaterial({
+        uniforms: this.uniformesCeu as unknown as Record<string, THREE.IUniform>,
+        vertexShader: SHADER_CEU.vertexShader,
+        fragmentShader: SHADER_CEU.fragmentShader,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+      });
+      this.ceuDomo = new THREE.Mesh(geoCeu, matCeu);
+      this.ceuDomo.renderOrder = -10;
+      this.cena.add(this.ceuDomo);
+      this.registar(geoCeu, matCeu);
+
+      if (def.tema === "praia" || def.tema === "deserto") {
+        const texNuv = texturaNuvem();
+        this.disposaveisTextura.push(texNuv);
+        const matNuv = new THREE.SpriteMaterial({ map: texNuv, transparent: true, opacity: 0.85, depthWrite: false });
+        this.registar(null, matNuv);
+        for (let k = 0; k < 9; k++) {
+          const sp = new THREE.Sprite(matNuv);
+          const ang = (k / 9) * Math.PI * 2 + rng() * 0.5;
+          const raio = 380 + rng() * 300;
+          sp.position.set(Math.sin(ang) * raio, 130 + rng() * 70, Math.cos(ang) * raio);
+          sp.scale.set(150 + rng() * 90, 45 + rng() * 25, 1);
+          this.nuvens.add(sp);
+        }
+        this.cena.add(this.nuvens);
+      }
+    }
   }
 
-  /** Fita entre duas latitudes laterais (estrada) — geometria por amostras. */
-  private fita(latA: number, latB: number, y: number): THREE.BufferGeometry {
+  /** v69: riscos de velocidade — linhas aditivas EM TORNO da câmara (aparecem com velocidade). */
+  private construirRiscos(): void {
+    const n = 44;
+    const pos = new Float32Array(n * 6);
+    for (let i = 0; i < n; i++) {
+      const th = Math.random() * Math.PI * 2;
+      const r = 2.4 + Math.random() * 6.5;
+      const len = 2.2 + Math.random() * 2.6;
+      const cx = Math.cos(th) * r, cy = Math.sin(th) * r * 0.72, cz = -3.5 - Math.random() * 3;
+      pos[i * 6] = cx; pos[i * 6 + 1] = cy; pos[i * 6 + 2] = cz;
+      pos[i * 6 + 3] = cx; pos[i * 6 + 4] = cy; pos[i * 6 + 5] = cz - len;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    this.matRiscos = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false });
+    this.riscos = new THREE.LineSegments(geo, this.matRiscos);
+    this.riscos.frustumCulled = false;
+    this.riscos.renderOrder = 20;
+    this.camara.add(this.riscos);
+    this.registar(geo, this.matRiscos);
+  }
+
+  /** Fita entre duas latitudes laterais (estrada) — geometria por amostras. v69: uv opcional ao longo. */
+  private fita(latA: number, latB: number, y: number, comUv = false): THREE.BufferGeometry {
     const pista = this.pista;
     const m = pista.amostras.length;
     const pos = new Float32Array((m + 1) * 2 * 3);
+    const uv = comUv ? new Float32Array((m + 1) * 2 * 2) : null;
     const idx: number[] = [];
     for (let i = 0; i <= m; i++) {
       const a = pista.amostras[i % m];
       pos[i * 6] = a.x + a.nx * latA; pos[i * 6 + 1] = y; pos[i * 6 + 2] = a.z + a.nz * latA;
       pos[i * 6 + 3] = a.x + a.nx * latB; pos[i * 6 + 4] = y; pos[i * 6 + 5] = a.z + a.nz * latB;
+      if (uv) {
+        const v = (a.s ?? i * 2.5) / 7; // 7 u por repetição do asfalto
+        uv[i * 4] = 0; uv[i * 4 + 1] = v;
+        uv[i * 4 + 2] = 1; uv[i * 4 + 3] = v;
+      }
     }
     for (let i = 0; i < m; i++) {
       const p0 = i * 2, p1 = i * 2 + 1, p2 = ((i + 1) % (m + 1)) * 2, p3 = ((i + 1) % (m + 1)) * 2 + 1;
@@ -423,6 +708,7 @@ export class MotorKart {
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    if (uv) g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     g.setIndex(idx);
     g.computeVertexNormals();
     return g;
@@ -458,6 +744,7 @@ export class MotorKart {
 
   // ── karts ──────────────────────────────────────────────────────
   private construirCorredores(): void {
+    const alta = this.qualidade === "alta";
     const geoCorpo = new THREE.BoxGeometry(1.9, 0.62, 3);
     const geoCabine = new THREE.BoxGeometry(1.15, 0.55, 1.3);
     const geoRoda = new THREE.CylinderGeometry(0.44, 0.44, 0.36, 10);
@@ -469,11 +756,14 @@ export class MotorKart {
     const geoFaiscas = new THREE.RingGeometry(1.1, 2.0, 16);
     geoFaiscas.rotateX(-Math.PI / 2);
     const geoEscudo = new THREE.SphereGeometry(2.1, 14, 10);
-    const matRoda = new THREE.MeshLambertMaterial({ color: 0x23262b });
-    const matPiloto = new THREE.MeshLambertMaterial({ color: 0xf2f2f2 });
-    const matCabine = new THREE.MeshLambertMaterial({ color: 0x2c3440 });
-    const matAlerao = new THREE.MeshLambertMaterial({ color: 0x1f242c });
-    const matChama = new THREE.MeshBasicMaterial({ color: 0xff8c1a, transparent: true, opacity: 0.9 });
+    const matRoda = alta ? new THREE.MeshPhongMaterial({ color: 0x23262b, shininess: 40, specular: 0x555555 }) : new THREE.MeshLambertMaterial({ color: 0x23262b });
+    const matPiloto = alta ? new THREE.MeshPhongMaterial({ color: 0xf2f2f2, shininess: 30, specular: 0x444444 }) : new THREE.MeshLambertMaterial({ color: 0xf2f2f2 });
+    const matCabine = alta ? new THREE.MeshPhongMaterial({ color: 0x2c3440, shininess: 90, specular: 0x8899aa }) : new THREE.MeshLambertMaterial({ color: 0x2c3440 });
+    const matAlerao = alta ? new THREE.MeshPhongMaterial({ color: 0x1f242c, shininess: 60, specular: 0x666666 }) : new THREE.MeshLambertMaterial({ color: 0x1f242c });
+    // v69: chama aditiva HDR (o bloom faz o turbo VIBRAR)
+    const matChama = alta
+      ? new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.6, 0.15), transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })
+      : new THREE.MeshBasicMaterial({ color: 0xff8c1a, transparent: true, opacity: 0.9 });
     const matFaiscas = new THREE.MeshBasicMaterial({ color: COR_FAISCA_1, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
     const matEscudo = new THREE.MeshBasicMaterial({ color: 0x66e0ff, transparent: true, opacity: 0.35 });
     this.registar(geoCorpo, matRoda);
@@ -485,17 +775,22 @@ export class MotorKart {
     this.registar(geoFaiscas, matFaiscas);
     this.registar(geoEscudo, matEscudo);
     for (const c of this.corrida.corredores) {
-      const matCorpo = new THREE.MeshLambertMaterial({ color: c.cor });
+      const matCorpo = alta
+        ? new THREE.MeshPhongMaterial({ color: c.cor, shininess: 80, specular: 0x777777 })
+        : new THREE.MeshLambertMaterial({ color: c.cor });
       this.registar(null, matCorpo);
       const grupo = new THREE.Group();
       const corpo = new THREE.Mesh(geoCorpo, matCorpo);
       corpo.position.y = 0.55;
+      corpo.castShadow = alta;
       const cabine = new THREE.Mesh(geoCabine, matCabine);
       cabine.position.set(0, 1.0, -0.25);
+      cabine.castShadow = alta;
       const piloto = new THREE.Mesh(geoPiloto, matPiloto);
       piloto.position.set(0, 1.35, -0.25);
       const alerao = new THREE.Mesh(geoAlerao, matAlerao);
       alerao.position.set(0, 1.0, -1.35);
+      alerao.castShadow = alta;
       grupo.add(corpo, cabine, piloto, alerao);
       for (const [rx, rz] of [[-1.05, 1.05], [1.05, 1.05], [-1.05, -1.05], [1.05, -1.05]] as const) {
         const roda = new THREE.Mesh(geoRoda, matRoda);
@@ -677,8 +972,10 @@ export class MotorKart {
     }
     this.atualizarSom();
     this.sincronizarVisual(agora);
+    this.atualizarAmbiente(agora, dt); // v69: céu/nuvens/água/lava/brasas/sombra seguem o mundo
     this.seguirCamara(dt);
-    if (this.renderer) this.renderer.render(this.cena, this.camara);
+    if (this.composer) this.composer.render();
+    else if (this.renderer) this.renderer.render(this.cena, this.camara);
     if (agora - this.ultimoHud > 110) this.empurrarHud();
   };
 
@@ -741,6 +1038,41 @@ export class MotorKart {
     return this.corrida.corredores.find((c) => c.id === this.idJogador) ?? this.corrida.corredores[6];
   }
 
+  /** v69: vida do MUNDO por frame — céu/nuvens seguem a câmara, água caustica, lava pulsa,
+   *  brasas sobem no vulcão, a caixa de sombra segue o jogador e as partículas físicas avançam. */
+  private atualizarAmbiente(agoraMs: number, dt: number): void {
+    const t = agoraMs / 1000;
+    const j = this.corredorJogador();
+    if (this.ceuDomo) this.ceuDomo.position.copy(this.camara.position);
+    if (this.nuvens.children.length) this.nuvens.rotation.y = t * 0.005;
+    if (this.texAgua) { this.texAgua.offset.x = (t * 0.022) % 1; this.texAgua.offset.y = (t * 0.013) % 1; }
+    if (this.matLava) {
+      const p = 0.5 + Math.sin(t * 2.6) * 0.09;
+      this.matLava.color.setRGB(1.9 * p + 0.2, 0.52 * p + 0.05, 0.14 * p);
+    }
+    if (this.luzDir) {
+      this.luzDir.position.set(j.x + 90, 160, j.z + 60);
+      this.luzDir.target.position.set(j.x, 0, j.z);
+      this.luzDir.target.updateMatrixWorld();
+    }
+    // brasas ambiente (vulcão/coliseu) — algumas por segundo, sobem devagar
+    if (this.part && this.pista.def.tema === "vulcao" && Math.random() < 0.4) {
+      const ang = Math.random() * Math.PI * 2, raio = 18 + Math.random() * 70;
+      this.part.emitir({
+        x: j.x + Math.sin(ang) * raio, y: 0.4, z: j.z + Math.cos(ang) * raio,
+        vx: 0, vy: 1.4 + Math.random() * 1.4, vz: 0, n: 1,
+        vida: 2.4, cor: 0xff6a1f, cor2: 0xffc85a, brilho: 1.15, tamanho: 0.3, gravidade: 0.4, arrasto: 0.4,
+      });
+    }
+    if (this.part) this.part.atualizar(dt);
+    // riscos de velocidade: opacidade pela velocidade (forte em turbo)
+    if (this.matRiscos) {
+      const vn = Math.max(0, Math.min(1, j.vel / Math.max(1, j.stats?.velMax ?? 38)));
+      const alvo = Math.max(0, (vn - 0.5) / 0.5) * 0.42 * (j.boost > 0 ? 1.45 : 1);
+      this.matRiscos.opacity += (Math.min(0.6, alvo) - this.matRiscos.opacity) * Math.min(1, 8 * Math.max(dt, 0.001));
+    }
+  }
+
   /** Condução assistida (telemóvel/testes): persegue o ponto da pista à frente. */
   private entradaAuto(): EntradaKart {
     const j = this.corredorJogador();
@@ -766,15 +1098,37 @@ export class MotorKart {
       algum = true;
       const e = ev as EventoCorrida;
       this.opts.som?.evento(e as unknown as { t: string; id?: number; item?: string; fase?: number; por?: number; alvo?: number }, this.idJogador); // v67
-      if (e.t === "golpe" && e.alvo === this.idJogador) { avisos.golpeRecebido = e.tipo; }
-      else if (e.t === "raio") { avisos.golpeRecebido = "raio"; this.ultRaio = performance.now(); }
-      else if (e.t === "item" && e.id === this.idJogador) { avisos.itemNovo = e.item; }
+      if (e.t === "golpe") {
+        // v69: faíscas no kart atingido + TREMOR se EU fui atingido
+        const vitima = this.corrida.corredores.find((c) => c.id === e.alvo);
+        if (vitima && this.part) {
+          this.part.emitir({ x: vitima.x, y: 0.8, z: vitima.z, vx: 0, vy: 3.5, vz: 0, espalhar: 7, n: 22, vida: 0.55, cor: 0xffd75e, cor2: 0xff8a1f, brilho: 1.4, tamanho: 0.34, gravidade: -9, arrasto: 1.4 });
+        }
+        if (e.alvo === this.idJogador) { avisos.golpeRecebido = e.tipo; this.tremor = 0.55; }
+      }
+      else if (e.t === "raio") {
+        avisos.golpeRecebido = "raio"; this.ultRaio = performance.now();
+        if (this.corredorJogador().stun > 0) this.tremor = Math.max(this.tremor, 0.35); // o raio atinge-me
+      }
+      else if (e.t === "item" && e.id === this.idJogador) {
+        avisos.itemNovo = e.item;
+        this.caixasEu++; // v70: caixa «?» que EU abri (contador honesto para desafios)
+        const j = this.corredorJogador();
+        if (this.part) this.part.emitir({ x: j.x, y: 1.3, z: j.z, vx: 0, vy: 3, vz: 0, espalhar: 4.5, n: 14, vida: 0.5, cor: 0xffb347, cor2: 0xfff0a0, brilho: 1.3, tamanho: 0.32, gravidade: -6, arrasto: 1.6 });
+      }
       else if (e.t === "volta" && e.id === this.idJogador) { avisos.voltaNova = e.volta; }
       else if (e.t === "moeda" && e.id === this.idJogador) { avisos.moeda = true; }
       else if (e.t === "deriva" && e.id === this.idJogador) {
         avisos.derivaTurbo = e.fase;
         this.derivaFase = 0;
-      } else if (e.t === "rampa" && e.id === this.idJogador) { avisos.rampa = true; }
+        // v69: jorros do mini-turbo (azul/laranja pela fase)
+        const j = this.corredorJogador();
+        if (this.part) this.part.emitir({ x: j.x, y: 0.5, z: j.z, vx: 0, vy: 2.5, vz: 0, espalhar: 5, n: 16, vida: 0.5, cor: e.fase === 2 ? 0xffb347 : COR_FAISCA_1, cor2: 0xffffff, brilho: e.fase === 2 ? 1.4 : 1.15, tamanho: 0.35, gravidade: -4, arrasto: 2 });
+      } else if (e.t === "rampa" && e.id === this.idJogador) {
+        avisos.rampa = true;
+        const j = this.corredorJogador();
+        if (this.part) this.part.emitir({ x: j.x, y: 0.6, z: j.z, vx: 0, vy: 4, vz: 0, espalhar: 4, n: 12, vida: 0.5, cor: 0x66ccff, cor2: 0xffffff, brilho: 1.3, tamanho: 0.34, gravidade: -5, arrasto: 1.8 });
+      }
     }
     this.corrida.eventos.length = 0;
     // v68 BATALHA: traduz os eventos de balões em avisos (o som dos golpes já veio pelo «golpe» do core)
@@ -871,6 +1225,52 @@ export class MotorKart {
           if (!mk.corpoMat.userData.wreck) { mk.corpoMat.color.setHex(0x4b4f56); mk.corpoMat.userData.wreck = true; }
         }
       }
+      // ── v69: emissores de partículas (derrapagem/turbo/off-road) — só em ALTA ──
+      if (this.part && !this.destruido) {
+        const dx = Math.sin(c.ang), dz = Math.cos(c.ang);      // frente do kart
+        const px = -dx, pz = -dz;                              // traseira
+        const deTras = 1.9;
+        if (c.derrapando && c.vel > 5) {
+          // fumo cinzento nos pneus traseiros (2/frame, vida curta)
+          this.part.emitir({
+            x: c.x + px * deTras, y: 0.25, z: c.z + pz * deTras,
+            vx: px * 2.2, vy: 1.1, vz: pz * 2.2, espalhar: 1.1, n: 2,
+            vida: 0.5, cor: 0xcfcfcf, tamanho: 0.5, gravidade: -1.2, arrasto: 2.4,
+          });
+        }
+        if (c.boost > 0) {
+          // chamas do escape (HDR — o bloom faz brilhar)
+          this.part.emitir({
+            x: c.x + px * (deTras + 0.6), y: 0.55, z: c.z + pz * (deTras + 0.6),
+            vx: px * 6.5, vy: 0.4, vz: pz * 6.5, espalhar: 1.4, n: 2,
+            vida: 0.28, cor: 0xff8a1f, cor2: 0xffd75e, brilho: 1.5, tamanho: 0.4, gravidade: 1.5, arrasto: 2.8,
+          });
+        }
+        if (c.foraPista && c.vel > 5) {
+          // poeira do terreno (cor pelo tema)
+          const poeira = this.pista.def.tema === "praia" ? 0xf2e3c0 : this.pista.def.tema === "deserto" ? 0xe0c090 : 0x5a4648;
+          this.part.emitir({
+            x: c.x + px * deTras, y: 0.3, z: c.z + pz * deTras,
+            vx: px * 3, vy: 1.4, vz: pz * 3, espalhar: 1.8, n: 1,
+            vida: 0.7, cor: poeira, tamanho: 0.55, gravidade: -1.0, arrasto: 2.2,
+          });
+        }
+      }
+    }
+    // v69: chegada do JOGADOR = chuva de confetti (1×)
+    if (this.part && !this.confeteFeito) {
+      const j = this.corredorJogador();
+      if (j.terminou) {
+        this.confeteFeito = true;
+        const cores = [0xff5252, 0xffd740, 0x69f0ae, 0x40c4ff, 0xff4081, 0xffffff];
+        for (let k = 0; k < 6; k++) {
+          this.part.emitir({
+            x: j.x, y: 2.4, z: j.z, vx: 0, vy: 8.5 + Math.random() * 4.5, vz: 0,
+            espalhar: 6.5, n: 22, vida: 1.9, cor: cores[k], tamanho: 0.42,
+            gravidade: -5.5, arrasto: 1.1,
+          });
+        }
+      }
     }
     // caixas
     this.corrida.caixas.forEach((cx, i) => {
@@ -948,6 +1348,17 @@ export class MotorKart {
     this.camara.position.lerp(alvo, fator);
     const mira = new THREE.Vector3(j.x + dx * 7, 1.5, j.z + dz * 7);
     this.camara.lookAt(mira);
+    // v69: rolagem bancária em deriva (a câmara inclina COM o kart)
+    const rollAlvo = j.derrapando ? -j.derivaDir * 0.055 : 0;
+    this.rollSuave += (rollAlvo - this.rollSuave) * Math.min(1, 5 * Math.max(dt, 0.001));
+    this.camara.rotateZ(this.rollSuave);
+    // v69: TREMOR de impacto (golpe/raio/balão perdido) — decai exponencial
+    if (this.tremor > 0.002) {
+      this.camara.position.x += (Math.random() - 0.5) * this.tremor;
+      this.camara.position.y += (Math.random() - 0.5) * this.tremor * 0.6;
+      this.camara.position.z += (Math.random() - 0.5) * this.tremor;
+      this.tremor *= Math.exp(-4.5 * Math.max(dt, 0.001));
+    }
     const fovAlvo = 66 + Math.min(14, (j.vel / Math.max(1, j.stats.velMax)) * 14);
     if (Math.abs(this.camara.fov - fovAlvo) > 0.4) {
       this.camara.fov += (fovAlvo - this.camara.fov) * Math.min(1, 3 * dt);
@@ -962,6 +1373,7 @@ export class MotorKart {
     const h = canvas.clientHeight || window.innerHeight;
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h, false);
+    this.composer?.setSize(w, h); // v69: o composer acompanha o resize
     this.camara.aspect = w / h;
     this.camara.updateProjectionMatrix();
   };
@@ -1047,6 +1459,22 @@ export class MotorKart {
         if (!c) return null;
         return { id: c.id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, posicao: c.posicao, vel: Math.round(c.vel * 10) / 10, terminou: c.terminou, eJogador: c.eJogador, item: c.item };
       },
+      /** v69 GRÁFICOS: estado honesto do motor visual (o E2E prova qualidade/partículas/confetti). */
+      graficos: () => ({
+        qualidade: self.qualidade,
+        bloom: self.composer !== null,
+        sombras: self.renderer?.shadowMap.enabled ?? false,
+        ceuDomo: self.ceuDomo !== null,
+        particulasVivas: self.part?.vivas ?? 0,
+        riscosVisiveis: (self.matRiscos?.opacity ?? 0) > 0.03,
+        tremorAtivo: self.tremor > 0.02,
+        confete: self.confeteFeito,
+        caixasAbertas: self.caixasEu,
+        fov: Math.round(self.camara.fov * 10) / 10,
+        tema: self.pista.def.tema,
+      }),
+      /** v69: provoca um TREMOR honesto de teste (o E2E prova o shake sem precisar de golpes). */
+      tremorForcar: (v: number) => { self.tremor = Math.max(0, Math.min(1.2, v)); },
       /** v68 BATALHA: estado completo da batalha (balões/golpes/eliminados/teto). */
       batalha: () => self.batalha ? {
         baloes: [...self.batalha.baloes],
@@ -1136,6 +1564,21 @@ export class MotorKart {
     this.meshesCaixa = [];
     this.meshesMoeda = [];
     this.meshesRampa = [];
+    // v69: dispose do composer, partículas e riscos (idempotente)
+    this.composer?.dispose();
+    this.composer = null;
+    this.passVinheta = null;
+    this.part?.dispose();
+    this.part = null;
+    this.riscos = null;
+    this.matRiscos = null;
+    this.ceuDomo = null;
+    this.uniformesCeu = null;
+    this.nuvens.clear();
+    this.texAgua = null;
+    this.matAgua = null;
+    this.matLava = null;
+    this.luzDir = null;
     if (this.renderer) {
       this.renderer.dispose();
       this.renderer.forceContextLoss?.();

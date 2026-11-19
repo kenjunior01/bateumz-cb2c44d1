@@ -97,6 +97,14 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const [nomePiloto] = useState(() => `Piloto-${Math.floor(1000 + Math.random() * 9000)}`);
   // ── v67 SOM ──
   const [mudo, setMudo] = useState(() => somGlobal().estaMudo());
+  // ── v69 GRÁFICOS: qualidade persistida no aparelho (alta = bloom/ACES/sombras/partículas) ──
+  const [qualidade, setQualidade] = useState<"alta" | "leve">(() => {
+    try {
+      const v = localStorage.getItem("bateu_gfx");
+      if (v === "leve" || v === "alta") return v;
+    } catch { /* sem storage — honesto */ }
+    return ehToque ? "leve" : "alta";
+  });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const miniRef = useRef<HTMLCanvasElement | null>(null);
   const motorRef = useRef<MotorKart | null>(null);
@@ -143,10 +151,25 @@ export default function BateuKart({ onScore, onExit }: Props) {
     };
   }, []);
 
-  // ── v67 SOM: música segue a fase (menu = tema do menu · corrida = tema de corrida) ──
+  // ── v69: música segue a fase E A PISTA (tema único por mundo; batalha tem tema próprio) ──
+  const temaMusica = modoJogo === "batalha" ? "batalha" as const
+    : pistaPorId(pistaSel)?.tema === "praia" ? "praia" as const
+    : pistaPorId(pistaSel)?.tema === "deserto" ? "deserto" as const
+    : pistaPorId(pistaSel)?.tema === "vulcao" ? "vulcao" as const
+    : "corrida" as const;
   useEffect(() => {
-    somGlobal().musica(fase === "corrida" ? "corrida" : "menu");
-  }, [fase]);
+    somGlobal().musica(fase === "corrida" ? temaMusica : "menu");
+  }, [fase, temaMusica]);
+
+  // ── v69: alternar qualidade gráfica (persistido; aplica na PRÓXIMA corrida) ──
+  const alternarGraficos = useCallback(() => {
+    setQualidade((q) => {
+      const novo = q === "alta" ? "leve" : "alta";
+      try { localStorage.setItem("bateu_gfx", novo); } catch { /* sem storage — honesto */ }
+      somGlobal().tocar("ui");
+      return novo;
+    });
+  }, []);
 
   const alternarSom = useCallback(() => {
     const som = somGlobal();
@@ -201,7 +224,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
     pistaRecRef.current = pistaId;
     const def = pistaPorId(pistaId);
     if (!def) return;
-    const leve = new URLSearchParams(window.location.search).has("kart-leve") || ehToque;
+    const leve = new URLSearchParams(window.location.search).has("kart-leve") || qualidade === "leve" || ehToque;
     const recordeAnterior = lerSave().recordes[pistaId] ?? Infinity;
 
     const motor = new MotorKart({
@@ -302,6 +325,8 @@ export default function BateuKart({ onScore, onExit }: Props) {
       return novo;
     });
     if (onScore) onScore(hud.payout.moedas);
+    // v69: PÓDIO — fanfarra triunfal para 1.º/2.º/3.º (corrida E batalha)
+    if (hud.posicao <= 3) somGlobal().tocar("podio");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hud?.fase, fase]);
 
@@ -386,12 +411,18 @@ export default function BateuKart({ onScore, onExit }: Props) {
           <p className="mt-3 max-w-2xl text-center text-slate-300 text-sm sm:text-base">{t("kart.menu.sub")}</p>
           <p className="mt-1 text-center text-[11px] text-slate-400" data-testid="kart-menu-nota">{t("kart.menu.nota")}</p>
 
-          {/* v67 SOM: botão honesto — o estado vive no aparelho */}
-          <div className="mt-2 flex justify-center">
+          {/* v67 SOM + v69 GFX: botões honestos — o estado vive no aparelho */}
+          <div className="mt-2 flex justify-center gap-2">
             <button onClick={alternarSom} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10" data-testid="kart-som">
               {mudo ? <VolumeX className="w-4 h-4 text-slate-400" /> : <Volume2 className="w-4 h-4 text-emerald-300" />}
               {t(mudo ? "som.ligar" : "som.desligar")}
             </button>
+            {!ehToque && (
+              <button onClick={alternarGraficos} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10" data-testid="kart-gfx" title={t("gfx.nota")}>
+                <Gauge className={`w-4 h-4 ${qualidade === "alta" ? "text-amber-300" : "text-slate-400"}`} />
+                {qualidade === "alta" ? t("gfx.alta") : t("gfx.leve")}
+              </button>
+            )}
           </div>
 
           {/* progressão */}

@@ -81,6 +81,8 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const [save, setSave] = useState<SaveKart>(() => lerSave());
   const [pistaSel, setPistaSel] = useState<string>(() => lerSave().kart === "cupim" ? "vulcao" : "praia");
   const [voltasSel, setVoltasSel] = useState<number>(4);
+  // v68 BATALHA: modo do jogo (solo) — corrida clássica OU batalha de balões no Coliseu
+  const [modoJogo, setModoJogo] = useState<"corrida" | "batalha">("corrida");
   const [garagemAberta, setGaragemAberta] = useState(false);
   const [kartSel, setKartSel] = useState<KartId>(() => lerSave().kart);
   const [hud, setHud] = useState<EstadoHudKart | null>(null);
@@ -105,6 +107,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
   const fimRedeRef = useRef(false);                           // payout local injetado 1×
   const modoRedeRef = useRef(false);
   modoRedeRef.current = modoRede;
+  const modoJogoRef = useRef<"corrida" | "batalha">("corrida");
   const rafMini = useRef(0);
   const toastSeq = useRef(1);
   const salvoRef = useRef(false);
@@ -211,6 +214,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
       recordeAnterior,
       leve,
       som: adaptadorSomKart(somGlobal()), // v67
+      batalha: modoJogoRef.current === "batalha", // v68
       aoHud: (e) => {
         // v66 ONLINE: o payout é DO APARELHO — calculado localmente 1× quando a sala fecha
         if (e.fase === "fim" && !e.payout && modoRedeRef.current && !fimRedeRef.current) {
@@ -226,9 +230,17 @@ export default function BateuKart({ onScore, onExit }: Props) {
       aoAviso: (a: AvisosKart) => {
         if (a.itemNovo) pushToast(`${ICONES_ITEM[a.itemNovo] ?? ""} ${t(`kart.item.${a.itemNovo}`)}`, "item");
         if (a.golpeRecebido) pushToast(t("kart.golpeRecebido", { item: a.golpeRecebido === "raio" ? "⚡" : t(`kart.item.${a.golpeRecebido}`) }), "golpe");
-        if (a.voltaNova) pushToast(t("kart.voltaNova", { n: String(a.voltaNova) }), "info");
+        if (a.voltaNova && modoJogoRef.current !== "batalha") pushToast(t("kart.voltaNova", { n: String(a.voltaNova) }), "info");
         if (a.derivaTurbo) pushToast(a.derivaTurbo === 2 ? t("kart.turboLaranja") : t("kart.turboAzul"), "turbo");
         if (a.rampa) pushToast(t("kart.rampa"), "turbo");
+        // v68 BATALHA
+        if (a.balaoPerdido) pushToast(t("batalha.balaoPerdido"), "golpe");
+        if (a.eliminadoEu) pushToast(t("batalha.eliminadoEu"), "golpe");
+        if (a.eliminadoOutro) {
+          pushToast(a.eliminadoOutro.por
+            ? t("batalha.eliminadoPor", { v: a.eliminadoOutro.nome, p: a.eliminadoOutro.por })
+            : t("batalha.eliminadoSem", { v: a.eliminadoOutro.nome }), "info");
+        }
       },
       // v66 ONLINE: o uso de item vai por MENSAGEM própria (o servidor é quem usa)
       ...(inicioRede ? {
@@ -452,15 +464,23 @@ export default function BateuKart({ onScore, onExit }: Props) {
             </div>
           </button>
 
-          {/* correr */}
+          {/* correr — v68: CORRIDA clássica OU BATALHA de balões */}
           <button
-            onClick={() => { setCorridaKey((k) => k + 1); setFase("corrida"); }}
+            onClick={() => { modoJogoRef.current = "corrida"; setModoJogo("corrida"); setCorridaKey((k) => k + 1); setFase("corrida"); }}
             className="mt-6 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 px-10 py-4 font-black text-lg text-white hover:brightness-110 active:scale-95"
             data-testid="kart-entrar"
           >
             <span className="inline-flex items-center gap-2"><Play className="w-6 h-6" /> {t("kart.correr")}</span>
           </button>
-          <p className="mt-2 text-[11px] text-slate-500">{t("kart.controles")}</p>
+          <button
+            onClick={() => { modoJogoRef.current = "batalha"; setModoJogo("batalha"); setCorridaKey((k) => k + 1); setFase("corrida"); }}
+            className="mt-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-700 px-8 py-3.5 font-black text-base text-white hover:brightness-110 active:scale-95"
+            data-testid="kart-batalha"
+          >
+            <span className="inline-flex items-center gap-2"><span className="text-xl">🎈</span> {t("batalha.menu.botao")}</span>
+          </button>
+          <p className="mt-2 text-[11px] text-fuchsia-300/90 text-center max-w-md" data-testid="kart-batalha-sub">{t("batalha.menu.sub")}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{t("kart.controles")}</p>
 
           {/* ── v66: SALA ONLINE (honesto: sem servidor, nada finge) ── */}
           <div className="mt-6 w-full max-w-xl rounded-2xl border-2 border-sky-500/40 bg-sky-500/5 p-4" data-testid="kart-online-painel">
@@ -606,7 +626,20 @@ export default function BateuKart({ onScore, onExit }: Props) {
             <span className="text-xs text-slate-400">/ {hud.total}</span>
           </div>
           <div className="rounded-xl bg-slate-900/80 border border-white/10 px-3 py-1.5 text-xs text-white flex items-center gap-3">
-            <span data-testid="kart-volta">{t("kart.hud.volta")} <b className="text-orange-300">{hud.volta}</b>/{hud.voltas}</span>
+            {hud.batalha ? (
+              <>
+                <span data-testid="kart-batalha-baloes" className="inline-flex items-center gap-1">
+                  <b className="text-fuchsia-300">{"🎈".repeat(Math.min(hud.batalha.baloes, 5))}</b>
+                  <span className="text-slate-300">×{hud.batalha.baloes}</span>
+                </span>
+                <span data-testid="kart-batalha-vivos" className="text-emerald-300">{t("batalha.hud.vivos", { n: String(hud.batalha.vivos) })}</span>
+                <span data-testid="kart-batalha-tempo" className="text-slate-300">
+                  {Math.floor(hud.batalha.tempoRestante / 60)}:{String(Math.floor(hud.batalha.tempoRestante % 60)).padStart(2, "0")}
+                </span>
+              </>
+            ) : (
+              <span data-testid="kart-volta">{t("kart.hud.volta")} <b className="text-orange-300">{hud.volta}</b>/{hud.voltas}</span>
+            )}
             <span data-testid="kart-tempo" className="text-slate-300">{Math.floor(hud.tempo / 60)}:{String(Math.floor(hud.tempo % 60)).padStart(2, "0")}</span>
             <span data-testid="kart-moedas" className="inline-flex items-center gap-1 text-yellow-300"><Coins className="w-3.5 h-3.5" /> {hud.moedas}</span>
           </div>
@@ -730,8 +763,13 @@ export default function BateuKart({ onScore, onExit }: Props) {
         <div className="absolute inset-0 z-[86] bg-black/75 grid place-items-center overflow-y-auto" data-testid="kart-resultados">
           <div className="my-auto rounded-3xl border border-white/15 bg-slate-900/95 p-6 w-[min(92vw,480px)]">
             <h2 className="text-center text-2xl font-black text-amber-300 flex items-center justify-center gap-2">
-              <Trophy className="w-6 h-6" /> {t("kart.resultado.titulo", { pos: ORDEM(hud.posicao) })}
+              <Trophy className="w-6 h-6" /> {t(hud.batalha ? "batalha.resultado.titulo" : "kart.resultado.titulo", { pos: ORDEM(hud.posicao) })}
             </h2>
+            {hud.batalha && (
+              <div className="mt-1 text-center text-xs text-fuchsia-200" data-testid="batalha-resumo">
+                {t("batalha.resultado.resumo", { b: String(hud.batalha.baloes), g: String(hud.batalha.golpes) })}
+              </div>
+            )}
             <div className="mt-3 flex justify-center gap-4 text-sm">
               <span className="inline-flex items-center gap-1 text-yellow-200" data-testid="kart-payout"><Coins className="w-4 h-4" /> +{hud.payout.moedas} {t("kart.moedas")}</span>
               <span className="inline-flex items-center gap-1 text-sky-200"><ChevronUp className="w-4 h-4" /> +{hud.payout.xp} XP</span>
@@ -742,13 +780,18 @@ export default function BateuKart({ onScore, onExit }: Props) {
             <div className="mt-4 max-h-64 overflow-y-auto rounded-xl border border-white/10">
               <table className="w-full text-xs">
                 <tbody>
-                  {hud.resultados.map((r) => (
-                    <tr key={r.id} className={`${r.id === motorIdRef.current ? "bg-amber-400/15 text-amber-200 font-bold" : "text-slate-300"} border-b border-white/5`}>
-                      <td className="px-3 py-1.5 w-10">{ORDEM(r.posicao)}</td>
-                      <td className="px-2 py-1.5">{r.nome}</td>
-                      <td className="px-3 py-1.5 text-right text-slate-400">{r.tempo > 0 ? `${Math.floor(r.tempo / 60)}:${String(Math.floor(r.tempo % 60)).padStart(2, "0")}` : "—"}</td>
-                    </tr>
-                  ))}
+                  {hud.resultados.map((r) => {
+                    const bal = hud.batalha?.classificacao.find((x) => x.id === r.id);
+                    return (
+                      <tr key={r.id} className={`${r.id === motorIdRef.current ? "bg-amber-400/15 text-amber-200 font-bold" : "text-slate-300"} border-b border-white/5`}>
+                        <td className="px-3 py-1.5 w-10">{ORDEM(r.posicao)}</td>
+                        <td className="px-2 py-1.5">{r.nome}</td>
+                        <td className="px-3 py-1.5 text-right text-slate-400" data-testid={"batalha-tabela-baloes"}>
+                          {hud.batalha && bal ? `${"🎈".repeat(Math.min(bal.baloes, 5))} ${bal.baloes}` : r.tempo > 0 ? `${Math.floor(r.tempo / 60)}:${String(Math.floor(r.tempo % 60)).padStart(2, "0")}` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

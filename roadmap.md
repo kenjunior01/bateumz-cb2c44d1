@@ -50,3 +50,11 @@
 - [x] Arena com som: dano/nível/abate/cura/erro/chat/morte/respawn + música ambiente, botão SOM no menu — docs/REA-som-v67.md §4.
 - [x] Furos reais fechados com repro: entrada online ONE-SHOT aliaseia com o tick (FIX LATCH), colisão kart-kart drenava por step de contacto contínuo e congelava pilhas nos cotovelos (FIX: só perde na aproximação), variante caixa morta, addInitScript no reload, pausa re-alimentava o pitch — docs/REA-som-v67.md §5.
 - [x] Prova: test-som-v67.mjs 59/59 ×2 · kart online 61/0 ×2 · kart solo 65/0 ×2 · arena 77/0 · pvp 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-som-v67.md §6.
+
+## v68 — Limpeza RPG + Batalha de Balões (2026-11-19)
+
+- [x] Apagar TODOS os jogos do género RPG a pedido do utilizador: BATEU RPG «Lendas da Arena» (componente + núcleo arena/* + servidor + 2 suítes), Aetheria, RPG Arena Battle e Campanha RPG — com o BATEU KART a assumir o destaque em todo o hub/rotas/i18n (338 chaves fora ×6 idiomas) — docs/REA-batalha-v68.md §1.
+- [x] Modo BATALHA DE BALÕES no BATEU KART: núcleo isomórfico (batalha.ts) sobre o core intato — arena Coliseu, 12×3 balões, invulnerabilidade, wreck, último-de-pé ou teto de 180 s, ranking balões→golpes, recompensa própria — docs/REA-batalha-v68.md §2.
+- [x] Motor + UI: balões 3D por kart, wreck cinzento, HUD de batalha, resultados com coluna de balões, botão 🎈 no menu, toasts de eliminação, i18n batalha.* pt+en — docs/REA-batalha-v68.md §3.
+- [x] Furos reais fechados com repro: clamp das voltas (999→5), janela de eventos do core (residuais nunca processados), teto do bónus de balões no payout — docs/REA-batalha-v68.md §4.
+- [x] Prova: test-kart-batalha-v68.mjs 30/30 ×2 (núcleo com batalha completa determinística de valores exatos + E2E no Coliseu) · regressão kart solo 65/0 · kart online 61/0 · som 53/0 · web 11/0 · tsc 0 · build OK — docs/REA-batalha-v68.md §5.

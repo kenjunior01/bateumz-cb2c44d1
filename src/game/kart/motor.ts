@@ -21,6 +21,7 @@ import {
   construirPista, novaCorrida, passoCorrida, posicoesDe, pistaPorId, statsDe,
   FaseCorrida, Pista, rng32,
 } from "./core.ts";
+import { novaBatalha, passoBatalha, rankingBatalha, DURACAO_BATALHA_S, type EstadoBatalha } from "./batalha.ts";
 import type { SnapKart, CorredorInicio } from "./mp.ts";
 import type { SomKart } from "../som.ts";
 
@@ -46,6 +47,14 @@ export interface EstadoHudKart {
   escudo: boolean;
   payout: { moedas: number; xp: number; recorde: boolean } | null;
   resultados: { id: number; nome: string; posicao: number; tempo: number }[];
+  // v68 BATALHA — null em corridas
+  batalha: {
+    baloes: number;
+    golpes: number;
+    vivos: number;
+    tempoRestante: number;
+    classificacao: { id: number; nome: string; posicao: number; baloes: number; eliminado: boolean }[];
+  } | null;
 }
 
 export interface AvisosKart {
@@ -55,6 +64,10 @@ export interface AvisosKart {
   moeda?: boolean;
   derivaTurbo?: 1 | 2;
   rampa?: boolean;
+  // v68 BATALHA
+  balaoPerdido?: boolean;
+  eliminadoEu?: boolean;
+  eliminadoOutro?: { nome: string; por: string };
 }
 
 interface OptsMotor {
@@ -74,6 +87,8 @@ interface OptsMotor {
   aoPulsarItemRede?: () => void;         // em rede o uso de item vai por MENSAGEM, não por física local
   // ── v67 SOM (adaptador fino — o motor nunca importa o Web Audio) ──
   som?: SomKart;
+  // ── v68 BATALHA (solo: o motor possui o EstadoBatalha e corre passoBatalha) ──
+  batalha?: boolean;
 }
 
 const COR_FAISCA_1 = 0x66ccff; // tier azul
@@ -124,7 +139,8 @@ export class MotorKart {
   private pausadoRef = false;
   private auto = false;
   private destruido = false;
-  private rede = false;                 // v66: true = o SERVIDOR simula; este motor só interpola e renderiza
+  private rede = false;                 // v66: o SERVIDOR simula; este motor só interpola e renderiza
+  private batalha: EstadoBatalha | null = null;   // v68: modo Batalha de Balões (solo)
   private idJogador = 6;
   private alvosRede = new Map<number, { x: number; z: number; ang: number; da: number }>();
   private alvosProjetilRede = new Map<number, { x: number; z: number; ang: number }>();
@@ -139,7 +155,7 @@ export class MotorKart {
   private somFase: FaseCorrida | null = null; // fase anterior (transição contagem→corrida = «JÁ»)
   private somTerminei = false;       // fanfarra de chegada 1×
   private disposaveis: { dispose(): void }[] = [];
-  private meshesKart = new Map<number, { grupo: THREE.Group; chama: THREE.Mesh; faiscas: THREE.Mesh; escudo: THREE.Mesh }>();
+  private meshesKart = new Map<number, { grupo: THREE.Group; chama: THREE.Mesh; faiscas: THREE.Mesh; escudo: THREE.Mesh; baloes: THREE.Group; corpoMat: THREE.MeshLambertMaterial }>();
   private meshesProjetil = new Map<number, THREE.Mesh>();
   private meshesOleo = new Map<number, THREE.Mesh>();
   private meshesCaixa: THREE.Mesh[] = [];
@@ -151,18 +167,30 @@ export class MotorKart {
 
   constructor(opts: OptsMotor) {
     this.opts = opts;
-    const def = pistaPorId(opts.pistaId);
-    if (!def) throw new Error(`pista desconhecida: ${opts.pistaId}`);
-    this.pista = construirPista(def);
     this.idJogador = typeof opts.idJogador === "number" && opts.idJogador >= 0 ? opts.idJogador : 6;
-    this.corrida = novaCorrida({
-      pista: this.pista,
-      voltas: opts.voltas,
-      kartJogador: opts.kartJogador,
-      melhoriasJogador: opts.melhorias,
-      nomeJogador: opts.nomeJogador,
-      recordeAnterior: opts.recordeAnterior,
-    });
+    if (opts.batalha) {
+      // v68 BATALHA: o núcleo da batalha possui a «corrida» (arena Coliseu, voltas ∞)
+      this.batalha = novaBatalha({
+        kartJogador: opts.kartJogador,
+        melhoriasJogador: opts.melhorias,
+        nomeJogador: opts.nomeJogador,
+      });
+      this.corrida = this.batalha.cor;
+      this.pista = this.corrida.pista;
+    } else {
+      const defIni = pistaPorId(opts.pistaId);
+      if (!defIni) throw new Error(`pista desconhecida: ${opts.pistaId}`);
+      this.pista = construirPista(defIni);
+      this.corrida = novaCorrida({
+        pista: this.pista,
+        voltas: opts.voltas,
+        kartJogador: opts.kartJogador,
+        melhoriasJogador: opts.melhorias,
+        nomeJogador: opts.nomeJogador,
+        recordeAnterior: opts.recordeAnterior,
+      });
+    }
+    const def: PistaDef = this.pista.def;
     // v66 ONLINE: o servidor mandou os descritores REAIS (nomes/karts/cores) —
     // reescrevem o mirror ANTES das meshes existirem (construirCorredores lê daqui)
     if (opts.corredoresRede?.length) {
@@ -487,12 +515,25 @@ export class MotorKart {
       escudo.position.y = 0.9;
       escudo.visible = false;
       grupo.add(escudo);
+      // v68 BATALHA: 3 balões sobre o kart (a cor do piloto) — visíveis por balões restantes
+      const geoBalao = new THREE.SphereGeometry(0.46, 10, 8);
+      this.registar(geoBalao);
+      const baloes = new THREE.Group();
+      const posBaloes: [number, number, number][] = [[-0.85, 2.45, -0.3], [0, 2.95, -0.5], [0.85, 2.45, -0.3]];
+      for (const [bx, by, bz] of posBaloes) {
+        const bolha = new THREE.Mesh(geoBalao, matCorpo);
+        bolha.position.set(bx, by, bz);
+        bolha.visible = false;
+        baloes.add(bolha);
+      }
+      baloes.visible = !!this.batalha;
+      grupo.add(baloes);
       this.cena.add(grupo);
-      this.meshesKart.set(c.id, { grupo, chama, faiscas, escudo });
+      this.meshesKart.set(c.id, { grupo, chama, faiscas, escudo, baloes, corpoMat: matCorpo });
     }
   }
 
-  private registar(geo: THREE.BufferGeometry | null, mat: THREE.Material | THREE.Light): void {
+  private registar(geo: THREE.BufferGeometry | null, mat?: THREE.Material | THREE.Light | null): void {
     if (geo) this.disposaveisGeometria.push(geo);
     if (mat && (mat as THREE.Material).dispose) this.disposaveisMaterial.push(mat as THREE.Material);
   }
@@ -625,10 +666,13 @@ export class MotorKart {
         }
         const antes = this.corrida.fase;
         const itemAntes = this.corredorJogador().item;
-        passoCorrida(this.corrida, this.entrada, dt);
+        const baloesAntes = this.batalha ? this.batalha.baloes[this.idJogador] : -1;
+        if (this.batalha) passoBatalha(this.batalha, this.entrada, dt);
+        else passoCorrida(this.corrida, this.entrada, dt);
         this.entrada.usarItem = false; // pulsação consumida
         this.drenarEventos();
-        if (this.corrida.fase !== antes || this.corredorJogador().item !== itemAntes) this.empurrarHud();
+        const mudouBaloes = this.batalha && this.batalha.baloes[this.idJogador] !== baloesAntes;
+        if (this.corrida.fase !== antes || this.corredorJogador().item !== itemAntes || mudouBaloes) this.empurrarHud();
       }
     }
     this.atualizarSom();
@@ -733,18 +777,52 @@ export class MotorKart {
       } else if (e.t === "rampa" && e.id === this.idJogador) { avisos.rampa = true; }
     }
     this.corrida.eventos.length = 0;
+    // v68 BATALHA: traduz os eventos de balões em avisos (o som dos golpes já veio pelo «golpe» do core)
+    if (this.batalha) {
+      for (const ev of this.batalha.eventos) {
+        algum = true;
+        if (ev.t === "balao" && ev.alvo === this.idJogador) avisos.balaoPerdido = true;
+        else if (ev.t === "eliminado") {
+          if (ev.alvo === this.idJogador) avisos.eliminadoEu = true;
+          else {
+            const vitima = this.corrida.corredores[ev.alvo];
+            const agressor = ev.por >= 0 && ev.por < this.corrida.corredores.length ? this.corrida.corredores[ev.por] : null;
+            avisos.eliminadoOutro = { nome: vitima?.nome ?? "?", por: agressor?.nome ?? "" };
+          }
+        }
+      }
+      this.batalha.eventos.length = 0;
+    }
     if (algum && Object.keys(avisos).length) this.opts.aoAviso(avisos);
   }
 
   private empurrarHud(): void {
     this.ultimoHud = performance.now();
     const j = this.corredorJogador();
+    // v68 BATALHA: posição/classificação vêm dos BALÕES (a «posição de corrida» é irrelevante aqui)
+    let posicao = j.posicao;
+    let infoBatalha: EstadoHudKart["batalha"] = null;
+    if (this.batalha) {
+      const ordem = rankingBatalha(this.batalha);
+      posicao = ordem.findIndex((c) => c.id === j.id) + 1;
+      infoBatalha = {
+        baloes: Math.max(0, this.batalha.baloes[this.idJogador] ?? 0),
+        golpes: this.batalha.golpes[this.idJogador] ?? 0,
+        vivos: this.batalha.baloes.filter((x) => x > 0).length,
+        tempoRestante: Math.max(0, DURACAO_BATALHA_S - this.corrida.tempo),
+        classificacao: ordem.map((c, idx) => ({
+          id: c.id, nome: c.nome, posicao: idx + 1,
+          baloes: Math.max(0, this.batalha!.baloes[c.id]),
+          eliminado: c.terminou,
+        })),
+      };
+    }
     this.opts.aoHud({
       fase: this.corrida.fase,
       contagem: Math.min(3, Math.max(0, Math.ceil(this.corrida.tempoContagem))),
       volta: Math.min(this.corrida.voltas, Math.max(1, j.volta || 1)),
       voltas: this.corrida.voltas,
-      posicao: j.posicao,
+      posicao,
       total: this.corrida.corredores.length,
       vel: j.vel,
       velMax: j.stats.velMax,
@@ -760,6 +838,7 @@ export class MotorKart {
       escudo: j.escudo > 0,
       payout: this.corrida.payout,
       resultados: this.corrida.resultados,
+      batalha: infoBatalha,
     });
   }
 
@@ -783,6 +862,15 @@ export class MotorKart {
       }
       mk.escudo.visible = c.escudo > 0;
       if (c.stun > 0) mk.grupo.rotation.y += c.stun * 6; // giro do stun (visual)
+      // v68 BATALHA: balões visíveis por balões restantes + wreck cinzento a zero
+      if (this.batalha) {
+        const n = Math.max(0, this.batalha.baloes[c.id] ?? 0);
+        mk.baloes.children.forEach((b, i) => { b.visible = i < n; });
+        if (n > 0) mk.baloes.position.y = Math.sin(t * 2.4 + c.id * 1.7) * 0.09;
+        if (n === 0) {
+          if (!mk.corpoMat.userData.wreck) { mk.corpoMat.color.setHex(0x4b4f56); mk.corpoMat.userData.wreck = true; }
+        }
+      }
     }
     // caixas
     this.corrida.caixas.forEach((cx, i) => {
@@ -959,6 +1047,20 @@ export class MotorKart {
         if (!c) return null;
         return { id: c.id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, posicao: c.posicao, vel: Math.round(c.vel * 10) / 10, terminou: c.terminou, eJogador: c.eJogador, item: c.item };
       },
+      /** v68 BATALHA: estado completo da batalha (balões/golpes/eliminados/teto). */
+      batalha: () => self.batalha ? {
+        baloes: [...self.batalha.baloes],
+        golpes: [...self.batalha.golpes],
+        eliminados: [...self.batalha.eliminados],
+        fim: self.batalha.fim,
+        vencedor: self.batalha.vencedor,
+        vivos: self.batalha.baloes.filter((x) => x > 0).length,
+        tempoRestante: Math.max(0, Math.round(DURACAO_BATALHA_S - self.corrida.tempo)),
+        meus: self.batalha.baloes[self.idJogador] ?? 0,
+        arena: self.pista.def.id,
+        corredores: self.corrida.corredores.length,
+        fase: self.corrida.fase,
+      } : null,
       /** Input externo (telemóvel/E2E). */
       entrada: (p: Partial<Omit<EntradaKart, "usarItem">>) => self.setEntrada(p),
       usarItem: () => self.pulsarItem(),

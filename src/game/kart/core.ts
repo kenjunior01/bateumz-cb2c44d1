@@ -109,7 +109,24 @@ export const PISTAS: PistaDef[] = [
   },
 ];
 export const IDS_PISTAS = PISTAS.map((p) => p.id);
-export const pistaPorId = (id: string): PistaDef | null => PISTAS.find((p) => p.id === id) ?? null;
+
+// v68 — ARENA DE BATALHA (Coliseu das Lendas): anel curto e LARGO para a
+// Batalha de Balões. NÃO entra em PISTAS (o menu de corridas fica intacto) —
+// pistaPorId também a resolve para o motor.
+const COLISEU: [number, number][] = [
+  [0, -96], [64, -78], [96, -26], [88, 40], [48, 84],
+  [-8, 96], [-64, 80], [-94, 28], [-86, -36], [-44, -82],
+];
+
+export const ARENA_BATALHA: PistaDef = {
+  id: "coliseu", nome: "Coliseu das Lendas", tema: "vulcao", largura: 11, voltasSugeridas: 1,
+  nivelNecessario: 1,
+  corEstrada: 0x3a3f47, corBordaA: 0xf2b632, corBordaB: 0x2c282c, corChao: 0x2a2126,
+  corCeu: 0x43203a, corNevoa: 0x552d45, pontos: COLISEU,
+};
+
+export const pistaPorId = (id: string): PistaDef | null =>
+  PISTAS.find((p) => p.id === id) ?? (id === ARENA_BATALHA.id ? ARENA_BATALHA : null);
 
 // ── Construção da pista (Catmull-Rom fechada → amostras) ───────
 export interface Amostra {

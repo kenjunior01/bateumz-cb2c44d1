@@ -94,11 +94,11 @@ async function main() {
   await page.waitForTimeout(1200);
   ok("Bounce joga sem crash com o kit activo", true);
 
-  // ── 5. MMORPG não duplica barra (tem progressão própria) ──
-  await page.goto(`${BASE}/lives?game=mmorpg`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  // ── 5. KART não duplica barra (progressão própria — garagem/moedas) ──
+  await page.goto(`${BASE}/lives?game=kart`, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForTimeout(12000);
-  const mmorpgBar = await page.getByText(/Missões de hoje —/i).count();
-  ok("MMORPG sem barra de kit (progressão RPG própria)", mmorpgBar === 0);
+  const kartBar = await page.getByText(/Missões de hoje —/i).count();
+  ok("KART sem barra de kit (progressão própria da garagem)", kartBar === 0);
 
   // ── 6. Estabilidade ──
   const criticalErrors = pageErrors.filter((e) => !NOISE.some((n) => e.includes(n)));

@@ -202,11 +202,11 @@ const AllGames = () => {
       </div>
 
       <div className="container mx-auto px-4 pt-4 pb-2 relative z-20">
-        {/* ⭐ Bateu World — destaque permanente no topo da página de jogos */}
+        {/* ⭐ Bateu Kart — destaque permanente no topo da página de jogos */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-          onClick={() => { sfx.whoosh(); navigate("/lives?game=mmorpg"); }}
+          onClick={() => { sfx.whoosh(); navigate("/lives?game=kart"); }}
           data-testid="jogos-destaque-bateu-world"
           className="relative overflow-hidden rounded-2xl mb-5 cursor-pointer"
           style={{ background: "linear-gradient(120deg, #4c0519 0%, #7c2d12 45%, #713f12 100%)", border: "1px solid rgba(251,113,133,0.45)", boxShadow: "0 0 40px rgba(244,63,94,0.3), 0 12px 32px rgba(0,0,0,0.4)" }}
@@ -223,15 +223,15 @@ const AllGames = () => {
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <GameArt id="mmorpg" className="w-full h-full" />
+              <GameArt id="kart" className="w-full h-full" />
             </motion.div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">MUNDO BATEU</span>
-                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[9px] font-black animate-pulse">MMO DA PLATAFORMA · JOGO EM DESTAQUE</span>
+                <span className="font-display text-lg sm:text-xl font-black text-white leading-none">BATEU KART: CIRCUITO DAS LENDAS</span>
+                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[9px] font-black animate-pulse">CORRIDAS · JOGO EM DESTAQUE</span>
               </div>
               <p className="text-[11px] sm:text-xs font-semibold text-white/80 mt-1 leading-snug">
-                Níveis, poderes, missões e exploração num mundo 3D ao vivo — derrota jogadores e rouba os cupões deles, troca pontos por moeda da plataforma e ganha prémios reais.
+                Corridas LONGAS contra 11 pilotos: derrapa para o mini-turbo, dispara cascas e mísseis, melhora o carro e as armas na garagem — e corre ONLINE numa sala partilhada de verdade.
               </p>
             </div>
             <div className="shrink-0 self-stretch sm:self-auto flex">

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark, BrainCircuit } from "lucide-react";
+import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark, BrainCircuit, Flag } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -231,13 +231,13 @@ const Navbar = () => {
         cta: t("nav.spotlight.cta.live"),
       },
       items: [
-        { label: "🌍 Bateu World 3D", href: "/world", icon: Globe, desc: "O MMO oficial — níveis, poderes, PvP com roubo de cupões e prémios reais", badge: "🔥 TOP", trending: true },
+        { label: "🏎️ BATEU KART", href: "/lives?game=kart", icon: Flag, desc: "O jogo principal — corridas longas, armas, garagem de melhorias e salas de corrida ONLINE partilhadas", badge: "🔥 TOP", trending: true },
         { label: "⚔️ Gaming Arena", href: "/arena", icon: Swords, desc: "Torneios ao vivo, copas diárias e semanais, missões e ranking de elite com prémios reais", badge: "NOVO", trending: true },
         { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
         { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
         { label: "⚽ Desporto Real", href: "/desporto", icon: Medal, desc: "Jornadas, resultados e classificação reais das grandes ligas + palpites parimutuel entre jogadores", badge: "NOVO", trending: true },
         { label: "🎮 Jogos Grátis", href: "/jogos-gratis", icon: Joystick, desc: "Catálogo real de jogos free-to-play para PC e browser — filtra por género e joga na hora", badge: "NOVO" },
-        { label: "⚔️ Lendas da Arena", href: "/lives?game=mmorpg", icon: Swords, desc: "O MMO da plataforma em vista de topo estilo MOBA: escolhe o teu campeão, luta em camps partilhados e enfrenta o Barão com jogadores de todo o mundo", badge: "NOVO", trending: true },
+        { label: "🏎️ Circuito das Lendas", href: "/lives?game=kart", icon: Flag, desc: "Corridas longas estilo arcade: derrapagem com mini-turbo, armas e garagem de melhorias — mais sala de corridas ONLINE partilhada", badge: "ONLINE", trending: true },
         { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },
         { label: t("nav.lives"), href: "/lives", icon: Radio, desc: t("nav.lives.desc") },
         { label: t("nav.blog"), href: "/blog", icon: Newspaper, desc: t("nav.blog.desc") },
@@ -283,7 +283,7 @@ const Navbar = () => {
     { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
     { label: "Desporto", href: "/desporto", icon: Medal },
     { label: "Jogos Grátis", href: "/jogos-gratis", icon: Joystick },
-    { label: "Lendas da Arena", href: "/lives?game=mmorpg", icon: Swords },
+    { label: "Circuito das Lendas", href: "/lives?game=kart", icon: Flag },
     { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
     { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
     { label: "Alienação", href: "/alienacao", icon: KeyRound },

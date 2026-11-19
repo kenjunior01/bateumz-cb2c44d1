@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Globe, Building2, Trophy, Clapperboard, Zap, Drum, ArrowRight, Play,
+  Globe, Building2, Trophy, Clapperboard, Zap, Drum, ArrowRight, Play, Flag,
 } from "lucide-react";
 import RollUp from "./RollUp";
 
@@ -37,12 +37,12 @@ const FEATURES: Feature[] = [
     num: "01",
     badge: "OFICIAL · AO VIVO",
     badgeColor: ACCENT.orange,
-    title: "Bateu World",
-    titleHighlight: "3D",
-    desc: "O nosso mundo aberto multiplayer: explora territórios, encontra outros jogadores, enfrenta monstros e sobe no ranking global.",
-    cta: "Entrar no Mundo",
-    href: "/lives?game=mmorpg",
-    icon: Globe,
+    title: "Bateu Kart",
+    titleHighlight: "Circuito",
+    desc: "O nosso jogo principal: corridas longas contra 11 pilotos, derrapagem com mini-turbo, armas e garagem de melhorias — mais salas de corrida ONLINE.",
+    cta: "Correr Agora",
+    href: "/lives?game=kart",
+    icon: Flag,
     grad: "linear-gradient(145deg, #1a0b02 0%, #3b1403 45%, #4a1a05 100%)",
     accent: ACCENT.orange,
     glow: "rgba(251,146,60,0.22)",
@@ -199,7 +199,7 @@ export default function DestaquesRollUp() {
                   className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 group-hover:gap-2.5"
                   style={{ color: "#fff", background: `${f.accent}1c`, border: `1px solid ${f.accent}40` }}
                 >
-                  {f.href.includes("mmorpg") && <Play className="h-3.5 w-3.5" />}
+                  {f.href.includes("kart") && <Play className="h-3.5 w-3.5" />}
                   {f.cta}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>

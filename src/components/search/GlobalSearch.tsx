@@ -18,7 +18,7 @@ import { ALL_GAMES, normalize } from "@/lib/gamesCatalog";
 import { GameArtChip } from "@/components/games/GameArt";
 import { listLeiloes, subscribeLeiloes, tempoRestante } from "@/lib/leiloes";
 import {
-  Gamepad2, Gavel, Trophy, Ticket, Store, Globe, Home, Swords, Radio,
+  Gamepad2, Gavel, Trophy, Ticket, Store, Globe, Home, Swords, Radio, Flag,
   History, HandCoins, KeyRound, Newspaper, HelpCircle, Wallet, User,
   Sparkles, Users, Crown, Play,
 } from "lucide-react";
@@ -47,7 +47,7 @@ interface SearchEntry {
 const PAGINAS: SearchEntry[] = [
   { id: "pg-home", label: "Página Inicial", group: "Páginas", icon: Home, route: "/", keywords: "home inicio principal" },
   { id: "pg-jogos", label: "Todos os Jogos", group: "Páginas", icon: Gamepad2, route: "/jogos", keywords: "jogos catalogo classicos arcade todos-jogos" },
-  { id: "pg-world", label: "Bateu World 3D — Mundo Aberto", group: "Páginas", icon: Globe, route: "/lives?game=mmorpg", keywords: "mmo mundo aberto 3d world mmorpg" },
+  { id: "pg-kart", label: "BATEU KART — Circuito das Lendas", group: "Páginas", icon: Flag, route: "/lives?game=kart", keywords: "kart corridas racing mario drift garagem online" },
   { id: "pg-leiloes", label: "Leilões ao Vivo", group: "Páginas", icon: Gavel, route: "/leiloes", keywords: "leiloes leilao lances arrematar" },
   { id: "pg-marketplace", label: "Marketplace — Vendas", group: "Páginas", icon: Store, route: "/marketplace", keywords: "loja vendas marketplace comprar produtos" },
   { id: "pg-esports", label: "Central de Esports", group: "Páginas", icon: Trophy, route: "/esports", keywords: "esports campeonatos torneios ligas" },
@@ -106,7 +106,7 @@ export default function GlobalSearch() {
       icon: Gamepad2,
       route: `/lives?game=${g.id}`,
       keywords: `${g.id} ${g.desc} ${g.category}`,
-      badge: g.id === "mmorpg" ? "MMO" : undefined,
+      badge: g.id === "kart" ? "ONLINE" : undefined,
       artId: g.id,
     }));
     const leiloes: SearchEntry[] = listLeiloes()

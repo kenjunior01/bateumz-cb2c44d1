@@ -33,38 +33,62 @@ function Stars({ uid, n = 26, salt = 3, w = 320, h = 180 }: { uid: string; n?: n
    por instância (useId) para suportar N instâncias na página.
    ───────────────────────────────────────────────────────────── */
 
-function ArtMmorpg(u: string) {
+function ArtKart(u: string) {
   return (
     <>
       <defs>
         <linearGradient id={`${u}sky`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1e1b4b" /><stop offset="1" stopColor="#7c2d12" />
+          <stop offset="0" stopColor="#7c2d12" /><stop offset="1" stopColor="#f59e0b" />
         </linearGradient>
-        <radialGradient id={`${u}pl`} cx="0.35" cy="0.3">
-          <stop offset="0" stopColor="#fdba74" /><stop offset="0.55" stopColor="#f97316" /><stop offset="1" stopColor="#9a3412" />
-        </radialGradient>
-        <radialGradient id={`${u}glow`} cx="0.5" cy="0.5">
-          <stop offset="0" stopColor="#fb923c" stopOpacity="0.5" /><stop offset="1" stopColor="#fb923c" stopOpacity="0" />
+        <linearGradient id={`${u}road`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#334155" /><stop offset="1" stopColor="#0f172a" />
+        </linearGradient>
+        <radialGradient id={`${u}sol`} cx="0.5" cy="0.5">
+          <stop offset="0" stopColor="#fef08a" /><stop offset="1" stopColor="#f97316" stopOpacity="0" />
         </radialGradient>
       </defs>
       <rect width="320" height="180" fill={`url(#${u}sky)`} />
-      <Stars uid={u} n={30} salt={7} />
-      <circle cx="160" cy="150" r="95" fill={`url(#${u}glow)`} />
-      {/* planeta */}
-      <circle cx="160" cy="118" r="58" fill={`url(#${u}pl)`} />
-      {/* continentes */}
-      <path d="M126 88c10-6 26-8 34 0s4 16-8 18-24 6-30-2-4-12 4-16z" fill="#65a30d" opacity="0.9" />
-      <path d="M168 108c8-3 20 0 22 8s-8 14-18 12-14-4-12-10 4-8 8-10z" fill="#65a30d" opacity="0.85" />
-      <path d="M136 128c6-2 16 1 16 7s-8 9-14 6-8-11-2-13z" fill="#4d7c0f" opacity="0.8" />
-      {/* anel orbital */}
-      <ellipse cx="160" cy="118" rx="86" ry="20" fill="none" stroke="#fcd34d" strokeWidth="2.5" opacity="0.55" transform="rotate(-14 160 118)" />
-      {/* satélites/avatares */}
-      <circle cx="248" cy="84" r="7" fill="#22d3ee" opacity="0.95" />
-      <circle cx="248" cy="84" r="11" fill="none" stroke="#22d3ee" strokeWidth="1.4" opacity="0.4" />
-      <circle cx="70" cy="66" r="5" fill="#a3e635" opacity="0.9" />
-      <circle cx="70" cy="66" r="8.5" fill="none" stroke="#a3e635" strokeWidth="1.2" opacity="0.4" />
-      {/* brilho no limbo do planeta */}
-      <path d="M104 142a58 58 0 0 0 112 0" fill="none" stroke="#fde68a" strokeWidth="2" opacity="0.5" />
+      <circle cx="160" cy="84" r="46" fill={`url(#${u}sol)`} />
+      <circle cx="160" cy="84" r="20" fill="#fde68a" opacity="0.95" />
+      {/* palmeiras na linha do horizonte */}
+      <g fill="#1c1917" opacity="0.9">
+        <rect x="38" y="66" width="5" height="34" rx="2" />
+        <path d="M40 66c-10-8-22-6-26 2 8-2 14-2 18 2-6 2-10 6-10 12 6-6 12-8 18-6z" />
+        <rect x="276" y="62" width="5" height="38" rx="2" />
+        <path d="M278 62c10-8 22-6 26 2-8-2-14-2-18 2 6 2 10 6 10 12-6-6-12-8-18-6z" />
+      </g>
+      {/* pista em curva */}
+      <path d="M0 172q80-64 160-52t160-24v84H0z" fill={`url(#${u}road)`} />
+      <path d="M0 168q80-60 160-50t160-22" fill="none" stroke="#fbbf24" strokeWidth="3" strokeDasharray="14 12" opacity="0.85" />
+      {/* faixa de largada */}
+      <g transform="rotate(-6 160 96)">
+        <rect x="112" y="62" width="96" height="22" rx="3" fill="#f8fafc" opacity="0.92" />
+        <g fill="#0f172a">
+          <rect x="112" y="62" width="12" height="11" /><rect x="136" y="62" width="12" height="11" /><rect x="160" y="62" width="12" height="11" /><rect x="184" y="62" width="12" height="11" />
+          <rect x="124" y="73" width="12" height="11" /><rect x="148" y="73" width="12" height="11" /><rect x="172" y="73" width="12" height="11" /><rect x="196" y="73" width="12" height="11" />
+        </g>
+      </g>
+      {/* caixa «?» a flutuar */}
+      <g className="ga-float">
+        <rect x="228" y="108" width="26" height="26" rx="6" fill="#fbbf24" stroke="#b45309" strokeWidth="2" />
+        <text x="241" y="127" textAnchor="middle" fontSize="17" fontWeight="900" fill="#7c2d12">?</text>
+      </g>
+      {/* casca verde */}
+      <g className="ga-float" transform="translate(0 6)">
+        <circle cx="78" cy="128" r="11" fill="#22c55e" />
+        <circle cx="78" cy="128" r="7" fill="#bbf7d0" opacity="0.7" />
+      </g>
+      {/* kart do jogador */}
+      <g className="ga-float">
+        <ellipse cx="160" cy="152" rx="44" ry="7" fill="#000" opacity="0.35" />
+        <rect x="124" y="118" width="72" height="26" rx="9" fill="#ef4444" />
+        <rect x="132" y="112" width="40" height="12" rx="5" fill="#f87171" />
+        <circle cx="146" cy="112" r="9" fill="#0ea5e9" />
+        <path d="M141 108a9 9 0 0 1 10 0z" fill="#e2e8f0" />
+        <circle cx="122" cy="146" r="12" fill="#0f172a" /><circle cx="122" cy="146" r="5" fill="#94a3b8" />
+        <circle cx="198" cy="146" r="12" fill="#0f172a" /><circle cx="198" cy="146" r="5" fill="#94a3b8" />
+        <rect x="188" y="124" width="14" height="8" rx="3" fill="#facc15" />
+      </g>
     </>
   );
 }
@@ -691,33 +715,6 @@ function ArtBingo(u: string) {
   );
 }
 
-function ArtRpgArena(u: string) {
-  return (
-    <>
-      <defs>
-        <linearGradient id={`${u}bg`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#450a0a" /><stop offset="1" stopColor="#3b0764" /></linearGradient>
-        <radialGradient id={`${u}glow`} cx="0.5" cy="0.45"><stop offset="0" stopColor="#f59e0b" stopOpacity="0.35" /><stop offset="1" stopColor="#f59e0b" stopOpacity="0" /></radialGradient>
-      </defs>
-      <rect width="320" height="180" fill={`url(#${u}bg)`} />
-      <circle cx="160" cy="90" r="70" fill={`url(#${u}glow)`} />
-      {/* espadas cruzadas */}
-      <g stroke="#e5e7eb" strokeWidth="7" strokeLinecap="round">
-        <line x1="108" y1="122" x2="204" y2="52" /><line x1="212" y1="122" x2="116" y2="52" />
-      </g>
-      <g stroke="#9ca3af" strokeWidth="5.4" strokeLinecap="round">
-        <line x1="100" y1="130" x2="112" y2="118" /><line x1="220" y1="130" x2="208" y2="118" />
-      </g>
-      <g fill="#fbbf24"><rect x="96" y="126" width="18" height="6" rx="3" transform="rotate(45 105 129)" /><rect x="206" y="126" width="18" height="6" rx="3" transform="rotate(-45 215 129)" /></g>
-      {/* escudo central */}
-      <g>
-        <path d="M160 58l26 10v26q0 22-26 32-26-10-26-32v-26z" fill="#7c2d12" stroke="#fbbf24" strokeWidth="3.4" />
-        <path d="M160 70v34M147 82h26" stroke="#fde68a" strokeWidth="3.6" strokeLinecap="round" />
-      </g>
-      <g stroke="#f87171" strokeWidth="3" strokeLinecap="round" opacity="0.85"><line x1="66" y1="40" x2="86" y2="56" /><line x1="254" y1="40" x2="234" y2="56" /></g>
-    </>
-  );
-}
-
 function ArtQuiz(u: string) {
   return (
     <>
@@ -819,7 +816,7 @@ function ArtDefault(u: string) {
 
 /* ── registo id → cena ── */
 const SCENES: Record<string, (u: string) => React.ReactNode> = {
-  mmorpg: ArtMmorpg,
+  kart: ArtKart,
   bounce: ArtBounce,
   spaceshooter: ArtSpaceshooter,
   flappybird: ArtFlappybird,
@@ -840,7 +837,6 @@ const SCENES: Record<string, (u: string) => React.ReactNode> = {
   battleroyale: ArtBattleRoyale,
   millionaire: ArtMillionaire,
   bingo: ArtBingo,
-  rpgarena: ArtRpgArena,
   quiz: ArtQuiz,
   crash: ArtCrash,
   diceduel: ArtDice,

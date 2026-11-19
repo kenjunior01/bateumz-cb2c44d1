@@ -1,11 +1,11 @@
 // ============================================================
 // v61 — MUNDO 3D SEM REGISTO (item 2 do roadmap «Bateu corrections»)
-// O Mundo 3D (BATEU RPG + Aetheria) corre SEM conta: o progresso
-// (XP, missões, inventário, créditos do jogo) guarda-se no APARELHO
-// (IndexedDB + localStorage, sistemaRpg.ts v41) e nunca sai dele.
-// As RECOMPENSAS DE CONTA (pontos de engajamento, carteira, jogos do
-// gestor, histórico da IA) vivem FORA do perímetro do mundo — em
-// tabelas/rotas que exigem JWT (RLS ou edge function 401).
+// O Mundo 3D (BATEU KART) corre SEM conta: o progresso (moedas,
+// garagem, melhorias, recordes) guarda-se no APARELHO (localStorage,
+// bateu_kart_save) e nunca sai dele. As RECOMPENSAS DE CONTA (pontos
+// de engajamento, carteira, jogos do gestor, histórico da IA) vivem
+// FORA do perímetro do mundo — em tabelas/rotas que exigem JWT (RLS
+// ou edge function 401).
 //
 // Este módulo é a FONTE ÚNICA dessas duas regras: puro (browser E
 // Node), sem react/supabase — as suítes provam a honestidade sem
@@ -49,14 +49,14 @@ export function modoDoUtilizador(user: unknown): ModoMundo {
 }
 
 /** Jogos com progressão PRÓPRIA no aparelho — não alimentam o kit universal. */
-export const JOGOS_SEM_KIT = ["mmorpg", "kart"] as const;
+export const JOGOS_SEM_KIT = ["kart"] as const;
 
 /**
  * O fim de partida deste jogo alimenta as missões/XP do kit universal?
- * v61: extraído do LiveHub para o contrato testável — o BATEU RPG
- * tem progressão própria (PerfilRpg no aparelho), os restantes jogos
- * do hub alimentam o kit (TAMBÉM no aparelho — nunca é recompensa de
- * conta). `null` (sem jogo ativo) nunca reporta.
+ * v61: extraído do LiveHub para o contrato testável — o BATEU KART
+ * tem progressão própria (garagem/moedas no aparelho), os restantes
+ * jogos do hub alimentam o kit (TAMBÉM no aparelho — nunca é
+ * recompensa de conta). `null` (sem jogo ativo) nunca reporta.
  */
 export function deveReportarUniversal(
   jogo: string | null,

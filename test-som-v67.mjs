@@ -11,8 +11,6 @@
 //    beeps da contagem 3-2-1-JÁ, loop do MOTOR alimentado por
 //    frame com velocidade real, DERRAPAGEM alimentada, PAUSA
 //    silencia por frame, caixa→item→uso com som real, ZERO pageerror.
-// C) E2E ARENA: música ambiente no jogo, erro de cd com som,
-//    ZERO pageerror.
 // Uso: PW_CHROME=… node test-som-v67.mjs
 // ============================================================
 import { spawn, spawnSync } from "node:child_process";
@@ -300,40 +298,6 @@ async function main() {
   await pg.screenshot({ path: "shots-v67/kart-menu-final.png" });
 
   ok("kart: ZERO pageerror/console relevante", erros.length === 0);
-
-  // ── C) E2E ARENA ──────────────────────────────────────────────
-  console.log("\n— C) E2E arena (ambiente no jogo · erro de cd com som) —");
-  await pg.evaluate(() => { try { localStorage.removeItem("bateu_som"); } catch {} });
-  await pg.goto(`${BASE}/lives?game=mmorpg&arena-leve=1`, { waitUntil: "domcontentloaded", timeout: 90_000 });
-  await pg.waitForSelector('[data-testid="arena-menu"]', { timeout: 60_000 });
-  ok("menu da arena com gancho de som", await pg.evaluate(() => !!window.__som));
-
-  await pg.locator('[data-testid="arena-som"]').click();
-  await dormir(250);
-  ok("gesto no menu da arena também acorda o contexto (singleton partilhado)",
-    await pg.evaluate(() => window.__som.vivo() === true));
-  await pg.locator('[data-testid="arena-som"]').click();
-  await dormir(150);
-
-  await pg.locator('[data-testid="arena-nome"]').fill("Som-E2E");
-  await pg.locator('[data-testid="arena-entrar"]').click();
-  await pg.waitForSelector('[data-testid="arena-jogo"]', { timeout: 45_000 });
-  ok("arena a jogar tem MÚSICA ambiente própria",
-    await pg.evaluate(() => window.__som.musicaActual() === "arena"));
-
-  const c1 = await pg.evaluate(() => window.__arena.disparar("Q"));
-  await dormir(150);
-  const c2 = await pg.evaluate(() => window.__arena.disparar("Q"));
-  ok("Q cast 1ª aceita · 2ª recusada (comportamento v63 intacto)", c1 === true && c2 === false);
-  let temErro = false;
-  for (let i = 0; i < 30 && !temErro; i++) {
-    temErro = (await pg.evaluate(() => window.__som.ultimos.slice(-8))).includes("erro");
-    await dormir(100);
-  }
-  ok("erro de cooldown tem SOM («erro» no registo)", temErro);
-  await pg.screenshot({ path: "shots-v67/arena-som.png" });
-
-  ok("arena: ZERO pageerror/console relevante", erros.length === 0);
 
   await browser.close();
 

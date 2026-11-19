@@ -332,7 +332,7 @@ export default function MobileMenuDrawer() {
                   {/* ⭐ MUNDO BATEU — jogo permanente em destaque no menu */}
                   <motion.button
                     variants={itemVariants}
-                    onClick={() => goOrAuth("/lives?game=mmorpg")}
+                    onClick={() => goOrAuth("/lives?game=kart")}
                     data-testid="menu-mundo-aberto"
                     className="relative w-full overflow-hidden rounded-2xl text-left group"
                     whileTap={{ scale: 0.97 }}
@@ -350,15 +350,15 @@ export default function MobileMenuDrawer() {
                         animate={{ y: [0, -3, 0] }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                       >
-                        🌍
+                        🏎️
                       </motion.div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-display text-[15px] font-black text-white leading-tight">MUNDO BATEU</span>
-                          <span className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-1.5 py-0.5 text-[8px] font-black text-white animate-pulse">MMO 3D · DESTAQUE</span>
+                          <span className="font-display text-[15px] font-black text-white leading-tight">BATEU KART</span>
+                          <span className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-1.5 py-0.5 text-[8px] font-black text-white animate-pulse">ONLINE · DESTAQUE</span>
                         </div>
                         <p className="text-[10.5px] font-semibold text-white/85 leading-tight mt-0.5 truncate">
-                          MMO em tempo real — luta, sobe de nível e ganha prémios reais!
+                          Corridas longas em tempo real — derrapa, dispara e ganha moedas para a garagem!
                         </p>
                       </div>
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/25">

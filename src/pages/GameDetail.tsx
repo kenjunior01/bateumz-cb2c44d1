@@ -25,11 +25,6 @@ import { useSEO } from "@/hooks/useSEO";
 /* Como jogar — dicas reais por jogo (nenhuma dica inventada sobre
    funcionalidades que não existem; fala do modo, do objetivo e do bot). */
 const TIPS: Record<string, string[]> = {
-  mmorpg: [
-    "Explora o mundo 3D ao lado de outros jogadores reais em tempo real.",
-    "Sobe de nível, desbloqueia poderes e melhora o teu Power Level.",
-    "Vence duelos 1v1 para roubar cupões e troca pontos por moeda da plataforma.",
-  ],
   bounce: [
     "Salta de plataforma em plataforma e apanha todos os anéis dourados.",
     "Evita os espinhos — um toque errado manda-te de volta ao início.",

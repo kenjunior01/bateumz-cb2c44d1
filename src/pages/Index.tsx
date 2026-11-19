@@ -90,7 +90,7 @@ const Home = () => {
               className="w-full h-14 rounded-2xl text-base font-bold glow-primary"
               data-testid="home-cta-jogar-central"
             >
-              <Link to="/lives?game=mmorpg" className="flex items-center justify-center gap-2">
+              <Link to="/lives?game=kart" className="flex items-center justify-center gap-2">
                 <Gamepad2 className="h-5 w-5" aria-hidden="true" />
                 {t("home.cta.mundo")}
               </Link>

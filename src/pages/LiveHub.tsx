@@ -75,16 +75,12 @@ const CapulanaQuiz = lazy(() => import("@/components/livegames/CapulanaQuiz"));
 const CarromBoard = lazy(() => import("@/components/livegames/CarromBoard"));
 const TeenPatti = lazy(() => import("@/components/livegames/TeenPatti"));
 const KabaddiRaid = lazy(() => import("@/components/livegames/KabaddiRaid"));
-const RpgArenaBattle = lazy(() => import("@/components/livegames/RpgArenaBattle"));
 const BattleRoyaleGame = lazy(() => import("@/components/livegames/BattleRoyaleGame"));
 const ChessGame = lazy(() => import("@/components/livegames/ChessGame"));
 const FlappyBirdGame = lazy(() => import("@/components/livegames/FlappyBirdGame"));
 const BounceGame = lazy(() => import("@/components/livegames/BounceGame"));
 const FruitNinjaGame = lazy(() => import("@/components/livegames/FruitNinjaGame"));
 const TypingRacer = lazy(() => import("@/components/livegames/TypingRacer"));
-const CampaignRPGGame = lazy(() => import("@/components/livegames/CampaignRPGGame"));
-const BateuRPG = lazy(() => import("@/components/livegames/BateuRPG"));
-const AetheriaGame = lazy(() => import("@/components/livegames/AetheriaGame"));
 const BateuKart = lazy(() => import("@/components/livegames/BateuKart"));
 const P2PBetArena = lazy(() => import("@/components/livegames/P2PBetArena"));
 const NtchuvaGame = lazy(() => import("@/components/livegames/NtchuvaGame"));
@@ -155,7 +151,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "rpgarena" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "campaignrpg" | "mmorpg" | "kart" | "aetheria" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "kart" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
 
 interface SavedWheelGame {
   id: string;
@@ -176,8 +172,6 @@ interface SavedWheelGame {
 }
 
 const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
-  { id: "aetheria", icon: Globe, emoji: "🪽", grad: "from-sky-500 via-indigo-500 to-violet-600" },
-  { id: "mmorpg", icon: Globe, emoji: "⚔️", grad: "from-rose-600 via-amber-500 to-yellow-400" },
   { id: "kart", icon: Flag, emoji: "🏎️", grad: "from-orange-500 via-red-500 to-rose-600" },
   { id: "bounce", icon: CircleDot, emoji: "⚽", grad: "from-sky-500 to-indigo-600" },
   { id: "spaceshooter", icon: Zap, emoji: "🚀", grad: "from-slate-500 to-blue-700" },
@@ -214,11 +208,8 @@ const LiveHub = () => {
   const navigate = useNavigate();
   const GAMES = useMemo(() => GAME_DEFS.map(g => ({
     ...g,
-    // v62: o rótulo do Aetheria segue o i18n (o EN do Mundo 3D — item 3)
-    label: g.id === "aetheria" ? t("livehub.game.aetheria") : t("livehub.game." + g.id),
-    desc: g.id === "aetheria"
-      ? t("livehub.game.aetheria.desc")
-      : t("livehub.game." + g.id + ".desc"),
+    label: t("livehub.game." + g.id),
+    desc: t("livehub.game." + g.id + ".desc"),
   })), [t]);
   const [searchParams] = useSearchParams();
   // v60: o ?game= do URL é DADO EXTERNO — validado contra o catálogo; antes
@@ -454,7 +445,7 @@ const LiveHub = () => {
   }, [active]);
 
   const activeMeta = useMemo(() => GAMES.find((g) => g.id === active), [GAMES, active]);
-  const isImmersiveWorld = active === "mmorpg" || active === "aetheria" || active === "kart";
+  const isImmersiveWorld = active === "kart";
 
   const recordScore = useCallback((game: string) => (name: string, score: number) => {
     if (!name) return;
@@ -463,7 +454,7 @@ const LiveHub = () => {
       { id: `${Date.now()}-${Math.random()}`, name, score, game, at: Date.now() },
     ]);
     // v20 PRO KIT: TODOS os jogos alimentam missões/XP/créditos universalmente
-    // (MMORPG tem progressão RPG PRÓPRIA no aparelho — PerfilRpg)
+    // (o kart tem progressão PRÓPRIA no aparelho — garagem/moedas)
     // v60: com o estado honesto GameId | null, sem jogo ativo não há score
     // v61: a regra vive no núcleo mundoConvidado (testável em Node) — o kit é
     // TUDO do aparelho, nunca recompensa de conta
@@ -732,26 +723,26 @@ const LiveHub = () => {
           </div>
         )}
 
-        {/* ⭐ BATEU WORLD — banner destaque permanente (jogo principal) */}
+        {/* ⭐ BATEU KART — banner destaque permanente (jogo principal) */}
         {!isImmersiveWorld && (
           <motion.button
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-            onClick={() => setActive("mmorpg")}
+            onClick={() => setActive("kart")}
             data-testid="livehub-destaque-bateu-world"
             className="relative w-full overflow-hidden rounded-2xl mb-4 mt-3 text-left"
             style={{ background: "linear-gradient(120deg, #4c0519 0%, #7c2d12 45%, #713f12 100%)", border: "1px solid rgba(251,113,133,0.5)", boxShadow: "0 0 36px rgba(244,63,94,0.35)" }}
           >
             <motion.div className="absolute inset-0" style={{ background: "radial-gradient(circle at 12% 25%, rgba(255,255,255,0.16), transparent 50%), radial-gradient(circle at 88% 80%, rgba(251,191,36,0.3), transparent 45%)" }} animate={{ opacity: [0.5, 0.9, 0.5] }} transition={{ duration: 4, repeat: Infinity }} />
             <div className="relative z-10 px-4 py-3.5 flex items-center gap-3">
-              <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>⚔️</motion.span>
+              <motion.span className="text-3xl" animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity }}>🏎️</motion.span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-display text-base font-black text-white">⚔️ BATEU RPG: LENDAS</span>
+                  <span className="font-display text-base font-black text-white">🏎️ BATEU KART: CIRCUITO DAS LENDAS</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-lime-400 text-white text-[8px] font-black animate-pulse">JOGO PRINCIPAL · DESTAQUE</span>
                 </div>
                 <p className="text-[10px] font-semibold text-white/80 truncate">
-                  RPG de exploração voxel: 6 regiões, missões de história, XP e níveis, chefes e noites perigosas!
+                  Corridas LONGAS contra 11 pilotos — derrapa para o mini-turbo, usa armas e melhora o carro na garagem. ONLINE: sala partilhada de verdade!
                 </p>
               </div>
               <span className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-400 text-white text-[10px] font-black">JOGAR ▶</span>
@@ -762,7 +753,7 @@ const LiveHub = () => {
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 mt-4">
           {GAMES.map((g) => {
             const isActive = active === g.id;
-            const featured = g.id === "mmorpg";
+            const featured = g.id === "kart";
             return (
               <button
                 key={g.id}
@@ -786,7 +777,7 @@ const LiveHub = () => {
                 {featured && (
                   <p className="mt-1.5 text-[10px] font-bold text-fuchsia-400 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
-                    Mundo social · avatar, quarto e prémios reais
+                    Corridas online · garagem com melhorias de carro e armas
                   </p>
                 )}
               </button>
@@ -1337,12 +1328,6 @@ const LiveHub = () => {
                   <KabaddiRaid onScore={recordScore("Kabaddi Raid")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
-              {active === "rpgarena" && (
-                <motion.div key="rpgarena" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <GameErrorBoundary gameName="RPG Arena Battle">
-                  <RpgArenaBattle onScore={recordScore("RPG Arena Battle")} liveCode={liveCode} />
-                  </GameErrorBoundary>
-                </motion.div>              )}
               {active === "battleroyale" && (
                 <motion.div key="battleroyale" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Battle Royale">
@@ -1379,43 +1364,12 @@ const LiveHub = () => {
                   <TypingRacer onScore={recordScore("Corrida de Digitacao")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>              )}
-              {active === "campaignrpg" && (
-                <motion.div key="campaignrpg" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <GameErrorBoundary gameName="Campanha RPG">
-                  <CampaignRPGGame onScore={recordScore("Campanha RPG")} liveCode={liveCode} />
-                  </GameErrorBoundary>
-                </motion.div>              )}
-              {active === "mmorpg" && createPortal(
-                /* ECRÃ INTEIRO REAL: portal no body + fixed inset-0 — o jogo nunca
-                   fica espremido no fluxo da página (bug "fica num quadrado") */
-                <motion.div key="mmorpg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[80] bg-black">
-                  {/* v62 (item 4): ecrã inteiro PARA os mundos imersivos — o botão
-                      vive DENTRO do portal (a HUD do jogo não tem um próprio;
-                      antes de hoje o mundo ficava sem caminho para fullscreen) */}
-                  <ToggleEcraInteiro />
-                  <GameErrorBoundary gameName="BATEU RPG: Lendas">
-                    <BateuRPG onScore={(creditos: number) => recordScore("BATEU RPG")("BATEU RPG", creditos)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-                  </GameErrorBoundary>
-                </motion.div>, document.body)}
               {active === "kart" && createPortal(
                 <motion.div key="kart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] bg-black">
                   <ToggleEcraInteiro />
                   <GameErrorBoundary gameName="BATEU KART: Circuito das Lendas">
                     <BateuKart onScore={(moedas: number) => recordScore("BATEU KART")("BATEU KART", moedas)} onExit={() => { setActive(null); try { window.history.replaceState(null, "", "/lives"); } catch { /* ignore */ } window.scrollTo({ top: 0 }); }} />
-                  </GameErrorBoundary>
-                </motion.div>, document.body)}
-              {active === "aetheria" && createPortal(
-                <motion.div key="aetheria" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[80] bg-black">
-                  {/* v62 (item 4): ecrã inteiro para o Aetheria também */}
-                  <ToggleEcraInteiro />
-                  <GameErrorBoundary gameName="Aetheria: Ilhas do Vento">
-                    <AetheriaGame
-                      onScore={recordScore("Aetheria: Ilhas do Vento")}
-                      onExit={() => { setActive("wheel"); navigate("/lives"); window.scrollTo({ top: 0 }); }}
-                    />
                   </GameErrorBoundary>
                 </motion.div>, document.body)}
               {active === "p2pbet" && (

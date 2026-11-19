@@ -69,7 +69,6 @@ const TOP_GAMES: FeedGame[] = [
   { id: "ludo", label: "Ludo Batalha", emoji: "🎲", desc: "O clássico em duelo 1v1 ao vivo!", grad: "from-emerald-500 to-teal-700", players: "1v1 / Bot" },
   { id: "tictactoepro", label: "Galo PRO", emoji: "❌", desc: "9 mini-tabuleiros de estratégia pura", grad: "from-violet-600 to-indigo-700", players: "1v1 / Bot" },
   { id: "bicho", label: "Jogo do Bicho", emoji: "🐘", desc: "Apostas rápidas, sorteios de minuto", grad: "from-amber-500 to-orange-700", players: "Multiplayer" },
-  { id: "mmorpg", label: "BATEU RPG: Lendas", emoji: "⚔️", desc: "RPG voxel: 6 regiões, missões e noites perigosas", grad: "from-rose-600 to-amber-500", players: "Solo" },
   { id: "millionaire", label: "Millionário", emoji: "💰", desc: "Chega ao milhão passo a passo", grad: "from-yellow-500 to-amber-700", players: "Solo / Live" },
   { id: "uno", label: "Uno VS", emoji: "🃏", desc: "Cartas rápidas contra o mundo", grad: "from-red-500 to-rose-700", players: "1v1 / Bot" },
 ];

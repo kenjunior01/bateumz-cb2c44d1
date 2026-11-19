@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Trophy, Swords, Flame, Target, Gift, Crown, TrendingUp, Users, Clock,
-  Medal, Star, ChevronRight, Zap, Globe, CalendarDays, Wallet, Sparkles,
+  Medal, Star, ChevronRight, Zap, Flag, CalendarDays, Wallet, Sparkles,
   ArrowUpRight, ShieldCheck, Gamepad2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +61,7 @@ interface MissionDef { id: string; label: string; desc: string; target: number; 
 const MISSIONS: MissionDef[] = [
   { id: "play", label: "Aquecimento", desc: "Joga 2 partidas em qualquer jogo", target: 2, reward: "+150 pontos", icon: Gamepad2 },
   { id: "duel", label: "Guerreiro", desc: "Vence 1 duelo ou desafia 1 jogador", target: 1, reward: "+250 pontos", icon: Swords },
-  { id: "world", label: "Herói do Mundo", desc: "Abate 5 criaturas no Bateu World", target: 5, reward: "+300 pontos", icon: Globe },
+  { id: "kart", label: "Piloto de Elite", desc: "Termina 1 corrida no BATEU KART", target: 1, reward: "+300 pontos", icon: Flag },
   { id: "tournament", label: "Competidor", desc: "Inscreve-te em 1 torneio ou copa", target: 1, reward: "+400 pontos", icon: Trophy },
   { id: "share", label: "Embaixador", desc: "Partilha 1 página da plataforma", target: 1, reward: "+120 pontos", icon: ArrowUpRight },
 ];
@@ -115,15 +115,14 @@ export default function Arena() {
   useEffect(() => { const iv = setInterval(() => setTick(t => t + 1), 1000); return () => clearInterval(iv); }, []);
   useEffect(() => { setMissions(loadMissions()); }, []);
 
-  // progresso do mundo (kills reais do Bateu World alimentam a missão "world")
+  // progresso do kart (corridas reais do BATEU KART alimentam a missão «kart»)
   useEffect(() => {
     try {
-      const w = JSON.parse(localStorage.getItem("bateu_legends_v18") || "null");
-      if (w?.kills) {
-        setMissions(m => (m.prog.world ? m : m));
+      const w = JSON.parse(localStorage.getItem("bateu_kart_save") || "null");
+      if (w && typeof w.corridas === "number" && w.corridas > 0) {
         const cur = loadMissions();
-        if (!cur.prog.world && w.kills > 0) {
-          const next = { ...cur, prog: { ...cur.prog, world: Math.min(5, w.kills) } };
+        if (!cur.prog.kart) {
+          const next = { ...cur, prog: { ...cur.prog, kart: Math.min(1, w.corridas) } };
           localStorage.setItem(MIS_KEY, JSON.stringify(next));
           setMissions(next);
         }
@@ -255,7 +254,7 @@ export default function Arena() {
               <Link to="/tournaments"><Trophy className="w-4 h-4 mr-1" /> Ver Torneios</Link>
             </Button>
             <Button asChild variant="outline" className="border-slate-700 bg-slate-900/70 hover:bg-slate-800 font-bold">
-              <Link to="/lives?game=mmorpg"><Globe className="w-4 h-4 mr-1" /> Entrar no Mundo</Link>
+              <Link to="/lives?game=kart"><Flag className="w-4 h-4 mr-1" /> Correr no Kart</Link>
             </Button>
           </div>
           {/* stats ao vivo */}

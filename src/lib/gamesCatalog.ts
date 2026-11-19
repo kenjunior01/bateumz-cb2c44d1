@@ -23,11 +23,9 @@ export interface GameDef {
   regions?: string[];
 }
 
-// CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o MMO da plataforma
+// CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o kart da plataforma
 export const ALL_GAMES: GameDef[] = [
-  { id: "aetheria", label: "Aetheria: Ilhas do Vento", emoji: "🪽", desc: "Explora ilhas suspensas, escolhe uma classe, enfrenta criaturas e completa missões num RPG de fantasia 3D.", grad: "from-sky-500 via-indigo-500 to-violet-600", category: "Mundo Aberto", players: "Solo", icon: "globe", hasBot: false },
-  { id: "mmorpg", label: "BATEU RPG: Lendas da Arena", emoji: "⚔️", desc: "MMO de arena em vista de topo estilo League of Legends: escolhe campeão, luta camps partilhados, Dragão e Barão — multiplayer real até 150 heróis!", grad: "from-rose-600 via-amber-500 to-yellow-400", category: "Mundo Aberto", players: "MMO · 150", icon: "globe", hasBot: false },
-  { id: "kart", label: "BATEU KART: Circuito das Lendas", emoji: "🏎️", desc: "Corridas LONGAS estilo Mario Kart: derrapa para o mini-turbo, recolhe cascas e mísseis, melhora o carro e as armas na garagem — 3 pistas de 1,5-2 km contra 11 pilotos!", grad: "from-orange-500 via-red-500 to-rose-600", category: "Corridas", players: "Solo · 12 pilotos", icon: "flag", hasBot: false },
+  { id: "kart", label: "BATEU KART: Circuito das Lendas", emoji: "🏎️", desc: "Corridas LONGAS estilo Mario Kart: derrapa para o mini-turbo, recolhe cascas e mísseis, melhora o carro e as armas na garagem — ONLINE com sala partilhada!", grad: "from-orange-500 via-red-500 to-rose-600", category: "Corridas", players: "Solo · 12 pilotos", icon: "flag", hasBot: false },
   { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false },
   { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },
   { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: "gamepad", hasBot: true },
@@ -47,7 +45,6 @@ export const ALL_GAMES: GameDef[] = [
 
 export const CATEGORIES = [
   { id: "todos", label: "Todos", emoji: "🎮" },
-  { id: "Mundo Aberto", label: "Mundo Aberto", emoji: "🗺️" },
   { id: "Corridas", label: "Corridas", emoji: "🏎️" },
   { id: "Arcade", label: "Arcade", emoji: "👾" },
   { id: "Estratégia", label: "Estratégia", emoji: "♟️" },
@@ -63,7 +60,7 @@ export function categoryCounts(): Record<string, number> {
 }
 
 /** Modos de jogo ao vivo no hub /lives (para claims honestos). */
-export const LIVE_GAME_MODES = 85;
+export const LIVE_GAME_MODES = 81;
 
 /* ─── Popularidade — base determinística estável por semana + jogadas reais ─── */
 

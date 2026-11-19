@@ -24,9 +24,8 @@ const POPULAR_GAMES = [
   { id: "millionaire", label: "Quem Quer Ser Milionário?", emoji: "💰", desc: "Chega ao prémio máximo", grad: "linear-gradient(140deg,#6d28d9,#8b5cf6)" },
   { id: "checkers", label: "Damas", emoji: "♟️", desc: "Capturas e promoção a rei", grad: "linear-gradient(140deg,#92400e,#c2410c)" },
   { id: "bingo", label: "Bingo ao Vivo", emoji: "🎱", desc: "Números sorteados em tempo real", grad: "linear-gradient(140deg,#047857,#10b981)" },
-  { id: "rpgarena", label: "RPG Arena", emoji: "⚔️", desc: "Guerreiro, Mago, Arqueiro, Ladino", grad: "linear-gradient(140deg,#7f1d1d,#6b21a8)" },
   { id: "quiz", label: "Quiz Battle", emoji: "🧠", desc: "Trivia ao vivo com amigos", grad: "linear-gradient(140deg,#0369a1,#0ea5e9)" },
-  { id: "mmorpg", label: "Bateu World 3D", emoji: "🌍", desc: "O MMO oficial da Bateu", grad: "linear-gradient(140deg,#9f1239,#f59e0b)" },
+  { id: "kart", label: "BATEU KART", emoji: "🏎️", desc: "Corridas longas + sala online", grad: "linear-gradient(140deg,#9a3412,#f59e0b)" },
 ];
 
 interface TourCard {

@@ -274,13 +274,13 @@ function AnimatedRoutes() {
             <Route path="/negocios" element={<BusinessEcosystem />} />
             <Route path="/empresa/:id" element={<BusinessProfile />} />
             <Route path="/empresa/:id/publico" element={<CompanyPublicProfile />} />
-            <Route path="/life" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/vida" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/bateulife" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/world" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/mundo" element={<Navigate to="/lives?game=mmorpg" replace />} />
-            <Route path="/jogos/mmorpg" element={<Navigate to="/lives?game=mmorpg" replace />} />
+            <Route path="/life" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/vida" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/bateulife" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/mmorpg" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/world" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/mundo" element={<Navigate to="/lives?game=kart" replace />} />
+            <Route path="/jogos/mmorpg" element={<Navigate to="/lives?game=kart" replace />} />
             <Route path="/lives" element={<JogosLayout />}>            <Route index element={<LiveHub />} />          </Route>
             <Route path="/batalhas" element={<Battles />} />
             <Route path="/lives/overlay" element={<LiveOverlay />} />
@@ -302,7 +302,7 @@ function AnimatedRoutes() {
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/desporto" element={<DesportoHub />} />
             <Route path="/jogos-gratis" element={<FreeGamesHub />} />
-            <Route path="/cidade" element={<Navigate to="/lives?game=mmorpg" replace />} />
+            <Route path="/cidade" element={<Navigate to="/lives?game=kart" replace />} />
             <Route path="/ligas" element={<LeaguesListPage />} />
             <Route path="/ligas/:slug" element={<LeagueDetailPage />} />
             <Route path="/esports" element={<EsportsLayout />}>            <Route index element={<EsportsHub />} />            <Route path="seasons" element={<SeasonsPage />} />            <Route path="betting" element={<ProtectedRoute><BettingPage /></ProtectedRoute>} />            <Route path="duelos" element={<ProtectedRoute><DuelosPage /></ProtectedRoute>} />            <Route path="leaderboard" element={<LeaderboardPage />} />            <Route path="brackets" element={<BracketsPage />} />            <Route path="fantasy" element={<FantasyPage />} />            <Route path="transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />            <Route path="achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />            <Route path="equipas" element={<ProtectedRoute><TeamManagementPage /></ProtectedRoute>} />            <Route path="team/:id" element={<TeamProfilePage />} />            <Route path=":slug" element={<ChampionshipDetailPage />} />          </Route>

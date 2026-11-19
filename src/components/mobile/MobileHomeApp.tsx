@@ -403,11 +403,11 @@ export default function MobileHomeApp() {
       {/* ═══ faixa MUNDO 3D ═══ */}
       <section className="mt-7 px-4">
         <button
-          onClick={() => { sfx.whoosh(); navigate("/lives?game=mmorpg"); }}
+          onClick={() => { sfx.whoosh(); navigate("/lives?game=kart"); }}
           data-testid="mh-world-banner"
-          className="relative flex w-full items-center gap-3 overflow-hidden rounded-3xl border border-violet-500/25 bg-gradient-to-r from-[#1a1030] via-[#241447] to-[#12102a] p-4 text-left shadow-lg shadow-violet-900/30 active:scale-[0.98] transition-transform"
+          className="relative flex w-full items-center gap-3 overflow-hidden rounded-3xl border border-orange-500/25 bg-gradient-to-r from-[#2a1206] via-[#3b1403] to-[#1a0b02] p-4 text-left shadow-lg shadow-orange-900/30 active:scale-[0.98] transition-transform"
         >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-600/40">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 shadow-md shadow-orange-600/40">
             <Play className="h-5 w-5 text-white fill-white" />
           </span>
           <span className="min-w-0 flex-1">
@@ -415,9 +415,9 @@ export default function MobileHomeApp() {
               {t("mh.worldTitle")}
               <Flame className="h-3.5 w-3.5 text-orange-400" />
             </span>
-            <span className="mt-0.5 block truncate text-[11px] text-violet-200/70">{t("mh.worldSub")}</span>
+            <span className="mt-0.5 block truncate text-[11px] text-orange-200/70">{t("mh.worldSub")}</span>
           </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-violet-300" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-orange-300" />
         </button>
       </section>
 

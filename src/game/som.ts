@@ -1,5 +1,6 @@
 // ============================================================
-// MOTOR DE SOM — v67 (BateuKart + BateuRPG)
+// MOTOR DE SOM — v67 (BateuKart; os predefinidos «arena*» ficaram
+// inativos desde a v68 — o BATEU RPG foi removido da plataforma)
 // ────────────────────────────────────────────────────────────
 // 100% SINTETIZADO com Web Audio — ZERO assets externos (nada
 // para descarregar, nada para licenciar, funciona offline e no

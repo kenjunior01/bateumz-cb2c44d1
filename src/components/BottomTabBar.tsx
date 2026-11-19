@@ -25,7 +25,7 @@ const TABS: TabDef[] = [
   { icon: User, labelKey: "tab.profile", href: "/profile", requiresAuth: false },
 ];
 
-const WORLD_HREF = "/lives?game=mmorpg";
+const WORLD_HREF = "/lives?game=kart";
 
 const BottomTabBar = () => {
   const location = useLocation();
@@ -74,7 +74,7 @@ const BottomTabBar = () => {
         <button
           onClick={() => go(WORLD_HREF)}
           data-testid="mob-tab-world"
-          aria-label="Bateu World 3D"
+          aria-label="BATEU KART"
           className="btn-press relative -mt-7 flex w-[72px] flex-col items-center"
         >
           <motion.span
@@ -83,7 +83,7 @@ const BottomTabBar = () => {
           >
             <Play className="h-6 w-6 text-white fill-white drop-shadow" />
           </motion.span>
-          <span className="mob-world-fab-label">WORLD</span>
+          <span className="mob-world-fab-label">KART</span>
         </button>
 
         {TABS.slice(2).map((tab) =>

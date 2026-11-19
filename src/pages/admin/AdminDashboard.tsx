@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Ticket, DollarSign, TrendingUp, ArrowUpRight, Shield, CreditCard, Settings, Activity, Eye, Clock, CheckCircle2, AlertTriangle, BarChart3 } from "lucide-react";
+import { Users, Ticket, DollarSign, TrendingUp, ArrowUpRight, Shield, CreditCard, Settings, Activity, Eye, Clock, CheckCircle2, AlertTriangle, BarChart3, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMZN } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -256,6 +256,7 @@ export default function AdminDashboard() {
                 { label: "Gerir Sorteios", icon: Ticket, path: "/admin/raffles", color: "text-accent" },
                 { label: "Ver Receitas", icon: DollarSign, path: "/admin/revenue", color: "text-primary" },
                 { label: "Aprovar Pagamentos", icon: CreditCard, path: "/admin/payments", color: "text-accent", badge: stats.pendingPayments },
+                { label: "Anúncios Regionais (MZ·AO·BR·PT)", icon: Megaphone, path: "/admin/ads", color: "text-primary" },
                 { label: "Configurações", icon: Settings, path: "/admin/settings", color: "text-primary" },
               ].map((action) => (
                 <button

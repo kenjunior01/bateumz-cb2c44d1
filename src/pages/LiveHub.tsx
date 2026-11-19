@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import PainelDesafios from "@/components/livegames/PainelDesafios";
+import { FaixaAnunciosRegionais, CartaoAnuncioRegional } from "@/components/regional/AdSlot";
 import GlowPulse from "@/components/ui/GlowPulse";
 import ShimmerText from "@/components/ui/ShimmerText";
 import NeonBorder from "@/components/ui/NeonBorder";
@@ -66,6 +67,7 @@ const CannonBattle = lazy(() => import("@/components/livegames/CannonBattle"));
 const SpotDifference = lazy(() => import("@/components/livegames/SpotDifference"));
 const WordChain = lazy(() => import("@/components/livegames/WordChain"));
 const NumberTetris = lazy(() => import("@/components/livegames/NumberTetris"));
+const Tetris = lazy(() => import("@/components/livegames/Tetris"));
 const PongVS = lazy(() => import("@/components/livegames/PongVS"));
 const WhackAMole = lazy(() => import("@/components/livegames/WhackAMole"));
 const ColorCatch = lazy(() => import("@/components/livegames/ColorCatch"));
@@ -152,7 +154,7 @@ class GameErrorBoundary extends Component<{children: ReactNode; gameName: string
     return <div key={this.state.resetKey}>{this.props.children}</div>;
   }
 }
-type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "kart" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores";
+type GameId = "wheel" | "bounce" | "tap" | "quiz" | "mystery" | "keyword" | "emoji" | "millionaire" | "kahoot" | "bingo" | "challenge" | "vsduel" | "speed" | "truthordare" | "memory" | "punishment" | "boknowledge" | "guessEmoji" | "quickdraw" | "hotpotato" | "numguess" | "chaos" | "checkers" | "ludo" | "connect4" | "battleship" | "tictactoe" | "uno" | "snakebattle" | "rps" | "colorsequence" | "spaceshooter" | "ballbreaker" | "reactionrace" | "quickmath" | "memorycards" | "wordscramble" | "tictactoepro" | "guessnumber100" | "colormatch" | "targettap" | "diceluel" | "patternmemory" | "triviaflash" | "dominoes" | "mazerace" | "slotsvs" | "match4" | "towerstack" | "cannonbattle" | "spotdifference" | "wordchain" | "numbertetris" | "pongvs" | "whackamole" | "colorcatch" | "mexerica" | "chigogo" | "urusse" | "capulanaquiz" | "carromboard" | "teenpatti" | "kabaddiraid" | "battleroyale" | "chess" | "flappybird" | "fruitninja" | "typingracer" | "kart" | "p2pbet" | "ntchuva" | "djikota" | "bicho" | "uri" | "mines" | "plinko" | "crash" | "hilo" | "blackjack" | "pokemon" | "raspadinha" | "keno" | "limbo" | "snakesladders" | "chesspuzzle" | "sabores" | "tetris";
 
 interface SavedWheelGame {
   id: string;
@@ -179,6 +181,7 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "flappybird", icon: Gamepad2, emoji: "🐦", grad: "from-sky-400 to-green-500" },
   { id: "snakebattle", icon: Gamepad2, emoji: "🐍", grad: "from-emerald-500 to-teal-600" },
   { id: "numbertetris", icon: LayoutGrid, emoji: "#", grad: "from-orange-600 to-red-700" },
+  { id: "tetris", icon: Layers, emoji: "🧱", grad: "from-cyan-500 to-violet-600" },
   { id: "pongvs", icon: Gamepad2, emoji: "🏓", grad: "from-blue-600 to-indigo-700" },
   { id: "tictactoepro", icon: Grid3X3, emoji: "✖", grad: "from-violet-600 to-indigo-700" },
   { id: "connect4", icon: LayoutGrid, emoji: "🔴", grad: "from-blue-500 to-yellow-500" },
@@ -656,6 +659,12 @@ const LiveHub = () => {
         </div>
       )}
 
+      {/* v72: ANÚNCIOS DO CO-FUNDADOR REGIONAL — o país do jogador vê a
+          publicidade DO SEU país (MZ/AO/BR/PT), rotativa e com CTA interna */}
+      <div className="container mx-auto px-3 sm:px-4 pt-3">
+        <FaixaAnunciosRegionais />
+      </div>
+
       <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
         {/* v13 MOBILE: com o Bateu World ativo o header NÃO renderiza — ele ficava
             por cima da UI full-screen do jogo (criação/HUD) e roubava os toques.
@@ -789,6 +798,8 @@ const LiveHub = () => {
               </button>
             );
           })}
+          {/* v72: cartão PATROCINADO do co-fundador regional (destaque na grelha) */}
+          <CartaoAnuncioRegional className="col-span-2 lg:col-span-2" />
         </div>
 
         <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
@@ -1262,6 +1273,13 @@ const LiveHub = () => {
                 <motion.div key="numbertetris" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <GameErrorBoundary gameName="Números Caindo">
                   <NumberTetris onScore={recordScore("Números Caindo")} liveCode={liveCode} />
+                  </GameErrorBoundary>
+                </motion.div>
+              )}
+              {active === "tetris" && (
+                <motion.div key="tetris" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <GameErrorBoundary gameName="Tetris">
+                  <Tetris onScore={recordScore("Tetris")} liveCode={liveCode} />
                   </GameErrorBoundary>
                 </motion.div>
               )}

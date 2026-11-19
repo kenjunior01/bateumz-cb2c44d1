@@ -125,6 +125,62 @@ const evaluateBoardFor = (b: Board, player: 1 | 2): number => {
   return score;
 };
 
+// ── v72: IA DE DAMAS DE VERDADE — minimax com PODA ALFA-BETA ──
+// Antes: «dificil» olhava 1 jogada à frente. Agora:
+// · facil  — profundidade 1 + ruído (erra de propósito, aprende-se a ganhar)
+// · medio  — profundidade 3
+// · dificil — profundidade 5 (+ capturas forçadas pelo gerador de jogadas)
+// A avaliação soma material, reis, avanço, defesa da retaguarda e centro.
+const PROFUNDIDADE: Record<Difficulty, number> = { facil: 1, medio: 3, dificil: 5 };
+
+const avaliarDamas = (b: Board, nos: 1 | 2): number => {
+  let s = 0;
+  let p1 = 0, p2 = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const cell = b[r][c];
+      if (!cell) continue;
+      const base = cell.king ? 8 : 3.4;
+      // avanço: peças perto da promoção valem mais
+      const avanco = cell.king ? 4 : cell.player === 2 ? (7 - r) * 0.28 : r * 0.28;
+      // defesa da retaguarda (a última fila guarda-se)
+      const retaguarda = cell.king ? 0
+        : cell.player === 2 && r === 0 ? 1.6
+        : cell.player === 1 && r === 7 ? 1.6 : 0;
+      // centro pesa mais do que as bordas
+      const centro = (c >= 2 && c <= 5 && r >= 2 && r <= 5) ? 0.7 : 0;
+      const val = base + avanco + retaguarda + centro;
+      if (cell.player === 1) { s -= val; p1++; } else { s += val; p2++; }
+    }
+  }
+  if (p1 === 0) return 10000;
+  if (p2 === 0) return -10000;
+  return nos === 2 ? s : -s;
+};
+
+const minimaxDamas = (
+  b: Board, prof: number, eu: 1 | 2, aJogar: 1 | 2, alfa: number, beta: number
+): number => {
+  const jogadas = getAllMovesForPlayer(b, aJogar);
+  if (jogadas.length === 0) return aJogar === eu ? -10000 : 10000;
+  if (prof === 0) return avaliarDamas(b, eu);
+  const max = aJogar === eu;
+  let melhor = max ? -Infinity : Infinity;
+  for (const j of jogadas) {
+    const nb = simulateMove(b, j);
+    const val = minimaxDamas(nb, prof - 1, eu, aJogar === 1 ? 2 : 1, alfa, beta);
+    if (max) {
+      melhor = Math.max(melhor, val);
+      alfa = Math.max(alfa, val);
+    } else {
+      melhor = Math.min(melhor, val);
+      beta = Math.min(beta, val);
+    }
+    if (beta <= alfa) break; // poda
+  }
+  return melhor;
+};
+
 const chooseBotMove = (b: Board, difficulty: Difficulty): FullMove => {
   const allMoves = getAllMovesForPlayer(b, 2);
   if (allMoves.length === 0) throw new Error("no_moves");
@@ -141,32 +197,24 @@ const chooseBotMove = (b: Board, difficulty: Difficulty): FullMove => {
       return allMoves[Math.floor(Math.random() * allMoves.length)];
     }
 
-    if (difficulty === "dificil") {
-      /* Look-ahead 1 move with positional evaluation */
-      const scored = allMoves.map(move => {
-        try {
-          const b1 = simulateMove(b, move);
-          const oppMoves = getAllMovesForPlayer(b1, 1);
-          if (oppMoves.length === 0) return { move, score: 10000 };
-          const oppMobility = oppMoves.length;
-          const boardScore = evaluateBoardFor(b1, 2);
-          const mobilityBonus = Math.max(0, 12 - oppMobility) * 3;
-          return { move, score: boardScore + mobilityBonus };
-        } catch {
-          return { move, score: 0 };
-        }
-      });
-      scored.sort((a, b) => b.score - a.score);
-      return scored[0].move;
-    }
-
-    /* Médio (or Fácil 70% of time): basic evaluation */
-    const scored = allMoves.map(move => ({ move, score: evaluateSingleMove(b, move) }));
-    scored.sort((a, b) => b.score - a.score);
-    if (difficulty === "facil") {
-      const top = scored.slice(0, Math.min(3, scored.length));
-      return top[Math.floor(Math.random() * top.length)].move;
-    }
+    // v72: TODAS as dificuldades passam pelo minimax — muda a PROFUNDIDADE
+    // e o ruído (o fácil joga bem mas com pequenos erros; o difícil é duro).
+    const prof = PROFUNDIDADE[difficulty];
+    const ruido = difficulty === "facil" ? 4 : difficulty === "medio" ? 1.2 : 0;
+    const scored = allMoves.map(move => {
+      try {
+        const b1 = simulateMove(b, move);
+        // captura em série obrigatória: se a jogada salta e há mais saltos
+        // da MESMA peça, dá-lhe um bónus de continuação honesto
+        let val = minimaxDamas(b1, prof - 1, 2, 1, -Infinity, Infinity);
+        if (ruido > 0) val += (Math.random() - 0.5) * 2 * ruido;
+        if (move.jumped) val += 1.5; // empurra capturas em empate
+        return { move, score: val };
+      } catch {
+        return { move, score: -Infinity };
+      }
+    });
+    scored.sort((a, bb) => bb.score - a.score);
     return scored[0].move;
   } catch {
     // Fallback: return a random valid move if anything goes wrong

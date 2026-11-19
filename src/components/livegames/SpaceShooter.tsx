@@ -52,7 +52,16 @@ interface Enemy {
   wobbleSpeed: number;
   prevX: number;
   prevY: number;
+  // v72: TIPOS DE INIMIGO com comportamentos (a IA da guerra espacial)
+  kind: EnemyKind;
+  hitFlash: number;         // flash branco quando levam dano mas não morrem
+  fireCd: number;           // fighter: cadência de tiro
+  strafeDir: number;        // fighter: direção de strafe
+  targetY: number;          // fighter: altitude de combate
+  leaveAt: number;          // fighter: frame em que foge
 }
+
+type EnemyKind = "normal" | "scout" | "fighter" | "tank" | "kamikaze" | "splitter";
 
 interface Particle {
   x: number;
@@ -109,12 +118,23 @@ const BOSS_EVERY_WAVES = 4;
 const BOSS_Y = 90;
 const POWERUP_CHANCE = 0.12;
 
+// ── v72: GUERRA ESPACIAL AVANÇADA — IA, drones, laser, combos ──
+const COMBO_JANELA = 120;          // frames para manter o combo vivo
+const COMBO_MULT_MAX = 4;          // ×4 no pico
+const LASER_DURACAO = 480;         // frames com laser ativo
+const LASER_CD = 16;               // cadência do raio
+const LASER_LARGURA = 13;          // meia-largura do feixe
+const HYPERJUMP_FRAMES = 45;       // estrelas a hiper-velocidade na troca de onda
+
 interface Boss {
   x: number; y: number; hp: number; maxHp: number;
   dir: number; speed: number; fireCd: number; phase: number; entering: boolean;
 }
-interface PowerUp { x: number; y: number; vy: number; kind: "shield" | "rapid" | "life"; phase: number; }
+interface PowerUp { x: number; y: number; vy: number; kind: "shield" | "rapid" | "life" | "laser" | "drone"; phase: number; }
 interface BossBullet { x: number; y: number; vx: number; vy: number; }
+// v72: balas dos FIGHTERS (a IA atira de volta!) + DRONES aliados
+interface EnemyBullet { x: number; y: number; vx: number; vy: number; color: string; }
+interface Drone { owner: 1 | 2; phase: number; fireCd: number; }
 
 const createStars = (): Star[] => {
   const stars: Star[] = [];
@@ -201,6 +221,14 @@ interface GameState {
   bossBullets: BossBullet[];
   powerUps: PowerUp[];
   rapidUntil: [number, number];
+  // v72: nova guerra
+  enemyBullets: EnemyBullet[];
+  drones: Drone[];
+  laserUntil: [number, number];
+  laserCd: [number, number];
+  comboCount: [number, number];
+  comboUntil: [number, number];
+  hyperJump: number;
 }
 
 const SpaceShooter = ({ onScore, liveCode }: Props) => {
@@ -213,6 +241,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
   const [scores, setScores] = useState({ p1: 0, p2: 0 });
   const [lives, setLives] = useState({ p1: 3, p2: 3 });
   const [wave, setWave] = useState(1);
+  const [combo, setCombo] = useState({ p1: 0, p2: 0 });
   const [winner, setWinner] = useState<string | null>(null);
   const [forceTick, setForceTick] = useState(0);
   const [shakeStyle, setShakeStyle] = useState({ x: 0, y: 0 });
@@ -240,7 +269,30 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
     const isBonus = Math.random() < BONUS_CHANCE + g.wave * 0.005;
     const type = Math.random() < 0.5 ? ("triangle" as const) : ("diamond" as const);
 
-    g.enemies.push({
+    // v72: IA da guerra — cada tipo tem um COMPORTAMENTO real:
+    // · scout    — rápido, zigue-zague forte (chega antes)
+    // · fighter  — desce até a altitude de combate, strafa e ATIRA nos jogadores
+    // · tank     — lento, 3 de vida, morte GRANDE + power-up garantido ao morrer
+    // · kamikaze — trava no jogador mais perto e mergulha acelerando
+    // · splitter — ao morrer divide-se em dois mini-inimigos
+    const w = g.wave;
+    const roleta: Array<[EnemyKind, number]> = [
+      ["normal", 10],
+      ["scout", w >= 2 ? 4 + Math.min(3, w) : 0],
+      ["fighter", w >= 3 ? 3 + w * 0.3 : 0],
+      ["tank", w >= 3 ? 2 + w * 0.2 : 0],
+      ["kamikaze", w >= 4 ? 2.5 + w * 0.25 : 0],
+      ["splitter", w >= 5 ? 2 + w * 0.2 : 0],
+    ];
+    const total = roleta.reduce((s, [, p]) => s + p, 0);
+    let roll = Math.random() * total;
+    let kind: EnemyKind = "normal";
+    for (const [k, p] of roleta) {
+      roll -= p;
+      if (roll <= 0) { kind = k; break; }
+    }
+
+    const base: Enemy = {
       x: 30 + Math.random() * (CANVAS_W - 60),
       y: -20,
       speed,
@@ -255,7 +307,39 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       wobbleSpeed: 0.02 + Math.random() * 0.03,
       prevX: 30 + Math.random() * (CANVAS_W - 60),
       prevY: -20,
-    });
+      kind: isBonus ? "normal" : kind,
+      hitFlash: 0,
+      fireCd: 80 + Math.floor(Math.random() * 60),
+      strafeDir: Math.random() < 0.5 ? 1 : -1,
+      targetY: 90 + Math.random() * 110,
+      leaveAt: 540 + Math.floor(Math.random() * 160),
+    };
+
+    switch (base.kind) {
+      case "scout":
+        base.size = 10; base.speed = Math.min(speed * 1.75, MAX_ENEMY_SPEED + 1.5);
+        base.wobbleSpeed = 0.09; base.color = "#fb7185"; base.type = "triangle";
+        base.rotSpeed = 0.12;
+        break;
+      case "fighter":
+        base.size = 13; base.hp = 2; base.speed = 1.6;
+        base.color = "#a3e635"; base.type = "diamond";
+        break;
+      case "tank":
+        base.size = 24; base.hp = 3; base.speed = Math.max(0.7, speed * 0.45);
+        base.color = "#a855f7"; base.type = "diamond";
+        break;
+      case "kamikaze":
+        base.size = 11; base.speed = 2.2;
+        base.color = "#ef4444"; base.type = "triangle"; base.rotSpeed = 0.22;
+        break;
+      case "splitter":
+        base.size = 14; base.hp = 2; base.speed = speed * 0.8;
+        base.color = "#38bdf8"; base.type = "diamond";
+        break;
+    }
+
+    g.enemies.push(base);
   }, []);
 
   const gameLoop = useCallback(
@@ -273,6 +357,13 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         g.waveFrame = 0;
         setWave(g.wave);
         playSfx("powerup");
+        // v72: HIPERSALTO — as estrelas disparam e o banner da onda entra
+        g.hyperJump = HYPERJUMP_FRAMES;
+        g.floatingTexts.push({
+          x: CANVAS_W / 2, y: CANVAS_H * 0.4, text: `ONDA ${g.wave}`,
+          color: "#fbbf24", life: 70, maxLife: 70, vy: -0.4,
+        });
+        g.screenFlash = Math.max(g.screenFlash, 8);
       }
 
       const p1 = g.players[0];
@@ -335,9 +426,16 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p1.shootCooldown <= 0 &&
         p1.lives > 0
       ) {
-        g.bullets.push({ x: p1.x, y: p1.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 1, trail: [] });
+        // v72: LASER ativo → o toque dispara o RAIO (não bala)
+        if (g.frame < g.laserUntil[0]) {
+          // (o raio é processado no bloco do laser mais abaixo)
+        } else {
+          g.bullets.push({ x: p1.x, y: p1.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 1, trail: [] });
+          // v72: flash de cano no momento do disparo
+          g.particles.push({ x: p1.x, y: p1.y - SHIP_SIZE, vx: 0, vy: -0.6, life: 5, maxLife: 5, color: "#a5f3fc", size: 4 });
+          playSfx("shoot", { volume: 0.25 });
+        }
         p1.shootCooldown = p1Rapid ? 5 : BULLET_COOLDOWN;
-        playSfx("shoot", { volume: 0.25 });
       }
       if (p1.invincible > 0) p1.invincible--;
       if (p1.damageFlash > 0) p1.damageFlash--;
@@ -350,9 +448,15 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         p2.shootCooldown <= 0 &&
         p2.lives > 0
       ) {
-        g.bullets.push({ x: p2.x, y: p2.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 2, trail: [] });
+        // v72: LASER ativo → o toque dispara o RAIO (não bala)
+        if (g.frame < g.laserUntil[1]) {
+          // (o raio é processado no bloco do laser mais abaixo)
+        } else {
+          g.bullets.push({ x: p2.x, y: p2.y - SHIP_SIZE, speed: BULLET_SPEED, owner: 2, trail: [] });
+          g.particles.push({ x: p2.x, y: p2.y - SHIP_SIZE, vx: 0, vy: -0.6, life: 5, maxLife: 5, color: "#f9a8d4", size: 4 });
+          playSfx("shoot", { volume: 0.25, pitch: 1.15 });
+        }
         p2.shootCooldown = p2Rapid ? 5 : BULLET_COOLDOWN;
-        playSfx("shoot", { volume: 0.25, pitch: 1.15 });
       }
       if (p2.invincible > 0) p2.invincible--;
       if (p2.damageFlash > 0) p2.damageFlash--;
@@ -381,10 +485,51 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       g.enemies = g.enemies.filter((e) => {
         e.prevX = e.x;
         e.prevY = e.y;
-        e.y += e.speed;
+        if (e.hitFlash > 0) e.hitFlash--;
         e.rotation += e.rotSpeed;
         e.wobble += e.wobbleSpeed;
-        e.x += Math.sin(e.wobble) * 0.5;
+
+        // ── v72: IA POR TIPO ──
+        if (e.kind === "fighter") {
+          // desce até a altitude de combate, strafa e ATIRA
+          if (e.y < e.targetY) {
+            e.y += e.speed;
+          } else {
+            e.y += Math.sin(e.wobble * 0.5) * 0.3;
+            e.x += e.strafeDir * 1.15;
+            if (e.x < e.size + 6) { e.x = e.size + 6; e.strafeDir = 1; }
+            if (e.x > CANVAS_W - e.size - 6) { e.x = CANVAS_W - e.size - 6; e.strafeDir = -1; }
+            // tiro MIRADO no jogador vivo mais próximo (a IA ataca)
+            if (--e.fireCd <= 0) {
+              const alvos = [p1, p2].filter((p) => p.lives > 0);
+              if (alvos.length > 0) {
+                const alvo = alvos[Math.floor(Math.random() * alvos.length)];
+                const dx = alvo.x - e.x, dy = alvo.y - e.y;
+                const len = Math.hypot(dx, dy) || 1;
+                g.enemyBullets.push({ x: e.x, y: e.y + e.size, vx: (dx / len) * 2.4, vy: (dy / len) * 2.4, color: "#a3e635" });
+                playSfx("shoot", { volume: 0.18, pitch: 0.7 });
+              }
+              e.fireCd = 100 + Math.floor(Math.random() * 60);
+            }
+            if (g.frame > e.leaveAt) e.y += 1.4; // cumpriu a missão → foge
+          }
+        } else if (e.kind === "kamikaze") {
+          // MERGULHO: trava no jogador vivo mais perto e acelera
+          const vivos = [p1, p2].filter((p) => p.lives > 0);
+          if (vivos.length > 0) {
+            const alvo = vivos[Math.floor(Math.random() * vivos.length)];
+            e.x += Math.max(-0.5, Math.min(0.5, (alvo.x - e.x) * 0.045));
+          }
+          e.speed = Math.min(e.speed + 0.045, 5.2);
+          e.y += e.speed;
+        } else if (e.kind === "scout") {
+          // zigue-zague forte (muito mais vivo que o wobble normal)
+          e.y += e.speed;
+          e.x += Math.sin(e.wobble) * 2.1;
+        } else {
+          e.y += e.speed;
+          e.x += Math.sin(e.wobble) * 0.5;
+        }
         e.x = Math.max(e.size, Math.min(CANVAS_W - e.size, e.x));
 
         if (e.y > CANVAS_H + 10) {
@@ -429,30 +574,65 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             if (e.hp <= 0) {
               enemiesToRemove.add(ei);
               const isBonus = e.bonus;
-              const pts = isBonus ? POINTS_BONUS : POINTS_NORMAL;
-              const streakIdx = b.owner === 1 ? 0 : 1;
-              g.killStreaks[streakIdx]++;
-              const streak = g.killStreaks[streakIdx];
+              const basePts = isBonus ? POINTS_BONUS : POINTS_NORMAL;
+              // pontos por TIPO (a guerra é mais rica)
+              const ptsPorTipo: Partial<Record<EnemyKind, number>> = {
+                scout: 15, fighter: 25, tank: 45, kamikaze: 20, splitter: 20,
+              };
+              const baseTipo = ptsPorTipo[e.kind] ?? basePts;
+
+              // v72: COMBO — matar rápido em série multiplica (até ×4)
+              const idx = b.owner === 1 ? 0 : 1;
+              if (g.frame <= g.comboUntil[idx]) g.comboCount[idx]++;
+              else g.comboCount[idx] = 1;
+              g.comboUntil[idx] = g.frame + COMBO_JANELA;
+              const mult = Math.min(1 + (g.comboCount[idx] - 1) * 0.25, COMBO_MULT_MAX);
+              const comboN = g.comboCount[idx];
+
+              const streak = (() => { g.killStreaks[idx]++; return g.killStreaks[idx]; })();
               const streakBonus = streak >= 10 ? 3 : streak >= 5 ? 2 : 0;
-              const totalPts = pts + streakBonus * 5;
-              if (b.owner === 1) p1.score += totalPts;
-              else p2.score += totalPts;
-              g.particles.push(...createExplosion(e.x, e.y, e.color, isBonus));
-              g.shockwaves.push(createShockwave(e.x, e.y, e.color, isBonus));
-              g.floatingTexts.push(createScoreText(e.x, e.y - 10, totalPts, isBonus));
-              // v20 PRO: queda de power-up + resposta sonora a cada abate
-              if (Math.random() < POWERUP_CHANCE && g.powerUps.length < 3) {
-                const kinds = ["shield", "rapid", "life"] as const;
+              const totalPts = Math.round(baseTipo * mult) + streakBonus * 5;
+              if (b.owner === 1) p1.score += totalPts; else p2.score += totalPts;
+
+              g.particles.push(...createExplosion(e.x, e.y, e.color, isBonus || e.kind === "tank"));
+              g.shockwaves.push(createShockwave(e.x, e.y, e.color, isBonus || e.kind === "tank"));
+              g.floatingTexts.push({
+                ...createScoreText(e.x, e.y - 10, totalPts, isBonus || e.kind === "tank"),
+                text: comboN >= 2 ? `+${totalPts} ×${comboN}` : `+${totalPts}`,
+                color: comboN >= 3 ? "#f0abfc" : comboN >= 2 ? "#fbbf24" : (isBonus ? "#fbbf24" : "#ffffff"),
+              });
+              // v72: queda de power-up — TANK GARANTE um; normal por chance
+              const chanceDrop = e.kind === "tank" ? 1 : POWERUP_CHANCE;
+              if (Math.random() < chanceDrop && g.powerUps.length < 3) {
+                const kinds = ["shield", "rapid", "life", "laser", "drone"] as const;
                 const kind = kinds[Math.floor(Math.random() * kinds.length)];
                 g.powerUps.push({ x: e.x, y: e.y, vy: 1.6, kind, phase: 0 });
               }
-              playSfx(isBonus ? "coin" : "hit", { volume: isBonus ? 0.6 : 0.4, pitch: isBonus ? 1.2 : 1 });
-              if (isBonus) {
+              // v72: SPLITTER divide-se em dois mini-inimigos ao morrer
+              if (e.kind === "splitter") {
+                for (const sinal of [-1, 1]) {
+                  g.enemies.push({
+                    ...e,
+                    kind: "normal", hp: 1, size: 8, bonus: false,
+                    x: Math.max(e.size, Math.min(CANVAS_W - e.size, e.x + sinal * 14)),
+                    y: e.y, speed: e.speed * 1.15, color: "#7dd3fc",
+                    wobble: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.12,
+                    prevX: e.x, prevY: e.y,
+                  });
+                }
+              }
+              if (e.kind === "tank") { g.shakeMagnitude = Math.max(g.shakeMagnitude, 6); }
+              playSfx(isBonus || e.kind === "tank" ? "coin" : "hit", { volume: isBonus ? 0.6 : 0.4, pitch: isBonus ? 1.2 : 1 });
+              if (isBonus || e.kind === "tank") {
                 g.screenFlash = 10;
                 g.vignettePulse = 15;
                 haptic(12);
               }
               scoreChanged = true;
+            } else {
+              // v72: dano SEM morte → flash branco no inimigo
+              e.hitFlash = 6;
+              playSfx("hit", { volume: 0.2, pitch: 1.4 });
             }
             break;
           }
@@ -461,6 +641,11 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
 
       if (scoreChanged) {
         setScores({ p1: p1.score, p2: p2.score });
+        // v72: combo visível no HUD (espelho do estado do jogo)
+        setCombo({
+          p1: g.frame <= g.comboUntil[0] ? g.comboCount[0] : 0,
+          p2: g.frame <= g.comboUntil[1] ? g.comboCount[1] : 0,
+        });
       }
 
       g.bullets = g.bullets.filter((_, i) => !bulletsToRemove.has(i));
@@ -518,6 +703,98 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         return true;
       });
 
+      // ── v72: BALAS DOS FIGHTERS — a guerra volta a tiro contra tiro ──
+      g.enemyBullets = g.enemyBullets.filter((eb) => {
+        eb.x += eb.vx; eb.y += eb.vy;
+        if (eb.y > CANVAS_H + 10 || eb.x < -10 || eb.x > CANVAS_W + 10) return false;
+        for (const p of [p1, p2]) {
+          if (p.lives <= 0 || p.invincible > 0) continue;
+          if (Math.hypot(p.x - eb.x, p.y - eb.y) < SHIP_SIZE + 4) {
+            p.lives--;
+            p.invincible = 60;
+            p.damageFlash = 12;
+            g.shakeMagnitude = 7;
+            setLives({ p1: p1.lives, p2: p2.lives });
+            playSfx("explosion", { volume: 0.45, pitch: 1.3 });
+            haptic(30);
+            return false;
+          }
+        }
+        return true;
+      });
+
+      // ── v72: DRONES ALIADOS — orbitam e abatem sozinhos ──
+      for (const d of g.drones) {
+        const dono = d.owner === 1 ? p1 : p2;
+        if (dono.lives <= 0) continue;
+        d.phase += 0.06;
+        if (--d.fireCd > 0) continue;
+        // mira o inimigo mais próximo que esteja por CIMA do dono
+        let maisPerto: Enemy | null = null;
+        let menor = Infinity;
+        for (const e of g.enemies) {
+          if (e.y >= dono.y - 10) continue;
+          const dist = Math.hypot(e.x - dono.x, e.y - dono.y);
+          if (dist < menor) { menor = dist; maisPerto = e; }
+        }
+        if (maisPerto && Math.abs(maisPerto.x - dono.x) < 46) {
+          g.bullets.push({
+            x: dono.x + Math.cos(d.phase) * 34,
+            y: dono.y + Math.sin(d.phase) * 16 - 8,
+            speed: BULLET_SPEED, owner: d.owner, trail: [],
+          });
+          playSfx("shoot", { volume: 0.12, pitch: 1.5 });
+          d.fireCd = 42;
+        } else {
+          d.fireCd = 8; // sem alvo → tenta logo a seguir
+        }
+      }
+
+      // ── v72: LASER — o raio da coluna fura TODOS os inimigos no caminho ──
+      for (const pi of [0, 1] as const) {
+        const p = g.players[pi];
+        if (p.lives <= 0) continue;
+        const laserAtivo = g.frame < g.laserUntil[pi];
+        if (!laserAtivo) continue;
+        if (g.laserCd[pi] > 0) g.laserCd[pi]--;
+        const dispara = (pi === 0 ? keys.has("w") || keys.has("W") || keys.has("p1shoot") : keys.has("ArrowUp") || keys.has("p2shoot"));
+        if (dispara && g.laserCd[pi] <= 0) {
+          g.laserCd[pi] = LASER_CD;
+          const coluna = p.x;
+          const atingidos = g.enemies.filter((e) => Math.abs(e.x - coluna) < LASER_LARGURA + e.size * 0.4 && e.y < p.y);
+          for (const e of atingidos) {
+            e.hp -= 2;
+            e.hitFlash = 5;
+            g.particles.push(...createExplosion(e.x, e.y, "#67e8f9", false));
+            if (e.hp <= 0) {
+              const idxL = pi;
+              if (g.frame <= g.comboUntil[idxL]) g.comboCount[idxL]++; else g.comboCount[idxL] = 1;
+              g.comboUntil[idxL] = g.frame + COMBO_JANELA;
+              const multL = Math.min(1 + (g.comboCount[idxL] - 1) * 0.25, COMBO_MULT_MAX);
+              const ptsL = Math.round((e.kind === "tank" ? 45 : 12) * multL);
+              p.score += ptsL;
+              scoreChanged = true;
+              g.floatingTexts.push(createScoreText(e.x, e.y - 8, ptsL, false));
+              if (e.kind === "splitter") {
+                for (const sinal of [-1, 1]) {
+                  g.enemies.push({ ...e, kind: "normal", hp: 1, size: 8, bonus: false, x: Math.max(e.size, Math.min(CANVAS_W - e.size, e.x + sinal * 14)), speed: e.speed * 1.15, color: "#7dd3fc", wobble: Math.random() * Math.PI * 2, prevX: e.x, prevY: e.y });
+                }
+              }
+            }
+          }
+          g.enemies = g.enemies.filter((e) => e.hp > 0);
+          playSfx("shoot", { volume: 0.3, pitch: 2.2 });
+          haptic(8);
+        }
+      }
+      if (scoreChanged) {
+        setScores({ p1: p1.score, p2: p2.score });
+        setCombo({
+          p1: g.frame <= g.comboUntil[0] ? g.comboCount[0] : 0,
+          p2: g.frame <= g.comboUntil[1] ? g.comboCount[1] : 0,
+        });
+      }
+
       // ── v20 PRO: power-ups caem e são apanhados ──
       g.powerUps = g.powerUps.filter((pu) => {
         pu.y += pu.vy;
@@ -528,6 +805,17 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
           if (Math.hypot(p.x - pu.x, p.y - pu.y) < SHIP_SIZE + 12) {
             if (pu.kind === "shield") p.invincible = Math.max(p.invincible, 240);
             else if (pu.kind === "rapid") g.rapidUntil[p === p1 ? 0 : 1] = g.frame + 300;
+            else if (pu.kind === "laser") {
+              const idxL = p === p1 ? 0 : 1;
+              g.laserUntil[idxL] = g.frame + LASER_DURACAO;
+              g.floatingTexts.push({ x: p.x, y: p.y - 26, text: "LASER!", color: "#67e8f9", life: 45, maxLife: 45, vy: -1 });
+            } else if (pu.kind === "drone") {
+              const idxD = p === p1 ? 0 : 1;
+              if (!g.drones.some((d) => d.owner === (p === p1 ? 1 : 2))) {
+                g.drones.push({ owner: p === p1 ? 1 : 2, phase: idxD * Math.PI, fireCd: 20 });
+                g.floatingTexts.push({ x: p.x, y: p.y - 26, text: "DRONE!", color: "#a78bfa", life: 45, maxLife: 45, vy: -1 });
+              }
+            }
             else if (p.lives < 5) p.lives += 1;
             setLives({ p1: p1.lives, p2: p2.lives });
             playSfx("powerup");
@@ -562,8 +850,11 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       if (g.screenFlash > 0) g.screenFlash--;
       if (g.vignettePulse > 0) g.vignettePulse--;
 
+      // v72: HIPERSALTO — estrelas em velocidade warp durante a troca de onda
+      const warpMul = g.hyperJump > 0 ? 7 - (g.hyperJump / HYPERJUMP_FRAMES) * 4 : 1;
+      if (g.hyperJump > 0) g.hyperJump--;
       g.stars.forEach((s) => {
-        s.y += s.speed;
+        s.y += s.speed * warpMul;
         if (s.y > CANVAS_H) {
           s.y = -2;
           s.x = Math.random() * CANVAS_W;
@@ -610,6 +901,17 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       // Stars with parallax layers
       const layerColors = ["#94a3b8", "#cbd5e1", "#ffffff"];
       g.stars.forEach((s) => {
+        // v72: HIPERSALTO — as estrelas viram RISCOS luminosos em warp
+        if (warpMul > 1.5) {
+          ctx.globalAlpha = Math.min(0.9, s.brightness + 0.3);
+          ctx.strokeStyle = layerColors[s.layer];
+          ctx.lineWidth = s.size * 1.4;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(s.x, s.y - s.speed * warpMul * 1.8);
+          ctx.stroke();
+          return;
+        }
         const twinkle = 0.6 + 0.4 * Math.sin(g.frame * 0.02 * (s.layer + 1) + s.x * 0.1);
         const alpha = s.brightness * twinkle;
         const col = layerColors[s.layer];
@@ -692,6 +994,21 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.strokeStyle = e.bonus ? "#fef08a" : "rgba(255,200,200,0.6)";
         ctx.lineWidth = 1.5;
         drawEnemyShape(ctx, e);
+
+        // v72: FLASH DE DANO — o inimigo fica branco quando leva dano sem morrer
+        if (e.hitFlash > 0) {
+          ctx.fillStyle = `rgba(255,255,255,${0.35 + (e.hitFlash / 6) * 0.45})`;
+          drawEnemyShape(ctx, e);
+        }
+
+        // v72: barra de vida nos resistentes (tank/fighter/splitter)
+        if (e.hp > 1 && e.kind !== "normal") {
+          const pct = e.hp / 3;
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.fillRect(-e.size, -e.size - 7, e.size * 2, 3);
+          ctx.fillStyle = "#22c55e";
+          ctx.fillRect(-e.size, -e.size - 7, e.size * 2 * Math.max(0, Math.min(1, pct)), 3);
+        }
 
         // Inner highlight
         ctx.fillStyle = "rgba(255,255,255,0.15)";
@@ -778,8 +1095,37 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         ctx.beginPath(); ctx.arc(bb.x, bb.y, 9, 0, Math.PI * 2); ctx.fill();
       });
 
+      // v72: balas dos FIGHTERS (verde-lima — a IA atira de volta)
+      g.enemyBullets.forEach((eb) => {
+        const gl = ctx.createRadialGradient(eb.x, eb.y, 0, eb.x, eb.y, 7);
+        gl.addColorStop(0, "#fff");
+        gl.addColorStop(0.35, eb.color);
+        gl.addColorStop(1, "rgba(163,230,53,0)");
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.arc(eb.x, eb.y, 7, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // v72: FEIXES DO LASER — colunas luminosas dos jogadores com laser ativo
+      g.players.forEach((p, pi) => {
+        if (p.lives <= 0) return;
+        if (g.frame >= g.laserUntil[pi]) return;
+        const fade = Math.min(1, (g.laserUntil[pi] - g.frame) / 40);
+        const core = ctx.createLinearGradient(p.x, p.y, p.x, 0);
+        core.addColorStop(0, `rgba(103,232,249,${0.5 * fade})`);
+        core.addColorStop(1, `rgba(103,232,249,${0.08 * fade})`);
+        ctx.fillStyle = core;
+        ctx.fillRect(p.x - LASER_LARGURA / 2, 0, LASER_LARGURA, p.y - SHIP_SIZE);
+        // núcleo branco fino
+        ctx.fillStyle = `rgba(255,255,255,${0.55 * fade})`;
+        ctx.fillRect(p.x - 1.5, 0, 3, p.y - SHIP_SIZE);
+        // orbes no topo do feixe
+        const orbY = (g.frame * 8) % (p.y - SHIP_SIZE);
+        ctx.fillStyle = `rgba(255,255,255,${0.8 * fade})`;
+        ctx.beginPath(); ctx.arc(p.x, orbY, 3, 0, Math.PI * 2); ctx.fill();
+      });
+
       // power-ups
-      const PU_STYLE = { shield: { g: "S", color: "#22d3ee" }, rapid: { g: "R", color: "#a78bfa" }, life: { g: "+", color: "#34d399" } } as const;
+      const PU_STYLE = { shield: { g: "S", color: "#22d3ee" }, rapid: { g: "R", color: "#a78bfa" }, life: { g: "+", color: "#34d399" }, laser: { g: "L", color: "#67e8f9" }, drone: { g: "D", color: "#c084fc" } } as const;
       g.powerUps.forEach((pu) => {
         const s = PU_STYLE[pu.kind];
         const bob = Math.sin(pu.phase) * 3;
@@ -956,6 +1302,32 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       drawShip(p1);
       drawShip(p2);
 
+      // v72: DRONES ALIADOS — pequenos caças orbitando o dono
+      g.drones.forEach((d) => {
+        const dono = d.owner === 1 ? p1 : p2;
+        if (dono.lives <= 0) return;
+        const dx = dono.x + Math.cos(d.phase) * 34;
+        const dy = dono.y + Math.sin(d.phase) * 16 - 8;
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.rotate(Math.cos(d.phase) * 0.4);
+        const aura = ctx.createRadialGradient(0, 0, 1, 0, 0, 12);
+        aura.addColorStop(0, "rgba(192,132,252,0.5)");
+        aura.addColorStop(1, "rgba(192,132,252,0)");
+        ctx.fillStyle = aura;
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#c084fc";
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(0, 7); ctx.lineTo(-6, -5); ctx.lineTo(0, -2); ctx.lineTo(6, -5);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(0, 0, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+
       // Particles with glow
       g.particles.forEach((pt) => {
         const alpha = pt.life / pt.maxLife;
@@ -1095,6 +1467,13 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         bossBullets: [],
         powerUps: [],
         rapidUntil: [0, 0],
+        enemyBullets: [],
+        drones: [],
+        laserUntil: [0, 0],
+        laserCd: [0, 0],
+        comboCount: [0, 0],
+        comboUntil: [0, 0],
+        hyperJump: 0,
       };
       gameRef.current = g;
       setLives({ p1: 3, p2: 3 });
@@ -1216,6 +1595,19 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
               </motion.span>
             </div>
             <div className="flex gap-1.5 mt-0.5">{renderLives(lives.p1, "cyan")}</div>
+            {/* v72: COMBO visível — matar rápido multiplica os pontos */}
+            <motion.div
+              key={`c1-${combo.p1}`}
+              initial={combo.p1 >= 2 ? { scale: 0.6, opacity: 0 } : false}
+              animate={{ scale: combo.p1 >= 2 ? 1 : 0.85, opacity: combo.p1 >= 2 ? 1 : 0.35 }}
+              className={cn(
+                "mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide",
+                combo.p1 >= 2 ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "text-zinc-600"
+              )}
+              data-testid="combo-p1"
+            >
+              {combo.p1 >= 2 ? `COMBO ×${combo.p1}` : "combo ×1"}
+            </motion.div>
             <span className="text-[10px] text-zinc-500 font-mono">A/D mover · W atirar</span>
           </div>
 
@@ -1274,6 +1666,18 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
               <Coins className="w-4 h-4 text-pink-400" />
             </div>
             <div className="flex gap-1.5 mt-0.5">{renderLives(lives.p2, "pink")}</div>
+            <motion.div
+              key={`c2-${combo.p2}`}
+              initial={combo.p2 >= 2 ? { scale: 0.6, opacity: 0 } : false}
+              animate={{ scale: combo.p2 >= 2 ? 1 : 0.85, opacity: combo.p2 >= 2 ? 1 : 0.35 }}
+              className={cn(
+                "mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide",
+                combo.p2 >= 2 ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "text-zinc-600"
+              )}
+              data-testid="combo-p2"
+            >
+              {combo.p2 >= 2 ? `COMBO ×${combo.p2}` : "combo ×1"}
+            </motion.div>
             <span className="text-[10px] text-zinc-500 font-mono">
               {"←"}{"→"} mover · {"↑"} atirar
             </span>
@@ -1582,6 +1986,18 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             <p>
               <span className="inline-block w-2.5 h-2.5 bg-amber-400 rounded-sm mr-1.5 opacity-70" />
               Inimigo Dourado = {POINTS_BONUS} pts
+            </p>
+            <p className="flex items-center justify-center gap-1 flex-wrap">
+              <span className="text-rose-400 font-bold">scouts</span> ·
+              <span className="text-lime-400 font-bold">fighters (atiram!)</span> ·
+              <span className="text-purple-400 font-bold">tanques</span> ·
+              <span className="text-red-500 font-bold">kamikazes</span> ·
+              <span className="text-sky-400 font-bold">divisores</span>
+            </p>
+            <p className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1"><span className="w-4 h-4 rounded bg-cyan-500/30 border border-cyan-400 text-cyan-300 text-[9px] font-black flex items-center justify-center">L</span> LASER</span>
+              <span className="inline-flex items-center gap-1"><span className="w-4 h-4 rounded bg-purple-500/30 border border-purple-400 text-purple-300 text-[9px] font-black flex items-center justify-center">D</span> DRONE aliado</span>
+              <span className="text-amber-400">combo ×4 no pico!</span>
             </p>
             <p className="text-zinc-600">
               Inimigos que passam roubam uma vida do jogador daquele lado

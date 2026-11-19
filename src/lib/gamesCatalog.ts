@@ -27,10 +27,11 @@ export interface GameDef {
 export const ALL_GAMES: GameDef[] = [
   { id: "kart", label: "BATEU KART: Circuito das Lendas", emoji: "🏎️", desc: "Corridas LONGAS estilo Mario Kart: derrapa para o mini-turbo, recolhe cascas e mísseis, melhora o carro e as armas na garagem — ONLINE com sala partilhada!", grad: "from-orange-500 via-red-500 to-rose-600", category: "Corridas", players: "Solo · 12 pilotos", icon: "flag", hasBot: false },
   { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false },
-  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Destrua naves inimigas no espaço — quem faz mais pontos!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },
+  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Scouts, fighters que atiram, tanques, kamikazes, drones aliados, LASER e chefes — a guerra avançada!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },
   { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: "gamepad", hasBot: true },
   { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "A cobra famosa de sempre — duas cobras, um tabuleiro, quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: true },
   { id: "numbertetris", label: "Números Caindo", emoji: "🔢", desc: "Estilo Tetris 2048 — números caem e combinam até fazer 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false },
+  { id: "tetris", label: "Tetris", emoji: "🧱", desc: "O CLÁSSICO de sempre: saco de 7, hold, peça fantasma, combos e TETRIS com flash — vicia!", grad: "from-cyan-500 to-violet-600", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false },
   { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "O primeiro clássico da história — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: false },
   { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "O famoso jogo do galo a nível PRO — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", category: "Estratégia", players: "1v1 / Bot", icon: "grid3", hasBot: true },
   { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estratégia", players: "1v1 / Bot", icon: "grid", hasBot: true },
@@ -60,7 +61,7 @@ export function categoryCounts(): Record<string, number> {
 }
 
 /** Modos de jogo ao vivo no hub /lives (para claims honestos). */
-export const LIVE_GAME_MODES = 81;
+export const LIVE_GAME_MODES = 82;
 
 /* ─── Popularidade — base determinística estável por semana + jogadas reais ─── */
 

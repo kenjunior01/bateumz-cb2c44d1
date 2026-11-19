@@ -9,12 +9,13 @@ import {
   Hash, HandCoins, Receipt, Building2, UserPlus, BadgeDollarSign,
   BarChart3, Download, ChevronDown, ChevronUp, FileText, Image,
   ArrowRight, ArrowLeft, Ban, Check, Loader2, WalletCards,
-  CircleDollarSign, CalendarDays, ArrowUpDown, Timer, BadgeCheck
+  CircleDollarSign, CalendarDays, ArrowUpDown, Timer, BadgeCheck, Trash2, Play
 } from "lucide-react";
 import { formatMoney, type SupportedCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +29,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { COUNTRIES } from "@/lib/regions";
 import { getPaymentMethodsForCountry, groupMethodsByCategory, PAYMENT_CATEGORY_LABELS, type PaymentMethodItem, PAYMENT_METHODS } from "@/lib/wallet";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  PAISES_COFUNDADOR, lerIdentidade, gravarIdentidade, criarAnuncio, listarAnunciosPais,
+  agirAnuncio, estatisticasPais, cssVarsDeIdentidade, GRADIENTES_VALIDOS,
+  type AnuncioRegional, type PaisCoFundador,
+} from "@/lib/regionalBranding";
 
 const sb: any = supabase;
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
@@ -81,7 +87,13 @@ export default function RegionalManagerPanel() {
   const [announcement, setAnnouncement] = useState({ enabled: false, text: "", cta_label: "", cta_url: "" });
   const [nativeGames, setNativeGames] = useState<any[]>([]);
   const [betConfig, setBetConfig] = useState({ min_bet: 10, max_bet: 10000, default_bet: 50, enable_p2p_betting: true, enable_bot_betting: true, commission_percent: 5, regional_games_enabled: true, featured_games: [] as string[], min_withdrawal: 100, auto_cashout_threshold: 5000 });
-  const cc = (region?.country_code || 'MZ') as SupportedCurrency;
+  // v72 FURO REAL (apanhado pela suíte com repro): o código de PAÍS («MZ»)
+  // estava a ser passado como MOEDA ao formatMoney → Intl.RangeError
+  // «Invalid currency code : MZ» crashava o painel INTEIRO do co-fundador
+  // (dashboard + aprovações + financeiro). A moeda certa vem do mapa de
+  // países (MZ→MZN, AO→AOA, BR→BRL, PT→EUR…), com fallback honesto.
+  const moedaPais = (COUNTRIES.find((c) => c.code === (region?.country_code || "MZ"))?.currency ?? "MZN") as SupportedCurrency;
+  const cc = moedaPais;
   const countryGameData = regionalGameData[region?.country_code || ''];
   const [regionalGames, setRegionalGames] = useState(countryGameData?.games.map(g => ({ ...g, active: true })) || []);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -91,6 +103,14 @@ export default function RegionalManagerPanel() {
   const [loadingDailyStats, setLoadingDailyStats] = useState(false);
   const [dateRange, setDateRange] = useState(7);
   const [finStatusFilter, setFinStatusFilter] = useState<string>("all");
+
+  // v72: ANÚNCIOS DO CO-FUNDADOR — estado local honesto (aparelho)
+  const paisGestor = (region?.country_code || "MZ") as PaisCoFundador;
+  const paisValido = PAISES_COFUNDADOR.includes(paisGestor);
+  const [anuncios, setAnuncios] = useState<AnuncioRegional[]>([]);
+  const [statsAnuncios, setStatsAnuncios] = useState({ anuncios: 0, ativos: 0, impressoes: 0, cliques: 0, ctr: 0 });
+  const [formAnuncio, setFormAnuncio] = useState({ tipo: "faixa", titulo: "", texto: "", ctaEtiqueta: "Participar", ctaUrl: "/lives", gradiente: GRADIENTES_VALIDOS[0] });
+  const [nomeGestor, setNomeGestor] = useState("");
 
   // Load functions
   const loadManagerData = useCallback(async () => { if (!user) return; const { data } = await sb.from("regional_managers").select("*").eq("user_id", user.id).maybeSingle(); if (data) setManagerData(data); }, [user]);
@@ -157,6 +177,16 @@ export default function RegionalManagerPanel() {
   useEffect(() => { loadManagerData(); loadDashboardStats(); loadBranding(); loadSettings(); loadNativeGames(); loadBetConfig(); loadRegionalGames(); loadPaymentConfig(); }, [loadManagerData, loadDashboardStats, loadBranding, loadSettings, loadNativeGames, loadBetConfig, loadRegionalGames, loadPaymentConfig]);
   useEffect(() => { if (activeTab === "financeiro" && financialRecords.length === 0) loadFinancialData(); if (activeTab === "users" && users.length === 0) loadUsers(); if (activeTab === "analytics") loadDailyStats(); }, [activeTab, financialRecords.length, users.length, loadFinancialData, loadUsers, loadDailyStats]);
 
+  // v72: carrega os ANÚNCIOS do país do co-fundador (fonte honesta local)
+  const recarregarAnuncios = useCallback(() => {
+    if (!paisValido) return;
+    setAnuncios(listarAnunciosPais(paisGestor));
+    setStatsAnuncios(estatisticasPais(paisGestor));
+  }, [paisValido, paisGestor]);
+  useEffect(() => {
+    if (activeTab === "anuncios") { recarregarAnuncios(); setNomeGestor(m => m || managerData?.name || user?.email?.split("@")[0] || "Co-fundador"); }
+  }, [activeTab, recarregarAnuncios, managerData, user]);
+
   // Approval/Rejection handlers
   const handleApproveDeposit = async (record: FinancialRecord) => {
     setProcessingId(record.id);
@@ -214,7 +244,32 @@ export default function RegionalManagerPanel() {
   };
 
   // Save handlers
-  const handleSaveBranding = async () => { setSaving(true); try { const { error } = await sb.from("regional_branding").upsert({ ...branding, region_id: region?.id, updated_at: new Date().toISOString() }, { onConflict: "region_id" }); if (error) throw error; toast.success(t("regional.panel.brandingSaved")); } catch { toast.error(t("regional.panel.brandingError")); } setSaving(false); };
+  const handleSaveBranding = async () => {
+    setSaving(true);
+    try {
+      const { error } = await sb.from("regional_branding").upsert({ ...branding, region_id: region?.id, updated_at: new Date().toISOString() }, { onConflict: "region_id" });
+      if (error) throw error;
+      toast.success(t("regional.panel.brandingSaved"));
+    } catch { toast.error(t("regional.panel.brandingError")); }
+    // v72: a identidade do CO-FUNDADOR fica VISÍVEL NO ATO — grava no
+    // aparelho (bateu_regional_v72) e aplica as variáveis CSS já;
+    // funciona MESMO quando o backend não responde.
+    if (paisValido) {
+      const r = gravarIdentidade(paisGestor, {
+        corPrimaria: branding.primary_color || lerIdentidade(paisGestor).corPrimaria,
+        corSecundaria: branding.secondary_color || lerIdentidade(paisGestor).corSecundaria,
+        corAcento: branding.accent_color || lerIdentidade(paisGestor).corAcento,
+        nomeTema: branding.theme_name || lerIdentidade(paisGestor).nomeTema,
+        iniciaisLogo: lerIdentidade(paisGestor).iniciaisLogo,
+        slogan: lerIdentidade(paisGestor).slogan,
+      });
+      if (r.d) {
+        const vars = cssVarsDeIdentidade(r.d);
+        for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
+      }
+    }
+    setSaving(false);
+  };
   const handleSaveSettings = async () => { setSaving(true); try { const { error } = await sb.from("regional_settings").upsert({ ...settings, region_id: region?.id, updated_at: new Date().toISOString() }, { onConflict: "region_id" }); if (error) throw error; toast.success(t("regional.panel.settingsSaved")); } catch { toast.error(t("regional.panel.settingsError")); } setSaving(false); };
   const handleSaveAnnouncement = async () => { setSaving(true); try { const { error } = await sb.from("regional_announcements").upsert({ ...announcement, region_id: region?.id, updated_by: user?.id }, { onConflict: "region_id" }); if (error) throw error; toast.success(t("regional.panel.announcementSaved")); } catch { toast.error(t("regional.panel.announcementError")); } setSaving(false); };
   const handleCreateGame = async () => { setSaving(true); try { const { data, error } = await sb.from("native_games").insert({ region_id: region?.id, name: `Jogo Personalizado ${nativeGames.length + 1}`, type: "custom", is_active: false, config: {}, created_by: user?.id }).select().single(); if (error) throw error; setNativeGames(prev => [data, ...prev]); toast.success(t("regional.panel.gameCreated")); } catch { toast.error(t("regional.panel.gameCreateError")); } setSaving(false); };
@@ -318,6 +373,7 @@ export default function RegionalManagerPanel() {
             <TabsTrigger value="pagamentos" className="gap-1.5 data-[state=active]:bg-background text-xs"><CreditCard className="w-3.5 h-3.5" /> Pagamentos</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 data-[state=active]:bg-background text-xs"><Users className="w-3.5 h-3.5" /> Utilizadores</TabsTrigger>
             <TabsTrigger value="branding" className="gap-1.5 data-[state=active]:bg-background text-xs"><Palette className="w-3.5 h-3.5" /> {t("regional.panel.branding")}</TabsTrigger>
+            <TabsTrigger value="anuncios" data-testid="anuncios-tab" className="gap-1.5 data-[state=active]:bg-background text-xs relative"><Megaphone className="w-3.5 h-3.5" /> Anúncios{statsAnuncios.ativos > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white font-bold">{statsAnuncios.ativos}</span>}</TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5 data-[state=active]:bg-background text-xs"><Settings className="w-3.5 h-3.5" /> {t("regional.panel.settings")}</TabsTrigger>
             <TabsTrigger value="announcement" className="gap-1.5 data-[state=active]:bg-background text-xs"><Megaphone className="w-3.5 h-3.5" /> {t("regional.panel.announcements")}</TabsTrigger>
             <TabsTrigger value="apostas" className="gap-1.5 data-[state=active]:bg-background text-xs"><Coins className="w-3.5 h-3.5" /> Apostas</TabsTrigger>
@@ -644,6 +700,84 @@ export default function RegionalManagerPanel() {
             </div>
             <div className="flex justify-end"><Button onClick={handleSaveBranding} disabled={saving} size="sm" className="gap-1"><Save className="w-3.5 h-3.5" /> {saving ? "..." : t("regional.panel.saveBranding")}</Button></div>
           </CardContent></Card></TabsContent>
+
+          {/* === v72: ANÚNCIOS DO CO-FUNDADOR (gestão independente do país) === */}
+          <TabsContent value="anuncios" className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[
+                { label: "Anúncios", value: statsAnuncios.anuncios, icon: Megaphone },
+                { label: "Ativos agora", value: statsAnuncios.ativos, icon: Zap },
+                { label: "Impressões", value: statsAnuncios.impressoes, icon: Eye },
+                { label: "Cliques", value: statsAnuncios.cliques, icon: Activity },
+                { label: "CTR", value: `${(statsAnuncios.ctr * 100).toFixed(1)}%`, icon: Percent },
+              ].map(s => (
+                <Card key={s.label} className="neon-border"><CardContent className="pt-4 pb-3 px-3">
+                  <div className="flex items-center gap-2 text-muted-foreground"><s.icon className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase">{s.label}</span></div>
+                  <p className="text-xl font-bold mt-1" data-testid={`stat-${s.label.toLowerCase().replace(/[^a-z]/g, "")}`}>{s.value}</p>
+                </CardContent></Card>
+              ))}
+            </div>
+
+            <Card className="neon-border"><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Megaphone className="w-4 h-4" /> Criar anúncio para {PAISES_COFUNDADOR.includes(paisGestor) ? `${paisGestor}` : paisGestor}</CardTitle></CardHeader><CardContent className="space-y-4">
+              {!paisValido ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Os co-fundadores de lançamento gerem os países 🇲🇿 MZ · 🇦🇴 AO · 🇧🇷 BR · 🇵🇹 PT. Este país ({paisGestor}) não faz parte do lançamento — o ADMIN é quem decide.</p>
+              ) : (
+                <>
+                  <div className="grid md:grid-cols-[1fr_160px] gap-4">
+                    <div className="space-y-1.5"><Label className="text-xs">Título (3-40)</Label><Input value={formAnuncio.titulo} onChange={e => setFormAnuncio(p => ({ ...p, titulo: e.target.value }))} placeholder="Ex: Festival de Jogos em Maputo" className="h-9 text-xs" data-testid="anuncio-titulo" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Tipo</Label>
+                      <Select value={formAnuncio.tipo} onValueChange={v => setFormAnuncio(p => ({ ...p, tipo: v }))}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="faixa">Faixa no topo do hub</SelectItem><SelectItem value="destaque">Cartão na grelha</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5"><Label className="text-xs">Texto (3-120)</Label><Textarea value={formAnuncio.texto} onChange={e => setFormAnuncio(p => ({ ...p, texto: e.target.value }))} placeholder="Ex: Junte-se ao maior festival de jogos da plataforma com prémios em moedas." rows={2} className="text-xs" data-testid="anuncio-texto" /></div>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5"><Label className="text-xs">Etiqueta do botão</Label><Input value={formAnuncio.ctaEtiqueta} onChange={e => setFormAnuncio(p => ({ ...p, ctaEtiqueta: e.target.value }))} className="h-9 text-xs" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Destino (caminho interno)</Label><Input value={formAnuncio.ctaUrl} onChange={e => setFormAnuncio(p => ({ ...p, ctaUrl: e.target.value }))} placeholder="/lives?game=kart" className="h-9 text-xs" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Esquema de cores</Label>
+                      <Select value={formAnuncio.gradiente} onValueChange={v => setFormAnuncio(p => ({ ...p, gradiente: v }))}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent className="max-h-64">{GRADIENTES_VALIDOS.map(g => (
+                          <SelectItem key={g} value={g}><span className={`inline-block h-3 w-8 rounded bg-gradient-to-r ${g}`} /></SelectItem>
+                        ))}</SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-muted-foreground max-w-md">Aparece no hub PARA OS JOGADORES DE {paisGestor} · impressões e cliques contados no aparelho · o ADMIN vê e pode pausar de qualquer país.</p>
+                    <Button size="sm" className="gap-1" data-testid="criar-anuncio" onClick={() => {
+                      const r = criarAnuncio({ pais: paisGestor, tipo: formAnuncio.tipo as "faixa" | "destaque", titulo: formAnuncio.titulo, texto: formAnuncio.texto, ctaEtiqueta: formAnuncio.ctaEtiqueta, ctaUrl: formAnuncio.ctaUrl, gradiente: formAnuncio.gradiente, criadoPor: nomeGestor });
+                      if (!r.d) {
+                        const motivos: Record<string, string> = { pais: "país inválido", tipo: "tipo inválido", titulo: "título deve ter 3-40 caracteres", texto: "texto deve ter 3-120 caracteres", cta: "etiqueta deve ter 2-24 caracteres", url: "destino deve ser caminho interno /…", cheio: "limite de 12 anúncios por país", janela: "agendamento inválido", gradiente: "cores inválidas", ok: "" };
+                        toast.error(`Recusado: ${motivos[r.motivo] || r.motivo}`);
+                      } else { toast.success("Anúncio criado — já está no ar para o teu país!"); setFormAnuncio(p => ({ ...p, titulo: "", texto: "" })); recarregarAnuncios(); }
+                    }}><Plus className="w-3.5 h-3.5" /> Publicar</Button>
+                  </div>
+                </>
+              )}
+            </CardContent></Card>
+
+            {paisValido && anuncios.length > 0 && (
+              <Card className="neon-border"><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Radio className="w-4 h-4" /> Os meus anúncios ({anuncios.length})</CardTitle></CardHeader><CardContent className="space-y-2">
+                {anuncios.map(a => (
+                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-card/30" data-testid={`anuncio-linha-${a.id}`}>
+                    <span className={`inline-block h-8 w-8 rounded-lg bg-gradient-to-br ${a.gradiente} shrink-0`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold truncate">{a.titulo}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{a.tipo} · {a.impressoes} impressões · {a.cliques} cliques ({(a.impressoes > 0 ? (a.cliques / a.impressoes) * 100 : 0).toFixed(1)}%)</p>
+                    </div>
+                    <Badge variant="secondary" className={a.estado === "ativo" ? "bg-emerald-500/15 text-emerald-600 text-[10px]" : "text-[10px]"}>{a.estado}</Badge>
+                    <Button size="sm" variant="ghost" onClick={() => { agirAnuncio(a.id, a.estado === "ativo" ? "pausar" : "reativar", paisGestor); recarregarAnuncios(); }}>
+                      {a.estado === "ativo" ? <XCircle className="w-3.5 h-3.5 text-amber-500" /> : <Play className="w-3.5 h-3.5 text-emerald-500" />}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { agirAnuncio(a.id, "remover", paisGestor); recarregarAnuncios(); }}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                  </div>
+                ))}
+              </CardContent></Card>
+            )}
+          </TabsContent>
 
           {/* === SETTINGS TAB === */}
           <TabsContent value="settings"><Card className="neon-border"><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Settings className="w-4 h-4" /> {t("regional.panel.regionSettings")}</CardTitle></CardHeader><CardContent className="space-y-3">

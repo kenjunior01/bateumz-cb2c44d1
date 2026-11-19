@@ -310,6 +310,69 @@ function bfsSurvivalDirection(
   return null;
 }
 
+// ── v72: IA DE SOBREVIVÊNCIA — flood-fill evita becos mortos ──
+// O BFS puro vai SEMPRE à comida, mesmo quando isso prende a cobra num
+// bolso sem saída. Agora cada direção candidata é avaliada pelo ESPAÇO
+// LIVRE alcançável depois do passo (flood-fill com limite) + distância
+// à comida: escolhe-se o equilíbrio comida/segurança. É esta a IA que
+// ganha as batalhas longas sem se suicidar.
+function espacoLivre(
+  inicio: Point,
+  dir: Direction,
+  obstacles: Set<string>,
+  limite: number
+): number {
+  const delta = DIRECTION_DELTA[dir];
+  const primeiro: Point = { x: inicio.x + delta.x, y: inicio.y + delta.y };
+  if (
+    primeiro.x < 0 || primeiro.x >= GRID_SIZE ||
+    primeiro.y < 0 || primeiro.y >= GRID_SIZE ||
+    obstacles.has(key(primeiro))
+  ) return 0;
+  const vistos = new Set<string>([key(primeiro)]);
+  const fila: Point[] = [primeiro];
+  let n = 0;
+  while (fila.length > 0 && n < limite) {
+    const p = fila.shift()!;
+    n++;
+    for (const d of ALL_DIRECTIONS) {
+      const dd = DIRECTION_DELTA[d];
+      const nx = { x: p.x + dd.x, y: p.y + dd.y };
+      const k = key(nx);
+      if (nx.x < 0 || nx.x >= GRID_SIZE || nx.y < 0 || nx.y >= GRID_SIZE) continue;
+      if (obstacles.has(k) || vistos.has(k)) continue;
+      vistos.add(k);
+      fila.push(nx);
+    }
+  }
+  return n;
+}
+
+function escolherDirInteligente(
+  snake: Snake,
+  food: Point,
+  obstacles: Set<string>
+): Direction | null {
+  const head = snake.body[0];
+  const comprimento = snake.body.length;
+  const limite = Math.max(comprimento * 2, 40);
+  let melhor: { dir: Direction; nota: number } | null = null;
+  for (const dir of ALL_DIRECTIONS) {
+    if (dir === OPPOSITE[snake.direction]) continue;
+    const delta = DIRECTION_DELTA[dir];
+    const prox: Point = { x: head.x + delta.x, y: head.y + delta.y };
+    if (prox.x < 0 || prox.x >= GRID_SIZE || prox.y < 0 || prox.y >= GRID_SIZE) continue;
+    if (obstacles.has(key(prox))) continue;
+    const espaco = espacoLivre(head, dir, obstacles, limite);
+    // espaço menor que o corpo = morte provável → penalidade brutal
+    const notaSeguranca = espaco < comprimento ? espaco * 8 - 600 : espaco * 2;
+    const notaDist = -Math.abs(prox.x - food.x) - Math.abs(prox.y - food.y);
+    const nota = notaSeguranca * 1.6 + notaDist + (prox.x === food.x || prox.y === food.y ? 3 : 0);
+    if (!melhor || nota > melhor.nota) melhor = { dir, nota };
+  }
+  return melhor?.dir ?? null;
+}
+
 /** Compute the best AI direction based on difficulty. */
 function getAIDirection(
   aiSnake: Snake,
@@ -355,11 +418,25 @@ function getAIDirection(
     // Easy: simple greedy — just move towards food if possible
     chosenDir = bfsDirection(aiSnake.body[0], food, obstacles);
   } else if (difficulty === "medio") {
-    // Medium: BFS to food
-    chosenDir = bfsDirection(aiSnake.body[0], food, obstacles);
+    // v72: BFS à comida MAS com verificação de espaço — o médio já não
+    // se prende nos becos que o BFS puro criava
+    const bfs = bfsDirection(aiSnake.body[0], food, obstacles);
+    if (bfs) {
+      const espaco = espacoLivre(
+        aiSnake.body[0], bfs, obstacles,
+        Math.max(aiSnake.body.length * 2, 40)
+      );
+      chosenDir = espaco < aiSnake.body.length
+        ? escolherDirInteligente(aiSnake, food, obstacles)
+        : bfs;
+    } else {
+      chosenDir = escolherDirInteligente(aiSnake, food, obstacles);
+    }
   } else {
-    // Hard: smart BFS with avoidance and cut-off potential
-    chosenDir = bfsSmartDirection(aiSnake, food, obstacles, playerSnake);
+    // v72: DIFÍCIL — flood-fill de sobrevivência + distância à comida
+    // (a IA que joga para GANHAR: corta caminhos, nunca se prende)
+    chosenDir = escolherDirInteligente(aiSnake, food, obstacles);
+    if (!chosenDir) chosenDir = bfsSmartDirection(aiSnake, food, obstacles, playerSnake);
   }
 
   if (chosenDir && chosenDir !== OPPOSITE[aiSnake.direction]) {

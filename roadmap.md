@@ -80,3 +80,12 @@
 - [x] Painéis de publicidade 3D das marcas DESAFIO no circuito: textura-canvas com cor/iniciais/nome/tagline/prémio, 8 do catálogo v70 + 4 custom da Sala de Patrocínios, nos caminhos ALTA e LEVE, com sombra dinâmica no ALTA — docs/REA-paineis-v71.md §1-2.
 - [x] Gancho honesto graficos().paineisMarcas + limpeza em destruir() — docs/REA-paineis-v71.md §1.
 - [x] Prova: test-gfx-v69 28/0 ×2 (+2 asserções ALTA+LEVE) · regressão desafios-v70 36/0 · kart-v65 65/0 · batalha-v68 30/0 · som-v67 58/0 · online-v66 61/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-paineis-v71.md §3.
+
+## v72 — Clássico Tetris + Guerra Espacial avançada + IA de verdade + Co-fundadores regionais (2026-11-19)
+
+- [x] TETRIS CLÁSSICO: saco de 7, hold, fantasma, kicks, combos, B2B, níveis com curva de gravidade, partículas/tremor/flash, recorde no aparelho, teclado+móvel, pausa honesta — docs/REA-classicos-v72.md §2.
+- [x] GUERRA ESPACIAL MEGA: 5 tipos de inimigo com IA (scout/fighter-que-atira/tank/kamikaze-que-mergulha/splitter), flash de dano, COMBO ×4 visível, LASER de coluna + DRONE aliado, balas inimigas, HIPERSALTO de onda — docs/REA-classicos-v72.md §3.
+- [x] IA DE VERDADE: Damas minimax alfa-beta prof.5 (por dificuldade, avaliação de material/avanço/retaguarda/centro) · Cobras flood-fill de sobrevivência (fim do suicídio nos becos) — docs/REA-classicos-v72.md §4.
+- [x] CO-FUNDADORES REGIONAIS MZ·AO·BR·PT: regionalBranding.ts (identidade visual + anúncios com agendamento, teto 12/país, url interna só, impressões/cliques honestos), aba Anúncios no painel regional, FaixaAnuncios+Cartão no hub, AdminAds (visão total + pausa atravessa países) — docs/REA-classicos-v72.md §5-6.
+- [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
+- [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.

@@ -94,6 +94,7 @@ const Contests = lazy(() => import("./pages/Contests.tsx"));
 const ContestDetail = lazy(() => import("./pages/ContestDetail.tsx"));
 const AdminCronJobs = lazy(() => import("./pages/admin/AdminCronJobs.tsx"));
 const AdminCoFounders = lazy(() => import("./pages/admin/AdminCoFounders.tsx"));
+const AdminAds = lazy(() => import("./pages/admin/AdminAds.tsx"));
 const AdminRegionalRevenue = lazy(() => import("./pages/admin/AdminRegionalRevenue.tsx"));
 const AdminRegionalManagers = lazy(() => import("./pages/admin/AdminRegionalManagers.tsx"));
 const AdminPlans = lazy(() => import("./pages/admin/AdminPlans.tsx"));
@@ -410,6 +411,7 @@ function AnimatedRoutes() {
               <Route path="games" element={<AdminGameManager />} />
               <Route path="contests" element={<AdminContests />} />
               <Route path="co-founders" element={<AdminCoFounders />} />
+              <Route path="ads" element={<AdminAds />} />
               <Route path="regional-revenue" element={<AdminRegionalRevenue />} />
               <Route path="regional-branding" element={<AdminRegionalBranding />} />
               <Route path="regional-dashboard" element={<AdminRegionalDashboard />} />

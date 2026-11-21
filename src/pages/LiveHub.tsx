@@ -244,6 +244,12 @@ const LiveHub = () => {
   const spinWheelManagerPath = getGameManagerPath(role, "spin-wheel");
   const [templateName, setTemplateName] = useState<string | null>(null);
   const [buscaJogos, setBuscaJogos] = useState("");
+  // v74 DESKTOP: a grelha passa a respeitar a busca (a pesquisa desktop filtra DE VERDADE)
+  const jogosFiltradosDesktop = useMemo(() => {
+    const q = buscaJogos.trim().toLowerCase();
+    if (!q) return GAMES;
+    return GAMES.filter((g) => g.label.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q));
+  }, [GAMES, buscaJogos]);
   const [active, setActive] = useState<GameId | null>(() => {
     try {
       const fromUrl = gameFromUrl;
@@ -560,7 +566,10 @@ const LiveHub = () => {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
         <ParticleBackground preset="stars" count={25} className="absolute inset-0 pointer-events-none" />
-        <div className="relative container mx-auto px-4 py-6 md:py-12">
+        {/* v74 DESKTOP: brilhos ambiente + painel de destaque à direita — o hero
+            era max-w-2xl e metade do ecrã desktop ficava MORTA */}
+        <div className="desktop-ambient hidden lg:block" aria-hidden="true" />
+        <div className="relative container mx-auto px-4 py-6 md:py-12 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-10 lg:items-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
               <Gamepad2 className="h-3.5 w-3.5" />
@@ -644,6 +653,59 @@ const LiveHub = () => {
               </NeonBorder>
             )}
           </motion.div>
+
+          {/* v74 DESKTOP: painel de destaque (SÓ ≥lg) — jogo principal + atalhos
+              rápidos, ocupando o espaço morto do hero */}
+          <div className="hidden lg:flex flex-col gap-4" data-testid="livehub-hero-desktop">
+            {(() => {
+              const kartMeta = GAMES.find((g) => g.id === "kart");
+              if (!kartMeta) return null;
+              return (
+                <button
+                  onClick={() => setActive("kart")}
+                  data-testid="livehub-hero-kart"
+                  className="group relative text-left rounded-3xl overflow-hidden border border-rose-400/40 p-5 transition-all hover:border-rose-400/80 hover:shadow-[0_10px_44px_rgba(244,63,94,0.28)]"
+                  style={{ background: "linear-gradient(135deg, #4c0519 0%, #7c2d12 55%, #312e81 130%)" }}
+                >
+                  <div className="absolute inset-0 opacity-60" style={{ background: "radial-gradient(320px 140px at 85% 10%, rgba(251,191,36,0.22), transparent 70%)" }} aria-hidden="true" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="h-14 w-14 shrink-0 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-3xl shadow-lg shadow-rose-900/50 group-hover:scale-105 transition-transform">🏎️</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black tracking-widest text-rose-300 uppercase">Destaque de hoje</p>
+                      <p className="font-display text-xl font-black text-white leading-tight mt-0.5">{kartMeta.label}</p>
+                      <p className="text-[11px] text-white/70 mt-1 line-clamp-2">{kartMeta.desc}</p>
+                    </div>
+                  </div>
+                  <div className="relative mt-4 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> 12 pilotos · online partilhado · garagem com upgrades
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 px-4 py-2 text-xs font-black text-white shadow-lg shadow-rose-900/40 group-hover:brightness-110 transition-all">
+                      JOGAR ▶
+                    </span>
+                  </div>
+                </button>
+              );
+            })()}
+            <div className="grid grid-cols-3 gap-3">
+              {["tetris", "spaceshooter", "chess"].map((id) => {
+                const g = GAMES.find((x) => x.id === id);
+                if (!g) return null;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setActive(g.id)}
+                    className="rounded-2xl border border-border bg-card/80 p-3 text-left transition-all hover:border-primary/50 hover:bg-card hover:-translate-y-0.5"
+                    data-testid={`livehub-hero-atalho-${g.id}`}
+                  >
+                    <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${g.grad} grid place-items-center text-lg mb-1.5`}>{g.emoji}</div>
+                    <p className="text-xs font-bold truncate">{g.label}</p>
+                    <p className="text-[9px] text-muted-foreground">clássico · direto</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -665,7 +727,10 @@ const LiveHub = () => {
         <FaixaAnunciosRegionais />
       </div>
 
-      <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8">
+      {/* v74 DESKTOP: ordem real de desktop — em ≥lg os JOGOS vêm primeiro
+          (destaque → grelha → jogo → desafios) e as RÁDIOS/lives descem;
+          no telemóvel a ordem original é mantida (flex só existe em lg) */}
+      <section className="container mx-auto px-3 sm:px-4 pt-2 md:py-8 pb-4 sm:pb-8 lg:flex lg:flex-col">
         {/* v13 MOBILE: com o Bateu World ativo o header NÃO renderiza — ele ficava
             por cima da UI full-screen do jogo (criação/HUD) e roubava os toques.
             A navegação de jogos volta ao sair do mundo (pílula «◀ Jogos»). */}
@@ -687,7 +752,7 @@ const LiveHub = () => {
 
         {/* ⭐ REA Twitch: secção de CONSUMO — quem está ao vivo agora na plataforma */}
         {!isImmersiveWorld && livesAgora.length > 0 && (
-          <div className="mb-4" data-testid="livehub-lives-agora">
+          <div className="mb-4 lg:order-5" data-testid="livehub-lives-agora">
             <div className="flex items-center gap-2 mb-2">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-rose-500" />
@@ -728,7 +793,7 @@ const LiveHub = () => {
 
         {/* ⭐ v34 — Rádios PALOP ao vivo (dados REAIS do Radio Browser) */}
         {!isImmersiveWorld && (
-          <div className="mb-4" data-testid="livehub-radios">
+          <div className="mb-4 lg:order-6" data-testid="livehub-radios">
             <RadiosPALOP />
           </div>
         )}
@@ -740,7 +805,7 @@ const LiveHub = () => {
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
             onClick={() => setActive("kart")}
             data-testid="livehub-destaque-bateu-world"
-            className="relative w-full overflow-hidden rounded-2xl mb-4 mt-3 text-left"
+            className="relative w-full overflow-hidden rounded-2xl mb-4 mt-3 lg:mt-0 lg:order-1 text-left"
             style={{ background: "linear-gradient(120deg, #4c0519 0%, #7c2d12 45%, #713f12 100%)", border: "1px solid rgba(251,113,133,0.5)", boxShadow: "0 0 36px rgba(244,63,94,0.35)" }}
           >
             <motion.div className="absolute inset-0" style={{ background: "radial-gradient(circle at 12% 25%, rgba(255,255,255,0.16), transparent 50%), radial-gradient(circle at 88% 80%, rgba(251,191,36,0.3), transparent 45%)" }} animate={{ opacity: [0.5, 0.9, 0.5] }} transition={{ duration: 4, repeat: Infinity }} />
@@ -762,21 +827,43 @@ const LiveHub = () => {
 
         {/* ⭐ v70 — DESAFIOS DE EMPRESAS: prémios patrocinados (o mecanismo real vive no aparelho) */}
         {!isImmersiveWorld && (
-          <PainelDesafios onJogar={() => setActive("kart")} />
+          <div className="lg:order-4">
+            <PainelDesafios onJogar={() => setActive("kart")} />
+          </div>
         )}
 
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 mt-4">
-          {GAMES.map((g) => {
+        {/* v74 DESKTOP: pesquisa + contagem — o MobileDiscoveryHeader é md:hidden,
+            o desktop NÃO TINHA pesquisa nenhuma no hub */}
+        {!isImmersiveWorld && (
+          <div className="hidden md:flex items-center gap-3 mb-5 lg:order-0">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input
+                value={buscaJogos}
+                onChange={(e) => setBuscaJogos(e.target.value)}
+                placeholder={t("livehub.search")}
+                className="w-full h-10 pl-9 pr-3 rounded-full bg-card border border-border text-sm outline-none transition-colors focus:border-primary/50"
+                data-testid="livehub-busca-desktop"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground font-medium">
+              {jogosFiltradosDesktop.length} de {GAMES.length} jogos
+            </span>
+          </div>
+        )}
+
+        <div data-testid="livehub-grelha" className="hidden md:grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-8 mt-4 lg:mt-5 lg:order-2">
+          {jogosFiltradosDesktop.map((g) => {
             const isActive = active === g.id;
             const featured = g.id === "kart";
             return (
               <button
                 key={g.id}
                 onClick={() => setActive(g.id)}
-                className={`text-left rounded-2xl border-2 p-4 transition-all relative overflow-hidden ${
+                className={`group text-left rounded-2xl border-2 p-4 transition-all duration-200 relative overflow-hidden hover:-translate-y-1 ${
                   featured
                     ? "border-rose-400/70 bg-gradient-to-br from-rose-500/10 via-card to-indigo-500/10 shadow-[0_0_18px_rgba(244,63,94,0.18)] hover:shadow-[0_0_26px_rgba(244,63,94,0.3)] col-span-2 lg:col-span-2"
-                    : isActive ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
+                    : isActive ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40 hover:shadow-lg"
                 }`}
               >
                 {featured && (
@@ -789,6 +876,10 @@ const LiveHub = () => {
                 </div>
                 <p className={`font-display font-bold mb-1 ${featured ? "text-base" : "text-sm"}`}>{g.label}</p>
                 <p className="text-[11px] text-muted-foreground line-clamp-2">{g.desc}</p>
+                {/* v74 DESKTOP: chip JOGAR no hover — o cartão diz o que faz */}
+                <span className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-black text-primary opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all">
+                  JOGAR ▶
+                </span>
                 {featured && (
                   <p className="mt-1.5 text-[10px] font-bold text-fuchsia-400 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
@@ -802,7 +893,7 @@ const LiveHub = () => {
           <CartaoAnuncioRegional className="col-span-2 lg:col-span-2" />
         </div>
 
-        <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0">
+        <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0 lg:order-3">
           <div>
             {/* v20 PRO KIT: progressão universal — missões diárias do jogo activo */}
             {!isImmersiveWorld && (

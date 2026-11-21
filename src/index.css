@@ -5891,3 +5891,163 @@ select:focus-visible {
   0% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v74 — DESKTOP REAL: as classes navbar-* eram usadas no Navbar.tsx desde a v9
+   mas NUNCA tiveram CSS — o orb «ao vivo» partia em 2 linhas («0 0 / Ao / Vivo»),
+   o logo não tinha anel, o spotlight/aurora/progresso não existiam. Implementação
+   completa com visual de desktop premium. NADA disto muda o mobile (display do
+   orb continua a ser controlado pelas classes tailwind hidden md:inline-flex).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* anel do logo: borda em gradiente que roda no hover do grupo */
+.navbar-logo-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  padding: 2px;
+  background: conic-gradient(from 140deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--primary)));
+  box-shadow: 0 1px 10px hsl(var(--primary) / 0.35);
+}
+.group:hover .navbar-logo-ring { box-shadow: 0 2px 18px hsl(var(--primary) / 0.55); }
+.navbar-logo-ring img { border-radius: 9999px; background: hsl(var(--background)); }
+
+/* ponto de verificado: azul certificado, sempre redondo */
+.navbar-verified-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 15px;
+  width: 15px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.45);
+  flex: none;
+}
+
+/* ORB «ao vivo» — o furo real: sem display próprio o texto partia em 3 linhas.
+   NÃO define display (tailwind manda: hidden md:inline-flex) — só a caixa interna. */
+.navbar-live-orb {
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: linear-gradient(120deg, rgba(244, 63, 94, 0.14), rgba(168, 85, 247, 0.12));
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+.navbar-live-orb:hover {
+  background: linear-gradient(120deg, rgba(244, 63, 94, 0.24), rgba(168, 85, 247, 0.18));
+  border-color: rgba(244, 63, 94, 0.6);
+  transform: translateY(-1px);
+}
+
+/* anel pulsante do orb (o «●» vivo) */
+.navbar-live-orb-ring {
+  position: relative;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+  border-radius: 9999px;
+  background: #f43f5e;
+  flex: none;
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55);
+  animation: navbar-orb-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes navbar-orb-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+/* spotlight do topo do navbar (halo suave que segue a luz da marca) */
+.navbar-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(600px 140px at 8% 0%, hsl(var(--primary) / 0.10), transparent 70%);
+}
+
+/* faixa aurora: gradiente vivo atrás do navbar (muito subtil, desktop nota) */
+.navbar-aurora-strip {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(420px 90px at 22% 110%, rgba(59, 130, 246, 0.10), transparent 70%),
+    radial-gradient(520px 110px at 58% 120%, rgba(168, 85, 247, 0.10), transparent 70%),
+    radial-gradient(460px 100px at 86% 105%, rgba(20, 184, 166, 0.09), transparent 70%);
+}
+
+/* barra de progresso de scroll (scaleX controlado por motion.div no JSX) */
+.navbar-scroll-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform-origin: 0% 50%;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+}
+
+/* estado scrolled: vidro mais denso */
+.navbar-scrolled { backdrop-filter: blur(18px) saturate(1.4); }
+
+/* item de navegação (trigger do NavigationMenu) */
+.navbar-trigger { letter-spacing: 0.01em; }
+.navbar-group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  width: 18px;
+  border-radius: 6px;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  flex: none;
+}
+.navbar-trigger:hover .navbar-group-icon { background: hsl(var(--primary) / 0.2); }
+
+/* v74 — brilho ambiente só em desktop (o hub hero ganhava profundidade) */
+@media (min-width: 1024px) {
+  .desktop-ambient {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .desktop-ambient::before,
+  .desktop-ambient::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.32;
+  }
+  .desktop-ambient::before {
+    height: 340px; width: 340px;
+    right: -60px; top: -80px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+    animation: ambient-drift 14s ease-in-out infinite alternate;
+  }
+  .desktop-ambient::after {
+    height: 300px; width: 300px;
+    right: 300px; top: 40px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.42), transparent 70%);
+    animation: ambient-drift 18s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes ambient-drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(-40px, 26px, 0) scale(1.12); }
+  }
+}

@@ -81,6 +81,15 @@
 - [x] Gancho honesto graficos().paineisMarcas + limpeza em destruir() — docs/REA-paineis-v71.md §1.
 - [x] Prova: test-gfx-v69 28/0 ×2 (+2 asserções ALTA+LEVE) · regressão desafios-v70 36/0 · kart-v65 65/0 · batalha-v68 30/0 · som-v67 58/0 · online-v66 61/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-paineis-v71.md §3.
 
+## v74 — Desktop real: navbar com CSS a valer + hub/kart/tetris/espaço de ecrã grande (2026-11-21)
+
+- [x] NAVBAR: as 8 classes navbar-* usadas desde a v9 SEM CSS ganham implementação (orb pill 1 linha, anel do logo, verified dot, aurora/spotlight/progresso/scrolled/trigger) + .desktop-ambient só ≥lg — src/index.css.
+- [x] HUB: hero 2 colunas ≥lg com «Destaque de hoje» (kart) + 3 atalhos · ordem desktop real (jogos ANTES das rádios, telemóvel intacto) · pesquisa desktop que FILTRA a grelha · grelha xl:grid-cols-5 com hover+JOGAR.
+- [x] KART: menu ≥lg em 2 colunas (pistas/garagem/arrancar | online/desafios) — telemóvel coluna única, testids intocados.
+- [x] TETRIS/ESPAÇO: legendas ≥lg (teclado+pontuação clássica · controlos P1/P2+power-ups+IA dos 5 inimigos) — invisíveis em 375px.
+- [x] FUROS i18n fechados: livehub.game.kart(.desc) e livehub.game.snakesladders(.desc) não existiam — chaves cruas no ecrã; adicionadas a en/pt/es.
+- [x] Prova: test-desktop-v74.mjs 35/35 ×2 (navbar 6 · hub 12 · kart 9 · legendas+mobile 6 · zero pageerror) · regressão classic 53/0 · desafios 36/0 · kart 65/0 · online 61/0 · batalha 30/0 · gfx 28/0 · som 58/0 · regional 60/0 · web 11/0 · tsc 0 · build OK — worklog v74.
+
 ## v73 — Servidor regional + ponte + Tetris Duelo 2P + IA esquiva (2026-11-21)
 
 - [x] NÚCLEO REGIONAL PURO: regionalCore.ts NOVO (sem localStorage/DOM) — identidade, anúncios, teto 12 contra o estado, permissões («TODOS» atravessa), stats/CTR, panorama, hidratarEstado à prova de JSON podre; regionalBranding.ts wrapper fino com assinaturas intactas (v72 53/0) — docs/REA-regional-v73.md §2.

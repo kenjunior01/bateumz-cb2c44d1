@@ -621,6 +621,26 @@ export default function Tetris({ onScore }: Props) {
         </Suspense>
       )}
       {modo === "solo" && (<>
+      {/* v74 DESKTOP: legenda rica ≥lg — teclas + regras num só golpe de vista
+          (no telemóvel não muda NADA: os botões táteis continuam por baixo) */}
+      <div className="hidden lg:flex w-full items-stretch gap-3 mb-3" data-testid="tetris-legenda-desktop">
+        <div className="flex-1 rounded-xl border border-border bg-card/70 px-4 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1.5">Teclado</p>
+          <div className="flex flex-wrap gap-1.5">
+            {[["←→", "mover"], ["↓", "descer"], ["↑/X", "rodar"], ["Z", "rodar ←"], ["Espaço", "queda dura"], ["C", "hold"], ["P", "pausa"]].map(([k, a]) => (
+              <span key={k} className="inline-flex items-center gap-1 rounded-md bg-secondary/60 px-2 py-0.5 text-[10px] font-bold text-foreground/80">
+                <kbd className="rounded bg-background border border-border px-1.5 py-px font-mono text-[9px]">{k}</kbd> {a}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="w-[290px] rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 mb-1.5">Pontuação clássica</p>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            1 linha 100 · 2 linhas 300 · 3 linhas 500 · <b className="text-amber-400">TETRIS 800</b> × nível · COMBO +50×n · back-to-back ×1,5
+          </p>
+        </div>
+      </div>
       {/* topo: pontuação */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-xl bg-card border border-border px-3 py-2 text-center">

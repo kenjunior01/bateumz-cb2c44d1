@@ -1586,6 +1586,29 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
 
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-[620px] mx-auto">
+      {/* v74 DESKTOP: legenda ≥lg — controlos dos 2 canos + power-ups + IA dos
+          inimigos (v72/v73) num só golpe de vista; telemóvel não muda nada */}
+      <div className="hidden lg:grid grid-cols-3 gap-3 w-full" data-testid="espaco-legenda-desktop">
+        <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-3.5 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-cyan-400 mb-1.5">Controlos</p>
+          <p className="text-[10px] leading-relaxed text-zinc-400">
+            <b className="text-cyan-300">P1</b> A/D mover · W atirar<br />
+            <b className="text-pink-300">P2</b> ←/→ mover · ↑ atirar
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-3.5 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5">Power-ups</p>
+          <p className="text-[10px] leading-relaxed text-zinc-400">
+            M escudo · S duplo · L laser · D drone aliado — o tanque GARANTE um
+          </p>
+        </div>
+        <div className="rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/5 px-3.5 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-fuchsia-400 mb-1.5">IA dos inimigos</p>
+          <p className="text-[10px] leading-relaxed text-zinc-400">
+            scout zigue-zague · fighter ATIRA e desvia · tank aguenta 3 · kamikaze mergulha · splitter divide-se
+          </p>
+        </div>
+      </div>
       {/* Score Panel */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

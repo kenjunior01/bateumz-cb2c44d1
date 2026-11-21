@@ -466,8 +466,13 @@ export default function BateuKart({ onScore, onExit }: Props) {
             )}
           </div>
 
+          {/* v74 DESKTOP: menu em DUAS colunas ≥lg — à esquerda pistas+garagem+arrancar,
+              à direita online+desafios; no telemóvel é a coluna única de sempre */}
+          <div className="mt-7 w-full max-w-6xl lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-6 lg:items-start">
+          <div className="flex flex-col items-center">
+
           {/* pistas */}
-          <h2 className="mt-7 text-lg font-bold text-orange-200">{t("kart.pistas")}</h2>
+          <h2 className="mt-0 text-lg font-bold text-orange-200">{t("kart.pistas")}</h2>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-4xl">
             {PISTAS.map((p) => {
               const bloqueada = nivel < p.nivelNecessario;
@@ -542,9 +547,12 @@ export default function BateuKart({ onScore, onExit }: Props) {
           </button>
           <p className="mt-2 text-[11px] text-fuchsia-300/90 text-center max-w-md" data-testid="kart-batalha-sub">{t("batalha.menu.sub")}</p>
           <p className="mt-1 text-[11px] text-slate-500">{t("kart.controles")}</p>
+          </div>
+
+          <div className="w-full flex flex-col items-center">
 
           {/* ── v66: SALA ONLINE (honesto: sem servidor, nada finge) ── */}
-          <div className="mt-6 w-full max-w-xl rounded-2xl border-2 border-sky-500/40 bg-sky-500/5 p-4" data-testid="kart-online-painel">
+          <div className="mt-6 lg:mt-0 w-full max-w-xl rounded-2xl border-2 border-sky-500/40 bg-sky-500/5 p-4" data-testid="kart-online-painel">
             <div className="flex items-center gap-3">
               <span className="w-10 h-10 rounded-xl grid place-items-center bg-sky-600"><Wifi className="w-5 h-5 text-white" /></span>
               <div className="flex-1 min-w-0">
@@ -636,6 +644,8 @@ export default function BateuKart({ onScore, onExit }: Props) {
               })}
             </div>
             <p className="mt-2 text-[10px] text-slate-500" data-testid="kart-desafios-nota">{t("desafios.nota")}</p>
+          </div>
+          </div>
           </div>
         </div>
 

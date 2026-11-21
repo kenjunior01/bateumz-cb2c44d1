@@ -18,7 +18,8 @@
     "apk:ci": "npm run apk:sync && cd android && ./gradlew assembleDebug",
     "apk:release": "npm run apk:sync && cd android && ./gradlew assembleRelease",
     "verify:sync": "node scripts/verify-db-sync.mjs",
-    "server:kart": "node server/kart-servidor.mjs"
+    "server:kart": "node server/kart-servidor.mjs",
+    "server:regional": "node server/regional-servidor.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

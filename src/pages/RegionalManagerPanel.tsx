@@ -30,10 +30,15 @@ import { COUNTRIES } from "@/lib/regions";
 import { getPaymentMethodsForCountry, groupMethodsByCategory, PAYMENT_CATEGORY_LABELS, type PaymentMethodItem, PAYMENT_METHODS } from "@/lib/wallet";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  PAISES_COFUNDADOR, lerIdentidade, gravarIdentidade, criarAnuncio, listarAnunciosPais,
-  agirAnuncio, estatisticasPais, cssVarsDeIdentidade, GRADIENTES_VALIDOS,
+  PAISES_COFUNDADOR, lerIdentidade, criarAnuncio, listarAnunciosPais,
+  estatisticasPais, cssVarsDeIdentidade, GRADIENTES_VALIDOS,
   type AnuncioRegional, type PaisCoFundador,
 } from "@/lib/regionalBranding";
+import {
+  carregarEstado as ponteCarregarEstado, publicarAnuncio, publicarIdentidade, agirRemoto,
+  testarServidor, guardarConfigServidor, lerConfigServidor, fonteConfigurada, type FonteRegional,
+} from "@/lib/redeRegional";
+import { cn } from "@/lib/utils";
 
 const sb: any = supabase;
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
@@ -178,13 +183,26 @@ export default function RegionalManagerPanel() {
   useEffect(() => { if (activeTab === "financeiro" && financialRecords.length === 0) loadFinancialData(); if (activeTab === "users" && users.length === 0) loadUsers(); if (activeTab === "analytics") loadDailyStats(); }, [activeTab, financialRecords.length, users.length, loadFinancialData, loadUsers, loadDailyStats]);
 
   // v72: carrega os ANÚNCIOS do país do co-fundador (fonte honesta local)
+  // v73: a ponte tenta o SERVIDOR regional e espelha no aparelho — a fonte é
+  // VISÍVEL no painel (nunca finge: sem servidor tudo fica no aparelho).
+  const [fonte, setFonte] = useState<FonteRegional>(fonteConfigurada());
+  const [cfgUrl, setCfgUrl] = useState(lerConfigServidor().url);
+  const [cfgToken, setCfgToken] = useState(lerConfigServidor().token);
+  const [msgServidor, setMsgServidor] = useState("");
   const recarregarAnuncios = useCallback(() => {
     if (!paisValido) return;
     setAnuncios(listarAnunciosPais(paisGestor));
     setStatsAnuncios(estatisticasPais(paisGestor));
   }, [paisValido, paisGestor]);
   useEffect(() => {
-    if (activeTab === "anuncios") { recarregarAnuncios(); setNomeGestor(m => m || managerData?.name || user?.email?.split("@")[0] || "Co-fundador"); }
+    if (activeTab === "anuncios") {
+      (async () => {
+        const r = await ponteCarregarEstado();
+        setFonte(r.fonte);
+        recarregarAnuncios();
+      })();
+      setNomeGestor(m => m || managerData?.name || user?.email?.split("@")[0] || "Co-fundador");
+    }
   }, [activeTab, recarregarAnuncios, managerData, user]);
 
   // Approval/Rejection handlers
@@ -255,18 +273,24 @@ export default function RegionalManagerPanel() {
     // aparelho (bateu_regional_v72) e aplica as variáveis CSS já;
     // funciona MESMO quando o backend não responde.
     if (paisValido) {
-      const r = gravarIdentidade(paisGestor, {
-        corPrimaria: branding.primary_color || lerIdentidade(paisGestor).corPrimaria,
-        corSecundaria: branding.secondary_color || lerIdentidade(paisGestor).corSecundaria,
-        corAcento: branding.accent_color || lerIdentidade(paisGestor).corAcento,
-        nomeTema: branding.theme_name || lerIdentidade(paisGestor).nomeTema,
-        iniciaisLogo: lerIdentidade(paisGestor).iniciaisLogo,
-        slogan: lerIdentidade(paisGestor).slogan,
-      });
-      if (r.d) {
-        const vars = cssVarsDeIdentidade(r.d);
-        for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
-      }
+      // v73: a identidade vai AO SERVIDOR (vale para toda a região) e é
+      // espelhada no aparelho — sem servidor, grava local como sempre.
+      (async () => {
+        const r = await publicarIdentidade(paisGestor, {
+          corPrimaria: branding.primary_color || lerIdentidade(paisGestor).corPrimaria,
+          corSecundaria: branding.secondary_color || lerIdentidade(paisGestor).corSecundaria,
+          corAcento: branding.accent_color || lerIdentidade(paisGestor).corAcento,
+          nomeTema: branding.theme_name || lerIdentidade(paisGestor).nomeTema,
+          iniciaisLogo: lerIdentidade(paisGestor).iniciaisLogo,
+          slogan: lerIdentidade(paisGestor).slogan,
+        });
+        if (r.ok) {
+          const id = lerIdentidade(paisGestor);
+          const vars = cssVarsDeIdentidade(id);
+          for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
+          if (r.fonte === "servidor") toast.success("Identidade aplicada EM TODA A REGIÃO (servidor regional).");
+        }
+      })();
     }
     setSaving(false);
   };
@@ -703,6 +727,29 @@ export default function RegionalManagerPanel() {
 
           {/* === v72: ANÚNCIOS DO CO-FUNDADOR (gestão independente do país) === */}
           <TabsContent value="anuncios" className="space-y-4">
+            {/* v73: SERVIDOR REGIONAL — quando ligado, TUDO vale para toda a região */}
+            <Card className="neon-border border-dashed"><CardContent className="pt-4 pb-3 px-4 space-y-2">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                <Radio className="w-3.5 h-3.5" /> Servidor regional
+                <Badge variant="secondary" className={cn("text-[9px] font-bold", fonte === "servidor" ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600")} data-testid="gestor-fonte">
+                  {fonte === "servidor" ? "LIGADO — ações valem para TODA a região" : "APARELHO (local — nada se perde)"}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Input value={cfgUrl} onChange={e => setCfgUrl(e.target.value)} placeholder="http://onde-o-servidor-corre:8799" className="h-8 w-56 text-[11px]" data-testid="gestor-servidor-url" />
+                <Input value={cfgToken} onChange={e => setCfgToken(e.target.value)} type="password" placeholder={`teu token de ${paisValido ? paisGestor : "gestor"}`} className="h-8 w-44 text-[11px]" data-testid="gestor-servidor-token" />
+                <Button size="sm" variant="outline" className="h-8 text-[11px]" data-testid="gestor-servidor-testar" onClick={async () => {
+                  guardarConfigServidor(cfgUrl, cfgToken);
+                  const r = await testarServidor();
+                  setMsgServidor(r.mensagem);
+                  const est = await ponteCarregarEstado();
+                  setFonte(est.fonte);
+                  recarregarAnuncios();
+                }}>Ligar</Button>
+                {msgServidor && <span className="text-[10px] text-muted-foreground max-w-[280px] truncate" data-testid="gestor-servidor-msg">{msgServidor}</span>}
+              </div>
+            </CardContent></Card>
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { label: "Anúncios", value: statsAnuncios.anuncios, icon: Megaphone },
@@ -746,13 +793,15 @@ export default function RegionalManagerPanel() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-muted-foreground max-w-md">Aparece no hub PARA OS JOGADORES DE {paisGestor} · impressões e cliques contados no aparelho · o ADMIN vê e pode pausar de qualquer país.</p>
-                    <Button size="sm" className="gap-1" data-testid="criar-anuncio" onClick={() => {
-                      const r = criarAnuncio({ pais: paisGestor, tipo: formAnuncio.tipo as "faixa" | "destaque", titulo: formAnuncio.titulo, texto: formAnuncio.texto, ctaEtiqueta: formAnuncio.ctaEtiqueta, ctaUrl: formAnuncio.ctaUrl, gradiente: formAnuncio.gradiente, criadoPor: nomeGestor });
-                      if (!r.d) {
+                    <p className="text-[10px] text-muted-foreground max-w-md">Aparece no hub PARA OS JOGADORES DE {paisGestor} · impressões e cliques contados honestamente · o ADMIN vê e pode pausar de qualquer país.</p>
+                    <Button size="sm" className="gap-1" data-testid="criar-anuncio" onClick={async () => {
+                      // v73: vai ao SERVIDOR quando configurado (vale para TODA a região);
+                      // sem servidor, o aparelho resolve — mesmoas regras do núcleo.
+                      const r = await publicarAnuncio({ pais: paisGestor, tipo: formAnuncio.tipo as "faixa" | "destaque", titulo: formAnuncio.titulo, texto: formAnuncio.texto, ctaEtiqueta: formAnuncio.ctaEtiqueta, ctaUrl: formAnuncio.ctaUrl, gradiente: formAnuncio.gradiente, criadoPor: nomeGestor });
+                      if (!r.ok) {
                         const motivos: Record<string, string> = { pais: "país inválido", tipo: "tipo inválido", titulo: "título deve ter 3-40 caracteres", texto: "texto deve ter 3-120 caracteres", cta: "etiqueta deve ter 2-24 caracteres", url: "destino deve ser caminho interno /…", cheio: "limite de 12 anúncios por país", janela: "agendamento inválido", gradiente: "cores inválidas", ok: "" };
-                        toast.error(`Recusado: ${motivos[r.motivo] || r.motivo}`);
-                      } else { toast.success("Anúncio criado — já está no ar para o teu país!"); setFormAnuncio(p => ({ ...p, titulo: "", texto: "" })); recarregarAnuncios(); }
+                        toast.error(`Recusado: ${motivos[r.motivo as string] || r.motivo || "erro"}`);
+                      } else { toast.success(r.fonte === "servidor" ? "Anúncio no SERVIDOR — já está no ar para toda a região!" : "Anúncio criado — já está no ar para o teu país!"); setFormAnuncio(p => ({ ...p, titulo: "", texto: "" })); recarregarAnuncios(); }
                     }}><Plus className="w-3.5 h-3.5" /> Publicar</Button>
                   </div>
                 </>
@@ -769,10 +818,19 @@ export default function RegionalManagerPanel() {
                       <p className="text-[10px] text-muted-foreground truncate">{a.tipo} · {a.impressoes} impressões · {a.cliques} cliques ({(a.impressoes > 0 ? (a.cliques / a.impressoes) * 100 : 0).toFixed(1)}%)</p>
                     </div>
                     <Badge variant="secondary" className={a.estado === "ativo" ? "bg-emerald-500/15 text-emerald-600 text-[10px]" : "text-[10px]"}>{a.estado}</Badge>
-                    <Button size="sm" variant="ghost" onClick={() => { agirAnuncio(a.id, a.estado === "ativo" ? "pausar" : "reativar", paisGestor); recarregarAnuncios(); }}>
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      // v73: a ação vai AO SERVIDOR (o papel é dele lá também)
+                      const r = await agirRemoto(a.id, a.estado === "ativo" ? "pausar" : "reativar", paisGestor);
+                      if (!r.ok) toast.error(r.erro || "ação recusada");
+                      recarregarAnuncios();
+                    }}>
                       {a.estado === "ativo" ? <XCircle className="w-3.5 h-3.5 text-amber-500" /> : <Play className="w-3.5 h-3.5 text-emerald-500" />}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { agirAnuncio(a.id, "remover", paisGestor); recarregarAnuncios(); }}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      const r = await agirRemoto(a.id, "remover", paisGestor);
+                      if (!r.ok) toast.error(r.erro || "remoção recusada");
+                      recarregarAnuncios();
+                    }}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
                   </div>
                 ))}
               </CardContent></Card>

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { playSfx, haptic, unlockAudio } from "@/components/games/kit";
+// v73: ESQUIVA — núcleo puro da IA que desvia das balas (testável em Node)
+import { decidirEsquiva, ESQUIVA_SKILL, ESQUIVA_DURACAO, ESQUIVA_VEL } from "@/game/space/ia";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -59,6 +61,8 @@ interface Enemy {
   strafeDir: number;        // fighter: direção de strafe
   targetY: number;          // fighter: altitude de combate
   leaveAt: number;          // fighter: frame em que foge
+  dodgeCd: number;          // v73: frames de merger de esquiva restantes
+  dodgeDir: number;         // v73: direção de esquiva decidida (-1|0|1)
 }
 
 type EnemyKind = "normal" | "scout" | "fighter" | "tank" | "kamikaze" | "splitter";
@@ -313,6 +317,8 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
       strafeDir: Math.random() < 0.5 ? 1 : -1,
       targetY: 90 + Math.random() * 110,
       leaveAt: 540 + Math.floor(Math.random() * 160),
+      dodgeCd: 0,   // v73: a esquiva nasce desligada (o núcleo decide)
+      dodgeDir: 0,
     };
 
     switch (base.kind) {
@@ -488,6 +494,18 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
         if (e.hitFlash > 0) e.hitFlash--;
         e.rotation += e.rotSpeed;
         e.wobble += e.wobbleSpeed;
+
+        // ── v73: ESQUIVA — os vivos desviam-se das balas do jogador ──
+        // decidirEsquiva é PURO e DETERMINÍSTICO (src/game/space/ia.ts):
+        // bala a subir dentro do alcance → merger para LONGE dela; o tank
+        // (skill 0) NUNCA desvia — é um tanque. O merger dura 12 frames.
+        if (e.dodgeCd > 0) {
+          e.dodgeCd--;
+          e.x += e.dodgeDir * ESQUIVA_VEL * (ESQUIVA_SKILL[e.kind as keyof typeof ESQUIVA_SKILL] ?? 0);
+        } else {
+          const dir = decidirEsquiva(e, g.bullets, CANVAS_W);
+          if (dir !== 0) { e.dodgeDir = dir; e.dodgeCd = ESQUIVA_DURACAO; }
+        }
 
         // ── v72: IA POR TIPO ──
         if (e.kind === "fighter") {
@@ -1989,7 +2007,7 @@ const SpaceShooter = ({ onScore, liveCode }: Props) => {
             </p>
             <p className="flex items-center justify-center gap-1 flex-wrap">
               <span className="text-rose-400 font-bold">scouts</span> ·
-              <span className="text-lime-400 font-bold">fighters (atiram!)</span> ·
+              <span className="text-lime-400 font-bold">fighters (atiram e ESQUIVAM!)</span> ·
               <span className="text-purple-400 font-bold">tanques</span> ·
               <span className="text-red-500 font-bold">kamikazes</span> ·
               <span className="text-sky-400 font-bold">divisores</span>

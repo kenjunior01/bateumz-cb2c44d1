@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, ChevronRight } from "lucide-react";
 import { useRegionalTheme } from "@/contexts/RegionalThemeContext";
 import {
-  anunciosAtivos, registrarImpressao, registrarClique, urlSegura,
+  anunciosAtivos, urlSegura,
   type AnuncioRegional, type PaisCoFundador,
 } from "@/lib/regionalBranding";
+import { contarImpressao, contarClique } from "@/lib/redeRegional";
 import { cn } from "@/lib/utils";
 
 // ── FAIXA DE ANÚNCIOS REGIONAIS — v72 ─────────────────────────
@@ -39,11 +40,12 @@ export function FaixaAnunciosRegionais({ className }: { className?: string }) {
     return () => clearInterval(t);
   }, [atual, lista.length]);
 
-  // impressão honesta (1× por anúncio por montagem)
+  // impressão honesta (1× por anúncio por montagem) — v73: conta no
+  // APARELHO e, se houver SERVIDOR regional, lá também (fire-and-forget)
   useEffect(() => {
     if (atual && ultimaContada.current !== atual.id) {
       ultimaContada.current = atual.id;
-      registrarImpressao(atual.id);
+      contarImpressao(atual.id);
     }
   }, [atual]);
 
@@ -57,7 +59,7 @@ export function FaixaAnunciosRegionais({ className }: { className?: string }) {
           href={urlSegura(atual.ctaUrl)}
           onClick={(e) => {
             e.preventDefault();
-            registrarClique(atual.id);
+            contarClique(atual.id);
             window.location.assign(urlSegura(atual.ctaUrl));
           }}
           initial={{ opacity: 0, y: -14 }}
@@ -102,7 +104,7 @@ export function CartaoAnuncioRegional({ className }: { className?: string }) {
   useEffect(() => {
     if (destaque && contou.current !== destaque.id) {
       contou.current = destaque.id;
-      registrarImpressao(destaque.id);
+      contarImpressao(destaque.id);
     }
   }, [destaque]);
 
@@ -113,7 +115,7 @@ export function CartaoAnuncioRegional({ className }: { className?: string }) {
       href={urlSegura(destaque.ctaUrl)}
       onClick={(e) => {
         e.preventDefault();
-        registrarClique(destaque.id);
+        contarClique(destaque.id);
         window.location.assign(urlSegura(destaque.ctaUrl));
       }}
       whileHover={{ scale: 1.02 }}

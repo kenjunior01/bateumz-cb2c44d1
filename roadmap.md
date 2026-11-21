@@ -81,6 +81,15 @@
 - [x] Gancho honesto graficos().paineisMarcas + limpeza em destruir() — docs/REA-paineis-v71.md §1.
 - [x] Prova: test-gfx-v69 28/0 ×2 (+2 asserções ALTA+LEVE) · regressão desafios-v70 36/0 · kart-v65 65/0 · batalha-v68 30/0 · som-v67 58/0 · online-v66 61/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-paineis-v71.md §3.
 
+## v73 — Servidor regional + ponte + Tetris Duelo 2P + IA esquiva (2026-11-21)
+
+- [x] NÚCLEO REGIONAL PURO: regionalCore.ts NOVO (sem localStorage/DOM) — identidade, anúncios, teto 12 contra o estado, permissões («TODOS» atravessa), stats/CTR, panorama, hidratarEstado à prova de JSON podre; regionalBranding.ts wrapper fino com assinaturas intactas (v72 53/0) — docs/REA-regional-v73.md §2.
+- [x] SERVIDOR REGIONAL autoritativo: server/regional-servidor.mjs NOVO (npm run server:regional, porto 8790) — O MESMO núcleo no servidor; papéis por token (admin «TODOS» · gestor por país); públicos /saude /publico/:pais /impressao /clique; /estado, /panorama (exclusivo do admin), /identidade, /anuncio, /acao com 403/422 do núcleo; persistência atómica (morre e renasce, stats sobrevivem); sem tokens → SÓ-LEITURA declarado — docs/REA-regional-v73.md §3.
+- [x] PONTE CLIENTE redeRegional.ts NOVO: servidor primeiro (teto 1,8 s), espelha no aparelho, recusa do servidor devolve o motivo SEM cair local, sem servidor fonte honesta «APARELHO»; cartão «Servidor regional» + badge LIGADO/APARELHO no painel do co-fundador e badge SERVIDOR/APARELHO no AdminAds; AdSlot conta pela ponte — docs/REA-regional-v73.md §4.
+- [x] TETRIS DUELO 2P: TetrisDuelo.tsx NOVO (botão no idle do solo, lazy) — 2 tabuleiros com saco/hold/nível próprios, WASD+Espaço+Q vs Setas+Enter+M, LIXO DOUBLE 1/TRIPLE 2/TETRIS 4 com furo, K.O. por topo imediato, revanche, pausa honesta dos DOIS, gancho ?duelo-teste=1 — docs/REA-regional-v73.md §5.
+- [x] IA ESQUIVA na Guerra Espacial: src/game/space/ia.ts NOVO puro/determinístico — merger para longe da bala (dy≤150, x size+46, centrada → lado com mais espaço), destreza scout 1.15 > fighter 0.95 > kamikaze 0.55 > splitter 0.3 > tank/normal 0, merger 12 frames ×2.0; legenda «atiram e ESQUIVAM!» — docs/REA-regional-v73.md §6.
+- [x] Prova: test-regional-v73.mjs 60/60 ×2 (núcleo 12 + esquiva 8 + servidor real 14 + E2E ponte 11 + duelo 7 + guerra 5) · regressão classic-v72 53/0 · desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · gfx-v69 28/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-regional-v73.md §7-8.
+
 ## v72 — Clássico Tetris + Guerra Espacial avançada + IA de verdade + Co-fundadores regionais (2026-11-19)
 
 - [x] TETRIS CLÁSSICO: saco de 7, hold, fantasma, kicks, combos, B2B, níveis com curva de gravidade, partículas/tremor/flash, recorde no aparelho, teclado+móvel, pausa honesta — docs/REA-classicos-v72.md §2.

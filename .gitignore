@@ -31,3 +31,4 @@ shot-*.mjs
 .env.local
 server/.env
 .bundle-*.mjs
+server/data/

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { Play, RotateCcw, Pause, Trophy, ChevronLeft, ChevronRight, ChevronDown, RotateCw, Archive, ArrowDownToLine } from "lucide-react";
+import { Play, RotateCcw, Pause, Trophy, ChevronLeft, ChevronRight, ChevronDown, RotateCw, Archive, ArrowDownToLine, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -42,8 +42,11 @@ const LINHAS_POR_NIVEL = 10;
 const LOCK_DELAY_MS = 500;
 const PONTOS_LINHA = [0, 100, 300, 500, 800];
 
+// v73: exportados para o DUELO 2P (TetrisDuelo.tsx) — fonte única das peças
+export { LARG, ALT, LOCK_DELAY_MS, PONTOS_LINHA, LINHAS_POR_NIVEL };
+
 // peças (matrizes 4×4 no estado de rotação 0 — rotação por matriz)
-const PECAS: Record<string, { cor: string; neon: string; celas: Array<[number, number]>[] }> = {
+export const PECAS: Record<string, { cor: string; neon: string; celas: Array<[number, number]>[] }> = {
   I: {
     cor: "#22d3ee", neon: "#0ea5e9",
     celas: [
@@ -109,10 +112,10 @@ const PECAS: Record<string, { cor: string; neon: string; celas: Array<[number, n
   },
 };
 
-type TipoPeca = keyof typeof PECAS;
-interface Parte { tipo: TipoPeca; rot: number; x: number; y: number }
+export type TipoPeca = keyof typeof PECAS;
+export interface Parte { tipo: TipoPeca; rot: number; x: number; y: number }
 
-function novoSaco(): TipoPeca[] {
+export function novoSaco(): TipoPeca[] {
   const tipos: TipoPeca[] = ["I", "O", "T", "S", "Z", "J", "L"];
   for (let i = tipos.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -121,17 +124,22 @@ function novoSaco(): TipoPeca[] {
   return tipos;
 }
 
-const KICKS: Array<[number, number]> = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, -2]];
+export const KICKS: Array<[number, number]> = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, -2]];
 
-function gravidadeMs(nivel: number): number {
+export function gravidadeMs(nivel: number): number {
   // curva clássica suavizada: nível 1 = 800 ms → nível 15 = 80 ms
   return Math.max(80, Math.round(800 * Math.pow(0.85, nivel - 1)));
 }
+
+// v73: o DUELO 2P carrega só quando é pedido (o solo continua leve)
+const TetrisDuelo = lazy(() => import("./TetrisDuelo"));
 
 interface Particula { x: number; y: number; vx: number; vy: number; vida: number; maxVida: number; cor: string; tam: number }
 
 export default function Tetris({ onScore }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // v73: DUELO 2P — quando ativo, o duelo substitui o solo (botão «Voltar ao solo»)
+  const [modo, setModo] = useState<"solo" | "duelo">("solo");
   const [fase, setFase] = useState<Phase>("idle");
   const [pontos, setPontos] = useState(0);
   const [linhas, setLinhas] = useState(0);
@@ -607,6 +615,12 @@ export default function Tetris({ onScore }: Props) {
 
   return (
     <div className="w-full max-w-3xl mx-auto select-none" data-testid="tetris-root">
+      {modo === "duelo" && (
+        <Suspense fallback={<div className="py-16 text-center text-sm text-muted-foreground">a abrir o duelo…</div>}>
+          <TetrisDuelo onScore={onScore} onSair={() => setModo("solo")} />
+        </Suspense>
+      )}
+      {modo === "solo" && (<>
       {/* topo: pontuação */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-xl bg-card border border-border px-3 py-2 text-center">
@@ -636,6 +650,9 @@ export default function Tetris({ onScore }: Props) {
               </motion.div>
               <Button size="lg" onClick={comecar} className="gap-2 font-bold" data-testid="tetris-comecar">
                 <Play className="w-5 h-5" /> Jogar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setModo("duelo")} className="gap-1.5" data-testid="tetris-duelo">
+                <Swords className="w-4 h-4" /> Duelo 2P — mesmo ecrã
               </Button>
               <p className="text-[10px] text-muted-foreground">← → mover · ↑ rodar · ↓ suave · espaço = queda dura · C = hold</p>
             </div>
@@ -716,6 +733,7 @@ export default function Tetris({ onScore }: Props) {
           </Button>
         </div>
       )}
+      </>) }
     </div>
   );
 }

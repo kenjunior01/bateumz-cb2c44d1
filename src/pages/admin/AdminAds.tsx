@@ -13,8 +13,12 @@ import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   PAISES_COFUNDADOR, PAIS_INFO, panoramaPaises, listarTodosAnuncios,
-  agirAnuncio, type PaisCoFundador, type AnuncioRegional,
+  type PaisCoFundador, type AnuncioRegional,
 } from "@/lib/regionalBranding";
+import {
+  carregarEstado as ponteCarregarEstado, agirRemoto, fonteConfigurada,
+  testarServidor, guardarConfigServidor, lerConfigServidor, type FonteRegional,
+} from "@/lib/redeRegional";
 import { cn } from "@/lib/utils";
 
 // ═══ ADMIN · ANÚNCIOS REGIONAIS — v72 ═════════════════════════
@@ -35,8 +39,16 @@ export default function AdminAds() {
   const [anuncios, setAnuncios] = useState<AnuncioRegional[]>([]);
   const [filtro, setFiltro] = useState<FiltroPais>("todos");
   const [busca, setBusca] = useState("");
+  // v73: a FONTE da verdade é visível — servidor regional ou aparelho
+  const [fonte, setFonte] = useState<FonteRegional>(fonteConfigurada());
+  const [cfgUrl, setCfgUrl] = useState(lerConfigServidor().url);
+  const [cfgToken, setCfgToken] = useState(lerConfigServidor().token);
+  const [msgServidor, setMsgServidor] = useState("");
 
-  const recarregar = useCallback(() => {
+  const recarregar = useCallback(async () => {
+    // a ponte espelha o servidor no aparelho; sem servidor, tudo local
+    const r = await ponteCarregarEstado();
+    setFonte(r.fonte);
     setPanorama(panoramaPaises());
     setAnuncios(listarTodosAnuncios());
     setCarregando(false);
@@ -49,15 +61,29 @@ export default function AdminAds() {
     (busca.trim() === "" || (a.titulo + a.texto + a.criadoPor).toLowerCase().includes(busca.toLowerCase()))
   ), [anuncios, filtro, busca]);
 
-  const agir = (a: AnuncioRegional, acao: "pausar" | "reativar" | "remover") => {
-    const r = agirAnuncio(a.id, acao, "TODOS");
-    if (!r) { toast.error("Não foi possível agir sobre o anúncio."); return; }
-    toast.success(acao === "remover" ? "Anúncio removido." : acao === "pausar" ? "Anúncio pausado." : "Anúncio reativado.");
+  const agir = async (a: AnuncioRegional, acao: "pausar" | "reativar" | "remover") => {
+    // v73: o papel é executado NO SERVIDOR quando existe (o admin atravessa
+    // países aí a valer); sem servidor, o aparelho resolve como sempre.
+    const r = await agirRemoto(a.id, acao, "TODOS");
+    if (!r.ok) { toast.error(r.erro || "Não foi possível agir sobre o anúncio."); return; }
+    toast.success(
+      (acao === "remover" ? "Anúncio removido." : acao === "pausar" ? "Anúncio pausado." : "Anúncio reativado.")
+      + (r.fonte === "servidor" ? " (servidor regional)" : "")
+    );
     recarregar();
   };
 
   if (authLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin" /></div>;
   if (role && role !== "admin" && role !== "superadmin") return <Navigate to="/admin" replace />;
+
+  const ligarServidor = async () => {
+    guardarConfigServidor(cfgUrl, cfgToken);
+    const t = await testarServidor();
+    setMsgServidor(t.mensagem);
+    if (t.ok) { toast.success("Servidor regional ligado — ações valem para TODA a região."); }
+    else toast.info(t.mensagem);
+    recarregar();
+  };
 
   const totais = panorama.reduce((s, p) => ({
     anuncios: s.anuncios + p.stats.anuncios,
@@ -73,12 +99,34 @@ export default function AdminAds() {
           <Megaphone className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Anúncios Regionais · Visão Total</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">Anúncios Regionais · Visão Total
+            <Badge className={cn("text-[10px] font-bold", fonte === "servidor"
+              ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/40"
+              : "bg-amber-500/15 text-amber-600 border-amber-500/40")} data-testid="admin-fonte">
+              {fonte === "servidor" ? "SERVIDOR regional" : "APARELHO (local)"}
+            </Badge>
+          </h1>
           <p className="text-sm text-muted-foreground">
             Os co-fundadores gerem MZ · AO · BR · PT de forma independente — <strong className="text-foreground">tu vês e controlas TUDO</strong>.
           </p>
         </div>
       </div>
+
+      {/* v73: ligação ao SERVIDOR regional (opcional — sem ele, tudo no aparelho) */}
+      <Card className="border-dashed">
+        <CardContent className="pt-4 pb-3 px-4 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+            <Globe className="h-3.5 w-3.5" /> Servidor regional (opcional)
+            <Badge variant="secondary" className="text-[9px]">as ações valem para toda a região</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Input value={cfgUrl} onChange={(e) => setCfgUrl(e.target.value)} placeholder="http://onde-o-servidor-corre:8799" className="h-9 w-64 text-xs" data-testid="admin-servidor-url" />
+            <Input value={cfgToken} onChange={(e) => setCfgToken(e.target.value)} type="password" placeholder="token ADMIN (REGIAO_ADMIN_TOKEN)" className="h-9 w-56 text-xs" data-testid="admin-servidor-token" />
+            <Button size="sm" onClick={ligarServidor} className="h-9" data-testid="admin-servidor-testar">Ligar e testar</Button>
+            {msgServidor && <span className="text-[10px] text-muted-foreground max-w-xs truncate" data-testid="admin-servidor-msg">{msgServidor}</span>}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs globais dos 4 países */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

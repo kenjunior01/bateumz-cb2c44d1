@@ -440,6 +440,7 @@ export default function BateuKart({ onScore, onExit }: Props) {
           </h1>
           <p className="mt-3 max-w-2xl text-center text-slate-300 text-sm sm:text-base">{t("kart.menu.sub")}</p>
           <p className="mt-1 text-center text-[11px] text-slate-400" data-testid="kart-menu-nota">{t("kart.menu.nota")}</p>
+          <p className="mt-1 text-center text-[11px] text-emerald-300/90" data-testid="kart-menu-ia">{t("kart.menu.ia")}</p>
 
           {/* v67 SOM + v69 GFX: botões honestos — o estado vive no aparelho */}
           <div className="mt-2 flex justify-center gap-2">

@@ -14,7 +14,9 @@
 //
 // Conteúdo: pistas Catmull-Rom fechadas · física arcade com
 // DERRAPAGEM e MINI-TURBO · 8 itens com pesos por POSIÇÃO (atrás
-// = armas melhores) · IA de 11 bots com rubber-banding suave ·
+// = armas melhores) · IA de 11 bots (v75 ELITE: ESQUIVA cascas/
+// mísseis/óleo, escudo levantado NA HORA, itens com estratégia,
+// desvio de trânsito para ultrapassar e reação à largada) ·
 // voltas/posições/tempo por amostras · garagem (4 karts ×
 // 5 melhorias × 5 níveis) · save validado · recompensas.
 // ============================================================
@@ -437,6 +439,8 @@ export interface Corredor {
   stats: StatsKart;
   iaRubber: number;
   iaOffset: number; iaSkill: number; iaItemTimer: number; iaFrenagem: number;
+  iaDesvio: number; // v75: desvio lateral DINÂMICO (esquiva perigos; decai a 0)
+  iaLargada: number; // v75: reação à largada (s) — 0 para humanos
 }
 
 export interface ProjetilKart { id: number; tipo: "casca" | "cascaAlvo" | "missil"; x: number; z: number; ang: number; vel: number; dono: number; alvo: number; vida: number; iAmostra: number }
@@ -518,6 +522,7 @@ export function novaCorrida(opts: {
     const p = posicaoNaPista(pista, s, lateral);
     const stats = eJogador ? statsDe(kart, opts.melhoriasJogador ?? {}) : statsDe(kart, {});
     const ref = amostraPerto(pista, p.x, p.z, p.i);
+    const skill = eJogador ? 1 : 0.82 + rng() * 0.13; // destreza do bot (v75: também define a reação à largada)
     corredores.push({
       id: i,
       nome: eJogador ? (opts.nomeJogador?.trim() || "Tu") : NOMES_BOTS[(i < 6 ? i : i - 1) % NOMES_BOTS.length],
@@ -533,9 +538,11 @@ export function novaCorrida(opts: {
       stats,
       iaRubber: 1,
       iaOffset: eJogador ? 0 : (rng() - 0.5) * pista.def.largura * 1.1,
-      iaSkill: eJogador ? 1 : 0.82 + rng() * 0.13,
+      iaSkill: skill,
       iaItemTimer: 2 + rng() * 4,
       iaFrenagem: 0.6 + rng() * 0.5,
+      iaDesvio: 0,
+      iaLargada: eJogador ? 0 : 0.32 - (skill - 0.82) * 1.85 + rng() * 0.05,
     });
   }
   return {
@@ -624,14 +631,109 @@ function acertar(e: EstadoCorrida, vitima: Corredor, tipo: ItemKartId, por: numb
   e.eventos.push({ t: "golpe", alvo: vitima.id, tipo, por });
 }
 
-// ── IA dos bots ────────────────────────────────────────────────
+// ── IA dos bots (v75 ELITE) ────────────────────────────────────
+// As linhas de v65 continuam (traçado + travagem + deriva + rubber-
+// banding + roleta de itens). O que é NOVO: os bots agora CONDUZEM
+// contra os perigos em vez de os comer todos — esquivam projéteis
+// (casca reta, casca-alvo e míssil teleguiados), contornam o óleo,
+// tiram-se da linha para ultrapassar sem choque, levantam o ESCUDO
+// no momento certo em vez de o gastar à toa, guardam o turbo para as
+// retas, não desperdiçam armas em alvos com escudo e reagem à largada
+// como pilotos (o reflexo cresce com a destreza iaSkill).
+// TUDO determinístico: só matemática sobre o estado — nada de Math.random.
+
+const DESVIO_TETO = 5.8; // teto do desvio lateral (u) — dentro da estrada (largura ≥ 6,5)
+const DESVIO_CRESC = 9; // u/s de subida do desvio quando há ameaça
+const DESVIO_RELAXA = 2.2; // u/s de descida quando a pista fica livre
+
+/** Curvatura média das próximas n amostras (≈0 = reta perfeita). */
+function curvaFrente(pista: Pista, iAmostra: number, n: number): number {
+  const m = pista.amostras.length;
+  let soma = 0;
+  for (let k = 1; k <= n; k++) soma += pista.amostras[((iAmostra + k) % m + m) % m].curva;
+  return soma / n;
+}
+
 function iaDecidir(e: EstadoCorrida, c: Corredor, dt: number): EntradaKart {
   const ent = entradaParada();
   const pista = e.pista;
   const m = pista.amostras.length;
+
+  // reação à largada: o «JÁ» não apanha ninguém a dormir, mas ninguém
+  // é máquina — melhor destreza → reflexo mais curto (0,08…0,37 s)
+  if (e.tempo < c.iaLargada) return ent;
+
+  // rubber-banding SUAVE (padrão Mario Kart: os de trás ganham fôlego)
+  const jogador = e.corredores[IDX_JOGADOR];
+  const gap = jogador.sTotal - c.sTotal;
+  c.iaRubber = gap > 120 ? 1.07 : gap < -120 ? 0.93 : 1;
+
+  // ── DESVIO (v75): projéteis > óleo > trânsito. O iaOffset é a linha
+  //    pessoal do bot; o iaDesvio é lateral DINÂMICA que cresce para
+  //    fugir do perigo e relaxa a 0 quando a pista fica livre.
+  const skill = clamp((c.iaSkill - 0.78) / 0.17, 0.25, 1); // destreza 0,25…1
+  const minhaLat = c.lateralPerto;
+  const tetoLat = pista.def.largura * 0.92;
+  const fugirDe = (perigoLat: number, forca: number): number => {
+    let dir = perigoLat > minhaLat ? -1 : 1; // longe do perigo…
+    if (Math.abs(c.iaOffset + dir * DESVIO_TETO * forca) > tetoLat) dir = -dir; // …sem pista desse lado → contorno pelo outro
+    return dir * DESVIO_TETO * forca;
+  };
+  let alvoDesvio = 0;
+  let ameacaAtiva = false;
+
+  // 1) projéteis — o PERIGO MAIS PERTO decide
+  let perigo: { d: number; lat: number; forca: number } | null = null;
+  for (const p of e.projeteis) {
+    if (p.dono === c.id) continue;
+    const d = Math.hypot(p.x - c.x, p.z - c.z);
+    const tele = p.alvo === c.id; // teleguiado VEM ATIRA-SE-ME — raio de atenção maior
+    if (d > (tele ? 62 : 46)) continue;
+    const lp = amostraPerto(pista, p.x, p.z, c.iAmostra).lateral;
+    if (!tele && Math.abs(lp - minhaLat) > 5.5) continue; // passa longe da minha linha
+    const forca = (p.tipo === "missil" ? 1 : p.tipo === "cascaAlvo" ? 0.85 : 0.7) * skill;
+    if (!perigo || d < perigo.d) perigo = { d, lat: lp, forca };
+  }
+  if (perigo) { alvoDesvio = fugirDe(perigo.lat, perigo.forca); ameacaAtiva = true; }
+
+  // 2) óleo — mancha no caminho → contornar (a minha própria: a física
+  //    perdoa 1,5 s; eu contorno a partir das 2)
+  if (!ameacaAtiva) {
+    for (const h of e.perigos) {
+      if (h.dono === c.id && h.idade < 2) continue;
+      const d = Math.hypot(h.x - c.x, h.z - c.z);
+      if (d > 48) continue;
+      const lh = amostraPerto(pista, h.x, h.z, c.iAmostra).lateral;
+      if (Math.abs(lh - minhaLat) < 4.4) { alvoDesvio = fugirDe(lh, 1.0 * skill); ameacaAtiva = true; break; }
+    }
+  }
+
+  // 3) trânsito — kart colado à frente na minha linha → tirar-me da
+  //    colisão (que custa velocidade aos DOIS) e tomar a linha por fora
+  if (!ameacaAtiva) {
+    let melhor: Corredor | null = null, dMelhor = 14;
+    for (const o of e.corredores) {
+      if (o.id === c.id || o.terminou) continue;
+      const d = Math.hypot(o.x - c.x, o.z - c.z);
+      if (d < dMelhor && o.sTotal > c.sTotal) { melhor = o; dMelhor = d; }
+    }
+    if (melhor) {
+      const lo = amostraPerto(pista, melhor.x, melhor.z, c.iAmostra).lateral;
+      if (Math.abs(lo - minhaLat) < 3.4) { alvoDesvio = fugirDe(lo, 0.55 * skill); ameacaAtiva = true; }
+    }
+  }
+
+  // dinâmica do desvio: sobe rápido com ameaça, relaxa sem ela
+  if (ameacaAtiva) c.iaDesvio += clamp(alvoDesvio - c.iaDesvio, -DESVIO_CRESC * dt, DESVIO_CRESC * dt);
+  else c.iaDesvio -= Math.sign(c.iaDesvio) * Math.min(Math.abs(c.iaDesvio), DESVIO_RELAXA * dt);
+  c.iaDesvio = clamp(c.iaDesvio, -DESVIO_TETO, DESVIO_TETO);
+
+  // direção: em ameaça o olhar ENCOLHE (55%) — o volante responde ao
+  // desvio AGORA em vez de surrar o ponto de fuga 50 u à frente
   const look = 10 + Math.floor(c.vel * 0.35);
-  const alvoA = pista.amostras[((c.iAmostra + look) % m + m) % m];
-  const tx = alvoA.x + alvoA.nx * c.iaOffset, tz = alvoA.z + alvoA.nz * c.iaOffset;
+  const lookEfetivo = ameacaAtiva ? Math.max(6, Math.floor(look * 0.55)) : look;
+  const alvoA = pista.amostras[((c.iAmostra + lookEfetivo) % m + m) % m];
+  const tx = alvoA.x + alvoA.nx * (c.iaOffset + c.iaDesvio), tz = alvoA.z + alvoA.nz * (c.iaOffset + c.iaDesvio);
   const dif = Math.atan2(tx - c.x, tz - c.z) - c.ang;
   const difN = Math.atan2(Math.sin(dif), Math.cos(dif));
   ent.virar = clamp(difN * 2.4, -1, 1);
@@ -642,20 +744,35 @@ function iaDecidir(e: EstadoCorrida, c: Corredor, dt: number): EntradaKart {
   if (c.vel > Math.max(18, velCurva)) { ent.acelerar = false; ent.travar = c.vel > velCurva + 6; }
   // drift nas curvas fechadas
   ent.derrapar = Math.abs(difN) > 0.32 && c.vel > 20;
-  // rubber-banding SUAVE (padrão Mario Kart: os de trás ganham fôlego)
-  const jogador = e.corredores[IDX_JOGADOR];
-  const gap = jogador.sTotal - c.sTotal;
-  c.iaRubber = gap > 120 ? 1.07 : gap < -120 ? 0.93 : 1;
-  // uso de itens
+
+  // ── ITENS com cabeça (v75): o timer re-agenda SEMPRE — quem guarda
+  //    não fica a olhar para o item para sempre.
   c.iaItemTimer -= dt;
   if (c.iaItemTimer <= 0 && c.item) {
     c.iaItemTimer = 1.6 + e.rng() * 2.8;
     const item = c.item;
-    if (item === "cogumelo" || item === "cogumelo3" || item === "escudo" || item === "raio") ent.usarItem = true;
-    else if (item === "casca" || item === "cascaAlvo" || item === "missil") {
+    if (item === "escudo") {
+      // míssil/casca-alvo à vista → o escudo FICA NO BOLSO até o perigo
+      // chegar perto (o uso à toa desperdiça 9 s de proteção)
+      const tel = e.projeteis.find((p) => p.alvo === c.id && (p.tipo === "missil" || p.tipo === "cascaAlvo"));
+      ent.usarItem = !tel || Math.hypot(tel.x - c.x, tel.z - c.z) < 28;
+    } else if (item === "cogumelo" || item === "cogumelo3") {
+      // turbo guardado para a RETA (curvatura média das próximas ~40 u baixa —
+      // calibrado com as 3 pistas: a reta mais limpa fica ≈0,0017-0,0019)
+      ent.usarItem = curvaFrente(pista, c.iAmostra, 16) < 0.0028;
+    } else if (item === "raio") {
+      ent.usarItem = true;
+    } else if (item === "casca" || item === "cascaAlvo" || item === "missil") {
       const alvo = proximoPara(c, e);
-      if (alvo && Math.hypot(alvo.x - c.x, alvo.z - c.z) < 130) ent.usarItem = true;
-    } else if (item === "oleo") ent.usarItem = e.rng() < 0.6;
+      if (alvo) {
+        const d = Math.hypot(alvo.x - c.x, alvo.z - c.z);
+        ent.usarItem = alvo.escudo <= 0 && d < 130; // alvo com escudo = tiro desperdiçado
+      }
+    } else if (item === "oleo") {
+      // óleo só vale a pena com alguém COLADO atrás — senão fica no meio de ninguém
+      const atras = e.corredores.some((o) => o.id !== c.id && !o.terminou && o.sTotal < c.sTotal && c.sTotal - o.sTotal < 55);
+      ent.usarItem = atras && e.rng() < 0.75;
+    }
   }
   return ent;
 }
@@ -820,7 +937,9 @@ function passoCorpo(e: EstadoCorrida, entradas: Record<number, EntradaKart>, dtC
     const p = e.projeteis[i];
     p.vida -= dtC;
     if (p.tipo !== "casca" && p.alvo >= 0) {
-      const alvo = e.corredores[p.alvo];
+      // FURO v75 fechado: o alvo é ID de corredor — em ONLINE os ids vêm de
+      // SLOTS_REDE e NÃO são índices do array (o míssil perseguia o kart ERRADO)
+      const alvo = e.corredores.find((cc) => cc.id === p.alvo);
       if (alvo && !alvo.terminou) {
         const dif = Math.atan2(alvo.x - p.x, alvo.z - p.z) - p.ang;
         const difN = Math.atan2(Math.sin(dif), Math.cos(dif));
@@ -972,6 +1091,7 @@ export function novaCorridaOnline(opts: {
     const p = posicaoNaPista(pista, s, lateral);
     const stats = h ? statsDe(h.kart, h.melhorias) : statsDe(kart, {});
     const ref = amostraPerto(pista, p.x, p.z, p.i);
+    const skill = h ? 1 : 0.82 + rng() * 0.13; // destreza do bot (v75: também define a reação à largada)
     corredores.push({
       id,
       nome: h ? h.nome : NOMES_BOTS[slot % NOMES_BOTS.length],
@@ -987,9 +1107,11 @@ export function novaCorridaOnline(opts: {
       stats,
       iaRubber: 1,
       iaOffset: h ? 0 : (rng() - 0.5) * pista.def.largura * 1.1,
-      iaSkill: h ? 1 : 0.82 + rng() * 0.13,
+      iaSkill: skill,
       iaItemTimer: 2 + rng() * 4,
       iaFrenagem: 0.6 + rng() * 0.5,
+      iaDesvio: 0,
+      iaLargada: h ? 0 : 0.32 - (skill - 0.82) * 1.85 + rng() * 0.05,
     });
   }
   return {

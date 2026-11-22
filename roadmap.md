@@ -115,3 +115,10 @@
 - [x] CO-FUNDADORES REGIONAIS MZ·AO·BR·PT: regionalBranding.ts (identidade visual + anúncios com agendamento, teto 12/país, url interna só, impressões/cliques honestos), aba Anúncios no painel regional, FaixaAnuncios+Cartão no hub, AdminAds (visão total + pausa atravessa países) — docs/REA-classicos-v72.md §5-6.
 - [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
 - [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.
+
+## v76 — IA de elite do circuito (2026-11-22) (2026-11-22)
+
+- [x] ESQUIVA: projéteis (casca reta 46 u · casca-alvo/míssil teleguiados 62 u) e óleo (48 u) com lateral dinâmica iaDesvio (teto ±5,8 u, troca de lado na berma), escala pela destreza iaSkill (0,25…1) — docs/REA-kart-ia-v76.md §1-2.
+- [x] ESCUDO INTELIGENTE + ITENS COM CABEÇA: escudo guardado com míssil à vista e levantado a < 28 u; turbo só na reta (curvaFrente < 0,0028); armas não desperdiçadas em alvo com escudo; óleo só com rival colado atrás; trânsito desvia do choque; reação à largada iaLargada 0,08…0,37 s (humano 0) — docs/REA-kart-ia-v76.md §1.
+- [x] FURO REAL v65 fechado: homing indexava o ARRAY com um ID (em ONLINE o míssil perseguia o kart ERRADO) → find por id; direção com olhar encolhido 55% sob ameaça (o desvio passa à frente da direção na iaDecidir) — docs/REA-kart-ia-v76.md §3.
+- [x] Prova: test-kart-ia-v76.mjs 49/0 ×2 (largada/esquiva/óleo/escudo/itens/trânsito/relaxa/rubber-band/determinismo/corrida completa nas 3 pistas) · regressão kart 65+61+30 · gfx 28 · som 58 · desafios 36 · classic 53 · regional 60 · desktop 35 · web 11 · tsc 0 · build OK — docs/REA-kart-ia-v76.md §4-5.

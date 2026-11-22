@@ -266,6 +266,7 @@ wss.on("connection", (ws) => {
           c.iaSkill = 0.82 + Math.random() * 0.13;
           c.iaItemTimer = 2 + Math.random() * 4;
           c.iaFrenagem = 0.6 + Math.random() * 0.5;
+          c.iaDesvio = 0; c.iaLargada = 0; // v75: piloto-IA a meio da corrida — largada imediata, desvio limpo
           broadcast({ t: "saiu-corredor", id: jogador.corredorId, nome: jogador.nome });
           log(`${jogador.nome} saiu — corredor ${jogador.corredorId} virou piloto-IA`);
         }
@@ -294,6 +295,7 @@ wss.on("connection", (ws) => {
           c.iaSkill = 0.82 + Math.random() * 0.13;
           c.iaItemTimer = 2 + Math.random() * 4;
           c.iaFrenagem = 0.6 + Math.random() * 0.5;
+          c.iaDesvio = 0; c.iaLargada = 0; // v75: piloto-IA a meio da corrida — largada imediata, desvio limpo
           broadcast({ t: "saiu-corredor", id: jogador.corredorId, nome: jogador.nome });
         }
       }

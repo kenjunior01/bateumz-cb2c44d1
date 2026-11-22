@@ -116,6 +116,13 @@
 - [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
 - [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.
 
+## v77 — UNIÃO DA IA DO CIRCUITO: cérebro de corrida + elite de defesa num só iaDecidir (2026-11-22)
+
+- [x] União das duas frentes que chegaram em paralelo: a ELITE v76 (esquiva dinâmica iaDesvio, óleo, trânsito, escudo inteligente, reação à largada) + o CÉREBRO DE CORRIDA (linha de corrida pelo PICO de curvatura, frenagem por JANELA 12-40 amostras, deriva no cotovelo, MOEDAS nas retas, BLOQUEIO do líder, leque de iaSkill 0,70-0,97) — uma função só, ZERO respingos de itens (guardar é a decisão inteligente) — docs/REA-kart-ia-v77.md §2-3.
+- [x] iaLargada recalibrada pela DESTREZA para o leque largo: 0,30 − destreza×0,22 + rng×0,05 → 0,08-0,35 s (a fórmula v76 punha 0,54 s no piloto fraco — fora do intervalo honesto 0,04-0,4) — docs/REA-kart-ia-v77.md §2.
+- [x] FURO do slot/id fechado com repro NO ONLINE: rubber-banding media o gap contra corredores[6] (um bot em SLOTS_REDE) → primeiro humano (eJogador); HOMING por id já da v76 mantido e PROVADO no estado online (míssil alvo=0 acerta o bot do slot 3) — docs/REA-kart-ia-v77.md §3.
+- [x] test-kart-ia-v77.mjs NOVO 26/26 ×2 (linha/skill+larg honesta/corrida com moedas/casca cone+guarda/míssil alcance/raio atrás/turbo por perseguição/rubber ONLINE/bloqueio com controlo/homing online/E2E) · test-kart-ia-v76 49/49 ×2 SOBRE O CÉREBRO UNIDO · regressão kart-v65 65/0 (§9 com isolamento honesto: o teste prova FÍSICA, não trânsito) · online-v66 61/0 · batalha-v68 30/0 (impressões 3.ª re-pin: vencedor bot 11, jogador 2.º wreck, 35 golpes) · som 58/0 · gfx 28/0 · desafios 36/0 · classic 53/0 · regional 60/0 · desktop 35/0 · web 11/0 · tsc 0 · build OK — docs/REA-kart-ia-v77.md §4.
+
 ## v76 — IA de elite do circuito (2026-11-22) (2026-11-22)
 
 - [x] ESQUIVA: projéteis (casca reta 46 u · casca-alvo/míssil teleguiados 62 u) e óleo (48 u) com lateral dinâmica iaDesvio (teto ±5,8 u, troca de lado na berma), escala pela destreza iaSkill (0,25…1) — docs/REA-kart-ia-v76.md §1-2.

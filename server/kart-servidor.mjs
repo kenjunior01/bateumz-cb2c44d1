@@ -263,7 +263,7 @@ wss.on("connection", (ws) => {
           // o corredor continua como PILOTO-IA (a corrida não para por quem sai)
           c.eJogador = false;
           c.iaOffset = (Math.random() - 0.5) * pista.def.largura * 1.1;
-          c.iaSkill = 0.82 + Math.random() * 0.13;
+          c.iaSkill = 0.7 + Math.random() * 0.27; // v75: leque largo (o core decide com ele)
           c.iaItemTimer = 2 + Math.random() * 4;
           c.iaFrenagem = 0.6 + Math.random() * 0.5;
           c.iaDesvio = 0; c.iaLargada = 0; // v75: piloto-IA a meio da corrida — largada imediata, desvio limpo
@@ -292,7 +292,7 @@ wss.on("connection", (ws) => {
         if (c && c.eJogador) {
           c.eJogador = false;
           c.iaOffset = (Math.random() - 0.5) * pista.def.largura * 1.1;
-          c.iaSkill = 0.82 + Math.random() * 0.13;
+          c.iaSkill = 0.7 + Math.random() * 0.27; // v75: leque largo (o core decide com ele)
           c.iaItemTimer = 2 + Math.random() * 4;
           c.iaFrenagem = 0.6 + Math.random() * 0.5;
           c.iaDesvio = 0; c.iaLargada = 0; // v75: piloto-IA a meio da corrida — largada imediata, desvio limpo

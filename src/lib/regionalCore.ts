@@ -199,9 +199,13 @@ export function validarAnuncio(
     ? entrada.gradiente : GRADIENTES_VALIDOS[0];
   if (estado.anuncios.filter((a) => a.pais === entrada.pais).length >= LIMITES.maxAnunciosPorPais) return { d: null, motivo: "cheio" };
   const agora = Date.now();
-  const iniciaEm = entrada.iniciaEm ?? agora;
+  // v75 FURO REAL (repro da suíte classic): «sem agendamento» passou a ser INICIO
+  // IMEDIATO a valer — iniciaEm = Date.now() deixava o anúncio «FUTURO» por uns ms
+  // (qualquer consumidor que capturasse «agora» antes da criação não o via).
+  // 0 = já começou (simétrico do terminaEm 0 = nunca acaba).
+  const iniciaEm = entrada.iniciaEm ?? 0;
   const terminaEm = entrada.terminaEm ?? 0;
-  if (terminaEm !== 0 && terminaEm <= iniciaEm) return { d: null, motivo: "janela" };
+  if (terminaEm !== 0 && iniciaEm !== 0 && terminaEm <= iniciaEm) return { d: null, motivo: "janela" };
   const anuncio: AnuncioRegional = {
     id: `an-${entrada.pais.toLowerCase()}-${agora.toString(36)}-${Math.floor(Math.random() * 46656).toString(36).padStart(3, "0")}`,
     pais: entrada.pais,

@@ -162,6 +162,17 @@ async function main() {
   {
     const e = core.novaCorrida({ pista: pistas[0], voltas: 3, kartJogador: "viralata", semente: 7, recordeAnterior: Infinity });
     e.fase = "corrida";
+    // v77 (fix do TESTE, não do jogo): com a IA de verdade os bots correm a LINHA
+    // e o piloto-de-prova (perseguição burra) fica preso no pelotão — este teste
+    // prova FÍSICA (aceleração/teto), não trânsito. Os bots ficam estacionados
+    // LONGE da volta do jogador (terminou → coast a 0) para o teste medir o teto.
+    for (const c of e.corredores) {
+      if (c.eJogador) continue;
+      c.terminou = true;
+      const aF = e.pista.amostras[(60 + c.id * 3) % e.pista.amostras.length];
+      c.x = aF.x + aF.nx * (e.pista.def.largura + 6 + c.id); c.z = aF.z + aF.nz * (e.pista.def.largura + 6 + c.id);
+      c.vel = 0;
+    }
     const j = e.corredores[6];
     let maxVel = 0;
     for (let i = 0; i < 1200; i++) {

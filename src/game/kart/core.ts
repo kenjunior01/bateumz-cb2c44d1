@@ -522,7 +522,7 @@ export function novaCorrida(opts: {
     const p = posicaoNaPista(pista, s, lateral);
     const stats = eJogador ? statsDe(kart, opts.melhoriasJogador ?? {}) : statsDe(kart, {});
     const ref = amostraPerto(pista, p.x, p.z, p.i);
-    const skill = eJogador ? 1 : 0.82 + rng() * 0.13; // destreza do bot (v75: também define a reação à largada)
+    const skill = eJogador ? 1 : 0.7 + rng() * 0.27; // v77: leque largo — de «Turbo Tia» (0,70) a pro (0,97)
     corredores.push({
       id: i,
       nome: eJogador ? (opts.nomeJogador?.trim() || "Tu") : NOMES_BOTS[(i < 6 ? i : i - 1) % NOMES_BOTS.length],
@@ -542,7 +542,9 @@ export function novaCorrida(opts: {
       iaItemTimer: 2 + rng() * 4,
       iaFrenagem: 0.6 + rng() * 0.5,
       iaDesvio: 0,
-      iaLargada: eJogador ? 0 : 0.32 - (skill - 0.82) * 1.85 + rng() * 0.05,
+      // v77: reflexo pela DESTREZA (0,25…1) — a fórmula da v76 com o leque largo
+      // punha 0,54 s no piloto fraco (fora do intervalo honesto 0,04-0,4)
+      iaLargada: eJogador ? 0 : 0.3 - clamp((skill - 0.78) / 0.17, 0.25, 1) * 0.22 + rng() * 0.05,
     });
   }
   return {
@@ -631,16 +633,18 @@ function acertar(e: EstadoCorrida, vitima: Corredor, tipo: ItemKartId, por: numb
   e.eventos.push({ t: "golpe", alvo: vitima.id, tipo, por });
 }
 
-// ── IA dos bots (v75 ELITE) ────────────────────────────────────
-// As linhas de v65 continuam (traçado + travagem + deriva + rubber-
-// banding + roleta de itens). O que é NOVO: os bots agora CONDUZEM
-// contra os perigos em vez de os comer todos — esquivam projéteis
-// (casca reta, casca-alvo e míssil teleguiados), contornam o óleo,
-// tiram-se da linha para ultrapassar sem choque, levantam o ESCUDO
-// no momento certo em vez de o gastar à toa, guardam o turbo para as
-// retas, não desperdiçam armas em alvos com escudo e reagem à largada
-// como pilotos (o reflexo cresce com a destreza iaSkill).
-// TUDO determinístico: só matemática sobre o estado — nada de Math.random.
+// ── IA dos bots (v77 — UNIÃO da ELITE v76 + do CÉREBRO de corrida) ──
+// A v76 deu aos bots DEFESA (esquivam projéteis/óleo/trânsito com o
+// desvio dinâmico iaDesvio, levantam o escudo NA HORA, reagem à
+// largada). A união v77 junta o CÉREBRO DE CORRIDA: LINHA DE CORRIDA
+// dinâmica (interior das curvas pelo PICO de curvatura — relação
+// −sinal verificada na sonda), FRENAGEM por JANELA 12-40 amostras,
+// DERIVA no cotovelo (mini-turbo de saída), MOEDAS nas retas e
+// BLOQUEIO do líder — mantendo TODA a defesa v76 intacta. Itens:
+// cone de tiro (casca verde voa reto), teleguiados ao alcance, nada
+// desperdiçado em alvo com escudo, turbo para as retas, raio atrás
+// no pelotão. TUDO determinístico: só matemática sobre o estado —
+// nada de Math.random fora da roleta de itens.
 
 const DESVIO_TETO = 5.8; // teto do desvio lateral (u) — dentro da estrada (largura ≥ 6,5)
 const DESVIO_CRESC = 9; // u/s de subida do desvio quando há ameaça
@@ -654,24 +658,64 @@ function curvaFrente(pista: Pista, iAmostra: number, n: number): number {
   return soma / n;
 }
 
+/** Variação ASSINADA do ângulo da tangente entre duas amostras (rad).
+ *  >0 = o traçado vira para o lado NEGATIVO da normal (interior = −sinal). */
+export function assinaturaCurva(pista: Pista, iA: number, iB: number): number {
+  const m = pista.amostras.length;
+  const a = pista.amostras[((iA % m) + m) % m];
+  const b = pista.amostras[((iB % m) + m) % m];
+  const da = Math.atan2(b.tx, b.tz) - Math.atan2(a.tx, a.tz);
+  return Math.atan2(Math.sin(da), Math.cos(da));
+}
+
+/** Linha de corrida: lateral ALVO (u, no referencial da normal da pista) à
+ *  frente de iAmostra — aperta para o INTERIOR nas curvas, centro nas retas.
+ *  Pura (zero rng) para os testes: interior = −sinal × peso do pico de
+ *  curvatura na janela (o apex manda, não a amostra do fim da janela). */
+export function linhaCorrida(pista: Pista, iAmostra: number, vel: number): number {
+  const m = pista.amostras.length;
+  const largura = pista.def.largura;
+  const mira = Math.floor(clamp(8 + vel * 0.5, 10, 26)); // olhar cresce com a velocidade
+  let mag = 0;
+  for (let k = 2; k <= mira; k++) {
+    const cv = pista.amostras[((iAmostra + k) % m + m) % m].curva;
+    if (cv > mag) mag = cv;
+  }
+  if (mag < 0.005) return 0; // reta: a linha é o centro (moedas entram por fora)
+  const sinal = assinaturaCurva(pista, iAmostra + 2, iAmostra + mira);
+  const peso = clamp(mag / 0.02, 0.35, 1.25);
+  return clamp(-sinal * largura * 0.45 * peso, -largura * 0.55, largura * 0.55);
+}
+
 function iaDecidir(e: EstadoCorrida, c: Corredor, dt: number): EntradaKart {
   const ent = entradaParada();
   const pista = e.pista;
   const m = pista.amostras.length;
 
   // reação à largada: o «JÁ» não apanha ninguém a dormir, mas ninguém
-  // é máquina — melhor destreza → reflexo mais curto (0,08…0,37 s)
+  // é máquina — melhor destreza → reflexo mais curto (0,08…0,35 s)
   if (e.tempo < c.iaLargada) return ent;
 
-  // rubber-banding SUAVE (padrão Mario Kart: os de trás ganham fôlego)
-  const jogador = e.corredores[IDX_JOGADOR];
+  // JANELA de curvatura à frente (v77 — hábeis antevêem mais): usada pela
+  // frenagem, pela deriva, pelas moedas e pelo cogumelo
+  const skill = clamp((c.iaSkill - 0.78) / 0.17, 0.25, 1); // destreza 0,25…1
+  const janela = Math.floor(clamp(10 + c.vel * (0.35 + skill * 0.45), 12, 40));
+  let curvaMax = 0;
+  for (let k = 6; k <= janela; k++) {
+    const cv = pista.amostras[((c.iAmostra + k) % m + m) % m].curva;
+    if (cv > curvaMax) curvaMax = cv;
+  }
+
+  // rubber-banding SUAVE (padrão Mario Kart: os de trás ganham fôlego).
+  // v77 FURO: no ONLINE corredores[6] é um BOT (SLOTS_REDE baralha id≠slot)
+  // — o gap passa a medir-se contra o PRIMEIRO humano da grelha.
+  const jogador = e.corredores.find((x) => x.eJogador) ?? e.corredores[IDX_JOGADOR];
   const gap = jogador.sTotal - c.sTotal;
   c.iaRubber = gap > 120 ? 1.07 : gap < -120 ? 0.93 : 1;
 
-  // ── DESVIO (v75): projéteis > óleo > trânsito. O iaOffset é a linha
-  //    pessoal do bot; o iaDesvio é lateral DINÂMICA que cresce para
-  //    fugir do perigo e relaxa a 0 quando a pista fica livre.
-  const skill = clamp((c.iaSkill - 0.78) / 0.17, 0.25, 1); // destreza 0,25…1
+  // ── DESVIO (v76 intacto): projéteis > óleo > trânsito. O iaOffset é a
+  //    linha pessoal; o iaDesvio é lateral DINÂMICA que cresce para fugir
+  //    do perigo e relaxa a 0 quando a pista fica livre.
   const minhaLat = c.lateralPerto;
   const tetoLat = pista.def.largura * 0.92;
   const fugirDe = (perigoLat: number, forca: number): number => {
@@ -728,48 +772,100 @@ function iaDecidir(e: EstadoCorrida, c: Corredor, dt: number): EntradaKart {
   else c.iaDesvio -= Math.sign(c.iaDesvio) * Math.min(Math.abs(c.iaDesvio), DESVIO_RELAXA * dt);
   c.iaDesvio = clamp(c.iaDesvio, -DESVIO_TETO, DESVIO_TETO);
 
-  // direção: em ameaça o olhar ENCOLHE (55%) — o volante responde ao
-  // desvio AGORA em vez de surrar o ponto de fuga 50 u à frente
-  const look = 10 + Math.floor(c.vel * 0.35);
+  // ── ALVO LATERAL (v77): LINHA DE CORRIDA + personalidade + desvio
+  //    de perigo + moedas (só em reta) + bloqueio do líder
+  let alvoLat = linhaCorrida(pista, c.iAmostra, c.vel) + c.iaOffset * 0.45 + c.iaDesvio;
+
+  // MOEDAS nas retas (v77): peso pequeno — o traçado nunca é trocado por moeda
+  if (!c.derrapando && c.moedas < 10 && curvaMax < 0.01) {
+    const a = pista.amostras[c.iAmostra];
+    const h = { x: Math.sin(c.ang), z: Math.cos(c.ang) };
+    let melhorD = Infinity, ganho = 0;
+    for (const mo of e.moedas) {
+      if (!mo.viva) continue;
+      const dx = mo.x - c.x, dz = mo.z - c.z;
+      const df = dx * h.x + dz * h.z; // à frente (corpo)
+      if (df < 4 || df > 34) continue;
+      const latMo = dx * a.nx + dz * a.nz; // lateral da moeda em relação a MIM
+      if (Math.abs(latMo) > 6.5) continue;
+      if (df < melhorD) { melhorD = df; ganho = latMo * 0.6; }
+    }
+    if (Number.isFinite(melhorD)) alvoLat += ganho;
+  }
+
+  // BLOQUEIO do líder (v77): o 1.º hábil espelha a lateral do 2.º para
+  // fechar a linha de ultrapassagem (nunca em derrapagem)
+  const ordem0 = posicoesDe(e);
+  const idxEu = ordem0.findIndex((x) => x.id === c.id);
+  if (idxEu === 0 && skill > 0.88 && !c.derrapando && ordem0[1]) {
+    const seg = ordem0[1];
+    const a = pista.amostras[c.iAmostra];
+    const h = { x: Math.sin(c.ang), z: Math.cos(c.ang) };
+    const dx = seg.x - c.x, dz = seg.z - c.z;
+    const df = dx * h.x + dz * h.z;
+    if (df < 4 && df > -22) {
+      const dl = dx * a.nx + dz * a.nz;
+      alvoLat += clamp(dl * 0.6, -pista.def.largura * 0.35, pista.def.largura * 0.35);
+    }
+  }
+
+  // direção: em ameaça o olhar ENCOLHE (55% — v76) — o volante responde
+  // ao desvio AGORA em vez de surrar o ponto de fuga 50 u à frente
+  const look = Math.floor(10 + c.vel * 0.35);
   const lookEfetivo = ameacaAtiva ? Math.max(6, Math.floor(look * 0.55)) : look;
   const alvoA = pista.amostras[((c.iAmostra + lookEfetivo) % m + m) % m];
-  const tx = alvoA.x + alvoA.nx * (c.iaOffset + c.iaDesvio), tz = alvoA.z + alvoA.nz * (c.iaOffset + c.iaDesvio);
+  const tx = alvoA.x + alvoA.nx * alvoLat, tz = alvoA.z + alvoA.nz * alvoLat;
   const dif = Math.atan2(tx - c.x, tz - c.z) - c.ang;
   const difN = Math.atan2(Math.sin(dif), Math.cos(dif));
-  ent.virar = clamp(difN * 2.4, -1, 1);
-  // velocidade de curva: curva alta → levanta / trava
-  const curvaA = pista.amostras[((c.iAmostra + 14) % m + m) % m].curva;
-  const velCurva = 36 - curvaA * 900 * c.iaFrenagem;
+  ent.virar = clamp(difN * (1.9 + skill * 1.1), -1, 1);
+
+  // frenagem por JANELA (v77 — hábeis antevêem mais e carregam mais velocidade)
+  const frenagem = c.iaFrenagem * (1.25 - skill * 0.55);
+  const velCurva = 36 - curvaMax * 900 * frenagem;
   ent.acelerar = true;
   if (c.vel > Math.max(18, velCurva)) { ent.acelerar = false; ent.travar = c.vel > velCurva + 6; }
-  // drift nas curvas fechadas
-  ent.derrapar = Math.abs(difN) > 0.32 && c.vel > 20;
 
-  // ── ITENS com cabeça (v75): o timer re-agenda SEMPRE — quem guarda
-  //    não fica a olhar para o item para sempre.
+  // deriva nas curvas de verdade (v77): o PICO da janela manda — mesmo com
+  // a linha suave, o bot derrapa no cotovelo e sai com MINI-TURBO
+  ent.derrapar = c.vel > 20 && (Math.abs(difN) > 0.3 || curvaMax > 0.014);
+
+  // ── ITENS com cabeça (v76 + v77): o timer re-agenda SEMPRE — quem
+  //    guarda não fica a olhar para o item para nunca.
   c.iaItemTimer -= dt;
   if (c.iaItemTimer <= 0 && c.item) {
-    c.iaItemTimer = 1.6 + e.rng() * 2.8;
+    c.iaItemTimer = 0.9 + e.rng() * 1.6; // decide mais vezes (antes 1,6-4,4)
     const item = c.item;
+    const alvo = proximoPara(c, e);
+    const dxA = alvo ? alvo.x - c.x : 0, dzA = alvo ? alvo.z - c.z : 0;
+    const dAlvo = alvo ? Math.hypot(dxA, dzA) : Infinity;
+    const dfA = alvo ? dxA * Math.sin(c.ang) + dzA * Math.cos(c.ang) : -Infinity;
+    const aNorm = pista.amostras[c.iAmostra];
+    const dlA = alvo ? dxA * aNorm.nx + dzA * aNorm.nz : 0;
+    const alvoEscudado = alvo ? alvo.escudo > 0 : false;
     if (item === "escudo") {
       // míssil/casca-alvo à vista → o escudo FICA NO BOLSO até o perigo
       // chegar perto (o uso à toa desperdiça 9 s de proteção)
       const tel = e.projeteis.find((p) => p.alvo === c.id && (p.tipo === "missil" || p.tipo === "cascaAlvo"));
       ent.usarItem = !tel || Math.hypot(tel.x - c.x, tel.z - c.z) < 28;
     } else if (item === "cogumelo" || item === "cogumelo3") {
-      // turbo guardado para a RETA (curvatura média das próximas ~40 u baixa —
-      // calibrado com as 3 pistas: a reta mais limpa fica ≈0,0017-0,0019)
-      ent.usarItem = curvaFrente(pista, c.iAmostra, 16) < 0.0028;
+      // turbo guardado para a RETA (v76, régua calibrada nas 3 pistas) —
+      // ou a fugir de quem anda colado (v77)
+      const perseguidorPerto = e.corredores.some((o) => o.id !== c.id && !o.terminou && o.sTotal < c.sTotal && c.sTotal - o.sTotal < 14);
+      ent.usarItem = curvaFrente(pista, c.iAmostra, 16) < 0.0028 || perseguidorPerto;
     } else if (item === "raio") {
-      ent.usarItem = true;
-    } else if (item === "casca" || item === "cascaAlvo" || item === "missil") {
-      const alvo = proximoPara(c, e);
-      if (alvo) {
-        const d = Math.hypot(alvo.x - c.x, alvo.z - c.z);
-        ent.usarItem = alvo.escudo <= 0 && d < 130; // alvo com escudo = tiro desperdiçado
-      }
+      // v77: raio atrás no pelotão vale ouro; na liderança guarda um pouco
+      ent.usarItem = c.posicao >= 5 || e.rng() < 0.3;
+    } else if (item === "casca") {
+      // v77: a verde voa RETO — só com alvo NO CONE (à frente 8-80 u e
+      // ±3,2 de lateral) e SEM escudo (tiro desperdiçado é tiro perdido)
+      ent.usarItem = alvo && !alvoEscudado && dfA > 8 && dfA < 80 && Math.abs(dlA) < 3.2;
+    } else if (item === "cascaAlvo") {
+      ent.usarItem = alvo && !alvoEscudado && dfA > 4 && dAlvo < 150;
+    } else if (item === "missil") {
+      ent.usarItem = alvo && !alvoEscudado && dAlvo < 200;
     } else if (item === "oleo") {
-      // óleo só vale a pena com alguém COLADO atrás — senão fica no meio de ninguém
+      // v76: óleo só vale a pena com alguém COLADO atrás — senão fica no
+      // meio de ninguém (mantido da v76; determinístico no «guardar»)
       const atras = e.corredores.some((o) => o.id !== c.id && !o.terminou && o.sTotal < c.sTotal && c.sTotal - o.sTotal < 55);
       ent.usarItem = atras && e.rng() < 0.75;
     }
@@ -1091,7 +1187,7 @@ export function novaCorridaOnline(opts: {
     const p = posicaoNaPista(pista, s, lateral);
     const stats = h ? statsDe(h.kart, h.melhorias) : statsDe(kart, {});
     const ref = amostraPerto(pista, p.x, p.z, p.i);
-    const skill = h ? 1 : 0.82 + rng() * 0.13; // destreza do bot (v75: também define a reação à largada)
+    const skill = h ? 1 : 0.7 + rng() * 0.27; // v77: leque largo — de «Turbo Tia» (0,70) a pro (0,97)
     corredores.push({
       id,
       nome: h ? h.nome : NOMES_BOTS[slot % NOMES_BOTS.length],
@@ -1111,7 +1207,9 @@ export function novaCorridaOnline(opts: {
       iaItemTimer: 2 + rng() * 4,
       iaFrenagem: 0.6 + rng() * 0.5,
       iaDesvio: 0,
-      iaLargada: h ? 0 : 0.32 - (skill - 0.82) * 1.85 + rng() * 0.05,
+      // v77: reflexo pela DESTREZA (0,25…1) — a fórmula da v76 com o leque largo
+      // punha 0,54 s no piloto fraco (fora do intervalo honesto 0,04-0,4)
+      iaLargada: h ? 0 : 0.3 - clamp((skill - 0.78) / 0.17, 0.25, 1) * 0.22 + rng() * 0.05,
     });
   }
   return {

@@ -174,18 +174,18 @@ async function main() {
   const soma1 = b1.baloes.reduce((a, x) => a + x, 0);
   const golpes1 = b1.golpes.reduce((a, x) => a + x, 0);
   ok("batalha completa: acaba por ÚLTIMO-DE-PÉ antes do teto (não por voltas)",
-    b1.fim && b1.cor.fase === "fim" && b1.cor.tempo < 180 && b1.vencedor === 0);
-  ok("batalha completa: 11 eliminados, 2 balões de pé e 33 golpes creditados (seed exata)",
-    b1.eliminados.length === 11 && soma1 === 2 && golpes1 === 33
-    && JSON.stringify(b1.eliminados) === JSON.stringify([4, 3, 5, 9, 1, 7, 8, 10, 11, 2, 6]));
-  ok("resultados: 12 posições únicas · jogador 2.º lugar com payout da tabela",
+    b1.fim && b1.cor.fase === "fim" && b1.cor.tempo < 180 && b1.vencedor === 11);
+  ok("batalha completa: 11 eliminados, 1 balão de pé e 35 golpes creditados (seed exata, IA v77)",
+    b1.eliminados.length === 11 && soma1 === 1 && golpes1 === 35
+    && JSON.stringify(b1.eliminados) === JSON.stringify([1, 9, 3, 0, 2, 4, 5, 7, 8, 10, 6]));
+  ok("resultados: 12 posições únicas · jogador 2.º (wreck honesto) com payout da tabela (IA v77)",
     b1.cor.resultados.length === 12
     && [...b1.cor.resultados].sort((a, b) => a.posicao - b.posicao).every((r, i) => r.posicao === i + 1)
     && (b1.cor.resultados.find((r) => r.id === 6)?.posicao ?? -1) === 2
     && b1.cor.payout.moedas === bat.recompensaBatalha(2, 0).moedas
     && b1.cor.payout.xp === bat.recompensaBatalha(2, 0).xp);
-  ok("evento fimBatalha com o vencedor e o wreck do jogador honesto",
-    b1.eventos.some((e) => e.t === "fimBatalha" && e.vencedor === 0)
+  ok("evento fimBatalha com o vencedor e o wreck do jogador honesto (IA v77)",
+    b1.eventos.some((e) => e.t === "fimBatalha" && e.vencedor === 11)
     && b1.cor.corredores[6].terminou === true && b1.baloes[6] === 0
     && passos * (1 / 30) >= b1.cor.tempo);
 

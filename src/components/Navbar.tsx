@@ -186,10 +186,14 @@ const Navbar = () => {
     }
   };
 
+  // v79 CICLO À VISTA (visão do produto): os destinos do ciclo passam a
+  // destinos de TOPO — «Prémios» (caminhos reais para prémios) e «Jogos»
+  // (o motor de retenção). Os items ficam iguais; o RÓTULO declara o que
+  // a visão pede: Início/Jogos/Ao vivo/Desporto/Prémios/Perfil à vista.
   const groups: MenuGroup[] = [
     {
-      label: t("nav.group.raffles"),
-      icon: Ticket,
+      label: t("nav.group.premios"),
+      icon: Gift,
       spotlight: {
         label: t("nav.spotlight.marketplace"),
         desc: t("nav.spotlight.marketplace.desc"),
@@ -197,10 +201,12 @@ const Navbar = () => {
         cta: t("nav.spotlight.cta"),
       },
       items: [
+        { label: t("nav.premios.ciclo"), href: "/premios", icon: Gift, desc: t("nav.premios.ciclo.desc"), badge: t("nav.badge.new") },
         { label: t("nav.marketplace"), href: "/marketplace", icon: Store, desc: t("nav.marketplace.desc"), trending: true },
         { label: t("nav.contests"), href: "/concursos", icon: Trophy, desc: t("nav.contests.desc") },
         { label: t("nav.instantwin"), href: "/instant-win", icon: Sparkles, desc: t("nav.instantwin.desc") },
         { label: t("nav.mytickets"), href: "/my-tickets", icon: Ticket, desc: t("nav.mytickets.desc") },
+        { label: t("nav.mypoints"), href: "/my-points", icon: Medal, desc: t("nav.mypoints.desc") },
       ],
     },
     {
@@ -222,7 +228,7 @@ const Navbar = () => {
       ],
     },
     {
-      label: t("nav.group.entertainment"),
+      label: t("nav.group.jogos"),
       icon: Gamepad2,
       spotlight: {
         label: t("nav.spotlight.live"),
@@ -281,6 +287,7 @@ const Navbar = () => {
   const quickActions = [
     { label: t("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
     { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
+    { label: t("nav.quick.premios"), href: "/premios", icon: Gift },
     { label: "Desporto", href: "/desporto", icon: Medal },
     { label: "Jogos Grátis", href: "/jogos-gratis", icon: Joystick },
     { label: "Circuito das Lendas", href: "/lives?game=kart", icon: Flag },

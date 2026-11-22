@@ -5,7 +5,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gamepad2, Radio, Swords, ChevronLeft,
-  Menu, X, Zap, Trophy, Users, Sparkles,
+  Menu, X, Zap, Trophy, Users, Sparkles, Gift,
 } from 'lucide-react';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { ALL_GAMES } from '@/lib/gamesCatalog';
@@ -19,6 +19,8 @@ import ScrollReveal from '@/components/ui/ScrollReveal';
 const NAV_ITEMS = [
   { icon: Gamepad2, label: 'Todos os Jogos', path: '/jogos' },
   { icon: Radio, label: 'Ao Vivo', path: '/lives' },
+  // v79 ciclo à vista: «Prémios» como destino de topo dentro da área de jogos
+  { icon: Gift, label: 'Prémios', path: '/premios' },
   { icon: Swords, label: 'Batalhas', path: '/batalhas' },
   { icon: Users, label: 'Participar', path: '/participar' },
   { icon: Trophy, label: 'Torneios', path: '/tournaments' },

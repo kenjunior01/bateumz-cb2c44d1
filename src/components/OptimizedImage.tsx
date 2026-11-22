@@ -26,6 +26,11 @@ export default function OptimizedImage({
   const webpSrc = getOptimizedImageUrl(src, { width: optimizeWidth });
   const loading = priority ? "eager" : "lazy";
   const fetchPriority = priority ? ("high" as const) : undefined;
+  // v79: React 18 NÃO reconhece fetchPriority camelCase no DOM (avisa em
+  // cada render — apanhado pela suíte v79). O atributo HTML real é
+  // «fetchpriority» minúsculo: passa-se como atributo nativo — zero aviso,
+  // mesmo comportamento no browser (suporte desde Chrome 71).
+  const fetchPriorityAttr = { fetchpriority: fetchPriority } as unknown as Record<string, string | undefined>;
 
   if (webpSrc && webpSrc !== src) {
     return (
@@ -41,7 +46,7 @@ export default function OptimizedImage({
             alt={alt}
             loading={loading}
             decoding="async"
-            fetchPriority={fetchPriority}
+            {...fetchPriorityAttr}
             className={className}
             {...rest}
           />
@@ -61,7 +66,7 @@ export default function OptimizedImage({
         alt={alt}
         loading={loading}
         decoding="async"
-        fetchPriority={fetchPriority}
+        {...fetchPriorityAttr}
         className={className}
         {...rest}
       />

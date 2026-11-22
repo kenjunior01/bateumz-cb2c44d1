@@ -1410,6 +1410,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.announcement.text": "Lives happening now — join and win real-time prizes!",
     "nav.announcement.cta": "Join Now",
 
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "Prizes",
+    "nav.group.jogos": "Games",
+    "nav.premios.ciclo": "The prize cycle",
+    "nav.premios.ciclo.desc": "Games earn points, points earn levels and levels unlock prizes — see the whole cycle",
+    "nav.mypoints": "My points",
+    "nav.mypoints.desc": "Your level, daily missions and progression on Bateu",
+    "nav.quick.premios": "Prizes",
   },
   pt: {
     "auth.oauth.dev.titulo": "O registo com Google/Apple corre na produção",
@@ -2753,6 +2761,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "biz.seo.ld_desc": "Empresas verificadas com sorteios, concursos e jogos ao vivo no Bateu.",
     "nav.announcement.text": "Lives a acontecer agora — participa e ganha prémios em tempo real!",
     "nav.announcement.cta": "Participar Agora",
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "Prémios",
+    "nav.group.jogos": "Jogos",
+    "nav.premios.ciclo": "O ciclo de prémios",
+    "nav.premios.ciclo.desc": "Jogos geram pontos, pontos geram níveis e níveis desbloqueiam prémios — vê o ciclo completo",
+    "nav.mypoints": "Os meus pontos",
+    "nav.mypoints.desc": "O teu nível, as missões do dia e a tua progressão no Bateu",
+    "nav.quick.premios": "Prémios",
   },
   "pt-BR": {
     "live.convidado.titulo": "Jogando como Convidado — o progresso é seu, neste aparelho",
@@ -3875,6 +3891,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "tournament.formCurrency": "Moeda",
     "tournament.formMaxParticipants": "Máximo de participantes",
     "tournament.formRules": "Regras",
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "Prêmios",
+    "nav.group.jogos": "Jogos",
+    "nav.premios.ciclo": "O ciclo de prêmios",
+    "nav.premios.ciclo.desc": "Jogos geram pontos, pontos geram níveis e níveis desbloqueiam prêmios — veja o ciclo completo",
+    "nav.mypoints": "Meus pontos",
+    "nav.mypoints.desc": "Seu nível, as missões do dia e sua progressão no Bateu",
+    "nav.quick.premios": "Prêmios",
   },
   es: {
     "live.convidado.titulo": "Juegas como Invitado — el progreso es tuyo, en este aparato",
@@ -4769,6 +4793,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "biz.seo.ld_desc": "Empresas verificadas realizando sorteos, concursos y juegos en vivo en Bateu.",
     "nav.announcement.text": "Lives ocurriendo ahora — unete y gana premios en tiempo real!",
     "nav.announcement.cta": "Unete Ahora",
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "Premios",
+    "nav.group.jogos": "Juegos",
+    "nav.premios.ciclo": "El ciclo de premios",
+    "nav.premios.ciclo.desc": "Los juegos generan puntos, los puntos generan niveles y los niveles desbloquean premios — mira el ciclo completo",
+    "nav.mypoints": "Mis puntos",
+    "nav.mypoints.desc": "Tu nivel, las misiones del día y tu progresión en Bateu",
+    "nav.quick.premios": "Premios",
   },
   fr: {
     "live.convidado.titulo": "Vous jouez en tant qu'Invité — votre progression reste sur cet appareil",
@@ -5630,6 +5662,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "biz.seo.ld_desc": "Entreprises verifiees organisant des tirages, concours et jeux en direct sur Bateu.",
     "nav.announcement.text": "Lives en cours — participez et gagnez des prix en temps reel!",
     "nav.announcement.cta": "Participer",
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "Prix",
+    "nav.group.jogos": "Jeux",
+    "nav.premios.ciclo": "Le cycle des prix",
+    "nav.premios.ciclo.desc": "Les jeux génèrent des points, les points génèrent des niveaux et les niveaux débloquent des prix — voir le cycle complet",
+    "nav.mypoints": "Mes points",
+    "nav.mypoints.desc": "Ton niveau, les missions du jour et ta progression sur Bateu",
+    "nav.quick.premios": "Prix",
   },
   hi: {
     "live.convidado.titulo": "अतिथि के रूप में खेल रहे हैं — आपकी प्रगति इस डिवाइस पर है",
@@ -6553,6 +6593,14 @@ const translations: Partial<Record<Lang, Dict>> = {
     "error.retry": "पुनः प्रयास करें",
     "error.gameCrash": "{game} लोड करने में त्रुटि",
     "error.gameCrashDesc": "कोई अन्य गेम चुनने का प्रयास करें",
+    // v79 ciclo à vista — destinos de topo
+    "nav.group.premios": "पुरस्कार",
+    "nav.group.jogos": "गेम्स",
+    "nav.premios.ciclo": "पुरस्कार चक्र",
+    "nav.premios.ciclo.desc": "गेम्स पॉइंट देते हैं, पॉइंट लेवल देते हैं और लेवल पुरस्कार खोलते हैं — पूरा चक्र देखें",
+    "nav.mypoints": "मेरे पॉइंट",
+    "nav.mypoints.desc": "आपका लेवल, दिन के मिशन और Bateu पर आपकी प्रगति",
+    "nav.quick.premios": "पुरस्कार",
   },
 };
 

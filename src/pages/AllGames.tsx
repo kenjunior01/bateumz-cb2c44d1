@@ -14,7 +14,10 @@ import HolographicCard from '@/components/ui/HolographicCard';
 import ChallengeModal from '@/components/games/ChallengeModal';
 import GameArt, { GameArtChip } from '@/components/games/GameArt';
 import { getPlayerIdentity } from '@/lib/challenges';
-import { ALL_GAMES, CATEGORIES, weeklyPopular, popularityScore, playsOf, bestOf } from '@/lib/gamesCatalog';
+import { ALL_GAMES, CATEGORIES, weeklyPopular, popularityScore, playsOf, bestOf, recentGames } from '@/lib/gamesCatalog';
+// v79 CICLO À VISTA: núcleo puro — Jogo do dia determinístico + secções validadas + rótulos honestos
+import { seccoesJogos, labelBeneficio, labelDuracao, labelDificuldade, diaDe } from '@/lib/ciclo';
+import { Clock, RotateCcw, Sun } from 'lucide-react';
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
 // Steam/CrazyGames inspired green theme
@@ -62,6 +65,24 @@ const AllGames = () => {
 
   /* ⭐ Populares esta Semana (padrão CrazyGames) — top 6 do catálogo */
   const weekTop = useMemo(() => weeklyPopular(6), []);
+
+  /* ⭐ v79 CICLO À VISTA: secções do núcleo puro (determinístico por dia)
+     — «Continuar a jogar» (histórico REAL do aparelho, validado) + «Jogo do
+     dia» (mesmo para todos, muda à meia-noite). O dia é recalculado só quando
+     muda — nunca a cada render. */
+  const hoje = useMemo(() => diaDe(Date.now()), []);
+  const seccoes = useMemo(
+    () => seccoesJogos(ALL_GAMES, recentGames(8).map((g) => g.id), new Date(`${hoje}T12:00:00`).getTime()),
+    [hoje]
+  );
+  const continuarGames = useMemo(
+    () => seccoes.continuar.map((id) => ALL_GAMES.find((g) => g.id === id)!).filter(Boolean),
+    [seccoes.continuar]
+  );
+  const doDiaGame = useMemo(
+    () => (seccoes.doDia ? ALL_GAMES.find((g) => g.id === seccoes.doDia) ?? null : null),
+    [seccoes.doDia]
+  );
 
   const botGames = useMemo(() => ALL_GAMES.filter((g) => g.hasBot), []);
   const categoryCounts = useMemo(() => {
@@ -242,6 +263,81 @@ const AllGames = () => {
           </div>
         </motion.div>
 
+        {/* ⭐ v79 CICLO À VISTA — JOGO DO DIA: escolha determinística do núcleo
+            puro (mesmo dia = mesmo jogo para TODOS, muda à meia-noite). Rótulo
+            honesto: é uma rotação do catálogo, não um sorteio nem patrocínio. */}
+        {doDiaGame && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            data-testid="jogos-jogo-do-dia"
+            className="relative overflow-hidden rounded-2xl mb-5 cursor-pointer"
+            onClick={() => { sfx.whoosh(); navigate(`/lives?game=${doDiaGame.id}`); }}
+            style={{ background: "linear-gradient(115deg, rgba(46,160,67,0.14) 0%, rgba(13,17,23,0.6) 55%), var(--area-card, #161b22)", border: "1px solid rgba(46,160,67,0.35)" }}
+          >
+            <div className="relative z-10 px-4 py-3 flex items-center gap-3">
+              <span className="h-11 w-16 shrink-0 rounded-xl overflow-hidden border border-white/20">
+                <GameArt id={doDiaGame.id} className="w-full h-full" animate={false} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider" style={{ color: THEME_P }}>
+                    <Sun className="h-3 w-3" /> Jogo do dia
+                  </span>
+                  <span className="text-[9px] text-muted-foreground">· muda à meia-noite · hoje para todos</span>
+                </div>
+                <p className="text-sm font-black truncate mt-0.5">{doDiaGame.label}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {labelBeneficio(doDiaGame.pontosMax) ?? "Joga e sobe de nível"}{labelDuracao(doDiaGame.minutos) ? ` · ${labelDuracao(doDiaGame.minutos)}` : ""}
+                </p>
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black text-white" style={{ background: THEME_P }}>
+                JOGAR ▶
+              </span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ⭐ v79 CICLO À VISTA — CONTINUAR A JOGAR (padrão Steam/Roblox): só
+            renderiza com histórico REAL do aparelho (validado pelo núcleo). */}
+        {category === "todos" && !search && continuarGames.length > 0 && (
+          <section className="mb-4" data-testid="jogos-continuar-rail">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(88,166,255,0.12)", border: "1px solid rgba(88,166,255,0.25)" }}>
+                <RotateCcw className="h-3.5 w-3.5" style={{ color: THEME_S }} />
+              </span>
+              <h2 className="text-sm font-black font-display tracking-tight">Continuar a jogar</h2>
+              <span className="text-[10px] text-muted-foreground">· do teu histórico neste aparelho</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide custom-scrollbar">
+              {continuarGames.map((g) => {
+                const plays = playsOf(g.id);
+                const best = bestOf(g.id);
+                return (
+                  <Link
+                    key={g.id}
+                    to={`/lives?game=${g.id}`}
+                    data-testid={`continuar-card-${g.id}`}
+                    onClick={() => sfx.click()}
+                    className="game-card-v2 shrink-0 w-[168px] rounded-2xl overflow-hidden card-hover-lift btn-press"
+                    style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                  >
+                    <div className={`relative h-[86px] overflow-hidden bg-gradient-to-br ${g.grad}`}>
+                      <GameArt id={g.id} className="w-full h-full" animate={false} />
+                    </div>
+                    <div className="p-2.5" style={{ background: "rgba(255,255,255,0.02)" }}>
+                      <p className="text-xs font-bold truncate">{g.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {plays > 0 ? <>jogaste <span className="font-bold" style={{ color: THEME_S }}>{plays}×</span></> : g.players}
+                        {best > 0 && <span className="opacity-60"> · recorde {best.toLocaleString("pt-PT")}</span>}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <motion.div
           className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide custom-scrollbar"
           initial={{ opacity: 0, y: 10 }}
@@ -393,6 +489,29 @@ const AllGames = () => {
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
                           {game.players}
                         </span>
+                        {/* v79 CICLO À VISTA: benefício REAL declarado pelo catálogo
+                            («Até X pontos» — teto que a progressão aplica; duração e
+                            dificuldade só quando o catálogo declara — nunca inventado) */}
+                        {labelBeneficio(game.pontosMax) && (
+                          <span
+                            data-testid={`beneficio-${game.id}`}
+                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-black"
+                            style={{ background: "rgba(250,204,21,0.12)", color: "#facc15" }}
+                            title="Pontos de progressão máximos por sessão — contam para o teu nível e missões"
+                          >
+                            {labelBeneficio(game.pontosMax)}
+                          </span>
+                        )}
+                        {labelDuracao(game.minutos) && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
+                            <Clock className="h-2.5 w-2.5" /> {labelDuracao(game.minutos)}
+                          </span>
+                        )}
+                        {labelDificuldade(game.dificuldade) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(var(--muted-foreground))" }}>
+                            {labelDificuldade(game.dificuldade)}
+                          </span>
+                        )}
                         {game.hasBot && (
                           <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "hsl(220 60% 40% / 0.15)", color: "hsl(220 60% 40%)" }}>
                             Bot IA

@@ -123,6 +123,7 @@ const SocialRaffleManager = lazy(() => import("./pages/dashboard/SocialRaffleMan
 const Blog = lazy(() => import("./pages/Blog.tsx"));
 const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail.tsx"));
 const AllGames = lazy(() => import("./pages/AllGames.tsx"));
+const Premios = lazy(() => import("./pages/Premios.tsx")); // v79 ciclo de prémios
 const AdminContests = lazy(() => import("./pages/admin/AdminContests.tsx"));
 const DashboardContests = lazy(() => import("./pages/dashboard/DashboardContests.tsx"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile.tsx"));
@@ -263,6 +264,8 @@ function AnimatedRoutes() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPostDetail />} />
             <Route path="/jogos" element={<JogosLayout />}>            <Route index element={<AllGames />} />          </Route>
+            <Route path="/premios" element={<JogosLayout />}>            <Route index element={<Premios />} />          </Route>
+            <Route path="/meus-premios" element={<Navigate to="/premios" replace />} />
             <Route path="/todos-jogos" element={<Navigate to="/jogos" replace />} />
             <Route path="/jogo/:id" element={<JogosLayout />}>            <Route index element={<GameDetail />} />          </Route>
             <Route path="/pontos" element={<EngagementLeaderboard />} />

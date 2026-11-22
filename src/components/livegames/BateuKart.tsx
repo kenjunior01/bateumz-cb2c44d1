@@ -19,6 +19,7 @@ import {
   Lock, Pause, Play, Timer, Trophy, Volume2, VolumeX, Wifi, Wrench, X, Zap,
 } from "lucide-react";
 import { MotorKart, type EstadoHudKart, type AvisosKart, type GanchosKart } from "@/game/kart/motor.ts";
+import { pontosMaxDe } from "@/lib/gamesCatalog";
 import {
   listarDesafios, lerEstado, progDe, metaAlvo, podeClamar, clamar, registarResultado, desafioPorId,
   type ResultadoKart,
@@ -357,6 +358,14 @@ export default function BateuKart({ onScore, onExit }: Props) {
       somGlobal().tocar("recorde");
     }
     setDesafioTick((k) => k + 1);
+    // ── v78 PROGRESSÃO: a partida alimenta o ciclo de RETENÇÃO (Pontos →
+    //    Nível → Missões) — pontos pela posição com o TETO do catálogo (120).
+    //    O painel é o DONO da store; o jogo só anuncia no bus do window.
+    try {
+      const teto = pontosMaxDe("kart");
+      const pontos = Math.max(10, Math.min(teto, teto - (hud.posicao - 1) * 10));
+      window.dispatchEvent(new CustomEvent("bateu:partida", { detail: { jogoId: "kart", vitoria: hud.posicao === 1, pontos } }));
+    } catch { /* bus indisponível — a partida continua a valer no kart */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hud?.fase, fase]);
 

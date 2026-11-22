@@ -21,27 +21,36 @@ export interface GameDef {
   icon: any;
   hasBot: boolean;
   regions?: string[];
+  // v78 RETENÇÃO (declarações do produto, exibidas ao jogador):
+  minutos?: number;       // tempo médio de uma sessão (para «Jogos rápidos» e «Cabe nos teus X min»)
+  pontosMax?: number;     // teto de PONTOS por sessão (cartão «Até X pontos» — o núcleo da progressão aplica-o)
+  dificuldade?: "Fácil" | "Média" | "Difícil";
+}
+
+/** Teto de pontos por jogo — fonte ÚNICA de verdade (o núcleo da progressão aplica-o). */
+export function pontosMaxDe(id: string): number {
+  return ALL_GAMES.find((g) => g.id === id)?.pontosMax ?? 0;
 }
 
 // CATÁLOGO CURADO: apenas os clássicos famosos de qualquer dispositivo + o kart da plataforma
 export const ALL_GAMES: GameDef[] = [
-  { id: "kart", label: "BATEU KART: Circuito das Lendas", emoji: "🏎️", desc: "Corridas LONGAS estilo Mario Kart: derrapa para o mini-turbo, recolhe cascas e mísseis, melhora o carro e as armas na garagem — ONLINE com sala partilhada!", grad: "from-orange-500 via-red-500 to-rose-600", category: "Corridas", players: "Solo · 12 pilotos", icon: "flag", hasBot: false },
-  { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false },
-  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Scouts, fighters que atiram, tanques, kamikazes, drones aliados, LASER e chefes — a guerra avançada!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false },
-  { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: "gamepad", hasBot: true },
-  { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "A cobra famosa de sempre — duas cobras, um tabuleiro, quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: true },
-  { id: "numbertetris", label: "Números Caindo", emoji: "🔢", desc: "Estilo Tetris 2048 — números caem e combinam até fazer 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false },
-  { id: "tetris", label: "Tetris", emoji: "🧱", desc: "O CLÁSSICO de sempre: saco de 7, hold, peça fantasma, combos e TETRIS com flash — vicia!", grad: "from-cyan-500 to-violet-600", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false },
-  { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "O primeiro clássico da história — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: false },
-  { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "O famoso jogo do galo a nível PRO — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", category: "Estratégia", players: "1v1 / Bot", icon: "grid3", hasBot: true },
-  { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estratégia", players: "1v1 / Bot", icon: "grid", hasBot: true },
-  { id: "checkers", label: "Damas", emoji: "♟️", desc: "O clássico mundial das damas com capturas e promoção a rei!", grad: "from-amber-700 to-red-800", category: "Estratégia", players: "1v1 / Bot", icon: "grid3", hasBot: false },
-  { id: "chess", label: "Xadrez", emoji: "♚", desc: "Xadrez completo: roque, en passant, promoção e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estratégia", players: "1v1 / Bot", icon: "crown", hasBot: true },
-  { id: "dominoes", label: "Dominó", emoji: "🎲", desc: "O clássico das mesas de Moçambique — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700", category: "Estratégia", players: "1v1 / Bot", icon: "grid", hasBot: false },
-  { id: "snakesladders", label: "Cobras e Escadas", emoji: "🪜", desc: "O clássico mundial! Suba escadas, fuja das cobras e chegue primeiro ao 100!", grad: "from-lime-600 to-emerald-700", category: "Arcade", players: "1v1 / Bot", icon: "sparkles", hasBot: true },
-  { id: "memory", label: "Jogo da Memória VS", emoji: "🧠", desc: "O clássico dos pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: "brain", hasBot: false },
-  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala moçambicano — semeie, capture e vença!", grad: "from-green-700 to-amber-900", category: "Moçambicano", players: "1v1 / Bot", icon: "gamepad", hasBot: true },
-  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mão — jogo moçambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Moçambicano", players: "1v1 / Bot", icon: "zap", hasBot: true },
+  { id: "kart", label: "BATEU KART: Circuito das Lendas", emoji: "🏎️", desc: "Corridas LONGAS estilo Mario Kart: derrapa para o mini-turbo, recolhe cascas e mísseis, melhora o carro e as armas na garagem — ONLINE com sala partilhada!", grad: "from-orange-500 via-red-500 to-rose-600", category: "Corridas", players: "Solo · 12 pilotos", icon: "flag", hasBot: false , minutos: 6, pontosMax: 120, dificuldade: "Fácil" },
+  { id: "bounce", label: "Bounce", emoji: "⚽", desc: "O clássico da bola quicando! Salte plataformas, junte anéis e evite os espinhos — direto ao nível final!", grad: "from-sky-500 to-indigo-600", category: "Arcade", players: "Solo", icon: "circle", hasBot: false , minutos: 3, pontosMax: 60, dificuldade: "Média" },
+  { id: "spaceshooter", label: "Guerra Espacial", emoji: "🚀", desc: "Scouts, fighters que atiram, tanques, kamikazes, drones aliados, LASER e chefes — a guerra avançada!", grad: "from-slate-500 to-blue-700", category: "Arcade", players: "1v1 / Bot", icon: "zap", hasBot: false , minutos: 5, pontosMax: 90, dificuldade: "Média" },
+  { id: "flappybird", label: "Flappy Bird", emoji: "🐦", desc: "Desvie dos canos! O clássico viciante de qualquer dispositivo!", grad: "from-sky-400 to-green-500", category: "Arcade", players: "Solo / Bot", icon: "gamepad", hasBot: true , minutos: 2, pontosMax: 50, dificuldade: "Difícil" },
+  { id: "snakebattle", label: "Batalha de Cobras", emoji: "🐍", desc: "A cobra famosa de sempre — duas cobras, um tabuleiro, quem cresce mais ganha!", grad: "from-emerald-500 to-teal-600", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: true , minutos: 3, pontosMax: 70, dificuldade: "Fácil" },
+  { id: "numbertetris", label: "Números Caindo", emoji: "🔢", desc: "Estilo Tetris 2048 — números caem e combinam até fazer 2048!", grad: "from-orange-600 to-red-700", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false , minutos: 5, pontosMax: 80, dificuldade: "Média" },
+  { id: "tetris", label: "Tetris", emoji: "🧱", desc: "O CLÁSSICO de sempre: saco de 7, hold, peça fantasma, combos e TETRIS com flash — vicia!", grad: "from-cyan-500 to-violet-600", category: "Puzzle", players: "Solo", icon: "grid", hasBot: false , minutos: 5, pontosMax: 100, dificuldade: "Média" },
+  { id: "pongvs", label: "Pong VS", emoji: "🏓", desc: "O primeiro clássico da história — primeiro a 5 pontos!", grad: "from-blue-600 to-indigo-700", category: "Arcade", players: "1v1 / Bot", icon: "gamepad", hasBot: false , minutos: 3, pontosMax: 60, dificuldade: "Fácil" },
+  { id: "tictactoepro", label: "Galo PRO", emoji: "✕", desc: "O famoso jogo do galo a nível PRO — 9 mini-tabuleiros, estratégia avançada!", grad: "from-violet-600 to-indigo-700", category: "Estratégia", players: "1v1 / Bot", icon: "grid3", hasBot: true , minutos: 4, pontosMax: 70, dificuldade: "Média" },
+  { id: "connect4", label: "Ligar 4", emoji: "🔴", desc: "Estratégia pura: ligue 4 peças em linha para vencer!", grad: "from-blue-500 to-yellow-500", category: "Estratégia", players: "1v1 / Bot", icon: "grid", hasBot: true, minutos: 4, pontosMax: 70, dificuldade: "Fácil" },
+  { id: "checkers", label: "Damas", emoji: "♟️", desc: "O clássico mundial das damas com capturas e promoção a rei!", grad: "from-amber-700 to-red-800", category: "Estratégia", players: "1v1 / Bot", icon: "grid3", hasBot: false , minutos: 8, pontosMax: 100, dificuldade: "Difícil" },
+  { id: "chess", label: "Xadrez", emoji: "♚", desc: "Xadrez completo: roque, en passant, promoção e checkmate!", grad: "from-slate-700 to-zinc-900", category: "Estratégia", players: "1v1 / Bot", icon: "crown", hasBot: true , minutos: 12, pontosMax: 120, dificuldade: "Difícil" },
+  { id: "dominoes", label: "Dominó", emoji: "🎲", desc: "O clássico das mesas de Moçambique — encaixe as peças e esvazie a mão!", grad: "from-slate-600 to-zinc-700", category: "Estratégia", players: "1v1 / Bot", icon: "grid", hasBot: false , minutos: 8, pontosMax: 90, dificuldade: "Média" },
+  { id: "snakesladders", label: "Cobras e Escadas", emoji: "🪜", desc: "O clássico mundial! Suba escadas, fuja das cobras e chegue primeiro ao 100!", grad: "from-lime-600 to-emerald-700", category: "Arcade", players: "1v1 / Bot", icon: "sparkles", hasBot: true , minutos: 4, pontosMax: 60, dificuldade: "Fácil" },
+  { id: "memory", label: "Jogo da Memória VS", emoji: "🧠", desc: "O clássico dos pares — quem tem melhor memória?", grad: "from-indigo-500 to-purple-600", category: "Puzzle", players: "1v1 / Bot", icon: "brain", hasBot: false , minutos: 3, pontosMax: 60, dificuldade: "Fácil" },
+  { id: "urusse", label: "Urusse", emoji: "🧴", desc: "Mancala moçambicano — semeie, capture e vença!", grad: "from-green-700 to-amber-900", category: "Moçambicano", players: "1v1 / Bot", icon: "gamepad", hasBot: true , minutos: 7, pontosMax: 90, dificuldade: "Média" },
+  { id: "mexerica", label: "Mexerica", emoji: "✋", desc: "Bate a Mão — jogo moçambicano de reflexos!", grad: "from-amber-600 to-red-700", category: "Moçambicano", players: "1v1 / Bot", icon: "zap", hasBot: true , minutos: 2, pontosMax: 50, dificuldade: "Fácil" },
 ];
 
 export const CATEGORIES = [

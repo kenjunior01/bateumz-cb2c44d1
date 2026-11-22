@@ -14,6 +14,8 @@ import ShimmerText from "@/components/ui/ShimmerText";
 import NeonBorder from "@/components/ui/NeonBorder";
 import ButtonRipple from "@/components/ui/ButtonRipple";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
+import PainelProgressao from "@/components/progressao/PainelProgressao";
+import { pontosMaxDe } from "@/lib/gamesCatalog";
 import { getActiveLives } from "@/lib/livePlatform";
 const TapBattle = lazy(() => import("@/components/livegames/TapBattle"));
 const QuizBattle = lazy(() => import("@/components/livegames/QuizBattle"));
@@ -218,6 +220,7 @@ const LiveHub = () => {
     ...g,
     label: t("livehub.game." + g.id),
     desc: t("livehub.game." + g.id + ".desc"),
+    pontosMax: pontosMaxDe(g.id), // v78 RETENÇÃO: o cartão mostra o BENEFÍCIO (Até X pontos)
   })), [t]);
   const [searchParams] = useSearchParams();
   // v60: o ?game= do URL é DADO EXTERNO — validado contra o catálogo; antes
@@ -754,6 +757,16 @@ const LiveHub = () => {
           />
         )}
 
+        {/* v78 RETENÇÃO: «JOGOS NO CENTRO» — progressão (Pontos → Nível →
+            Missões → Prémios), recomendações por REGRAS e banner honesto de
+            convidado. Fica no TOPO da secção (antes da grelha) em telemóvel
+            E em desktop (ordem 0 < order-2 da grelha). */}
+        {!isImmersiveWorld && (
+          <div className="lg:order-1">
+            <PainelProgressao onAbrirJogo={(id) => { const j = jogoValido(id, IDS_GAMES); if (j) setActive(j); }} />
+          </div>
+        )}
+
         {/* ⭐ REA Twitch: secção de CONSUMO — quem está ao vivo agora na plataforma */}
         {!isImmersiveWorld && livesAgora.length > 0 && (
           <div className="mb-4 lg:order-5" data-testid="livehub-lives-agora">
@@ -880,6 +893,12 @@ const LiveHub = () => {
                 </div>
                 <p className={`font-display font-bold mb-1 ${featured ? "text-base" : "text-sm"}`}>{g.label}</p>
                 <p className="text-[11px] text-muted-foreground line-clamp-2">{g.desc}</p>
+                {/* v78 RETENÇÃO: o cartão mostra o BENEFÍCIO — não só «Jogar» */}
+                {!!g.pontosMax && (
+                  <span data-testid={`livehub-card-pontos-${g.id}`} className="mt-2 inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[10px] font-black text-amber-300">
+                    Até {g.pontosMax} pontos
+                  </span>
+                )}
                 {/* v74 DESKTOP: chip JOGAR no hover — o cartão diz o que faz */}
                 <span className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-black text-primary opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all">
                   JOGAR ▶

@@ -19,6 +19,14 @@ import { useNavigate } from "react-router-dom";
 import ResponsibleGaming from "@/components/ResponsibleGaming";
 import StoryHighlights from "@/components/stories/StoryHighlights";
 import { Progress } from "@/components/ui/progress";
+// v80 DESBLOQUEIOS REAIS: o Profile é o DONO da store nesta rota (a regra
+// v78 «um único dono» mantém-se) — moldura no avatar, título junto ao nome
+// e o catálogo com seleção honesta abaixo das estatísticas.
+import { useProgressao } from "@/lib/progressaoStore";
+import { useCosmeticos } from "@/lib/cosmeticosStore";
+import { CAT_DESBLOQUEIOS } from "@/lib/desbloqueios";
+import PainelDesbloqueios from "@/components/progressao/PainelDesbloqueios";
+import { useState as useStateAlias } from "react";
 
 interface Participation {
   id: string;
@@ -55,6 +63,10 @@ const Profile = () => {
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, spent: 0 });
+  // v80: dono da progressão NESTA rota (regen idempotente) + cosmeticos
+  const [agora] = useStateAlias(() => Date.now());
+  const { estado: estadoProg, nivel: nivelProg } = useProgressao(agora);
+  const { estado: cosmeticos, escolher: escolherCosmetico } = useCosmeticos(nivelProg.nivel);
 
   useEffect(() => {
     if (!user) return;
@@ -160,7 +172,7 @@ const Profile = () => {
             <div className="h-24 bg-gradient-to-r from-primary/30 via-primary/10 to-accent/20" />
             <CardContent className="relative px-4 sm:px-6 pb-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10 text-center sm:text-left">
-                <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
+                <Avatar className="h-20 w-20 border-4 shadow-lg" style={{ borderColor: cosmeticos.molduraId ? CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.molduraId)?.cor ?? undefined : undefined, boxShadow: cosmeticos.molduraId ? `0 0 14px ${(CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.molduraId)?.cor ?? "#000") + "66"}` : undefined }}>
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
                     {initials}
@@ -188,6 +200,19 @@ const Profile = () => {
                     <>
                       <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                         {profile?.display_name || "Utilizador"}
+                        {cosmeticos.tituloId && (
+                          <span
+                            data-testid="perfil-titulo-ativo"
+                            className="ml-2 inline-flex items-center align-middle rounded-full border px-2.5 py-0.5 text-[11px] font-black"
+                            style={{
+                              color: CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.cor,
+                              borderColor: (CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.cor ?? "#f59e0b") + "88",
+                              background: (CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.cor ?? "#f59e0b") + "14",
+                            }}
+                          >
+                            {CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.nome.replace("Título ", "")}
+                          </span>
+                        )}
                       </h1>
                       <div className="flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
                         <span className="flex items-center gap-1 max-w-full truncate"><Mail className="h-3.5 w-3.5 shrink-0" />{user?.email}</span>
@@ -252,7 +277,31 @@ const Profile = () => {
           ))}
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        {/* v80 DESBLOQUEIOS REAIS: nível, pontos e o catálogo com seleção
+            honesta — a progressão dos jogos aparece no próprio perfil. */}
+        <Card className="glass border-amber-500/30 mb-8" data-testid="perfil-progressao">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <p className="text-sm font-black text-foreground">
+                Progressão no Bateu
+                <span className="ml-2 rounded-full border border-fuchsia-400/50 bg-fuchsia-500/10 px-2.5 py-0.5 text-xs font-black text-fuchsia-200">
+                  Nível {nivelProg.nivel} · {nivelProg.nome}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <b className="text-amber-400">{estadoProg.pontos.toLocaleString("pt-PT")}</b> pontos
+                {nivelProg.proximo ? ` · faltam ${nivelProg.proximo.pontosFaltam.toLocaleString("pt-PT")} para ${nivelProg.proximo.nome}` : " · nível máximo"}
+              </p>
+            </div>
+            <PainelDesbloqueios estado={estadoProg} nivel={nivelProg} cosmeticos={cosmeticos} escolher={escolherCosmetico} compacto />
+          </CardContent>
+        </Card>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <Tabs defaultValue="all">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-foreground">Área do Perfil</h2>

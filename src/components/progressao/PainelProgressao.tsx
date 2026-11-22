@@ -18,7 +18,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_GAMES, pontosMaxDe } from "@/lib/gamesCatalog";
 import { useProgressao } from "@/lib/progressaoStore";
+import { useCosmeticos } from "@/lib/cosmeticosStore";
+import { CAT_DESBLOQUEIOS } from "@/lib/desbloqueios";
 import { avisoExpiracao, recomendarJogos, visaoCarteiras, NIVEIS } from "@/lib/progressao";
+import PainelDesbloqueios from "./PainelDesbloqueios";
 
 const NIVEIS_BASE = NIVEIS.map((n) => n.pontos);
 
@@ -26,6 +29,9 @@ const PainelProgressao = ({ onAbrirJogo }: { onAbrirJogo?: (jogoId: string) => v
   const { toast } = useToast();
   const [agora, setAgora] = useState(() => Date.now());
   const { estado, nivel, reclamar, registrarPartida } = useProgressao(agora);
+  // v80 DESBLOQUEIOS REAIS: a moldura/título SELECIONADOS aplicam-se na
+  // faixa de nível deste painel (o dono da store é UM por rota).
+  const { estado: cosmeticos, escolher } = useCosmeticos(nivel.nivel);
 
   useEffect(() => {
     const iv = setInterval(() => setAgora(Date.now()), 30_000);
@@ -104,9 +110,27 @@ const PainelProgressao = ({ onAbrirJogo }: { onAbrirJogo?: (jogoId: string) => v
         <div className="flex items-baseline gap-3">
           <span data-testid="progressao-pontos" className="font-display text-2xl font-black text-amber-300">{estado.pontos.toLocaleString("pt-PT")}</span>
           <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">pontos</span>
-          <span data-testid="progressao-nivel" className="rounded-full border border-fuchsia-400/50 bg-fuchsia-500/10 px-3 py-0.5 text-xs font-black text-fuchsia-200">
+          <span
+            data-testid="progressao-nivel"
+            className="rounded-full border bg-fuchsia-500/10 px-3 py-0.5 text-xs font-black text-fuchsia-200"
+            style={{
+              borderColor: cosmeticos.molduraId ? CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.molduraId)?.cor : undefined,
+              color: cosmeticos.molduraId ? CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.molduraId)?.cor : undefined,
+              boxShadow: cosmeticos.molduraId
+                ? `0 0 10px ${(CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.molduraId)?.cor ?? "#e879f9") + "44"}`
+                : undefined,
+            }}
+          >
             Nível {nivel.nivel} · {nivel.nome}
           </span>
+          {cosmeticos.tituloId && (
+            <span
+              data-testid="progressao-titulo-ativo"
+              className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-0.5 text-xs font-black text-amber-200"
+            >
+              {CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.nome.replace("Título ", "")}
+            </span>
+          )}
         </div>
         {/* CARTUBEIRAS SEPARADAS (regra do produto — nunca misturadas) */}
         <div className="flex flex-wrap items-center gap-2 text-[11px]" data-testid="progressao-carteiras">
@@ -202,6 +226,11 @@ const PainelProgressao = ({ onAbrirJogo }: { onAbrirJogo?: (jogoId: string) => v
         Joga → ganha pontos → sobe de nível → desbloqueia vantagens. Os desbloqueios são de aparência e acesso — nunca dão vantagem em jogo.
         {pontosMaxDe("kart") > 0 && <> O BATEU KART rende até <b>{pontosMaxDe("kart")} pontos</b> por corrida.</>}
       </p>
+
+      {/* v80 DESBLOQUEIOS REAIS: catálogo sincronizado com NIVEIS, seleção
+          honesta (bloqueado recusado pelo núcleo) — o DONO da store passa
+          tudo por props (zero hooks duplicados). */}
+      <PainelDesbloqueios estado={estado} nivel={nivel} cosmeticos={cosmeticos} escolher={escolher} />
     </div>
   );
 };

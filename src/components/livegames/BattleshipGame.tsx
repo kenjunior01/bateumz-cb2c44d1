@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+// v75: a IA vive em src/game/batalhanaval/ia.ts — modo-alvo de VERDADE
+// (hits vivos só os do navio ainda em pé) + densidade completa com
+// paridade no «médio» + RNG com semente (determinística nos testes).
+import { escolherTiro, dadosDaFrota, mulberry32, type TabuleiroTiro, type TabuleiroNavio } from "@/game/batalhanaval/ia";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -57,106 +61,7 @@ const placeShipsRandom = (b: Board): Board => {
   return board;
 };
 
-/* ===== AI Helpers ===== */
-
-const getEmptyCells = (attack: Board): [number, number][] => {
-  const cells: [number, number][] = [];
-  for (let r = 0; r < GRID; r++)
-    for (let c = 0; c < GRID; c++)
-      if (attack[r][c] === "empty") cells.push([r, c]);
-  return cells;
-};
-
-const getAdjacentEmpty = (attack: Board, r: number, c: number): [number, number][] => {
-  const result: [number, number][] = [];
-  for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-    const nr = r + dr, nc = c + dc;
-    if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && attack[nr][nc] === "empty") {
-      result.push([nr, nc]);
-    }
-  }
-  return result;
-};
-
-const computeProbMap = (attack: Board): number[][] => {
-  const prob: number[][] = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-
-  for (const ship of SHIPS) {
-    /* Horizontal placements */
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c <= GRID - ship.size; c++) {
-        let valid = true;
-        let hasEmpty = false;
-        for (let i = 0; i < ship.size; i++) {
-          const cell = attack[r][c + i];
-          if (cell === "miss") { valid = false; break; }
-          if (cell === "empty") hasEmpty = true;
-        }
-        if (valid && hasEmpty) {
-          for (let i = 0; i < ship.size; i++) {
-            if (attack[r][c + i] === "empty") prob[r][c + i]++;
-          }
-        }
-      }
-    }
-    /* Vertical placements */
-    for (let r = 0; r <= GRID - ship.size; r++) {
-      for (let c = 0; c < GRID; c++) {
-        let valid = true;
-        let hasEmpty = false;
-        for (let i = 0; i < ship.size; i++) {
-          const cell = attack[r + i][c];
-          if (cell === "miss") { valid = false; break; }
-          if (cell === "empty") hasEmpty = true;
-        }
-        if (valid && hasEmpty) {
-          for (let i = 0; i < ship.size; i++) {
-            if (attack[r + i][c] === "empty") prob[r + i][c]++;
-          }
-        }
-      }
-    }
-  }
-
-  /* Boost cells adjacent to existing hits (targeting focus) */
-  for (let r = 0; r < GRID; r++) {
-    for (let c = 0; c < GRID; c++) {
-      if (attack[r][c] === "hit") {
-        for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-          const nr = r + dr, nc = c + dc;
-          if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && attack[nr][nc] === "empty") {
-            prob[nr][nc] += 10;
-          }
-        }
-      }
-    }
-  }
-
-  return prob;
-};
-
-const pickHighestProb = (prob: number[][], attack: Board): [number, number] | undefined => {
-  let maxVal = -1;
-  let bestCells: [number, number][] = [];
-  for (let r = 0; r < GRID; r++) {
-    for (let c = 0; c < GRID; c++) {
-      if (prob[r][c] > maxVal) {
-        maxVal = prob[r][c];
-        bestCells = [[r, c]];
-      } else if (prob[r][c] === maxVal && maxVal > 0) {
-        bestCells.push([r, c]);
-      }
-    }
-  }
-  if (bestCells.length > 0) {
-    return bestCells[Math.floor(Math.random() * bestCells.length)];
-  }
-  // Fallback: pick a random empty cell
-  const empty = getEmptyCells(attack);
-  return empty.length > 0 ? empty[Math.floor(Math.random() * empty.length)] : undefined;
-};
-
-/* ===== End AI Helpers ===== */
+/* ===== IA v75: helpers locais saíram — vivem em src/game/batalhanaval/ia.ts ===== */
 
 const BattleshipGame = ({ onScore, liveCode }: Props) => {
   const [gameStarted, setGameStarted] = useState(false);
@@ -175,7 +80,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
   const [showEnemy, setShowEnemy] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
   const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const botTargetRef = useRef<{ stack: [number, number][] }>({ stack: [] });
+  const botRngRef = useRef<() => number>(() => Math.random());
   const botActiveRef = useRef(false);
 
   const countShips = (b: Board) => {
@@ -236,51 +141,16 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
     setBotThinking(true);
     botTimeoutRef.current = setTimeout(() => {
       try {
-        const attack = p2Attack.map(r => [...r]) as Board;
-        const enemy = p1Board.map(r => [...r]) as Board;
-        const target = botTargetRef.current;
+        const attack = p2Attack.map(r => [...r]) as TabuleiroTiro;
+        const enemy = p1Board.map(r => [...r]) as unknown as TabuleiroNavio;
 
-        let targetR: number, targetC: number;
-
-        if (difficulty === "facil") {
-          /* Random shot */
-          const empty = getEmptyCells(attack);
-          if (empty.length === 0) { botActiveRef.current = false; setBotThinking(false); return; }
-          const pick = empty[Math.floor(Math.random() * empty.length)];
-          targetR = pick[0];
-          targetC = pick[1];
-        } else if (difficulty === "medio") {
-          /* Hunt / Target mode */
-          let found = false;
-          /* Try targets from stack first */
-          while (target.stack.length > 0) {
-            const [sr, sc] = target.stack[target.stack.length - 1];
-            if (attack[sr][sc] === "empty") {
-              targetR = sr;
-              targetC = sc;
-              found = true;
-              break;
-            }
-            target.stack.pop();
-          }
-          if (!found) {
-            /* Hunt mode: checkerboard parity */
-            const empty = getEmptyCells(attack);
-            if (empty.length === 0) { botActiveRef.current = false; setBotThinking(false); return; }
-            const checker = empty.filter(([r, c]) => (r + c) % 2 === 0);
-            const pool = checker.length > 0 ? checker : empty;
-            const pick = pool[Math.floor(Math.random() * pool.length)];
-            targetR = pick[0];
-            targetC = pick[1];
-          }
-        } else {
-          /* Difícil: probability density map */
-          const prob = computeProbMap(attack);
-          const pick = pickHighestProb(prob, attack);
-          if (!pick) { botActiveRef.current = false; setBotThinking(false); return; }
-          targetR = pick[0];
-          targetC = pick[1];
-        }
+        /* IA v75: modo-alvo com AFUNDADOS públicos + densidade com paridade */
+        const frota = dadosDaFrota(enemy, SHIPS.map(s => s.size));
+        const [targetR, targetC] = escolherTiro(
+          { ataque: attack, afundados: frota.afundados, restantes: frota.restantes, rng: botRngRef.current },
+          difficulty,
+        );
+        if (targetR < 0 || targetC < 0) { botActiveRef.current = false; setBotThinking(false); return; }
 
         /* Resolve the shot */
         const isHit = enemy[targetR][targetC] === "ship";
@@ -289,14 +159,6 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
 
         setP2Attack(attack);
         setP1Board(enemy);
-
-        /* Update targeting for Médio */
-        if (difficulty === "medio" && isHit) {
-          const adj = getAdjacentEmpty(attack, targetR, targetC);
-          for (const cell of adj) {
-            target.stack.push(cell);
-          }
-        }
 
         /* Check game over */
         const remaining = countShips(enemy).remaining;
@@ -335,7 +197,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
     setTurnCount(0); setShowEnemy(false); setBet(0);
     setBotThinking(false);
     botActiveRef.current = false;
-    botTargetRef.current = { stack: [] };
+    botRngRef.current = mulberry32(Math.floor(Math.random() * 2147483647));
   };
 
   const startGame = () => {
@@ -372,6 +234,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
           </motion.div>
           <motion.div whileHover={{scale:1.03}}>
           <Button
+            data-testid="naval-vs-bot"
             onClick={() => setVsComputer(true)}
             className={cn(
               "rounded-xl px-6",
@@ -398,6 +261,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
                   <Button
                     key={d}
                     size="sm"
+                    data-testid={`naval-dif-${d}`}
                     onClick={() => setDifficulty(d)}
                     className={cn(
                       "rounded-xl",
@@ -415,6 +279,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
         </AnimatePresence>
         <motion.div whileHover={{scale:1.03}}>
         <Button
+          data-testid="naval-iniciar"
           onClick={startGame}
           className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-10 text-lg font-bold"
           style={{ boxShadow: "0 0 24px rgba(6,182,212,0.35)" }}
@@ -508,6 +373,7 @@ const BattleshipGame = ({ onScore, liveCode }: Props) => {
               row.map((cell, c) => (
                 <motion.button
                   key={`${r}-${c}`}
+                  data-testid={`naval-ataque-${r}-${c}`}
                   onClick={() => fire(r, c)}
                   disabled={gameOver || cell !== "empty" || (vsComputer && current === 2)}
                   whileHover={{ scale: 1.1 }}

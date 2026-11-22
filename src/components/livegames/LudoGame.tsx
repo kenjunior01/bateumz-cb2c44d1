@@ -4,6 +4,10 @@ import { RotateCcw, Trophy, Star, Crown, Zap, Shield, Target, Flame } from "luci
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+// v75: o Ludo deixou de ser só hot-seat — a lógica da MÁQUINA vive em
+// src/game/ludo/ia.ts (terminar > capturar > fugir > seguro > base >
+// progresso) e o modo «vs IA» põe o Azul a jogar sozinho.
+import { escolherPecaIA } from "@/game/ludo/ia";
 
 interface Props {
   onScore?: (name: string, score: number) => void;
@@ -64,14 +68,14 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
   const [winner, setWinner] = useState<number | null>(null);
   const [sixCnt, setSixCnt] = useState(0);
   const [animKey, setAnimKey] = useState(0);
-  const [mode, setMode] = useState<"2p" | "4p">("2p");
+  const [mode, setMode] = useState<"2p" | "4p" | "ia">("2p");
   const [sparks, setSparks] = useState<{id:number;x:number;y:number;c:string;vx:number;vy:number}[]>([]);
   const [captureFlash, setCaptureFlash] = useState(false);
   const [diceRolling, setDiceRolling] = useState(false);
   const [confetti, setConfetti] = useState<{id:number;x:number;y:number;c:string;r:number;d:number}[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const ap = mode === "2p" ? [0, 2] : [0, 1, 2, 3];
+  const ap = mode === "4p" ? [0, 1, 2, 3] : [0, 2];
   const apI = ap.indexOf(cur);
 
   const canMove = useCallback((p: number, i: number, d: number): Pos | null => {
@@ -162,6 +166,24 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
   };
   const reset = () => { setPieces(Array.from({length:4},()=>[-1,-1,-1,-1] as Pos[])); setCur(0); setDice(1); setRolled(false); setGameOver(false); setWinner(null); setSixCnt(0); setSparks([]); setConfetti([]); setCaptureFlash(false); setDiceRolling(false); };
 
+  // ── IA do modo «vs IA» (jogador 2 — Azul): lança e joga sozinha ──
+  useEffect(() => {
+    if (mode !== "ia" || gameOver || cur !== 2) return;
+    if (!rolled) {
+      const t = setTimeout(() => rollDice(), 700);
+      return () => clearTimeout(t);
+    }
+    // tem lance? (o efeito de passar a vez já trata o «não tem»)
+    const temLance = [0, 1, 2, 3].some(i => canMove(cur, i, dice) !== null);
+    if (!temLance) return;
+    const t = setTimeout(() => {
+      const idx = escolherPecaIA(pieces, cur, dice, Math.random);
+      if (idx >= 0) movePiece(idx);
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, gameOver, cur, rolled, dice, pieces, apI]);
+
   const cellMap = useMemo(() => {
     const m = new Map<string, {type:string;player?:number}>();
     MT.forEach(([r,c],i) => { let pl: number|undefined; for(let p=0;p<4;p++) if(SO[p]===i) pl=p; m.set(`${r},${c}`,{type:SAFE.has(i)?"safe":"track",player:pl}); });
@@ -251,7 +273,7 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
                     />
                   )}
                 </div>
-                <span className="text-xs font-bold" style={{ color: PL[p] }}>{PN[p]}</span>
+                <span className="text-xs font-bold" style={{ color: PL[p] }}>{PN[p]}{mode === "ia" && p === 2 && <span className="ml-1 text-[9px] px-1 rounded bg-violet-500/25 text-violet-300 align-middle">IA</span>}</span>
                 {isActive && <Crown className="h-3 w-3 ml-auto" style={{ color: PC[p] }} />}
                 {!isActive && !gameOver && <span className="text-[9px] text-muted-foreground ml-auto">{homeCount}/4</span>}
               </div>
@@ -298,8 +320,9 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
       </div>
 
       <div className="flex justify-center gap-2">
-        <Button size="sm" variant={mode==="2p"?"default":"outline"} className={cn("rounded-xl text-xs",mode==="2p"&&"bg-gradient-to-r from-red-500 to-blue-500")} onClick={()=>{setMode("2p");reset();}}>2J</Button>
-        <Button size="sm" variant={mode==="4p"?"default":"outline"} className={cn("rounded-xl text-xs",mode==="4p"&&"bg-gradient-to-r from-red-500 via-green-500 via-blue-500 to-amber-500")} onClick={()=>{setMode("4p");reset();}}>4J</Button>
+        <Button size="sm" data-testid="ludo-modo-2p" variant={mode==="2p"?"default":"outline"} className={cn("rounded-xl text-xs",mode==="2p"&&"bg-gradient-to-r from-red-500 to-blue-500")} onClick={()=>{setMode("2p");reset();}}>2J</Button>
+        <Button size="sm" data-testid="ludo-modo-4p" variant={mode==="4p"?"default":"outline"} className={cn("rounded-xl text-xs",mode==="4p"&&"bg-gradient-to-r from-red-500 via-green-500 via-blue-500 to-amber-500")} onClick={()=>{setMode("4p");reset();}}>4J</Button>
+        <Button size="sm" data-testid="ludo-modo-ia" variant={mode==="ia"?"default":"outline"} className={cn("rounded-xl text-xs gap-1",mode==="ia"&&"bg-gradient-to-r from-blue-500 to-violet-500 text-white")} onClick={()=>{setMode("ia");reset();}}>🤖 vs IA</Button>
       </div>
 
       <div className="flex justify-center">
@@ -561,6 +584,7 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
         </div>
         {!rolled ? (
           <motion.button
+            data-testid="ludo-dado-rolar"
             whileHover={{ scale: 1.05, boxShadow: `0 6px 30px ${PC[cur]}50` }}
             whileTap={{ scale: 0.95 }}
             onClick={rollDice}
@@ -594,6 +618,7 @@ const LudoGame = ({ onScore, liveCode }: Props) => {
         {rolled && pieces[cur].map((pos,i)=>{if(canMove(cur,i,dice)===null) return null;return(
           <motion.button
             key={i}
+            data-testid={`ludo-ficha-${i}`}
             initial={{opacity:0,y:10}}
             animate={{opacity:1,y:0}}
             whileHover={{scale:1.05,x:4}}

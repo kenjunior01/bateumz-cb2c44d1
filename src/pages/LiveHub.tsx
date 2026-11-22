@@ -186,9 +186,13 @@ const GAME_DEFS: { id: GameId; icon: any; emoji: string; grad: string }[] = [
   { id: "tictactoepro", icon: Grid3X3, emoji: "✖", grad: "from-violet-600 to-indigo-700" },
   { id: "connect4", icon: LayoutGrid, emoji: "🔴", grad: "from-blue-500 to-yellow-500" },
   { id: "checkers", icon: Grid3X3, emoji: "♟️", grad: "from-amber-700 to-red-800" },
+  // v75: Ludo e Batalha Naval TINHAM painel no hub mas nenhum caminho até lá
+  // (?game= era recusado pelo catálogo — furo fechado: entram na grelha a valer)
+  { id: "ludo", icon: Dices, emoji: "🎲", grad: "from-emerald-500 to-teal-700" },
   { id: "chess", icon: Crown, emoji: "♚", grad: "from-slate-700 to-zinc-900" },
   { id: "dominoes", icon: LayoutGrid, emoji: "🎲", grad: "from-slate-600 to-zinc-700" },
   { id: "snakesladders", icon: TrendingUp, emoji: "🪜", grad: "from-lime-600 to-emerald-700" },
+  { id: "battleship", icon: Anchor, emoji: "🚢", grad: "from-blue-600 to-cyan-700" },
   { id: "memory", icon: Brain, emoji: "🧠", grad: "from-indigo-500 to-purple-600" },
   { id: "urusse", icon: Gamepad2, emoji: "🧴", grad: "from-green-700 to-amber-900" },
   { id: "mexerica", icon: Zap, emoji: "✋", grad: "from-amber-600 to-red-700" },

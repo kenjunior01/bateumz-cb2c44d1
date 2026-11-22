@@ -5,48 +5,28 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Crown, RotateCcw, Bot, Clock, History, Shield, Swords } from 'lucide-react';
 
-// ===================== TYPES =====================
+// v75: a LÓGICA PURA do xadrez vive em src/game/chess/ia.ts — o
+// componente passa a ser SÓ interface (mesmo contrato, motor NOVO:
+// PST + negamax alfa-beta + quiscência, em vez do aleatório/guloso).
+import {
+  type PieceType, type Color, type Piece, type Board, type Difficulty, type Move,
+  createInitialBoard, applyMoveToBoard, moveToNotation, getAllLegalMoves,
+  getLegalMoves, isInCheck, opponent, findKing, getBestMove, PIECE_VALUES,
+} from '@/game/chess/ia';
 
 interface Props {
   onScore?: (name: string, score: number) => void;
   liveCode?: string;
 }
 
-type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P';
-type Color = 'w' | 'b';
-
-interface Piece {
-  type: PieceType;
-  color: Color;
-  moved: boolean;
-}
-
-type Cell = Piece | null;
-type Board = Cell[][];
-type Difficulty = 'facil' | 'medio' | 'dificil';
 type TimerOption = 5 | 10 | 15;
 type GamePhase = 'menu' | 'playing' | 'promoting' | 'ended';
 
-interface Move {
-  fromR: number;
-  fromC: number;
-  toR: number;
-  toC: number;
-  piece: PieceType;
-  captured?: Piece;
-  castling?: 'K' | 'Q';
-  enPassant?: boolean;
-  promotion?: PieceType;
-}
 // ===================== CONSTANTS =====================
 
 const PIECE_SYMBOLS: Record<string, Record<PieceType, string>> = {
   w: { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' },
   b: { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' },
-};
-
-const PIECE_VALUES: Record<PieceType, number> = {
-  P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100,
 };
 
 const PIECE_NAMES_PT: Record<PieceType, string> = {
@@ -59,363 +39,6 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
   { value: 'medio', label: 'Médio' },
   { value: 'dificil', label: 'Difícil' },
 ];
-
-// ===================== BOARD HELPERS =====================
-
-function createInitialBoard(): Board {
-  const b: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
-  const backRank: PieceType[] = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
-  for (let c = 0; c < 8; c++) {
-    b[0][c] = { type: backRank[c], color: 'b', moved: false };
-    b[1][c] = { type: 'P', color: 'b', moved: false };
-    b[6][c] = { type: 'P', color: 'w', moved: false };
-    b[7][c] = { type: backRank[c], color: 'w', moved: false };
-  }
-  return b;
-}
-
-function cloneBoard(b: Board): Board {
-  return b.map(row => row.map(c => c ? { ...c } : null));
-}
-
-function inBounds(r: number, c: number): boolean {
-  return r >= 0 && r < 8 && c >= 0 && c < 8;
-}
-
-function opponent(color: Color): Color {
-  return color === 'w' ? 'b' : 'w';
-}
-
-function findKing(board: Board, color: Color): [number, number] {
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 8; c++)
-      if (board[r][c]?.type === 'K' && board[r][c]?.color === color) return [r, c];
-  return [-1, -1];
-}
-
-function isSquareAttacked(board: Board, r: number, c: number, byColor: Color): boolean {
-  // Pawn attacks
-  const pawnDir = byColor === 'w' ? 1 : -1;
-  for (const dc of [-1, 1]) {
-    const pr = r + pawnDir, pc = c + dc;
-    if (inBounds(pr, pc) && board[pr][pc]?.type === 'P' && board[pr][pc]?.color === byColor) return true;
-  }
-  // Knight attacks
-  const knightMoves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-  for (const [dr, dc] of knightMoves) {
-    const nr = r + dr, nc = c + dc;
-    if (inBounds(nr, nc) && board[nr][nc]?.type === 'N' && board[nr][nc]?.color === byColor) return true;
-  }
-  // King attacks
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue;
-      const nr = r + dr, nc = c + dc;
-      if (inBounds(nr, nc) && board[nr][nc]?.type === 'K' && board[nr][nc]?.color === byColor) return true;
-    }
-  }
-  // Sliding pieces (Rook/Queen for straights, Bishop/Queen for diagonals)
-  const straightDirs = [[-1,0],[1,0],[0,-1],[0,1]];
-  const diagDirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
-  for (const [dr, dc] of straightDirs) {
-    let nr = r + dr, nc = c + dc;
-    while (inBounds(nr, nc)) {
-      if (board[nr][nc]) {
-        if (board[nr][nc]?.color === byColor && (board[nr][nc]?.type === 'R' || board[nr][nc]?.type === 'Q')) return true;
-        break;
-      }
-      nr += dr; nc += dc;
-    }
-  }
-  for (const [dr, dc] of diagDirs) {
-    let nr = r + dr, nc = c + dc;
-    while (inBounds(nr, nc)) {
-      if (board[nr][nc]) {
-        if (board[nr][nc]?.color === byColor && (board[nr][nc]?.type === 'B' || board[nr][nc]?.type === 'Q')) return true;
-        break;
-      }
-      nr += dr; nc += dc;
-    }
-  }
-  return false;
-}
-
-function isInCheck(board: Board, color: Color): boolean {
-  const [kr, kc] = findKing(board, color);
-  if (kr === -1) return false;
-  return isSquareAttacked(board, kr, kc, opponent(color));
-}
-
-// ===================== MOVE GENERATION =====================
-
-function getRawMoves(board: Board, r: number, c: number, enPassantTarget: [number, number] | null): Move[] {
-  const piece = board[r][c];
-  if (!piece) return [];
-  const moves: Move[] = [];
-  const color = piece.color;
-  const opp = opponent(color);
-
-  const addMove = (tr: number, tc: number, extra?: Partial<Move>) => {
-    const captured = board[tr][tc];
-    if (captured && captured.color === color) return;
-    moves.push({ fromR: r, fromC: c, toR: tr, toC: tc, piece: piece.type, captured: captured ?? undefined, ...extra });
-  };
-
-  const addSliding = (dirs: number[][]) => {
-    for (const [dr, dc] of dirs) {
-      let nr = r + dr, nc = c + dc;
-      while (inBounds(nr, nc)) {
-        if (board[nr][nc]) {
-          if (board[nr][nc]?.color === opp) addMove(nr, nc);
-          break;
-        }
-        addMove(nr, nc);
-        nr += dr; nc += dc;
-      }
-    }
-  };
-
-  switch (piece.type) {
-    case 'P': {
-      const dir = color === 'w' ? -1 : 1;
-      const startRow = color === 'w' ? 6 : 1;
-      const promoRow = color === 'w' ? 0 : 7;
-      // Forward
-      const fr = r + dir;
-      if (inBounds(fr, c) && !board[fr][c]) {
-        if (fr === promoRow) {
-          for (const pt of ['Q', 'R', 'B', 'N'] as PieceType[]) moves.push({ fromR: r, fromC: c, toR: fr, toC: c, piece: 'P', promotion: pt });
-        } else {
-          addMove(fr, c);
-          // Double move
-          if (r === startRow && !board[r + 2 * dir][c]) {
-            addMove(r + 2 * dir, c);
-          }
-        }
-      }
-      // Captures
-      for (const dc of [-1, 1]) {
-        const nc = c + dc;
-        if (!inBounds(fr, nc)) continue;
-        if (board[fr][nc]?.color === opp) {
-          if (fr === promoRow) {
-            for (const pt of ['Q', 'R', 'B', 'N'] as PieceType[]) moves.push({ fromR: r, fromC: c, toR: fr, toC: nc, piece: 'P', captured: board[fr][nc], promotion: pt });
-          } else {
-            addMove(fr, nc);
-          }
-        }
-        // En passant
-        if (enPassantTarget && enPassantTarget[0] === fr && enPassantTarget[1] === nc) {
-          moves.push({ fromR: r, fromC: c, toR: fr, toC: nc, piece: 'P', enPassant: true, captured: board[r][nc] });
-        }
-      }
-      break;
-    }
-    case 'N': {
-      const knightMoves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-      for (const [dr, dc] of knightMoves) {
-        const nr = r + dr, nc = c + dc;
-        if (inBounds(nr, nc)) addMove(nr, nc);
-      }
-      break;
-    }
-    case 'B': addSliding([[-1,-1],[-1,1],[1,-1],[1,1]]); break;
-    case 'R': addSliding([[-1,0],[1,0],[0,-1],[0,1]]); break;
-    case 'Q': addSliding([[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]); break;
-    case 'K': {
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          const nr = r + dr, nc = c + dc;
-          if (inBounds(nr, nc)) addMove(nr, nc);
-        }
-      }
-      // Castling
-      if (!piece.moved && !isInCheck(board, color)) {
-        const row = color === 'w' ? 7 : 0;
-        const rook = board[row][7];
-        if (rook && rook.type === 'R' && !rook.moved && !board[row][5] && !board[row][6]) {
-          if (!isSquareAttacked(board, row, 5, opp) && !isSquareAttacked(board, row, 6, opp)) {
-            moves.push({ fromR: r, fromC: c, toR: row, toC: 6, piece: 'K', castling: 'K' });
-          }
-        }
-        const rookQ = board[row][0];
-        if (rookQ && rookQ.type === 'R' && !rookQ.moved && !board[row][1] && !board[row][2] && !board[row][3]) {
-          if (!isSquareAttacked(board, row, 2, opp) && !isSquareAttacked(board, row, 3, opp)) {
-            moves.push({ fromR: r, fromC: c, toR: row, toC: 2, piece: 'K', castling: 'Q' });
-          }
-        }
-      }
-      break;
-    }
-  }
-  return moves;
-}
-
-function getLegalMoves(board: Board, r: number, c: number, enPassantTarget: [number, number] | null): Move[] {
-  const piece = board[r][c];
-  if (!piece) return [];
-  const raw = getRawMoves(board, r, c, enPassantTarget);
-  return raw.filter(m => {
-    const nb = applyMoveToBoard(board, m);
-    return !isInCheck(nb, piece.color);
-  });
-}
-
-function getAllLegalMoves(board: Board, color: Color, enPassantTarget: [number, number] | null): Move[] {
-  const moves: Move[] = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      if (board[r][c]?.color === color) {
-        moves.push(...getLegalMoves(board, r, c, enPassantTarget));
-      }
-    }
-  }
-  return moves;
-}
-
-// ===================== APPLY MOVE =====================
-
-function applyMoveToBoard(board: Board, move: Move): Board {
-  const nb = cloneBoard(board);
-  const piece = nb[move.fromR][move.fromC];
-  if (!piece) return nb;
-
-  // En passant capture
-  if (move.enPassant) {
-    nb[move.fromR][move.toC] = null;
-  }
-
-  // Castling rook
-  if (move.castling) {
-    const row = move.fromR;
-    if (move.castling === 'K') {
-      nb[row][5] = nb[row][7];
-      nb[row][7] = null;
-      if (nb[row][5]) nb[row][5].moved = true;
-    } else {
-      nb[row][3] = nb[row][0];
-      nb[row][0] = null;
-      if (nb[row][3]) nb[row][3].moved = true;
-    }
-  }
-
-  nb[move.toR][move.toC] = piece;
-  nb[move.fromR][move.fromC] = null;
-  piece.moved = true;
-
-  // Promotion
-  if (move.promotion) {
-    nb[move.toR][move.toC] = { type: move.promotion, color: piece.color, moved: true };
-  }
-
-  return nb;
-}
-
-// ===================== MOVE NOTATION =====================
-
-function moveToNotation(move: Move, board: Board): string {
-  const files = 'abcdefgh';
-  const piece = board[move.fromR][move.fromC];
-  if (!piece) return '';
-
-  if (move.castling === 'K') return 'O-O';
-  if (move.castling === 'Q') return 'O-O-O';
-
-  let notation = '';
-  if (piece.type !== 'P') {
-    notation += piece.type;
-  }
-  if (move.captured) {
-    if (piece.type === 'P') notation += files[move.fromC];
-    notation += 'x';
-  }
-  notation += files[move.toC] + (8 - move.toR);
-  if (move.promotion) notation += '=' + move.promotion;
-  return notation;
-}
-
-// ===================== AI =====================
-
-function evaluateBoard(board: Board, color: Color): number {
-  let score = 0;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const p = board[r][c];
-      if (!p) continue;
-      const val = PIECE_VALUES[p.type];
-      score += p.color === color ? val : -val;
-    }
-  }
-  return score;
-}
-
-function minimax(board: Board, depth: number, color: Color, maximizing: boolean, epTarget: [number, number] | null, alpha: number, beta: number): number {
-  if (depth === 0) return evaluateBoard(board, color);
-
-  const currentColor = maximizing ? color : opponent(color);
-  const moves = getAllLegalMoves(board, currentColor, epTarget);
-
-  if (moves.length === 0) {
-    if (isInCheck(board, currentColor)) return maximizing ? -999 + (3 - depth) : 999 - (3 - depth);
-    return 0;
-  }
-
-  if (maximizing) {
-    let maxEval = -Infinity;
-    for (const m of moves) {
-      const nb = applyMoveToBoard(board, m);
-      const newEp: [number, number] | null = (m.piece === 'P' && Math.abs(m.toR - m.fromR) === 2) ? [(m.fromR + m.toR) / 2, m.fromC] : null;
-      const ev = minimax(nb, depth - 1, color, false, newEp, alpha, beta);
-      maxEval = Math.max(maxEval, ev);
-      alpha = Math.max(alpha, ev);
-      if (beta <= alpha) break;
-    }
-    return maxEval;
-  } else {
-    let minEval = Infinity;
-    for (const m of moves) {
-      const nb = applyMoveToBoard(board, m);
-      const newEp: [number, number] | null = (m.piece === 'P' && Math.abs(m.toR - m.fromR) === 2) ? [(m.fromR + m.toR) / 2, m.fromC] : null;
-      const ev = minimax(nb, depth - 1, color, true, newEp, alpha, beta);
-      minEval = Math.min(minEval, ev);
-      beta = Math.min(beta, ev);
-      if (beta <= alpha) break;
-    }
-    return minEval;
-  }
-}
-
-function getBestMove(board: Board, color: Color, difficulty: Difficulty, epTarget: [number, number] | null): Move | null {
-  const moves = getAllLegalMoves(board, color, epTarget);
-  if (moves.length === 0) return null;
-
-  if (difficulty === 'facil') {
-    return moves[Math.floor(Math.random() * moves.length)];
-  }
-
-  if (difficulty === 'medio') {
-    let bestMove = moves[0];
-    let bestScore = -Infinity;
-    for (const m of moves) {
-      const nb = applyMoveToBoard(board, m);
-      const score = evaluateBoard(nb, color);
-      if (score > bestScore) { bestScore = score; bestMove = m; }
-    }
-    return bestMove;
-  }
-
-  // dificil: 2-ply minimax
-  let bestMove = moves[0];
-  let bestScore = -Infinity;
-  for (const m of moves) {
-    const nb = applyMoveToBoard(board, m);
-    const newEp: [number, number] | null = (m.piece === 'P' && Math.abs(m.toR - m.fromR) === 2) ? [(m.fromR + m.toR) / 2, m.fromC] : null;
-    const score = minimax(nb, 1, color, false, newEp, -Infinity, Infinity);
-    if (score > bestScore) { bestScore = score; bestMove = m; }
-  }
-  return bestMove;
-}
 
 // ===================== COMPONENT =====================
 
@@ -637,7 +260,7 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           <div className="text-sm font-medium text-muted-foreground">Dificuldade</div>
           <div className="flex gap-2">
             {DIFFICULTY_OPTIONS.map(d => (
-              <Button key={d.value} variant={difficulty === d.value ? 'default' : 'outline'} size="sm" onClick={() => setDifficulty(d.value)}>
+              <Button key={d.value} data-testid={`chess-dif-${d.value}`} variant={difficulty === d.value ? 'default' : 'outline'} size="sm" onClick={() => setDifficulty(d.value)}>
                 {d.label}
               </Button>
             ))}
@@ -656,7 +279,7 @@ export default function ChessGame({ onScore, liveCode }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
         >
-          <Button size="lg" onClick={startGame} className="gap-2 mt-2">
+          <Button size="lg" data-testid="chess-jogar" onClick={startGame} className="gap-2 mt-2">
             <Swords className="w-5 h-5" /> Jogar contra Bot
           </Button>
         </motion.div>
@@ -781,6 +404,7 @@ export default function ChessGame({ onScore, liveCode }: Props) {
                 return (
                   <motion.button
                     key={c}
+                    data-testid={`chess-casa-${r}-${c}`}
                     whileHover={canInteract ? { scale: 1.08 } : {}}
                     whileTap={isValidTarget || canInteract ? { scale: 0.92 } : {}}
                     className={cn(

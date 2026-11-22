@@ -81,6 +81,14 @@
 - [x] Gancho honesto graficos().paineisMarcas + limpeza em destruir() — docs/REA-paineis-v71.md §1.
 - [x] Prova: test-gfx-v69 28/0 ×2 (+2 asserções ALTA+LEVE) · regressão desafios-v70 36/0 · kart-v65 65/0 · batalha-v68 30/0 · som-v67 58/0 · online-v66 61/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-paineis-v71.md §3.
 
+## v75 — IA de elite (2.ª vaga): xadrez motor de verdade + naval modo-alvo + ludo «vs IA» (2026-11-22)
+
+- [x] XADREZ: src/game/chess/ia.ts NOVO (puro) — material×8 + PST por peça (rei com tabelas meio-jogo/FIM), par de bispos, peões dobrados/isolados/passados, escudo do rei, roque; negamax alfa-beta com aprofundamento iterativo + ordenação MVV-LVA + QUISCÊNCIA (fim do efeito de horizonte) + orçamento de nós por dificuldade; facil erra 35% de propósito — ChessGame.tsx vira SÓ interface (1062→685 linhas) — docs/REA-ia-v75.md §2.
+- [x] BATALHA NAVAL: src/game/batalhanaval/ia.ts NOVO — dadosDaFrota() marca navios AFUNDADOS (público) e tira-os dos «hits vivos»; MODO-ALVO continua a linha (hits em linha fixam o eixo); caça = densidade completa com paridade no «médio» + semente determinística — §3.
+- [x] LUDO «vs IA»: src/game/ludo/ia.ts NOVO — política terminar +1000 > capturar +500 > fugir +250 > casa segura +120 > base +90 > progresso; modo 3.º botão no componente (o Azul lança/joga sozinho, dado 6 dá vez extra como sempre, selo «IA» no cartão) — §4.
+- [x] FURO DE NAVEGAÇÃO fechado: ludo e battleship tinham painel no hub mas NÃO estavam no catálogo GAME_DEFS (?game= recusado — atalhos mortos); entram na grelha (21→23 jogos).
+- [x] Prova: test-ia-v75.mjs 40/40 ×2 (xadrez 12: mate em 1 Qxf7#, quiscência recusa isco defendido, promoção bxc8=Q, afogamento, facil honesto, orçamento+performance; naval 8; ludo 6; E2E 14: 2 rondas completas vs bot, ?game=battleship abre, IA do ludo lança+joga+devolve a vez — zero pageerror) · regressão classic 53/0 · desafios 36/0 · kart 65/0 · online 61/0 · batalha 30/0 · gfx 28/0 · som 58/0 · regional 60/0 · desktop 35/0 · web 11/0 · tsc 0 · build OK 49 s — worklog v75.
+
 ## v74 — Desktop real: navbar com CSS a valer + hub/kart/tetris/espaço de ecrã grande (2026-11-21)
 
 - [x] NAVBAR: as 8 classes navbar-* usadas desde a v9 SEM CSS ganham implementação (orb pill 1 linha, anel do logo, verified dot, aurora/spotlight/progresso/scrolled/trigger) + .desktop-ambient só ≥lg — src/index.css.

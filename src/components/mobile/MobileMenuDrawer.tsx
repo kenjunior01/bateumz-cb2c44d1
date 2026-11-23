@@ -6,7 +6,8 @@ import {
   MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen,
   Gift, Store, Gamepad2, Bell, Search, Flame, Wallet, Clock, Heart,
   BadgeCheck, LogOut, Settings, User, X, Home, Layers, TrendingUp,
-  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins, Medal, Joystick, Landmark
+  Swords, Newspaper, CreditCard, Target, Dice5, Globe, ChevronDown, Play, Shield, MapPin, Megaphone, HandCoins, Medal, Joystick, Landmark,
+  KeyRound, BrainCircuit, HeartHandshake
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,6 +47,8 @@ const NAV_GROUPS: NavGroup[] = [
       { icon: Sparkles, labelKey: "menu.instantWin", href: "/instant-win", grad: "from-violet-500 to-fuchsia-500" },
       { icon: Radio, labelKey: "menu.liveHub", href: "/lives", grad: "from-red-500 to-pink-500", live: true },
       { icon: Ticket, labelKey: "menu.myTickets", href: "/my-tickets", grad: "from-emerald-500 to-teal-500" },
+      // v79 — Mercado Bateu agrupa Loja/Sorteios/Leilões num só sistema (fim do nome jurídico «Alienação de Bens»)
+      { icon: KeyRound, labelKey: "nav79.leiloes", href: "/alienacao", grad: "from-teal-500 to-cyan-600" },
     ],
   },
   {
@@ -80,6 +83,8 @@ const NAV_GROUPS: NavGroup[] = [
       { icon: ShieldCheck, labelKey: "menu.transparency", href: "/transparencia", grad: "from-emerald-500 to-green-500" },
       { icon: Users, labelKey: "menu.referral", href: "/referral", grad: "from-fuchsia-500 to-pink-500" },
       { icon: Newspaper, labelKey: "menu.blog", href: "/blog", grad: "from-slate-500 to-slate-600" },
+      // v79 — a Bateu IA é um assistente DENTRO do produto (não produto separado)
+      { icon: BrainCircuit, labelKey: "nav.ia", href: "/ia", grad: "from-indigo-500 to-purple-600", badge: "NOVO" },
     ],
   },
   {
@@ -90,6 +95,9 @@ const NAV_GROUPS: NavGroup[] = [
       { icon: HelpCircle, labelKey: "menu.faq", href: "/faq", grad: "from-zinc-500 to-zinc-600" },
       { icon: Globe, labelKey: "mob.languages", href: "/", grad: "from-teal-500 to-cyan-600" },
       { icon: Shield, labelKey: "mob.terms", href: "/termos", grad: "from-gray-500 to-gray-600" },
+      // v79 — confiança organizada num só sítio (menu Mais), com o produto limpo
+      { icon: HeartHandshake, labelKey: "nav79.protecao", href: "/protecao", grad: "from-emerald-500 to-teal-600" },
+      { icon: ShieldCheck, labelKey: "nav79.privacidade", href: "/privacy", grad: "from-zinc-500 to-slate-600" },
     ],
   },
 ];

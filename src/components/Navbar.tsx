@@ -1,8 +1,12 @@
-// @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { Menu, X, Zap, Star, ChevronDown, Trophy, Ticket, Sparkles, Building2, Users, Calendar, MessageCircle, History, ShieldCheck, Radio, HelpCircle, BookOpen, Gift, Store, Gamepad2, Newspaper, Bell, Search, Flame, Crown, Wallet, ArrowRight, BadgeCheck, Rocket, LayoutGrid, LifeBuoy, Swords, ChevronLeft, Megaphone, XCircle, Globe, KeyRound, HandCoins, Medal, Joystick, Landmark, BrainCircuit, Flag } from "lucide-react";
+import {
+  X, Zap, ChevronDown, Star, Gamepad2, Radio, Medal, Store, Gift,
+  MessageCircle, History, Ticket, BrainCircuit, Users, LifeBuoy,
+  ShieldCheck, BookOpen, HeartHandshake, Landmark, KeyRound, CreditCard,
+  Bell, Search, Wallet, ArrowRight, BadgeCheck, LayoutGrid, Crown,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -10,23 +14,29 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import SoundSettings from "@/components/SoundSettings";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
 import RegionCountrySwitcher from "@/components/RegionCountrySwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { abrirBuscaGlobal } from "@/components/search/GlobalSearch";
 import bateuLogo from "@/assets/bateu-logo.png";
 // v26.2: counts partilhados (1 pedido/30s por tabela+filtro em toda a app)
 import { countRows } from "@/lib/counts";
-
 // supabase is used directly as (supabase as any) below
 
-// Premium announcement banner data — can be driven by CMS later
+/* ═══════════════════════════════════════════════════════════════════════
+   v79 — CABEÇALHO DESKTOP «POUCAS OPÇÕES PRINCIPAIS»:
+       Logo | Jogos | Ao vivo | Desporto | Mercado | Mais | Pesquisar | Entrar/Participar
+   Sai do cabeçalho (reorganizado, NÃO eliminado):
+   · os 5 mega-menus com ícones sem texto (causa do overflow a 1280px)
+   · os atalhos directos duplicados (Desporto/Ligas/Jogos Grátis)
+   · os switchers de região/idioma/som/tema → dentro do menu «Mais»
+   · o menu mobile embutido (código morto — a barra inferior + drawer
+     MobileMenuDrawer já são a navegação mobile)
+   Todas as outras áreas continuam acessíveis: «Mais» tem o menu
+   secundário completo (Vencedores, Histórico, Comunidade, Bateu IA,
+   Indique e ganhe, Suporte, Transparência, Como funciona, Protecção do
+   jogador, Termos, Privacidade + negócios) e as preferências.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 const ANNOUNCEMENT_KEY = "bateu_navbar_announcement_dismissed";
 type Announcement = {
   id: string;
@@ -36,23 +46,21 @@ type Announcement = {
   gradient: string;
 };
 
-type SubItem = { label: string; href: string; icon: typeof Trophy; desc: string; badge?: string; live?: boolean; trending?: boolean };
-type MenuGroup = { label: string; icon: typeof Trophy; items: SubItem[]; spotlight: { label: string; desc: string; href: string; cta: string } };
-
 const Navbar = () => {
-  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [unread, setUnread] = useState(0);
   const [liveCount, setLiveCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const [maisAberto, setMaisAberto] = useState(false);
   // v62 (item 8): altura REAL do banner de anúncio (o 38 fixo subestimava o
   // bar — o navbar ficava parcialmente SOB ele e os itens perdiam cliques)
   const [alturaAnuncio, setAlturaAnuncio] = useState(38);
   const lastY = useRef(0);
   const navRef = useRef<HTMLDivElement>(null);
   const anuncioRef = useRef<HTMLDivElement>(null);
+  const maisRef = useRef<HTMLDivElement>(null);
   const { user, role, signOut, profile } = useAuth();
   const { t } = useLanguage();
   const { sfx } = useSoundEffects();
@@ -121,8 +129,6 @@ const Navbar = () => {
   // Live activity count — real-time pulse of how many streams are active right now
   useEffect(() => {
     let mounted = true;
-    // v26.2: count partilhado via lib/counts (TTL 30s, dedup) — o Interval e o
-    // realtime apenas relêem; a rede vê ~1 pedido/30s para TODA a app.
     const load = () => {
       countRows("live_sessions", { col: "status", val: "active" })
         .then((n) => { if (mounted) setLiveCount(n ?? 0); });
@@ -160,8 +166,21 @@ const Navbar = () => {
     return () => { mounted = false; (supabase as any).removeChannel(ch); };
   }, [user]);
 
-  // Close mobile menu on route change
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  // Fecha «Mais» em navegação e clique-fora
+  useEffect(() => { setMaisAberto(false); }, [location.pathname]);
+  useEffect(() => {
+    if (!maisAberto) return;
+    const onDoc = (e: MouseEvent) => {
+      if (maisRef.current && !maisRef.current.contains(e.target as Node)) setMaisAberto(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setMaisAberto(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [maisAberto]);
 
   // Cursor-follow spotlight — desktop only
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -181,128 +200,41 @@ const Navbar = () => {
 
   const dismissAnnouncement = () => {
     if (currentAnnouncement) {
-    sessionStorage.setItem(ANNOUNCEMENT_KEY, currentAnnouncement.id);
-    setAnnouncementDismissed(true);
+      sessionStorage.setItem(ANNOUNCEMENT_KEY, currentAnnouncement.id);
+      setAnnouncementDismissed(true);
     }
   };
 
-  // v79 CICLO À VISTA (visão do produto): os destinos do ciclo passam a
-  // destinos de TOPO — «Prémios» (caminhos reais para prémios) e «Jogos»
-  // (o motor de retenção). Os items ficam iguais; o RÓTULO declara o que
-  // a visão pede: Início/Jogos/Ao vivo/Desporto/Prémios/Perfil à vista.
-  const groups: MenuGroup[] = [
-    {
-      label: t("nav.group.premios"),
-      icon: Gift,
-      spotlight: {
-        label: t("nav.spotlight.marketplace"),
-        desc: t("nav.spotlight.marketplace.desc"),
-        href: "/marketplace",
-        cta: t("nav.spotlight.cta"),
-      },
-      items: [
-        { label: t("nav.premios.ciclo"), href: "/premios", icon: Gift, desc: t("nav.premios.ciclo.desc"), badge: t("nav.badge.new") },
-        { label: t("nav.marketplace"), href: "/marketplace", icon: Store, desc: t("nav.marketplace.desc"), trending: true },
-        { label: t("nav.contests"), href: "/concursos", icon: Trophy, desc: t("nav.contests.desc") },
-        { label: t("nav.instantwin"), href: "/instant-win", icon: Sparkles, desc: t("nav.instantwin.desc") },
-        { label: t("nav.mytickets"), href: "/my-tickets", icon: Ticket, desc: t("nav.mytickets.desc") },
-        { label: t("nav.mypoints"), href: "/my-points", icon: Medal, desc: t("nav.mypoints.desc") },
-      ],
-    },
-    {
-      label: t("nav.group.business"),
-      icon: Building2,
-      spotlight: {
-        label: t("nav.spotlight.prestacoes"),
-        desc: t("nav.spotlight.prestacoes.desc"),
-        href: "/prestacoes/catalogo",
-        cta: t("nav.spotlight.cta"),
-      },
-      items: [
-        { label: "Ganhe Dinheiro", href: "/negocios", icon: HandCoins, desc: "O ecossistema completo de rendimento: vendas, concursos, sorteios, campeonatos e desafios", badge: "NOVO" },
-        { label: t("nav.directory"), href: "/empresas", icon: Building2, desc: t("nav.directory.desc") },
-        { label: "Alienação de Bens", href: "/alienacao", icon: KeyRound, desc: "Leasing, leilões e rent-to-own de viaturas, imóveis e equipamentos", badge: "NOVO" },
-        { label: t("nav.installments.catalog"), href: "/prestacoes/catalogo", icon: Calendar, desc: t("nav.installments.catalog.desc"), badge: t("nav.badge.new") },
-        { label: t("nav.installments.about"), href: "/prestacoes", icon: Calendar, desc: t("nav.installments.about.desc") },
-        { label: t("nav.createraffle"), href: "/dashboard/raffles/create", icon: Gift, desc: t("nav.createraffle.desc") },
-      ],
-    },
-    {
-      label: t("nav.group.jogos"),
-      icon: Gamepad2,
-      spotlight: {
-        label: t("nav.spotlight.live"),
-        desc: t("nav.spotlight.live.desc"),
-        href: "/lives-agora",
-        cta: t("nav.spotlight.cta.live"),
-      },
-      items: [
-        { label: "🏎️ BATEU KART", href: "/lives?game=kart", icon: Flag, desc: "O jogo principal — corridas longas, armas, garagem de melhorias e salas de corrida ONLINE partilhadas", badge: "🔥 TOP", trending: true },
-        { label: "⚔️ Gaming Arena", href: "/arena", icon: Swords, desc: "Torneios ao vivo, copas diárias e semanais, missões e ranking de elite com prémios reais", badge: "NOVO", trending: true },
-        { label: t("nav.games"), href: "/jogos", icon: Gamepad2, desc: t("nav.games.desc"), badge: "Hot", trending: true },
-        { label: t("nav.tournaments"), href: "/tournaments", icon: Swords, desc: t("nav.tournaments.desc"), badge: t("nav.badge.new") },
-        { label: "⚽ Desporto Real", href: "/desporto", icon: Medal, desc: "Jornadas, resultados e classificação reais das grandes ligas + palpites parimutuel entre jogadores", badge: "NOVO", trending: true },
-        { label: "🎮 Jogos Grátis", href: "/jogos-gratis", icon: Joystick, desc: "Catálogo real de jogos free-to-play para PC e browser — filtra por género e joga na hora", badge: "NOVO" },
-        { label: "🏎️ Circuito das Lendas", href: "/lives?game=kart", icon: Flag, desc: "Corridas longas estilo arcade: derrapagem com mini-turbo, armas e garagem de melhorias — mais sala de corridas ONLINE partilhada", badge: "ONLINE", trending: true },
-        { label: t("nav.livedraw"), href: "/lives-agora", icon: Radio, desc: t("nav.livedraw.desc"), live: true },
-        { label: t("nav.lives"), href: "/lives", icon: Radio, desc: t("nav.lives.desc") },
-        { label: t("nav.blog"), href: "/blog", icon: Newspaper, desc: t("nav.blog.desc") },
-      ],
-    },
-    {
-      label: t("nav.group.community"),
-      icon: MessageCircle,
-      spotlight: {
-        label: t("nav.spotlight.transparency"),
-        desc: t("nav.spotlight.transparency.desc"),
-        href: "/transparencia",
-        cta: t("nav.spotlight.cta"),
-      },
-      items: [
-        { label: t("nav.hub"), href: "/community", icon: MessageCircle, desc: t("nav.hub.desc") },
-        { label: t("nav.winners"), href: "/historico", icon: History, desc: t("nav.winners.desc") },
-        { label: t("nav.transparency"), href: "/transparencia", icon: ShieldCheck, desc: t("nav.transparency.desc") },
-        { label: t("nav.how"), href: "/como-funciona", icon: BookOpen, desc: t("nav.how.desc") },
-      ],
-    },
-    {
-      label: t("nav.group.more"),
-      icon: LayoutGrid,
-      spotlight: {
-        label: t("nav.spotlight.referral"),
-        desc: t("nav.spotlight.referral.desc"),
-        href: "/referral",
-        cta: t("nav.spotlight.cta"),
-      },
-      items: [
-        { label: t("nav.referral"), href: "/referral", icon: Users, desc: t("nav.referral.desc") },
-        { label: t("nav.faq"), href: "/faq", icon: HelpCircle, desc: t("nav.faq.desc") },
-        // v54 — BATEU IA (NVIDIA Nemotron) — assistente com streaming real
-        { label: t("nav.ia"), href: "/ia", icon: BrainCircuit, desc: t("nav.ia.desc"), badge: t("nav.badge.new"), trending: true },
-      ],
-    },
+  /* ── navegação principal: EXATAMENTE as cinco áreas + «Mais» ── */
+  const principais = [
+    { to: "/jogos", label: t("nav79.jogos"), icon: Gamepad2, teste: "nav79-desktop-jogos" },
+    { to: "/lives", label: t("nav79.live"), icon: Radio, teste: "nav79-desktop-live", live: true },
+    { to: "/desporto", label: t("nav79.desporto"), icon: Medal, teste: "nav79-desktop-desporto" },
+    { to: "/marketplace", label: t("nav79.mercado"), icon: Store, teste: "nav79-desktop-mercado" },
   ];
 
-  // Mobile quick actions — one-tap access at the top of the mobile menu
-  const quickActions = [
-    { label: t("nav.quick.live"), href: "/lives-agora", icon: Radio, live: true },
-    { label: t("nav.quick.games"), href: "/jogos", icon: Gamepad2 },
+  /* ── menu secundário «Mais» (funções continuam a existir, organizadas) ── */
+  const maisSecundario: { label: string; href: string; icon: typeof History }[] = [
+    { label: t("nav.winners"), href: "/historico", icon: History },
+    { label: t("nav79.historico"), href: "/my-tickets", icon: Ticket },
     { label: t("nav.quick.premios"), href: "/premios", icon: Gift },
-    { label: "Desporto", href: "/desporto", icon: Medal },
-    { label: "Jogos Grátis", href: "/jogos-gratis", icon: Joystick },
-    { label: "Circuito das Lendas", href: "/lives?game=kart", icon: Flag },
-    { label: t("nav.quick.market"), href: "/marketplace", icon: Store },
-    { label: t("nav.quick.tickets"), href: "/my-tickets", icon: Ticket },
-    { label: "Alienação", href: "/alienacao", icon: KeyRound },
-    { label: "Ganhe Dinheiro", href: "/negocios", icon: HandCoins },
+    { label: t("nav.hub"), href: "/community", icon: MessageCircle },
+    { label: t("nav.ia"), href: "/ia", icon: BrainCircuit },
+    { label: t("nav.referral"), href: "/referral", icon: Users },
+    { label: t("nav.faq"), href: "/faq", icon: LifeBuoy },
+    { label: t("nav.transparency"), href: "/transparencia", icon: ShieldCheck },
+    { label: t("nav.how"), href: "/como-funciona", icon: BookOpen },
+    { label: t("nav79.protecao"), href: "/protecao", icon: HeartHandshake },
+    { label: t("mob.terms"), href: "/termos", icon: Landmark },
+    { label: t("nav79.privacidade"), href: "/privacy", icon: ShieldCheck },
+  ];
+  const maisNegocios: { label: string; href: string; icon: typeof History }[] = [
+    { label: t("nav79.negocios"), href: "/negocios", icon: LifeBuoy },
+    { label: t("nav79.leiloes"), href: "/alienacao", icon: KeyRound },
+    { label: t("nav79.prestacoes"), href: "/prestacoes/catalogo", icon: CreditCard },
   ];
 
   // Show/hide navbar on specific routes (overlay, dashboard, admin)
-  // v62: mede a posição REAL do fundo do banner (o bar vive no FLUXO da
-  // página — com o TrustBar acima ele começa a ~41px, não a 0 — e o spring
-  // de entrada anima a altura; o observer acompanha). O nav fixed desce até
-  // o BOTTOM do bar: o valor medido não é a altura, é o limite inferior —
-  // é isso que impede a sobreposição que interceptava cliques/hover.
   useEffect(() => {
     const el = anuncioRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -315,6 +247,10 @@ const Navbar = () => {
 
   const hideNavbar = location.pathname.startsWith("/overlay/");
   if (hideNavbar) return null;
+
+  const linkCls = (ativo: boolean) =>
+    "navbar-trigger flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 " +
+    (ativo ? "bg-secondary/60 text-foreground" : "bg-transparent text-foreground/85 hover:bg-secondary/50 hover:text-foreground");
 
   return (
     <>
@@ -377,15 +313,6 @@ const Navbar = () => {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         onMouseMove={handleMouseMove}
         className="navbar-shell fixed left-0 right-0 z-50 hidden lg:block transition-[top] duration-300"
-        /* v26 fix: top-0 e top-[38px] no mesmo className empatavam (ordem
-           arbitrária do Tailwind) e o navbar ficava SOB o banner de anúncio.
-           Inline style decide sem ambiguidade.
-           v62 fix (item 8 — legibilidade do design público): o 38 era FIXO e
-           o banner real cresce além disso (emoji text-xl + py-2) — o bar
-           SOBREPUNHA os itens do navbar e INTERCEPTAVA os cliques/hover
-           (repro: page.hover em nav-direct-desporto → «subtree intercepts
-           pointer events»). A altura do bar é MEDIDA (ResizeObserver) e o
-           navbar desce o valor real. */
         style={{ top: currentAnnouncement && !announcementDismissed ? alturaAnuncio : 0 }}
       >
         <div className="navbar-spotlight" aria-hidden="true" />
@@ -414,12 +341,11 @@ const Navbar = () => {
         >
           <div
             className={
-              "container mx-auto flex items-center justify-between transition-all duration-500 " +
-              (scrolled ? "px-6 py-2" : "px-6 py-3.5")
-          }
+              "container mx-auto flex items-center justify-between gap-2 transition-all duration-500 " +
+              (scrolled ? "px-6 py-2" : "px-6 py-3")
+            }
           >
-            {/* v9: logo e orb "ao vivo" são links IRMÃOS — antes o orb estava
-                dentro do Link do logo (a dentro de a), quebrando os cliques */}
+            {/* logo */}
             <div className="group relative flex items-center gap-2.5">
               <Link to="/" className="relative flex items-center gap-2.5">
                 <motion.div
@@ -439,169 +365,104 @@ const Navbar = () => {
                 >
                   Bateu
                 </span>
-                <span className="navbar-verified-dot hidden md:inline-flex" title={t("nav.verified")}>
+                <span className="navbar-verified-dot hidden xl:inline-flex" title={t("nav.verified")}>
                   <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
                 </span>
               </Link>
-              <Link
-                to="/lives-agora"
-                className="navbar-live-orb hidden items-center md:inline-flex"
-                title={t("nav.live.count")}
-                aria-label={`${liveCount} ${t("nav.live.count")}`}
-              >
-                <span className="navbar-live-orb-ring" aria-hidden="true" />
-                <span className="tabular-nums">{liveCount}</span>
-                <span className="hidden xl:inline opacity-80">{t("nav.live")}</span>
-              </Link>
             </div>
 
-            <div className="hidden lg:flex">
-              <NavigationMenu>
-                <NavigationMenuList className="gap-0.5">
-                  {groups.map((g, gi) => (
-                    <NavigationMenuItem key={g.label}>
-                      <NavigationMenuTrigger
-                        title={g.label}
-                        className={
-                          "navbar-trigger bg-transparent text-sm font-medium transition-all duration-200 data-[state=open]:text-foreground " +
-                          "text-foreground/80 hover:text-foreground " +
-                          "hover:bg-secondary/50 data-[state=open]:bg-secondary/50 " +
-                          "rounded-lg px-3 py-2"
-                        }
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="navbar-group-icon" aria-hidden="true">
-                            <g.icon className="h-[11px] w-[11px]" strokeWidth={2.2} />
-                          </span>
-                          {/* v26: label só em ≥1536px — abaixo disso só o ícone
-                              (com tooltip), para a linha do navbar nunca
-                              empurrar as ações (busca/auth) fora do viewport */}
-                          <span className="hidden 2xl:inline">{g.label}</span>
-                          {(gi === 2 || (gi === 0 && liveCount > 0)) && (
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-                            </span>
-                          )}
-                          {g.items.some(i => i.trending) && (
-                            <span className="hidden xl:inline-flex items-center gap-1 ml-1 rounded-md bg-accent/12 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
-                              <Flame className="h-2.5 w-2.5" />
-                              <span className="hidden 2xl:inline">{t("nav.trending")}</span>
-                            </span>
-                          )}
-                        </span>
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent>
-                        <div className="navbar-mega-panel premium-card rounded-2xl p-2 w-[480px]">
-                          <div className="navbar-mega-header mb-1 flex items-center justify-between px-2 pt-1">
-                            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-                              <g.icon className="h-3 w-3" strokeWidth={2.2} />
-                              {g.label}
-                            </span>
-                            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
-                              <Sparkles className="h-3 w-3" />
-                              {t("nav.mega.explore")}
-                            </span>
-                          </div>
-                          <ul className="gap-0.5">
-                            {g.items.map((item, ii) => (
-                              <motion.li
-                                key={item.label}
-                                initial={{ opacity: 0, x: -8 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: ii * 0.04, duration: 0.2 }}
-                              >
-                                <Link
-                                  to={item.href}
-                                  className="group/item flex items-start gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-primary/5"
-                                >
-                                  <div
-                                    className={
-                                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200 " +
-                                      "bg-gradient-to-br from-primary/10 to-accent/5 " +
-                                      "text-primary group-hover/item:from-primary/20 group-hover/item:to-accent/10 " +
-                                      "group-hover/item:shadow-md group-hover/item:scale-105"
-                                    }
-                                  >
-                                    <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-foreground group-hover/item:text-gradient-primary transition-colors">
-                                        {item.label}
-                                      </span>
-                                      {item.trending && (
-                                        <span className="flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                                          <Flame className="h-2.5 w-2.5" />
-                                          <span>{t("nav.trending")}</span>
-                                        </span>
-                                      )}
-                                      {item.live && (
-                                        <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
-                                          <span className="h-1.5 w-1.5 rounded-full bg-accent pulse-live" />
-                                          {t("nav.live")}
-                                        </span>
-                                      )}
-                                      {item.badge && !item.live && !item.trending && (
-                                        <span className="badge-premium rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-                                          {item.badge}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-                                      {item.desc}
-                                    </p>
-                                  </div>
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground/40 group-hover/item:text-primary/60 group-hover/item:translate-x-0.5 transition-all -rotate-90 mt-0.5" />
-                                </Link>
-                              </motion.li>
-                            ))}
-                          </ul>
-                          <Link to={g.spotlight.href} className="navbar-spotlight-card group/spotlight flex items-center gap-3">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                              <Rocket className="h-4 w-4" strokeWidth={2.2} />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-bold text-primary-foreground">
-                                {g.spotlight.label}
-                              </p>
-                              <p className="truncate text-xs text-primary-foreground/80">
-                                {g.spotlight.desc}
-                              </p>
-                            </div>
-                            <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold text-primary-foreground transition-transform group-hover/spotlight:translate-x-0.5">
-                              {g.spotlight.cta}
-                              <ArrowRight className="h-3 w-3" />
-                            </span>
+            {/* ═══ navegação principal: Jogos · Ao vivo · Desporto · Mercado · Mais ═══ */}
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 lg:flex">
+              {principais.map((p) => (
+                <Link
+                  key={p.to}
+                  to={p.to}
+                  className={linkCls(location.pathname.startsWith(p.to))}
+                  data-testid={p.teste}
+                  onClick={() => sfx.click()}
+                >
+                  <p.icon className="h-[13px] w-[13px]" strokeWidth={2.2} aria-hidden="true" />
+                  <span>{p.label}</span>
+                  {"live" in p && p.live && liveCount > 0 && (
+                    <span className="ml-0.5 rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-extrabold text-rose-500 tabular-nums">
+                      {liveCount > 99 ? "99+" : liveCount}
+                    </span>
+                  )}
+                </Link>
+              ))}
+
+              {/* Mais — menu secundário completo + preferências */}
+              <div className="relative" ref={maisRef}>
+                <button
+                  type="button"
+                  onClick={() => { setMaisAberto((v) => !v); sfx.click(); }}
+                  className={linkCls(maisAberto) + " flex"}
+                  data-testid="nav79-desktop-mais"
+                  aria-expanded={maisAberto}
+                  aria-haspopup="menu"
+                >
+                  <LayoutGrid className="h-[13px] w-[13px]" strokeWidth={2.2} aria-hidden="true" />
+                  <span>{t("nav79.mais")}</span>
+                  <ChevronDown className={"h-3 w-3 transition-transform duration-200 " + (maisAberto ? "rotate-180" : "")} aria-hidden="true" />
+                </button>
+
+                <AnimatePresence>
+                  {maisAberto && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ duration: 0.16 }}
+                      className="absolute right-0 top-full z-50 mt-2 w-[300px] rounded-2xl border border-border/60 bg-popover p-2 shadow-elegant"
+                      role="menu"
+                    >
+                      <div className="max-h-[62vh] overflow-y-auto">
+                        {maisSecundario.map((item) => (
+                          <Link
+                            key={item.href + item.label}
+                            to={item.href}
+                            onClick={() => { setMaisAberto(false); sfx.click(); }}
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/5"
+                          >
+                            <item.icon className="h-4 w-4 text-primary/80" strokeWidth={1.8} />
+                            <span>{item.label}</span>
                           </Link>
+                        ))}
+
+                        <div className="my-2 h-px bg-border/60" />
+                        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                          {t("nav.group.business")}
+                        </p>
+                        {maisNegocios.map((item) => (
+                          <Link
+                            key={item.href + item.label}
+                            to={item.href}
+                            onClick={() => { setMaisAberto(false); sfx.click(); }}
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/5"
+                          >
+                            <item.icon className="h-4 w-4 text-primary/80" strokeWidth={1.8} />
+                            <span>{item.label}</span>
+                          </Link>
+                        ))}
+
+                        <div className="my-2 h-px bg-border/60" />
+                        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                          {t("mob.settings")}
+                        </p>
+                        <div className="flex items-center justify-between gap-1 px-2 py-1.5">
+                          <RegionCountrySwitcher compact />
+                          <LanguageSwitcher />
+                          <SoundSettings compact />
+                          <ThemeToggle />
                         </div>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
-                  ))}
-                  {/* v26 Web excellence: atalhos diretos de 1 clique para os pilares
-                      competitivos — antes só acessíveis em dropdowns (2 cliques) */}
-                  {[
-                    { to: "/desporto", label: "Desporto", icon: Medal, testid: "nav-direct-desporto" },
-                    { to: "/jogos-gratis", label: "Jogos Grátis", icon: Joystick, testid: "nav-direct-jogos-gratis" },
-                    { to: "/ligas", label: "Ligas", icon: Trophy, testid: "nav-direct-ligas" },
-                  ].map((d) => (
-                    <NavigationMenuItem key={d.to}>
-                      <Link
-                        to={d.to}
-                        title={d.label}
-                        className="navbar-trigger navbar-direct hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-foreground/80 transition-all duration-200 hover:bg-secondary/50 hover:text-foreground xl:flex"
-                        data-testid={d.testid}
-                        onClick={() => sfx.click()}
-                      >
-                        <d.icon className="h-[11px] w-[11px]" strokeWidth={2.2} />
-                        <span className="hidden 2xl:inline">{d.label}</span>
-                      </Link>
-                    </NavigationMenuItem>
-                  ))}
-                </NavigationMenuList>
-              </NavigationMenu>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
+            {/* ═══ Pesquisar + autenticação ═══ */}
             <div className="hidden items-center gap-1.5 lg:flex">
               <button
                 type="button"
@@ -611,15 +472,9 @@ const Navbar = () => {
                 data-testid="navbar-busca"
               >
                 <Search className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                <span className="hidden max-w-40 truncate 2xl:inline">{t("nav.search.placeholder")}</span>
+                <span className="hidden max-w-40 truncate xl:inline">{t("nav.search.placeholder")}</span>
                 <kbd className="navbar-kbd hidden xl:inline-flex">⌘K</kbd>
               </button>
-              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/40 p-1 backdrop-blur-md">
-                <RegionCountrySwitcher compact />
-                <LanguageSwitcher />
-                <SoundSettings compact />
-                <ThemeToggle />
-              </div>
 
               {user && (
                 <Link
@@ -707,12 +562,14 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     className="hover-lift rounded-xl px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:bg-secondary/50"
+                    data-testid="navbar-entrar"
                   >
                     {t("nav.signin")}
                   </Link>
                   <Link
                     to="/register"
-                    className="btn-premium glow-primary hover-lift flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-primary-foreground"
+                    className="glow-primary hover-lift flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-[1.03]"
+                    data-testid="navbar-participar"
                   >
                     <Zap className="h-4 w-4" />
                     {t("nav.signup")}
@@ -720,280 +577,9 @@ const Navbar = () => {
                 </motion.div>
               )}
             </div>
-
-            <div className="flex items-center gap-1 lg:hidden">
-              <button
-                type="button"
-                onClick={() => { sfx.inputFocus(); abrirBuscaGlobal(); }}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
-                aria-label={t("nav.search")}
-                data-testid="navbar-busca-mobile"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-              <LanguageSwitcher />
-              <SoundSettings compact />
-              <ThemeToggle />
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                className="relative flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary/50"
-                onClick={() => { setOpen(!open); if (open) { sfx.modalClose(); } else { sfx.modalOpen(); } }}
-                aria-label="Menu"
-              >
-                <AnimatePresence mode="wait" initial={false}>
-                  {open ? (
-                    <motion.span
-                      key="close"
-                      initial={{ rotate: -90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 90, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <X className="h-5 w-5" />
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="menu"
-                      initial={{ rotate: 90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: -90, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <Menu className="h-5 w-5" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            </div>
           </div>
         </div>
       </motion.nav>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden"
-              onClick={() => { setOpen(false); sfx.tabClick(); }}
-            />
-
-            <motion.div
-              initial={{ y: "-10%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "-10%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed top-0 left-0 right-0 z-50 lg:hidden"
-            >
-              <div className="glass-strong shadow-elegant border-b border-border/50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-                  <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-                    <img src={bateuLogo} alt="Bateu" className="h-8 w-8" />
-                    <span className="font-display text-lg font-bold text-gradient-primary">Bateu</span>
-                    <span className="navbar-verified-dot ml-0.5 inline-flex" title={t("nav.verified")}>
-                      <BadgeCheck className="h-[10px] w-[10px]" strokeWidth={2.5} />
-                    </span>
-                  </Link>
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => { setOpen(false); sfx.tabClick(); }}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl text-foreground hover:bg-secondary/50 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </motion.button>
-                </div>
-
-                <div className="flex flex-col gap-1 px-3 py-3 max-h-[78vh] overflow-y-auto">
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.04 }}
-                    className="grid grid-cols-4 gap-2 mb-3 px-1"
-                  >
-                    {quickActions.map((qa) => (
-                      <Link
-                        key={qa.label}
-                        to={qa.href}
-                        onClick={() => { setOpen(false); sfx.tabClick(); }}
-                        className="navbar-quick-action"
-                      >
-                        <span className="navbar-quick-action-icon relative">
-                          <qa.icon className="h-4 w-4" strokeWidth={1.9} />
-                          {qa.live && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent pulse-live" />
-                          )}
-                        </span>
-                        <span>{qa.label}</span>
-                      </Link>
-                    ))}
-                  </motion.div>
-
-                  <div className="mb-3 flex items-center gap-2 px-1">
-                    <Link
-                      to="/lives-agora"
-                      onClick={() => { setOpen(false); sfx.tabClick(); }}
-                      className="navbar-mobile-live"
-                    >
-                      <span className="navbar-live-orb-ring" aria-hidden="true" />
-                      <span className="tabular-nums">{liveCount}</span>
-                      <span className="opacity-90">{t("nav.live")}</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => { setOpen(false); sfx.inputFocus(); abrirBuscaGlobal(); }}
-                      className="navbar-search-trigger flex flex-1 items-center gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
-                      data-testid="navbar-busca-menu"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      <span className="flex-1 text-left">{t("nav.search.placeholder")}</span>
-                    </button>
-                  </div>
-
-                  {!user && (
-                    <Link
-                      to="/register"
-                      onClick={() => { setOpen(false); sfx.tabClick(); }}
-                      className="navbar-hero-cta mb-3 flex items-center gap-3 rounded-2xl p-4"
-                    >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                        <Flame className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-primary-foreground">
-                          {t("nav.hero.cta.title")}
-                        </p>
-                        <p className="truncate text-xs text-primary-foreground/80">
-                          {t("nav.hero.cta.subtitle")}
-                        </p>
-                      </div>
-                      <Zap className="h-4 w-4 text-primary-foreground" />
-                    </Link>
-                  )}
-
-                  {groups.map((g, gi) => (
-                    <motion.div
-                      key={g.label}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.08 + gi * 0.05 }}
-                    >
-                      <p className="mb-1.5 flex items-center gap-1.5 px-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                        <g.icon className="h-3 w-3" strokeWidth={2.2} />
-                        {g.label}
-                      </p>
-                      <div className="flex flex-col gap-0.5">
-                        {g.items.map((item) => (
-                          <Link
-                            key={item.label}
-                            to={item.href}
-                            onClick={() => { setOpen(false); sfx.tabClick(); }}
-                            className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-foreground transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]"
-                          >
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-accent/5 text-primary group-hover:from-primary/20 group-hover:to-accent/10 transition-all">
-                              <item.icon className="h-4 w-4" strokeWidth={1.8} />
-                            </div>
-                            <span className="flex-1 font-medium">{item.label}</span>
-                            {item.trending && (
-                              <span className="flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
-                                <Flame className="h-3 w-3" />
-                                <span>{t("nav.trending")}</span>
-                              </span>
-                            )}
-                            {item.live && (
-                              <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent">
-                                <span className="h-1.5 w-1.5 rounded-full bg-accent pulse-live" />
-                                {t("nav.live")}
-                              </span>
-                            )}
-                            {item.badge && !item.live && !item.trending && (
-                              <span className="badge-premium rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                                {item.badge}
-                              </span>
-                            )}
-                          </Link>
-                        ))}
-                      </div>
-                      <Link
-                        to={g.spotlight.href}
-                        onClick={() => { setOpen(false); sfx.tabClick(); }}
-                        className="navbar-spotlight-card group/spotlight mt-1 mb-2 flex items-center gap-3"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
-                          <Rocket className="h-3.5 w-3.5" strokeWidth={2.2} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-primary-foreground">{g.spotlight.label}</p>
-                          <p className="truncate text-[11px] text-primary-foreground/75">{g.spotlight.desc}</p>
-                        </div>
-                        <ArrowRight className="h-3.5 w-3.5 text-primary-foreground transition-transform group-hover/spotlight:translate-x-0.5" />
-                      </Link>
-                    </motion.div>
-                  ))}
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.08 + groups.length * 0.05 + 0.05 }}
-                    className="pt-2 pb-1"
-                  >
-                    {!user ? (
-                      <div className="grid grid-cols-2 gap-2 px-1">
-                        <Link
-                          to="/login"
-                          onClick={() => { setOpen(false); sfx.tabClick(); }}
-                          className="hover-lift flex items-center justify-center rounded-xl border border-border bg-secondary/50 py-2.5 text-sm font-semibold transition-all hover:bg-secondary"
-                        >
-                          {t("nav.signin")}
-                        </Link>
-                        <Link
-                          to="/register"
-                          onClick={() => { setOpen(false); sfx.tabClick(); }}
-                          className="btn-premium glow-primary hover-lift flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-primary-foreground"
-                        >
-                          <Zap className="h-4 w-4" />
-                          {t("nav.signup")}
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-1.5 px-1">
-                        {walletBalance !== null && (
-                          <Link
-                            to="/wallet"
-                            onClick={() => { setOpen(false); sfx.tabClick(); }}
-                            className="navbar-wallet-pill group relative w-full justify-center py-2.5"
-                          >
-                            <span className="navbar-wallet-shine" aria-hidden="true" />
-                            <Wallet className="h-4 w-4 relative" />
-                            <span className="relative">{t("nav.wallet")}: {format(walletBalance)}</span>
-                          </Link>
-                        )}
-                        <Link
-                          to="/my-points"
-                          onClick={() => { setOpen(false); sfx.tabClick(); }}
-                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-primary/5 transition-colors"
-                        >
-                          <Star className="h-4 w-4 text-accent fill-accent/30" />
-                          <span className="text-gradient-primary font-semibold">{t("nav.points")}</span>
-                        </Link>
-                        <button
-                          onClick={() => { setOpen(false); signOut(); sfx.success(); }}
-                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
-                        >
-                          <LifeBuoy className="h-4 w-4" />
-                          {t("nav.signout")}
-                        </button>
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </>
   );
 };

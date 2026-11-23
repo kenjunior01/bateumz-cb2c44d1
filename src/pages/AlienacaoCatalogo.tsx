@@ -116,7 +116,7 @@ function monthlyEstimate(a: Asset): number {
 
 const AlienacaoCatalogo = () => {
   useSEO({
-    title: "Alienação de Bens — Leasing, Leilões e Rent-to-Own | Bateu",
+    title: "Leilões e Bens — Viaturas, Imóveis e Equipamentos | Mercado Bateu",
     description:
       "Empresas alienam viaturas, imóveis, equipamentos e frotas. Simule leasing com valor residual, participe em leilões e feche contratos com propostas em minutos.",
     canonicalPath: "/alienacao",
@@ -188,7 +188,7 @@ const AlienacaoCatalogo = () => {
                 <KeyRound className="h-3.5 w-3.5" /> Novo na Bateu
               </Badge>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight">
-                Alienação de <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Bens</span>
+                Leilões e <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">bens</span>
               </h1>
               <p className="mt-4 text-muted-foreground text-base sm:text-lg leading-relaxed">
                 Empresas colocam viaturas, imóveis, equipamentos, frotas e máquinas para

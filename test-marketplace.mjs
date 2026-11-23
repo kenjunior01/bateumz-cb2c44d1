@@ -63,13 +63,13 @@ async function runSuite(browser, label, viewport) {
   const busca = page.locator('[data-testid="market-search"] input');
   ok("busca instantânea presente", await busca.isVisible().catch(() => false));
 
-  // chips de categoria com contadores
-  const chips = ["all", "leilao", "produto", "alienacao", "sorteio", "jogo", "concurso"];
+  // chips de categoria — v79 MERCADO BATEU: 4 categorias + Tudo
+  const chips = ["all", "sorteio", "concurso", "leilao", "produto"];
   let todosChips = true;
   for (const c of chips) {
     if (!(await page.locator(`[data-testid="market-cat-${c}"]`).first().isVisible().catch(() => false))) todosChips = false;
   }
-  ok("7 chips de categoria (com contadores reais)", todosChips);
+  ok("5 chips (Tudo + 4 categorias da visão: Sorteios/Concursos/Leilões e bens/Comprar e vender)", todosChips);
 
   // espera o carregamento de dados (grelha ou estado vazio honesto)
   const temGrelha = await waitVisible(page, '[data-testid="market-grid"]', 20000)
@@ -152,21 +152,22 @@ async function runSuite(browser, label, viewport) {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   const isMobileView = viewport.width < 768;
   if (isMobileView) {
-    ok("homepage mobile abre", await waitVisible(page, '[data-testid="mh-quick"]', 60000));
-    ok("atalho MERCADO nos círculos rápidos", await page.getByText("MERCADO").first().isVisible().catch(() => false));
+    // v79: homepage = 5 blocos; o Mercado vive no cabeçalho/menu (não em círculos)
+    ok("homepage mobile abre (chamada principal)", await waitVisible(page, '[data-testid="home79-frase"]', 60000));
+    ok("cartão de descoberta jogos presente", await page.locator('[data-testid="home79-card-jogos"]').first().isVisible().catch(() => false));
   } else {
-    ok("homepage abre", await waitVisible(page, '[data-testid="home-arena-banner"]', 60000));
+    // v79: a chamada principal substitui os banners da era v62
+    ok("homepage desktop abre (chamada principal)", await waitVisible(page, '[data-testid="home79-frase"]', 60000));
   }
-  // rolar até aos roll-ups e procurar o de Esports & Ligas (desktop e mobile)
-  await page.evaluate(() => window.scrollBy(0, 1400)).catch(() => {});
-  const temEsportsRollUp = await waitVisible(page, '[data-testid="esports-criar-card"]', 30000)
-    || await waitVisible(page, '[data-testid="esports-torneio-1"]', 10000)
-    || await waitVisible(page, '[data-testid="esports-liga-1"]', 10000);
-  ok("roll-up Esports & Ligas na homepage (inscrições abertas)", temEsportsRollUp);
-  // feed de atividade na home (compacto ou completo)
-  const temAtividadeHome = await waitVisible(page, '[data-testid="mh-activity"]', 20000)
-    || await waitVisible(page, '[data-testid="activity-feed"]', 15000);
-  ok("atividade ao vivo na homepage", temAtividadeHome);
+  // v79: os roll-ups Esports saíram da homepage (a Arena/Esports tem hub próprio,
+  // já provado na secção 4) — o que a home mostra são os 3 cartões + actividade real
+  const temDescoberta = await waitVisible(page, '[data-testid="home79-card-desporto"]', 20000)
+    || await waitVisible(page, '[data-testid="home79-kart-destaque"]', 10000);
+  ok("descoberta com Desporto em destaque na homepage", temDescoberta);
+  // actividade real da v79 (4 linhas honestas) substitui o feed solto
+  const temAtividadeHome = await waitVisible(page, '[data-testid="home79-ativ-live"]', 20000)
+    || await waitVisible(page, '[data-testid="home79-ativ-vencedor"]', 10000);
+  ok("actividade real na homepage (v79)", temAtividadeHome);
 
   // ── 6. ACTIVITYBUS funciona (publicar → aparece no feed) ────────
   console.log("\n── 6. ActivityBus em tempo real ──");

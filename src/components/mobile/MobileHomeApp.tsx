@@ -1,38 +1,39 @@
 // ═══════════════════════════════════════════════════════════════
-// MobileHomeApp — Home mobile da Bateu (estilo app nativo)
-// Fusão do melhor das duas versões de exemplo:
-//   • Círculos de acesso rápido com anéis de gradiente coloridos
-//   • Cartão DESTAQUE com contagem decrescente, preço e progresso
-//   • Secção "Descoberta ao Vivo" com FILTRAR e badges de raridade
-//   • Fundo escuro com ambiente roxo + brilhos suaves
-//   • Sino com ponto de notificação + avatar no topo
-// 100% em português.
+// MobileHomeApp — Home mobile da Bateu
+// v79 — «POUCAS OPÇÕES PRINCIPAIS» (reorganização do produto):
+// A homepage passa a ter EXATAMENTE os cinco blocos da visão:
+//   1. Cabeçalho (MobileTopBar global) + barra de confiança
+//   2. UMA chamada principal (HeroPrincipal — uma frase, 2 botões)
+//   3. TRÊS cartões de descoberta (DescobertaTres — jogos/lives/desporto)
+//   4. ACTIVIDADE REAL (ActividadeReal + sorteios disponíveis com dados
+//      reais; se não houver dados, mensagem clara — nunca caixa vazia)
+//   5. CONFIANÇA no fim (ConfiancaFim + Footer)
+// Sai da homepage (reorganizado, não eliminado):
+//   · os 5 círculos de atalho (duplicavam a barra inferior)
+//   · os stories «Seu Status»/«Bateu Oficial» (vivem em Comunidade)
+//   · o banner «Ganhe dinheiro» (fica no menu Mais e no perfil do negócio)
+//   · o roll-up de vendas (Mercado Bateu tem página própria)
+//   · o feed social e missões soltas (missões vivem no Painel de
+//     Progressão do hub Ao vivo — /lives)
 // ═══════════════════════════════════════════════════════════════
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Radio, Ticket, Gamepad2, Crown, Play,
-  MoreHorizontal, Flame, Clock, Sparkles, ChevronRight, Gem,
-  HandCoins, HeartPulse, ShoppingBag,
+  Clock, Sparkles, ChevronRight, Gem,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMobileNav } from "@/contexts/MobileNavigationContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { formatMZN } from "@/lib/currency";
-import bateuLogo from "@/assets/bateu-logo.png";
 import Footer from "@/components/Footer";
 import TrustBar from "@/components/TrustBar";
-import HeroAgora from "@/components/HeroAgora";
-import DailyMissions from "@/components/engagement/DailyMissions";
+import HeroPrincipal from "@/components/home/HeroPrincipal";
+import DescobertaTres from "@/components/home/DescobertaTres";
+import ActividadeReal from "@/components/home/ActividadeReal";
+import ConfiancaFim from "@/components/home/ConfiancaFim";
 
-const MobileSocialFeed = lazy(() => import("@/components/MobileSocialFeed").then(m => ({ default: m.default })));
-const StoriesCarousel = lazy(() => import("@/components/StoriesCarousel").then(m => ({ default: m.default })));
-const ActivityFeed = lazy(() => import("@/components/ActivityFeed").then(m => ({ default: m.default })));
-const GamesTournamentsRollUp = lazy(() => import("@/components/home/GamesTournamentsRollUp").then(m => ({ default: m.default })));
-const EsportsRollUp = lazy(() => import("@/components/home/EsportsRollUp").then(m => ({ default: m.default })));
-const VendasRollUp = lazy(() => import("@/components/home/VendasRollUp").then(m => ({ default: m.default })));
+const SorteiosConcursosRollUp = lazy(() => import("@/components/home/SorteiosConcursosRollUp").then(m => ({ default: m.default })));
 
 /* ─── tipos ─── */
 interface RaffleRow {
@@ -88,15 +89,6 @@ function useCountdown(endDate: string | null) {
   return `${m}m`;
 }
 
-/* ─── anéis de gradiente dos círculos ─── */
-const QUICK_LINKS = [
-  { icon: Radio, label: "AO VIVO", href: "/lives", ring: "conic-gradient(from 180deg, #f97316, #ec4899, #f97316)", live: true },
-  { icon: ShoppingBag, label: "MERCADO", href: "/marketplace", ring: "conic-gradient(from 180deg, #d946ef, #8b5cf6, #d946ef)" },
-  { icon: Gamepad2, label: "GAMES", href: "/jogos", ring: "conic-gradient(from 180deg, #22d3ee, #3b82f6, #22d3ee)" },
-  { icon: Crown, label: "VIP HUB", href: "/pontos", ring: "conic-gradient(from 180deg, #f59e0b, #fbbf24, #f59e0b)" },
-  { icon: MoreHorizontal, label: "MAIS", href: null, ring: "conic-gradient(from 180deg, #ec4899, #f43f5e, #ec4899)" },
-];
-
 /* ─── carta de destaque ─── */
 function DestaqueCard({ r }: { r: RaffleRow }) {
   const { t } = useLanguage();
@@ -145,7 +137,7 @@ function DestaqueCard({ r }: { r: RaffleRow }) {
             )}
           </div>
 
-          {/* título — 1ª palavra branca, resto gradiente azul (versão A) */}
+          {/* título — 1ª palavra branca, resto gradiente azul */}
           <h2 className="font-display text-2xl font-black leading-[1.08] tracking-tight text-white drop-shadow-lg">
             {first}
             {rest && (
@@ -158,7 +150,7 @@ function DestaqueCard({ r }: { r: RaffleRow }) {
             )}
           </h2>
 
-          {/* preço + progresso (versão B) */}
+          {/* preço + progresso */}
           <div className="mt-2 flex items-baseline justify-between gap-2">
             <p className="text-xs text-zinc-400">
               {t("mh.ticketsFrom")}{" "}
@@ -177,7 +169,7 @@ function DestaqueCard({ r }: { r: RaffleRow }) {
             />
           </div>
 
-          {/* CTA */}
+          {/* CTA único */}
           <span className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-700/40 active:scale-[0.98] transition-transform">
             <Sparkles className="h-4 w-4" />
             {t("mh.joinNow")}
@@ -188,9 +180,9 @@ function DestaqueCard({ r }: { r: RaffleRow }) {
   );
 }
 
-/* ─── cartão da Descoberta ao Vivo ─── */
+/* ─── carta da descoberta de sorteios ─── */
 function DiscoveryCard({ r }: { r: RaffleRow }) {
-  const { t } = useLanguage(); // v16 fix: usava t() sem ter o tradutor em âmbito
+  const { t } = useLanguage();
   const { sfx } = useSoundEffects();
   const pct = r.total_tickets > 0 ? Math.min(100, Math.round((r.sold_tickets / r.total_tickets) * 100)) : 0;
   const rarity = rarityOf(r);
@@ -212,7 +204,6 @@ function DiscoveryCard({ r }: { r: RaffleRow }) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d15cc] via-transparent to-transparent" />
-        {/* chip % bilhetes + badge raridade (versão B) */}
         <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm border border-white/10">
           {pct}% {t("mh.slots")}
         </span>
@@ -240,9 +231,7 @@ function DiscoveryCard({ r }: { r: RaffleRow }) {
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function MobileHomeApp() {
-  const navigate = useNavigate();
   const { t } = useLanguage();
-  const { openMenu } = useMobileNav();
   const { sfx } = useSoundEffects();
 
   const [raffles, setRaffles] = useState<RaffleRow[]>([]);
@@ -271,7 +260,7 @@ export default function MobileHomeApp() {
     return raffles[0] || null;
   }, [raffles]);
 
-  /* descoberta = lista filtrável (versão B) */
+  /* descoberta = lista filtrável */
   const discovery = useMemo(() => {
     const list = [...raffles];
     if (mode === "acabar") {
@@ -289,72 +278,23 @@ export default function MobileHomeApp() {
 
   return (
     <div className="dark min-h-screen bg-[#050508] text-zinc-100" style={{ paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
-      {/* ambiente roxo suave (versão B) */}
+      {/* ambiente suave */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 h-64 bg-[radial-gradient(ellipse_60%_100%_at_50%_100%,rgba(124,58,237,0.16),transparent_70%)]" />
 
-      {/* ═══ v39 auditoria (P0 2): barra de confiança no primeiro ecrã —
-          país activo, +18, protecção/transparência/suporte a um toque ═══ */}
+      {/* ═══ 1 · CABEÇALHO — MobileTopBar é global; barra de confiança no 1.º ecrã ═══ */}
       <TrustBar />
 
-      {/* ═══ v39 auditoria (P0 3): hero funcional — as três entradas claras
-          (Jogar · Sorteios ao vivo · Desporto) antes de qualquer feed ═══ */}
-      <HeroAgora />
+      {/* ═══ 2 · UMA CHAMADA PRINCIPAL — uma frase, dois botões ═══ */}
+      <HeroPrincipal />
 
-      {/* ═══ topo global MobileTopBar (pesquisa + sino + avatar + menu) ═══ */}
+      {/* ═══ 3 · TRÊS CARTÕES DE DESCOBERTA — jogos / lives / desporto + KART dentro de Jogos ═══ */}
+      <DescobertaTres />
 
-      {/* ═══ STORIES — rail ao vivo (criadores + plataforma) ═══ */}
-      <div className="mt-2">
-        <Suspense fallback={<div className="h-24" />}>
-          <StoriesCarousel embedded />
-        </Suspense>
-      </div>
+      {/* ═══ 4 · ACTIVIDADE REAL — próxima live, vencedor, destaque, partida ═══ */}
+      <ActividadeReal />
 
-      {/* ═══ círculos de acesso rápido (rótulos PT + anéis B) ═══ */}
-      <section className="px-4 pt-4" data-testid="mh-quick">
-        <div className="flex items-start justify-between gap-1">
-          {QUICK_LINKS.map((q) => {
-            const inner = (
-              <>
-                <span
-                  className="grid h-[62px] w-[62px] place-items-center rounded-full p-[2.5px]"
-                  style={{ background: q.ring }}
-                >
-                  <span className="relative grid h-full w-full place-items-center rounded-full bg-[#101018]">
-                    <q.icon className="h-5 w-5 text-zinc-200" strokeWidth={1.9} />
-                    {q.live && (
-                      <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)]">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-60" />
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <span className="mt-1.5 text-[9.5px] font-bold tracking-wider text-zinc-400">{q.label}</span>
-              </>
-            );
-            return q.href ? (
-              <Link
-                key={q.label}
-                to={q.href}
-                onClick={() => sfx.tabClick()}
-                className="flex w-[19%] flex-col items-center transition-transform active:scale-95"
-              >
-                {inner}
-              </Link>
-            ) : (
-              <button
-                key={q.label}
-                onClick={() => { sfx.tabClick(); openMenu(); }}
-                className="flex w-[19%] flex-col items-center transition-transform active:scale-95"
-              >
-                {inner}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ═══ DESTAQUE — contagem + preço + progresso (A+B) ═══ */}
-      <div className="mt-4">
+      {/* ═══ 4b · SORTEIOS DISPONÍVEIS — destaque + descoberta (dados reais) ═══ */}
+      <div className="mt-7 pt-2">
         {destaque ? (
           <DestaqueCard r={destaque} />
         ) : (
@@ -368,7 +308,6 @@ export default function MobileHomeApp() {
         )}
       </div>
 
-      {/* ═══ Descoberta ao Vivo + FILTRAR (versão B) ═══ */}
       <section className="mt-7" data-testid="mh-discovery">
         <div className="mb-3 flex items-center justify-between px-4">
           <h2 className="font-display text-[17px] font-extrabold tracking-tight text-white">{t("mh.discovery")}</h2>
@@ -390,80 +329,17 @@ export default function MobileHomeApp() {
         )}
       </section>
 
-      {/* ═══ JOGOS & TORNEIOS — roll-up dinâmico (dados reais) ═══ */}
-      <Suspense fallback={<div className="h-56" />}>
-        <GamesTournamentsRollUp />
-      </Suspense>
-
-      {/* ═══ ESPORTS & LIGAS — inscrições abertas (harmonia desktop+mobile) ═══ */}
-      <Suspense fallback={<div className="h-56" />}>
-        <EsportsRollUp />
-      </Suspense>
-
-      {/* ═══ faixa MUNDO 3D ═══ */}
-      <section className="mt-7 px-4">
-        <button
-          onClick={() => { sfx.whoosh(); navigate("/lives?game=kart"); }}
-          data-testid="mh-world-banner"
-          className="relative flex w-full items-center gap-3 overflow-hidden rounded-3xl border border-orange-500/25 bg-gradient-to-r from-[#2a1206] via-[#3b1403] to-[#1a0b02] p-4 text-left shadow-lg shadow-orange-900/30 active:scale-[0.98] transition-transform"
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 shadow-md shadow-orange-600/40">
-            <Play className="h-5 w-5 text-white fill-white" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5 text-[15px] font-black text-white">
-              {t("mh.worldTitle")}
-              <Flame className="h-3.5 w-3.5 text-orange-400" />
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] text-orange-200/70">{t("mh.worldSub")}</span>
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-orange-300" />
-        </button>
-      </section>
-
-      {/* ═══ ECOSSISTEMA EM HARMONIA (v14) ═══ */}
-      <section className="mt-7 px-4">
-        <button
-          onClick={() => { sfx.whoosh(); navigate("/negocios"); }}
-          data-testid="mh-earnings-banner"
-          className="relative flex w-full items-center gap-3 overflow-hidden rounded-3xl border border-emerald-400/25 bg-gradient-to-r from-[#0d2b1e] via-[#123324] to-[#0d2029] p-4 text-left shadow-lg shadow-emerald-900/30 active:scale-[0.98] transition-transform"
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-600/40">
-            <HandCoins className="h-5 w-5 text-white" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5 text-[15px] font-black text-white">
-              Ganhe dinheiro com a Bateu
-              <HeartPulse className="h-3.5 w-3.5 text-emerald-400" />
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] text-emerald-200/70">Empresas pagam mensalidade · Todos os outros usam grátis</span>
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-emerald-300" />
-        </button>
-      </section>
-
-      {/* ═══ COISAS À VENDA — roll-up do marketplace (dados reais) ═══ */}
-      <Suspense fallback={<div className="h-56" />}>
-        <VendasRollUp />
-      </Suspense>
-
-      {/* ═══ ATIVIDADE AO VIVO — o que está a acontecer agora ═══ */}
-      <section className="mt-7">
-        <Suspense fallback={<div className="mx-4 h-24 rounded-2xl bg-white/5" />}>
-          <ActivityFeed compact limit={5} />
+      {/* roll-up de sorteios & concursos (dados reais) */}
+      <div className="mt-7">
+        <Suspense fallback={<div className="h-56" />}>
+          <SorteiosConcursosRollUp />
         </Suspense>
-      </section>
+      </div>
 
-      {/* ═══ missões diárias + feed social (conteúdo real da plataforma) ═══ */}
-      <section className="mt-7 px-4">
-        <DailyMissions compact />
-      </section>
-
-      <section className="mt-6">
-        <Suspense fallback={<div className="h-40" />}>
-          <MobileSocialFeed />
-        </Suspense>
-      </section>
+      {/* ═══ 5 · CONFIANÇA — como funciona · verificável · responsável · suporte ═══ */}
+      <div className="mt-4">
+        <ConfiancaFim />
+      </div>
 
       <Footer />
     </div>

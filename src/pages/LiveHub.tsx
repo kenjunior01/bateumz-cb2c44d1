@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Component, lazy, Suspense, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed, Flag } from "lucide-react";
+import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed, Flag, Bell, History } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
@@ -115,11 +115,13 @@ import { modoDoUtilizador, deveReportarUniversal } from "@/lib/mundoConvidado";
 import { ParticleBackground } from "@/components/effects";
 import { appendHistory } from "@/lib/liveHistory";
 import { useToast } from "@/hooks/use-toast";
+// v79 — estado vazio honesto do hub: activar notificações é uma acção REAL
+import { requestNotificationPermission } from "@/lib/pushNotifications";
+import { toast } from "sonner";
 import AmbassadorPanel from "@/components/ambassadors/AmbassadorPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { getGameManagerPath } from "@/lib/game-manager-paths";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { MissionsBar, reportUniversalScore } from "@/components/games/kit/MissionsBar";
 import GameFullscreenWrapper, { ToggleEcraInteiro } from "@/components/livegames/GameFullscreenWrapper";
 import EngagementBar from "@/components/engagement/EngagementBar";
@@ -804,6 +806,39 @@ const LiveHub = () => {
                   </div>
                 </motion.button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* v79 — estado vazio HONESTO: quando não há transmissões, a página
+            nunca fica «em branco» — diz-se a verdade e dá-se a acção real:
+            activar notificações (permissão de push) e ver resultados. */}
+        {!isImmersiveWorld && livesAgora.length === 0 && (
+          <div className="mb-4 rounded-2xl border border-dashed border-border bg-card/60 p-5 text-center lg:order-5" data-testid="livehub-lives-vazio">
+            <p className="text-sm font-bold text-foreground">Não há transmissões a decorrer neste momento.</p>
+            <p className="mt-1 text-xs text-muted-foreground">A próxima transmissão será anunciada aqui.</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={async () => {
+                  const perm = await requestNotificationPermission();
+                  if (perm === "granted") toast.success("Notificações activadas — avisamos quando começar a próxima live.");
+                  else if (perm === "denied") toast.error("A permissão de notificações está bloqueada nas definições do navegador.");
+                  else toast("Sem permissão de notificações — podes activar mais tarde.");
+                }}
+                data-testid="livehub-activar-notificacoes"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-transform active:scale-[0.97]"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                Activar notificações
+              </button>
+              <Link
+                to="/historico"
+                data-testid="livehub-ver-resultados"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground transition-colors hover:bg-secondary"
+              >
+                <History className="h-3.5 w-3.5" />
+                Ver resultados recentes
+              </Link>
             </div>
           </div>
         )}

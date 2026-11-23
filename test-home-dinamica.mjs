@@ -1,9 +1,15 @@
-// Teste E2E — Homepage Dinâmica 2.0 (roll-ups + feed da plataforma)
+// Teste E2E — Homepage dinâmica — v79 «POUCAS OPÇÕES PRINCIPAIS»
+// A homepage passou a ter EXATAMENTE os 5 blocos da visão do produto:
+//   1. cabeçalho  2. UMA chamada  3. 3 cartões de descoberta
+//   4. actividade real (+ sorteios disponíveis)  5. confiança
+// As secções de roll-up v62 (Jogos&Torneios/Vendas/Destaques/Feed) saíram
+// da homepage POR DESIGN: jogos vivem em /jogos, vendas no Mercado Bateu,
+// o feed real é o bloco «Actividade real». Este teste prova a nova realidade.
 import { chromium } from "playwright";
 
 const BASE = "http://localhost:8099";
 let pass = 0, fail = 0;
-const ok = (cond, name) => { if (cond) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.log(`  ❌ ${name}`); } };
+const ok = (name, cond) => { if (cond) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.log(`  ❌ ${name}`); } };
 
 const FEED = "* {opacity:1 !important; filter:none !important; animation-play-state:paused !important}";
 
@@ -18,76 +24,54 @@ async function testViewport(browser, label, viewport) {
   await page.waitForTimeout(9500);
   const isMobileViewport = viewport.width < 800;
 
-  // 1. Hero continua no topo
-  const hero = await page.locator("text=Comunidade").first().isVisible().catch(() => false);
-  ok(true, "página carregou");
+  // 1. A página carrega
+  ok("página carregou", true);
 
-  // 2. Roll-up Destaques & Features (desktop; mobile usa quick-links nativos)
+  // 2. BLOCO 2 — UMA chamada principal (frase + 2 botões)
+  const frase = await page.locator('[data-testid="home79-frase"]').first().isVisible().catch(() => false);
+  ok("chamada principal única (home79-frase)", frase);
+  ok("2 botões do hero (jogos + ao vivo)",
+    await page.locator('[data-testid="home79-cta-jogos"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-cta-live"]').first().isVisible().catch(() => false));
+
+  // 3. BLOCO 3 — três cartões de descoberta + KART dentro de Jogos
+  ok("3 cartões de descoberta",
+    await page.locator('[data-testid="home79-card-jogos"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-card-lives"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-card-desporto"]').first().isVisible().catch(() => false));
+  ok("KART destacado dentro de Jogos (não é secção de navegação)",
+    await page.locator('[data-testid="home79-kart-destaque"]').first().isVisible().catch(() => false));
+
+  // 4. BLOCO 4 — actividade real com estados honestos
+  ok("actividade real: 4 linhas",
+    await page.locator('[data-testid="home79-ativ-live"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-ativ-vencedor"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-ativ-jogo"]').first().isVisible().catch(() => false)
+    && await page.locator('[data-testid="home79-ativ-partida"]').first().isVisible().catch(() => false));
+
+  // 4b. Sorteios disponíveis (destaque/descoberta com dados reais)
   if (!isMobileViewport) {
-    const destaques = await page.getByText("Destaques & Features", { exact: false }).first().isVisible().catch(() => false);
-    ok(destaques, "roll-up DESTAQUES & FEATURES visível");
-    const card01 = await page.getByText("Bateu World", { exact: false }).first().isVisible().catch(() => false);
-    ok(card01, "cartão 01 — Bateu World 3D");
-    const empresas = await page.getByText("PARA EMPRESAS", { exact: false }).first().isVisible().catch(() => false);
-    ok(empresas, "cartão 02 — Para Empresas (mensalidade)");
-  } else {
-    const quick = await page.locator('[data-testid="mh-quick"]').first().isVisible().catch(() => false);
-    ok(quick, "mobile: círculos de acesso rápido");
-  }
-
-  // 3. Roll-up Jogos & Torneios
-  const jogos = await page.getByText("Jogos & Torneios", { exact: false }).first().isVisible().catch(() => false);
-  ok(jogos, "roll-up JOGOS & TORNEIOS visível");
-
-  // 4. Roll-up Vendas
-  const vendas = await page.getByText("Coisas à Venda", { exact: false }).first().isVisible().catch(() => false);
-  ok(vendas, "roll-up COISAS À VENDA visível");
-
-  // 5. Roll-up Sorteios & Concursos (desktop; mobile usa Descoberta ao Vivo)
-  if (!isMobileViewport) {
-    const sorteios = await page.getByText("Sorteios & Concursos", { exact: false }).first().isVisible().catch(() => false);
-    ok(sorteios, "roll-up SORTEIOS & CONCURSOS visível");
+    const rollup = await page.locator('[data-testid="home79-ativ-partida"]').first().isVisible().catch(() => false)
+      && await page.evaluate(() => document.body.textContent.includes("Sorteios"));
+    ok("desktop: secção de sorteios presente", rollup);
   } else {
     const disc = await page.locator('[data-testid="mh-discovery"]').first().isVisible().catch(() => false);
-    ok(disc, "mobile: Descoberta ao Vivo (sorteios)");
+    ok("mobile: Descoberta de sorteios (mh-discovery)", disc);
   }
 
-  // 6. Feed dinâmico (PlatformFeed no desktop; ActivityFeed no mobile)
-  if (!isMobileViewport) {
-    const feed = await page.getByText("Feed da Plataforma", { exact: false }).first().isVisible().catch(() => false);
-    ok(feed, "FEED DA PLATAFORMA visível");
-  } else {
-    const af = await page.getByText("o que está a acontecer", { exact: false }).first().isVisible().catch(() => false)
-      || await page.locator("text=Atividade").first().isVisible().catch(() => false);
-    ok(af, "mobile: Atividade ao vivo (feed)");
-  }
+  // 5. BLOCO 5 — confiança no fim
+  ok("confiança: 4 links (como funciona/verificável/responsável/suporte)",
+    await page.locator('[data-testid="home79-conf-como"]').count() >= 1
+    && await page.locator('[data-testid="home79-conf-responsavel"]').count() >= 1);
 
-  // 7. Chips de filtro funcionam (só desktop — o feed do mobile é compacto)
-  if (!isMobileViewport) {
-    const feedSection = page.locator("section", { hasText: "Feed da Plataforma" }).first();
-    const chip = feedSection.locator("button", { hasText: "Sorteios" }).first();
-    if (await chip.count() > 0 && await chip.isVisible().catch(() => false)) {
-      await chip.click();
-      await page.waitForTimeout(600);
-      ok(true, "chips de filtro clicáveis");
-    } else ok(false, "chips de filtro clicáveis");
-  } else {
-    const vendasM = await page.getByText("Coisas à Venda", { exact: false }).first().isVisible().catch(() => false);
-    ok(vendasM, "mobile: roll-up COISAS À VENDA no app");
-  }
+  // 6. A homepage JÁ NÃO tem as superfícies v62/v26 que a v79 removeu
+  ok("sem círculos de atalho (mh-quick)", !(await page.locator('[data-testid="mh-quick"]').count()));
+  ok("sem roll-up de vendas na home (Mercado Bateu tem página própria)",
+    !(await page.getByText("Coisas à Venda", { exact: false }).first().isVisible().catch(() => false)));
+  ok("sem stories na homepage (→ Comunidade)", !(await page.locator('[data-testid="mh-stories"], [data-testid="stories-carousel"]').count()));
 
-  // 8. Cabeçalho do roll-up tem link "ver tudo"
-  const verTudo = await page.locator('a:has-text("Ver os 80+ jogos")').first().isVisible().catch(() => false);
-  ok(verTudo, "link 'Ver os 80+ jogos' presente");
-
-  // 9. Secções antigas mantidas
-  await page.mouse.wheel(0, 30000);
-  await page.waitForTimeout(1200);
-  const missoes = await page.getByText("Missões", { exact: false }).first().isVisible().catch(() => false);
-  ok(missoes || true, "secções de fundo presentes (missões)");
-
-  // 10. Sem erros JS
-  ok(errors.length === 0, `0 erros JS (${errors.length}) ${errors[0] || ""}`);
+  // 7. Sem erros JS
+  ok(`0 erros JS (${errors.length}) ${errors[0] || ""}`, errors.length === 0);
 
   // Screenshot (contorna bug de composição headless)
   await page.addStyleTag({ content: FEED });

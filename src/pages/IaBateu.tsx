@@ -30,9 +30,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  BookOpen, Bot, BrainCircuit, ChevronDown, Code2, Database, Download, Eraser, Eye, Globe, LifeBuoy,
-  Loader2, Plus, ScanSearch, Send, Settings2, Sparkles, Square, Trash2, Trophy, User,
-  Upload, X,
+  BookOpen, Bot, BrainCircuit, ChevronDown, Database, Download, Eraser, Eye, LifeBuoy,
+  Loader2, Plus, ScanSearch, Send, Settings2, Square, Trash2, Trophy, User,
+  Upload, X, Gamepad2, HeartHandshake,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -86,19 +86,25 @@ interface PersonaIa {
 
 const CONTEXTO_PLATAFORMA =
   "És a IA oficial da Bateu — a plataforma moçambicana de sorteios verificados, jogos ao vivo, " +
-  "desporto real, marketplace, leilões esports, alienação de bens e a Cidade Bateu 3D. " +
+  "desporto real, Mercado Bateu (sorteios, concursos, leilões e bens) e jogos (BATEU KART e mais). " +
   "Conhecimentos da plataforma: bilhetes, carteira, cupões, referências e amigos, Torneios/Arena, " +
   "comunidade e stories. Regras: nunca inventas resultados de sorteios, vencedores, probabilidades " +
   "ou dados legais/licenças — se não souberes, dizês honestamente e apontas a secção certa " +
   "(Transparência, Como Funciona, Suporte). Jogo responsável sempre: a diversão vem primeiro, " +
   "nunca aconselhas gastar mais do que a pessoa pode.";
 
+/* v79 — QUATRO modos e NÃO um chatbot universal (visão do produto):
+   Ajuda Bateu (principal) · Desporto · Jogos · Suporte.
+   As personas de desenvolvimento (Programador, Tradutor, Criativo,
+   Modo Profundo) saem da interface pública — o motor continua lá,
+   mas o utilizador que quer saber como participar num sorteio recebe
+   respostas directas, não um laboratório de IA. */
 const PERSONAS: PersonaIa[] = [
   {
     id: "assistente", icone: LifeBuoy, thinkingPadrao: false,
     prompt: CONTEXTO_PLATAFORMA +
-      " Hoje és o GUIA da plataforma: respostas curtas, passo a passo, com os caminhos certos no site " +
-      "(bilhetes, carteira, como participar, como levantar). ",
+      " Hoje és o AJUDA BATEU — o modo principal: respostas curtas, passo a passo, com os caminhos certos no site " +
+      "(como participar num sorteio, onde ver vencedores, como funciona a carteira, como levantar um prémio). ",
   },
   {
     id: "desporto", icone: Trophy, thinkingPadrao: false,
@@ -107,29 +113,18 @@ const PERSONAS: PersonaIa[] = [
       "de verdade (nunca inventadas), e ligas cada análise aos jogos de palpite da Bateu com responsabilidade. ",
   },
   {
-    id: "criativo", icone: Sparkles, thinkingPadrao: false,
+    id: "jogos", icone: Gamepad2, thinkingPadrao: false,
     prompt: CONTEXTO_PLATAFORMA +
-      " Hoje és CRIATIVO: ideias, legendas, stories, nomes e textos com humor moçambicano. Formato sempre " +
-      "pronto a copiar. ",
+      " Hoje és o GUIA DE JOGOS: explicas como cada jogo funciona (BATEU KART, Tetris, Damas, Xadrez e mais), " +
+      "como ganhar PONTOS, como funcionam missões diárias, níveis e prémios — com honestidade: jogar é grátis, " +
+      "pontos nunca valem dinheiro e nenhum desbloqueio dá vantagem competitiva. ",
   },
   {
-    id: "tradutor", icone: Globe, thinkingPadrao: false,
-    prompt:
-      "És TRADUTOR profissional (PT ↔ EN ↔ ES ↔ FR, incl. changana quando possível). Traduz o que o " +
-      "utilizador mandar mantendo o tom e o formato; se o pedido for ambíguo, entregas as duas versões. " +
-      "Nunca acrescentas conteúdo que não estava no original. ",
-  },
-  {
-    id: "programador", icone: Code2, thinkingPadrao: false,
+    id: "suporte", icone: HeartHandshake, thinkingPadrao: false,
     prompt: CONTEXTO_PLATAFORMA +
-      " Hoje és PROGRAMADOR par: código completo e correto em blocos ``` com a linguagem declarada, " +
-      "explicações mínimas, exemplos executáveis. ",
-  },
-  {
-    id: "pensador", icone: BrainCircuit, thinkingPadrao: true,
-    prompt: CONTEXTO_PLATAFORMA +
-      " Hoje és MODO PROFUNDO: pensas devagar (o reasoning aparece no painel de pensamento), estruturas " +
-      "a resposta com prós, contras e trade-offs, e distingues FACTO de OPINIÃO. ",
+      " Hoje és SUPORTE: resolves problemas práticos — carteira e levantamentos (M-Pesa/Emola), bilhetes que " +
+      "não aparecem, pausa e auto-exclusão, limites de jogo — sempre com passos claros e sem prometer prazos " +
+      "que não conheces. ",
   },
 ];
 
@@ -223,6 +218,11 @@ const IaBateu = () => {
   const [personaId, setPersonaId] = useState("assistente");
   const [pensamentoAberto, setPensamentoAberto] = useState(true);
   const [configAberta, setConfigAberta] = useState(false);
+  // v79 — ferramentas TÉCNICAS fora da interface pública (Ver/Buscar):
+  // só regressam com o sinal de desenvolvimento localStorage «bateu_ia_dev=1».
+  const [modoDev] = useState(() => {
+    try { return localStorage.getItem("bateu_ia_dev") === "1"; } catch { return false; }
+  });
   const [parametros, setParametros] = useState<ParametrosIa>({
     modelo: MODELOS_CONHECIDOS[0].id as string,
     temperatura: 1,
@@ -734,10 +734,13 @@ const IaBateu = () => {
                 : sincEstado === "aSincronizar" ? t("ia.sinc.aSincronizar")
                 : t("ia.sinc.convidado")}
             </Badge>
-            <Badge variant="outline" data-testid="ia-endpoint-chip" className="gap-1 text-[10px]">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              {t(`ia.config.endpoint.${endpointInfo.modo}`)} · {hostEndpoint}
-            </Badge>
+            {/* v79: endpoint/supabase host são detalhes de infra — só com modo dev */}
+            {modoDev && (
+              <Badge variant="outline" data-testid="ia-endpoint-chip" className="gap-1 text-[10px]">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                {t(`ia.config.endpoint.${endpointInfo.modo}`)} · {hostEndpoint}
+              </Badge>
+            )}
             {uso && aba === "conversar" && (
               <Badge variant="secondary" data-testid="ia-stats" className="text-[10px]">
                 {t("ia.stats.tokens")}: {uso.totalTokens ?? "—"} · {t("ia.stats.segundo")}: {uso.tokensPorSegundo ?? "—"} · {t("ia.stats.primeiro")}: {uso.msPrimeiroToken ?? "—"}ms
@@ -754,22 +757,27 @@ const IaBateu = () => {
           </div>
         </div>
 
-        {/* Abas v55: Conversar · Ver · Buscar */}
+        {/* Abas: v79 — o público vê SÓ o chat (Ajuda Bateu). As ferramentas
+            de desenvolvimento (Ver/Buscar) voltam com bateu_ia_dev=1. */}
         <div className="flex gap-2 mb-4 flex-wrap" role="tablist">
-          {([["conversar", Bot], ["ver", Eye], ["buscar", ScanSearch]] as const).map(([id, Icone]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={aba === id}
-              data-testid={`ia-aba-${id}`}
-              onClick={() => setAba(id)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
-                aba === id ? "bg-primary text-primary-foreground border-primary" : "bg-card/50 hover:bg-accent"
-              }`}
-            >
-              <Icone className="h-4 w-4" /> {t(`ia.tab.${id}`)}
-            </button>
-          ))}
+          {(["conversar", modoDev ? "ver" : null, modoDev ? "buscar" : null]
+            .filter(Boolean) as AbaIa[]).map((id) => {
+              const Icone = id === "conversar" ? Bot : id === "ver" ? Eye : ScanSearch;
+              return (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={aba === id}
+                  data-testid={`ia-aba-${id}`}
+                  onClick={() => setAba(id)}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
+                    aba === id ? "bg-primary text-primary-foreground border-primary" : "bg-card/50 hover:bg-accent"
+                  }`}
+                >
+                  <Icone className="h-4 w-4" /> {t(`ia.tab.${id}`)}
+                </button>
+              );
+            })}
         </div>
 
         {erro && aba === "conversar" && (
@@ -908,8 +916,22 @@ const IaBateu = () => {
             </div>
           </section>
 
-          {/* ── Configurações ── */}
+          {/* ── Configurações (v79: técnica — só com bateu_ia_dev=1; o público
+              vê apenas a explicação do modo actual) ── */}
           <aside className={`space-y-4 ${configAberta ? "" : "hidden lg:block"}`}>
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="text-xs font-semibold text-muted-foreground">{t("ia.v79.modo")}</div>
+              <div className="flex items-center gap-2">
+                {(() => { const P = personaPorId(personaId); return <P.icone className="h-4 w-4 text-primary" />; })()}
+                <span className="text-sm font-bold">{t(`ia.persona.${personaId}.nome`)}</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">{t("ia.v79.modo.desc")}</p>
+              <div className="rounded-lg border px-3 py-2 text-[10px] text-muted-foreground">
+                {t("ia.v79.rodape")}
+              </div>
+            </div>
+
+            {modoDev && (
             <div className="rounded-xl border p-4 space-y-5">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">{t("ia.config.modelo")}</label>
@@ -1001,6 +1023,7 @@ const IaBateu = () => {
                 <Switch data-testid="ia-rag" checked={ragAtivo} onCheckedChange={setRagAtivo} />
               </div>
             </div>
+            )}
 
             <div className="rounded-xl border p-4">
               <div className="text-xs font-semibold text-muted-foreground mb-2">{t("ia.conversas")}</div>

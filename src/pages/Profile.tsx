@@ -312,8 +312,8 @@ const Profile = () => {
                   <TabsTrigger value="confirmed" className="text-xs whitespace-nowrap">Confirmados</TabsTrigger>
                   <TabsTrigger value="pending" className="text-xs whitespace-nowrap">Pendentes</TabsTrigger>
                 </div>
-                <TabsTrigger value="responsible" className="text-xs whitespace-nowrap gap-1">
-                  <Heart className="h-3 w-3" />Responsável
+                <TabsTrigger value="responsible" className="text-xs whitespace-nowrap gap-1" data-testid="profile-tab-responsavel">
+                  <Heart className="h-3 w-3" />Jogo responsável
                 </TabsTrigger>
                 <TabsTrigger value="stats" className="text-xs whitespace-nowrap">Estatísticas</TabsTrigger>
               </TabsList>

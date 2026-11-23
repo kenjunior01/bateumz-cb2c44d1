@@ -111,7 +111,7 @@ const Footer = () => {
         <motion.div className="flex flex-col items-center gap-6 md:flex-row md:justify-between" custom={0.3} variants={fadeInUp}>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
             <Link to="/marketplace" className="region-link hover:opacity-80 transition-opacity">{t("footer.raffles")}</Link>
-            <Link to="/alienacao" className="region-link hover:opacity-80 transition-opacity">Alienação de Bens</Link>
+            <Link to="/alienacao" className="region-link hover:opacity-80 transition-opacity">Leilões e bens</Link>
             <Link to="/historico" className="region-link hover:opacity-80 transition-opacity">{t("footer.winners")}</Link>
             <Link to="/como-funciona" className="region-link hover:opacity-80 transition-opacity">{t("footer.howItWorks")}</Link>
             <Link to="/transparencia" className="region-link hover:opacity-80 transition-opacity">{t("footer.transparency")}</Link>

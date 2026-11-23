@@ -58,18 +58,22 @@ async function navegar(page, url, waitMs = 3800) {
   page.on("pageerror", (e) => erros.push(String(e)));
 
   // ═══ A. NAVBAR DESKTOP (home /) ═══
-  console.log("\n— A. navbar desktop —");
+  console.log("\n— A. navbar desktop (v79: cabeçalho simples) —");
   await navegar(page, "/", 5000);
-  const orb = page.locator(".navbar-live-orb");
-  assert(await orb.count() === 1, "A1 orb «ao vivo» presente em desktop");
-  const orbBox = await orb.boundingBox();
-  const orbStats = await orb.evaluate((el) => {
-    const cs = getComputedStyle(el);
-    return { h: el.getBoundingClientRect().height, ws: el.scrollWidth, wc: el.clientWidth, radius: cs.borderRadius, border: cs.borderTopWidth };
-  });
-  assert(orbStats.h >= 24 && orbStats.h <= 36, `A2 orb com altura de pill (~30px, ${orbStats.h.toFixed(1)})`);
-  assert(orbStats.ws <= orbStats.wc + 2, `A3 orb SEM wrap vertical (scrollWidth ${orbStats.ws} ≤ clientWidth ${orbStats.wc})`);
-  assert(orbStats.radius !== "0px", "A4 orb com border-radius de pill");
+  // v79: o orb deu lugar a 4 links principais + Mais + pesquisa — mesmo sítio,
+  // agora SEM mega-menus nem atalhos duplicados
+  const principaisA = ["nav79-desktop-jogos", "nav79-desktop-live", "nav79-desktop-desporto", "nav79-desktop-mercado", "nav79-desktop-mais"];
+  for (const tid of principaisA) {
+    const el = page.locator(`[data-testid="${tid}"]`);
+    assert(await el.isVisible(), `A1 ${tid} visível`);
+    const box = await el.boundingBox();
+    assert(box && box.height >= 24 && box.height <= 44, `A2 ${tid} altura de linha de nav (${box ? box.height.toFixed(1) : "?"}px)`);
+  }
+  const overflowA = await page.evaluate(() => ({
+    sw: document.documentElement.scrollWidth,
+    cw: document.documentElement.clientWidth,
+  }));
+  assert(overflowA.sw <= overflowA.cw, `A3 navbar SEM overflow horizontal a 1600px (${overflowA.sw} ≤ ${overflowA.cw})`);
   const ring = await page.locator(".navbar-logo-ring").evaluate((el) => getComputedStyle(el).boxShadow !== "none");
   assert(ring, "A5 anel do logo com sombra (classe navbar-logo-ring existente)");
   const aurora = await page.locator(".navbar-aurora-strip").count();

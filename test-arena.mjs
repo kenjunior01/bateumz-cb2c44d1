@@ -85,12 +85,15 @@ async function main() {
 
   console.log("— Navegação —");
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector('[data-testid="home-arena-banner"]', { timeout: 15000 }).catch(() => {});
+  // v79: a homepage tem 5 blocos — a Arena deixa de ter banner próprio na
+  // home e vive via Jogos (destaque do hub) e menu «Mais». A navegação
+  // principal continua a chegar lá: Jogos → /jogos é um clique da barra.
+  await page.waitForSelector('[data-testid="home79-frase"]', { timeout: 15000 }).catch(() => {});
   await page.waitForTimeout(600);
-  ok("Home tem banner GAMING ARENA", await page.locator('[data-testid="home-arena-banner"]').count() >= 1);
-  await page.locator('[data-testid="home-arena-banner"] a').first().click().catch(() => {});
+  ok("Homepage v79 sem banner de Arena (secções: 5 blocos)", await page.locator('[data-testid="home-arena-banner"]').count() === 0);
+  await page.goto(`${BASE}/arena`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(900);
-  ok("Banner da home navega para /arena", page.url().includes("/arena"));
+  ok("Arena alcançável por URL directa (/arena)", page.url().includes("/arena"));
 
   // mobile
   const mpage = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
@@ -100,7 +103,7 @@ async function main() {
   await mpage.goto(`${BASE}/arena`, { waitUntil: "domcontentloaded", timeout: 60000 });
   await mpage.waitForSelector('[data-testid="arena-hero"]', { timeout: 20000 });
   ok("M: /arena carrega no telemóvel", true);
-  ok("M: tab Arena na barra inferior", await mpage.locator('a[href="/arena"], [data-testid="mob-tab-arena"]').count() >= 1);
+  ok("M: barra inferior com as 5 áreas (Jogos presente)", await mpage.locator('a[href="/arena"], [data-testid="mob-tab-jogos"]').count() >= 1);
   await mpage.locator('a[href="/arena"]').first().click().catch(() => {});
   const realM = mErrors.filter(e => !NOISE.some(n => e.includes(n)));
   ok(`M: sem erros JS (${realM.length})`, realM.length === 0);

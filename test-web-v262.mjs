@@ -135,22 +135,20 @@ console.log("■ 6. Sem regressões de navegação");
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("[data-testid='home-cta-jogar-central']", { timeout: 10000 });
-  // v62: a homepage nova monta a CTA cedo — o hover no navbar precisa do
-  // assentamento do layout (o elemento ficava «not stable» durante o boot);
-  // espera honesta de estabilidade, a asserção de navegação fica intacta
-  await page.waitForSelector("[data-testid='nav-direct-desporto']", { timeout: 10000 });
+  // v79: o cabeçalho é o simples (nav79-desktop-*); a CTA antiga da home
+  // (home-cta-jogar-central) deixou de existir — o hero é UMA chamada.
+  await page.waitForSelector("[data-testid='nav79-desktop-desporto']", { timeout: 10000 });
   await page.waitForFunction(() => {
-    const el = document.querySelector("[data-testid='nav-direct-desporto']");
+    const el = document.querySelector("[data-testid='nav79-desktop-desporto']");
     if (!el) return false;
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && window.scrollY === 0;
   }, null, { timeout: 10000 });
   await page.waitForTimeout(1800);
-  await page.hover("[data-testid='nav-direct-desporto']");
+  await page.hover("[data-testid='nav79-desktop-desporto']");
   await page.waitForTimeout(900);
   const t1 = Date.now();
-  await page.click("[data-testid='nav-direct-desporto']");
+  await page.click("[data-testid='nav79-desktop-desporto']");
   try {
     await page.waitForURL("**/desporto", { timeout: 5000 });
     const navMs = Date.now() - t1;

@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import { useSEO } from "@/hooks/useSEO";
 import SabiasQue from "@/components/community/SabiasQue";
+// v79 — «Comunidade → Bateu Oficial»: os stories (incl. o canal oficial da
+// plataforma e o «Seu Status») vivem AQUI, não na homepage.
+import StoriesCarousel from "@/components/StoriesCarousel";
 
 interface Message {
   id: string;
@@ -249,6 +252,12 @@ export default function Community() {
 
         {/* ⭐ v34 — Sabias que? (resumo REAL da Wikipédia PT, PALOP) */}
         <SabiasQue />
+
+        {/* v79 — Bateu Oficial + Seu Status: o canal oficial da plataforma e
+            os stories da comunidade, num só lugar (saíram da homepage) */}
+        <div className="mt-2 -mx-1" data-testid="community-stories">
+          <StoriesCarousel embedded />
+        </div>
 
         {/* Desktop header - enhanced with gradient accent */}
         <motion.div

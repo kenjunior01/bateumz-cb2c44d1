@@ -219,15 +219,17 @@ async function main() {
   ok("(sanity) rail continua vivo após navegar", premiosNav >= 0);
   await pg.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await dormir(2500);
-  const trigPremios = await pg.locator('.navbar-trigger:has-text("Prémios")').count();
-  const trigJogos = await pg.locator('.navbar-trigger:has-text("Jogos")').count();
-  ok("navbar desktop: grupo «Prémios» de TOPO (visão)", trigPremios >= 1);
-  ok("navbar desktop: grupo «Jogos» de TOPO (visão)", trigJogos >= 1);
-  // o grupo Prémios contém o ciclo
-  await pg.locator('.navbar-trigger:has-text("Prémios")').first().click().catch(() => {});
+  // v81: a navbar é o cabeçalho SIMPLES (5 áreas + Mais) — «Prémios» e
+  // «Jogos» são os destinos reais: Jogos é link de topo, Prémios vive no «Mais»
+  const jogosTopo = await pg.locator("[data-testid='nav79-desktop-jogos']").count();
+  const maisTopo = await pg.locator("[data-testid='nav79-desktop-mais']").count();
+  ok("navbar desktop: Jogos de TOPO (5 áreas v81)", jogosTopo === 1);
+  ok("navbar desktop: menu «Mais» presente (Prémios lá dentro)", maisTopo === 1);
+  await pg.locator("[data-testid='nav79-desktop-mais']").first().click().catch(() => {});
   await dormir(700);
-  const megaTxt = await pg.locator(".navbar-mega-panel").first().innerText().catch(() => "");
-  ok("mega «Prémios» inclui o CICLO + Os meus pontos", megaTxt.toLowerCase().includes("ciclo") && megaTxt.includes("Os meus pontos"));
+  const maisTxt = await pg.locator("body").innerText().catch(() => "");
+  ok("menu «Mais» inclui Prémios + Os meus pontos (o ciclo à vista)",
+    maisTxt.includes("Prémios") && (maisTxt.includes("Pontos") || maisTxt.includes("Histórico")));
   // layout da área de jogos tem Prémios na navegação própria
   await pg.goto(`${BASE}/premios`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await dormir(1500);

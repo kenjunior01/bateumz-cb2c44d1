@@ -30,15 +30,29 @@ const sb: any = null; // acesso direto não necessário — tudo via lib/marketp
 
 type CatFilter = "all" | MarketKind;
 
+/* v79 — MERCADO BATEU: EXATAMENTE quatro categorias (visão do produto):
+   Sorteios · Concursos · Leilões e bens · Comprar e vender.
+   «Alienação de Bens» deixa de ser um nome próprio — os bens (viaturas,
+   imóveis, equipamentos) vivem DENTRO de «Leilões e bens». Os filtros
+   internos de jogo ficam por compatibilidade com links antigos (?tab=). */
 const CATS: { id: CatFilter; label: string; icon: typeof Gavel; accent: string }[] = [
   { id: "all", label: "Tudo", icon: LayoutGrid, accent: "from-cyan-500 to-blue-600" },
-  { id: "leilao", label: "Leilões", icon: Gavel, accent: "from-orange-500 to-amber-600" },
-  { id: "produto", label: "Produtos", icon: ShoppingBag, accent: "from-fuchsia-500 to-purple-600" },
-  { id: "alienacao", label: "Alienação", icon: KeyRound, accent: "from-emerald-500 to-teal-600" },
   { id: "sorteio", label: "Sorteios", icon: Gift, accent: "from-violet-500 to-fuchsia-600" },
-  { id: "jogo", label: "Jogos", icon: Gamepad2, accent: "from-lime-500 to-green-600" },
   { id: "concurso", label: "Concursos", icon: Trophy, accent: "from-yellow-500 to-orange-600" },
+  { id: "leilao", label: "Leilões e bens", icon: Gavel, accent: "from-orange-500 to-amber-600" },
+  { id: "produto", label: "Comprar e vender", icon: ShoppingBag, accent: "from-fuchsia-500 to-purple-600" },
 ];
+
+/* v79: «Leilões e bens» = leilões + alienação (bens à venda) no MESMO filtro */
+const KINDS_POR_CAT: Record<CatFilter, MarketKind[]> = {
+  all: [],
+  leilao: ["leilao", "alienacao"],
+  produto: ["produto"],
+  alienacao: ["alienacao"],
+  sorteio: ["sorteio"],
+  jogo: ["jogo"],
+  concurso: ["concurso"],
+};
 
 const SORTS: { id: MarketSort; label: string }[] = [
   { id: "urgente", label: "Acaba primeiro" },
@@ -182,8 +196,8 @@ function MarketCard({ item, now }: { item: MarketItem; now: number }) {
 
 export default function Marketplace() {
   useSEO({
-    title: "Marketplace Bateu — Leilões, Produtos, Alienação e Sorteios",
-    description: "O mercado unificado da Bateu: leilões ao vivo, produtos em prestações, alienação, sorteios premium e jogos. Busca instantânea, flash deals reais e confiança verificada.",
+    title: "Mercado Bateu — Sorteios, Concursos, Leilões e Bens",
+    description: "O mercado unificado da Bateu: sorteios, concursos, leilões e bens à venda. Busca instantânea, flash deals reais e confiança verificada.",
     canonicalPath: "/marketplace",
   });
 
@@ -240,7 +254,7 @@ export default function Marketplace() {
   const filtered = useMemo(() => {
     if (!data) return [];
     let list = searchMarket(data.items, q);
-    if (cat !== "all") list = list.filter((i) => i.kind === cat);
+    if (cat !== "all") list = list.filter((i) => KINDS_POR_CAT[cat].includes(i.kind));
     return sortMarket(list, sort);
   }, [data, q, cat, sort]);
 
@@ -256,7 +270,7 @@ export default function Marketplace() {
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
             <div className="mb-1 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-cyan-400" />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-400">Marketplace Bateu</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-400">Mercado Bateu</span>
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl">
               Um mercado. <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Tudo dentro.</span>

@@ -105,8 +105,9 @@ async function main() {
   }));
   ok("razão honesta de rede lenta", (await pSlow.evaluate(() => document.getElementById("bateu-boot-razao")?.textContent || "")).includes("demora"));
   // Deixar o bundle continuar → app monta → shell removido
-  await pSlow.waitForSelector('[data-testid="heroagora-title"]', { timeout: 20000 }).catch(() => {});
-  ok("app recuperou sozinha depois do atraso (hero funcional visível)", await pSlow.getByTestId("heroagora-title").isVisible().catch(() => false));
+  // v79: o hero é UMA chamada (home79-frase) — a recuperação prova-se nela
+  await pSlow.waitForSelector('[data-testid="home79-frase"]', { timeout: 20000 }).catch(() => {});
+  ok("app recuperou sozinha depois do atraso (chamada principal visível)", await pSlow.getByTestId("home79-frase").isVisible().catch(() => false));
   ok("shell removido após montagem", await pSlow.evaluate(() => document.getElementById("bateu-shell") === null));
   await ctxSlow.close();
 
@@ -121,7 +122,7 @@ async function main() {
   page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
   const t0 = Date.now();
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector('[data-testid="heroagora-title"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="home79-frase"]', { timeout: 15000 });
   const bootMs = Date.now() - t0;
   ok(`home monta em ≤ 6 s (real: ${(bootMs / 1000).toFixed(1)} s)`, bootMs < 6000);
   ok("shell removido no arranque normal", await page.evaluate(() => document.getElementById("bateu-shell") === null));
@@ -138,29 +139,29 @@ async function main() {
   ok("link Suporte → /suporte", (await page.getByTestId("trust-suporte").getAttribute("href")) === "/suporte");
   ok("trust-bar no primeiro ecrã (topo < 200 px)", (await tb.boundingBox()).y < 200);
 
-  // ── 5. Hero funcional (P0 3) — desktop ──
-  console.log("— Hero funcional (desktop)");
-  ok("pergunta «O que queres fazer agora?»", (await page.getByTestId("heroagora-title").textContent()).includes("O que queres fazer agora"));
-  ok("3 entradas presentes", await page.evaluate(() =>
-    ["heroagora-jogar", "heroagora-live", "heroagora-desporto"].every((id) => !!document.querySelector(`[data-testid="${id}"]`))));
-  ok("destinos reais (/jogos, /lives, /desporto)", await page.evaluate(() =>
-    document.querySelector('[data-testid="heroagora-jogar"]').getAttribute("href") === "/jogos"
-    && document.querySelector('[data-testid="heroagora-live"]').getAttribute("href") === "/lives"
-    && document.querySelector('[data-testid="heroagora-desporto"]').getAttribute("href") === "/desporto"));
-  ok("hero acima do banner antigo (hierarquia auditada)", (await page.getByTestId("heroagora-title").boundingBox()).y < (await tb.boundingBox()).y + 900);
-  await page.getByTestId("heroagora-jogar").click();
+  // ── 5. Hero v79 (uma chamada + 2 botões) — desktop ──
+  console.log("— Hero v79 (desktop)");
+  ok("frase única «Joga, acompanha e participa com transparência.»", (await page.getByTestId("home79-frase").textContent()).includes("transparência"));
+  ok("2 botões do hero presentes", await page.evaluate(() =>
+    ["home79-cta-jogos", "home79-cta-live"].every((id) => !!document.querySelector(`[data-testid="${id}"]`))));
+  ok("destinos reais (/jogos, /lives)", await page.evaluate(() =>
+    document.querySelector('[data-testid="home79-cta-jogos"]').getAttribute("href") === "/jogos"
+    && document.querySelector('[data-testid="home79-cta-live"]').getAttribute("href") === "/lives"));
+  ok("hero acima dos cartões de descoberta (hierarquia auditada)", (await page.getByTestId("home79-frase").boundingBox()).y < (await tb.boundingBox()).y + 900);
+  await page.getByTestId("home79-cta-jogos").click();
   await page.waitForURL("**/jogos", { timeout: 8000 }).catch(() => {});
-  ok("clique Jogar → /jogos", page.url().includes("/jogos"));
+  ok("clique Explorar jogos → /jogos", page.url().includes("/jogos"));
   await page.goBack();
-  await page.getByTestId("heroagora-live").waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
-  await page.getByTestId("heroagora-live").click();
+  await page.getByTestId("home79-cta-live").waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  await page.getByTestId("home79-cta-live").click();
   await page.waitForURL("**/lives", { timeout: 8000 }).catch(() => {});
-  ok("clique Ao vivo → /lives", page.url().includes("/lives"));
+  ok("clique Ver ao vivo → /lives", page.url().includes("/lives"));
   await page.goBack();
-  await page.getByTestId("heroagora-desporto").waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
-  await page.getByTestId("heroagora-desporto").click();
+  // a 3.ª entrada (Desporto) vive nos cartões de descoberta
+  await page.getByTestId("home79-card-desporto").waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  await page.getByTestId("home79-card-desporto").click();
   await page.waitForURL("**/desporto", { timeout: 8000 }).catch(() => {});
-  ok("clique Desporto → /desporto", page.url().includes("/desporto"));
+  ok("clique Desporto (cartão) → /desporto", page.url().includes("/desporto"));
 
   // ── 6. Footer global com Suporte e Protecção ──
   console.log("— Footer");
@@ -200,8 +201,8 @@ async function main() {
     localStorage.setItem("bateu_region", "MZ");
   });
   await pEn.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await pEn.waitForSelector('[data-testid="heroagora-title"]', { timeout: 15000 }).catch(() => {});
-  ok("hero funcional traduzido (EN)", (await pEn.getByTestId("heroagora-title").textContent().catch(() => "")).includes("What do you want to do now"));
+  await pEn.waitForSelector('[data-testid="home79-frase"]', { timeout: 15000 }).catch(() => {});
+  ok("chamada principal traduzida (EN)", (await pEn.getByTestId("home79-frase").textContent().catch(() => "")).includes("transparency"));
   ok("trust bar traduzida (EN)", (await pEn.getByTestId("trust-bar").textContent().catch(() => "")).includes("How we protect players"));
   await ctxEn.close();
 
@@ -211,10 +212,10 @@ async function main() {
   const pMob = await ctxMob.newPage();
   await pMob.addInitScript(() => localStorage.setItem("bateu_region", "MZ"));
   await pMob.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await pMob.waitForSelector('[data-testid="heroagora-title"]', { timeout: 15000 }).catch(() => {});
+  await pMob.waitForSelector('[data-testid="home79-frase"]', { timeout: 15000 }).catch(() => {});
   ok("mobile: trust-bar no topo (< 140 px)", (await pMob.getByTestId("trust-bar").boundingBox().catch(() => ({ y: 999 }))).y < 140);
-  const heroBox = await pMob.getByTestId("heroagora-jogar").boundingBox().catch(() => null);
-  ok("mobile: 3 entradas no primeiro ecrã (sem scroll)", heroBox && heroBox.y < 740);
+  const heroBox = await pMob.getByTestId("home79-cta-jogos").boundingBox().catch(() => null);
+  ok("mobile: botões do hero no primeiro ecrã (sem scroll)", heroBox && heroBox.y < 740);
   await pMob.getByTestId("trust-suporte").click();
   await pMob.waitForURL("**/suporte", { timeout: 8000 }).catch(() => {});
   ok("mobile: Suporte a um toque a partir da home", pMob.url().includes("/suporte"));

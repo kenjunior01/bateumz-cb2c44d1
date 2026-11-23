@@ -24,7 +24,7 @@ page.on("console", m => {
 const t0 = Date.now();
 await page.goto(BASE + "/", { waitUntil: "domcontentloaded", timeout: 30000 });
 try {
-  await page.waitForSelector("[data-testid='home-cta-jogar-central']", { timeout: 4500 });
+  await page.waitForSelector("[data-testid='home79-frase']", { timeout: 4500 });
   const dt = Date.now() - t0;
   ok(`hero renderiza em ${dt}ms (< 5000ms)`, dt < 5000);
 } catch {
@@ -45,14 +45,15 @@ console.log("■ 4. Prefetch de rota no hover");
 const chunkReqs = [];
 page.on("request", r => {
   const u = r.url();
-  if (/src\/pages\/games-gratis\/|FreeGamesHub/.test(u)) chunkReqs.push(u);
+  if (/src\/pages\/desporto\/|DesportoHub/.test(u)) chunkReqs.push(u);
 });
-// hover REAL no link direto do navbar (o prefetch escuta mouseover delegado)
-const direct = page.locator("[data-testid='nav-direct-jogos-gratis']");
-ok("atalho direto «Jogos Grátis» no navbar desktop", await direct.isVisible());
+// hover REAL num link do navbar (o prefetch escuta mouseover delegado)
+// v79: os atalhos nav-direct-* saíram — o hover corre no link principal
+const direct = page.locator("[data-testid='nav79-desktop-desporto']");
+ok("link principal «Desporto» no navbar desktop", await direct.isVisible());
 await direct.hover();
 await page.waitForTimeout(1200);
-ok("chunk de /jogos-gratis pedido no hover (antes do clique)", chunkReqs.length > 0,
+ok("chunk de /desporto pedido no hover (antes do clique)", chunkReqs.length > 0,
   `— reqs: ${chunkReqs.length}`);
 // ─── 5. SKIP-LINK a11y: 1º Tab foca «Saltar para o conteúdo» ───
 console.log("■ 5. Skip-link de acessibilidade");
@@ -77,16 +78,15 @@ const afterSkip = await page.evaluate(() => document.activeElement?.id === "cont
 ok("Enter move o foco para #conteudo-principal", afterSkip);
 
 // ─── 6. Navegação desktop segue funcional (regressão leve) ───
-console.log("■ 6. Navegação desktop para /jogos-gratis");
-await page.click("a[href='/jogos-gratis']");
-await page.waitForURL("**/jogos-gratis", { timeout: 8000 });
-await page.waitForSelector("[data-testid='freegames-grid'], [data-testid='freegames-empty']", { timeout: 8000 });
-ok("navegação para hub de jogos grátis OK", true);
+console.log("■ 6. Navegação desktop para /jogos (cabeçalho v79)");
+await page.click("[data-testid='nav79-desktop-jogos']");
+await page.waitForURL("**/jogos", { timeout: 8000 });
+ok("navegação para o hub de jogos OK", true);
 
 // ─── 7b. SCROLL RESTORATION: rota nova abre no topo ───
 console.log("■ 7b. Scroll restoration na navegação");
 await page.goto(BASE + "/", { waitUntil: "domcontentloaded", timeout: 30000 });
-await page.waitForSelector("[data-testid='home-cta-jogar-central']", { timeout: 15000 });
+await page.waitForSelector("[data-testid='home79-frase']", { timeout: 15000 });
 await page.evaluate(() => window.scrollTo({ top: 999999, behavior: "instant" }));
 await page.waitForTimeout(200);
 const beforeY = await page.evaluate(() => document.scrollingElement?.scrollTop ?? window.scrollY);

@@ -1,4 +1,26 @@
 ---
+Task ID: 81
+Agent: Super Z (main)
+Task: v81 — «POUCAS OPÇÕES PRINCIPAIS»: navegação 5 áreas, homepage de 5 blocos, Mercado Bateu, IA com 4 modos, /lives nunca branco (reorganização completa do produto segundo o briefing do utilizador)
+
+Work Log:
+- Estado à entrada: main local = v78 (49eb678) + rebase sobre v79 «Ciclo à vista» e v80 «Desbloqueios reais» (avanço paralelo do remoto; a minha reorganização passa a v81 por colisão de numeração); briefing novo com a regra «poucas opções principais, funcionalidades secundárias bem organizadas» + ordem prática 1→10 (item 11 NVIDIA fica para depois)
+- BARRA INFERIOR reescrita (BottomTabBar.tsx): Início · Jogos · [AO VIVO central elevado com pulso] · Desporto · Perfil; KART sai da barra (fica no banner destaque de Jogos + homepage); BUG PRÉ-EXISTENTE caçado: os tabs Home/Perfil não tinham data-testid (o Home derivava de href.replace("/","")="")
+- NAVBAR DESKTOP reescrita de raiz (994→~570 linhas): 5 mega-menus de ícones-só + 3 atalhos directos + menu mobile morto FORA; fica Logo · Jogos · Ao vivo (+contagem real) · Desporto · Mercado Bateu · Mais ▾ · Pesquisar · Entrar/Participar; o «Mais» é um dropdown novo com o menu secundário completo (Vencedores, Histórico, Comunidade, Bateu IA, Indique e ganhe, Suporte, Transparência, Como funciona, Protecção do jogador, Termos, Privacidade + Negócios/Leilões e bens/Prestações + switchers região/idioma/som/tema), fecha em clique-fora/Escape; overflow horizontal A 1280px RESOLVIDO (provado scrollWidth ≤ clientWidth)
+- HOMEPAGE 5 BLOCOS (mobile + desktop): 4 componentes novos partilhados — HeroPrincipal (uma frase + 2 botões), DescobertaTres (3 cartões com contagem real de lives + KART destaque dentro de Jogos), ActividadeReal (4 linhas honestas: próxima live/último vencedor verificado via get_public_winners/destaque da semana ROTULADO/partida), ConfiancaFim (4 links); MobileHomeApp reescrita e Index.tsx reescrita; saem por design: QUICK_LINKS, stories, banner «Ganhe dinheiro», VendasRollUp, GamesTournamentsRollUp, EsportsRollUp, DailyMissions, MobileSocialFeed, PlatformFeed, CTA central duplicado
+- FUROS REPARADOS: /lives estado vazio honesto com 2 acções reais (requestNotificationPermission + /historico); «Participar» com bg-primary real (btn-premium NUNCA teve CSS — texto invisível em tema claro); h1 da home desktop nascia SOB a navbar fixa → pt-20 (verificado por screenshot); aurora strip mantida no navbar (regressão v74)
+- STORIES → COMUNIDADE: StoriesCarousel (Seu Status + Bateu Oficial) acolhido no Community.tsx com testid community-stories; componente deixou de estar órfão
+- MERCADO BATEU: Marketplace com 4 categorias (o filtro «Leilões e bens» inclui alienacao via KINDS_POR_CAT), renames em AlienacaoCatalogo (h1+SEO), Footer, GlobalSearch, story do anúncio; identidade «Mercado Bateu» no cabeçalho da página
+- BATEU IA ESPECIALIZADA: PERSONAS 6→4 (Ajuda Bateu principal, Desporto, Jogos NOVO, Suporte NOVO — ids antigos caem no fallback); TODA a parede técnica (modelo/sliders/thinking/pensamento/RAG) + abas Ver/Buscar + chip do endpoint ATRÁS de localStorage bateu_ia_dev=1; nome técnico do modelo fora do ia.subtitle ×6 idiomas; CONTEXTO_PLATAFORMA com o vocabulário novo
+- i18n: ~65 chaves tab.games/tab.sport/nav79.*/home79.*/ia.persona.{jogos,suporte}/ia.v79.* ×6 idiomas (scripts/add-i18n-v79.py, idempotente por âncora desporto.real/ia.persona.assistente.desc); renome do modo principal para «Ajuda Bateu» (en=Bateu Help)
+- TESTES: test-nav-v79.mjs NOVO 78/78 ×2 (a visão inteira, ponto por ponto); 9 suítes antigas ACTUALIZADAS para PROVAR as remoções por design (home-dinamica reescrita 24/0, marketplace 57/0, arena 25/0, ecosystem 29/0, stories-plans 14/0, web-excellence 13/0, web-v262 11/0, desktop-v74 42/0 com secção A da navbar nova, auditoria-v40 50/0 com hero v79)
+- tsc -b 0; build OK; screenshots verificados (home mobile 5 blocos, home desktop sem overflow, IA sem laboratório técnico)
+
+Stage Summary:
+- O Bateu deixou de mostrar tudo ao mesmo tempo: 5 áreas principais na navegação, homepage de 5 blocos com dados reais e estados honestos, secundárias organizadas no «Mais», Mercado Bateu unificado, IA como assistente da plataforma (as regras decidem, a IA ajuda)
+- Suite v81: 78/78 ×2; regressão completa verde (18 suítes); tsc 0; build OK
+
+---
 Task ID: v29-bateucraft-sistemas-avancados
 Agent: Super Z (main)
 Task: v29 — BateuCraft «sistemas muito mais avançados e completos»: AGRICULTURA (enxada · terra arada · sementes · trigo 2 estágios · pão) + TNT (fusível + explosão grande) + BAÚ (18 posições por posição, persistido) + ARMADURA (3 peitorais com absorção real de dano) + VACA e GALINHA (mobs passivos com drops) + METEOROLOGIA (chuva · tempestade · relâmpagos · trovoada · céu escurece · trigo cresce ×2,4) + save v3

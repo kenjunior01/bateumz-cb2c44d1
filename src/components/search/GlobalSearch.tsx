@@ -61,7 +61,7 @@ const PAGINAS: SearchEntry[] = [
   { id: "pg-concursos", label: "Concursos", group: "Páginas", icon: Users, route: "/concursos", keywords: "concursos competicoes" },
   { id: "pg-negocios", label: "Ganhe Dinheiro — Negócios", group: "Páginas", icon: HandCoins, route: "/negocios", keywords: "negocios dinheiro ganhar rendimento embaixador" },
   { id: "pg-empresas", label: "Para Empresas", group: "Páginas", icon: Store, route: "/empresas", keywords: "empresas mensalidade plano business" },
-  { id: "pg-alienacao", label: "Alienação de Bens", group: "Páginas", icon: KeyRound, route: "/alienacao", keywords: "alienacao bens leilao proprietario" },
+  { id: "pg-alienacao", label: "Leilões e bens", group: "Páginas", icon: KeyRound, route: "/alienacao", keywords: "alienacao bens leilao viaturas imoveis equipamentos" },
   { id: "pg-wallet", label: "Carteira", group: "Páginas", icon: Wallet, route: "/wallet", keywords: "carteira wallet saldo creditos mzn" },
   { id: "pg-profile", label: "O Meu Perfil", group: "Páginas", icon: User, route: "/profile", keywords: "perfil profile conta" },
   { id: "pg-blog", label: "Blog & Notícias", group: "Páginas", icon: Newspaper, route: "/blog", keywords: "blog noticias artigos" },

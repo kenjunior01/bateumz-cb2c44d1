@@ -55,15 +55,16 @@ async function main() {
       if (m.type() === "error" && !NOISE.some((n) => m.text().includes(n))) errors.push(m.text());
     });
 
-    console.log("🖥️ Desktop — stories na home");
-    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+    // v79: os stories vivem na Comunidade (homepage = 5 blocos sem stories)
+    console.log("🖥️ Desktop — stories na Comunidade (Bateu Oficial)");
+    await page.goto(`${BASE}/community`, { waitUntil: "domcontentloaded" });
     await waitBodyPattern(page, /Bateu Oficial|Sorteio|COMPETE/i);
     await page.waitForTimeout(2500);
 
-    const rail = await page.locator("[data-testid='stories-carousel']").isVisible().catch(() => false);
+    const rail = await page.locator("[data-testid='community-stories']").isVisible().catch(() => false);
     ok("rail de stories presente", rail);
 
-    await openPlatformStory(page, "stories-carousel");
+    await openPlatformStory(page, "community-stories");
     const closeBtn = page.locator("button[aria-label='Fechar']");
     ok("viewer de stories abre", await closeBtn.first().isVisible().catch(() => false));
 
@@ -72,7 +73,7 @@ async function main() {
     if (await cta.isVisible().catch(() => false)) {
       await cta.click({ timeout: 4000 }).catch(() => {});
       await page.waitForTimeout(2200);
-      ok("CTA do story navega para /alienacao", page.url().includes("/alienacao"));
+      ok("CTA do story navega para o Mercado Bateu (/alienacao)", page.url().includes("/alienacao"));
     } else {
       // fallback: fechar com Escape
       await page.keyboard.press("Escape");
@@ -130,23 +131,22 @@ async function main() {
       if (m.type() === "error" && !NOISE.some((n) => m.text().includes(n))) errors.push(m.text());
     });
 
-    console.log("\n📱 Mobile — stories + atividade ao vivo");
-    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-    await waitBodyPattern(page, /Bateu Oficial|Sorteio|Iniciando/i);
+    console.log("\n📱 Mobile — stories na Comunidade + actividade real na home");
+    // v79: a homepage mobile = 5 blocos (sem stories, sem feed solto);
+    // os stories vivem na Comunidade; a actividade real usa linhas honestas
+    await page.goto(`${BASE}/community`, { waitUntil: "domcontentloaded" });
+    await waitBodyPattern(page, /Bateu Oficial|Comunidade|Sorteio|Iniciando/i);
     await page.waitForTimeout(2500);
 
-    // polling: chunks lazy (stories + feed) em mobile dev
-    let railM = false, actM = false;
-    for (let i = 0; i < 12 && !(railM && actM); i++) {
-      if (!railM) railM = await page.locator("[data-testid='mh-stories']").isVisible().catch(() => false);
-      if (!actM) actM = await page.locator("[data-testid='mh-activity']").isVisible().catch(() => false);
-      if (railM && actM) break;
-      await page.waitForTimeout(1000);
+    // polling: chunks lazy (stories) em mobile dev
+    let railM = false;
+    for (let i = 0; i < 12 && !railM; i++) {
+      railM = await page.locator("[data-testid='community-stories']").isVisible().catch(() => false);
+      if (!railM) await page.waitForTimeout(1000);
     }
-    ok("rail de stories no topo do home mobile", railM);
-    ok("feed de atividade no home mobile", actM);
+    ok("rail de stories na Comunidade (mobile)", railM);
 
-    await openPlatformStory(page, "mh-stories");
+    await openPlatformStory(page, "community-stories");
     const closeBtn = page.locator("button[aria-label='Fechar']");
     ok("viewer abre no mobile", await closeBtn.first().isVisible().catch(() => false));
     ok("progress bars do viewer visíveis", (await page.locator(".h-\\[3px\\]").count()) > 0 || true);

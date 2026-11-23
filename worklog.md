@@ -15,6 +15,9 @@ Work Log:
 - TESTES: test-retencao-v83.mjs NOVO 39/0 (barra fecha o ciclo, visitante honesto, desktop sem overflow, núcleo 0 pontos em estado novo, 4 carteiras); test-nav-v79 actualizado para a nova navegação (83/0: +Desporto-sai-da-barra, +Mais→Mercado, +/premios nos destinos) e test-desktop-v74 (principais); regressão retenção-v78 38/0 · home-dinamica 24/0 · web-v262 11/0 · marketplace 57/0 · ia-v82 72/0 · web-excellence 13/0 (12/1 na 1.ª passagem = flake ambiental já provado na v82) · tsc -b 0 · build OK
 
 Stage Summary:
+- O ciclo de retenção chegou às três superfícies de entrada: a BARRA fecha «Jogas → Ganhas pontos → Subes de nível → Desbloqueias prémios» com Prémios nos principais (desktop e mobile), a HOMEPAGE mostra a progressão real (Olá + nível + «faltam X para Y» + missão do dia + torneio + desbloqueios do nível seguinte) e o PERFIL apresenta as 4 carteiras separadas com números de fonte própria
+- Honestidade mantida a ferro: o bloco registado declara «Progresso contado neste aparelho» em vez de fingir sincronização com a conta — o binding jogadorId + servidor é a fatia seguinte, documentada
+- Verificação final em sandbox reciclado (2026-11-24): retencao-v83 39/0 · nav-v79 83/0 · ia-v82 72/0 · tsc -b 0 · tsc app 0 — tudo verde sobre ec6b8b3; os 11 pontos do briefing «Poucas opções principais» mapeados e provados (1-3 navegação/homepage: nav-v79 §1-2 · 4 Perfil: §5 · 5 Mercado: marketplace 57/0 · 6-7 IA: ia-v82 · 8 /lives: nav-v79 · 9 barra não cobre: nav-v79 §9 · 10 overflow 1280px: nav-v79 §6 · 11 NVIDIA: ia-v82 72/0)
 
 Task ID: 82
 Agent: Super Z (main)

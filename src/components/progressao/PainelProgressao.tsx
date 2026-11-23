@@ -22,6 +22,7 @@ import { useCosmeticos } from "@/lib/cosmeticosStore";
 import { CAT_DESBLOQUEIOS } from "@/lib/desbloqueios";
 import { avisoExpiracao, recomendarJogos, visaoCarteiras, NIVEIS } from "@/lib/progressao";
 import PainelDesbloqueios from "./PainelDesbloqueios";
+import ChipSincProgressao from "./ChipSincProgressao";
 
 const NIVEIS_BASE = NIVEIS.map((n) => n.pontos);
 
@@ -131,6 +132,8 @@ const PainelProgressao = ({ onAbrirJogo }: { onAbrirJogo?: (jogoId: string) => v
               {CAT_DESBLOQUEIOS.find((d) => d.id === cosmeticos.tituloId)?.nome.replace("Título ", "")}
             </span>
           )}
+          {/* v84: estado REAL da sincronização da conta (nunca finge) */}
+          <ChipSincProgressao variante="chip" />
         </div>
         {/* CARTUBEIRAS SEPARADAS (regra do produto — nunca misturadas) */}
         <div className="flex flex-wrap items-center gap-2 text-[11px]" data-testid="progressao-carteiras">

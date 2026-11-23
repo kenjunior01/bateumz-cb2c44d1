@@ -25,6 +25,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useProgressao } from "@/lib/progressaoStore";
 import { NIVEIS } from "@/lib/progressao";
 import { getActiveTournament, type Tournament } from "@/lib/tournaments";
+import ChipSincProgressao from "@/components/progressao/ChipSincProgressao";
 
 const BoasVindasRetencao = () => {
   const { user, profile } = useAuth();
@@ -110,6 +111,8 @@ const BoasVindasRetencao = () => {
               <span data-testid="reten-pontos" className="text-sm font-bold text-amber-300">
                 {t("reten.pontos", { pontos: estado.pontos.toLocaleString("pt-PT") })}
               </span>
+              {/* v84: estado REAL da sincronização (nunca finge) */}
+              <ChipSincProgressao variante="chip" />
               {nivel.proximo ? (
                 <span data-testid="reten-faltam" className="text-xs text-muted-foreground">
                   {t("reten.faltam", { faltam: nivel.proximo.pontosFaltam.toLocaleString("pt-PT"), proximo: nivel.proximo.nome })}
@@ -157,7 +160,7 @@ const BoasVindasRetencao = () => {
               ) : (
                 <p className="mt-2 text-[11px] text-muted-foreground">{t("reten.missao.vazia")}</p>
               )}
-              <p className="mt-1.5 text-[10px] text-muted-foreground/70">{t("reten.missao.aparelho")}</p>
+              <ChipSincProgressao variante="linha" />
             </div>
 
             {/* TORNEIO (dados reais da tabela; sem torneio DIZ-SE) */}

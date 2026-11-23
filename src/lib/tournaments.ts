@@ -197,6 +197,10 @@ export async function getActiveTournament(): Promise<Tournament | null> {
     .limit(1)
     .single();
   if (error) return null;
+  // v84: um corpo que NÃO é objeto (ex.: array vazio de um servidor fora do
+  // padrão) nunca vira «torneio» — a UI mostraria um Invalid Date em vez do
+  // estado vazio honesto («Sem torneios activos agora»).
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   return data as Tournament;
 }
 

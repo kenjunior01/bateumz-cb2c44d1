@@ -20,6 +20,10 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { getOneClick, saveOneClick } from "@/lib/oneClick";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+// v82 — CONTEXTO PARA A IA: a página publica os factos REAIS deste sorteio
+// e a IA do Bateu (/ia) chega com o contexto preparado (chip + perguntas).
+// O contexto sobrevive à navegação (TTL 15 min + sessionStorage + X no chip).
+import { publicarContextoIa } from "@/lib/iaContexto";
 
 interface Raffle {
   id: string;
@@ -151,6 +155,29 @@ const RaffleDetail = () => {
     };
     fetchData();
   }, [slug]);
+
+  // v82 — publica o contexto REAL do sorteio para a IA (um slot; só factos
+  // já carregados; no unmount a página dona limpa por rota).
+  const rotaSorteio = `/raffle/${slug ?? ""}`;
+  useEffect(() => {
+    if (!raffle) return;
+    const vendidos = soldNumbers.length || raffle.sold_tickets || 0;
+    const disponiveis = Math.max(0, (raffle.total_tickets || 0) - vendidos);
+    publicarContextoIa({
+      tipo: "sorteio",
+      id: raffle.id,
+      titulo: raffle.title,
+      rota: rotaSorteio,
+      factos: [
+        `Prémio: ${raffle.prize_title}${raffle.hide_prize_value ? " (valor oculto pelo organizador)" : ` — valor ${fmt(raffle.prize_value)}`}`,
+        `Preço do bilhete: ${fmt(raffle.ticket_price)}`,
+        `Bilhetes: ${vendidos} vendidos de ${raffle.total_tickets} — ${disponiveis} disponíveis`,
+        raffle.end_date ? `Data do sorteio/fim: ${raffle.end_date.slice(0, 10)}` : "",
+        `Estado: ${raffle.status}`,
+        raffle.raffle_type === "points" ? "Bilhetes compram-se com pontos (luck_points), não com dinheiro" : "",
+      ].filter(Boolean),
+    });
+  }, [raffle, soldNumbers.length, rotaSorteio]);
 
   /* saldo de pontos para sorteios por pontos */
   useEffect(() => {

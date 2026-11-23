@@ -6,7 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardMoreDrawer } from "@/components/dashboard/DashboardMoreDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap, UserCog, MapPin, Tag
+  LayoutDashboard, Users, Ticket, DollarSign, Settings, Shield, LogOut, Bell, ArrowLeft, CreditCard, ScrollText, Clock, Trophy, Crown, Globe, Palette, Zap, UserCog, MapPin, Tag, ShieldAlert
 } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import {
@@ -20,6 +20,7 @@ const items = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Raffles", url: "/admin/raffles", icon: Ticket },
   { title: "Contests", url: "/admin/contests", icon: Trophy },
+  { title: "Moderação IA", url: "/admin/moderacao", icon: ShieldAlert },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
   { title: "Plans", url: "/admin/plans", icon: DollarSign },
   { title: "Revenue", url: "/admin/revenue", icon: DollarSign },

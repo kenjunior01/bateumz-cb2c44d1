@@ -12,6 +12,9 @@ import {
   Ticket,
   ShieldAlert,
   Info,
+  Sparkles,
+  Square,
+  Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,6 +61,20 @@ import {
   type SportPick,
   type SportPrediction,
 } from "@/lib/sportPredictions";
+// v82 — CONTEXTO PARA A IA + COMENTADOR DA IA (só comenta factos reais;
+// NUNCA é conselho de aposta — a regra do briefing: a IA sugere, decide tu).
+import { publicarContextoIa } from "@/lib/iaContexto";
+import {
+  PROMPT_COMENTADOR,
+  factosDesporto,
+  fingerprintEventos,
+  guardarCacheComent,
+  lerCacheComent,
+  type CacheComent,
+  type FactoDesporto,
+} from "@/lib/iaSugestoes";
+import { MODELO_PADRAO, ClienteNemotron, NemotronError } from "@/lib/nemotron";
+import { cabecalhosEdge, resolverEndpointChat } from "@/lib/iaEndpoint";
 
 type TabKey = "partidas" | "resultados" | "top5" | "palpites";
 
@@ -97,6 +114,15 @@ export default function DesportoHub() {
   const [stake, setStake] = useState<string>("25");
   const [pool, setPool] = useState<PredictionPoolStats | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // v82 — COMENTADOR DA IA da jornada (estado honesto: parado/aFluir/erro/feito)
+  const [comIa, setComIa] = useState<{
+    estado: "parado" | "aFluir" | "erro" | "feito";
+    texto: string;
+    erro: string | null;
+  }>({ estado: "parado", texto: "", erro: null });
+  const [cacheComent, setCacheComent] = useState<Record<string, CacheComent>>(() => lerCacheComent());
+  const controladorIaRef = useRef<AbortController | null>(null);
 
   const liveTick = useRef(0);
 
@@ -216,6 +242,103 @@ export default function DesportoHub() {
   const byKickoff = (a: SportEvent, b: SportEvent) =>
     new Date(a.kickoff || 0).getTime() - new Date(b.kickoff || 0).getTime();
 
+  // ── v82 — factos REAIS da jornada (fonte: a lista e a tabela já carregadas) ──
+  const factosJornada = useMemo(() => {
+    const lista: FactoDesporto[] = events.map((e) => ({
+      casa: e.home,
+      fora: e.away,
+      estado: deriveStatus(e),
+      placar: e.homeScore != null && e.awayScore != null ? `${e.homeScore}-${e.awayScore}` : undefined,
+      kickoff: formatKickoff(e.kickoff),
+    }));
+    const linhas = factosDesporto(
+      league.name,
+      round,
+      lista,
+      standings.slice(0, 5).map((s) => ({ pos: s.rank, equipa: s.team, pts: s.points })),
+    );
+    return { lista, linhas };
+  }, [events, standings, league.id, league.name, round]);
+
+  // v82 — publica o contexto REAL da jornada para a IA (sobrevive à navegação:
+  // TTL 15 min + sessionStorage + X no chip)
+  const rotaDesporto = "/desporto";
+  useEffect(() => {
+    if (!factosJornada.linhas.length) return;
+    publicarContextoIa({
+      tipo: "desporto",
+      id: `${league.id}#${round ?? "?"}`,
+      titulo: `${league.name} — jornada ${round ?? "?"}`,
+      rota: rotaDesporto,
+      factos: factosJornada.linhas,
+    });
+  }, [events, standings, league.id, league.name, round, factosJornada.linhas]);
+
+  const chaveComent = `${league.id}#${round ?? "?"}`;
+  const fpAtual = fingerprintEventos(factosJornada.lista);
+  const cacheVigente = cacheComent[chaveComent];
+  const temCacheFresca = !!cacheVigente && cacheVigente.fp === fpAtual;
+  const textoVisivel = comIa.estado === "parado" && temCacheFresca ? cacheVigente!.texto : comIa.texto;
+  const geradoEmVisivel = comIa.estado === "parado" && temCacheFresca ? cacheVigente!.geradoEm : null;
+
+  const pararComentario = useCallback(() => {
+    controladorIaRef.current?.abort();
+  }, []);
+
+  // v82 — o comentador SÓ lê factos reais e NUNCA aconselha aposta (o prompt
+  // proíbe); o abort a meio mantém o texto parcial (honesto).
+  const gerarComentario = useCallback(async () => {
+    if (comIa.estado === "aFluir" || !factosJornada.lista.length) return;
+    setComIa({ estado: "aFluir", texto: "", erro: null });
+    const controlador = new AbortController();
+    controladorIaRef.current = controlador;
+    try {
+      const info = resolverEndpointChat();
+      const cliente = new ClienteNemotron({
+        endpoint: info.url,
+        chave: info.chaveDirecta,
+        cabecalhos: info.modo === "edge" ? await cabecalhosEdge() : undefined,
+        tentativas: 2,
+      });
+      const resultado = await cliente.conversarStream({
+        mensagens: [
+          { role: "system", content: PROMPT_COMENTADOR },
+          {
+            role: "user",
+            content:
+              "Factos REAIS desta jornada (fonte oficial):\n" +
+              factosJornada.linhas.map((l) => `- ${l}`).join("\n"),
+          },
+        ],
+        parametros: { modelo: MODELO_PADRAO, temperatura: 0.8, topP: 0.95, maxTokens: 700, thinking: false },
+        sinal: controlador.signal,
+        aoEvento: (e) => {
+          if (e.tipo === "conteudo") setComIa((c) => ({ ...c, texto: c.texto + e.texto }));
+        },
+      });
+      const texto = resultado.conteudo;
+      if (texto.trim()) {
+        const novo = {
+          ...cacheComent,
+          [chaveComent]: { fp: fpAtual, texto, geradoEm: Date.now() } as CacheComent,
+        };
+        guardarCacheComent(novo);
+        setCacheComent(novo);
+      }
+      setComIa({ estado: "feito", texto, erro: null });
+    } catch (err: any) {
+      const e = err instanceof NemotronError ? err : null;
+      const detalhe = e?.estado ? ` · HTTP ${e.estado}` : "";
+      const msg =
+        err?.name === "AbortError"
+          ? "Comentário parado a pedido (texto parcial mantido)."
+          : `A IA não conseguiu gerar o comentário${detalhe} — ${String(err?.message ?? err).slice(0, 140)}`;
+      setComIa((c) => ({ estado: "erro", texto: c.texto, erro: msg }));
+    } finally {
+      controladorIaRef.current = null;
+    }
+  }, [comIa.estado, factosJornada.lista, factosJornada.linhas, cacheComent, chaveComent, fpAtual]);
+
   const now = new Date();
   const upcoming = events.filter((e) => deriveStatus(e) === "NS").sort(byKickoff);
   const live = events.filter((e) => ["LIVE", "HT"].includes(deriveStatus(e))).sort(byKickoff);
@@ -275,6 +398,63 @@ export default function DesportoHub() {
           <Button variant="ghost" size="sm" className="gap-1.5" onClick={refresh} data-testid="desporto-refresh">
             <RefreshCw className="h-3.5 w-3.5" /> Atualizar
           </Button>
+        </div>
+
+        {/* ── v82 — COMENTADOR DA IA da jornada: só comenta factos reais da fonte;
+            NUNCA aconselha aposta (o prompt proíbe e o rodapé declara). ── */}
+        <div className="rounded-xl border p-3.5 mb-4 bg-secondary/20" data-testid="desporto-ia-card">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Comentário da IA da jornada
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              A IA comenta — não é conselho de aposta · 18+
+            </span>
+          </div>
+          {(comIa.estado !== "parado" || textoVisivel) && (
+            <div className="mt-2">
+              {comIa.estado === "aFluir" && !comIa.texto && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2" data-testid="desporto-ia-afluir">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> A IA está a comentar…
+                </p>
+              )}
+              {textoVisivel && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="desporto-ia-texto">
+                  {textoVisivel}
+                </p>
+              )}
+              {comIa.estado === "erro" && comIa.erro && (
+                <p className="text-xs text-red-500 mt-1" data-testid="desporto-ia-erro">{comIa.erro}</p>
+              )}
+              {geradoEmVisivel && comIa.estado === "parado" && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  comentário em cache de {new Date(geradoEmVisivel).toLocaleTimeString("pt-PT")} — regenera se quiseres um novo
+                </p>
+              )}
+            </div>
+          )}
+          <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+            {comIa.estado === "aFluir" ? (
+              <Button size="sm" variant="destructive" onClick={pararComentario} data-testid="desporto-ia-parar">
+                <Square className="h-3.5 w-3.5 mr-1" /> Parar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={gerarComentario}
+                disabled={loading || !factosJornada.lista.length}
+                data-testid="desporto-ia-gerar"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                {textoVisivel ? "Regenerar comentário" : "Gerar comentário da IA"}
+              </Button>
+            )}
+            {!factosJornada.lista.length && !loading && (
+              <span className="text-xs text-muted-foreground">Sem partidas nesta jornada — nada para comentar (honesto).</span>
+            )}
+          </div>
         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>

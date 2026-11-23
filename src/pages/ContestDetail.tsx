@@ -21,6 +21,9 @@ import ShareButtons from "@/components/ShareButtons";
 import { fireConfetti, fireSideCannons } from "@/lib/celebrate";
 import LiveLeaderboard from "@/components/LiveLeaderboard";
 import SocialVideoEmbed from "@/components/SocialVideoEmbed";
+// v82 — CONTEXTO PARA A IA: factos REAIS do concurso publicados para a /ia
+// (sobrevive à navegação; TTL 15 min + X no chip).
+import { publicarContextoIa } from "@/lib/iaContexto";
 
 interface Contest {
   id: string;
@@ -92,6 +95,27 @@ export default function ContestDetail() {
   }, [id, user]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // v82 — contexto REAL do concurso para a IA (dados já carregados; o
+  // unmount limpa por rota — só a página dona).
+  const rotaConcurso = `/concursos/${id ?? ""}`;
+  useEffect(() => {
+    if (!contest) return;
+    publicarContextoIa({
+      tipo: "concurso",
+      id: contest.id,
+      titulo: contest.title,
+      rota: rotaConcurso,
+      factos: [
+        contest.description ? `Descrição: ${contest.description.slice(0, 160)}` : "",
+        contest.prize_description ? `Prémio: ${contest.prize_description.slice(0, 120)}` : "",
+        `Estado: ${contest.status} · avaliação ${contest.evaluation_type}`,
+        contest.end_date ? `Termina: ${contest.end_date.slice(0, 10)}` : "",
+        `Participações aprovadas: ${submissions.length}` + (submissions.length ? ` · líder atual: ${submissions[0]?.participant_name ?? "—"} com ${submissions[0]?.votes_count ?? 0} votos` : ""),
+        `Máx. participações por utilizador: ${contest.max_submissions_per_user}`,
+      ].filter(Boolean),
+    });
+  }, [contest, submissions.length, rotaConcurso]);
 
   const handleSubmit = async () => {
     if (!user || !contest || !name.trim()) return;

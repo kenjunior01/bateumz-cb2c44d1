@@ -17,6 +17,9 @@ import {
   ANTI_SNIPE_JANELA_MS, ANTI_SNIPE_EXTENSAO_MS, type Leilao, type LanceResultado,
 } from "@/lib/leiloes";
 import { formatMZN } from "@/lib/currency";
+// v82 — CONTEXTO PARA A IA: factos REAIS do leilão publicados para a /ia
+// (sobrevive à navegação; TTL 15 min + X no chip).
+import { publicarContextoIa } from "@/lib/iaContexto";
 
 /**
  * LeilaoDetalhe — sala de leilão ao vivo: contador regressivo,
@@ -65,6 +68,29 @@ export default function LeilaoDetalhe() {
   }, [leilao?.id, leilao?.categoria, force]);
 
   useSEO({ title: leilao ? `${leilao.titulo} — Leilão ao Vivo | Bateu` : "Leilão | Bateu", description: leilao?.descricao?.slice(0, 150), canonicalPath: `/leiloes/${id}` });
+
+  // v82 — contexto REAL do leilão para a IA (publica a cada mudança de
+  // lance/estado; o unmount limpa por rota — só a página dona).
+  const rotaLeilao = `/leiloes/${id ?? ""}`;
+  useEffect(() => {
+    if (!leilao) return;
+    const fim = new Date(leilao.ends_at);
+    publicarContextoIa({
+      tipo: "leilao",
+      id: leilao.id,
+      titulo: leilao.titulo,
+      rota: rotaLeilao,
+      factos: [
+        `Item: ${leilao.descricao.slice(0, 160)}`,
+        `Lance atual: ${formatMZN(leilao.lance_atual)} · próximo mínimo ${formatMZN(leilao.lance_atual + incrementoPara(leilao.lance_atual))}`,
+        leilao.comprar_agora ? `Comprar agora: ${formatMZN(leilao.comprar_agora)}` : "",
+        `Estado: ${leilao.status} · termina ${fim.toLocaleString("pt-PT")}`,
+        `Vendedor: ${leilao.vendedor}${leilao.vendedor_verificado ? " (verificado)" : ""} · localização ${leilao.localizacao}`,
+        `Estado do item: ${leilao.estado_item} · categoria ${categoriaLabel(leilao.categoria)}`,
+        `Nº de lances até agora: ${leilao.lances.length}`,
+      ].filter(Boolean),
+    });
+  }, [leilao?.id, leilao?.lance_atual, leilao?.status, leilao?.lances.length, rotaLeilao]);
 
   if (!leilao) {
     return (

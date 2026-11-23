@@ -1,4 +1,24 @@
 ---
+Task ID: 82
+Agent: Super Z (main)
+Task: v82 — «A IA SUGERE, NUNCA DECIDE» + CONTEXTO: passo 11 do briefing — moderação/comentador/recomendações com NVIDIA (IA só sugere) + IA context-aware
+
+Work Log:
+- Estado à entrada: sandbox reciclado com a árvore rebatida para v78 (snapshot velho) — diagnosticado com reflog + git ls-remote: o GitHub TINHA a v81 (aac83ae) intacta → git reset --hard origin/main restaurou tudo (lição: verificar o remoto ANTES de reconstruir)
+- CONTEXTO (iaContexto.ts NOVO, puro): loja de UM slot + ouvintes (useSyncExternalStore) onde as páginas publicam factos REAIS; FURO DE DESIGN evitado a tempo: a 1.ª versão limpava no unmount — matava exatamente o produto («abres o sorteio e a IA chega com o contexto») e não sobrevivia a reload → contexto sobrevive à navegação com sessionStorage validado (tipo enum + TTL 15 min) + X no chip; CAPs 8 factos/200 chars; recusa de publicação sem título/factos; contextoParaPrompt injeta os factos no system com «NUNCA inventes fora desta lista»
+- PÁGINAS que publicam: RaffleDetail (prémio/preço/vendidos com moeda real), LeilaoDetalhe (lances/verificado/fim), ContestDetail (líder real com votos), GameDetail (catálogo + histórico REAL do aparelho ou «nunca jogaste — honesto»), DesportoHub (jornada + partidas com placar + top-5)
+- /ia consome: chip no composer (ícone por tipo + «abrir página» + X), banner «Vindo da página» no estado vazio, perguntas ctx (ia-sugestao-ctx-1..3) substituem as de persona quando há contexto e voltam com o X; 19 chaves ia.ctx.* ×6 idiomas (scripts/add-ia-i18n-v82.py)
+- MODERAÇÃO (/admin/moderacao NOVO + sidebar + rota em App.tsx): IA TRIA com JSON exato e «nunca decidis» no prompt; veredicto sem JSON válido = «sem veredicto» (nunca inventado); remover é SEMPRE humano em 2 passos (RLS has_role admin existente — ZERO migração); lote de 10 sequencial; estatísticas honestas; FURO próprio caçado: botão individual ficou sem handler no 1.º rascunho → analisarIndividual com cliente próprio
+- COMENTADOR (DesportoHub): card com rótulo «não é conselho de aposta · 18+» PERMANENTE; prompt proíbe «aposta em X» e manda «sem dados» em vez de inventar; cache por jornada com fingerprint casa|fora|estado|placar (comentário velho nunca passa por atual); STOP com parcial; hint honesta sem partidas
+- RECOMENDAÇÃO (SugestaoIaJogo.tsx NOVO no hub /jogos): ZERO chamadas ao carregar (só no clique); validação dura contra o catálogo — nome inventado NUNCA vira sugestão (erro honesto); jogo do dia filtrado; máx. 2; link só para /jogo/:id real
+- FURO DO TESTE caçado: o mock da sugestão escolhia Tetris — que É o jogo do dia de hoje (determinístico v79) e o núcleo filta-o DE PROPÓSITO → o mock passa a LER o pedido real e escolher um jogo do catálogo ≠ jogo do dia; parser de sugestões tinha bug de precedência (?? vs ternário) que arruinava o formato {"sugestoes":[…]} → blocos explícitos
+- TESTES: test-ia-v82.mjs NOVO 72/0 (A núcleos Node 41 + B E2E 31 com interceção SSE em formato NVIDIA real); regressão completa 23 suítes (nav 78, ciclo 45, desporto 14, marketplace 57, home 24, desktop 42, retenção 38, desbloqueios 38, auditoria 50, arena 25, ecosystem 29, stories 13, web 11, kart 65+61+30+26+49, som 58, gfx 28, desafios 36, classic 53, regional 60) + tsc 0 + build OK; web-excellence 12/1 de performance — PROVADO ambiental com git stash sobre a v81 (7049 ms idêntico)
+- Screenshots v82 verificados visualmente (chip+banner+perguntas na /ia; comentador com dados reais TheSportsDB; sugestão em /jogos)
+
+Stage Summary:
+- O passo 11 fechou o briefing: a IA da Bateu sabe ONDE o utilizador está (contexto real das páginas), TRIA a comunidade sem decidir nada, comenta o desporto sem aconselhar aposta e recomenda jogos que EXISTEM — «a IA sugere, tu decides» executado com testes que contam as chamadas (zero antes do clique) e recusam tudo o que é inventado
+
+---
 Task ID: 81
 Agent: Super Z (main)
 Task: v81 — «POUCAS OPÇÕES PRINCIPAIS»: navegação 5 áreas, homepage de 5 blocos, Mercado Bateu, IA com 4 modos, /lives nunca branco (reorganização completa do produto segundo o briefing do utilizador)

@@ -125,6 +125,7 @@ const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail.tsx"));
 const AllGames = lazy(() => import("./pages/AllGames.tsx"));
 const Premios = lazy(() => import("./pages/Premios.tsx")); // v79 ciclo de prémios
 const AdminContests = lazy(() => import("./pages/admin/AdminContests.tsx"));
+const AdminModeracao = lazy(() => import("./pages/admin/AdminModeracao.tsx")); // v82 moderação com IA
 const DashboardContests = lazy(() => import("./pages/dashboard/DashboardContests.tsx"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile.tsx"));
 const BusinessDirectory = lazy(() => import("./pages/BusinessDirectory.tsx"));
@@ -413,6 +414,7 @@ function AnimatedRoutes() {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="games" element={<AdminGameManager />} />
               <Route path="contests" element={<AdminContests />} />
+              <Route path="moderacao" element={<AdminModeracao />} />
               <Route path="co-founders" element={<AdminCoFounders />} />
               <Route path="ads" element={<AdminAds />} />
               <Route path="regional-revenue" element={<AdminRegionalRevenue />} />

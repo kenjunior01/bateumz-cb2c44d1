@@ -21,6 +21,10 @@ import ChallengeModal from "@/components/games/ChallengeModal";
 import { getPlayerIdentity } from "@/lib/challenges";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useSEO } from "@/hooks/useSEO";
+// v82 — CONTEXTO PARA A IA: factos REAIS do jogo (catálogo + histórico)
+// publicados para a /ia (sobrevive à navegação; TTL 15 min + X no chip).
+import { publicarContextoIa } from "@/lib/iaContexto";
+import { useEffect } from "react";
 
 /* Como jogar — dicas reais por jogo (nenhuma dica inventada sobre
    funcionalidades que não existem; fala do modo, do objetivo e do bot). */
@@ -125,6 +129,26 @@ export default function GameDetail() {
 
   const challengeGame = id ? { id, label: game?.label ?? id } : null;
   const [challengeOpen, setChallengeOpen] = useState(false);
+
+  // v82 — contexto REAL do jogo para a IA (catálogo + histórico local;
+  // o unmount limpa por rota — só a página dona).
+  const rotaJogo = `/jogo/${id}`;
+  useEffect(() => {
+    if (!game) return;
+    publicarContextoIa({
+      tipo: "jogo",
+      id: game.id,
+      titulo: game.label,
+      rota: rotaJogo,
+      factos: [
+        `Categoria: ${game.category} · jogadores: ${game.players} · dificuldade: ${game.dificuldade}`,
+        `Duração típica: ~${game.minutos} min · pontos máximos por partida: ${game.pontosMax}`,
+        game.desc,
+        plays > 0 ? `Neste aparelho: jogaste ${plays}× · melhor pontuação ${best}` : "Neste aparelho: nunca jogaste — ainda sem histórico (honesto)",
+        pop > 0 ? `Popularidade na plataforma: #${rank} do catálogo` : "",
+      ].filter(Boolean),
+    });
+  }, [game?.id, plays, best, rank, rotaJogo]);
 
   if (!game) return <Navigate to="/jogos" replace />;
 

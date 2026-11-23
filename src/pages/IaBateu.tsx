@@ -27,11 +27,11 @@
 //     + VITE_NVIDIA_API_KEY — a chave fica no bundle (risco declarado).
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import {
-  BookOpen, Bot, BrainCircuit, ChevronDown, Database, Download, Eraser, Eye, LifeBuoy,
-  Loader2, Plus, ScanSearch, Send, Settings2, Square, Trash2, Trophy, User,
+  BookOpen, Bot, BrainCircuit, ChevronDown, Database, Download, Eraser, Eye, Gavel, LifeBuoy,
+  Loader2, Plus, ScanSearch, Send, Settings2, Square, Ticket, Trash2, Trophy, User,
   Upload, X, Gamepad2, HeartHandshake,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -59,6 +59,14 @@ import { carregarDocsPlataforma } from "@/lib/ia-plataforma";
 // ÚNICA em src/lib/iaEndpoint.ts (o NPC IA da Cidade partilha A MESMA regra;
 // visão/vetores continuam aqui porque só a página /ia os usa).
 import { cabecalhosEdge, resolverEndpointChat, type EndpointIa, type ModoIa } from "@/lib/iaEndpoint";
+// v82 — CONTEXTO: a IA sabe ONDE o utilizador está (briefing passo 11).
+// As páginas publicam factos REAIS; a /ia chega com o contexto preparado:
+// chip no composer, perguntas sugeridas da entidade e factos no system.
+import {
+  contextoParaPrompt, contextoValido, lerContextoIa, limparContextoIaTotal,
+  questoesDeContexto, subscreverContextoIa,
+  type ContextoIa, type TipoContextoIa,
+} from "@/lib/iaContexto";
 // v58 — histórico da IA NO SERVIDOR (o passo anotado desde a v54): o chat
 // segue o utilizador ENTRE DISPOSITIVOS via ia_historico (RLS, JWT).
 import {
@@ -129,6 +137,15 @@ const PERSONAS: PersonaIa[] = [
 ];
 
 const personaPorId = (id: string) => PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
+
+// v82 — ícone do chip de contexto por tipo de página
+const ICONE_POR_TIPO: Record<TipoContextoIa, typeof Ticket> = {
+  sorteio: Ticket,
+  leilao: Gavel,
+  concurso: Trophy,
+  jogo: Gamepad2,
+  desporto: Trophy,
+};
 
 // ── Endpoints (browser nunca conhece a chave NVIDIA) ─────────────────────
 // v57: resolverEndpointChat + cabecalhosEdge vivem em src/lib/iaEndpoint.ts
@@ -315,11 +332,17 @@ const IaBateu = () => {
 
   const ativa = conversas.find((c) => c.id === ativaId) ?? null;
 
+  // v82 — contexto da página de origem (referência estável do store)
+  const contexto: ContextoIa | null = useSyncExternalStore(subscreverContextoIa, lerContextoIa);
+  const contextoOk = contextoValido(contexto);
+  const questoesCtx = useMemo(() => questoesDeContexto(contexto), [contexto]);
+
   const systemPrompt = useMemo(() => {
     const p = personaPorId(personaId);
     const lingua = lang === "pt" || lang === "pt-BR" ? "português" : "a língua da mensagem do utilizador";
-    return p.prompt + ` Responde SEMPRE em ${lingua}.`;
-  }, [personaId, lang]);
+    // v82 — os factos REAIS da página de origem entram no system (se existirem)
+    return p.prompt + contextoParaPrompt(contexto) + ` Responde SEMPRE em ${lingua}.`;
+  }, [personaId, lang, contexto]);
 
   // ── v56 — RAG: sincronizar estatísticas + indexar a plataforma ─────────
 
@@ -833,6 +856,12 @@ const IaBateu = () => {
                     <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">{t("ia.vazio.desc")}</p>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 max-w-3xl mx-auto">
+                    {contextoOk && contexto && (
+                      <div className="sm:col-span-2 md:col-span-3 rounded-xl border bg-secondary/40 px-3 py-2 text-xs flex items-center gap-2" data-testid="ia-contexto-banner">
+                        <span className="font-semibold shrink-0">{t("ia.ctx.banner")}</span>
+                        <span className="text-muted-foreground truncate">{contexto.titulo}</span>
+                      </div>
+                    )}
                     {PERSONAS.map((p) => (
                       <button
                         key={p.id}
@@ -849,14 +878,17 @@ const IaBateu = () => {
                     ))}
                   </div>
                   <div className="mt-4 max-w-3xl mx-auto flex flex-wrap gap-2 justify-center">
-                    {[1, 2, 3].map((n) => (
+                    {(questoesCtx.length
+                      ? questoesCtx
+                      : [1, 2, 3].map((n) => `ia.persona.${personaId}.s${n}`)
+                    ).map((chave, i) => (
                       <button
-                        key={n}
-                        data-testid={`ia-sugestao-${n}`}
-                        onClick={() => enviar(t(`ia.persona.${personaId}.s${n}`))}
+                        key={chave}
+                        data-testid={questoesCtx.length ? `ia-sugestao-ctx-${i + 1}` : `ia-sugestao-${i + 1}`}
+                        onClick={() => enviar(t(chave))}
                         className="text-xs rounded-full border px-3 py-1.5 text-muted-foreground hover:border-primary/60 hover:text-foreground transition-colors"
                       >
-                        {t(`ia.persona.${personaId}.s${n}`)}
+                        {t(chave)}
                       </button>
                     ))}
                   </div>
@@ -882,6 +914,25 @@ const IaBateu = () => {
 
             {/* Composer */}
             <div className="border-t p-3">
+              {contextoOk && contexto && (
+                <div className="mb-2 flex items-center gap-2 rounded-lg border bg-secondary/40 px-3 py-1.5 text-xs" data-testid="ia-contexto-chip">
+                  {(() => { const I = ICONE_POR_TIPO[contexto.tipo]; return <I className="h-3.5 w-3.5 text-primary shrink-0" />; })()}
+                  <span className="truncate">
+                    <span className="font-semibold">{t("ia.ctx.chip")}</span> {contexto.titulo}
+                  </span>
+                  <a href={contexto.rota} className="underline text-muted-foreground shrink-0 ml-auto" data-testid="ia-contexto-abrir">
+                    {t("ia.ctx.abrir")}
+                  </a>
+                  <button
+                    onClick={limparContextoIaTotal}
+                    aria-label={t("ia.ctx.limpar")}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                    data-testid="ia-contexto-limpar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <Button variant="outline" size="icon" data-testid="ia-nova-conversa-mobile" className="lg:hidden shrink-0" onClick={novaConversaAgora} aria-label={t("ia.nova.conversa")}>
                   <Plus className="h-4 w-4" />

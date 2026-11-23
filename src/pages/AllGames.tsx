@@ -18,6 +18,9 @@ import { ALL_GAMES, CATEGORIES, weeklyPopular, popularityScore, playsOf, bestOf,
 // v79 CICLO À VISTA: núcleo puro — Jogo do dia determinístico + secções validadas + rótulos honestos
 import { seccoesJogos, labelBeneficio, labelDuracao, labelDificuldade, diaDe } from '@/lib/ciclo';
 import { Clock, RotateCcw, Sun } from 'lucide-react';
+// v82 — «A IA SUGERE UM JOGO»: recomendação NVIDIA validada contra o
+// catálogo real (nome inventado nunca vira sugestão).
+import SugestaoIaJogo from '@/components/games/SugestaoIaJogo';
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 25 };
 // Steam/CrazyGames inspired green theme
@@ -295,6 +298,12 @@ const AllGames = () => {
               </span>
             </div>
           </motion.div>
+        )}
+
+        {/* ⭐ v82 — A IA SUGERE UM JOGO: só com dados reais (catálogo + núcleo);
+            a sugestão é validada contra o catálogo — nunca link morto. */}
+        {category === "todos" && !search && (
+          <SugestaoIaJogo doDiaGame={doDiaGame} />
         )}
 
         {/* ⭐ v79 CICLO À VISTA — CONTINUAR A JOGAR (padrão Steam/Roblox): só

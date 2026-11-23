@@ -3,6 +3,9 @@
 // Regra da visão: poucas opções principais; funcionalidades secundárias
 // bem organizadas. Cada assert abaixo mapeia UM item do briefing:
 //   1. navegação principal = 5 áreas (barra inferior + cabeçalho desktop)
+//      (v83 «A RETENÇÃO À VISTA»: PRÉMIOS entra nos principais — barra
+//       mobile e cabeçalho; Desporto/Mercado ficam no «Mais» do mobile
+//       e o Mercado no «Mais» do desktop)
 //   2. os 5 círculos de atalho saem da homepage mobile
 //   3. «Seu Status»/«Bateu Oficial» saem da homepage → Comunidade
 //   4. carteira/histórico/protecção organizadas no Perfil (aba Jogo responsável)
@@ -29,16 +32,18 @@ const browser = await chromium.launch({ executablePath: EXE, args: ["--no-sandbo
 // ───────────────────────────────────────────────────────────────
 // 1 · MOBILE (390×844): barra inferior de 5 áreas + homepage 5 blocos
 // ───────────────────────────────────────────────────────────────
-console.log("■ 1. Mobile — barra inferior = Início | Jogos | [Ao vivo] | Desporto | Perfil");
+console.log("■ 1. Mobile — barra inferior = Início | Jogos | [Ao vivo] | Prémios | Perfil");
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
 
-  for (const tab of ["mob-tab-home", "mob-tab-jogos", "mob-tab-live", "mob-tab-desporto", "mob-tab-profile"]) {
+  for (const tab of ["mob-tab-home", "mob-tab-jogos", "mob-tab-live", "mob-tab-premios", "mob-tab-profile"]) {
     ok(`barra inferior tem ${tab}`, await page.locator(`[data-testid='${tab}']`).isVisible().catch(() => false));
   }
+  // v83: o Desporto saiu da barra (continua no menu «Mais» do mobile e no cabeçalho desktop)
+  ok("Desporto saiu da barra (vive no Mais mobile)", !(await page.locator("[data-testid='mob-tab-desporto']").count()));
   ok("botão central é AO VIVO (não KART)", (await page.locator("[data-testid='mob-tab-live']").textContent().catch(() => "")).includes("Ao Vivo"));
 
   // item 2: os cinco círculos saem da homepage
@@ -80,6 +85,11 @@ console.log("■ 1. Mobile — barra inferior = Início | Jogos | [Ao vivo] | De
     return main ? getComputedStyle(main).paddingBottom : "";
   });
   ok(`homepage tem respiro para a barra inferior (${pb})`, /7[6-9]|8\d|9\d|\d{3}/.test(pb));
+
+  // v83: o separador Prémios abre o ciclo completo (o fim da barra = o fim do ciclo)
+  await page.click("[data-testid='mob-tab-premios']");
+  await page.waitForTimeout(2000);
+  ok("Prémios na barra abre /premios (ciclo completo)", await page.locator("[data-testid='premios-hero']").isVisible().catch(() => false));
   await ctx.close();
 }
 
@@ -195,9 +205,11 @@ console.log("■ 6. Desktop 1280px — cabeçalho simples, zero overflow");
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
 
-  for (const item of ["nav79-desktop-jogos", "nav79-desktop-live", "nav79-desktop-desporto", "nav79-desktop-mercado", "nav79-desktop-mais"]) {
+  for (const item of ["nav79-desktop-jogos", "nav79-desktop-live", "nav79-desktop-desporto", "nav79-desktop-premios", "nav79-desktop-mais"]) {
     ok(`cabeçalho tem ${item}`, await page.locator(`[data-testid='${item}']`).isVisible().catch(() => false));
   }
+  // v83: o Mercado passou a secundário no «Mais» (Prémios é área principal)
+  ok("Mercado saiu dos principais (vive no Mais)", !(await page.locator("[data-testid='nav79-desktop-mercado']").count()));
   ok("pesquisa no cabeçalho (uma só)", await page.locator("[data-testid='navbar-busca']").isVisible().catch(() => false));
   ok("Entrar + Participar no cabeçalho",
     await page.locator("[data-testid='navbar-entrar']").isVisible() &&
@@ -223,6 +235,7 @@ console.log("■ 6. Desktop 1280px — cabeçalho simples, zero overflow");
   ok("Mais → Transparência", maisTexto.includes("Transparência"));
   ok("Mais → Protecção do jogador", maisTexto.includes("Protecção do jogador"));
   ok("Mais → Termos + Privacidade", maisTexto.includes("Termos") && maisTexto.includes("Privacidade"));
+  ok("Mais → Mercado Bateu (secundário organizado, v83)", maisTexto.includes("Mercado Bateu"));
 
   // homepage desktop: mesma estrutura de 5 blocos
   ok("desktop: chamada principal", await page.locator("[data-testid='home79-frase']").isVisible().catch(() => false));
@@ -244,6 +257,7 @@ console.log("■ 7. Desktop — os cinco destinos carregam conteúdo real");
     ["/jogos", "Jogos"],
     ["/lives", "Ao vivo"],
     ["/desporto", "Desporto"],
+    ["/premios", "Prémios"],
     ["/marketplace", "Mercado Bateu"],
   ];
   for (const [rota, nome] of destinos) {

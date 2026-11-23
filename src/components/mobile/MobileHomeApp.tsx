@@ -29,6 +29,7 @@ import { formatMZN } from "@/lib/currency";
 import Footer from "@/components/Footer";
 import TrustBar from "@/components/TrustBar";
 import HeroPrincipal from "@/components/home/HeroPrincipal";
+import BoasVindasRetencao from "@/components/home/BoasVindasRetencao";
 import DescobertaTres from "@/components/home/DescobertaTres";
 import ActividadeReal from "@/components/home/ActividadeReal";
 import ConfiancaFim from "@/components/home/ConfiancaFim";
@@ -286,6 +287,10 @@ export default function MobileHomeApp() {
 
       {/* ═══ 2 · UMA CHAMADA PRINCIPAL — uma frase, dois botões ═══ */}
       <HeroPrincipal />
+
+      {/* ═══ 2b · RETENÇÃO À VISTA (v83) — visitante honesto / registado:
+          Olá + nível + pontos + missão do dia + torneio + desbloqueios ═══ */}
+      <BoasVindasRetencao />
 
       {/* ═══ 3 · TRÊS CARTÕES DE DESCOBERTA — jogos / lives / desporto + KART dentro de Jogos ═══ */}
       <DescobertaTres />

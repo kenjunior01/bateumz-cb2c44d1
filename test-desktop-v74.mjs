@@ -62,7 +62,7 @@ async function navegar(page, url, waitMs = 3800) {
   await navegar(page, "/", 5000);
   // v79: o orb deu lugar a 4 links principais + Mais + pesquisa — mesmo sítio,
   // agora SEM mega-menus nem atalhos duplicados
-  const principaisA = ["nav79-desktop-jogos", "nav79-desktop-live", "nav79-desktop-desporto", "nav79-desktop-mercado", "nav79-desktop-mais"];
+  const principaisA = ["nav79-desktop-jogos", "nav79-desktop-live", "nav79-desktop-desporto", "nav79-desktop-premios", "nav79-desktop-mais"];
   for (const tid of principaisA) {
     const el = page.locator(`[data-testid="${tid}"]`);
     assert(await el.isVisible(), `A1 ${tid} visível`);

@@ -205,19 +205,21 @@ const Navbar = () => {
     }
   };
 
-  /* ── navegação principal: EXATAMENTE as cinco áreas + «Mais» ── */
+  /* ── navegação principal: EXATAMENTE as áreas principais + «Mais» ──
+     v83 «A RETENÇÃO À VISTA»: Prémios entra nos principais (a visão:
+     «a página Prémios deve ser uma das áreas principais») e o Mercado
+     passa a secundário no «Mais» — Jogos · Ao vivo · Desporto · Prémios. */
   const principais = [
     { to: "/jogos", label: t("nav79.jogos"), icon: Gamepad2, teste: "nav79-desktop-jogos" },
     { to: "/lives", label: t("nav79.live"), icon: Radio, teste: "nav79-desktop-live", live: true },
     { to: "/desporto", label: t("nav79.desporto"), icon: Medal, teste: "nav79-desktop-desporto" },
-    { to: "/marketplace", label: t("nav79.mercado"), icon: Store, teste: "nav79-desktop-mercado" },
+    { to: "/premios", label: t("nav79.premios"), icon: Gift, teste: "nav79-desktop-premios" },
   ];
 
   /* ── menu secundário «Mais» (funções continuam a existir, organizadas) ── */
   const maisSecundario: { label: string; href: string; icon: typeof History }[] = [
     { label: t("nav.winners"), href: "/historico", icon: History },
     { label: t("nav79.historico"), href: "/my-tickets", icon: Ticket },
-    { label: t("nav.quick.premios"), href: "/premios", icon: Gift },
     { label: t("nav.hub"), href: "/community", icon: MessageCircle },
     { label: t("nav.ia"), href: "/ia", icon: BrainCircuit },
     { label: t("nav.referral"), href: "/referral", icon: Users },
@@ -229,6 +231,8 @@ const Navbar = () => {
     { label: t("nav79.privacidade"), href: "/privacy", icon: ShieldCheck },
   ];
   const maisNegocios: { label: string; href: string; icon: typeof History }[] = [
+    // v83 — o Mercado (sorteios/loja/leilões) passa a secundário organizado
+    { label: t("nav79.mercado"), href: "/marketplace", icon: Store },
     { label: t("nav79.negocios"), href: "/negocios", icon: LifeBuoy },
     { label: t("nav79.leiloes"), href: "/alienacao", icon: KeyRound },
     { label: t("nav79.prestacoes"), href: "/prestacoes/catalogo", icon: CreditCard },

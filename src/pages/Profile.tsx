@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMZN } from "@/lib/currency";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import ResponsibleGaming from "@/components/ResponsibleGaming";
 import StoryHighlights from "@/components/stories/StoryHighlights";
 import { Progress } from "@/components/ui/progress";
@@ -292,6 +292,15 @@ const Profile = () => {
                 <b className="text-amber-400">{estadoProg.pontos.toLocaleString("pt-PT")}</b> pontos
                 {nivelProg.proximo ? ` · faltam ${nivelProg.proximo.pontosFaltam.toLocaleString("pt-PT")} para ${nivelProg.proximo.nome}` : " · nível máximo"}
               </p>
+            </div>
+            {/* v83 RETENÇÃO: as carteiras separadas à vista (regra do produto:
+                Pontos ≠ Bilhetes ≠ Prémios ≠ Saldo) — só números com FONTE
+                própria; cada carteira liga ao seu caminho real. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]" data-testid="perfil-carteiras">
+              <span className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 font-bold text-amber-200">Pontos: {estadoProg.pontos.toLocaleString("pt-PT")}</span>
+              <span className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-2 py-1 font-bold text-emerald-200">Bilhetes: {stats.total}</span>
+              <Link to="/my-tickets" className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-2 py-1 font-bold text-sky-200 transition-colors hover:bg-sky-400/20">Prémios e bilhetes →</Link>
+              <Link to="/wallet" className="rounded-lg border border-slate-400/40 bg-slate-400/10 px-2 py-1 font-bold text-slate-200 transition-colors hover:bg-slate-400/20">Saldo na carteira →</Link>
             </div>
             <PainelDesbloqueios estado={estadoProg} nivel={nivelProg} cosmeticos={cosmeticos} escolher={escolherCosmetico} compacto />
           </CardContent>

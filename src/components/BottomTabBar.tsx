@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Gamepad2, User, Radio, Medal } from "lucide-react";
+import { Home, Gamepad2, User, Radio, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -13,18 +13,20 @@ type TabDef = {
   requiresAuth?: boolean;
 };
 
-/* v79 — «POUCAS OPÇÕES PRINCIPAIS» (reorganização do produto):
-   a barra inferior passa a ter EXATAMENTE as cinco áreas principais da
-   plataforma e deixa de duplicar atalhos: Início · Jogos · AO VIVO
-   (botão central elevado) · Desporto · Perfil.
-   O KART deixa de ser destino da barra (era confundido com uma secção
-   de navegação) — continua promovido dentro de Jogos (destaque
-   principal) e na homepage. O Mercado também sai da barra: vive no
-   cabeçalho/topbar, no menu «Mais» e na homepage. */
+/* v83 — «A RETENÇÃO À VISTA» (visão do produto: «Jogos geram pontos.
+   Pontos geram progressão. Progressão desbloqueia prémios.»):
+   a barra inferior fecha o CICLO: Início · Jogos · AO VIVO (botão
+   central elevado) · PRÉMIOS · Perfil — a visão põe Prémios como
+   área principal («a página Prémios deve ser uma das áreas
+   principais») porque é onde o ciclo se fecha e as 4 carteiras
+   (Pontos ≠ Bilhetes ≠ Prémios ≠ Saldo) ficam à vista.
+   O Desporto continua área principal no cabeçalho desktop e vive no
+   menu «Mais» do mobile (drawer); o Mercado idem. O KART segue
+   promovido DENTRO de Jogos (destaque) e na homepage. */
 const TABS: TabDef[] = [
   { icon: Home, labelKey: "tab.home", href: "/", teste: "mob-tab-home" },
   { icon: Gamepad2, labelKey: "tab.games", href: "/jogos", teste: "mob-tab-jogos" },
-  { icon: Medal, labelKey: "tab.sport", href: "/desporto", teste: "mob-tab-desporto" },
+  { icon: Gift, labelKey: "tab.premios", href: "/premios", teste: "mob-tab-premios" },
   { icon: User, labelKey: "tab.profile", href: "/profile", teste: "mob-tab-profile", requiresAuth: false },
 ];
 

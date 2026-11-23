@@ -56,6 +56,9 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Gamepad2,
     items: [
       { icon: Zap, labelKey: "menu.games", href: "/jogos", grad: "from-amber-400 to-yellow-600", badge: "NOVO" },
+      // v83 — Prémios é área principal da visão de retenção (ciclo + 4 carteiras);
+      // Desporto e Mercado continuam alcançáveis no «Mais» do mobile
+      { icon: Gift, labelKey: "nav.quick.premios", href: "/premios", grad: "from-amber-400 to-orange-600" },
       { icon: Swords, labelKey: "mob.battles", href: "/batalhas", grad: "from-blue-600 to-indigo-800", trending: true },
       { icon: Dice5, labelKey: "mob.spinWheel", href: "/marketplace?tab=games", grad: "from-purple-500 to-pink-600" },
       { icon: Target, labelKey: "tournament.title", href: "/tournaments", grad: "from-emerald-500 to-teal-600", badge: "NOVO" },

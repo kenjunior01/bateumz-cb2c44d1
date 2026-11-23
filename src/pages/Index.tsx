@@ -20,6 +20,7 @@ import Navbar from "@/components/Navbar";
 import TrustBar from "@/components/TrustBar";
 import Footer from "@/components/Footer";
 import HeroPrincipal from "@/components/home/HeroPrincipal";
+import BoasVindasRetencao from "@/components/home/BoasVindasRetencao";
 import DescobertaTres from "@/components/home/DescobertaTres";
 import ActividadeReal from "@/components/home/ActividadeReal";
 import ConfiancaFim from "@/components/home/ConfiancaFim";
@@ -59,6 +60,11 @@ const Home = () => {
             respiro evita que a chamada principal nasça por baixo dela. */}
         {/* 2 · UMA chamada principal */}
         <HeroPrincipal />
+
+        {/* 2b · RETENÇÃO À VISTA (v83): a homepage mostra a PROGRESSÃO —
+            visitante vê o que muda com a conta (honesto); registado vê
+            Olá + nível + pontos + missão do dia + torneio + desbloqueios */}
+        <BoasVindasRetencao />
 
         {/* 3 · TRÊS cartões de descoberta (KART promovido DENTRO de jogos) */}
         <DescobertaTres />

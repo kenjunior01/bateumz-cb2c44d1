@@ -1,4 +1,21 @@
 ---
+Task ID: 83
+Agent: Super Z (main)
+Task: v83 — «A RETENÇÃO À VISTA»: o ciclo nas superfícies de entrada (Prémios nos principais, homepage com progressão, 4 carteiras no Perfil)
+
+Work Log:
+- Estado à entrada: sandbox reciclado em v78 de novo — git fetch mostrou origin/main em v82 (c1a1466) → fast-forward limpo (merge --ff-only) antes de QUALQUER edição (lição v82 aplicada)
+- Mapa de lacunas feito sobre o código REAL pós-v82: a visão de retenção pedia Prémios como área principal (barra mobile + cabeçalho), homepage com progressão e a interface das 4 carteiras — tudo o resto do briefing já vivia em v78→v82
+- BARRA MOBILE: Desporto → Prémios (mob-tab-premios, tab.premios ×6); Desporto/Mercado mantidos no drawer (MobileMenuDrawer ganha entrada Prémios) — exatamente «Desporto e o Mercado podem ficar dentro de Mais no mobile» da visão
+- DESKTOP: principais Jogos · Ao vivo · Desporto · Prémios (nav79-desktop-premios); Mercado → primeiro item do grupo de negócios no «Mais»; entrada /premios removida do «Mais» (dedupe, regra v81)
+- BoasVindasRetencao.tsx NOVO (montado no Index desktop + MobileHomeApp, após o HeroPrincipal): visitante honesto (o que muda com a conta + CTA /register, sem bloquear nada) vs registado (Olá {nome} · Nível · pontos · Faltam X para {proximo} com limiares REAIS do núcleo · Continuar a jogar · Missão do dia com progresso real do núcleo v78 e reclamar validado · Torneio via getActiveTournament com vazio honesto · desbloqueios do nível seguinte)
+- FURO DE HONESTIDADE evitado: o comentário da store declara binding do jogadorId à conta mas NADA o implementa — em vez de prometer «pontos guardados na conta», o bloco registado declara «Progresso contado neste aparelho»; sincronização real documentada como fatia seguinte
+- Perfil: linha perfil-carteiras no cartão Progressão — Pontos real, Bilhetes = stats.total real, ligações /my-tickets e /wallet (o saldo real fica NA carteira, ligado — nunca copiado nem falsificado)
+- i18n: 22 chaves ×6 dicionários via scripts/insere_i18n_v83.py (pt/pt-BR com âncoras idênticas → inserção por fronteiras de dicionário, baixo→cima; 1.ª passagem falhou no regex por "pt-BR" com aspas — corrigido antes de qualquer escrita)
+- TESTES: test-retencao-v83.mjs NOVO 39/0 (barra fecha o ciclo, visitante honesto, desktop sem overflow, núcleo 0 pontos em estado novo, 4 carteiras); test-nav-v79 actualizado para a nova navegação (83/0: +Desporto-sai-da-barra, +Mais→Mercado, +/premios nos destinos) e test-desktop-v74 (principais); regressão retenção-v78 38/0 · home-dinamica 24/0 · web-v262 11/0 · marketplace 57/0 · ia-v82 72/0 · web-excellence 13/0 (12/1 na 1.ª passagem = flake ambiental já provado na v82) · tsc -b 0 · build OK
+
+Stage Summary:
+
 Task ID: 82
 Agent: Super Z (main)
 Task: v82 — «A IA SUGERE, NUNCA DECIDE» + CONTEXTO: passo 11 do briefing — moderação/comentador/recomendações com NVIDIA (IA só sugere) + IA context-aware

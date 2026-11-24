@@ -24,7 +24,7 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import {
   EstadoCorrida, EntradaKart, EventoCorrida, ItemKartId, MelhoriaId, KartId, PistaDef,
   construirPista, novaCorrida, passoCorrida, posicoesDe, pistaPorId, statsDe,
-  FaseCorrida, Pista, rng32,
+  FaseCorrida, Pista, rng32, type DificuldadeKart,
 } from "./core.ts";
 import { novaBatalha, passoBatalha, rankingBatalha, DURACAO_BATALHA_S, type EstadoBatalha } from "./batalha.ts";
 import { Particulas } from "./particulas.ts";
@@ -96,6 +96,10 @@ interface OptsMotor {
   som?: SomKart;
   // ── v68 BATALHA (solo: o motor possui o EstadoBatalha e corre passoBatalha) ──
   batalha?: boolean;
+  // ── v86 FORMA DE JOGAR: dificuldade + assistência + auto-aceleração ──
+  dificuldade?: DificuldadeKart;   // omissão «normal» = o campo de sempre
+  assistencia?: boolean;           // smart steering (o jogador só)
+  autoAcelerar?: boolean;          // o motor mantém o acelerador PREMIDO
 }
 
 const COR_FAISCA_1 = 0x66ccff; // tier azul
@@ -316,6 +320,7 @@ export class MotorKart {
   private alvosOleoRede = new Map<number, { x: number; z: number }>();
   private entrada: EntradaKart = { acelerar: false, travar: false, virar: 0, derrapar: false, usarItem: false };
   private teclas = new Set<string>();
+  private autoAcelerar = false; // v86: o acelerador nunca larga
   private ultimoHud = 0;
   private derivaFase: 0 | 1 | 2 = 0;
   private ultRaio = 0;
@@ -356,6 +361,7 @@ export class MotorKart {
 
   constructor(opts: OptsMotor) {
     this.opts = opts;
+    this.autoAcelerar = opts.autoAcelerar === true; // v86 forma de jogar
     this.idJogador = typeof opts.idJogador === "number" && opts.idJogador >= 0 ? opts.idJogador : 6;
     if (opts.batalha) {
       // v68 BATALHA: o núcleo da batalha possui a «corrida» (arena Coliseu, voltas ∞)
@@ -377,6 +383,8 @@ export class MotorKart {
         melhoriasJogador: opts.melhorias,
         nomeJogador: opts.nomeJogador,
         recordeAnterior: opts.recordeAnterior,
+        dificuldade: opts.dificuldade,
+        assistencia: opts.assistencia,
       });
     }
     const def: PistaDef = this.pista.def;
@@ -938,6 +946,7 @@ export class MotorKart {
   private largarTudo = (): void => {
     this.teclas.clear();
     this.entrada.acelerar = false; this.entrada.travar = false; this.entrada.virar = 0; this.entrada.derrapar = false;
+    if (this.autoAcelerar) this.entrada.acelerar = true;
   };
   private sincronizarTeclas(): void {
     this.entrada.acelerar = this.teclas.has("ArrowUp") || this.teclas.has("KeyW");
@@ -946,12 +955,14 @@ export class MotorKart {
     const dir = this.teclas.has("ArrowRight") || this.teclas.has("KeyD");
     this.entrada.virar = (dir ? 1 : 0) + (esq ? -1 : 0);
     this.entrada.derrapar = this.teclas.has("ShiftLeft") || this.teclas.has("ShiftRight") || this.teclas.has("Space");
+    if (this.autoAcelerar) this.entrada.acelerar = true;
   }
 
   /** Entrada externa (botões móveis / E2E). `usarItem` é uma PULSAÇÃO. */
   setEntrada(parcial: Partial<Omit<EntradaKart, "usarItem">>): void {
     if (this.destruido) return;
     Object.assign(this.entrada, parcial);
+    if (this.autoAcelerar && parcial.acelerar === false) this.entrada.acelerar = true;
   }
   pulsarItem(): void {
     if (!this.destruido) this.entrada.usarItem = true;

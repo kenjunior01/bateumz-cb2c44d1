@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
-import { Plus } from "lucide-react";
+import { Plus, X, Building2 } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -25,6 +25,11 @@ import {
   type League,
   type LeagueFormat,
 } from "@/lib/leagues";
+import {
+  ligasDoAparelho, criarLiga, validaLiga, jogoEsport, JOGOS_ESPORT,
+  PREMIO_MIN, PREMIO_MAX, JANELA_MIN_DIAS, JANELA_MAX_DIAS,
+  type LigaEsport, type InputLiga,
+} from "@/lib/esport";
 
 const sb: any = supabase;
 
@@ -244,11 +249,34 @@ function FeaturedCarousel({ leagues }: { leagues: League[] }) {
 export default function LeaguesListPage() {
   useSEO({ title: 'Ligas Competitivas', description: 'Compita em ligas organizadas na Bateu. Suba na classificação, ganhe recompensas e prove o seu valor.', canonicalPath: '/ligas' });
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [featured, setFeatured] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  // ── v86 E-SPORT: ligas LOCAIS que funcionam agora + criação ──
+  const [locais, setLocais] = useState<LigaEsport[]>([]);
+  const [modalCriar, setModalCriar] = useState(false);
+  const [formL, setFormL] = useState({ nome: "", jogo: "kart", premioPontos: 300, janelaDias: 7, orgEmpresa: false, empresaNome: "", empresaSector: "" });
+  const [erroL, setErroL] = useState("");
+
+  const recarregarLocais = () => setLocais(ligasDoAparelho());
+
+  const submeterLiga = () => {
+    const input: InputLiga = {
+      nome: formL.nome, jogo: formL.jogo, premioPontos: Number(formL.premioPontos),
+      janelaDias: Number(formL.janelaDias), organizadorEmpresa: formL.orgEmpresa,
+      empresaNome: formL.empresaNome, empresaSector: formL.empresaSector,
+    };
+    const v = validaLiga(input);
+    if (!v.sim) { setErroL(t("esport.criar.erro", { motivo: v.motivo })); return; }
+    const { l } = criarLiga(input);
+    if (!l) { setErroL(t("esport.criar.erro", { motivo: "—" })); return; }
+    setModalCriar(false);
+    setErroL("");
+    navigate(`/ligas/${l.id}`);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -260,6 +288,7 @@ export default function LeaguesListPage() {
         setFeatured(feat);
       })
       .finally(() => setLoading(false));
+    recarregarLocais();
   }, []);
 
   const filteredLeagues = useMemo(() => {
@@ -331,13 +360,13 @@ export default function LeaguesListPage() {
             className="flex flex-wrap items-center justify-center gap-3"
             data-testid="ligas-ctas"
           >
-            <a
-              href="/dashboard/leagues"
+            <button
+              onClick={() => { recarregarLocais(); setModalCriar(true); }}
               data-testid="ligas-criar"
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-purple-500/25 transition-transform hover:scale-[1.03]"
             >
-              <Plus className="h-4 w-4" /> Criar Liga (empresas e organizadores)
-            </a>
+              <Plus className="h-4 w-4" /> Criar Liga (jogadores e empresas)
+            </button>
             <a
               href="/tournaments"
               className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-bold text-white backdrop-blur hover:border-white/30"
@@ -372,6 +401,47 @@ export default function LeaguesListPage() {
       </section>
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        {/* v86 E-SPORT: ligas do APARELHO — temporada real alimentada por partidas reais */}
+        {locais.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} data-testid="ligas-local-section">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="h-4 w-4 text-amber-400" />
+              <h2 className="text-sm font-black uppercase tracking-wide text-white">{t("esport.listaLigas.titulo")}</h2>
+              <Badge className="bg-amber-500/25 text-amber-200 border-0 text-[10px]">{locais.length}</Badge>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {locais.slice(0, 6).map((lg) => {
+                const emp = lg.organizador.tipo === "empresa";
+                return (
+                  <button
+                    key={lg.id}
+                    onClick={() => navigate(`/ligas/${lg.id}`)}
+                    className="text-left rounded-xl border-2 border-white/10 bg-white/5 p-3 transition-all hover:border-amber-400/60"
+                    style={emp ? { borderColor: `${lg.organizador.cor}66` } : undefined}
+                    data-testid={`ligas-local-card-${lg.id}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg grid place-items-center text-[10px] font-black text-white shrink-0" style={{ background: lg.organizador.cor }}>{lg.organizador.iniciais}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-black text-white truncate">{lg.nome}</div>
+                        <div className="text-[10px] text-white/50 truncate">
+                          {emp ? <Building2 className="inline h-3 w-3 mr-0.5 text-sky-400" /> : null}
+                          {jogoEsport(lg.jogo)?.label ?? lg.jogo} · {lg.temporada}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] font-bold">
+                      <span className="text-amber-300">🏆 {lg.premioPontos} {t("esport.local.premioUnit")}</span>
+                      <span className="text-white/50">{t(`esport.estado.${lg.estado}`)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[10px] text-white/40">{t("esport.listaLigas.sub")}</p>
+          </motion.div>
+        )}
+
         {!loading && featured.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
             <FeaturedCarousel leagues={featured} />
@@ -455,6 +525,78 @@ export default function LeaguesListPage() {
           <ActivityFeed limit={4} testId="ligas-activity-feed" />
         </div>
       </div>
+
+      {/* ── v86: MODAL CRIAR LIGA (aparelho, honesto) ── */}
+      {modalCriar && (
+        <div className="fixed inset-0 z-[90] bg-black/75 backdrop-blur-sm overflow-y-auto" data-testid="ligas-modal-criar">
+          <div className="min-h-full flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-slate-900/95 p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-purple-200 flex items-center gap-2"><Trophy className="h-5 w-5" /> {t("esport.liga.criar.titulo")}</h2>
+                <button onClick={() => setModalCriar(false)} data-testid="ligas-modal-fechar" className="p-2 rounded-lg hover:bg-white/10"><X className="w-5 h-5 text-slate-300" /></button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-white/70 block mb-1">{t("esport.criar.nome")}</label>
+                  <Input value={formL.nome} onChange={(e) => setFormL({ ...formL, nome: e.target.value })} placeholder={t("esport.criar.nome.falt")} maxLength={40} className="bg-white/5 border-white/10 text-white" data-testid="ligas-form-nome" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-white/70 block mb-1">{t("esport.criar.jogo")}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {JOGOS_ESPORT.map((j) => (
+                      <button
+                        key={j.id}
+                        onClick={() => setFormL({ ...formL, jogo: j.id })}
+                        className={`rounded-xl px-2.5 py-2 text-[11px] font-bold text-left truncate transition-all ${formL.jogo === j.id ? "bg-purple-600 text-white" : "bg-white/10 text-white/70 hover:bg-white/20"}`}
+                        data-testid={`ligas-form-jogo-${j.id}`}
+                      >
+                        {j.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-white/70 block mb-1">{t("esport.criar.premio")}</label>
+                    <Input type="number" min={PREMIO_MIN} max={PREMIO_MAX} value={formL.premioPontos} onChange={(e) => setFormL({ ...formL, premioPontos: Number(e.target.value) })} className="bg-white/5 border-white/10 text-white" data-testid="ligas-form-premio" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-white/70 block mb-1">{t("esport.criar.janela")}</label>
+                    <Input type="number" min={JANELA_MIN_DIAS} max={JANELA_MAX_DIAS} value={formL.janelaDias} onChange={(e) => setFormL({ ...formL, janelaDias: Number(e.target.value) })} className="bg-white/5 border-white/10 text-white" data-testid="ligas-form-janela" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-white/70 block mb-1">{t("esport.criar.org")}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setFormL({ ...formL, orgEmpresa: false })} className={`rounded-xl border-2 px-3 py-2 text-xs font-black transition-all ${!formL.orgEmpresa ? "border-purple-400 bg-purple-500/20 text-white" : "border-white/10 text-white/60"}`} data-testid="ligas-form-org-jogador">
+                      {t("esport.criar.org.jogador")}
+                    </button>
+                    <button onClick={() => setFormL({ ...formL, orgEmpresa: true })} className={`rounded-xl border-2 px-3 py-2 text-xs font-black transition-all ${formL.orgEmpresa ? "border-purple-400 bg-purple-500/20 text-white" : "border-white/10 text-white/60"}`} data-testid="ligas-form-org-empresa">
+                      {t("esport.criar.org.empresa")}
+                    </button>
+                  </div>
+                  {formL.orgEmpresa && (
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Input value={formL.empresaNome} onChange={(e) => setFormL({ ...formL, empresaNome: e.target.value })} placeholder={t("esport.criar.empresa.nome")} maxLength={24} className="bg-white/5 border-white/10 text-white" data-testid="ligas-form-empresa-nome" />
+                      <Input value={formL.empresaSector} onChange={(e) => setFormL({ ...formL, empresaSector: e.target.value })} placeholder={t("esport.criar.empresa.sector")} maxLength={24} className="bg-white/5 border-white/10 text-white" data-testid="ligas-form-empresa-sector" />
+                    </div>
+                  )}
+                </div>
+                {erroL && <p className="text-xs font-bold text-red-400" data-testid="ligas-form-erro">{erroL}</p>}
+                <button
+                  onClick={submeterLiga}
+                  className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-600 px-4 py-3 font-black text-white hover:brightness-110"
+                  data-testid="ligas-form-submit"
+                >
+                  {t("esport.liga.criar.submit")}
+                </button>
+                <p className="text-[10px] text-white/40" data-testid="ligas-form-nota">{t("esport.nota.aparelho", { jogo: jogoEsport(formL.jogo)?.label ?? formL.jogo })}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

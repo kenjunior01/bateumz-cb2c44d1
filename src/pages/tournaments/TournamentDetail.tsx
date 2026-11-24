@@ -28,8 +28,20 @@ import {
   type TournamentStanding,
 } from "@/lib/tournaments";
 import { toast } from "sonner";
+import TorneioLocalDetalhe from "@/components/esport/TorneioLocalDetalhe";
 
+/** v86 E-SPORT: ids «local-*» (aparelho) vão à superfície LOCAL funcional;
+ *  todo o resto mantém o torneio remoto de sempre — SEM trocar a ordem dos
+ *  hooks (o wrapper garante duas componentes separadas). */
 export default function TournamentDetail() {
+  const { id } = useParams<{ id: string }>();
+  if (id?.startsWith("local-")) {
+    return <TorneioLocalDetalhe id={id} />;
+  }
+  return <TorneioRemoto />;
+}
+
+function TorneioRemoto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();

@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Inbox, HandCoins, Plus, WifiOff, RefreshCw } from "lucide-react";
+import { Trophy, Inbox, HandCoins, Plus, WifiOff, RefreshCw, Zap, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import ActivityFeed from "@/components/ActivityFeed";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import { getTournaments, type Tournament } from "@/lib/tournaments";
+import { torneiosDoAparelho, jogoEsport, type TorneioEsport } from "@/lib/esport";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,10 @@ export default function TournamentsList() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // v86 E-SPORT: torneios QUE FUNCIONAM AGORA (aparelho, resultados reais)
+  const [locais, setLocais] = useState<TorneioEsport[]>([]);
+
+  const loadLocais = () => setLocais(torneiosDoAparelho());
 
   const load = () => {
     setLoading(true);
@@ -35,6 +41,7 @@ export default function TournamentsList() {
 
   useEffect(() => {
     load();
+    loadLocais();
   }, []);
 
   // REA torneios: o que está a acabar primeiro aparece em cima (urgência real)
@@ -122,7 +129,7 @@ export default function TournamentsList() {
                 </a>
               </Button>
               <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700" data-testid="torneios-criar">
-                <a href="/dashboard/tournaments">
+                <a href="/tournaments/criar">
                   <Plus className="h-4 w-4" /> Criar Torneio
                 </a>
               </Button>
@@ -132,6 +139,47 @@ export default function TournamentsList() {
             {t("tournament.subtitle")}
           </p>
         </motion.div>
+
+        {/* v86 E-SPORT: torneios do APARELHO — funcionam agora, resultados reais */}
+        {locais.length > 0 && (
+          <div className="mb-8" data-testid="torneios-local-section">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-4 w-4 text-amber-500" />
+              <h2 className="text-sm font-black uppercase tracking-wide">{t("esport.lista.titulo")}</h2>
+              <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border-0 text-[10px]">{locais.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">{t("esport.lista.sub")}</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {locais.slice(0, 6).map((lt) => {
+                const emp = lt.organizador.tipo === "empresa";
+                return (
+                  <button
+                    key={lt.id}
+                    onClick={() => navigate(`/tournaments/${lt.id}`)}
+                    className="text-left rounded-xl border-2 p-3 transition-all hover:border-amber-400/60 bg-white/5"
+                    style={emp ? { borderColor: `${lt.organizador.cor}66` } : undefined}
+                    data-testid={`torneios-local-card-${lt.id}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg grid place-items-center text-[10px] font-black text-white shrink-0" style={{ background: lt.organizador.cor }}>{lt.organizador.iniciais}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-black truncate">{lt.nome}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {emp ? <Building2 className="inline h-3 w-3 mr-0.5 text-sky-400" /> : null}
+                          {jogoEsport(lt.jogo)?.label ?? lt.jogo}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] font-bold">
+                      <span className="text-amber-500">🏆 {lt.premioPontos} {t("esport.local.premioUnit")}</span>
+                      <span className="text-muted-foreground">{t(`esport.estado.${lt.estado}`)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <Tabs defaultValue="active">
           <TabsList className="w-full justify-start">

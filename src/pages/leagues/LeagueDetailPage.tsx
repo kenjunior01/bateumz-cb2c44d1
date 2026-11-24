@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,23 @@ function timeAgo(iso: string) {
   return `${days}d atras`;
 }
 
+/** v86 E-SPORT: slugs «local-liga-*» (aparelho) vão à superfície LOCAL
+ *  funcional; todo o resto mantém a liga remota de sempre — duas
+ *  componentes separadas para NUNCA trocar a ordem dos hooks. */
+const LigaLocalDetalhe = lazy(() => import("@/components/esport/LigaLocalDetalhe"));
 export default function LeagueDetailPage() {
+  const { slug } = useParams<{ slug: string }>();
+  if (slug?.startsWith("local-")) {
+    return (
+      <Suspense fallback={<div className="min-h-[60vh]" />}>
+        <LigaLocalDetalhe id={slug} />
+      </Suspense>
+    );
+  }
+  return <LigaRemota />;
+}
+
+function LigaRemota() {
   const { slug } = useParams<{ slug: string }>();
   const { t } = useLanguage();
   const { user } = useAuth();

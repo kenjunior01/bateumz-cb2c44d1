@@ -467,6 +467,27 @@ export type EventoCorrida =
 export interface EntradaKart { acelerar: boolean; travar: boolean; virar: number; derrapar: boolean; usarItem: boolean }
 export const entradaParada = (): EntradaKart => ({ acelerar: false, travar: false, virar: 0, derrapar: false, usarItem: false });
 
+// ── v86 FORMA DE JOGAR: dificuldade + assistência ─────────────
+// «normal» é o comportamento EXATO de sempre (regressão provada);
+// «facil»/«dificil» escalam o leque de destreza dos 11 rivais, o
+// reflexo à largada e o rubber-banding (os de trás ganham fôlego
+// no fácil, o campo é mais implacável no difícil).
+export type DificuldadeKart = "facil" | "normal" | "dificil";
+const LEQUE_SKILL: Record<DificuldadeKart, { base: number; amp: number }> = {
+  facil: { base: 0.62, amp: 0.2 },
+  normal: { base: 0.7, amp: 0.27 },
+  dificil: { base: 0.78, amp: 0.19 },
+};
+const RUBBER_GAP: Record<DificuldadeKart, { atras: number; frente: number; pesoAtras: number; pesoFrente: number }> = {
+  facil: { atras: 90, frente: 90, pesoAtras: 1.09, pesoFrente: 0.91 },
+  normal: { atras: 120, frente: 120, pesoAtras: 1.07, pesoFrente: 0.93 },
+  dificil: { atras: 240, frente: 240, pesoAtras: 1.04, pesoFrente: 0.96 },
+};
+/** Correção de largada/reflexo por dificuldade (sobre a fórmula v77). */
+export function ajusteLargadaDificuldade(d: DificuldadeKart): number {
+  return d === "facil" ? 0.08 : d === "dificil" ? -0.05 : 0;
+}
+
 export interface EstadoCorrida {
   fase: FaseCorrida;
   tempoContagem: number;
@@ -484,6 +505,8 @@ export interface EstadoCorrida {
   recordeAnterior: number;
   resultados: { id: number; nome: string; posicao: number; tempo: number }[];
   payout: { moedas: number; xp: number; recorde: boolean } | null;
+  dificuldade: DificuldadeKart; // v86 forma de jogar (omissão normal)
+  assistencia: boolean;         // v86 smart steering (o jogador só)
 }
 
 const NOMES_BOTS = ["Kudisso", "Zapata", "Makuti", "Ndove", "Turbo Tia", "Capalanga", "Xitique", "Djakba", "Maningue", "Bué Rápido", "Marimba"];
@@ -498,7 +521,8 @@ function posicaoNaPista(pista: Pista, s: number, lateral: number): { x: number; 
 
 const IDX_JOGADOR = 6; // grelha 2×6: jogador no MEIO — começa a LUTAR para o pódio
 
-/** Nova corrida: 12 corredores (jogador + 11 IA), grelha ATRÁS da linha, contagem 3-2-1-JÁ. */
+/** Nova corrida: 12 corredores (jogador + 11 IA), grelha ATRÁS da linha, contagem 3-2-1-JÁ.
+ *  v86: dificuldade (omissão «normal» = o comportamento EXATO de sempre) + assistência de condução. */
 export function novaCorrida(opts: {
   pista: Pista;
   voltas?: number;
@@ -507,9 +531,13 @@ export function novaCorrida(opts: {
   nomeJogador?: string;
   semente?: number;
   recordeAnterior?: number;
+  dificuldade?: DificuldadeKart;
+  assistencia?: boolean;
 }): EstadoCorrida {
   const rng = rng32(opts.semente ?? ((Math.random() * 2 ** 31) | 0));
   const voltas = clamp(Math.round(opts.voltas ?? VOLTAS_OMISSAO), VOLTAS_MIN, VOLTAS_MAX);
+  const dificuldade: DificuldadeKart = opts.dificuldade ?? "normal";
+  const leque = LEQUE_SKILL[dificuldade];
   const pista = opts.pista;
   const L = pista.comprimento;
   const corredores: Corredor[] = [];
@@ -522,7 +550,8 @@ export function novaCorrida(opts: {
     const p = posicaoNaPista(pista, s, lateral);
     const stats = eJogador ? statsDe(kart, opts.melhoriasJogador ?? {}) : statsDe(kart, {});
     const ref = amostraPerto(pista, p.x, p.z, p.i);
-    const skill = eJogador ? 1 : 0.7 + rng() * 0.27; // v77: leque largo — de «Turbo Tia» (0,70) a pro (0,97)
+    // v86: leque de destreza pela dificuldade (normal = 0,70 + rng*0,27 EXATO de sempre)
+    const skill = eJogador ? 1 : leque.base + rng() * leque.amp; // v77: de «Turbo Tia» a pro
     corredores.push({
       id: i,
       nome: eJogador ? (opts.nomeJogador?.trim() || "Tu") : NOMES_BOTS[(i < 6 ? i : i - 1) % NOMES_BOTS.length],
@@ -544,7 +573,8 @@ export function novaCorrida(opts: {
       iaDesvio: 0,
       // v77: reflexo pela DESTREZA (0,25…1) — a fórmula da v76 com o leque largo
       // punha 0,54 s no piloto fraco (fora do intervalo honesto 0,04-0,4)
-      iaLargada: eJogador ? 0 : 0.3 - clamp((skill - 0.78) / 0.17, 0.25, 1) * 0.22 + rng() * 0.05,
+      // v86: o fácil atrasa o reflexo, o difícil afia (normal = intocado)
+      iaLargada: eJogador ? 0 : Math.max(0.04, 0.3 - clamp((skill - 0.78) / 0.17, 0.25, 1) * 0.22 + rng() * 0.05 + ajusteLargadaDificuldade(dificuldade)),
     });
   }
   return {
@@ -564,6 +594,8 @@ export function novaCorrida(opts: {
     recordeAnterior: opts.recordeAnterior ?? Infinity,
     resultados: [],
     payout: null,
+    dificuldade,
+    assistencia: opts.assistencia === true,
   };
 }
 
@@ -709,9 +741,11 @@ function iaDecidir(e: EstadoCorrida, c: Corredor, dt: number): EntradaKart {
   // rubber-banding SUAVE (padrão Mario Kart: os de trás ganham fôlego).
   // v77 FURO: no ONLINE corredores[6] é um BOT (SLOTS_REDE baralha id≠slot)
   // — o gap passa a medir-se contra o PRIMEIRO humano da grelha.
+  // v86: os limiares/pesos seguem a DIFICULDADE (normal = os valores de sempre)
   const jogador = e.corredores.find((x) => x.eJogador) ?? e.corredores[IDX_JOGADOR];
   const gap = jogador.sTotal - c.sTotal;
-  c.iaRubber = gap > 120 ? 1.07 : gap < -120 ? 0.93 : 1;
+  const rb = RUBBER_GAP[e.dificuldade ?? "normal"];
+  c.iaRubber = gap > rb.atras ? rb.pesoAtras : gap < -rb.frente ? rb.pesoFrente : 1;
 
   // ── DESVIO (v76 intacto): projéteis > óleo > trânsito. O iaOffset é a
   //    linha pessoal; o iaDesvio é lateral DINÂMICA que cresce para fugir
@@ -890,7 +924,17 @@ function passoKart(e: EstadoCorrida, c: Corredor, ent: EntradaKart, stats: Stats
     c.ang += 9 * dt;
     c.dirAng += 9 * dt;
   } else if (emCorrida && !c.terminou) {
-    const virar = clamp(ent.virar, -1, 1);
+    let virar = clamp(ent.virar, -1, 1);
+    // v86 ASSISTÊNCIA de condução (smart steering, só o jogador): corrige
+    // SUAVEMENTE para a linha de corrida — nunca anula a intenção do
+    // piloto (peso decai quando ele já vira com força) e nunca age em
+    // derrapagem (o drift é comando do jogador).
+    if (e.assistencia && c.eJogador && !c.derrapando) {
+      const alvoLat = linhaCorrida(pista, c.iAmostra, c.vel);
+      const erro = alvoLat - c.lateralPerto;
+      const correcao = clamp(erro * 0.06, -0.5, 0.5);
+      virar = clamp(virar + correcao * (1 - Math.abs(virar) * 0.75), -1, 1);
+    }
     const podeDrift = ent.derrapar && c.vel > 16;
     if (podeDrift && !c.derrapando && virar !== 0) {
       c.derrapando = true; c.derivaDir = Math.sign(virar); c.derivaCarga = 0;
@@ -1229,6 +1273,8 @@ export function novaCorridaOnline(opts: {
     recordeAnterior: Infinity, // recorde é DO APARELHO de cada cliente (payout local)
     resultados: [],
     payout: null,
+    dificuldade: "normal", // ONLINE mantém o campo padrão de sempre
+    assistencia: false,
   };
 }
 

@@ -29,7 +29,7 @@ import { adaptadorSomKart, somGlobal, type MotorSom } from "@/game/som.ts";
 import {
   IDS_KARTS, IDS_MELHORIAS, PISTAS, KARTS, custoMelhoria, kartDesbloqueado,
   nivelDeXp, pistaPorId, recompensaCorrida, statsDe, validarSaveKart,
-  type KartId, type MelhoriaId, type SaveKart,
+  type KartId, type MelhoriaId, type SaveKart, type DificuldadeKart,
 } from "@/game/kart/core.ts";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -79,6 +79,21 @@ function melhoriasDe(s: SaveKart, kart: KartId): Partial<Record<MelhoriaId, numb
 
 const ORDEM = (p: number): string => `${p}º`;
 
+// ── v86 FORMA DE JOGAR: preferências persistidas no aparelho ──
+function lerDificuldade(): DificuldadeKart {
+  try {
+    const v = localStorage.getItem("bateu_kart_dif");
+    if (v === "facil" || v === "normal" || v === "dificil") return v;
+  } catch { /* sem storage — honesto */ }
+  return "normal";
+}
+function lerBool(chave: string): boolean {
+  try { return localStorage.getItem(chave) === "1"; } catch { return false; }
+}
+function guardarBool(chave: string, v: boolean): void {
+  try { localStorage.setItem(chave, v ? "1" : "0"); } catch { /* sem storage — honesto */ }
+}
+
 // ═══════════════════════════════════════════════════════════════
 export default function BateuKart({ onScore, onExit }: Props) {
   const { t } = useLanguage();
@@ -113,6 +128,10 @@ export default function BateuKart({ onScore, onExit }: Props) {
     } catch { /* sem storage — honesto */ }
     return ehToque ? "leve" : "alta";
   });
+  // ── v86 FORMA DE JOGAR: dificuldade + assistência + auto-aceleração ──
+  const [dificuldade, setDificuldade] = useState<DificuldadeKart>(() => lerDificuldade());
+  const [assistencia, setAssistencia] = useState<boolean>(() => lerBool("bateu_kart_assist"));
+  const [autoAcelerar, setAutoAcelerar] = useState<boolean>(() => lerBool("bateu_kart_auto"));
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const miniRef = useRef<HTMLCanvasElement | null>(null);
   const motorRef = useRef<MotorKart | null>(null);
@@ -244,6 +263,9 @@ export default function BateuKart({ onScore, onExit }: Props) {
       nomeJogador: inicioRede ? nomePiloto : "Tu",
       recordeAnterior,
       leve,
+      dificuldade,                       // v86 forma de jogar
+      assistencia,                       // v86 smart steering
+      autoAcelerar,                      // v86 acelerador preso
       som: adaptadorSomKart(somGlobal()), // v67
       batalha: modoJogoRef.current === "batalha", // v68
       aoHud: (e) => {
@@ -361,10 +383,18 @@ export default function BateuKart({ onScore, onExit }: Props) {
     // ── v78 PROGRESSÃO: a partida alimenta o ciclo de RETENÇÃO (Pontos →
     //    Nível → Missões) — pontos pela posição com o TETO do catálogo (120).
     //    O painel é o DONO da store; o jogo só anuncia no bus do window.
+    //    v86 E-SPORT: o bus leva a MINHA posição E o CAMPO COMPLETO (nomes
+    //    + posições reais dos 12 pilotos) — torneios/ligas alimentam-se
+    //    de resultados VERDADEIROS, nunca inventados.
     try {
       const teto = pontosMaxDe("kart");
       const pontos = Math.max(10, Math.min(teto, teto - (hud.posicao - 1) * 10));
-      window.dispatchEvent(new CustomEvent("bateu:partida", { detail: { jogoId: "kart", vitoria: hud.posicao === 1, pontos } }));
+      const campo = hud.resultados.map((r) => ({
+        id: r.id === motorIdRef.current ? "eu" : r.nome,
+        nome: r.nome,
+        posicao: r.posicao,
+      }));
+      window.dispatchEvent(new CustomEvent("bateu:partida", { detail: { jogoId: "kart", vitoria: hud.posicao === 1, pontos, posicao: hud.posicao, total: hud.total, campo } }));
     } catch { /* bus indisponível — a partida continua a valer no kart */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hud?.fase, fase]);
@@ -521,6 +551,40 @@ export default function BateuKart({ onScore, onExit }: Props) {
                 {v}
               </button>
             ))}
+          </div>
+
+          {/* v86 FORMA DE JOGAR: dificuldade + assistências (persistidas no aparelho) */}
+          <div className="mt-5 w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-3" data-testid="kart-forma">
+            <div className="text-[11px] font-black uppercase tracking-wide text-orange-200">{t("kart.forma.titulo")}</div>
+            <div className="mt-2 flex items-center gap-1.5">
+              {(["facil", "normal", "dificil"] as DificuldadeKart[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setDificuldade(d); try { localStorage.setItem("bateu_kart_dif", d); } catch { /* honesto */ } somGlobal().tocar("ui"); }}
+                  className={`flex-1 py-2 rounded-xl font-bold text-xs ${dificuldade === d ? "bg-orange-500 text-white" : "bg-white/10 text-slate-200 hover:bg-white/20"}`}
+                  data-testid={`kart-dif-${d}`}
+                >
+                  {t(`kart.dif.${d}`)}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <button
+                onClick={() => { setAssistencia((v) => { const n = !v; guardarBool("bateu_kart_assist", n); return n; }); somGlobal().tocar("ui"); }}
+                className={`flex-1 py-2 rounded-xl font-bold text-xs border ${assistencia ? "bg-emerald-600/80 border-emerald-300/60 text-white" : "bg-white/10 border-white/10 text-slate-200 hover:bg-white/20"}`}
+                data-testid="kart-assist"
+              >
+                {assistencia ? "✓ " : ""}{t("kart.assist")}
+              </button>
+              <button
+                onClick={() => { setAutoAcelerar((v) => { const n = !v; guardarBool("bateu_kart_auto", n); return n; }); somGlobal().tocar("ui"); }}
+                className={`flex-1 py-2 rounded-xl font-bold text-xs border ${autoAcelerar ? "bg-emerald-600/80 border-emerald-300/60 text-white" : "bg-white/10 border-white/10 text-slate-200 hover:bg-white/20"}`}
+                data-testid="kart-auto"
+              >
+                {autoAcelerar ? "✓ " : ""}{t("kart.auto")}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-400">{t("kart.forma.nota")}</p>
           </div>
 
           {/* carro atual + garagem */}

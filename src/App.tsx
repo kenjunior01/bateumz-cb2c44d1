@@ -31,6 +31,7 @@ import DashboardLayout from "./layouts/DashboardLayout.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import { initRoutePrefetch } from "@/lib/routePrefetch";
+import { ouvirPartidasEsport } from "@/lib/esport"; // v86 E-SPORT: bus de partidas reais (torneios/ligas)
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
@@ -159,6 +160,7 @@ const Battles = lazy(() => import("./pages/Battles.tsx"));
 const LiveParticipar = lazy(() => import("./pages/LiveParticipar.tsx"));
 const TournamentsList = lazy(() => import("./pages/tournaments/TournamentsList.tsx"));
 const TournamentDetail = lazy(() => import("./pages/tournaments/TournamentDetail.tsx"));
+const CriarTorneio = lazy(() => import("./pages/tournaments/CriarTorneio.tsx")); // v86 E-SPORT
 const DashboardTournaments = lazy(() => import("./pages/dashboard/DashboardTournaments.tsx"));
 const DashboardLeagues = lazy(() => import("./pages/dashboard/DashboardLeagues.tsx"));
 const DashboardBlog = lazy(() => import("./pages/dashboard/DashboardBlog.tsx"));
@@ -304,6 +306,7 @@ function AnimatedRoutes() {
             <Route path="/lives-agora" element={<LivesAgora />} />
             <Route path="/participar" element={<LiveParticipar />} />
             <Route path="/tournaments" element={<TournamentsList />} />
+            <Route path="/tournaments/criar" element={<CriarTorneio />} /> {/* v86: ANTES de /:id — senão «criar» virava id */}
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/desporto" element={<DesportoHub />} />
             <Route path="/jogos-gratis" element={<FreeGamesHub />} />
@@ -507,6 +510,10 @@ function AppShell() {
   /* v26 Web Excellence: prefetch de chunks de rota no hover/focus — navegação
      instantânea na web (o chunk descarrega ANTES do clique) */
   useEffect(() => { initRoutePrefetch(); }, []);
+
+  // v86 E-SPORT: um ÚNICO ouvinte global de `bateu:partida` alimenta os
+  // torneios/ligas do aparelho com resultados REAIS (idempotente no núcleo).
+  useEffect(() => { ouvirPartidasEsport(); }, []);
 
   useEffect(() => {
     if (!configLoading) { setShowLoading(false); return; }

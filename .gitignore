@@ -32,3 +32,6 @@ shot-*.mjs
 server/.env
 .bundle-*.mjs
 server/data/
+
+# v87 higiene: bundles efémeros dos testes de núcleo (esbuild)
+.v*-bundle.mjs

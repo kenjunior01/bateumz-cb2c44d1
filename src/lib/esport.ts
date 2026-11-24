@@ -417,8 +417,46 @@ function aplicarPartidaCampeonato(t: TorneioEsport, partida: PartidaEsport, agor
  *  A ronda é UMA corrida real contra o campo completo. */
 export function corteRonda(t: TorneioEsport): number {
   if (t.formato !== "eliminatoria") return 0;
-  if (t.ronda >= t.rondasTotal) return 1;
-  return Math.max(1, Math.round(t.tamanho / Math.pow(2, t.ronda)));
+  return corteDeRonda(t.tamanho, t.ronda, t.rondasTotal);
+}
+
+/** Corte por ronda (v87 — alimenta o bracket visual sem duplicar regra):
+ *  a final exige SEMPRE 1.º; as rondas antes cortam top tamanho/2^r. */
+export function corteDeRonda(tamanho: number, ronda: number, rondasTotal: number): number {
+  if (ronda >= rondasTotal) return 1;
+  return Math.max(1, Math.round(tamanho / Math.pow(2, ronda)));
+}
+
+/** v87 BRACKET HONESTO: estado de CADA ronda do CAMINHO DO JOGADOR.
+ *  O núcleo não elimina bots ronda a ronda (o corte é a posição REAL
+ *  do «eu» em cada corrida) — por isso o bracket mostra o percurso do
+ *  jogador: passou / emCurso / eliminado / campeao / pendente. Deriva
+ *  SÓ de estado real (t.ronda, eu.rondaEliminado, vencedorId). */
+export type EstadoRondaBracket = "passou" | "emCurso" | "eliminado" | "campeao" | "pendente";
+
+export function estadosBracket(t: TorneioEsport): EstadoRondaBracket[] {
+  if (t.formato !== "eliminatoria") return [];
+  const n = Math.max(1, t.rondasTotal);
+  const eu = t.participantes.find((p) => p && p.id === EU_ID);
+  const rondaElim = (t.estado === "terminado" && eu && typeof eu.rondaEliminado === "number") ? eu.rondaEliminado : null;
+  const campeao = t.estado === "terminado" && t.vencedorId === EU_ID;
+  const inscrito = Boolean(eu);
+  if (t.estado === "inscricao" || (t.estado === "terminado" && !campeao && rondaElim == null && !inscrito)) {
+    return Array.from({ length: n }, () => "pendente" as const);
+  }
+  const out: EstadoRondaBracket[] = [];
+  for (let r = 1; r <= n; r++) {
+    if (campeao) { out.push(r === n ? "campeao" : "passou"); continue; }
+    if (rondaElim != null) {
+      out.push(r < rondaElim ? "passou" : r === rondaElim ? "eliminado" : "pendente");
+      continue;
+    }
+    if (t.estado === "terminado") { out.push("pendente"); continue; } // terminou sem o eu terminar percurso (sem arranque)
+    if (r < t.ronda) out.push("passou");
+    else if (r === t.ronda) out.push("emCurso");
+    else out.push("pendente");
+  }
+  return out;
 }
 
 function avancarEliminatoria(t: TorneioEsport, partida: PartidaEsport, agoraMs: number): "ok" | "terminado-campeao" | "terminado-eliminado" {

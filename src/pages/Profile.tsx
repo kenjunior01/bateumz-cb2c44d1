@@ -26,6 +26,9 @@ import { useProgressao } from "@/lib/progressaoStore";
 import { useCosmeticos } from "@/lib/cosmeticosStore";
 import { CAT_DESBLOQUEIOS } from "@/lib/desbloqueios";
 import PainelDesbloqueios from "@/components/progressao/PainelDesbloqueios";
+// v87 TROFÉUS QUE SE MOSTRAM: vitrine derivada da store REAL do e-sport
+// (só campeonatos/ligas fechados com «eu» em 1.º lugar — núcleo trofeus.ts).
+import VitrineTrofeus from "@/components/perfil/VitrineTrofeus";
 import { useState as useStateAlias } from "react";
 
 interface Participation {
@@ -306,6 +309,10 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* v87 TROFÉUS QUE SE MOSTRAM: a vitrine fecha o ciclo do e-sport —
+            jogas → competes → és CAMPEÃO → o troféu fica à vista no perfil. */}
+        <VitrineTrofeus />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -314,7 +321,10 @@ const Profile = () => {
           <Tabs defaultValue="all">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-foreground">Área do Perfil</h2>
-              <TabsList className="glass border border-border self-start sm:auto overflow-x-auto flex-nowrap">
+              {/* v87 FURO REAL fechado: sem max-w-full a linha de tabs
+                  (w≈495px) empurrava o scrollWidth do documento em móvel
+                  (390px → sw=507) — agora rola POR DENTRO (overflow-x-auto). */}
+              <TabsList className="glass border border-border self-start sm:auto max-w-full overflow-x-auto flex-nowrap">
                 <div className="flex items-center gap-0.5 pr-1.5 border-r border-border/60 mr-1.5">
                   <span className="text-[10px] text-muted-foreground px-1 hidden lg:inline select-none">Histórico</span>
                   <TabsTrigger value="all" className="text-xs whitespace-nowrap">Todos</TabsTrigger>

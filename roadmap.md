@@ -116,6 +116,15 @@
 - [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
 - [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.
 
+## v87 — «TROFÉUS QUE SE MOSTRAM»: vitrine no perfil + caminho da eliminatória (2026-11-24)
+
+- [x] NÚCLEO PURO src/lib/trofeus.ts NOVO: TROFÉU = campeonato/liga fechada com «eu» em 1.º pelas DUAS fontes (vencedorId/campeaoId E 1.º na ordem — a mesma regra que coroa; incoerência → sem troféu) · PÓDIO = 2.º/3.º real (eliminatória eliminada não é pódio) · COMPETIÇÕES com «eu» inscrito · fechadoEm do histórico · PUREZA provada (não grava nem expira) · ANTI-PODRE — docs/REA-trofeus-v87.md §2.1.
+- [x] VITRINE NO PERFIL (VitrineTrofeus.tsx NOVO): cartões com marca do organizador + selo «Campeão» + prémio, chips = números do núcleo, VAZIO honesto com CTA real /tournaments, nota do aparelho — data-testid perfil-trofeus* completo.
+- [x] BRACKET HONESTO da eliminatória: corteDeRonda (final exige sempre 1.º) + estadosBracket (passou/emCurso/eliminado/campeao/pendente) SÓ de estado real → nós visuais com cor por estado no TorneioLocalDetalhe + nota declarada (o núcleo NÃO elimina bots ronda a ronda — o bracket é o PERCURSO DO JOGADOR); campeonato sem bracket.
+- [x] FURO REAL de móvel fechado: /profile a 390px tinha scrollWidth=507 (TabsList do «Área do Perfil» sem max-w-full empurrava o documento) → sw=390=cw provado pela suíte B4.
+- [x] i18n ×6: 20 chaves novas (esport.bracket.* + perfil.trofeus.*) via scripts/add-i18n-v87.py.
+- [x] Prova: test-trofeus-v87.mjs NOVO **39/39 ×2** (núcleo 18 + E2E 21 com sessão fake padrão v84: vitrine vazia+CTA, seed REAL em aparelho novo com chips = números do núcleo 3/1/6, bracket nos 3 estados + campeonato sem bracket, 1280px ×2 + 390px ×1, i18n EN sem chaves cruas, ZERO pageerror) · regressão esport-v86 44/0 · retencao-v83 39/0 · retencao-v84 67/0 · nav-v79 83/0 · retencacao-v78 38/0 · web-v262 11/0 · som-v67 58/0 · kart-v65 65/0 · kart-ia-v77 26/0 · kart-batalha-v68 30/0 · kart-online-v66 61/0 · desktop-v85 46/0 · tsc -b 0 · tsc app 0 · build OK — docs/REA-trofeus-v87.md §3-4.
+
 ## v86.1 — re-prova em sandbox reciclado + shots + REA doc (2026-11-24)
 
 - [x] Re-prova COMPLETA do v86 (9fab3b3) em sandbox FRESCO: tsc -b 0 · tsc app 0 · test-esport-v86 44/44 ×3 (incluindo com vite re-iniciado a FRIO antes) · regressão kart-v65 65/0 · kart-ia-v77 26/0 · kart-batalha-v68 30/0 · kart-online-v66 61/0 · retencao-v83 39/0 · retencao-v84 67/0 · nav-v79 83/0 · retencacao-v78 38/0 · web-v262 11/0 · som-v67 58/0 — zero edições de src.

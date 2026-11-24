@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Trophy, Users, Gift, ArrowLeft, Building2, Medal, Play, Zap,
-  Swords, CheckCircle2, Coins, History, Crown,
+  Swords, CheckCircle2, Coins, History, Crown, ChevronRight,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
@@ -25,6 +25,7 @@ import { useProgressao } from "@/lib/progressaoStore";
 import {
   torneioPorId, inscreverTorneio, iniciarTorneio, classificacaoTorneio,
   podeClamarTorneio, clamarPremioTorneio, corteRonda, jogoEsport,
+  estadosBracket, corteDeRonda,
   type TorneioEsport,
 } from "@/lib/esport";
 
@@ -128,17 +129,11 @@ export default function TorneioLocalDetalhe({ id }: { id: string }) {
               />
             </div>
 
-            {/* eliminatória: ronda atual e corte */}
-            {torneio.formato === "eliminatoria" && torneio.estado === "ativo" && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-3 text-sm flex items-center gap-2" data-testid="torneio-local-ronda">
-                <Swords className="h-4 w-4 text-rose-400" />
-                <span>
-                  <b>{t("esport.local.ronda", { n: String(torneio.ronda), total: String(torneio.rondasTotal) })}</b>
-                  {" — "}
-                  {t("esport.local.corte", { n: String(corteRonda(torneio)) })}
-                </span>
-              </div>
-            )}
+            {/* v87 BRACKET HONESTO: o CAMINHO DO JOGADOR na eliminatória
+                (ronda a ronda, com o corte real de cada uma) — o núcleo não
+                elimina bots ronda a ronda, por isso o bracket é o percurso
+                do «eu», nunca uma árvore inventada. */}
+            {torneio.formato === "eliminatoria" && <CaminhoEliminatoria torneio={torneio} />}
 
             {/* terminado: campeão + claim */}
             {torneio.estado === "terminado" && (
@@ -272,6 +267,56 @@ function InfoMini({ label, value, testid }: { label: string; value: string; test
     <div className="rounded-lg bg-muted/40 p-2.5" data-testid={testid}>
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className="text-xs font-bold truncate">{value}</p>
+    </div>
+  );
+}
+
+/** v87 — caminho do jogador na eliminatória: um nó por ronda com o corte
+ *  real e o estado derivado pelo núcleo (estadosBracket). */
+function CaminhoEliminatoria({ torneio }: { torneio: TorneioEsport }) {
+  const { t } = useLanguage();
+  const estados = estadosBracket(torneio);
+  if (estados.length === 0) return null;
+  const estilo = {
+    passou: "border-emerald-500/50 bg-emerald-500/10 text-emerald-300",
+    emCurso: "border-rose-500/60 bg-rose-500/15 text-rose-200",
+    eliminado: "border-red-500/50 bg-red-500/10 text-red-300",
+    campeao: "border-amber-500/60 bg-amber-500/15 text-amber-200",
+    pendente: "border-white/10 bg-white/5 text-muted-foreground",
+  } as const;
+  return (
+    <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-3 space-y-2" data-testid="torneio-local-bracket">
+      <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+        <Swords className="h-3.5 w-3.5 text-rose-400" />
+        {t("esport.bracket.titulo")}
+      </div>
+      <div className="flex flex-wrap items-stretch gap-x-1 gap-y-1.5">
+        {estados.map((estado, i) => {
+          const r = i + 1;
+          const final = r === torneio.rondasTotal;
+          const corte = corteDeRonda(torneio.tamanho, r, torneio.rondasTotal);
+          const rotulo = estado === "campeao" ? t("esport.bracket.campeao")
+            : estado === "emCurso" ? t("esport.bracket.emCurso")
+            : estado === "eliminado" ? t("esport.bracket.eliminado")
+            : estado === "passou" ? t("esport.bracket.passou")
+            : t("esport.bracket.pendente");
+          return (
+            <div key={r} className="flex items-center gap-0.5">
+              <div
+                className={`rounded-lg border px-2.5 py-1.5 min-w-[7.25rem] ${estilo[estado]}`}
+                data-testid={`torneio-local-bracket-r${r}`}
+                data-estado={estado}
+              >
+                <p className="text-[10px] font-black leading-tight">{final ? t("esport.bracket.final") : t("esport.bracket.ronda", { n: String(r) })}</p>
+                <p className="text-[9px] opacity-80">{t("esport.bracket.corte", { n: String(corte) })}</p>
+                <p className="text-[10px] font-bold leading-tight mt-0.5">{rotulo}</p>
+              </div>
+              {i < estados.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground" data-testid="torneio-local-bracket-nota">{t("esport.bracket.nota")}</p>
     </div>
   );
 }

@@ -65,15 +65,23 @@ const Navbar = () => {
   const { t } = useLanguage();
   const { sfx } = useSoundEffects();
 
-  const currentAnnouncement: Announcement | null = {
-    id: "live-may2025",
-    emoji: "🔥",
-    text: t("nav.announcement.text"),
-    cta: { label: t("nav.announcement.cta"), href: "/lives-agora" },
-    gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
-  };
   const { format } = useCurrency();
   const location = useLocation();
+
+  /* v85 — «TOPO FINO»: a barra colorida de lives SÓ existe quando há
+     transmissões ACTIVAS de verdade (contagem real lib/counts, 1 pedido/30 s).
+     Sem live activa: a barra desaparece (o aviso passa a viver no cartão
+     «Ao vivo» da homepage — nunca uma faixa fixa cheia de avisos). */
+  const mostrarAnuncio = liveCount > 0;
+  const currentAnnouncement: Announcement | null = mostrarAnuncio
+    ? {
+        id: "live-activa",
+        emoji: "🔥",
+        text: t("nav.announcement.text", { n: String(liveCount) }),
+        cta: { label: t("nav.announcement.cta"), href: "/lives-agora" },
+        gradient: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)) 45%, hsl(var(--accent)))",
+      }
+    : null;
 
   // Premium scroll progress indicator (top of viewport)
   const { scrollYProgress } = useScroll();
@@ -247,7 +255,7 @@ const Navbar = () => {
     const ro = new ResizeObserver(mede);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [currentAnnouncement, announcementDismissed]);
+  }, [currentAnnouncement, announcementDismissed, mostrarAnuncio]);
 
   const hideNavbar = location.pathname.startsWith("/overlay/");
   if (hideNavbar) return null;
@@ -262,6 +270,7 @@ const Navbar = () => {
         {currentAnnouncement && !announcementDismissed && (
           <motion.div
             ref={anuncioRef}
+            data-testid="nav-anuncio"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -317,7 +326,7 @@ const Navbar = () => {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         onMouseMove={handleMouseMove}
         className="navbar-shell fixed left-0 right-0 z-50 hidden lg:block transition-[top] duration-300"
-        style={{ top: currentAnnouncement && !announcementDismissed ? alturaAnuncio : 0 }}
+        style={{ top: currentAnnouncement && !announcementDismissed && mostrarAnuncio ? alturaAnuncio : 0 }}
       >
         <div className="navbar-spotlight" aria-hidden="true" />
 
@@ -349,9 +358,10 @@ const Navbar = () => {
               (scrolled ? "px-6 py-2" : "px-6 py-3")
             }
           >
-            {/* logo */}
-            <div className="group relative flex items-center gap-2.5">
-              <Link to="/" className="relative flex items-center gap-2.5">
+            {/* logo — v85: presença de marca (símbolo maior, menos ar entre
+                símbolo/nome/verificação; altura do nav intacta) */}
+            <div className="group relative flex items-center gap-2">
+              <Link to="/" className="relative flex items-center gap-2">
                 <motion.div
                   whileHover={{ scale: 1.1, rotate: -3 }}
                   whileTap={{ scale: 0.95 }}
@@ -360,7 +370,7 @@ const Navbar = () => {
                   <img
                     src={bateuLogo}
                     alt="Bateu"
-                    className={"transition-all duration-500 " + (scrolled ? "h-8 w-8" : "h-9 w-9")}
+                    className={"transition-all duration-500 " + (scrolled ? "h-10 w-10" : "h-11 w-11")}
                   />
                   <div className="absolute inset-0 rounded-full bg-primary/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </motion.div>

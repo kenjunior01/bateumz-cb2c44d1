@@ -1,16 +1,20 @@
 // ============================================================
-// v79 — HOMEPAGE DESKTOP «POUCAS OPÇÕES PRINCIPAIS»:
-// EXATAMENTE os cinco blocos da visão do produto:
-//   1. Cabeçalho simples (Navbar v79) + TrustBar
-//   2. UMA chamada principal (HeroPrincipal — uma frase, 2 botões)
-//   3. TRÊS cartões de descoberta (DescobertaTres)
-//   4. ACTIVIDADE REAL (ActividadeReal + sorteios disponíveis com
-//      dados reais — mensagem clara quando não há dados)
-//   5. CONFIANÇA no fim (ConfiancaFim + Footer)
+// v85 — HOMEPAGE DESKTOP «DESKTOP VIVO» (sobre a base v79/v83):
+//   1. Cabeçalho fino (TrustBar 1 fio · Navbar v79 — barra de live SÓ
+//      com transmissão activa real)
+//   2. PRIMEIRA DOBRA EM DUAS COLUNAS (HeroDobra): chamada à esquerda,
+//      PAINEL VIVO de progressão à direita (loop «Joga hoje. Acumula
+//      pontos. Desbloqueia prémios.» com números REAIS; registado:
+//      nível/pontos/barra/missão/prémios)
+//   3. TRÊS cartões CONCRETOS (DescobertaTres: KART com recompensa à
+//      vista, partida real de desporto, banner KART com imagem)
+//   4. PRÉMIOS disponíveis (SorteiosConcursosRollUp — dados reais)
+//   5. ACTIVIDADE REAL (ActividadeReal — só números que existem)
+//   6. continuar a jogar (ContinuePlayRail — progressão do próprio)
+//   7. CONFIANÇA no fim (ConfiancaFim + Footer)
 // Sai da homepage (reorganizado, não eliminado):
 //   · stories «Seu Status»/«Bateu Oficial» → Comunidade
 //   · roll-up da loja → Mercado Bateu (página própria)
-//   · CTA central duplicado (o hero JÁ tem os dois botões)
 // Tudo aqui são componentes REAIS de dados (supabase/locais).
 // ============================================================
 import { lazy, Suspense } from "react";
@@ -19,8 +23,7 @@ import { useSEO } from "@/hooks/useSEO";
 import Navbar from "@/components/Navbar";
 import TrustBar from "@/components/TrustBar";
 import Footer from "@/components/Footer";
-import HeroPrincipal from "@/components/home/HeroPrincipal";
-import BoasVindasRetencao from "@/components/home/BoasVindasRetencao";
+import HeroDobra from "@/components/home/HeroDobra";
 import DescobertaTres from "@/components/home/DescobertaTres";
 import ActividadeReal from "@/components/home/ActividadeReal";
 import ConfiancaFim from "@/components/home/ConfiancaFim";
@@ -56,23 +59,18 @@ const Home = () => {
       <TrustBar />
       <Navbar />
       <main id="conteudo-principal" className="pb-16 pt-20 lg:pt-20">
-        {/* pt-20: a navbar é FIXA (topo = fundo do banner de anúncio) — o
-            respiro evita que a chamada principal nasça por baixo dela. */}
-        {/* 2 · UMA chamada principal */}
-        <HeroPrincipal />
+        {/* pt-20: a navbar é FIXA (topo = fundo do banner de anúncio quando
+            existe live activa, 0 caso contrário) — o respiro evita que a
+            chamada principal nasça por baixo dela. */}
+        {/* 2 · PRIMEIRA DOBRA EM DUAS COLUNAS — chamada à esquerda,
+            painel vivo de progressão à direita (v85) */}
+        <HeroDobra />
 
-        {/* 2b · RETENÇÃO À VISTA (v83): a homepage mostra a PROGRESSÃO —
-            visitante vê o que muda com a conta (honesto); registado vê
-            Olá + nível + pontos + missão do dia + torneio + desbloqueios */}
-        <BoasVindasRetencao />
-
-        {/* 3 · TRÊS cartões de descoberta (KART promovido DENTRO de jogos) */}
+        {/* 3 · TRÊS cartões de descoberta CONCRETOS (KART com recompensa,
+            partida real de desporto, banner KART com imagem) */}
         <DescobertaTres />
 
-        {/* 4 · ACTIVIDADE REAL */}
-        <ActividadeReal />
-
-        {/* 4b · SORTEIOS DISPONÍVEIS — descoberta com dados reais */}
+        {/* 4 · PRÉMIOS DISPONÍVEIS — descoberta com dados reais */}
         <section className="px-4 py-8" aria-label="Sorteios disponíveis">
           <div className="container mx-auto max-w-6xl">
             <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card animate-pulse" />}>
@@ -81,12 +79,15 @@ const Home = () => {
           </div>
         </section>
 
+        {/* 5 · ACTIVIDADE REAL */}
+        <ActividadeReal />
+
         {/* continuar a jogar — progressão REAL do próprio jogador (v78) */}
         <Suspense fallback={<div className="h-40" />}>
           <ContinuePlayRail />
         </Suspense>
 
-        {/* 5 · CONFIANÇA */}
+        {/* 6 · CONFIANÇA */}
         <ConfiancaFim />
       </main>
       <Footer />

@@ -116,6 +116,12 @@
 - [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
 - [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.
 
+## v86.1 — re-prova em sandbox reciclado + shots + REA doc (2026-11-24)
+
+- [x] Re-prova COMPLETA do v86 (9fab3b3) em sandbox FRESCO: tsc -b 0 · tsc app 0 · test-esport-v86 44/44 ×3 (incluindo com vite re-iniciado a FRIO antes) · regressão kart-v65 65/0 · kart-ia-v77 26/0 · kart-batalha-v68 30/0 · kart-online-v66 61/0 · retencao-v83 39/0 · retencao-v84 67/0 · nav-v79 83/0 · retencacao-v78 38/0 · web-v262 11/0 · som-v67 58/0 — zero edições de src.
+- [x] FURO de flake do harness fechado: o passo «i18n EN» da suíte apanhou 1 falha em arranque frio do vite (captura antes da hidratação da i18n) → dormir(800) antes da captura com ASSENTAÇÃO INTACTA — re-provas ×2 verdes incl. cenário frio.
+- [x] shots-v86 NOVO (scripts/shots-v86.mjs — dados REAIS criados pelo núcleo esport.ts e injectados pela store, nada de JSON inventado; campo de demo em permutação honesta 1-12): 6 capturas verificadas a olho (lista com marca da empresa, detalhe com classificação F1 viva, form de criação, ligas, detalhe da liga ≤25, menu «Forma de jogar») — docs/REA-esport-v86.md §5.
+
 ## v86 — «E-SPORT VIVO»: torneios/ligas/empresas que funcionam + forma de jogar do kart (2026-11-24)
 
 - [x] NÚCLEO ISOMÓRFICO src/lib/esport.ts NOVO (padrão desafios v70): TORNEIOS campeonato (pontos na janela) e eliminatória (rondas reais, corte top 4→final, tamanhos 4/8, só no kart onde há posições reais) com prémio 100-5000 Pontos Bateu e janela 1-30 dias · LIGAS por jogo (10 jogos do catálogo) com temporada e classificação por partidas reais · EMPRESA organizadora com marca própria (nome+sector→cor/iniciais) · pipeline de resultados REAIS via bus `bateu:partida` {jogoId, pontos, vitoria, posicao, campo}: o kart reporta o CAMPO COMPLETO de 12 posições (tabela F1 25/18/15/12/10/8/6/4/2/1, rivais IA casados POR NOME e sempre etiquetados), os outros jogos acumulam os pontos reais do JOGADOR com teto 25/partida declarado · expirarPendentes coroa o líder ao fechar a janela · claim 1× pago pela store da progressão (pontosDeJogo, sem evento de jogo falso) — nada finge backend (esport.nota.aparelho ×6).

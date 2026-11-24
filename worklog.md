@@ -1,3 +1,22 @@
+Task ID: 86.1
+Agent: Super Z (main)
+Task: v86.1 — re-prova do v86 em sandbox reciclado + endurecimento do harness (flake i18n EN a frio) + shots-v86 com dados reais do núcleo + docs/REA-esport-v86.md
+
+Work Log:
+- Estado à entrada: sandbox reciclado, origin/main já em 9fab3b3 (v86, commit + push feitos na fatia anterior); falta ao padrão v81-v85: shots da versão e REA doc
+- VERIFICAÇÃO COMPLETA no sandbox novo: vite no 8099 · tsc -b 0 · tsc app 0 · test-esport-v86 44/44 ×3 (incluindo 44/44 com vite re-iniciado a FRIO imediatamente antes) · regressão kart-v65 65/0 · kart-ia-v77 26/0 · kart-batalha-v68 30/0 · kart-online-v66 61/0 · retencao-v83 39/0 · retencao-v84 67/0 · nav-v79 83/0 · retencacao-v78 38/0 · web-v262 11/0 · som-v67 58/0 (runner scripts/run-suites-v86.sh guarda o server e corre as suítes na mesma sessão — o sandbox mata processos em background entre chamadas)
+- FURO de FLAKE caçado e fechado: o passo «i18n EN» da suíte falhou 1× (43/44) NO 1.º run pós-reciclo — em arranque frio do vite, o waitForSelector do formulário resolvia no 1.º paint e a captura do HTML/h1 chegava antes da hidratação da i18n (probe scripts/probe-i18n-v86.mjs: com settle de 800 ms passa; probe-b ×6 corridas também); FIX honesto no harness: dormir(800) antes da captura, ASSERTAÇÃO INTACTA — re-provas ×2 verdes incluindo o cenário frio
+- shots-v86 NOVO (scripts/shots-v86.mjs, padrão v84/v85 — dados REAIS criados pelo próprio núcleo esport.ts em Node, injectados pela store bateu_esport_v1, NADA de JSON inventado): v86-torneios-lista (secção «Torneios que funcionam agora» com 2 reais, marca TropiCola visível) · v86-torneio-detalhe (classificação F1 viva Kudisso 43 · Eu 40, IA etiquetados, histórico, nota honesta) · v86-criar-form · v86-ligas-lista («Ligas do aparelho» + CTA modal) · v86-liga-detalhe (xadrez ≤25/partida declarado, Eu 50) · v86-kart-forma (menu com Forma de jogar ×3 + assistência + auto) — os 6 shots VERIFICADOS a olho
+- FUROS do próprio script de shots caçados: (1) stringify DUPLO da store (a shim guarda string; JSON.stringify de novo devolvia string-escapada e o lerEsport recusava → secção local vazia) — repro com probe-seed e fix de uma linha; (2) o campo de demo tinha posições DUPLICADAS (o jogo real nunca produz) → permutação honesta 1-12 no campoRace
+- docs/REA-esport-v86.md NOVO (§1 pedido · §2 núcleo/kart/superfícies/i18n · §3 provas 44/44 + regressão · §4 honestidade · §5 v86.1)
+
+Stage Summary:
+- O v86 está re-provado de ponta a ponta num sandbox FRESCO: a suíte própria 44/44 ×3, as 10 suítes de regressão e os 2 gates tsc — tudo verde no estado do commit 9fab3b3, sem qualquer edição de src
+- A suíte fica mais dura: o flake de arranque frio está fechado no harness (settle antes da captura) e os shots da versão existem com dados que o NÚCLEO criou de verdade
+- Falta nada ao padrão v81-v85 para a v86: shots + REA doc + worklog/roadmap atualizados
+
+---
+
 Task ID: 86
 Agent: Super Z (main)
 Task: v86 — «E-SPORT VIVO»: melhorar a forma de jogar o kart (dificuldade + assistência + auto-aceleração) + torneios/ligas de e-sport que FUNCIONAM (criação por jogadores E por empresas, resultados SÓ de partidas reais)

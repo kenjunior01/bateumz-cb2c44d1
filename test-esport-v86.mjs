@@ -442,6 +442,7 @@ async function main() {
   await pg.evaluate(() => localStorage.setItem("bateu_lang", "en"));
   await pg.goto(`${BASE}/tournaments/criar`, { waitUntil: "domcontentloaded" });
   await pg.waitForSelector('[data-testid="torneio-form-nome"]', { timeout: 30_000 });
+  await dormir(800); // v86.1: settle — arranque frio do vite hidrata a i18n depois do 1.º paint (flake apanhado a 44/43 no 1.º run pós-commit); a ASSENTAÇÃO é a mesma, só a captura estabiliza
   const htmlCriar = await pg.content();
   const chavesCruas = htmlCriar.match(/esport\.[a-zA-Z.]+|kart\.forma\.[a-zA-Z.]+/g);
   const tituloEn = await pg.locator("h1").first().innerText();

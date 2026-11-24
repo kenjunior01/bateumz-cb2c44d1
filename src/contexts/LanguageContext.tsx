@@ -9,6 +9,12 @@ type Dict = Record<string, string>;
 // Per-key fallback (see `t()` resolver below). Add localized keys as they are produced.
 const translations: Partial<Record<Lang, Dict>> = {
   en: {
+
+    // ===== v88 DESIGN DESKTOP: responsible gaming readable + honest on every theme =====
+    "rg.actividade.partidas": "Games played today",
+    "rg.actividade.jogos": "Different games today",
+    "rg.actividade.nota": "Real data from this device",
+
     // ===== v87 TROPHIES ON SHOW: profile showcase + knockout path =====
     "esport.bracket.titulo": "Knockout path",
     "esport.bracket.ronda": "Round {n}",
@@ -1647,6 +1653,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.quick.premios": "Prizes",
   },
   pt: {
+
+    // ===== v88 DESIGN DESKTOP: jogo responsável legível e honesto em qualquer tema =====
+    "rg.actividade.partidas": "Partidas jogadas hoje",
+    "rg.actividade.jogos": "Jogos distintos hoje",
+    "rg.actividade.nota": "Dados reais deste aparelho",
+
     // ===== v87 TROFÉUS QUE SE MOSTRAM: vitrine no perfil + caminho da eliminatória =====
     "esport.bracket.titulo": "Caminho na eliminatória",
     "esport.bracket.ronda": "Ronda {n}",
@@ -3225,6 +3237,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.quick.premios": "Prémios",
   },
   "pt-BR": {
+
+    // ===== v88 DESIGN DESKTOP: jogo responsável legível e honesto em qualquer tema =====
+    "rg.actividade.partidas": "Partidas jogadas hoje",
+    "rg.actividade.jogos": "Jogos distintos hoje",
+    "rg.actividade.nota": "Dados reais deste aparelho",
+
     // ===== v87 TROFÉUS EM DESTAQUE: vitrine no perfil + caminho da eliminatória =====
     "esport.bracket.titulo": "Caminho na eliminatória",
     "esport.bracket.ronda": "Rodada {n}",
@@ -4582,6 +4600,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.quick.premios": "Prêmios",
   },
   es: {
+
+    // ===== v88 DESIGN DESKTOP: juego responsable legible y honesto en cualquier tema =====
+    "rg.actividade.partidas": "Partidas jugadas hoy",
+    "rg.actividade.jogos": "Juegos distintos hoy",
+    "rg.actividade.nota": "Datos reales de este aparato",
+
     // ===== v87 TROFEOS EN VITRINA: escaparate en el perfil + camino de la eliminatoria =====
     "esport.bracket.titulo": "Camino en la eliminatoria",
     "esport.bracket.ronda": "Ronda {n}",
@@ -5711,6 +5735,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.quick.premios": "Premios",
   },
   fr: {
+
+    // ===== v88 DESIGN DESKTOP: jeu responsable lisible et honnête sur tous les thèmes =====
+    "rg.actividade.partidas": "Parties jouées aujourd'hui",
+    "rg.actividade.jogos": "Jeux différents aujourd'hui",
+    "rg.actividade.nota": "Données réelles de cet appareil",
+
     // ===== v87 TROPHÉES EN VITRINE : vitrine du profil + parcours de l'éliminatoire =====
     "esport.bracket.titulo": "Parcours en éliminatoire",
     "esport.bracket.ronda": "Manche {n}",
@@ -6807,6 +6837,12 @@ const translations: Partial<Record<Lang, Dict>> = {
     "nav.quick.premios": "Prix",
   },
   hi: {
+
+    // ===== v88 DESIGN DESKTOP: ज़िम्मेदार गेमिंग हर थीम में पढ़ने योग्य और ईमानदार =====
+    "rg.actividade.partidas": "आज खेले गए मैच",
+    "rg.actividade.jogos": "आज के अलग-अलग गेम",
+    "rg.actividade.nota": "इस डिवाइस का वास्तविक डेटा",
+
     // ===== v87 ट्रॉफ़ी प्रदर्शन: प्रोफ़ाइल शोकेस + नॉकआउट पथ =====
     "esport.bracket.titulo": "नॉकआउट में रास्ता",
     "esport.bracket.ronda": "राउंड {n}",

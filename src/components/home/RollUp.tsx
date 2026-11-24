@@ -18,6 +18,7 @@ export default function RollUp({
   viewAllHref,
   viewAllLabel = "Ver tudo",
   autoAdvanceMs = 0,
+  tonal = "escuro",
   children,
 }: {
   kicker: string;
@@ -27,6 +28,10 @@ export default function RollUp({
   viewAllHref?: string;
   viewAllLabel?: string;
   autoAdvanceMs?: number;
+  /** v88 DESIGN DESKTOP: «escuro» (padrão, cinema) ou «claro» — fundo
+   *  transparente + texto do tema, para secções em páginas claras. No claro
+   *  uma secção com 1-2 cartões deixa de ser uma CAIXA PRETA gigante. */
+  tonal?: "escuro" | "claro";
   children: React.ReactNode;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +118,12 @@ export default function RollUp({
   return (
     <section
       className="relative py-8 sm:py-12"
-      style={{ background: "linear-gradient(180deg, #050508 0%, #07060d 50%, #050508 100%)" }}
+      style={
+        tonal === "claro"
+          ? { background: "transparent" }
+          : { background: "linear-gradient(180deg, #050508 0%, #07060d 50%, #050508 100%)" }
+      }
+      data-testid={`rollup-${tonal}`}
       onMouseEnter={pause}
       onMouseLeave={resume}
       onTouchStart={pause}
@@ -121,10 +131,12 @@ export default function RollUp({
       aria-roledescription="carousel"
     >
       {/* brilho de fundo na cor do acento */}
-      <div
-        className="absolute inset-x-0 top-0 h-40 pointer-events-none opacity-60"
-        style={{ background: `radial-gradient(ellipse 50% 80% at 50% 0%, ${accent}0d, transparent 70%)` }}
-      />
+      {tonal !== "claro" && (
+        <div
+          className="absolute inset-x-0 top-0 h-40 pointer-events-none opacity-60"
+          style={{ background: `radial-gradient(ellipse 50% 80% at 50% 0%, ${accent}0d, transparent 70%)` }}
+        />
+      )}
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         {/* ─── Cabeçalho ─── */}
@@ -139,15 +151,19 @@ export default function RollUp({
                 {kicker}
               </span>
             </div>
-            <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white leading-tight line-clamp-2">{title}</h2>
-            {subtitle && <p className="text-xs sm:text-sm text-zinc-500 mt-1 line-clamp-1">{subtitle}</p>}
+            <h2 className={"text-xl sm:text-3xl font-black tracking-tight leading-tight line-clamp-2 " + (tonal === "claro" ? "text-foreground" : "text-white")}>{title}</h2>
+            {subtitle && <p className={"text-xs sm:text-sm mt-1 line-clamp-1 " + (tonal === "claro" ? "text-muted-foreground" : "text-zinc-500")}>{subtitle}</p>}
           </div>
 
           {viewAllHref && (
             <Link
               to={viewAllHref}
               className="shrink-0 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition-all duration-200 hover:scale-[1.03] active:scale-95"
-              style={{ color: accent, background: `${accent}0f`, border: `1px solid ${accent}26` }}
+              style={
+                tonal === "claro"
+                  ? { color: accent, background: `${accent}12`, border: `1px solid ${accent}30` }
+                  : { color: accent, background: `${accent}0f`, border: `1px solid ${accent}26` }
+              }
             >
               {viewAllLabel}
               <ArrowRight className="h-3.5 w-3.5" />
@@ -162,22 +178,35 @@ export default function RollUp({
             aria-label="Anterior"
             onClick={() => scrollByCard(-1)}
             className={`hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${canPrev ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-            style={{ background: "rgba(10,10,16,0.92)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}
+            style={
+              tonal === "claro"
+                ? { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", boxShadow: "0 4px 24px rgba(0,0,0,0.12)" }
+                : { background: "rgba(10,10,16,0.92)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }
+            }
           >
-            <ChevronLeft className="h-5 w-5 text-white" />
+            <ChevronLeft className={tonal === "claro" ? "h-5 w-5 text-foreground" : "h-5 w-5 text-white"} />
           </button>
           <button
             aria-label="Seguinte"
             onClick={() => scrollByCard(1)}
             className={`hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${canNext ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-            style={{ background: "rgba(10,10,16,0.92)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}
+            style={
+              tonal === "claro"
+                ? { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", boxShadow: "0 4px 24px rgba(0,0,0,0.12)" }
+                : { background: "rgba(10,10,16,0.92)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }
+            }
           >
-            <ChevronRight className="h-5 w-5 text-white" />
+            <ChevronRight className={tonal === "claro" ? "h-5 w-5 text-foreground" : "h-5 w-5 text-white"} />
           </button>
 
-          {/* degradés nas bordas (desktop) */}
-          <div className="hidden md:block absolute inset-y-0 left-0 w-10 z-10 pointer-events-none" style={{ background: "linear-gradient(90deg, #050508, transparent)" }} />
-          <div className="hidden md:block absolute inset-y-0 right-0 w-10 z-10 pointer-events-none" style={{ background: "linear-gradient(-90deg, #050508, transparent)" }} />
+          {/* degradés nas bordas (desktop) — só no escuro: no claro a secção
+              é transparente e o fade teria de «inventar» a cor da página */}
+          {tonal !== "claro" && (
+            <>
+              <div className="hidden md:block absolute inset-y-0 left-0 w-10 z-10 pointer-events-none" style={{ background: "linear-gradient(90deg, #050508, transparent)" }} />
+              <div className="hidden md:block absolute inset-y-0 right-0 w-10 z-10 pointer-events-none" style={{ background: "linear-gradient(-90deg, #050508, transparent)" }} />
+            </>
+          )}
 
           <div
             ref={scrollerRef}
@@ -195,7 +224,7 @@ export default function RollUp({
         {/* ─── Indicador de progresso ─── */}
         {pages > 1 && (
           <div className="mt-3 flex items-center gap-3">
-            <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <div className={"flex-1 h-1 rounded-full overflow-hidden " + (tonal === "claro" ? "bg-border" : "")} style={tonal === "claro" ? undefined : { background: "rgba(255,255,255,0.06)" }}>
               <div
                 className="h-full rounded-full transition-all duration-200"
                 style={{ width: `${Math.max(12, progress * 100)}%`, background: `linear-gradient(90deg, ${accent}66, ${accent})`, boxShadow: `0 0 12px ${accent}55` }}
@@ -211,7 +240,7 @@ export default function RollUp({
                   style={{
                     width: i === Math.min(page, 7) ? 14 : 5,
                     height: 5,
-                    background: i === Math.min(page, 7) ? accent : "rgba(255,255,255,0.15)",
+                    background: i === Math.min(page, 7) ? accent : tonal === "claro" ? "hsl(var(--border))" : "rgba(255,255,255,0.15)",
                   }}
                 />
               ))}

@@ -67,6 +67,7 @@ export default function SorteiosConcursosRollUp() {
       accent={ACCENT.gold}
       viewAllHref="/marketplace"
       viewAllLabel="Ver tudo"
+      tonal="claro"
     >
       {/* ── Sorteios reais ── */}
       {raffles.map((r, i) => {

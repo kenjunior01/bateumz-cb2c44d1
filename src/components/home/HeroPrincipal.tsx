@@ -23,11 +23,11 @@ const HeroPrincipal = ({ naDobra = false }: { naDobra?: boolean }) => {
       <h1
         id="hero-principal-title"
         data-testid="home79-frase"
-        className="font-display text-2xl font-black leading-tight tracking-tight text-foreground sm:text-4xl"
+        className="font-display text-2xl font-black leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl"
       >
         {t("home79.frase")}
       </h1>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base lg:text-lg">
         {t("home79.sub")}
       </p>
 

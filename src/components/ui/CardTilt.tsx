@@ -93,10 +93,11 @@ export default function CardTilt({
           opacity: glareOpacityVal,
         }}
       />
-      {/* Optional border glow */}
+      {/* Optional border glow — v88: inset-0 (era -inset-px: a caixa do brilho
+          ultrapassava o pai em 1px de cada lado e criava sw=1281 no /jogos) */}
       {borderGlow && (
         <motion.div
-          className="pointer-events-none absolute -inset-px rounded-[inherit]"
+          className="pointer-events-none absolute inset-0 rounded-[inherit]"
           style={{ boxShadow: glowBoxShadow }}
         />
       )}

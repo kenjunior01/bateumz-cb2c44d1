@@ -16,7 +16,10 @@ import {
   AlertTriangle,
   Lock,
   CalendarX,
+  Gamepad2,
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useProgressao } from '@/lib/progressaoStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,13 +40,12 @@ type TimeLimit = 30 | 60 | 120 | 240 | null;
 type CoinLimit = 100 | 500 | 1000 | 5000 | null;
 type BreakDuration = '24h' | '48h' | '7d' | '30d';
 
-interface ActivitySummary {
-  timeSpentToday: number; // minutes
-  coinsUsedThisWeek: number;
-}
-
 // ============================================================
-// DADOS MOCK
+// v88 DESIGN DESKTOP — HONESTIDADE: os números do «Resumo de Actividade»
+// eram MOCK hard-coded (47 min / 820 moedas) mas o cartão dizia «Dados
+// calculados neste dispositivo» — FALSO. Agora vêm da progressão REAL do
+// aparelho (bateu_progressao_v78): partidas jogadas hoje e jogos distintos
+// hoje. Zero dados inventados.
 // ============================================================
 
 const TIME_LIMIT_OPTIONS: { value: TimeLimit; label: string }[] = [
@@ -68,11 +70,6 @@ const BREAK_OPTIONS: { value: BreakDuration; label: string; description: string 
   { value: '7d', label: '7 dias', description: 'Pausa de uma semana' },
   { value: '30d', label: '30 dias', description: 'Pausa de um mês' },
 ];
-
-const MOCK_ACTIVITY: ActivitySummary = {
-  timeSpentToday: 47,
-  coinsUsedThisWeek: 820,
-};
 
 // ============================================================
 // HELPERS
@@ -100,6 +97,15 @@ function getSliderPosition(index: number, total: number): number {
 // ============================================================
 
 export default function ResponsibleGaming() {
+  const { t } = useLanguage();
+  // v88: números REAIS do aparelho (não mock) — partidas/jogos distintos de hoje.
+  // Padrão dos consumidores (BoasVindasRetencao/Premios/Profile): timestamp ESTÁVEL —
+  // Date.now() inline re-agendava as missões a CADA render (loop de re-render).
+  const [agora] = useState(() => Date.now());
+  const progressao = useProgressao(agora);
+  const partidasHoje = progressao.estado.corridas;
+  const jogosDistintosHoje = progressao.estado.jogosHoje.length;
+
   // Estado local
   const [timeLimit, setTimeLimit] = useState<TimeLimit>(60);
   const [coinLimit, setCoinLimit] = useState<CoinLimit>(1000);
@@ -158,7 +164,10 @@ export default function ResponsibleGaming() {
       className="w-full space-y-4"
     >
       {/* ---- Limite de Tempo Diário ---- */}
+      {/* v88 DESIGN DESKTOP: tokens de tema (text-foreground) — legível em tema
+          claro E escuro. Era text-white → invisível no rodapé claro das páginas. */}
       <Card
+        data-testid="rg-tempo-card"
         className="border-sky-500/15"
         style={{ background: 'rgba(14, 165, 233, 0.04)' }}
       >
@@ -167,15 +176,15 @@ export default function ResponsibleGaming() {
           className="w-full text-left"
         >
           <CardHeader className="pb-2 cursor-pointer">
-            <CardTitle className="flex items-center justify-between text-sm font-semibold text-white">
+            <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
               <span className="flex items-center gap-2">
-                <Timer className="h-4 w-4 text-sky-400" />
+                <Timer className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                 Limite de Tempo Diário
               </span>
               {expandedSections.has('time-limit') ? (
-                <ChevronUp className="h-4 w-4 text-white/30" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground/60" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/30" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
               )}
             </CardTitle>
           </CardHeader>
@@ -191,7 +200,7 @@ export default function ResponsibleGaming() {
               className="overflow-hidden"
             >
               <CardContent className="pt-0 pb-4 space-y-4">
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   Define um limite de tempo diário para jogar. Quando atingires o limite, serás notificado.
                 </p>
 
@@ -206,13 +215,13 @@ export default function ResponsibleGaming() {
                     step={25}
                     className="w-full [&_[role=slider]]:bg-sky-400 [&_[role=slider]]:border-sky-300 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=track]]:bg-sky-500/20"
                   />
-                  <div className="flex justify-between text-[10px] text-white/25 font-medium">
+                  <div className="flex justify-between text-[10px] text-muted-foreground/70 font-medium">
                     {TIME_LIMIT_OPTIONS.map((opt) => (
                       <span
                         key={opt.label}
                         className={
                           timeLimit === opt.value
-                            ? 'text-sky-400 font-bold'
+                            ? 'text-sky-600 dark:text-sky-400 font-bold'
                             : ''
                         }
                       >
@@ -223,26 +232,14 @@ export default function ResponsibleGaming() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 text-sky-400/50" />
-                  <span className="text-xs text-white/50">
+                  <Clock className="h-3.5 w-3.5 text-sky-500/60 dark:text-sky-400/50" />
+                  <span className="text-xs text-foreground/70">
                     Limite actual:{' '}
-                    <span className="text-sky-400 font-semibold">
+                    <span className="text-sky-600 dark:text-sky-400 font-semibold">
                       {timeLimit ? formatMinutes(timeLimit) : 'Sem limite'}
                     </span>
                   </span>
                 </div>
-
-                {MOCK_ACTIVITY.timeSpentToday > 0 && (
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <Activity className="h-3 w-3 text-sky-400/40" />
-                    <span className="text-white/30">
-                      Hoje já usaste{' '}
-                      <span className="text-white/50 font-medium">
-                        {formatMinutes(MOCK_ACTIVITY.timeSpentToday)}
-                      </span>
-                    </span>
-                  </div>
-                )}
               </CardContent>
             </motion.div>
           )}
@@ -251,6 +248,7 @@ export default function ResponsibleGaming() {
 
       {/* ---- Limite de Moedas Semanal ---- */}
       <Card
+        data-testid="rg-moedas-card"
         className="border-sky-500/15"
         style={{ background: 'rgba(14, 165, 233, 0.04)' }}
       >
@@ -259,15 +257,15 @@ export default function ResponsibleGaming() {
           className="w-full text-left"
         >
           <CardHeader className="pb-2 cursor-pointer">
-            <CardTitle className="flex items-center justify-between text-sm font-semibold text-white">
+            <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
               <span className="flex items-center gap-2">
-                <Coins className="h-4 w-4 text-sky-400" />
+                <Coins className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                 Limite de Moedas Semanal
               </span>
               {expandedSections.has('coin-limit') ? (
-                <ChevronUp className="h-4 w-4 text-white/30" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground/60" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/30" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
               )}
             </CardTitle>
           </CardHeader>
@@ -283,7 +281,7 @@ export default function ResponsibleGaming() {
               className="overflow-hidden"
             >
               <CardContent className="pt-0 pb-4 space-y-4">
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   Define um limite semanal para as moedas virtuais que podes usar em previsões.
                 </p>
 
@@ -298,13 +296,13 @@ export default function ResponsibleGaming() {
                     step={25}
                     className="w-full [&_[role=slider]]:bg-sky-400 [&_[role=slider]]:border-sky-300 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=track]]:bg-sky-500/20"
                   />
-                  <div className="flex justify-between text-[10px] text-white/25 font-medium">
+                  <div className="flex justify-between text-[10px] text-muted-foreground/70 font-medium">
                     {COIN_LIMIT_OPTIONS.map((opt) => (
                       <span
                         key={opt.label}
                         className={
                           coinLimit === opt.value
-                            ? 'text-sky-400 font-bold'
+                            ? 'text-sky-600 dark:text-sky-400 font-bold'
                             : ''
                         }
                       >
@@ -315,27 +313,14 @@ export default function ResponsibleGaming() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <TrendingDown className="h-3.5 w-3.5 text-sky-400/50" />
-                  <span className="text-xs text-white/50">
+                  <TrendingDown className="h-3.5 w-3.5 text-sky-500/60 dark:text-sky-400/50" />
+                  <span className="text-xs text-foreground/70">
                     Limite actual:{' '}
-                    <span className="text-sky-400 font-semibold">
+                    <span className="text-sky-600 dark:text-sky-400 font-semibold">
                       {coinLimit ? `${coinLimit.toLocaleString('pt-BR')} moedas` : 'Sem limite'}
                     </span>
                   </span>
                 </div>
-
-                {MOCK_ACTIVITY.coinsUsedThisWeek > 0 && (
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <Activity className="h-3 w-3 text-sky-400/40" />
-                    <span className="text-white/30">
-                      Esta semana usaste{' '}
-                      <span className="text-white/50 font-medium">
-                        {MOCK_ACTIVITY.coinsUsedThisWeek.toLocaleString('pt-BR')}
-                      </span>{' '}
-                      moedas
-                    </span>
-                  </div>
-                )}
               </CardContent>
             </motion.div>
           )}
@@ -344,6 +329,7 @@ export default function ResponsibleGaming() {
 
       {/* ---- Fazer Pausa ---- */}
       <Card
+        data-testid="rg-pausa-card"
         className="border-amber-500/15"
         style={{ background: 'rgba(245, 158, 11, 0.04)' }}
       >
@@ -352,15 +338,15 @@ export default function ResponsibleGaming() {
           className="w-full text-left"
         >
           <CardHeader className="pb-2 cursor-pointer">
-            <CardTitle className="flex items-center justify-between text-sm font-semibold text-white">
+            <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
               <span className="flex items-center gap-2">
-                <PauseCircle className="h-4 w-4 text-amber-400" />
+                <PauseCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                 Fazer Pausa
               </span>
               {expandedSections.has('break') ? (
-                <ChevronUp className="h-4 w-4 text-white/30" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground/60" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/30" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
               )}
             </CardTitle>
           </CardHeader>
@@ -376,7 +362,7 @@ export default function ResponsibleGaming() {
               className="overflow-hidden"
             >
               <CardContent className="pt-0 pb-4 space-y-4">
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   Precisas de um descanso? Activa uma pausa temporária. Durante a pausa, não poderás aceder às previsões.
                 </p>
 
@@ -386,12 +372,12 @@ export default function ResponsibleGaming() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_15px_hsl(var(--primary)/0.12)]"
                   >
-                    <CheckCircle className="h-5 w-5 text-amber-400 shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-300">
+                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-300">
                         Pausa activada com sucesso
                       </p>
-                      <p className="text-xs text-white/40 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         A tua pausa está activa. Podes voltar quando quiseres.
                       </p>
                     </div>
@@ -422,6 +408,7 @@ export default function ResponsibleGaming() {
 
       {/* ---- Auto-Exclusão ---- */}
       <Card
+        data-testid="rg-exclusao-card"
         className="border-red-500/15"
         style={{ background: 'rgba(239, 68, 68, 0.04)' }}
       >
@@ -430,15 +417,15 @@ export default function ResponsibleGaming() {
           className="w-full text-left"
         >
           <CardHeader className="pb-2 cursor-pointer">
-            <CardTitle className="flex items-center justify-between text-sm font-semibold text-white">
+            <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
               <span className="flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-red-400" />
+                <ShieldAlert className="h-4 w-4 text-red-500 dark:text-red-400" />
                 Auto-Exclusão
               </span>
               {expandedSections.has('exclusion') ? (
-                <ChevronUp className="h-4 w-4 text-white/30" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground/60" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/30" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
               )}
             </CardTitle>
           </CardHeader>
@@ -454,7 +441,7 @@ export default function ResponsibleGaming() {
               className="overflow-hidden"
             >
               <CardContent className="pt-0 pb-4 space-y-4">
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   Se sentes que precisas de uma pausa mais longa, podes auto-excluir-te. A tua conta será desactivada temporariamente.
                 </p>
 
@@ -464,12 +451,12 @@ export default function ResponsibleGaming() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20"
                   >
-                    <Lock className="h-5 w-5 text-red-400 shrink-0" />
+                    <Lock className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-red-300">
+                      <p className="text-sm font-semibold text-red-600 dark:text-red-300">
                         Auto-exclusão activada
                       </p>
-                      <p className="text-xs text-white/40 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         A tua conta foi desactivada. Contacta o suporte para reactivar.
                       </p>
                     </div>
@@ -491,7 +478,11 @@ export default function ResponsibleGaming() {
       </Card>
 
       {/* ---- Resumo de Actividade ---- */}
+      {/* v88 HONESTO: os números eram MOCK (47 min / 820) com a nota «Dados
+          calculados neste dispositivo» — agora mostram a progressão REAL do
+          aparelho (partidas hoje · jogos distintos hoje). */}
       <Card
+        data-testid="rg-actividade-card"
         className="border-sky-500/15"
         style={{ background: 'rgba(14, 165, 233, 0.04)' }}
       >
@@ -500,15 +491,15 @@ export default function ResponsibleGaming() {
           className="w-full text-left"
         >
           <CardHeader className="pb-2 cursor-pointer">
-            <CardTitle className="flex items-center justify-between text-sm font-semibold text-white">
+            <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
               <span className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-sky-400" />
+                <Activity className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                 Resumo de Actividade
               </span>
               {expandedSections.has('activity') ? (
-                <ChevronUp className="h-4 w-4 text-white/30" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground/60" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/30" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
               )}
             </CardTitle>
           </CardHeader>
@@ -526,21 +517,21 @@ export default function ResponsibleGaming() {
               <CardContent className="pt-0 pb-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(14, 165, 233, 0.06)' }}>
-                    <Clock className="h-5 w-5 text-sky-400/50 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-white">
-                      {formatMinutes(MOCK_ACTIVITY.timeSpentToday)}
+                    <Activity className="h-5 w-5 text-sky-500/60 dark:text-sky-400/50 mx-auto mb-2" />
+                    <p data-testid="rg-actividade-partidas" className="text-lg font-bold text-foreground">
+                      {partidasHoje}
                     </p>
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">
-                      Tempo hoje
+                    <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider mt-0.5">
+                      {t("rg.actividade.partidas")}
                     </p>
                   </div>
                   <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(14, 165, 233, 0.06)' }}>
-                    <Coins className="h-5 w-5 text-sky-400/50 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-white">
-                      {MOCK_ACTIVITY.coinsUsedThisWeek.toLocaleString('pt-BR')}
+                    <Gamepad2 className="h-5 w-5 text-sky-500/60 dark:text-sky-400/50 mx-auto mb-2" />
+                    <p data-testid="rg-actividade-jogos" className="text-lg font-bold text-foreground">
+                      {jogosDistintosHoje}
                     </p>
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">
-                      Moedas esta semana
+                    <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider mt-0.5">
+                      {t("rg.actividade.jogos")}
                     </p>
                   </div>
                 </div>
@@ -548,13 +539,13 @@ export default function ResponsibleGaming() {
                 <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'rgba(14, 165, 233, 0.05)' }}>
                   <Badge
                     variant="outline"
-                    className="border-sky-500/20 text-sky-400 text-[10px] bg-sky-500/10"
+                    className="border-sky-500/20 text-sky-600 dark:text-sky-400 text-[10px] bg-sky-500/10"
                   >
                     <Activity className="h-3 w-3 mr-1" />
                     Resumo local
                   </Badge>
-                  <span className="text-[10px] text-white/30">
-                    Dados calculados neste dispositivo
+                  <span className="text-[10px] text-muted-foreground/80">
+                    {t("rg.actividade.nota")}
                   </span>
                 </div>
               </CardContent>

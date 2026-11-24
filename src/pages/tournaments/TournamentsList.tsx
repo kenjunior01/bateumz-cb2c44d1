@@ -109,7 +109,9 @@ export default function TournamentsList() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="mx-auto max-w-5xl px-4 py-8">
+      {/* v88 DESIGN DESKTOP: pt-24 — a navbar é FIXA e o título nasça SOB ela
+          (era py-8 → «Torneios» cortado pelo cabeçalho em qualquer desktop) */}
+      <div className="mx-auto max-w-5xl px-4 pt-24 pb-8">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

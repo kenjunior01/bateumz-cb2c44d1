@@ -116,6 +116,16 @@
 - [x] FURO REAL pré-existente fechado: painel regional crashava com Intl «Invalid currency code : MZ» (país passado como moeda) → mapa COUNTRIES — docs/REA-classicos-v72.md §7.
 - [x] Prova: test-classic-v72.mjs 53/53 ×2 (núcleo 24 + E2E 29 com auth mockada nos painéis) · regressão desafios-v70 36/0 · kart-v65 65/0 · online-v66 61/0 · batalha-v68 30/0 · som-v67 58/0 · web-v262 11/0 · tsc 0 · build OK — docs/REA-classicos-v72.md §8.
 
+## v88 — «DESIGN DESKTOP»: o desktop deixa de ter defeitos visuais (2026-11-24)
+
+- [x] DIAGNÓSTICO com browser em 6 rotas: furo de 360px no /lives (coluna 1fr crescendo com o min-content dos jogos), furo de 1px no /jogos (CardTilt -inset-px), texto INVISÍVEL do jogo responsável no rodapé claro de todas as páginas (text-white), «caixa preta» gigante na secção de sorteios da homepage (RollUp com fundo escuro hard-coded), «Torneios» cortado pela navbar fixa (py-8 sem folga) — docs/REA-desktop-v88.md §2.
+- [x] FUROS MORTOS: #game-content-area com minmax(0,1fr)+min-w-0 (sw=1280 provado) e CardTilt borderGlow inset-0 (sw=1280 provado) — docs/REA-desktop-v88.md §3.1-3.2.
+- [x] RG LEGÍVEL EM QUALQUER TEMA: tokens de tema nos 4 cartões (text-foreground/muted-foreground, acentos sky-600 dark:) + diálogos escuros intencionalmente intactos + data-testid rg-* — docs/REA-desktop-v88.md §3.3.
+- [x] HONESTIDADE: fim do MOCK 47min/820 — «Resumo de Actividade» mostra a progressão REAL do aparelho (partidas hoje · jogos distintos hoje, bateu_progressao_v78) + nota «Dados reais deste aparelho» ×6 idiomas; timestamp ESTÁVEL (padrão dos consumidores — Date.now() inline era loop de re-render) — docs/REA-desktop-v88.md §3.4.
+- [x] ROLLUP tonal=«claro» (padrão «escuro» intacto para os outros consumidores): homepage sem caixa preta, título do tema, setas/trilho com hsl(var(--card)/border) — docs/REA-desktop-v88.md §3.5.
+- [x] DOBRA PREMIUM: ambiente decorativo (home88-ambiente, só ≥lg) nas cores da marca + h1 lg:text-5xl (48px provado) + subtítulo lg:text-lg; grelha 2 colunas v85 intata — docs/REA-desktop-v88.md §3.7.
+- [x] Prova: test-desktop-v88.mjs NOVO **30/30** (zero overflow ×6 rotas a 1280 · RG legível+honesto · rollup claro · topo do torneio · dobra 48px · 390px sem regressão · i18n EN limpo · zero pageerror) · regressão desktop-v85 46/0 · nav-v79 83/0 · esport-v86 44/0 · retencao-v83 39/0 · retencao-v84 67/0 · retencacao-v78 38/0 · web-v262 11/0 · kart-v65 65/0 · tsc -b 0 · tsc app 0 · build OK (4520 módulos) — docs/REA-desktop-v88.md §4.
+
 ## v87 — «TROFÉUS QUE SE MOSTRAM»: vitrine no perfil + caminho da eliminatória (2026-11-24)
 
 - [x] NÚCLEO PURO src/lib/trofeus.ts NOVO: TROFÉU = campeonato/liga fechada com «eu» em 1.º pelas DUAS fontes (vencedorId/campeaoId E 1.º na ordem — a mesma regra que coroa; incoerência → sem troféu) · PÓDIO = 2.º/3.º real (eliminatória eliminada não é pódio) · COMPETIÇÕES com «eu» inscrito · fechadoEm do histórico · PUREZA provada (não grava nem expira) · ANTI-PODRE — docs/REA-trofeus-v87.md §2.1.

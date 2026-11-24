@@ -951,8 +951,11 @@ const LiveHub = () => {
           <CartaoAnuncioRegional className="col-span-2 lg:col-span-2" />
         </div>
 
-        <div id="game-content-area" className="grid lg:grid-cols-[1fr_320px] gap-6 mt-4 lg:mt-0 lg:order-3">
-          <div>
+        {/* v88 DESIGN DESKTOP: minmax(0,…) em AMBAS as colunas + min-w-0 nos filhos —
+            o 1fr simples deixa a pista crescer com o min-content dos jogos
+            (roda/canvas) e empurrava a página 360px além do ecrã no desktop */}
+        <div id="game-content-area" className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] gap-6 mt-4 lg:mt-0 lg:order-3">
+          <div className="min-w-0">
             {/* v20 PRO KIT: progressão universal — missões diárias do jogo activo */}
             {!isImmersiveWorld && (
               <div className="mb-3">
@@ -1650,7 +1653,7 @@ const LiveHub = () => {
             </GameFullscreenWrapper>
           </div>
 
-          <aside className="space-y-4">
+          <aside className="min-w-0 space-y-4">
             {/* v9: widgets de streamer só em ecrãs grandes — no mobile ficavam
                 empilhados abaixo do jogo a tapar o essencial */}
             <div className="hidden lg:block">

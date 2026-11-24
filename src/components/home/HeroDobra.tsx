@@ -17,11 +17,24 @@ import BoasVindasRetencao from "@/components/home/BoasVindasRetencao";
 
 const HeroDobra = () => {
   return (
-    <section aria-labelledby="hero-principal-title" className="px-4 pt-5 sm:pt-8">
-      <div className="container mx-auto max-w-6xl">
+    <section aria-labelledby="hero-principal-title" className="relative px-4 pt-5 sm:pt-8">
+      {/* v88 DESIGN DESKTOP: ambiente suave atrás da dobra — a primeira dobra
+          deixa de ser «página branca com texto» e ganha profundidade (glow
+          nas duas cores da marca, SEM imagens inventadas nem números falsos) */}
+      <div
+        data-testid="home88-ambiente"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] hidden lg:block"
+        style={{
+          background:
+            "radial-gradient(560px 260px at 18% 12%, hsl(var(--primary)/0.10), transparent 68%)," +
+            "radial-gradient(520px 300px at 84% 30%, hsl(var(--accent)/0.10), transparent 70%)",
+        }}
+      />
+      <div className="relative container mx-auto max-w-6xl">
         <div
           data-testid="home85-dobra"
-          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.05fr_minmax(330px,0.95fr)] lg:gap-8"
+          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.05fr_minmax(330px,0.95fr)] lg:gap-8 lg:pt-2"
         >
           <div className="min-w-0">
             <HeroPrincipal naDobra />

@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { initBootSelfHeal } from "./lib/self-heal";
 import { warmRouteChunkFor } from "./lib/routePrefetch";
+// v90 — MODO ALTO CONTRASTE: aplicado ANTES da React montar (zero FOUC):
+// um atributo no <html> que o CSS §v90 da index.css chaveia.
+import { aplicarContraste } from "./lib/contraste";
 import App from "./App.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
@@ -11,6 +14,14 @@ import "./micro-interactions.css";
 
 // PWA self-heal: deteta deploys novos e purga caches de chunks obsoletos
 initBootSelfHeal();
+
+// v90: alto contraste — escolha EXPLÍCITA do utilizador; se nunca escolheu,
+// o SO decide (prefers-contrast: more). Um atributo, aplicado no boot.
+aplicarContraste({
+  storage: localStorage,
+  documentElement: document.documentElement,
+  matchMedia: (q) => window.matchMedia(q),
+});
 
 // PWA: Unregister service workers in preview/iframe contexts
 const isInIframe = (() => {

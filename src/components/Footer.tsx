@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Shield, Lock, CheckCircle2 } from "lucide-react";
+import { Shield, Lock, CheckCircle2, Contrast } from "lucide-react";
 import bateuLogo from "@/assets/bateu-logo.png";
 import ResponsibleGaming from "@/components/ResponsibleGaming";
+// v90 — MODO ALTO CONTRASTE: o botão do rodapé é a ÚNICA superfície que
+// grava a escolha; o núcleo (contraste.ts) é puro e a aplicação é um
+// atributo no <html> que o CSS §v90 da index.css chaveia.
+import { CHAVE_CONTRASTE, alternarContraste, aplicarContraste, type EstadoContraste } from "@/lib/contraste";
 
 const regionIconStyle = { color: "var(--region-primary, hsl(var(--primary)))" } as const;
 
@@ -23,6 +28,45 @@ const securityIcons = [Lock, Shield, CheckCircle2] as const;
 
 const Footer = () => {
   const { t } = useLanguage();
+  // v90 — alto contraste: o estado INICIAL é lido da MESMA fonte que o boot
+  // (núcleo aplicarContraste — escolha explícita, ou o SO se nunca escolheu);
+  // o botão mostra o estado EFETIVO e o aria-pressed bate sempre certo.
+  const [contraste, setContraste] = useState<EstadoContraste>(() =>
+    aplicarContraste({
+      storage: localStorage,
+      documentElement: document.documentElement,
+      matchMedia: (q) => window.matchMedia(q),
+    }),
+  );
+  useEffect(() => {
+    // re-sincroniza se outra página/aba gravou (o mesmo padrão do storage event)
+    const aoTrocar = (e: StorageEvent) => {
+      if (e.key === CHAVE_CONTRASTE) {
+        setContraste(
+          aplicarContraste({
+            storage: localStorage,
+            documentElement: document.documentElement,
+            matchMedia: (q) => window.matchMedia(q),
+          }),
+        );
+      }
+    };
+    window.addEventListener("storage", aoTrocar);
+    return () => window.removeEventListener("storage", aoTrocar);
+  }, []);
+  const alternarContrasteAgora = () => {
+    const novo = alternarContraste(contraste);
+    try {
+      localStorage.setItem(CHAVE_CONTRASTE, novo);
+    } catch { /* storage cheio/bloqueado — o atributo é aplicado na mesma */ }
+    setContraste(
+      aplicarContraste({
+        storage: localStorage,
+        documentElement: document.documentElement,
+        matchMedia: (q) => window.matchMedia(q),
+      }),
+    );
+  };
   return (
     <footer
       className="relative border-t border-border py-16 section-glow-divider"
@@ -127,9 +171,28 @@ const Footer = () => {
             <Link to="/suporte" data-testid="footer-suporte" className="region-link hover:opacity-80 transition-opacity">{t("footer.support")}</Link>
             <Link to="/protecao" data-testid="footer-protecao" className="region-link hover:opacity-80 transition-opacity">{t("footer.protection")}</Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 Bateu. {t("footer.rights")}
-          </p>
+          <div className="flex flex-col items-center gap-3">
+            {/* v90 — MODO ALTO CONTRASTE: escolha EXPLÍCITA, gravada no
+                aparelho; aria-pressed comunica o estado real */}
+            <button
+              type="button"
+              data-testid="footer-contraste"
+              aria-pressed={contraste === "alto"}
+              onClick={alternarContrasteAgora}
+              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors"
+              style={
+                contraste === "alto"
+                  ? { borderColor: "hsl(var(--primary) / 0.6)", color: "hsl(var(--primary))", background: "hsl(var(--primary) / 0.08)" }
+                  : { borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }
+              }
+            >
+              <Contrast className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("contraste.rotulo")}
+            </button>
+            <p className="text-sm text-muted-foreground">
+              © 2026 Bateu. {t("footer.rights")}
+            </p>
+          </div>
         </motion.div>
       </motion.div>
     </footer>

@@ -6051,3 +6051,86 @@ select:focus-visible {
     to { transform: translate3d(-40px, 26px, 0) scale(1.12); }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v90 — «DESKTOP AO TOQUE»
+   1) .game-card-v2 deixa de ser CLASSE MORTA (usada na grelha de jogos
+      e concursos sem nenhum CSS): estados de repouso, HOVER que se vê
+      e FOCO-VISÍVEL para quem navega por teclado.
+   2) MODO ALTO CONTRASTE — html[data-contraste="alto"] (atributo posto
+      pelo núcleo contraste.ts no boot e pelo botão do rodapé): o
+      texto-mudo deixa de ser decorativo, bordas ganham presença e o
+      foco fica inconfundível. Honesto: muda superfícies que usam as
+      VARIÁVEIS do tema; cores hard-coded de arte/branding não mudam.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* --- 1. Grelha de jogos: hover/foco (classe morta definida de facto) --- */
+.game-card-v2 {
+  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.game-card-v2:hover {
+  /* !important necessário: os cartões trazem borda INLINE
+     (rgba(255,255,255,0.05)) — o estado hover tem de vencê-la */
+  border-color: hsl(var(--primary) / 0.55) !important;
+  box-shadow: 0 10px 32px hsl(var(--primary) / 0.16), 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.game-card-v2:focus-visible {
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+/* CTA «JOGAR ▶» responde ao hover/foco do CARTÃO inteiro (não só do chip) */
+.game-card-v2 .jogos-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.game-card-v2:hover .jogos-cta,
+.game-card-v2:focus-visible .jogos-cta {
+  transform: scale(1.08);
+  box-shadow: 0 2px 12px hsl(var(--primary) / 0.45);
+}
+/* Botões «Desafiar»/«Detalhes»: hover real, não só whileTap */
+.jogos-accao-btn {
+  transition: filter 0.15s ease;
+}
+.jogos-accao-btn:hover {
+  filter: brightness(1.25);
+}
+.jogos-accao-btn:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 1px;
+}
+
+/* --- 2. Modo alto contraste --- */
+/* Claro: texto principal a preto puro, texto-mudo legível (7.4:1),
+   bordas que se veem, anel de foco inconfundível. */
+html[data-contraste="alto"]:not(.dark) {
+  --foreground: 0 0% 0%;
+  --muted-foreground: 0 0% 30%;
+  --border: 220 13% 36%;
+  --ring: 220 13% 15%;
+  --accent-foreground: 0 0% 0%;
+  --secondary-foreground: 0 0% 0%;
+}
+/* Escuro: branco puro, texto-mudo a 78% (≥ 7:1 sobre o fundo), bordas
+   com presença, anel branco. */
+html[data-contraste="alto"].dark {
+  --foreground: 0 0% 100%;
+  --muted-foreground: 0 0% 78%;
+  --border: 220 14% 48%;
+  --ring: 0 0% 100%;
+}
+/* O furo REAL: variantes de OPACIDADE do texto-mudo
+   (text-muted-foreground/20…/60 — 75 ficheiros) ficam ilegíveis;
+   em alto contraste todas voltam ao valor cheio da variável. */
+html[data-contraste="alto"] [class*="text-muted-foreground/"] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+/* Bordas brancas fantasma (rgba(255,255,255,0.05) inline nos cartões)
+   ganham a borda do tema — o cartão deixa de flutuar sem contorno. */
+html[data-contraste="alto"] .game-card-v2 {
+  border-color: hsl(var(--border)) !important;
+}
+/* Foco 3 px no anel do tema — quem navega por teclado nunca se perde. */
+html[data-contraste="alto"] :where(a, button, summary, [tabindex]):focus-visible {
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 2px;
+}

@@ -479,6 +479,7 @@ const AllGames = () => {
                 >
                   <Link
                     to={`/lives?game=${game.id}`}
+                    data-testid={`jogos-card-${game.id}`}
                     className="game-card-v2 block cursor-pointer card-hover-lift btn-press btn-glow rounded-xl overflow-hidden"
                     style={{ border: "1px solid rgba(255,255,255,0.05)", "--glow-color": "#2ea043" } as React.CSSProperties}
                     onClick={() => sfx.click()}
@@ -487,7 +488,7 @@ const AllGames = () => {
                     <div className="relative h-24 sm:h-28 overflow-hidden">
                       <GameArt id={game.id} className="w-full h-full transition-transform duration-300 hover:scale-[1.04]" animate={false} />
                       <span className="absolute inset-x-0 bottom-0 h-10 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(13,17,23,0.85))" }} />
-                      <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ background: "rgba(46,160,67,0.92)" }}>
+                      <span className="jogos-cta absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ background: "rgba(46,160,67,0.92)" }}>
                         JOGAR ▶
                       </span>
                     </div>
@@ -543,7 +544,7 @@ const AllGames = () => {
                             whileTap={{ scale: 0.9 }}
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setChallengeGame({ id: game.id, label: game.label }); sfx.click(); }}
                             title={`Desafiar amigo no ${game.label}`}
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                            className="jogos-accao-btn inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
                             style={{ color: THEME_A, background: "rgba(247,129,102,0.1)" }}
                           >
                             <Swords className="h-3 w-3" /> Desafiar
@@ -553,7 +554,7 @@ const AllGames = () => {
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); sfx.click(); navigate(`/jogo/${game.id}`); }}
                             title={`Detalhes do ${game.label}`}
                             data-testid={`info-${game.id}`}
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                            className="jogos-accao-btn inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
                             style={{ color: THEME_S, background: "rgba(88,166,255,0.1)" }}
                           >
                             <Info className="h-3 w-3" /> Detalhes

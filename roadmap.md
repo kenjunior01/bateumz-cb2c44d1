@@ -222,3 +222,11 @@
 - [x] ESCUDO INTELIGENTE + ITENS COM CABEÇA: escudo guardado com míssil à vista e levantado a < 28 u; turbo só na reta (curvaFrente < 0,0028); armas não desperdiçadas em alvo com escudo; óleo só com rival colado atrás; trânsito desvia do choque; reação à largada iaLargada 0,08…0,37 s (humano 0) — docs/REA-kart-ia-v76.md §1.
 - [x] FURO REAL v65 fechado: homing indexava o ARRAY com um ID (em ONLINE o míssil perseguia o kart ERRADO) → find por id; direção com olhar encolhido 55% sob ameaça (o desvio passa à frente da direção na iaDecidir) — docs/REA-kart-ia-v76.md §3.
 - [x] Prova: test-kart-ia-v76.mjs 49/0 ×2 (largada/esquiva/óleo/escudo/itens/trânsito/relaxa/rubber-band/determinismo/corrida completa nas 3 pistas) · regressão kart 65+61+30 · gfx 28 · som 58 · desafios 36 · classic 53 · regional 60 · desktop 35 · web 11 · tsc 0 · build OK — docs/REA-kart-ia-v76.md §4-5.
+
+## v89 — «DESKTOP DE PRODUTO»: progressão acima da dobra + kart com ARTE real + conteúdo específico (2026-11-26)
+
+- [x] PROGRESSÃO ACIMA DA DOBRA: ProgressoHero.tsx NOVO (só-leitura, mesma store, sincronizado pelo anúncio `bateu:progressao` que o gravar() emite — osouvintes re-leem FRESCO da chave ativa; sem claim e sem bus `bateu:partida`, o PainelProgressao continua o ÚNICO dono das mutações) no hero do hub ≥lg: pontos, nível, barra, 3 carteiras, missão do dia + CTA que rola ao painel — docs/REA-desktop-v89.md §2.1.
+- [x] CONTEÚDO ESPECÍFICO: atalhos do hero com minutos/pontos/dificuldade REAIS do catálogo (ALL_GAMES) em vez de «clássico · direto» ×3; kart com ARTE real (GameArt/ArtKart 64 px em vez do emoji) + chip «Até 120 pontos» (teto pontosMaxDe) — docs/REA-desktop-v89.md §2.2.
+- [x] TOPO COMPRIMIDO no hub: hero py-12 → py-8 em ≥lg (a progressão cabe acima da dobra) — docs/REA-desktop-v89.md §2.3.
+- [x] i18n ×6: 16 chaves livehub.hero.* + 3 livehub.dif.* nos 5 dicionários (en/pt/es/fr/hi; pt-BR herda pt) — docs/REA-desktop-v89.md §2.1.
+- [x] FLAKE de data UTC fechado NA SUÍTE retencacao-v78 (Date.now fixo no dia autorado; baseline provou 36/2 idêntico em v78 limpo sem a v89) + Prova: test-desktop-v89.mjs NOVO 37/0 ×2 · regressão desktop-v74 · retencacao-v78 38/0 · web-v262 · kart-v65 · tsc 0 · build OK — docs/REA-desktop-v89.md §3.

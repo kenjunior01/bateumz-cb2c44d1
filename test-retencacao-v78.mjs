@@ -208,6 +208,17 @@ async function main() {
   const erros = [];
   const ctx = await browser.newContext({ viewport: { width: 960, height: 640 } });
   const pg = await ctx.newPage();
+  // v89 FIX de FLAKE (descoberta honesta): as missões do dia são SEMEADAS por
+  // (dia LOCAL + jogadorId) — em headless o dia local é UTC e o CICLO exigia
+  // que a rotação DO DIA CORRENTO contivesse «joga-kart». Em 25-11-UTC a seed
+  // deu joga-tetris/vence-1/joga-3-partidas e a suíte PARTIU SEM ALTERAÇÃO DE
+  // CÓDIGO (provado com baseline: 36/2 também em v78 limpo). Fix: Date.now()
+  // fixo no DIA AUTORADO (2026-11-22) → determinístico para sempre; o núcleo
+  // recebe `agoraMs` do painel, por isso BASTA o Date.now do aparelho.
+  await ctx.addInitScript(() => {
+    const FIXO = new Date("2026-11-22T10:00:00Z").getTime();
+    Date.now = () => FIXO;
+  });
   pg.on("pageerror", (e) => erros.push(String(e)));
   pg.on("console", (m) => { if (m.type() === "error") erros.push(`${m.text()} @ ${m.location()?.url ?? "?"}`); });
 

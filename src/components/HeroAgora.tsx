@@ -57,10 +57,12 @@ const HeroAgora = () => {
   return (
     <section aria-labelledby="heroagora-title" className="px-4 pt-4 sm:pt-5">
       <div className="container mx-auto max-w-6xl">
+        {/* v87: text-foreground (tema-consciente) — text-zinc-100 era quase
+            INVISÍVEL no tema claro (título do hero branco sobre branco) */}
         <h2
           id="heroagora-title"
           data-testid="heroagora-title"
-          className="mb-3 font-display text-lg font-bold tracking-tight text-zinc-100 sm:text-xl"
+          className="mb-3 font-display text-lg font-bold tracking-tight text-foreground sm:text-xl"
         >
           {t("heroagora.title")}
         </h2>

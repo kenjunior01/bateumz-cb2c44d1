@@ -56,6 +56,12 @@ function ler(chave: string, jogadorIdAgora = ""): EstadoProgressao {
 }
 function gravar(chave: string, e: EstadoProgressao): void {
   try { localStorage.setItem(chave, JSON.stringify(e)); } catch { /* aparelho cheio → só memória */ }
+  // v89 DESKTOP: anuncia o estado novo para TODAS as superfícies vivas (painel
+  // compacto no hero) — quem ouve re-lê FRESCO da chave ativa, assim nenhum
+  // receptor escreve nem confia num snapshot possivelmente velho.
+  if (typeof window !== "undefined") {
+    try { window.dispatchEvent(new CustomEvent("bateu:progressao")); } catch { /* ambiente sem eventos */ }
+  }
 }
 
 // ── GESTOR DA CONTA (singleton do módulo — dedupe entre instâncias) ─────
@@ -196,6 +202,19 @@ export function useProgressao(agoraMs: number) {
     };
     ouvintesContexto.add(fn);
     return () => { ouvintesContexto.delete(fn); };
+  }, []);
+
+  // v89: qualquer gravar() noutra superfície anuncia por `bateu:progressao` —
+  // TODAS as instâncias ficam a ver o MESMO estado (re-leitura FRESCA da
+  // chave ativa — nada de confiar em snapshots nem duplicar escritas).
+  useEffect(() => {
+    const onSync = () => {
+      const k = chaveAtiva();
+      setChave(k);
+      setEstado(ler(k, usuarioAtivo ?? ""));
+    };
+    window.addEventListener("bateu:progressao", onSync);
+    return () => window.removeEventListener("bateu:progressao", onSync);
   }, []);
 
   // v84: vincula/desliga quando a conta muda (a carga de auth resolve sozinha)

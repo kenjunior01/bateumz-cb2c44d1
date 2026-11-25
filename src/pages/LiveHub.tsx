@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Zap, Brain, Package, RotateCcw, Sparkles, Trophy, Users, Plus, Copy, Check, Search, Vote, Play, Square, Lock, Loader2, Gamepad2, Skull, Swords, Pencil, Bomb, Hash, SmilePlus, Shuffle, Flame, Heart, Grid3X3, Anchor, Dices, CircleDot, LayoutGrid, Target, Palette, Map, Crosshair, Layers, Globe, Coins, HandCoins, Rocket, Spade, Ticket, Gauge, TrendingUp, Crown, UtensilsCrossed, Flag, Bell, History } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { GameArtChip, hasArt } from "@/components/games/GameArt";
+import GameArt, { GameArtChip, hasArt } from "@/components/games/GameArt";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -15,7 +15,8 @@ import NeonBorder from "@/components/ui/NeonBorder";
 import ButtonRipple from "@/components/ui/ButtonRipple";
 import MobileDiscoveryHeader from "@/components/meituan/MobileDiscoveryHeader";
 import PainelProgressao from "@/components/progressao/PainelProgressao";
-import { pontosMaxDe } from "@/lib/gamesCatalog";
+import ProgressoHero from "@/components/progressao/ProgressoHero";
+import { ALL_GAMES, pontosMaxDe } from "@/lib/gamesCatalog";
 import { getActiveLives } from "@/lib/livePlatform";
 const TapBattle = lazy(() => import("@/components/livegames/TapBattle"));
 const QuizBattle = lazy(() => import("@/components/livegames/QuizBattle"));
@@ -578,7 +579,7 @@ const LiveHub = () => {
         {/* v74 DESKTOP: brilhos ambiente + painel de destaque à direita — o hero
             era max-w-2xl e metade do ecrã desktop ficava MORTA */}
         <div className="desktop-ambient hidden lg:block" aria-hidden="true" />
-        <div className="relative container mx-auto px-4 py-6 md:py-12 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-10 lg:items-center">
+        <div className="relative container mx-auto px-4 py-6 md:py-10 lg:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-10 lg:items-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
               <Gamepad2 className="h-3.5 w-3.5" />
@@ -663,12 +664,15 @@ const LiveHub = () => {
             )}
           </motion.div>
 
-          {/* v74 DESKTOP: painel de destaque (SÓ ≥lg) — jogo principal + atalhos
-              rápidos, ocupando o espaço morto do hero */}
-          <div className="hidden lg:flex flex-col gap-4" data-testid="livehub-hero-desktop">
+          {/* v74 DESKTOP: painel de destaque (SÓ ≥lg). v89 «DESKTOP DE
+              PRODUTO»: kart com ARTE real + PRÉMIO visível, PROGRESSÃO acima
+              da dobra (leitura da MESMA store) e atalhos com conteúdo
+              específico (nada de «clássico · direto» genérico) */}
+          <div className="hidden lg:flex flex-col gap-3" data-testid="livehub-hero-desktop">
             {(() => {
               const kartMeta = GAMES.find((g) => g.id === "kart");
               if (!kartMeta) return null;
+              const kartPontos = pontosMaxDe("kart");
               return (
                 <button
                   onClick={() => setActive("kart")}
@@ -678,14 +682,17 @@ const LiveHub = () => {
                 >
                   <div className="absolute inset-0 opacity-60" style={{ background: "radial-gradient(320px 140px at 85% 10%, rgba(251,191,36,0.22), transparent 70%)" }} aria-hidden="true" />
                   <div className="relative flex items-start gap-4">
-                    <div className="h-14 w-14 shrink-0 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-3xl shadow-lg shadow-rose-900/50 group-hover:scale-105 transition-transform">🏎️</div>
+                    {/* v89: ARTE REAL do kart (cena SVG do catálogo) em vez de emoji */}
+                    <div data-testid="livehub-hero-kart-art" className="h-16 w-16 shrink-0 rounded-2xl overflow-hidden border border-rose-400/40 shadow-lg shadow-rose-900/50 group-hover:scale-105 transition-transform" aria-hidden="true">
+                      <GameArt id="kart" className="h-full w-full" />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black tracking-widest text-rose-300 uppercase">Destaque de hoje</p>
                       <p className="font-display text-xl font-black text-white leading-tight mt-0.5">{kartMeta.label}</p>
                       <p className="text-[11px] text-white/70 mt-1 line-clamp-2">{kartMeta.desc}</p>
                     </div>
                   </div>
-                  <div className="relative mt-4 flex items-center justify-between">
+                  <div className="relative mt-3 flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> 12 pilotos · online partilhado · garagem com upgrades
                     </span>
@@ -693,13 +700,29 @@ const LiveHub = () => {
                       JOGAR ▶
                     </span>
                   </div>
+                  {/* v89: o PRÉMIO visível — número REAL do teto de pontos (pontosMaxDe) */}
+                  {!!kartPontos && (
+                    <span data-testid="livehub-hero-kart-pontos" className="relative mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-400/15 px-2.5 py-1 text-[10px] font-black text-amber-200">
+                      🏆 {t("livehub.hero.kartPontos", { n: String(kartPontos) })}
+                    </span>
+                  )}
                 </button>
               );
             })()}
+
+            {/* v89: PROGRESSÃO ACIMA DA DOBRA — leitura da MESMA store;
+                reclamar continua SÓ no painel (zero mutações aqui) */}
+            <ProgressoHero onVerPainel={() => {
+              document.querySelector('[data-testid="painel-progressao"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }} />
+
             <div className="grid grid-cols-3 gap-3">
               {["tetris", "spaceshooter", "chess"].map((id) => {
                 const g = GAMES.find((x) => x.id === id);
                 if (!g) return null;
+                // v89: dados ESPECÍFICOS vêm do CATÁLOGO (fonte única da v78)
+                const cat = ALL_GAMES.find((x) => x.id === g.id);
+                const difKey = cat?.dificuldade === "Fácil" ? "livehub.dif.facil" : cat?.dificuldade === "Difícil" ? "livehub.dif.dificil" : "livehub.dif.media";
                 return (
                   <button
                     key={g.id}
@@ -709,7 +732,10 @@ const LiveHub = () => {
                   >
                     <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${g.grad} grid place-items-center text-lg mb-1.5`}>{g.emoji}</div>
                     <p className="text-xs font-bold truncate">{g.label}</p>
-                    <p className="text-[9px] text-muted-foreground">clássico · direto</p>
+                    {/* v89: minutos/pontos/dificuldade REAIS do catálogo */}
+                    <p data-testid={`livehub-hero-atalho-info-${g.id}`} className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                      {t("livehub.hero.atalhoMeta", { p: String(cat?.pontosMax ?? 0), m: String(cat?.minutos ?? 0), d: t(difKey) })}
+                    </p>
                   </button>
                 );
               })}

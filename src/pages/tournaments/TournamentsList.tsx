@@ -11,6 +11,7 @@ import { useSEO } from "@/hooks/useSEO";
 import TournamentCard from "@/components/tournaments/TournamentCard";
 import { getTournaments, type Tournament } from "@/lib/tournaments";
 import { torneiosDoAparelho, jogoEsport, type TorneioEsport } from "@/lib/esport";
+import ChipSincEsport from "@/components/esport/ChipSincEsport";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,10 @@ export default function TournamentsList() {
   useEffect(() => {
     load();
     loadLocais();
+    // v91: a store da conta anuncia absorção/pull por `bateu:esport` —
+    // a lista re-lê FRESCO da chave ativa (convidado ↔ conta)
+    window.addEventListener("bateu:esport", loadLocais);
+    return () => window.removeEventListener("bateu:esport", loadLocais);
   }, []);
 
   // REA torneios: o que está a acabar primeiro aparece em cima (urgência real)
@@ -149,6 +154,7 @@ export default function TournamentsList() {
               <Zap className="h-4 w-4 text-amber-500" />
               <h2 className="text-sm font-black uppercase tracking-wide">{t("esport.lista.titulo")}</h2>
               <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border-0 text-[10px]">{locais.length}</Badge>
+              <ChipSincEsport />
             </div>
             <p className="text-xs text-muted-foreground mb-3">{t("esport.lista.sub")}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

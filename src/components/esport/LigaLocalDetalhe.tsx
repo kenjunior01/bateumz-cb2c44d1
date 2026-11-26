@@ -26,6 +26,7 @@ import {
   clamarPremioLiga, jogoEsport, TETO_PONTOS_PARTIDA_SEM_CAMPO,
   type LigaEsport,
 } from "@/lib/esport";
+import ChipSincEsport from "@/components/esport/ChipSincEsport";
 
 const EU_ID = "eu";
 
@@ -39,7 +40,11 @@ export default function LigaLocalDetalhe({ id }: { id: string }) {
 
   useEffect(() => {
     const iv = setInterval(() => setAgora(Date.now()), 30_000);
-    return () => clearInterval(iv);
+    // v91: a store da conta anuncia absorção/pull por `bateu:esport` —
+    // o detalhe re-lê FRESCO da chave ativa (convidado ↔ conta)
+    const onSync = () => setTick((k) => k + 1);
+    window.addEventListener("bateu:esport", onSync);
+    return () => { clearInterval(iv); window.removeEventListener("bateu:esport", onSync); };
   }, []);
 
   const liga = useMemo(() => ligaPorId(id), [id, tick, agora]);
@@ -219,6 +224,7 @@ export default function LigaLocalDetalhe({ id }: { id: string }) {
               <Gift className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               {t("esport.nota.aparelho", { jogo: jogoEsport(liga.jogo)?.label ?? liga.jogo })}
             </p>
+            <ChipSincEsport variante="linha" />
           </CardContent>
         </Card>
       </motion.div>

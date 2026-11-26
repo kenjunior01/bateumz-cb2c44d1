@@ -106,6 +106,28 @@ export const CHAVE_ESPORT = "bateu_esport_v1";
 export const TETO_TORNEIOS = 12;
 export const TETO_LIGAS = 8;
 
+// v91 «E-SPORT SEGUE A CONTA»: a CHAVE ATIVA da persistência pode ser
+// redirecionada pela store da conta (esportStore.ts) — convidado lê/escreve
+// a chave clássica; conta vincula a chave POR CONTA. Padrão v84
+// (progressaoStore/progressaoConta): o NÚCLEO nunca sabe da conta — só da
+// chave ativa. Sem store instalada (Node, suítes v86), o comportamento é
+// BYTE-A-BYTE o de sempre.
+let chaveAtivaAtual: string = CHAVE_ESPORT;
+
+/** A store da conta (esportStore.ts) instala a chave por conta aqui.
+ *  `null` volta ao convidado. NÃO é para outra camada usar. */
+export function definirChaveEsportAtiva(chave: string | null): void {
+  chaveAtivaAtual = chave || CHAVE_ESPORT;
+}
+
+/** GATILHO pós-escrita: a store da conta ouve para agendar o push
+ *  (dedupe por impressão + debounce). Padrão do gestor v84. */
+type AoGuardarEsport = (e: EstadoEsport) => void;
+let aoGuardar: AoGuardarEsport | null = null;
+export function definirAoGuardarEsport(fn: AoGuardarEsport | null): void {
+  aoGuardar = fn;
+}
+
 function lsLer(chave: string): string | null {
   try { return typeof localStorage !== "undefined" ? localStorage.getItem(chave) : null; } catch { return null; }
 }
@@ -115,7 +137,7 @@ function lsGuardar(chave: string, valor: string): void {
 
 export function lerEsport(): EstadoEsport {
   try {
-    const raw = lsLer(CHAVE_ESPORT);
+    const raw = lsLer(chaveAtivaAtual);
     if (raw) {
       const p = JSON.parse(raw) as EstadoEsport;
       if (p && Array.isArray(p.torneios) && Array.isArray(p.ligas)) return p;
@@ -126,7 +148,11 @@ export function lerEsport(): EstadoEsport {
 
 function guardarEsport(e: EstadoEsport): void {
   e.ts = Date.now();
-  lsGuardar(CHAVE_ESPORT, JSON.stringify(e));
+  const chave = chaveAtivaAtual; // lida UMA vez: o vínculo pode trocar a meio
+  lsGuardar(chave, JSON.stringify(e));
+  // v91: a store da conta agenda o push (dedupe + debounce) — nunca no caminho
+  // do convidado (a store só instala o ouvido quando há conta).
+  if (aoGuardar) { try { aoGuardar(e); } catch { /* ouvinte podre nunca quebra o núcleo */ } }
 }
 
 // ── catálogo de jogos do e-sport (fonte única — espelho do

@@ -1,3 +1,26 @@
+---
+Task ID: 91
+Agent: Super Z (main)
+Task: v91 — «E-SPORT SEGUE A CONTA»: os torneios/ligas do aparelho passam a seguir a conta entre dispositivos (padrão v84 — a fatia anotada desde a v86/v87: «a sincronização para o servidor continua na fatia da migração», PGRST205 real)
+
+Work Log:
+- Estado à entrada: main sincronizado ao origin/main = 8144430 (v90 «DESKTOP AO TOQUE» — o pedido «Quero no design da versao desktop melhore bastante» já fechado pela v85/v88/v89/v90; sandbox reciclado tinha o repo na v78, re-sincronizado por fetch sem force-push)
+- MIGRAÇÃO 20261126_esport_conta.sql NOVA: esport_conta UMA linha por conta (user_id PK → auth.users CASCADE, jogador_id binding NOT NULL CHECK ≤60, torneios JSONB CHECK ≤12, ligas CHECK ≤8 — MESMOS tetos do núcleo v86, atualizado_em) com RLS só do dono e SEM SELECT/INSERT público (convidado nunca toca); aplicação pelo utilizador — o cliente DETECTA PGRST205 e declara «Migração pendente»
+- NÚCLEO esportConta.ts NOVO (isomórfico, padrão progressaoConta v84): hidratar dura (jogo no catálogo, enums fechados, prémio 100..5000, histórico últimas 24, participantes dedup cap 12, RIVAIS IA SEMPRE etiquetados — eBot não negociável: só «eu» pode ficar humano) · MERGE por UNIÃO de ids (aparelhos coexistem, caps 12/8; mesmo id vence o MAIS AVANÇADO: premioReclamado → estado → histórico → atividade; NUNCA mistura participantes — limitação declarada) · absorverConvidadoEsport · estadoParaLinhaEsport/linhaParaEstadoEsport (user_id tem de bater CERTO — RLS provado; podre → null) · impressaoEstadoEsport determinística (ordenada por id; cobre claim/estado/ronda/vencedor/histórico/participante id:pontos:vitórias:partidas:eliminado) + deveEnviarEsport (ordem NÃO paga; claim e partida pagam)
+- NÚCLEO v86 cirurgia mínima: definirChaveEsportAtiva (chave ativa injetável — sem store o comportamento é BYTE-A-BYTE, suítes v86/v87 intocadas e verdes) + definirAoGuardarEsport (gatilho pós-escrita com try/catch — ouvinte podre nunca quebra o núcleo); guardarEsport lê a chave UMA vez (vínculo pode trocar a meio)
+- STORE esportStore.ts NOVA (singleton, padrão v84): instalação única no load do módulo (importado pelo App — chave ativa real ANTES de qualquer página) · vincular = ABSORÇÃO (cache por conta `bateu_esport_v1:u:<id>` ← união; ficheiro de convidado limpo DEPOIS de absorvido; evento `bateu:esport`) → PULL → PUSH (upsert onConflict user_id) · agendarEnvio com dedupe por impressão + debounce 1,2 s · desligar() volta ao convidado sem apagar nada · useEsportSinc (useSyncExternalStore, padrão iaContexto v82) · ClientePostgrestLike (cast por chamada — gates tsc limpos)
+- INTEGRAÇÃO: AppShell liga/desliga com a sessão (authLoading → ZERO pedidos) · TournamentsList/LeaguesListPage/TorneioLocalDetalhe/LigaLocalDetalhe re-leem FRESCO no `bateu:esport` · ChipSincEsport NOVO (chip nas 2 listas, linha nos 2 detalhes; convidado não rende nada) · i18n esport.sinc.* ×6 dicionários (scripts/insere_i18n_v91.py, âncora esport.nota.aparelho, 48 chaves, idempotente)
+- FURO do harness fechado: o recarregar da página do detalhe paga um push HONESTO do re-bind (pull→merge→push, idempotente) ANTES do push do claim — a espera da suíte é pelo POST COM `premioReclamado=true`, nunca por contagem de pedidos
+- TESTES: test-esport-conta-v91.mjs NOVO 63/63 ×2 (A núcleo 28: hidratar dura, IA etiquetada, caps, merge, linha RLS, impressão anti-spam · B E2E 29 com sessão fake sb-ref + rotas REST mockadas + dados REAIS do núcleo criarTorneio/criarLiga: convidado ZERO pedidos, absorção com ficheiro limpo, união com o servidor, PGRST205 declarado, erro honesto, CLAIM → push com premioReclamado=true, mobile 390, zero pageerror)
+- REGRESSÃO 15 suítes verdes: nav-v79 83/0 · desktop-v85 46/0 · desktop-v88 30/0 · desktop-v89 37/0 · desktop-v90 38/0 · trofeus-v87 39/0 · esport-v86 44/0 · retencacao-v78 38/0 · retencao-v83 39/0 (solo) · retencao-v84 67/0 (solo) · desktop-v74 42/0 (solo) · home-dinamica 24/0 · web-v262 11/0 · auditoria-v40 50/0 · kart-v65 65/0 · tsc -b 0 · tsc app 0 · build OK 4525 módulos
+- SHOTS: scripts/shots-v91.mjs (padrão v84-v90, dados REAIS do núcleo) — 4 capturas verificadas a olho: torneios-conta-sincronizado (chip «Na conta» + Copa Galão Telecom/Copa Maputo), torneios-migracao (CloudOff declarado), detalhe-claim-linha (Prémio já clamado + linha «Torneios e ligas guardados na conta»), ligas-conta
+- Docs: docs/REA-esport-conta-v91.md (§1 pedido anotado · §2 migração · §3 núcleo · §4 cirurgia v86 · §5 store · §6 integração · §7 provas · §8 honestidade) + roadmap v91 + esta entrada
+
+Stage Summary:
+- O maior buraco honesto declarado desde a v86 está fechado: o e-sport que FUNCIONA (torneios/ligas/empresas, resultados só de partidas reais) passa a SEGUIR A CONTA entre dispositivos — com o mesmo padrão de honestidade da v84 (convidado ZERO pedidos, absorção sem perder nada, PGRST205 declarado quando a migração ainda não foi aplicada, erro com o motivo real)
+- O MERGE é UNIÃO por id (aparelhos coexistem) e o MESMO torneio nunca mistura participantes — mostra o estado mais avançado; o prémio reclamado vence em qualquer lado, o mesmo prémio NUNCA é pago duas vezes
+- 15 suítes de regressão verdes sem tocar numa única regra do jogo; 63/63 ×2 na suíte nova com dados REAIS do núcleo
+
 
 ---
 Task ID: 19

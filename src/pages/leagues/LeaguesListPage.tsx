@@ -30,6 +30,7 @@ import {
   PREMIO_MIN, PREMIO_MAX, JANELA_MIN_DIAS, JANELA_MAX_DIAS,
   type LigaEsport, type InputLiga,
 } from "@/lib/esport";
+import ChipSincEsport from "@/components/esport/ChipSincEsport";
 
 const sb: any = supabase;
 
@@ -289,6 +290,10 @@ export default function LeaguesListPage() {
       })
       .finally(() => setLoading(false));
     recarregarLocais();
+    // v91: a store da conta anuncia absorção/pull por `bateu:esport` —
+    // a lista re-lê FRESCO da chave ativa (convidado ↔ conta)
+    window.addEventListener("bateu:esport", recarregarLocais);
+    return () => window.removeEventListener("bateu:esport", recarregarLocais);
   }, []);
 
   const filteredLeagues = useMemo(() => {
@@ -408,6 +413,7 @@ export default function LeaguesListPage() {
               <Zap className="h-4 w-4 text-amber-400" />
               <h2 className="text-sm font-black uppercase tracking-wide text-white">{t("esport.listaLigas.titulo")}</h2>
               <Badge className="bg-amber-500/25 text-amber-200 border-0 text-[10px]">{locais.length}</Badge>
+              <ChipSincEsport />
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {locais.slice(0, 6).map((lg) => {

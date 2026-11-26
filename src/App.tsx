@@ -32,6 +32,7 @@ import AdminLayout from "./layouts/AdminLayout.tsx";
 import LoadingScreen from "./components/LoadingScreen.tsx";
 import { initRoutePrefetch } from "@/lib/routePrefetch";
 import { ouvirPartidasEsport } from "@/lib/esport"; // v86 E-SPORT: bus de partidas reais (torneios/ligas)
+import { trocarUsuarioEsport } from "@/lib/esportStore"; // v91 E-SPORT SEGUE A CONTA: binding + sync
 
 import MascotBuddy from "./components/MascotBuddy.tsx";
 import MobileTopBar from "./components/MobileTopBar.tsx";
@@ -514,6 +515,14 @@ function AppShell() {
   // v86 E-SPORT: um ÚNICO ouvinte global de `bateu:partida` alimenta os
   // torneios/ligas do aparelho com resultados REAIS (idempotente no núcleo).
   useEffect(() => { ouvirPartidasEsport(); }, []);
+
+  // v91 E-SPORT SEGUE A CONTA: o estado de e-sport (torneios/ligas) segue a
+  // sessão — convidado lê/escreve o aparelho; conta vincula (absorção → pull →
+  // push) pelo gestor singleton do esportStore (padrão v84 da progressão).
+  useEffect(() => {
+    if (authLoading) return; // auth ainda a resolver → nada (ZERO pedidos ao suspense)
+    void trocarUsuarioEsport(user?.id ?? null);
+  }, [user?.id, authLoading]);
 
   useEffect(() => {
     if (!configLoading) { setShowLoading(false); return; }
